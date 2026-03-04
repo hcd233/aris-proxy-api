@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "aris-proxy-api",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/main.go",
+            "envFile": "${workspaceFolder}/env/api.env",
+            "args": ["server", "start", "--host", "0.0.0.0", "--port", "8170"],
+        },
+        {
+            "name": "aris-proxy-api-object-bucket-create",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/main.go",
+            "envFile": "${workspaceFolder}/env/api.env",
+            "args": ["object", "bucket", "create"],
+        },
+        {
+            "name": "aris-proxy-api-database-migrate",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/main.go",
+            "envFile": "${workspaceFolder}/env/api.env",
+            "args": ["database", "migrate"],
+        }
+    ]
+}
