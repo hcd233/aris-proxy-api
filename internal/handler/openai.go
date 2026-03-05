@@ -42,7 +42,7 @@ func (h *openaiHandler) HandleListModels(_ context.Context, _ *dto.EmptyReq) (*d
 
 // loadModelsFromConfig 从配置文件加载模型列表
 func loadModelsFromConfig() []*dto.OpenAIModel {
-	cfg := config.GetProxyConfig()
+	cfg := config.GetLLMProxyConfig()
 	now := time.Now().Unix()
 
 	models := lo.MapToSlice(cfg.Models, func(key string, _ config.ModelConfig) *dto.OpenAIModel {

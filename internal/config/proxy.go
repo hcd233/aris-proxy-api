@@ -15,41 +15,39 @@ type ModelConfig struct {
 	BaseURL string `mapstructure:"base_url" yaml:"base_url"`
 }
 
-// ProxyConfig 代理配置（从config.yaml加载）
+// LLMProxyConfig 代理配置（从config.yaml加载）
 //
 //	@author centonhuang
 //	@update 2025-11-12 10:00:00
-type ProxyConfig struct {
+type LLMProxyConfig struct {
 	Models  map[string]ModelConfig `mapstructure:"model_list" yaml:"model_list"`
 	APIKeys map[string]string      `mapstructure:"api_keys" yaml:"api_keys"`
 }
 
-var proxyConfig *ProxyConfig
+var llmProxyConfig *LLMProxyConfig
 
-// GetProxyConfig 获取代理配置（单例）
+// GetLLMProxyConfig 获取代理配置（单例）
 //
 //	@return *ProxyConfig
 //	@author centonhuang
 //	@update 2025-11-12 10:00:00
-func GetProxyConfig() *ProxyConfig {
-	return proxyConfig
+func GetLLMProxyConfig() *LLMProxyConfig {
+	return llmProxyConfig
 }
 
-func init() {
-	initProxyConfig()
-}
-
-func initProxyConfig() {
+// InitLLMProxyConfig 初始化代理配置
+//
+//	@author centonhuang
+//	@update 2026-03-05 19:42:49
+func InitLLMProxyConfig() {
 	v := viper.New()
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
 	v.AddConfigPath("./config")
 
-	cfg := &ProxyConfig{}
+	llmProxyConfig = &LLMProxyConfig{}
 
 	lo.Must0(v.ReadInConfig())
-	lo.Must0(v.Unmarshal(cfg))
-
-	proxyConfig = cfg
+	lo.Must0(v.Unmarshal(llmProxyConfig))
 }

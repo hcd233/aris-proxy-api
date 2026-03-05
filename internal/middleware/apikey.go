@@ -17,7 +17,7 @@ import (
 //	@update 2026-03-05 18:00:00
 func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 	// 启动时构建 apiKey -> name 的反向索引
-	cfg := config.GetProxyConfig()
+	cfg := config.GetLLMProxyConfig()
 	keyToName := lo.SliceToMap(lo.Keys(cfg.APIKeys), func(key string) (string, string) {
 		return cfg.APIKeys[key], key
 	})

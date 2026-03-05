@@ -26,6 +26,8 @@ services:
       - 7070:8080
     env_file:
       - ../env/api.env
+    volumes:
+      - ../config/config.yaml:/app/config/config.yaml:ro
     depends_on:
       aris-proxy-api-db-migrate:
         condition: service_completed_successfully
