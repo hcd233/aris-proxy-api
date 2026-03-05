@@ -1,0 +1,10 @@
+api_keys:
+  aris: sk-xxx
+
+model_list:
+  deepseek-chat:
+    model: deepseek-chat
+    api_key: sk-xxx
+    base_url: https://api.deepseek.com/v1
+  kimi-k2.5:
+    model: kimi-k2.5

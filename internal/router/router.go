@@ -53,4 +53,7 @@ func RegisterAPIRouter() {
 
 	userGroup := huma.NewGroup(v1Group, "/user")
 	initUserRouter(userGroup)
+
+	openaiGroup := huma.NewGroup(v1Group, "/openai")
+	initOpenAIRouter(openaiGroup)
 }

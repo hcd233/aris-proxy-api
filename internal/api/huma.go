@@ -34,6 +34,11 @@ func init() {
 						In:          "header",
 						Description: "JWT Authentication，Please pass the JWT token in the Authorization header.",
 					},
+					"apiKeyAuth": {
+						Type:        "http",
+						Scheme:      "bearer",
+						Description: "API Key Authentication, Please pass the API Key as Bearer token in the Authorization header.",
+					},
 				},
 			},
 		},
