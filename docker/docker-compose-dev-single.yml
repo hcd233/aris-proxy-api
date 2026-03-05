@@ -1,0 +1,40 @@
+version: '3'
+
+networks:
+  1panel-network:
+    external: true
+
+services:
+
+  aris-proxy-api-db-migrate-dev:
+    image: ghcr.io/hcd233/aris-proxy-api:master # aris-proxy-api:latest
+    container_name: aris-proxy-api-db-migrate-dev
+    restart: no
+    networks:
+      - 1panel-network
+    env_file:
+      - ../env/api-dev.env
+    command: ["/app/aris-proxy-api", "database", "migrate"]
+
+  aris-proxy-api-dev:
+    image: ghcr.io/hcd233/aris-proxy-api:master # aris-proxy-api:latest
+    container_name: aris-proxy-api-dev
+    restart: always
+    networks:
+      - 1panel-network
+    ports:
+      - 9080:8080
+    env_file:
+      - ../env/api-dev.env
+    depends_on:
+      aris-proxy-api-db-migrate-dev:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    command: ["/app/aris-proxy-api", "server", "start", "--host", "0.0.0.0", "--port", "8080"]
+
+# docker compose -f docker/docker-compose-dev-single.yml up -d
