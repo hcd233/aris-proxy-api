@@ -5,10 +5,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/spf13/viper"
 )
 
 var (
+	// Env string 环境
+	//	@update 2026-01-31 15:20:42
+	Env enum.Env
 
 	// ReadTimeout time Gin读取超时时间
 	//	update 2024-06-22 08:59:40
@@ -168,6 +172,8 @@ func init() {
 func initEnvironment() {
 	config := viper.New()
 	config.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	config.SetDefault("env", enum.EnvProduction)
 
 	config.SetDefault("read.timeout", 10*time.Second)
 	config.SetDefault("write.timeout", 5*time.Minute)

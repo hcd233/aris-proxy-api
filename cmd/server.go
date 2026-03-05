@@ -7,6 +7,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"go.uber.org/zap"
@@ -56,7 +57,9 @@ var startServerCmd = &cobra.Command{
 			middleware.LogMiddleware(),
 		)
 
-		router.RegisterDocsRouter()
+		if config.Env != enum.EnvProduction {
+			router.RegisterDocsRouter()
+		}
 		router.RegisterAPIRouter()
 
 		lo.Must0(app.Listen(fmt.Sprintf("%s:%s", host, port)))
