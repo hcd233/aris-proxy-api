@@ -9,6 +9,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"go.uber.org/zap"
 
@@ -47,14 +48,14 @@ var startServerCmd = &cobra.Command{
 
 		app := api.GetFiberApp()
 
-		// app.Use(
-		// middleware.RecoverMiddleware(),
-		// middleware.FgprofMiddleware(),
-		// middleware.CORSMiddleware(),
-		// middleware.CompressMiddleware(),
-		// middleware.TraceMiddleware(),
-		// middleware.LogMiddleware(),
-		// )
+		app.Use(
+			middleware.RecoverMiddleware(),
+			middleware.FgprofMiddleware(),
+			middleware.CORSMiddleware(),
+			middleware.CompressMiddleware(),
+			middleware.TraceMiddleware(),
+			middleware.LogMiddleware(),
+		)
 
 		if config.Env != enum.EnvProduction {
 			router.RegisterDocsRouter()
