@@ -120,6 +120,11 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 	upstreamReq.Header.Set("Content-Type", "application/json")
 	upstreamReq.Header.Set("Authorization", "Bearer "+modelCfg.APIKey)
 
+	logger.Info("[CreateChatCompletion] send upstream request", zap.String("upstreamURL", upstreamURL), 
+	zap.String("upstreamModel", modelCfg.Model), 
+	zap.Any("upstreamAPIKey", util.MaskSecret(modelCfg.APIKey)),
+	 zap.Any("upstreamBody", bodyMap),)
+
 	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
 	if err != nil {
 		logger.Error("[CreateChatCompletion] send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
