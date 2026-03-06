@@ -134,8 +134,6 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 	if req.Body.Stream {
 		return &huma.StreamResponse{
 			Body: func(humaCtx huma.Context) {
-				defer upstreamResp.Body.Close()
-
 				fiberCtx := humafiber.Unwrap(humaCtx)
 				humaCtx.SetStatus(upstreamResp.StatusCode)
 				fiberCtx.Set("Content-Type", "text/event-stream")
@@ -144,6 +142,8 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				fiberCtx.Set("Transfer-Encoding", "chunked")
 
 				fiberCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+					defer upstreamResp.Body.Close()
+
 					scanner := bufio.NewScanner(upstreamResp.Body)
 					for scanner.Scan() {
 						line := scanner.Text()
