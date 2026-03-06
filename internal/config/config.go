@@ -159,10 +159,13 @@ var (
 	//	update 2024-06-22 11:15:55
 	JwtRefreshTokenSecret string
 
-	// ServerEndpoint string
-	//	@author centonhuang
-	//	@update 2025-11-11 20:13:39
-	ServerEndpoint string
+	// PoolWorkers int 协程池工作协程数
+	//	@update 2026-01-31 03:26:11
+	PoolWorkers int
+
+	// PoolQueueSize int 协程池任务队列大小
+	//	@update 2026-01-31 03:26:08
+	PoolQueueSize int
 )
 
 func init() {
@@ -181,6 +184,9 @@ func initEnvironment() {
 
 	config.SetDefault("log.level", "info")
 	config.SetDefault("log.dir", "./logs")
+
+	config.SetDefault("pool.workers", 8)
+	config.SetDefault("pool.queue.size", 64)
 
 	config.SetDefault("postgres.sslmode", "disable")
 
@@ -236,5 +242,6 @@ func initEnvironment() {
 	JwtRefreshTokenExpired = config.GetDuration("jwt.refresh.token.expired")
 	JwtRefreshTokenSecret = config.GetString("jwt.refresh.token.secret")
 
-	ServerEndpoint = config.GetString("server.endpoint")
+	PoolWorkers = config.GetInt("pool.workers")
+	PoolQueueSize = config.GetInt("pool.queue.size")
 }

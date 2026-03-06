@@ -41,6 +41,7 @@ require (
 )
 
 require (
+	github.com/alitto/pond/v2 v2.6.2
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bytedance/sonic v1.14.0
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
