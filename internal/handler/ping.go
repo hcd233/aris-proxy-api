@@ -55,6 +55,7 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 			fCtx.Set("Cache-Control", "no-cache")
 			fCtx.Set("Connection", "keep-alive")
 			fCtx.Set("Transfer-Encoding", "chunked")
+			fCtx.Set("X-Accel-Buffering", "no")
 
 			fCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 				for i := 0; i < 30; i++ {
