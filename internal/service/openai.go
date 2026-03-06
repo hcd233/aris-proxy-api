@@ -138,6 +138,8 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				fiberCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 					defer upstreamResp.Body.Close()
 
+					var collectedChunks []*dto.ChatCompletionChunk
+
 					// Use bufio.Reader.ReadString instead of bufio.Scanner to avoid
 					// batch pre-reading: ReadString blocks on I/O when upstream has no
 					// data yet, naturally pacing writes to match the upstream token rate
@@ -158,7 +160,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 										logger.Warn("[CreateChatCompletion] unmarshal sse chunk error", zap.Error(err))
 									} else {
 										chunk.Model = req.Body.Model
-										logger.Info("[CreateChatCompletion] upstream sse chunk", zap.Any("chunk", chunk))
+										collectedChunks = append(collectedChunks, chunk)
 										line = fmt.Sprintf("%s%s", dataPrefix, lo.Must1(sonic.Marshal(chunk)))
 									}
 								}
@@ -173,6 +175,16 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 						if readErr != nil {
 							if readErr != io.EOF {
 								logger.Warn("[CreateChatCompletion] read upstream sse error", zap.Error(readErr))
+							}
+
+							// Merge all collected chunks and log the full response.
+							if len(collectedChunks) > 0 {
+								merged, mergeErr := util.ConcatChatCompletionChunks(collectedChunks)
+								if mergeErr != nil {
+									logger.Warn("[CreateChatCompletion] concat sse chunks error", zap.Error(mergeErr))
+								} else {
+									logger.Info("[CreateChatCompletion] merged sse response", zap.Any("merged", merged))
+								}
 							}
 							return
 						}
