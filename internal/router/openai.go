@@ -12,7 +12,7 @@ import (
 //
 //	@param openaiGroup huma.API
 //	@author centonhuang
-//	@update 2025-11-12 10:00:00
+//	@update 2026-03-06 10:00:00
 func initOpenAIRouter(openaiGroup huma.API) {
 	openaiHandler := handler.NewOpenAIHandler()
 
@@ -29,4 +29,16 @@ func initOpenAIRouter(openaiGroup huma.API) {
 			{"apiKeyAuth": {}},
 		},
 	}, openaiHandler.HandleListModels)
+
+	huma.Register(openaiGroup, huma.Operation{
+		OperationID: "createChatCompletion",
+		Method:      http.MethodPost,
+		Path:        "/chat/completions",
+		Summary:     "Create chat completion",
+		Description: "Creates a model response for the given chat conversation.",
+		Tags:        []string{"OpenAI"},
+		Security: []map[string][]string{
+			{"apiKeyAuth": {}},
+		},
+	}, openaiHandler.HandleChatCompletion)
 }
