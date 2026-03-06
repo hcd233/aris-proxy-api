@@ -1,9 +1,8 @@
 package proxy
 
 import (
-	"fmt"
-
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -39,14 +38,6 @@ func GetLLMProxyConfig() *LLMProxyConfig {
 	return llmProxyConfig
 }
 
-// maskAPIKey masks an API key for safe logging, keeping first 4 and last 4 characters
-func maskAPIKey(key string) string {
-	if len(key) <= 8 {
-		return "***"
-	}
-	return fmt.Sprintf("%s***%s", key[:4], key[len(key)-4:])
-}
-
 // InitLLMProxyConfig initializes the LLM proxy configuration from config.yaml.
 // A *zap.Logger is accepted to avoid an import cycle (logger -> config).
 //
@@ -72,14 +63,14 @@ func InitLLMProxyConfig() {
 		maskedModels[name] = map[string]string{
 			"model":    mc.Model,
 			"base_url": mc.BaseURL,
-			"api_key":  maskAPIKey(mc.APIKey),
+			"api_key":  util.MaskSecret(mc.APIKey),
 		}
 	}
 
 	// Build masked API keys for structured logging
 	maskedAPIKeys := make(map[string]string, len(llmProxyConfig.APIKeys))
 	for name, key := range llmProxyConfig.APIKeys {
-		maskedAPIKeys[name] = maskAPIKey(key)
+		maskedAPIKeys[name] = util.MaskSecret(key)
 	}
 
 	logger.Logger().Info("[Proxy] LLM proxy config loaded",
