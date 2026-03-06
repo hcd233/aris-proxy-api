@@ -133,7 +133,6 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				fiberCtx.Set("Cache-Control", "no-cache")
 				fiberCtx.Set("Connection", "keep-alive")
 				fiberCtx.Set("Transfer-Encoding", "chunked")
-				fiberCtx.Set("X-Accel-Buffering", "no")
 
 				fiberCtx.Status(upstreamResp.StatusCode).Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 					defer upstreamResp.Body.Close()
