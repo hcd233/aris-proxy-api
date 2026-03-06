@@ -41,6 +41,10 @@ func GetLLMProxyConfig() *LLMProxyConfig {
 //	@update 2026-03-05 19:42:49
 func InitLLMProxyConfig() {
 	v := viper.New()
+
+	// 禁用嵌套 key 解析，避免模型名中的 "." 被当作路径分隔符
+	v.SetKeyDelimiter("::")
+
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
