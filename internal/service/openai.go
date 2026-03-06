@@ -129,13 +129,12 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		return &huma.StreamResponse{
 			Body: func(humaCtx huma.Context) {
 				fiberCtx := humafiber.Unwrap(humaCtx)
-				humaCtx.SetStatus(upstreamResp.StatusCode)
 				fiberCtx.Set("Content-Type", "text/event-stream")
 				fiberCtx.Set("Cache-Control", "no-cache")
 				fiberCtx.Set("Connection", "keep-alive")
 				fiberCtx.Set("Transfer-Encoding", "chunked")
 
-				fiberCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+				fiberCtx.Status(upstreamResp.StatusCode).Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 					defer upstreamResp.Body.Close()
 
 					var collectedChunks []*dto.ChatCompletionChunk
