@@ -50,9 +50,9 @@ var startServerCmd = &cobra.Command{
 
 		app.Use(
 			middleware.RecoverMiddleware(),
-			// middleware.FgprofMiddleware(),
-			// middleware.CORSMiddleware(),
-			// middleware.CompressMiddleware(),
+			middleware.FgprofMiddleware(),
+			middleware.CORSMiddleware(),
+			middleware.CompressMiddleware(),
 			middleware.TraceMiddleware(),
 			middleware.LogMiddleware(),
 		)
