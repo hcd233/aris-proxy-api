@@ -32,12 +32,6 @@ var upstreamHTTPClient = &http.Client{
 //	@update 2026-03-06 10:00:00
 type OpenAIService interface {
 	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsResponse, error)
-	// CreateChatCompletion 创建聊天补全
-	//
-	//	@param ctx context.Context
-	//	@param req *dto.ChatCompletionRequestBody
-	//	@return *ChatCompletionResult
-	//	@return error
 	CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error)
 }
 
@@ -67,12 +61,12 @@ func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.Lis
 
 	rsp.Body = &dto.ListModelsResponseBody{
 		Object: "list",
-		Data: lo.MapToSlice(config.Models, func(key string, model proxy.ModelConfig) *dto.OpenAIModel {
+		Data: lo.Map(lo.Keys(config.Models), func(key string, _ int) *dto.OpenAIModel {
 			return &dto.OpenAIModel{
-				ID:      model.Model,
+				ID:      key,
 				Created: time.Now().Unix(),
 				Object:  "model",
-				OwnedBy: key,
+				OwnedBy: "openai",
 			}
 		}),
 	}
