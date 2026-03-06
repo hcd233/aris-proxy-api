@@ -1,0 +1,63 @@
+#!/bin/sh
+# Pre-commit hook: run Go checks before committing
+
+# Path to the Go binary — override if Go is installed elsewhere, e.g. /usr/local/go/bin/go
+GO_BIN="${GO_BIN:-go}"
+
+# Allow Go to automatically download and switch to the toolchain version
+# required by go.mod (e.g. go 1.25.1 when the system only has 1.22.x)
+export GOTOOLCHAIN=auto
+
+# Ensure common Go install locations are in PATH
+export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin:$HOME/sdk/go/bin
+
+PASS="\033[32m[PASS]\033[0m"
+FAIL="\033[31m[FAIL]\033[0m"
+INFO="\033[34m[INFO]\033[0m"
+
+fail() {
+    printf "$FAIL %s\n" "$1"
+    exit 1
+}
+
+# --------------------------------------------------------------------------
+# 1. gofmt — auto-format source files
+# --------------------------------------------------------------------------
+printf "$INFO Running gofmt -w ...\n"
+gofmt -w .
+
+if ! git diff --quiet; then
+    printf "$FAIL gofmt reformatted the following files (please re-stage and commit):\n"
+    git diff --name-only | sed 's/^/       /'
+    echo ""
+    exit 1
+fi
+printf "$PASS gofmt\n"
+
+# --------------------------------------------------------------------------
+# 2. go mod tidy — verify go.mod / go.sum are consistent
+# --------------------------------------------------------------------------
+printf "$INFO Running go mod tidy...\n"
+$GO_BIN mod tidy
+
+if ! git diff --quiet go.mod go.sum; then
+    printf "$FAIL go.mod or go.sum changed after 'go mod tidy' (please re-stage and commit):\n"
+    git diff --name-only go.mod go.sum | sed 's/^/       /'
+    echo ""
+    exit 1
+fi
+printf "$PASS go mod tidy\n"
+
+# --------------------------------------------------------------------------
+# 3. go vet — static analysis
+# --------------------------------------------------------------------------
+printf "$INFO Running go vet ./...\n"
+
+if ! $GO_BIN vet ./... 2>&1; then
+    fail "go vet failed. Please fix the issues above before committing."
+fi
+printf "$PASS go vet\n"
+
+# --------------------------------------------------------------------------
+echo ""
+printf "$PASS All checks passed. Proceeding with commit.\n"
