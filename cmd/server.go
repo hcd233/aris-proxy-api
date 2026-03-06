@@ -14,7 +14,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/storage"
 	"github.com/hcd233/aris-proxy-api/internal/router"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -42,7 +41,7 @@ var startServerCmd = &cobra.Command{
 
 		database.InitDatabase()
 		cache.InitCache()
-		storage.InitObjectStorage()
+		// storage.InitObjectStorage()
 		config.InitLLMProxyConfig()
 		// cron.InitCronJobs()
 

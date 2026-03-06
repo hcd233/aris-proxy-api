@@ -40,10 +40,8 @@ func GetLLMProxyConfig() *LLMProxyConfig {
 //	@author centonhuang
 //	@update 2026-03-05 19:42:49
 func InitLLMProxyConfig() {
-	v := viper.New()
-
-	// 禁用嵌套 key 解析，避免模型名中的 "." 被当作路径分隔符
-	v.SetKeyDelimiter("::")
+	// Use "::" as key delimiter to avoid conflicts with "." in model names (e.g. "gpt-4.1")
+	v := viper.NewWithOptions(viper.KeyDelimiter("::"))
 
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
