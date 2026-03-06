@@ -52,9 +52,9 @@ var startServerCmd = &cobra.Command{
 			middleware.RecoverMiddleware(),
 			middleware.FgprofMiddleware(),
 			middleware.CORSMiddleware(),
-			middleware.CompressMiddleware(),
+			// middleware.CompressMiddleware(),
 			middleware.TraceMiddleware(),
-			middleware.LogMiddleware(),
+			// middleware.LogMiddleware(),
 		)
 
 		if config.Env != enum.EnvProduction {
