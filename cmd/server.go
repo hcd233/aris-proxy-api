@@ -47,14 +47,14 @@ var startServerCmd = &cobra.Command{
 
 		app := api.GetFiberApp()
 
-		app.Use(
+		// app.Use(
 		// middleware.RecoverMiddleware(),
 		// middleware.FgprofMiddleware(),
 		// middleware.CORSMiddleware(),
 		// middleware.CompressMiddleware(),
 		// middleware.TraceMiddleware(),
 		// middleware.LogMiddleware(),
-		)
+		// )
 
 		if config.Env != enum.EnvProduction {
 			router.RegisterDocsRouter()
