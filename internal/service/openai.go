@@ -147,6 +147,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 					scanner := bufio.NewScanner(upstreamResp.Body)
 					for scanner.Scan() {
 						line := scanner.Text()
+						logger.Info("[CreateChatCompletion] upstream sse response", zap.String("line", line))
 						if line == "" {
 							continue
 						}
