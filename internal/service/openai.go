@@ -144,31 +144,42 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				fiberCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 					defer upstreamResp.Body.Close()
 
-					scanner := bufio.NewScanner(upstreamResp.Body)
-					for scanner.Scan() {
-						line := scanner.Text()
-						logger.Info("[CreateChatCompletion] upstream sse response", zap.String("line", line))
-						if line == "" {
-							continue
-						}
-						// Replace model name in SSE data lines
-						const dataPrefix = "data: "
-						if strings.HasPrefix(line, dataPrefix) {
-							payload := line[len(dataPrefix):]
-							if payload != "[DONE]" {
-								chunk := &dto.ChatCompletionChunk{}
-								err := sonic.UnmarshalString(payload, chunk)
-								if err != nil {
-									logger.Warn("[CreateChatCompletion] unmarshal sse chunk error", zap.Error(err))
-									continue
+					// Use bufio.Reader.ReadString instead of bufio.Scanner to avoid
+					// batch pre-reading: ReadString blocks on I/O when upstream has no
+					// data yet, naturally pacing writes to match the upstream token rate
+					// and preventing multiple events from being coalesced (粘包).
+					reader := bufio.NewReader(upstreamResp.Body)
+					for {
+						raw, readErr := reader.ReadString('\n')
+						line := strings.TrimRight(raw, "\r\n")
+
+						if line != "" {
+							// Replace model name in SSE data lines
+							const dataPrefix = "data: "
+							if strings.HasPrefix(line, dataPrefix) {
+								payload := line[len(dataPrefix):]
+								if payload != "[DONE]" {
+									chunk := &dto.ChatCompletionChunk{}
+									if err := sonic.UnmarshalString(payload, chunk); err != nil {
+										logger.Warn("[CreateChatCompletion] unmarshal sse chunk error", zap.Error(err))
+									} else {
+										chunk.Model = req.Body.Model
+										logger.Info("[CreateChatCompletion] upstream sse chunk", zap.Any("chunk", chunk))
+										line = fmt.Sprintf("%s%s", dataPrefix, lo.Must1(sonic.Marshal(chunk)))
+									}
 								}
-								chunk.Model = req.Body.Model
-								line = fmt.Sprintf("%s%s", dataPrefix, lo.Must1(sonic.Marshal(chunk)))
+							}
+							fmt.Fprintf(w, "%s\n\n", line)
+							if err := w.Flush(); err != nil {
+								logger.Warn("[CreateChatCompletion] flush sse error", zap.Error(err))
+								return
 							}
 						}
-						fmt.Fprintf(w, "%s\n\n", line)
-						if err := w.Flush(); err != nil {
-							logger.Warn("[CreateChatCompletion] flush sse error", zap.Error(err))
+
+						if readErr != nil {
+							if readErr != io.EOF {
+								logger.Warn("[CreateChatCompletion] read upstream sse error", zap.Error(readErr))
+							}
 							return
 						}
 					}
