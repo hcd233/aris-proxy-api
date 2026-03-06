@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/proxy"
 )
 
 var upstreamHTTPClient = &http.Client{
@@ -67,7 +67,7 @@ func NewOpenAIService() OpenAIService {
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
 func (s *openAIService) CreateChatCompletion(_ context.Context, req *dto.ChatCompletionRequestBody) (*ChatCompletionResult, error) {
-	cfg := config.GetLLMProxyConfig()
+	cfg := proxy.GetLLMProxyConfig()
 	modelCfg, ok := cfg.Models[req.Model]
 	if !ok {
 		return &ChatCompletionResult{

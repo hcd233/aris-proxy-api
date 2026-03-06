@@ -10,6 +10,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
@@ -42,7 +43,7 @@ var startServerCmd = &cobra.Command{
 		database.InitDatabase()
 		cache.InitCache()
 		// storage.InitObjectStorage()
-		config.InitLLMProxyConfig()
+		proxy.InitLLMProxyConfig()
 		// cron.InitCronJobs()
 
 		app := api.GetFiberApp()

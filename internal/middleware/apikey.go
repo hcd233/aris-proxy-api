@@ -5,7 +5,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
@@ -17,7 +17,7 @@ import (
 //	@update 2026-03-05 18:00:00
 func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 	// 启动时构建 apiKey -> name 的反向索引
-	cfg := config.GetLLMProxyConfig()
+	cfg := proxy.GetLLMProxyConfig()
 	keyToName := lo.SliceToMap(lo.Keys(cfg.APIKeys), func(key string) (string, string) {
 		return cfg.APIKeys[key], key
 	})

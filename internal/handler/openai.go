@@ -12,8 +12,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v2"
-	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/service"
 	"github.com/samber/lo"
 )
@@ -68,10 +68,10 @@ func (h *openAIHandler) HandleListModels(_ context.Context, _ *dto.EmptyReq) (*d
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
 func loadModelsFromConfig() []*dto.OpenAIModel {
-	cfg := config.GetLLMProxyConfig()
+	cfg := proxy.GetLLMProxyConfig()
 	now := time.Now().Unix()
 
-	models := lo.MapToSlice(cfg.Models, func(key string, _ config.ModelConfig) *dto.OpenAIModel {
+	models := lo.MapToSlice(cfg.Models, func(key string, _ proxy.ModelConfig) *dto.OpenAIModel {
 		return &dto.OpenAIModel{
 			ID:      key,
 			Created: now,
