@@ -151,11 +151,11 @@ type FunctionCall struct {
 // ChatCompletionMessageFunctionToolCall 函数工具调用
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type ChatCompletionMessageFunctionToolCall struct {
 	ID       string        `json:"id" doc:"The ID of the tool call"`
 	Function *FunctionCall `json:"function" doc:"The function that the model called"`
-	Type     string        `json:"type" doc:"The type of the tool. Always 'function'"`
+	Type     enum.ToolType `json:"type" doc:"The type of the tool. Always 'function'"`
 }
 
 // CustomToolInput 自定义工具输入
@@ -245,10 +245,10 @@ type VoiceID struct {
 // ChatCompletionAudioParam 音频输出参数
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type ChatCompletionAudioParam struct {
-	Format string `json:"format" doc:"Specifies the output audio format (wav, aac, mp3, flac, opus, pcm16)"`
-	Voice  any    `json:"voice" doc:"The voice the model uses to respond (string enum or VoiceID object)"`
+	Format enum.AudioFormat `json:"format" doc:"Specifies the output audio format (wav, aac, mp3, flac, opus, pcm16)"`
+	Voice  any              `json:"voice" doc:"The voice the model uses to respond (string enum or VoiceID object)"`
 }
 
 // ==================== 响应格式 ====================
@@ -256,9 +256,9 @@ type ChatCompletionAudioParam struct {
 // ResponseFormatText 文本响应格式
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type ResponseFormatText struct {
-	Type string `json:"type" doc:"The type of response format being defined. Always 'text'"`
+	Type enum.ResponseFormatType `json:"type" doc:"The type of response format being defined. Always 'text'"`
 }
 
 // JSONSchema 结构化输出配置
@@ -275,10 +275,10 @@ type JSONSchema struct {
 // ResponseFormatJSONSchema JSON Schema响应格式
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type ResponseFormatJSONSchema struct {
-	Type       string      `json:"type" doc:"The type of response format being defined. Always 'json_schema'"`
-	JSONSchema *JSONSchema `json:"json_schema" doc:"Structured Outputs configuration options"`
+	Type       enum.ResponseFormatType `json:"type" doc:"The type of response format being defined. Always 'json_schema'"`
+	JSONSchema *JSONSchema             `json:"json_schema" doc:"Structured Outputs configuration options"`
 }
 
 // ResponseFormatJSONObject JSON对象响应格式
@@ -311,36 +311,48 @@ type FunctionDefinition struct {
 // ChatCompletionFunctionTool 函数工具
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type ChatCompletionFunctionTool struct {
 	Function *FunctionDefinition `json:"function" doc:"A function tool that can be used to generate a response"`
-	Type     string              `json:"type" doc:"The type of the tool. Always 'function'"`
+	Type     enum.ToolType       `json:"type" doc:"The type of the tool. Always 'function'"`
 }
 
 // TextFormat 文本格式（自定义工具）
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type TextFormat struct {
-	Type string `json:"type" doc:"Unconstrained text format. Always 'text'"`
+	Type enum.ContentPartType `json:"type" doc:"Unconstrained text format. Always 'text'"`
 }
 
 // Grammar 语法定义
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type Grammar struct {
-	Definition string `json:"definition" doc:"The grammar definition"`
-	Syntax     string `json:"syntax" doc:"The syntax of the grammar definition (lark or regex)"`
+	Definition string             `json:"definition" doc:"The grammar definition"`
+	Syntax     enum.GrammarSyntax `json:"syntax" doc:"The syntax of the grammar definition (lark or regex)"`
 }
 
 // GrammarFormat 语法格式（自定义工具）
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-09 10:00:00
 type GrammarFormat struct {
 	Grammar *Grammar `json:"grammar" doc:"Your chosen grammar"`
 	Type    string   `json:"type" doc:"Grammar format. Always 'grammar'"`
+}
+
+// ==================== 废弃的函数定义（用于 functions 参数） ====================
+
+// ChatCompletionFunctionDef 废弃的函数定义（用于 functions 参数）
+//
+//	@author centonhuang
+//	@update 2026-03-09 10:00:00
+type ChatCompletionFunctionDef struct {
+	Name        string              `json:"name" doc:"The name of the function to be called"`
+	Description string              `json:"description,omitempty" doc:"A description of what the function does"`
+	Parameters  *FunctionParameters `json:"parameters,omitempty" doc:"The parameters the function accepts, described as a JSON Schema object"`
 }
 
 // ChatCompletionCustomToolDefinition 自定义工具定义
@@ -503,7 +515,7 @@ type ChatCompletionRequestBody struct {
 	Audio                *ChatCompletionAudioParam        `json:"audio,omitempty" doc:"Parameters for audio output"`
 	FrequencyPenalty     *float64                         `json:"frequency_penalty,omitempty" doc:"Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency"`
 	FunctionCall         any                              `json:"function_call,omitempty" doc:"Deprecated in favor of tool_choice"`
-	Functions            []any                            `json:"functions,omitempty" doc:"Deprecated in favor of tools"`
+	Functions            []*ChatCompletionFunctionDef     `json:"functions,omitempty" doc:"Deprecated in favor of tools"`
 	LogitBias            map[string]float64               `json:"logit_bias,omitempty" doc:"Modify the likelihood of specified tokens appearing in the completion"`
 	Logprobs             *bool                            `json:"logprobs,omitempty" doc:"Whether to return log probabilities of the output tokens"`
 	MaxCompletionTokens  *int                             `json:"max_completion_tokens,omitempty" doc:"An upper bound for the number of tokens that can be generated"`

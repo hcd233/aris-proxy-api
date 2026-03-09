@@ -15,12 +15,12 @@ import (
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-06 18:08:53
-func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCompletionChunk, error) {
+func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCompletion, error) {
 	if len(chunks) == 0 {
 		return nil, fmt.Errorf("no chunks to concat")
 	}
 
-	ret := &dto.ChatCompletionChunk{}
+	ret := &dto.ChatCompletion{}
 
 	// choiceBuilders accumulates per-index delta state.
 	type choiceState struct {
@@ -95,18 +95,18 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 		}
 	}
 
-	ret.Choices = make([]*dto.ChatCompletionChunkChoice, 0, len(choiceOrder))
+	ret.Choices = make([]*dto.ChatCompletionChoice, 0, len(choiceOrder))
 	for _, idx := range choiceOrder {
 		cs := choiceMap[idx]
-		delta := &dto.ChatCompletionChunkDelta{
+		message := &dto.ChatCompletionMessageResponse{
 			Role:      cs.role,
 			Content:   strings.Join(cs.contentParts, ""),
 			Refusal:   strings.Join(cs.refusalParts, ""),
 			ToolCalls: cs.toolCalls,
 		}
-		ret.Choices = append(ret.Choices, &dto.ChatCompletionChunkChoice{
+		ret.Choices = append(ret.Choices, &dto.ChatCompletionChoice{
 			Index:        cs.index,
-			Delta:        delta,
+			Message:      message,
 			FinishReason: cs.finishReason,
 			Logprobs:     cs.logprobs,
 		})

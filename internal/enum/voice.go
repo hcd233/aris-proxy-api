@@ -39,6 +39,24 @@ const (
 	//	@update 2026-03-06 10:00:00
 	VoiceEcho Voice = "echo"
 
+	// VoiceFable Fable声音
+	//
+	//	@author centonhuang
+	//	@update 2026-03-09 10:00:00
+	VoiceFable Voice = "fable"
+
+	// VoiceNova Nova声音
+	//
+	//	@author centonhuang
+	//	@update 2026-03-09 10:00:00
+	VoiceNova Voice = "nova"
+
+	// VoiceOnyx Onyx声音
+	//
+	//	@author centonhuang
+	//	@update 2026-03-09 10:00:00
+	VoiceOnyx Voice = "onyx"
+
 	// VoiceSage Sage声音
 	//
 	//	@author centonhuang
