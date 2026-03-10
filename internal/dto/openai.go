@@ -558,8 +558,9 @@ type ChatCompletionChunkChoice struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionChunkDelta struct {
-	Content   string                           `json:"content,omitempty" doc:"内容增量"`
-	Refusal   string                           `json:"refusal,omitempty" doc:"拒绝消息增量"`
-	Role      enum.Role                        `json:"role,omitempty" doc:"角色"`
-	ToolCalls []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用增量"`
+	Content          string                           `json:"content,omitempty" doc:"内容增量"`
+	ReasoningContent string                           `json:"reasoning_content,omitempty" doc:"推理内容增量"`
+	Refusal          string                           `json:"refusal,omitempty" doc:"拒绝消息增量"`
+	Role             enum.Role                        `json:"role,omitempty" doc:"角色"`
+	ToolCalls        []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用增量"`
 }
