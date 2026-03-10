@@ -9,7 +9,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"go.uber.org/zap"
@@ -21,7 +21,7 @@ import (
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type MessageDAO struct {
-	baseDAO[model.Message]
+	baseDAO[dbmodel.Message]
 }
 
 // StoreMessageChain 存储消息链（带链式去重）
@@ -34,7 +34,7 @@ type MessageDAO struct {
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
-func (dao *MessageDAO) StoreMessageChain(ctx context.Context, apiKeyName string, messages []*dto.ChatCompletionMessageParam, response *dto.ChatCompletionMessageParam) error {
+func (dao *MessageDAO) StoreMessageChain(ctx context.Context, apiKeyName string, model string, messages []*dto.ChatCompletionMessageParam, response *dto.ChatCompletionMessageParam) error {
 	logger := logger.WithCtx(ctx)
 
 	// 2. 构建完整消息链（用户消息 + 模型回复）
@@ -68,7 +68,7 @@ func (dao *MessageDAO) StoreMessageChain(ctx context.Context, apiKeyName string,
 
 	for i := len(fullChain) - 1; i >= 0; i-- {
 		// 查询数据库中是否存在相同(apiKeyName, checkSum)的消息
-		var existingMsg model.Message
+		var existingMsg dbmodel.Message
 		err := db.Where("api_key_name = ? AND check_sum = ?", apiKeyName, checksums[i]).
 			Where("deleted_at = 0").
 			First(&existingMsg).Error
@@ -115,7 +115,7 @@ func (dao *MessageDAO) StoreMessageChain(ctx context.Context, apiKeyName string,
 	// 需要找到insertStartIndex之前的那条消息的ID作为起始preMessageID
 	if insertStartIndex > 0 {
 		// 查询insertStartIndex-1对应的消息是否存在
-		var prevMsg model.Message
+		var prevMsg dbmodel.Message
 		err := db.Where("api_key_name = ? AND check_sum = ?", apiKeyName, checksums[insertStartIndex-1]).
 			Where("deleted_at = 0").
 			First(&prevMsg).Error
@@ -133,12 +133,13 @@ func (dao *MessageDAO) StoreMessageChain(ctx context.Context, apiKeyName string,
 	}
 
 	// 6. 构建需要插入的消息记录
-	messagesToInsert := make([]*model.Message, 0, len(fullChain)-insertStartIndex)
+	messagesToInsert := make([]*dbmodel.Message, 0, len(fullChain)-insertStartIndex)
 
 	for i := insertStartIndex; i < len(fullChain); i++ {
 		msg := fullChain[i]
-		msgModel := &model.Message{
+		msgModel := &dbmodel.Message{
 			APIKeyName:   apiKeyName,
+			Model:        model,
 			Message:      *msg,
 			CheckSum:     checksums[i],
 			PreMessageID: preMessageID,

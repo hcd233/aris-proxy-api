@@ -17,6 +17,7 @@ type PingTask struct {
 type MessageStoreTask struct {
 	Ctx        context.Context
 	APIKeyName string
+	Model      string
 	Messages   []*ChatCompletionMessageParam // 用户请求消息列表
 	Response   *ChatCompletionMessageParam   // 模型回复消息
 }

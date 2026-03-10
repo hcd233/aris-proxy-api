@@ -82,7 +82,7 @@ func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
 func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 	return pm.messageStorePool.Go(func() {
 		logger := logger.WithCtx(task.Ctx)
-		if err := pm.messageDAO.StoreMessageChain(task.Ctx, task.APIKeyName, task.Messages, task.Response); err != nil {
+		if err := pm.messageDAO.StoreMessageChain(task.Ctx, task.APIKeyName, task.Model, task.Messages, task.Response); err != nil {
 			logger.Error("[PoolManager] failed to store message chain", zap.Error(err))
 		} else {
 			logger.Info("[PoolManager] message chain stored successfully")

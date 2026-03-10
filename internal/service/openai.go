@@ -13,7 +13,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -36,6 +38,48 @@ type OpenAIService interface {
 }
 
 type openAIService struct{}
+
+// submitMessageStoreTask 提交消息存储异步任务
+//
+//	@receiver s *openAIService
+//	@param ctx context.Context
+//	@param req *dto.ChatCompletionRequest
+//	@param upstreamModel string
+//	@param completion *dto.ChatCompletion
+//	@author centonhuang
+//	@update 2026-03-10 11:00:00
+func (s *openAIService) submitMessageStoreTask(ctx context.Context, req *dto.ChatCompletionRequest, upstreamModel string, completion *dto.ChatCompletion) {
+	logger := logger.WithCtx(ctx)
+
+	// Get apiKeyName from context
+	apiKeyName, ok := ctx.Value(constant.CtxKeyUserName).(string)
+	if !ok || apiKeyName == "" {
+		logger.Warn("[submitMessageStoreTask] apiKeyName not found in context")
+		return
+	}
+
+	// Extract assistant message from completion
+	var assistantMsg *dto.ChatCompletionMessageParam
+	if len(completion.Choices) > 0 && completion.Choices[0].Message != nil {
+		assistantMsg = completion.Choices[0].Message
+	}
+
+	// Convert request messages
+	requestMsgs := make([]*dto.ChatCompletionMessageParam, len(req.Body.Messages))
+	copy(requestMsgs, req.Body.Messages)
+
+	task := &dto.MessageStoreTask{
+		Ctx:        ctx,
+		APIKeyName: apiKeyName,
+		Model:      upstreamModel,
+		Messages:   requestMsgs,
+		Response:   assistantMsg,
+	}
+
+	if err := pool.GetPoolManager().SubmitMessageStoreTask(task); err != nil {
+		logger.Error("[submitMessageStoreTask] failed to submit message store task", zap.Error(err))
+	}
+}
 
 // NewOpenAIService 创建OpenAI服务
 //
@@ -196,6 +240,8 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 									logger.Warn("[CreateChatCompletion] concat sse chunks error", zap.Error(mergeErr))
 								} else {
 									logger.Info("[CreateChatCompletion] merged sse response", zap.Any("merged", merged))
+									// Submit async message store task
+									s.submitMessageStoreTask(ctx, req, modelCfg.Model, merged)
 								}
 							}
 							return
@@ -233,9 +279,13 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 			if err != nil {
 				logger.Warn("[CreateChatCompletion] unmarshal upstream response error", zap.Error(err))
 				humaCtx.BodyWriter().Write(respBody)
+				return
 			}
 			completion.Model = req.Body.Model
 			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(completion)))
+
+			// Submit async message store task
+			s.submitMessageStoreTask(ctx, req, modelCfg.Model, completion)
 		},
 	}, nil
 }
