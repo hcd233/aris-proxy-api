@@ -27,7 +27,7 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 		role         enum.Role
 		contentParts []string
 		refusalParts []string
-		toolCalls    []any
+		toolCalls    []*dto.ChatCompletionMessageToolCall
 		finishReason enum.FinishReason
 		logprobs     *dto.Logprobs
 		index        int
@@ -56,9 +56,6 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 		}
 
 		for _, choice := range chunk.Choices {
-			if choice == nil {
-				continue
-			}
 			cs, exists := choiceMap[choice.Index]
 			if !exists {
 				cs = &choiceState{index: choice.Index}
@@ -66,19 +63,17 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 				choiceOrder = append(choiceOrder, choice.Index)
 			}
 
-			if choice.Delta != nil {
-				if cs.role == "" && choice.Delta.Role != "" {
-					cs.role = choice.Delta.Role
-				}
-				if choice.Delta.Content != "" {
-					cs.contentParts = append(cs.contentParts, choice.Delta.Content)
-				}
-				if choice.Delta.Refusal != "" {
-					cs.refusalParts = append(cs.refusalParts, choice.Delta.Refusal)
-				}
-				if len(choice.Delta.ToolCalls) > 0 {
-					cs.toolCalls = append(cs.toolCalls, choice.Delta.ToolCalls...)
-				}
+			if cs.role == "" && choice.Delta.Role != "" {
+				cs.role = choice.Delta.Role
+			}
+			if choice.Delta.Content != "" {
+				cs.contentParts = append(cs.contentParts, choice.Delta.Content)
+			}
+			if choice.Delta.Refusal != "" {
+				cs.refusalParts = append(cs.refusalParts, choice.Delta.Refusal)
+			}
+			if len(choice.Delta.ToolCalls) > 0 {
+				cs.toolCalls = append(cs.toolCalls, choice.Delta.ToolCalls...)
 			}
 
 			if choice.FinishReason != "" {

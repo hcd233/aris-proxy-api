@@ -4,764 +4,562 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
-// ==================== 错误相关 ====================
+// ==================== Chat Completion Request DTOs ====================
 
-// OpenAIError OpenAI格式错误
+// ChatCompletionReq Chat Completions请求
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type OpenAIError struct {
-	Message string `json:"message" doc:"Error message"`
-	Type    string `json:"type" doc:"Error type"`
-	Code    string `json:"code" doc:"Error code"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionReq struct {
+	Messages             []ChatCompletionMessageParam     `json:"messages" doc:"对话消息列表"`
+	Model                string                           `json:"model" doc:"模型ID"`
+	Audio                *ChatCompletionAudioParam        `json:"audio,omitempty" doc:"音频输出参数"`
+	FrequencyPenalty     *float64                         `json:"frequency_penalty,omitempty" doc:"频率惩罚(-2.0到2.0)"`
+	LogitBias            map[string]int                   `json:"logit_bias,omitempty" doc:"token偏差映射"`
+	Logprobs             *bool                            `json:"logprobs,omitempty" doc:"是否返回log概率"`
+	MaxCompletionTokens  *int                             `json:"max_completion_tokens,omitempty" doc:"最大完成token数（包含推理token）"`
+	MaxTokens            *int                             `json:"max_tokens,omitempty" doc:"最大token数（已废弃）"`
+	Metadata             map[string]string                `json:"metadata,omitempty" doc:"元数据(最多16个键值对)"`
+	Modalities           []enum.ModalityType              `json:"modalities,omitempty" doc:"输出模态类型"`
+	N                    *int                             `json:"n,omitempty" doc:"生成选择数量"`
+	ParallelToolCalls    *bool                            `json:"parallel_tool_calls,omitempty" doc:"是否启用并行工具调用"`
+	Prediction           *ChatCompletionPredictionContent `json:"prediction,omitempty" doc:"预测输出内容"`
+	PresencePenalty      *float64                         `json:"presence_penalty,omitempty" doc:"存在惩罚(-2.0到2.0)"`
+	PromptCacheKey       string                           `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`
+	PromptCacheRetention enum.PromptCacheRetention        `json:"prompt_cache_retention,omitempty" doc:"提示缓存保留策略"`
+	ReasoningEffort      enum.ReasoningEffort             `json:"reasoning_effort,omitempty" doc:"推理努力级别"`
+	ResponseFormat       *ResponseFormat                  `json:"response_format,omitempty" doc:"响应格式"`
+	SafetyIdentifier     string                           `json:"safety_identifier,omitempty" doc:"安全标识符"`
+	Seed                 *int                             `json:"seed,omitempty" doc:"随机种子"`
+	ServiceTier          enum.ServiceTier                 `json:"service_tier,omitempty" doc:"服务层级"`
+	Stop                 any                              `json:"stop,omitempty" doc:"停止序列(字符串或字符串数组)"`
+	Store                *bool                            `json:"store,omitempty" doc:"是否存储输出"`
+	Stream               *bool                            `json:"stream,omitempty" doc:"是否流式响应"`
+	StreamOptions        *ChatCompletionStreamOptions     `json:"stream_options,omitempty" doc:"流式选项"`
+	Temperature          *float64                         `json:"temperature,omitempty" doc:"采样温度(0-2)"`
+	ToolChoice           any                              `json:"tool_choice,omitempty" doc:"工具选择(字符串或对象)"`
+	Tools                []ChatCompletionTool             `json:"tools,omitempty" doc:"可用工具列表"`
+	TopLogprobs          *int                             `json:"top_logprobs,omitempty" doc:"返回的最可能token数量(0-20)"`
+	TopP                 *float64                         `json:"top_p,omitempty" doc:"核采样概率质量"`
+	User                 string                           `json:"user,omitempty" doc:"用户标识符(已废弃，使用safety_identifier或prompt_cache_key)"`
+	Verbosity            enum.Verbosity                   `json:"verbosity,omitempty" doc:"响应详细程度"`
+	WebSearchOptions     *WebSearchOptions                `json:"web_search_options,omitempty" doc:"网页搜索选项"`
 }
 
-// OpenAIErrorResponse OpenAI格式错误响应
+// ChatCompletionMessageParam 聊天完成消息参数接口
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type OpenAIErrorResponse struct {
-	Error *OpenAIError `json:"error" doc:"Error object"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionMessageParam struct {
+	Role    enum.Role `json:"role" doc:"消息角色"`
+	Content any       `json:"content" doc:"消息内容(字符串或数组)"`
+	Name    string    `json:"name,omitempty" doc:"参与者名称"`
+
+	// 开发者/系统消息特有
+
+	// 用户消息特有
+
+	// 助手消息特有
+	Audio        *ChatCompletionAudioReference    `json:"audio,omitempty" doc:"音频响应数据"`
+	ToolCalls    []ChatCompletionMessageToolCall  `json:"tool_calls,omitempty" doc:"工具调用列表"`
+	FunctionCall *ChatCompletionFunctionCallParam `json:"function_call,omitempty" doc:"函数调用(已废弃)"`
+	Refusal      string                           `json:"refusal,omitempty" doc:"拒绝消息"`
+
+	// 工具消息特有
+	ToolCallID string `json:"tool_call_id,omitempty" doc:"工具调用ID"`
 }
 
-// ==================== 内容部分 ====================
+// ChatCompletionAudioReference 音频引用
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionAudioReference struct {
+	ID string `json:"id" doc:"音频响应的唯一标识符"`
+}
+
+// ChatCompletionFunctionCallParam 函数调用参数（已废弃）
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionFunctionCallParam struct {
+	Arguments string `json:"arguments" doc:"函数参数(JSON格式)"`
+	Name      string `json:"name" doc:"函数名称"`
+}
 
 // ChatCompletionContentPartText 文本内容部分
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-10 10:00:00
 type ChatCompletionContentPartText struct {
-	Type enum.ContentPartType `json:"type" doc:"The type of the content part. Always 'text'"`
-	Text string               `json:"text" doc:"The text content"`
-}
-
-// ImageUrl 图片URL结构
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ImageUrl struct {
-	URL    string           `json:"url" doc:"Either a URL of the image or the base64 encoded image data"`
-	Detail enum.ImageDetail `json:"detail,omitempty" doc:"Specifies the detail level of the image (auto, low, high)"`
+	Type string `json:"type" doc:"内容类型: text"`
+	Text string `json:"text" doc:"文本内容"`
 }
 
 // ChatCompletionContentPartImage 图片内容部分
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-10 10:00:00
 type ChatCompletionContentPartImage struct {
-	Type     enum.ContentPartType `json:"type" doc:"The type of the content part. Always 'image_url'"`
-	ImageUrl *ImageUrl            `json:"image_url" doc:"The image URL object"`
+	Type     string                 `json:"type" doc:"内容类型: image_url"`
+	ImageURL ChatCompletionImageURL `json:"image_url" doc:"图片URL信息"`
 }
 
-// InputAudio 输入音频结构
+// ChatCompletionImageURL 图片URL信息
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type InputAudio struct {
-	Data   string                `json:"data" doc:"Base64 encoded audio data"`
-	Format enum.InputAudioFormat `json:"format" doc:"The format of the encoded audio data (wav, mp3)"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionImageURL struct {
+	URL    string           `json:"url" doc:"图片URL或base64编码数据"`
+	Detail enum.ImageDetail `json:"detail,omitempty" doc:"细节级别: auto/low/high"`
 }
 
 // ChatCompletionContentPartInputAudio 音频输入内容部分
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-10 10:00:00
 type ChatCompletionContentPartInputAudio struct {
-	Type       enum.ContentPartType `json:"type" doc:"The type of the content part. Always 'input_audio'"`
-	InputAudio *InputAudio          `json:"input_audio" doc:"The input audio object"`
+	Type       string                          `json:"type" doc:"内容类型: input_audio"`
+	InputAudio ChatCompletionInputAudioContent `json:"input_audio" doc:"音频输入内容"`
 }
 
-// FileData 文件数据结构
+// ChatCompletionInputAudioContent 音频输入内容
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type FileData struct {
-	FileData string `json:"file_data,omitempty" doc:"The base64 encoded file data"`
-	FileID   string `json:"file_id,omitempty" doc:"The ID of an uploaded file to use as input"`
-	Filename string `json:"filename,omitempty" doc:"The name of the file"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionInputAudioContent struct {
+	Data   string                `json:"data" doc:"base64编码的音频数据"`
+	Format enum.InputAudioFormat `json:"format" doc:"音频格式: wav/mp3"`
 }
 
-// FileContentPart 文件内容部分
+// ChatCompletionContentPartFile 文件内容部分
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type FileContentPart struct {
-	Type enum.ContentPartType `json:"type" doc:"The type of the content part. Always 'file'"`
-	File *FileData            `json:"file" doc:"The file data object"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionContentPartFile struct {
+	Type string                    `json:"type" doc:"内容类型: file"`
+	File ChatCompletionFileContent `json:"file" doc:"文件内容"`
 }
 
-// ChatCompletionContentPartRefusal 拒绝内容部分
+// ChatCompletionFileContent 文件内容
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionContentPartRefusal struct {
-	Type    enum.ContentPartType `json:"type" doc:"The type of the content part. Always 'refusal'"`
-	Refusal string               `json:"refusal" doc:"The refusal message generated by the model"`
-}
-
-// ==================== 消息参数 ====================
-
-// ChatCompletionDeveloperMessageParam 开发者消息参数
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionDeveloperMessageParam struct {
-	Role    string `json:"role" doc:"The role of the message author. Always 'developer'"`
-	Content any    `json:"content" doc:"The contents of the developer message (string or array of ChatCompletionContentPartText)"`
-	Name    string `json:"name,omitempty" doc:"An optional name for the participant"`
-}
-
-// ChatCompletionSystemMessageParam 系统消息参数
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionSystemMessageParam struct {
-	Role    string `json:"role" doc:"The role of the message author. Always 'system'"`
-	Content any    `json:"content" doc:"The contents of the system message (string or array of ChatCompletionContentPartText)"`
-	Name    string `json:"name,omitempty" doc:"An optional name for the participant"`
-}
-
-// ChatCompletionUserMessageParam 用户消息参数
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionUserMessageParam struct {
-	Role    string `json:"role" doc:"The role of the message author. Always 'user'"`
-	Content any    `json:"content" doc:"The contents of the user message (string or array of ChatCompletionContentPart)"`
-	Name    string `json:"name,omitempty" doc:"An optional name for the participant"`
-}
-
-// ChatCompletionAssistantMessageParamAudio 助手消息音频数据
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionAssistantMessageParamAudio struct {
-	ID string `json:"id" doc:"Unique identifier for a previous audio response from the model"`
-}
-
-// FunctionCall 函数调用（已废弃）
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type FunctionCall struct {
-	Arguments string `json:"arguments" doc:"The arguments to call the function with, as generated by the model in JSON format"`
-	Name      string `json:"name" doc:"The name of the function to call"`
-}
-
-// ChatCompletionMessageFunctionToolCall 函数工具调用
-//
-//	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type ChatCompletionMessageFunctionToolCall struct {
-	ID       string        `json:"id" doc:"The ID of the tool call"`
-	Function *FunctionCall `json:"function" doc:"The function that the model called"`
-	Type     enum.ToolType `json:"type" doc:"The type of the tool. Always 'function'"`
-}
-
-// CustomToolInput 自定义工具输入
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type CustomToolInput struct {
-	Input string `json:"input" doc:"The input for the custom tool call generated by the model"`
-	Name  string `json:"name" doc:"The name of the custom tool to call"`
-}
-
-// ChatCompletionMessageCustomToolCall 自定义工具调用
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionMessageCustomToolCall struct {
-	ID     string           `json:"id" doc:"The ID of the tool call"`
-	Custom *CustomToolInput `json:"custom" doc:"The custom tool that the model called"`
-	Type   enum.ToolType    `json:"type" doc:"The type of the tool. Always 'custom'"`
-}
-
-// ChatCompletionAssistantMessageParam 助手消息参数
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionAssistantMessageParam struct {
-	Role         string                                    `json:"role" doc:"The role of the message author. Always 'assistant'"`
-	Audio        *ChatCompletionAssistantMessageParamAudio `json:"audio,omitempty" doc:"Data about a previous audio response from the model"`
-	Content      any                                       `json:"content,omitempty" doc:"The contents of the assistant message (string or array of content parts)"`
-	FunctionCall *FunctionCall                             `json:"function_call,omitempty" doc:"Deprecated: replaced by tool_calls"`
-	Name         string                                    `json:"name,omitempty" doc:"An optional name for the participant"`
-	Refusal      string                                    `json:"refusal,omitempty" doc:"The refusal message by the assistant"`
-	ToolCalls    []any                                     `json:"tool_calls,omitempty" doc:"The tool calls generated by the model"`
-}
-
-// ChatCompletionToolMessageParam 工具消息参数
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionToolMessageParam struct {
-	Role       string `json:"role" doc:"The role of the message author. Always 'tool'"`
-	Content    any    `json:"content" doc:"The contents of the tool message (string or array of ChatCompletionContentPartText)"`
-	ToolCallID string `json:"tool_call_id" doc:"Tool call that this message is responding to"`
-}
-
-// ChatCompletionFunctionMessageParam 函数消息参数（已废弃）
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionFunctionMessageParam struct {
-	Role    string `json:"role" doc:"The role of the message author. Always 'function'"`
-	Content string `json:"content" doc:"The contents of the function message"`
-	Name    string `json:"name" doc:"The name of the function to call"`
-}
-
-// ChatCompletionMessageParam 聊天消息参数（通用接口）
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionMessageParam any
-
-// ChatCompletionMessage 聊天消息（简化版本，用于向后兼容）
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionMessage struct {
-	Role         string `json:"role" doc:"The role of the message author (system, user, assistant, developer, tool, function)"`
-	Content      any    `json:"content,omitempty" doc:"The content of the message (string or array of content parts)"`
-	Name         string `json:"name,omitempty" doc:"Optional name for the participant"`
-	ToolCallID   string `json:"tool_call_id,omitempty" doc:"Tool call that this message is responding to (tool role)"`
-	ToolCalls    any    `json:"tool_calls,omitempty" doc:"Tool calls generated by the model (assistant role)"`
-	FunctionCall any    `json:"function_call,omitempty" doc:"Deprecated: function call generated by the model (assistant role)"`
-	Refusal      string `json:"refusal,omitempty" doc:"Refusal message by the assistant"`
-	Audio        any    `json:"audio,omitempty" doc:"Audio data for the message"`
-}
-
-// ==================== 音频参数 ====================
-
-// VoiceID 自定义声音引用
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type VoiceID struct {
-	ID string `json:"id" doc:"The custom voice ID, e.g. 'voice_1234'"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionFileContent struct {
+	FileData string `json:"file_data,omitempty" doc:"base64编码的文件数据"`
+	FileID   string `json:"file_id,omitempty" doc:"上传文件的ID"`
+	Filename string `json:"filename,omitempty" doc:"文件名"`
 }
 
 // ChatCompletionAudioParam 音频输出参数
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
+//	@update 2026-03-10 10:00:00
 type ChatCompletionAudioParam struct {
-	Format enum.AudioFormat `json:"format" doc:"Specifies the output audio format (wav, aac, mp3, flac, opus, pcm16)"`
-	Voice  any              `json:"voice" doc:"The voice the model uses to respond (string enum or VoiceID object)"`
+	Format enum.AudioFormat `json:"format" doc:"输出音频格式"`
+	Voice  any              `json:"voice" doc:"声音(字符串或对象{id})"`
 }
 
-// ==================== 响应格式 ====================
-
-// ResponseFormatText 文本响应格式
+// ChatCompletionPredictionContent 预测输出内容
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type ResponseFormatText struct {
-	Type enum.ResponseFormatType `json:"type" doc:"The type of response format being defined. Always 'text'"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionPredictionContent struct {
+	Type    string `json:"type" doc:"类型: content"`
+	Content any    `json:"content" doc:"内容(字符串或数组)"`
 }
 
-// JSONSchema 结构化输出配置
+// ResponseFormat 响应格式
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type JSONSchema struct {
-	Name        string         `json:"name" doc:"The name of the response format"`
-	Description string         `json:"description,omitempty" doc:"A description of what the response format is for"`
-	Schema      map[string]any `json:"schema,omitempty" doc:"The schema for the response format, described as a JSON Schema object"`
-	Strict      *bool          `json:"strict,omitempty" doc:"Whether to enable strict schema adherence when generating the output"`
+//	@update 2026-03-10 10:00:00
+type ResponseFormat struct {
+	Type       enum.ResponseFormatType `json:"type" doc:"响应格式类型: text/json_object/json_schema"`
+	JSONSchema *JSONSchemaFormat       `json:"json_schema,omitempty" doc:"JSON Schema格式配置"`
 }
 
-// ResponseFormatJSONSchema JSON Schema响应格式
+// JSONSchemaFormat JSON Schema格式配置
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type ResponseFormatJSONSchema struct {
-	Type       enum.ResponseFormatType `json:"type" doc:"The type of response format being defined. Always 'json_schema'"`
-	JSONSchema *JSONSchema             `json:"json_schema" doc:"Structured Outputs configuration options"`
+//	@update 2026-03-10 10:00:00
+type JSONSchemaFormat struct {
+	Name        string         `json:"name" doc:"响应格式名称"`
+	Description string         `json:"description,omitempty" doc:"响应格式描述"`
+	Schema      map[string]any `json:"schema,omitempty" doc:"JSON Schema对象"`
+	Strict      *bool          `json:"strict,omitempty" doc:"是否启用严格模式"`
 }
 
-// ResponseFormatJSONObject JSON对象响应格式
+// ChatCompletionStreamOptions 流式选项
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ResponseFormatJSONObject struct {
-	Type enum.ResponseFormatType `json:"type" doc:"The type of response format being defined. Always 'json_object'"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionStreamOptions struct {
+	IncludeObfuscation *bool `json:"include_obfuscation,omitempty" doc:"是否包含混淆数据"`
+	IncludeUsage       *bool `json:"include_usage,omitempty" doc:"是否包含使用量统计"`
 }
 
-// ==================== 工具定义 ====================
-
-// FunctionParameters 函数参数（JSON Schema）
+// ChatCompletionTool 聊天完成工具
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type FunctionParameters map[string]any
+//	@update 2026-03-10 10:00:00
+type ChatCompletionTool struct {
+	Type     enum.ToolType         `json:"type" doc:"工具类型: function/custom"`
+	Function *FunctionDefinition   `json:"function,omitempty" doc:"函数定义"`
+	Custom   *CustomToolDefinition `json:"custom,omitempty" doc:"自定义工具定义"`
+}
 
 // FunctionDefinition 函数定义
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-10 10:00:00
 type FunctionDefinition struct {
-	Name        string              `json:"name" doc:"The name of the function to be called"`
-	Description string              `json:"description,omitempty" doc:"A description of what the function does"`
-	Parameters  *FunctionParameters `json:"parameters,omitempty" doc:"The parameters the function accepts, described as a JSON Schema object"`
-	Strict      *bool               `json:"strict,omitempty" doc:"Whether to enable strict schema adherence when generating the function call"`
+	Name        string         `json:"name" doc:"函数名称"`
+	Description string         `json:"description,omitempty" doc:"函数描述"`
+	Parameters  map[string]any `json:"parameters,omitempty" doc:"参数JSON Schema"`
+	Strict      *bool          `json:"strict,omitempty" doc:"是否启用严格模式"`
 }
 
-// ChatCompletionFunctionTool 函数工具
+// CustomToolDefinition 自定义工具定义
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type ChatCompletionFunctionTool struct {
-	Function *FunctionDefinition `json:"function" doc:"A function tool that can be used to generate a response"`
-	Type     enum.ToolType       `json:"type" doc:"The type of the tool. Always 'function'"`
+//	@update 2026-03-10 10:00:00
+type CustomToolDefinition struct {
+	Name        string            `json:"name" doc:"自定义工具名称"`
+	Description string            `json:"description,omitempty" doc:"自定义工具描述"`
+	Format      *CustomToolFormat `json:"format,omitempty" doc:"输入格式"`
 }
 
-// TextFormat 文本格式（自定义工具）
+// CustomToolFormat 自定义工具格式
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type TextFormat struct {
-	Type enum.ContentPartType `json:"type" doc:"Unconstrained text format. Always 'text'"`
+//	@update 2026-03-10 10:00:00
+type CustomToolFormat struct {
+	Type    string          `json:"type" doc:"格式类型: text/grammar"`
+	Grammar *GrammarContent `json:"grammar,omitempty" doc:"语法定义(当type=grammar时)"`
 }
 
-// Grammar 语法定义
+// GrammarContent 语法内容
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type Grammar struct {
-	Definition string             `json:"definition" doc:"The grammar definition"`
-	Syntax     enum.GrammarSyntax `json:"syntax" doc:"The syntax of the grammar definition (lark or regex)"`
+//	@update 2026-03-10 10:00:00
+type GrammarContent struct {
+	Definition string             `json:"definition" doc:"语法定义"`
+	Syntax     enum.GrammarSyntax `json:"syntax" doc:"语法类型: lark/regex"`
 }
 
-// GrammarFormat 语法格式（自定义工具）
+// ChatCompletionToolChoice 工具选择（具体结构）
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type GrammarFormat struct {
-	Grammar *Grammar `json:"grammar" doc:"Your chosen grammar"`
-	Type    string   `json:"type" doc:"Grammar format. Always 'grammar'"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionToolChoice struct {
+	Type         string              `json:"type" doc:"工具类型: function/custom/allowed_tools"`
+	Function     *ToolChoiceFunction `json:"function,omitempty" doc:"函数工具选择"`
+	Custom       *ToolChoiceCustom   `json:"custom,omitempty" doc:"自定义工具选择"`
+	AllowedTools *AllowedToolsConfig `json:"allowed_tools,omitempty" doc:"允许的工具配置"`
 }
 
-// ==================== 废弃的函数定义（用于 functions 参数） ====================
-
-// ChatCompletionFunctionDef 废弃的函数定义（用于 functions 参数）
+// ToolChoiceFunction 函数工具选择
 //
 //	@author centonhuang
-//	@update 2026-03-09 10:00:00
-type ChatCompletionFunctionDef struct {
-	Name        string              `json:"name" doc:"The name of the function to be called"`
-	Description string              `json:"description,omitempty" doc:"A description of what the function does"`
-	Parameters  *FunctionParameters `json:"parameters,omitempty" doc:"The parameters the function accepts, described as a JSON Schema object"`
+//	@update 2026-03-10 10:00:00
+type ToolChoiceFunction struct {
+	Name string `json:"name" doc:"函数名称"`
 }
 
-// ChatCompletionCustomToolDefinition 自定义工具定义
+// ToolChoiceCustom 自定义工具选择
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionCustomToolDefinition struct {
-	Name        string `json:"name" doc:"The name of the custom tool"`
-	Description string `json:"description,omitempty" doc:"Optional description of the custom tool"`
-	Format      any    `json:"format,omitempty" doc:"The input format for the custom tool (TextFormat or GrammarFormat)"`
+//	@update 2026-03-10 10:00:00
+type ToolChoiceCustom struct {
+	Name string `json:"name" doc:"自定义工具名称"`
 }
 
-// ChatCompletionCustomTool 自定义工具
+// AllowedToolsConfig 允许的工具配置
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionCustomTool struct {
-	Custom *ChatCompletionCustomToolDefinition `json:"custom" doc:"A custom tool that processes input using a specified format"`
-	Type   enum.ToolType                       `json:"type" doc:"The type of the custom tool. Always 'custom'"`
+//	@update 2026-03-10 10:00:00
+type AllowedToolsConfig struct {
+	Mode  string           `json:"mode" doc:"模式: auto/required"`
+	Tools []map[string]any `json:"tools" doc:"允许的工具定义列表"`
 }
 
-// ChatCompletionTool 工具定义（通用接口）
+// WebSearchOptions 网页搜索选项
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionTool any
-
-// ==================== 函数调用选项（已废弃） ====================
-
-// ChatCompletionFunctionCallOption 函数调用选项
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionFunctionCallOption struct {
-	Name string `json:"name" doc:"The name of the function to call"`
-}
-
-// ==================== 工具选择 ====================
-
-// ChatCompletionNamedToolChoice 指定函数工具选择
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionNamedToolChoice struct {
-	Function *ChatCompletionNamedToolChoiceFunction `json:"function" doc:"Specifies a tool the model should use"`
-	Type     enum.ToolType                          `json:"type" doc:"For function calling, the type is always 'function'"`
-}
-
-// ChatCompletionNamedToolChoiceFunction 指定工具选择的函数
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionNamedToolChoiceFunction struct {
-	Name string `json:"name" doc:"The name of the function to call"`
-}
-
-// ChatCompletionNamedToolChoiceCustom 指定自定义工具选择
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionNamedToolChoiceCustom struct {
-	Custom *ChatCompletionNamedToolChoiceCustomTool `json:"custom" doc:"Specifies a custom tool the model should use"`
-	Type   enum.ToolType                            `json:"type" doc:"For custom tool calling, the type is always 'custom'"`
-}
-
-// ChatCompletionNamedToolChoiceCustomTool 指定自定义工具
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionNamedToolChoiceCustomTool struct {
-	Name string `json:"name" doc:"The name of the custom tool to call"`
-}
-
-// ChatCompletionAllowedTools 允许的工具约束
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionAllowedTools struct {
-	Mode  enum.ToolChoice  `json:"mode" doc:"Constrains the tools available (auto or required)"`
-	Tools []map[string]any `json:"tools" doc:"A list of tool definitions that the model should be allowed to call"`
-}
-
-// ChatCompletionAllowedToolChoice 允许的工具选择约束
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionAllowedToolChoice struct {
-	AllowedTools *ChatCompletionAllowedTools `json:"allowed_tools" doc:"Constrains the tools available to the model to a pre-defined set"`
-	Type         string                      `json:"type" doc:"Allowed tool configuration type. Always 'allowed_tools'"`
-}
-
-// ChatCompletionToolChoiceOption 工具选择选项
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionToolChoiceOption any
-
-// ==================== 预测内容 ====================
-
-// ChatCompletionPredictionContent 预测内容
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionPredictionContent struct {
-	Content any    `json:"content" doc:"The content that should be matched when generating a model response"`
-	Type    string `json:"type" doc:"The type of the predicted content. Always 'content'"`
-}
-
-// ==================== Web搜索选项 ====================
-
-// ApproximateLocation 近似位置参数
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ApproximateLocation struct {
-	City     string `json:"city,omitempty" doc:"Free text input for the city of the user"`
-	Country  string `json:"country,omitempty" doc:"The two-letter ISO country code of the user"`
-	Region   string `json:"region,omitempty" doc:"Free text input for the region of the user"`
-	Timezone string `json:"timezone,omitempty" doc:"The IANA timezone of the user"`
+//	@update 2026-03-10 10:00:00
+type WebSearchOptions struct {
+	SearchContextSize enum.SearchContextSize `json:"search_context_size,omitempty" doc:"搜索上下文大小"`
+	UserLocation      *UserLocation          `json:"user_location,omitempty" doc:"用户位置信息"`
 }
 
 // UserLocation 用户位置
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-10 10:00:00
 type UserLocation struct {
-	Approximate *ApproximateLocation `json:"approximate" doc:"Approximate location parameters for the search"`
-	Type        string               `json:"type" doc:"The type of location approximation. Always 'approximate'"`
+	Type        string               `json:"type" doc:"位置类型: approximate"`
+	Approximate *ApproximateLocation `json:"approximate,omitempty" doc:"近似位置"`
 }
 
-// WebSearchOptions Web搜索选项
+// ApproximateLocation 近似位置
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type WebSearchOptions struct {
-	SearchContextSize enum.SearchContextSize `json:"search_context_size,omitempty" doc:"High level guidance for the amount of context window space (low, medium, high)"`
-	UserLocation      *UserLocation          `json:"user_location,omitempty" doc:"Approximate location parameters for the search"`
+//	@update 2026-03-10 10:00:00
+type ApproximateLocation struct {
+	City     string `json:"city,omitempty" doc:"城市"`
+	Country  string `json:"country,omitempty" doc:"国家(ISO 3166-1两位代码)"`
+	Region   string `json:"region,omitempty" doc:"地区/州"`
+	Timezone string `json:"timezone,omitempty" doc:"时区(IANA格式)"`
 }
 
-// ==================== 流式选项 ====================
+// ==================== Chat Completion Response DTOs ====================
 
-// ChatCompletionStreamOptions 流式响应选项
+// ChatCompletion Chat Completions响应
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionStreamOptions struct {
-	IncludeObfuscation *bool `json:"include_obfuscation,omitempty" doc:"When true, stream obfuscation will be enabled"`
-	IncludeUsage       *bool `json:"include_usage,omitempty" doc:"If set, an additional chunk will be streamed with usage statistics"`
-}
-
-// ==================== 请求体 ====================
-
-// ChatCompletionRequestBody 聊天补全请求体
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionRequestBody struct {
-	Model                string                           `json:"model" doc:"ID of the model to use"`
-	Messages             []*ChatCompletionMessage         `json:"messages" doc:"A list of messages comprising the conversation so far"`
-	Audio                *ChatCompletionAudioParam        `json:"audio,omitempty" doc:"Parameters for audio output"`
-	FrequencyPenalty     *float64                         `json:"frequency_penalty,omitempty" doc:"Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency"`
-	FunctionCall         any                              `json:"function_call,omitempty" doc:"Deprecated in favor of tool_choice"`
-	Functions            []*ChatCompletionFunctionDef     `json:"functions,omitempty" doc:"Deprecated in favor of tools"`
-	LogitBias            map[string]float64               `json:"logit_bias,omitempty" doc:"Modify the likelihood of specified tokens appearing in the completion"`
-	Logprobs             *bool                            `json:"logprobs,omitempty" doc:"Whether to return log probabilities of the output tokens"`
-	MaxCompletionTokens  *int                             `json:"max_completion_tokens,omitempty" doc:"An upper bound for the number of tokens that can be generated"`
-	MaxTokens            *int                             `json:"max_tokens,omitempty" doc:"Deprecated: maximum number of tokens to generate"`
-	Metadata             map[string]string                `json:"metadata,omitempty" doc:"Set of 16 key-value pairs that can be attached to an object"`
-	Modalities           []string                         `json:"modalities,omitempty" doc:"Output types that you would like the model to generate (text, audio)"`
-	N                    *int                             `json:"n,omitempty" doc:"How many chat completion choices to generate for each input message"`
-	ParallelToolCalls    *bool                            `json:"parallel_tool_calls,omitempty" doc:"Whether to enable parallel function calling during tool use"`
-	Prediction           *ChatCompletionPredictionContent `json:"prediction,omitempty" doc:"Static predicted output content"`
-	PresencePenalty      *float64                         `json:"presence_penalty,omitempty" doc:"Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far"`
-	PromptCacheKey       string                           `json:"prompt_cache_key,omitempty" doc:"Used by OpenAI to cache responses for similar requests"`
-	PromptCacheRetention enum.PromptCacheRetention        `json:"prompt_cache_retention,omitempty" doc:"The retention policy for the prompt cache (in-memory, 24h)"`
-	ReasoningEffort      enum.ReasoningEffort             `json:"reasoning_effort,omitempty" doc:"Constrains effort on reasoning (none, minimal, low, medium, high, xhigh)"`
-	ResponseFormat       any                              `json:"response_format,omitempty" doc:"Format that the model must output"`
-	SafetyIdentifier     string                           `json:"safety_identifier,omitempty" doc:"A stable identifier used to help detect users violating usage policies"`
-	Seed                 *int                             `json:"seed,omitempty" doc:"Seed for deterministic sampling (beta)"`
-	ServiceTier          enum.ServiceTier                 `json:"service_tier,omitempty" doc:"Specifies the processing type (auto, default, flex, scale, priority)"`
-	Stop                 any                              `json:"stop,omitempty" doc:"Up to 4 sequences where the API will stop generating (string or array)"`
-	Store                *bool                            `json:"store,omitempty" doc:"Whether to store output for distillation or evals"`
-	Stream               bool                             `json:"stream,omitempty" doc:"Whether to stream back partial progress via SSE"`
-	StreamOptions        *ChatCompletionStreamOptions     `json:"stream_options,omitempty" doc:"Options for streaming response"`
-	Temperature          *float64                         `json:"temperature,omitempty" doc:"Sampling temperature between 0 and 2"`
-	ToolChoice           any                              `json:"tool_choice,omitempty" doc:"Controls which tool is called by the model"`
-	Tools                []any                            `json:"tools,omitempty" doc:"A list of tools the model may call"`
-	TopLogprobs          *int                             `json:"top_logprobs,omitempty" doc:"Number of most likely tokens to return (0-20)"`
-	TopP                 *float64                         `json:"top_p,omitempty" doc:"Nucleus sampling parameter"`
-	User                 string                           `json:"user,omitempty" doc:"A unique identifier representing the end-user (deprecated, use safety_identifier or prompt_cache_key)"`
-	Verbosity            enum.Verbosity                   `json:"verbosity,omitempty" doc:"Constrains the verbosity of the model's response (low, medium, high)"`
-	WebSearchOptions     *WebSearchOptions                `json:"web_search_options,omitempty" doc:"Web search tool options"`
-}
-
-// ChatCompletionRequest 聊天补全请求 (Huma convention)
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionRequest struct {
-	Body ChatCompletionRequestBody
-}
-
-// ==================== 响应结构体 ====================
-
-// TopLogprob 最可能的token及其概率
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type TopLogprob struct {
-	Token   string  `json:"token" doc:"The token"`
-	Bytes   []int   `json:"bytes,omitempty" doc:"A list of integers representing the UTF-8 bytes representation of the token"`
-	Logprob float64 `json:"logprob" doc:"The log probability of this token"`
-}
-
-// ChatCompletionTokenLogprob Token概率信息
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionTokenLogprob struct {
-	Token       string        `json:"token" doc:"The token"`
-	Bytes       []int         `json:"bytes,omitempty" doc:"A list of integers representing the UTF-8 bytes representation of the token"`
-	Logprob     float64       `json:"logprob" doc:"The log probability of this token"`
-	TopLogprobs []*TopLogprob `json:"top_logprobs" doc:"List of the most likely tokens and their log probability"`
-}
-
-// Logprobs 概率信息
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type Logprobs struct {
-	Content []*ChatCompletionTokenLogprob `json:"content,omitempty" doc:"A list of message content tokens with log probability information"`
-	Refusal []*ChatCompletionTokenLogprob `json:"refusal,omitempty" doc:"A list of message refusal tokens with log probability information"`
-}
-
-// UrlCitation URL引用
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type UrlCitation struct {
-	EndIndex   int    `json:"end_index" doc:"The index of the last character of the URL citation in the message"`
-	StartIndex int    `json:"start_index" doc:"The index of the first character of the URL citation in the message"`
-	Title      string `json:"title" doc:"The title of the web resource"`
-	URL        string `json:"url" doc:"The URL of the web resource"`
-}
-
-// Annotation 注释
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type Annotation struct {
-	Type        string       `json:"type" doc:"The type of the annotation"`
-	UrlCitation *UrlCitation `json:"url_citation,omitempty" doc:"A URL citation when using web search"`
-}
-
-// ChatCompletionAudio 音频响应
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionAudio struct {
-	Data       string `json:"data" doc:"Base64 encoded audio bytes generated by the model"`
-	ExpiresAt  int64  `json:"expires_at" doc:"The Unix timestamp for when this audio response will no longer be accessible"`
-	ID         string `json:"id" doc:"Unique identifier for this audio response"`
-	Transcript string `json:"transcript" doc:"Transcript of the audio generated by the model"`
-}
-
-// ChatCompletionMessageResponse 聊天完成消息（响应）
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionMessageResponse struct {
-	Content      string               `json:"content" doc:"The contents of the message"`
-	Refusal      string               `json:"refusal,omitempty" doc:"The refusal message generated by the model"`
-	Role         enum.Role            `json:"role" doc:"The role of the author of this message"`
-	Annotations  []*Annotation        `json:"annotations,omitempty" doc:"Annotations for the message"`
-	Audio        *ChatCompletionAudio `json:"audio,omitempty" doc:"Data about the audio response from the model"`
-	FunctionCall *FunctionCall        `json:"function_call,omitempty" doc:"Deprecated: replaced by tool_calls"`
-	ToolCalls    []any                `json:"tool_calls,omitempty" doc:"The tool calls generated by the model"`
-}
-
-// ChatCompletionChoice 聊天完成选择
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionChoice struct {
-	FinishReason enum.FinishReason              `json:"finish_reason" doc:"The reason the model stopped generating tokens"`
-	Index        int                            `json:"index" doc:"The index of the choice in the list of choices"`
-	Logprobs     *Logprobs                      `json:"logprobs,omitempty" doc:"Log probability information for the choice"`
-	Message      *ChatCompletionMessageResponse `json:"message" doc:"A chat completion message generated by the model"`
-}
-
-// CompletionTokensDetails 完成token详情
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type CompletionTokensDetails struct {
-	AcceptedPredictionTokens *int `json:"accepted_prediction_tokens,omitempty" doc:"When using Predicted Outputs, the number of tokens in the prediction that appeared in the completion"`
-	AudioTokens              *int `json:"audio_tokens,omitempty" doc:"Audio input tokens generated by the model"`
-	ReasoningTokens          *int `json:"reasoning_tokens,omitempty" doc:"Tokens generated by the model for reasoning"`
-	RejectedPredictionTokens *int `json:"rejected_prediction_tokens,omitempty" doc:"When using Predicted Outputs, the number of tokens in the prediction that did not appear"`
-}
-
-// PromptTokensDetails 提示token详情
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type PromptTokensDetails struct {
-	AudioTokens  *int `json:"audio_tokens,omitempty" doc:"Audio input tokens present in the prompt"`
-	CachedTokens *int `json:"cached_tokens,omitempty" doc:"Cached tokens present in the prompt"`
-}
-
-// CompletionUsage 使用统计
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type CompletionUsage struct {
-	CompletionTokens        int                      `json:"completion_tokens" doc:"Number of tokens in the generated completion"`
-	PromptTokens            int                      `json:"prompt_tokens" doc:"Number of tokens in the prompt"`
-	TotalTokens             int                      `json:"total_tokens" doc:"Total number of tokens used in the request"`
-	CompletionTokensDetails *CompletionTokensDetails `json:"completion_tokens_details,omitempty" doc:"Breakdown of tokens used in a completion"`
-	PromptTokensDetails     *PromptTokensDetails     `json:"prompt_tokens_details,omitempty" doc:"Breakdown of tokens used in the prompt"`
-}
-
-// ChatCompletion 聊天完成响应
-//
-//	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-10 10:00:00
 type ChatCompletion struct {
-	ID                string                  `json:"id" doc:"A unique identifier for the chat completion"`
-	Choices           []*ChatCompletionChoice `json:"choices" doc:"A list of chat completion choices"`
-	Created           int64                   `json:"created" doc:"The Unix timestamp of when the chat completion was created"`
-	Model             string                  `json:"model" doc:"The model used for the chat completion"`
-	Object            string                  `json:"object" doc:"The object type, which is always 'chat.completion'"`
-	ServiceTier       enum.ServiceTier        `json:"service_tier,omitempty" doc:"The processing type used for serving the request"`
-	SystemFingerprint string                  `json:"system_fingerprint,omitempty" doc:"The backend configuration that the model runs with"`
-	Usage             *CompletionUsage        `json:"usage,omitempty" doc:"Usage statistics for the completion request"`
+	ID                string                  `json:"id" doc:"唯一标识符"`
+	Choices           []*ChatCompletionChoice `json:"choices" doc:"完成选择列表"`
+	Created           int64                   `json:"created" doc:"创建时间戳(Unix秒)"`
+	Model             string                  `json:"model" doc:"使用的模型"`
+	Object            string                  `json:"object" doc:"对象类型: chat.completion"`
+	ServiceTier       enum.ServiceTier        `json:"service_tier,omitempty" doc:"服务层级"`
+	SystemFingerprint string                  `json:"system_fingerprint,omitempty" doc:"系统指纹"`
+	Usage             *CompletionUsage        `json:"usage,omitempty" doc:"使用量统计"`
 }
 
-// ChatCompletionResponse 聊天完成响应（别名）
+// ChatCompletionChoice 完成选择
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionResponse = ChatCompletion
+//	@update 2026-03-10 10:00:00
+type ChatCompletionChoice struct {
+	FinishReason enum.FinishReason              `json:"finish_reason" doc:"完成原因"`
+	Index        int                            `json:"index" doc:"选择索引"`
+	Logprobs     *Logprobs                      `json:"logprobs,omitempty" doc:"Log概率信息"`
+	Message      *ChatCompletionMessageResponse `json:"message" doc:"消息内容"`
+}
 
-// ==================== 流式响应 ====================
-
-// ChatCompletionChunkDelta 流式增量内容
+// ChatCompletionMessageResponse 聊天完成消息响应
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionChunkDelta struct {
-	Content      string               `json:"content,omitempty" doc:"The contents of the chunk message"`
-	FunctionCall *FunctionCall        `json:"function_call,omitempty" doc:"Deprecated: replaced by tool_calls"`
-	Refusal      string               `json:"refusal,omitempty" doc:"The refusal message generated by the model"`
-	Role         enum.Role            `json:"role,omitempty" doc:"The role of the author of this message"`
-	ToolCalls    []any                `json:"tool_calls,omitempty" doc:"Tool calls generated by the model"`
-	Audio        *ChatCompletionAudio `json:"audio,omitempty" doc:"Audio data for the message"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionMessageResponse struct {
+	Content      string                           `json:"content" doc:"消息内容"`
+	Refusal      string                           `json:"refusal,omitempty" doc:"拒绝消息"`
+	Role         enum.Role                        `json:"role" doc:"角色: assistant"`
+	Annotations  []*MessageAnnotation             `json:"annotations,omitempty" doc:"消息注释"`
+	Audio        *ChatCompletionAudio             `json:"audio,omitempty" doc:"音频响应数据"`
+	FunctionCall *ChatCompletionFunctionCallParam `json:"function_call,omitempty" doc:"函数调用(已废弃)"`
+	ToolCalls    []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
+}
+
+// MessageAnnotation 消息注释
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type MessageAnnotation struct {
+	Type        string       `json:"type" doc:"注释类型: url_citation"`
+	URLCitation *URLCitation `json:"url_citation,omitempty" doc:"URL引用"`
+}
+
+// URLCitation URL引用
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type URLCitation struct {
+	EndIndex   int    `json:"end_index" doc:"URL引用结束字符索引"`
+	StartIndex int    `json:"start_index" doc:"URL引用开始字符索引"`
+	Title      string `json:"title" doc:"网页资源标题"`
+	URL        string `json:"url" doc:"网页资源URL"`
+}
+
+// ChatCompletionAudio 聊天完成音频响应
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionAudio struct {
+	ID         string `json:"id" doc:"音频响应唯一标识符"`
+	Data       string `json:"data" doc:"base64编码的音频数据"`
+	ExpiresAt  int64  `json:"expires_at" doc:"过期时间戳(Unix秒)"`
+	Transcript string `json:"transcript" doc:"音频转录文本"`
+}
+
+// ChatCompletionMessageToolCall 聊天完成消息工具调用
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionMessageToolCall struct {
+	ID       string                                 `json:"id" doc:"工具调用ID"`
+	Type     enum.ToolType                          `json:"type" doc:"工具类型: function/custom"`
+	Function *ChatCompletionMessageFunctionToolCall `json:"function,omitempty" doc:"函数工具调用"`
+	Custom   *ChatCompletionMessageCustomToolCall   `json:"custom,omitempty" doc:"自定义工具调用"`
+}
+
+// ChatCompletionMessageFunctionToolCall 函数工具调用
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionMessageFunctionToolCall struct {
+	Arguments string `json:"arguments" doc:"函数参数(JSON格式)"`
+	Name      string `json:"name" doc:"函数名称"`
+}
+
+// ChatCompletionMessageCustomToolCall 自定义工具调用
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionMessageCustomToolCall struct {
+	Input string `json:"input" doc:"自定义工具输入"`
+	Name  string `json:"name" doc:"自定义工具名称"`
+}
+
+// Logprobs Log概率信息
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type Logprobs struct {
+	Content []*ChatCompletionTokenLogprob `json:"content,omitempty" doc:"消息内容token的log概率"`
+	Refusal []*ChatCompletionTokenLogprob `json:"refusal,omitempty" doc:"拒绝消息token的log概率"`
+}
+
+// ChatCompletionTokenLogprob Token Log概率
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionTokenLogprob struct {
+	Token       string             `json:"token" doc:"token"`
+	Bytes       []int              `json:"bytes,omitempty" doc:"UTF-8字节表示"`
+	Logprob     float64            `json:"logprob" doc:"log概率"`
+	TopLogprobs []*TopTokenLogprob `json:"top_logprobs,omitempty" doc:"最可能的token及其概率"`
+}
+
+// TopTokenLogprob 最可能的Token Log概率
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type TopTokenLogprob struct {
+	Token   string  `json:"token" doc:"token"`
+	Bytes   []int   `json:"bytes,omitempty" doc:"UTF-8字节表示"`
+	Logprob float64 `json:"logprob" doc:"log概率"`
+}
+
+// CompletionUsage 完成使用量统计
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type CompletionUsage struct {
+	CompletionTokens        int                      `json:"completion_tokens" doc:"生成的token数"`
+	PromptTokens            int                      `json:"prompt_tokens" doc:"提示的token数"`
+	TotalTokens             int                      `json:"total_tokens" doc:"总token数"`
+	CompletionTokensDetails *CompletionTokensDetails `json:"completion_tokens_details,omitempty" doc:"完成token详细信息"`
+	PromptTokensDetails     *PromptTokensDetails     `json:"prompt_tokens_details,omitempty" doc:"提示token详细信息"`
+}
+
+// CompletionTokensDetails 完成Token详细信息
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type CompletionTokensDetails struct {
+	AcceptedPredictionTokens int `json:"accepted_prediction_tokens,omitempty" doc:"接受的预测token数"`
+	AudioTokens              int `json:"audio_tokens,omitempty" doc:"音频token数"`
+	ReasoningTokens          int `json:"reasoning_tokens,omitempty" doc:"推理token数"`
+	RejectedPredictionTokens int `json:"rejected_prediction_tokens,omitempty" doc:"拒绝的预测token数"`
+}
+
+// PromptTokensDetails 提示Token详细信息
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type PromptTokensDetails struct {
+	AudioTokens  int `json:"audio_tokens,omitempty" doc:"音频token数"`
+	CachedTokens int `json:"cached_tokens,omitempty" doc:"缓存token数"`
+}
+
+// ==================== Request/Response Wrapper DTOs ====================
+
+// ChatCompletionRequest Chat Completions请求包装
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionRequest struct {
+	Body *ChatCompletionReq `json:"body" doc:"请求体"`
+}
+
+// ListModelsResponseBody 模型列表响应体
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ListModelsResponse struct {
+	Object string         `json:"object" doc:"对象类型: list"`
+	Data   []*OpenAIModel `json:"data" doc:"模型列表"`
+}
+
+// OpenAIModel OpenAI模型
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type OpenAIModel struct {
+	ID      string `json:"id" doc:"模型ID"`
+	Created int64  `json:"created" doc:"创建时间戳"`
+	Object  string `json:"object" doc:"对象类型: model"`
+	OwnedBy string `json:"owned_by" doc:"所有者"`
+}
+
+// ==================== OpenAI Error DTOs ====================
+
+// OpenAIError OpenAI错误响应
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type OpenAIError struct {
+	Message string `json:"message" doc:"错误消息"`
+	Type    string `json:"type" doc:"错误类型"`
+	Code    string `json:"code" doc:"错误代码"`
+}
+
+// OpenAIErrorResponse OpenAI错误响应包装
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type OpenAIErrorResponse struct {
+	Error *OpenAIError `json:"error" doc:"错误信息"`
+}
+
+// ==================== Chat Completion Chunk (Streaming) DTOs ====================
+
+// ChatCompletionChunk 聊天完成流式块
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type ChatCompletionChunk struct {
+	ID                string                       `json:"id" doc:"唯一标识符"`
+	Choices           []*ChatCompletionChunkChoice `json:"choices" doc:"选择列表"`
+	Created           int64                        `json:"created" doc:"创建时间戳(Unix秒)"`
+	Model             string                       `json:"model" doc:"使用的模型"`
+	Object            string                       `json:"object" doc:"对象类型: chat.completion.chunk"`
+	ServiceTier       enum.ServiceTier             `json:"service_tier,omitempty" doc:"服务层级"`
+	SystemFingerprint string                       `json:"system_fingerprint,omitempty" doc:"系统指纹"`
+	Usage             *CompletionUsage             `json:"usage,omitempty" doc:"使用量统计"`
 }
 
 // ChatCompletionChunkChoice 流式选择
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-03-10 10:00:00
 type ChatCompletionChunkChoice struct {
-	Delta        *ChatCompletionChunkDelta `json:"delta" doc:"A chat completion delta generated by streamed model responses"`
-	FinishReason enum.FinishReason         `json:"finish_reason,omitempty" doc:"The reason the model stopped generating tokens"`
-	Index        int                       `json:"index" doc:"The index of the choice in the list of choices"`
-	Logprobs     *Logprobs                 `json:"logprobs,omitempty" doc:"Log probability information for the choice"`
+	Delta        ChatCompletionChunkDelta `json:"delta" doc:"增量内容"`
+	FinishReason enum.FinishReason        `json:"finish_reason,omitempty" doc:"完成原因"`
+	Index        int                      `json:"index" doc:"选择索引"`
+	Logprobs     *Logprobs                `json:"logprobs,omitempty" doc:"Log概率信息"`
 }
 
-// ChatCompletionChunk 聊天完成流式块
+// ChatCompletionChunkDelta 流式增量内容
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-type ChatCompletionChunk struct {
-	ID                string                       `json:"id" doc:"A unique identifier for the chat completion. Each chunk has the same ID"`
-	Choices           []*ChatCompletionChunkChoice `json:"choices" doc:"A list of chat completion choices. Can be more than one if n is greater than 1"`
-	Created           int64                        `json:"created" doc:"The Unix timestamp of when the chat completion was created. Each chunk has the same timestamp"`
-	Model             string                       `json:"model" doc:"The model used for the chat completion"`
-	Object            string                       `json:"object" doc:"The object type, which is always 'chat.completion.chunk'"`
-	ServiceTier       enum.ServiceTier             `json:"service_tier,omitempty" doc:"The processing type used for serving the request"`
-	SystemFingerprint string                       `json:"system_fingerprint,omitempty" doc:"The backend configuration that the model runs with"`
-	Usage             *CompletionUsage             `json:"usage,omitempty" doc:"Usage statistics for the completion request"`
-}
-
-// OpenAIModel OpenAI模型信息
-//
-//	@author centonhuang
-//	@update 2025-11-12 10:00:00
-type OpenAIModel struct {
-	ID      string `json:"id" doc:"The model identifier"`
-	Created int64  `json:"created" doc:"Unix timestamp (in seconds) when the model was created"`
-	Object  string `json:"object" doc:"The object type, always model"`
-	OwnedBy string `json:"owned_by" doc:"The organization that owns the model"`
-}
-
-// ListModelsResponse OpenAI模型列表响应体
-//
-//	@author centonhuang
-//	@update 2025-11-12 10:00:00
-type ListModelsResponse struct {
-	Body *ListModelsResponseBody `json:"body" doc:"The body of the response"`
-}
-
-// ListModelsResponseBody OpenAI模型列表响应体
-//
-//	@author centonhuang
-//	@update 2025-11-12 10:00:00
-type ListModelsResponseBody struct {
-	CommonRsp
-	Object string         `json:"object" doc:"The object type, always list"`
-	Data   []*OpenAIModel `json:"data" doc:"List of model objects"`
+//	@update 2026-03-10 10:00:00
+type ChatCompletionChunkDelta struct {
+	Content   string                           `json:"content,omitempty" doc:"内容增量"`
+	Refusal   string                           `json:"refusal,omitempty" doc:"拒绝消息增量"`
+	Role      enum.Role                        `json:"role,omitempty" doc:"角色"`
+	ToolCalls []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用增量"`
 }

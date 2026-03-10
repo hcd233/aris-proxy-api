@@ -55,11 +55,10 @@ func NewOpenAIService() OpenAIService {
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
 func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.ListModelsResponse, error) {
-	rsp := &dto.ListModelsResponse{}
 
 	config := proxy.GetLLMProxyConfig()
 
-	rsp.Body = &dto.ListModelsResponseBody{
+	return &dto.ListModelsResponse{
 		Object: "list",
 		Data: lo.Map(lo.Keys(config.Models), func(key string, _ int) *dto.OpenAIModel {
 			return &dto.OpenAIModel{
@@ -69,9 +68,7 @@ func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.Lis
 				OwnedBy: "openai",
 			}
 		}),
-	}
-
-	return rsp, nil
+	}, nil
 }
 
 // CreateChatCompletion 创建聊天补全
@@ -125,7 +122,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		return util.SendOpenAIInternalError(), nil
 	}
 
-	if req.Body.Stream {
+	if req.Body.Stream != nil && *req.Body.Stream {
 		return &huma.StreamResponse{
 			Body: func(humaCtx huma.Context) {
 				fiberCtx := humafiber.Unwrap(humaCtx)
