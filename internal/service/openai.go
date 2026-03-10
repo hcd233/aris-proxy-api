@@ -89,6 +89,11 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		logger.Error("[CreateChatCompletion] model not found", zap.String("model", req.Body.Model))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
+
+	if req.Body.MaxTokens != nil {
+		logger.Info("[CreateChatCompletion] max_tokens is deprecated, adapt to max_completion_tokens", zap.Intp("max_tokens", req.Body.MaxTokens))
+		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
+	}
 	// Build upstream request body as map to replace model name
 	bodyBytes := lo.Must1(sonic.Marshal(req.Body))
 

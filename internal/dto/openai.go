@@ -11,7 +11,7 @@ import (
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionReq struct {
-	Messages             []ChatCompletionMessageParam     `json:"messages" doc:"对话消息列表"`
+	Messages             []*ChatCompletionMessageParam    `json:"messages" doc:"对话消息列表"`
 	Model                string                           `json:"model" doc:"模型ID"`
 	Audio                *ChatCompletionAudioParam        `json:"audio,omitempty" doc:"音频输出参数"`
 	FrequencyPenalty     *float64                         `json:"frequency_penalty,omitempty" doc:"频率惩罚(-2.0到2.0)"`
@@ -20,7 +20,7 @@ type ChatCompletionReq struct {
 	MaxCompletionTokens  *int                             `json:"max_completion_tokens,omitempty" doc:"最大完成token数（包含推理token）"`
 	MaxTokens            *int                             `json:"max_tokens,omitempty" doc:"最大token数（已废弃）"`
 	Metadata             map[string]string                `json:"metadata,omitempty" doc:"元数据(最多16个键值对)"`
-	Modalities           []enum.ModalityType              `json:"modalities,omitempty" doc:"输出模态类型"`
+	Modalities           []*enum.ModalityType             `json:"modalities,omitempty" doc:"输出模态类型"`
 	N                    *int                             `json:"n,omitempty" doc:"生成选择数量"`
 	ParallelToolCalls    *bool                            `json:"parallel_tool_calls,omitempty" doc:"是否启用并行工具调用"`
 	Prediction           *ChatCompletionPredictionContent `json:"prediction,omitempty" doc:"预测输出内容"`
@@ -60,13 +60,15 @@ type ChatCompletionMessageParam struct {
 	// 用户消息特有
 
 	// 助手消息特有
-	Audio        *ChatCompletionAudioReference    `json:"audio,omitempty" doc:"音频响应数据"`
-	ToolCalls    []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
-	FunctionCall *ChatCompletionFunctionCallParam `json:"function_call,omitempty" doc:"函数调用(已废弃)"`
-	Refusal      string                           `json:"refusal,omitempty" doc:"拒绝消息"`
+	Audio     *ChatCompletionAudioReference    `json:"audio,omitempty" doc:"音频响应数据"`
+	ToolCalls []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
+	Refusal   string                           `json:"refusal,omitempty" doc:"拒绝消息"`
 
 	// 工具消息特有
 	ToolCallID string `json:"tool_call_id,omitempty" doc:"工具调用ID"`
+
+	// 额外字段
+	Annotations []*MessageAnnotation `json:"annotations,omitempty" doc:"消息注解"`
 }
 
 // ChatCompletionAudioReference 音频引用
@@ -75,15 +77,6 @@ type ChatCompletionMessageParam struct {
 //	@update 2026-03-10 10:00:00
 type ChatCompletionAudioReference struct {
 	ID string `json:"id" doc:"音频响应的唯一标识符"`
-}
-
-// ChatCompletionFunctionCallParam 函数调用参数（已废弃）
-//
-//	@author centonhuang
-//	@update 2026-03-10 10:00:00
-type ChatCompletionFunctionCallParam struct {
-	Arguments string `json:"arguments" doc:"函数参数(JSON格式)"`
-	Name      string `json:"name" doc:"函数名称"`
 }
 
 // ChatCompletionContentPartText 文本内容部分
@@ -333,24 +326,10 @@ type ChatCompletion struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionChoice struct {
-	FinishReason enum.FinishReason              `json:"finish_reason" doc:"完成原因"`
-	Index        int                            `json:"index" doc:"选择索引"`
-	Logprobs     *Logprobs                      `json:"logprobs,omitempty" doc:"Log概率信息"`
-	Message      *ChatCompletionMessageResponse `json:"message" doc:"消息内容"`
-}
-
-// ChatCompletionMessageResponse 聊天完成消息响应
-//
-//	@author centonhuang
-//	@update 2026-03-10 10:00:00
-type ChatCompletionMessageResponse struct {
-	Content      string                           `json:"content" doc:"消息内容"`
-	Refusal      string                           `json:"refusal,omitempty" doc:"拒绝消息"`
-	Role         enum.Role                        `json:"role" doc:"角色: assistant"`
-	Annotations  []*MessageAnnotation             `json:"annotations,omitempty" doc:"消息注释"`
-	Audio        *ChatCompletionAudio             `json:"audio,omitempty" doc:"音频响应数据"`
-	FunctionCall *ChatCompletionFunctionCallParam `json:"function_call,omitempty" doc:"函数调用(已废弃)"`
-	ToolCalls    []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
+	FinishReason enum.FinishReason           `json:"finish_reason" doc:"完成原因"`
+	Index        int                         `json:"index" doc:"选择索引"`
+	Logprobs     *Logprobs                   `json:"logprobs,omitempty" doc:"Log概率信息"`
+	Message      *ChatCompletionMessageParam `json:"message" doc:"消息内容"`
 }
 
 // MessageAnnotation 消息注释

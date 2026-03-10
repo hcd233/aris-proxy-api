@@ -8,7 +8,9 @@ import (
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"go.uber.org/zap"
 )
 
 // Manager 全局协程池管理器
@@ -16,7 +18,10 @@ import (
 //	author centonhuang
 //	update 2026-01-31 16:00:00
 type Manager struct {
-	pingPool pond.Pool
+	messageDAO *dao.MessageDAO
+
+	pingPool         pond.Pool
+	messageStorePool pond.Pool
 }
 
 var poolManager *Manager
@@ -27,7 +32,10 @@ var poolManager *Manager
 //	@update 2026-01-31 03:37:28
 func InitPoolManager() {
 	poolManager = &Manager{
-		pingPool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
+		messageDAO: dao.GetMessageDAO(),
+
+		pingPool:         pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
+		messageStorePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 	}
 }
 
@@ -64,6 +72,24 @@ func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
 	})
 }
 
+// SubmitMessageStoreTask 提交消息存储任务到协程池
+//
+//	@receiver pm *Manager
+//	@param task *dto.MessageStoreTask
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
+	return pm.messageStorePool.Go(func() {
+		logger := logger.WithCtx(task.Ctx)
+		if err := pm.messageDAO.StoreMessageChain(task.Ctx, task.APIKeyName, task.Messages, task.Response); err != nil {
+			logger.Error("[PoolManager] failed to store message chain", zap.Error(err))
+		} else {
+			logger.Info("[PoolManager] message chain stored successfully")
+		}
+	})
+}
+
 // Stop 停止所有协程池
 //
 //	author centonhuang
@@ -71,5 +97,8 @@ func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
 func (pm *Manager) Stop() {
 	if pm.pingPool != nil {
 		pm.pingPool.Stop()
+	}
+	if pm.messageStorePool != nil {
+		pm.messageStorePool.Stop()
 	}
 }

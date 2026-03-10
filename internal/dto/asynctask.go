@@ -9,3 +9,14 @@ import "context"
 type PingTask struct {
 	Ctx context.Context
 }
+
+// MessageStoreTask 消息存储任务
+//
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+type MessageStoreTask struct {
+	Ctx        context.Context
+	APIKeyName string
+	Messages   []*ChatCompletionMessageParam // 用户请求消息列表
+	Response   *ChatCompletionMessageParam   // 模型回复消息
+}

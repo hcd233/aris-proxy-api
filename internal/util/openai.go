@@ -1,7 +1,9 @@
 package util
 
 import (
-	"fmt"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -16,11 +18,11 @@ import (
 //	@author centonhuang
 //	@update 2026-03-06 18:08:53
 func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCompletion, error) {
-	if len(chunks) == 0 {
-		return nil, fmt.Errorf("no chunks to concat")
-	}
+	cmpl := &dto.ChatCompletion{}
 
-	ret := &dto.ChatCompletion{}
+	if len(chunks) == 0 {
+		return cmpl, nil
+	}
 
 	// choiceBuilders accumulates per-index delta state.
 	type choiceState struct {
@@ -35,24 +37,24 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	choiceMap := make(map[int]*choiceState)
 	choiceOrder := make([]int, 0)
 
-	for idx, chunk := range chunks {
+	for _, chunk := range chunks {
 		if chunk == nil {
-			return nil, fmt.Errorf("unexpected nil chunk at index %d", idx)
+			continue
 		}
 
 		// Metadata: use the first chunk's values.
-		if ret.ID == "" {
-			ret.ID = chunk.ID
-			ret.Created = chunk.Created
-			ret.Object = chunk.Object
-			ret.ServiceTier = chunk.ServiceTier
-			ret.SystemFingerprint = chunk.SystemFingerprint
-			ret.Model = chunk.Model
+		if cmpl.ID == "" {
+			cmpl.ID = chunk.ID
+			cmpl.Created = chunk.Created
+			cmpl.Object = chunk.Object
+			cmpl.ServiceTier = chunk.ServiceTier
+			cmpl.SystemFingerprint = chunk.SystemFingerprint
+			cmpl.Model = chunk.Model
 		}
 
 		// Usage: keep the last non-nil value (upstream sends it in the final chunk).
 		if chunk.Usage != nil {
-			ret.Usage = chunk.Usage
+			cmpl.Usage = chunk.Usage
 		}
 
 		for _, choice := range chunk.Choices {
@@ -90,16 +92,16 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 		}
 	}
 
-	ret.Choices = make([]*dto.ChatCompletionChoice, 0, len(choiceOrder))
+	cmpl.Choices = make([]*dto.ChatCompletionChoice, 0, len(choiceOrder))
 	for _, idx := range choiceOrder {
 		cs := choiceMap[idx]
-		message := &dto.ChatCompletionMessageResponse{
+		message := &dto.ChatCompletionMessageParam{
 			Role:      cs.role,
 			Content:   strings.Join(cs.contentParts, ""),
 			Refusal:   strings.Join(cs.refusalParts, ""),
 			ToolCalls: cs.toolCalls,
 		}
-		ret.Choices = append(ret.Choices, &dto.ChatCompletionChoice{
+		cmpl.Choices = append(cmpl.Choices, &dto.ChatCompletionChoice{
 			Index:        cs.index,
 			Message:      message,
 			FinishReason: cs.finishReason,
@@ -107,5 +109,35 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 		})
 	}
 
-	return ret, nil
+	return cmpl, nil
+}
+
+// ComputeMessageChecksum 计算消息校验和（基于Content和ToolCalls）
+//
+//	@param msg *dto.ChatCompletionMessageParam
+//	@return string
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-10 10:00:00
+func ComputeMessageChecksum(msg *dto.ChatCompletionMessageParam) (string, error) {
+	if msg == nil {
+		return "", nil
+	}
+
+	// 构建用于计算校验和的数据结构
+	data := struct {
+		Content   any                                  `json:"content"`
+		ToolCalls []*dto.ChatCompletionMessageToolCall `json:"tool_calls"`
+	}{
+		Content:   msg.Content,
+		ToolCalls: msg.ToolCalls,
+	}
+
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(jsonBytes)
+	return hex.EncodeToString(hash[:]), nil
 }

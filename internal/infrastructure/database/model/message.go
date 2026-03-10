@@ -11,7 +11,9 @@ import "github.com/hcd233/aris-proxy-api/internal/dto"
 //	update 2024-06-22 09:36:22
 type Message struct {
 	BaseModel
-	ID         uint                              `json:"id" gorm:"column:id;primary_key;auto_increment;comment:用户ID"`
-	APIKeyName string                            `json:"api_key_name" gorm:"column:api_key_name;not null;default:'';comment:API Key 名称"`
-	Message    dto.ChatCompletionMessageResponse `json:"message" gorm:"column:message;not null;comment:消息;serializer:json"`
+	ID           uint                           `json:"id" gorm:"column:id;primary_key;auto_increment;comment:用户ID"`
+	APIKeyName   string                         `json:"api_key_name" gorm:"column:api_key_name;not null;default:'';comment:API Key 名称"`
+	Message      dto.ChatCompletionMessageParam `json:"message" gorm:"column:message;not null;comment:消息;serializer:json"`
+	CheckSum     string                         `json:"check_sum" gorm:"column:check_sum;not null;default:'';comment:校验和"`
+	PreMessageID uint                           `json:"pre_message_id" gorm:"column:pre_message_id;not null;default:0;comment:上一条消息ID"`
 }
