@@ -69,7 +69,9 @@ func (dao *MessageDAO) StoreMessageChain(ctx context.Context, apiKeyName string,
 	for i := len(fullChain) - 1; i >= 0; i-- {
 		// 查询数据库中是否存在相同(apiKeyName, checkSum)的消息
 		var existingMsg dbmodel.Message
-		err := db.Where("api_key_name = ? AND check_sum = ?", apiKeyName, checksums[i]).
+		err := db.Where("api_key_name = ?", apiKeyName).
+			Where("check_sum = ?", checksums[i]).
+			Where("model = ?", model).
 			Where("deleted_at = 0").
 			First(&existingMsg).Error
 
@@ -116,7 +118,9 @@ func (dao *MessageDAO) StoreMessageChain(ctx context.Context, apiKeyName string,
 	if insertStartIndex > 0 {
 		// 查询insertStartIndex-1对应的消息是否存在
 		var prevMsg dbmodel.Message
-		err := db.Where("api_key_name = ? AND check_sum = ?", apiKeyName, checksums[insertStartIndex-1]).
+		err := db.Where("api_key_name = ?", apiKeyName).
+			Where("check_sum = ?", checksums[insertStartIndex-1]).
+			Where("model = ?", model).
 			Where("deleted_at = 0").
 			First(&prevMsg).Error
 		switch err {
