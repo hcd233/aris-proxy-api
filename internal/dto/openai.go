@@ -51,9 +51,10 @@ type ChatCompletionReq struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionMessageParam struct {
-	Role    enum.Role `json:"role" doc:"消息角色"`
-	Content any       `json:"content" doc:"消息内容(字符串或数组)"`
-	Name    string    `json:"name,omitempty" doc:"参与者名称"`
+	Role             enum.Role `json:"role" doc:"消息角色"`
+	Content          any       `json:"content" doc:"消息内容(字符串或数组)"`
+	ReasoningContent string    `json:"reasoning_content,omitempty" doc:"推理内容"`
+	Name             string    `json:"name,omitempty" doc:"参与者名称"`
 
 	// 开发者/系统消息特有
 

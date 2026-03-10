@@ -26,13 +26,14 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 
 	// choiceBuilders accumulates per-index delta state.
 	type choiceState struct {
-		role         enum.Role
-		contentParts []string
-		refusalParts []string
-		toolCalls    []*dto.ChatCompletionMessageToolCall
-		finishReason enum.FinishReason
-		logprobs     *dto.Logprobs
-		index        int
+		role                  enum.Role
+		contentParts          []string
+		reasoningContentParts []string
+		refusalParts          []string
+		toolCalls             []*dto.ChatCompletionMessageToolCall
+		finishReason          enum.FinishReason
+		logprobs              *dto.Logprobs
+		index                 int
 	}
 	choiceMap := make(map[int]*choiceState)
 	choiceOrder := make([]int, 0)
@@ -71,6 +72,9 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 			if choice.Delta.Content != "" {
 				cs.contentParts = append(cs.contentParts, choice.Delta.Content)
 			}
+			if choice.Delta.ReasoningContent != "" {
+				cs.reasoningContentParts = append(cs.reasoningContentParts, choice.Delta.ReasoningContent)
+			}
 			if choice.Delta.Refusal != "" {
 				cs.refusalParts = append(cs.refusalParts, choice.Delta.Refusal)
 			}
@@ -96,10 +100,11 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	for _, idx := range choiceOrder {
 		cs := choiceMap[idx]
 		message := &dto.ChatCompletionMessageParam{
-			Role:      cs.role,
-			Content:   strings.Join(cs.contentParts, ""),
-			Refusal:   strings.Join(cs.refusalParts, ""),
-			ToolCalls: cs.toolCalls,
+			Role:             cs.role,
+			Content:          strings.Join(cs.contentParts, ""),
+			ReasoningContent: strings.Join(cs.reasoningContentParts, ""),
+			Refusal:          strings.Join(cs.refusalParts, ""),
+			ToolCalls:        cs.toolCalls,
 		}
 		cmpl.Choices = append(cmpl.Choices, &dto.ChatCompletionChoice{
 			Index:        cs.index,
