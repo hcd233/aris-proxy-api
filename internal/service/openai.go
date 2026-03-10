@@ -154,12 +154,22 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 								if payload != "[DONE]" {
 									chunk := &dto.ChatCompletionChunk{}
 									if err := sonic.UnmarshalString(payload, chunk); err != nil {
-										logger.Warn("[CreateChatCompletion] unmarshal sse chunk error", zap.Error(err))
-									} else {
-										chunk.Model = req.Body.Model
-										collectedChunks = append(collectedChunks, chunk)
-										line = fmt.Sprintf("%s%s", dataPrefix, lo.Must1(sonic.Marshal(chunk)))
+										logger.Warn("[CreateChatCompletion] unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
+										continue
 									}
+
+									delta := &dto.ChatCompletionChunkDelta{}
+									if len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil {
+										delta = chunk.Choices[0].Delta
+									}
+									if delta.Content == "" && delta.ReasoningContent == "" && len(delta.ToolCalls) == 0 {
+										logger.Info("[CreateChatCompletion] ignore empty chunk", zap.Any("chunk", chunk))
+										continue
+									}
+
+									chunk.Model = req.Body.Model
+									collectedChunks = append(collectedChunks, chunk)
+									line = fmt.Sprintf("%s%s", dataPrefix, lo.Must1(sonic.Marshal(chunk)))
 								}
 							}
 							fmt.Fprintf(w, "%s\n\n", line)

@@ -547,10 +547,10 @@ type ChatCompletionChunk struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionChunkChoice struct {
-	Delta        ChatCompletionChunkDelta `json:"delta" doc:"增量内容"`
-	FinishReason enum.FinishReason        `json:"finish_reason,omitempty" doc:"完成原因"`
-	Index        int                      `json:"index" doc:"选择索引"`
-	Logprobs     *Logprobs                `json:"logprobs,omitempty" doc:"Log概率信息"`
+	Delta        *ChatCompletionChunkDelta `json:"delta" doc:"增量内容"`
+	FinishReason enum.FinishReason         `json:"finish_reason,omitempty" doc:"完成原因"`
+	Index        int                       `json:"index" doc:"选择索引"`
+	Logprobs     *Logprobs                 `json:"logprobs,omitempty" doc:"Log概率信息"`
 }
 
 // ChatCompletionChunkDelta 流式增量内容
