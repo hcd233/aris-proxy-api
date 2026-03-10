@@ -8,6 +8,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"github.com/hcd233/aris-proxy-api/internal/proxy"
@@ -44,6 +45,7 @@ var startServerCmd = &cobra.Command{
 		cache.InitCache()
 		// storage.InitObjectStorage()
 		proxy.InitLLMProxyConfig()
+		pool.InitPoolManager()
 		// cron.InitCronJobs()
 
 		app := api.GetFiberApp()
