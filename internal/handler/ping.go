@@ -23,7 +23,7 @@ import (
 //	author centonhuang
 //	update 2025-01-04 15:52:48
 type PingHandler interface {
-	HandlePing(ctx context.Context, req *dto.EmptyReq) (rsp *dto.HTTPResponse[*dto.PingResponse], err error)
+	HandlePing(ctx context.Context, req *dto.EmptyReq) (rsp *dto.HTTPResponse[*dto.PingRsp], err error)
 	HandleSSEPing(ctx context.Context, req *dto.EmptyReq) (rsp *huma.StreamResponse, err error)
 }
 
@@ -39,8 +39,8 @@ func NewPingHandler() PingHandler {
 }
 
 // HandlePing 健康检查处理器
-func (h *pingHandler) HandlePing(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.PingResponse], error) {
-	rsp := &dto.PingResponse{
+func (h *pingHandler) HandlePing(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.PingRsp], error) {
+	rsp := &dto.PingRsp{
 		Status: "ok",
 	}
 

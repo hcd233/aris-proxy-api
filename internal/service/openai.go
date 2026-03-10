@@ -31,7 +31,7 @@ var upstreamHTTPClient = &http.Client{
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
 type OpenAIService interface {
-	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsResponse, error)
+	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsRsp, error)
 	CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error)
 }
 
@@ -54,11 +54,11 @@ func NewOpenAIService() OpenAIService {
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
-func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.ListModelsResponse, error) {
+func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.ListModelsRsp, error) {
 
 	config := proxy.GetLLMProxyConfig()
 
-	return &dto.ListModelsResponse{
+	return &dto.ListModelsRsp{
 		Object: "list",
 		Data: lo.Map(lo.Keys(config.Models), func(key string, _ int) *dto.OpenAIModel {
 			return &dto.OpenAIModel{

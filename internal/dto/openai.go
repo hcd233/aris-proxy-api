@@ -61,7 +61,7 @@ type ChatCompletionMessageParam struct {
 
 	// 助手消息特有
 	Audio        *ChatCompletionAudioReference    `json:"audio,omitempty" doc:"音频响应数据"`
-	ToolCalls    []ChatCompletionMessageToolCall  `json:"tool_calls,omitempty" doc:"工具调用列表"`
+	ToolCalls    []*ChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
 	FunctionCall *ChatCompletionFunctionCallParam `json:"function_call,omitempty" doc:"函数调用(已废弃)"`
 	Refusal      string                           `json:"refusal,omitempty" doc:"拒绝消息"`
 
@@ -489,7 +489,7 @@ type ChatCompletionRequest struct {
 //
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
-type ListModelsResponse struct {
+type ListModelsRsp struct {
 	Object string         `json:"object" doc:"对象类型: list"`
 	Data   []*OpenAIModel `json:"data" doc:"模型列表"`
 }

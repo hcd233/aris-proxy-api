@@ -6,6 +6,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/service"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // OpenAIHandler OpenAI兼容接口处理器
@@ -13,7 +14,7 @@ import (
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
 type OpenAIHandler interface {
-	HandleListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsResponse, error)
+	HandleListModels(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
 	HandleChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error)
 }
 
@@ -41,8 +42,8 @@ func NewOpenAIHandler() OpenAIHandler {
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
-func (h *openAIHandler) HandleListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsResponse, error) {
-	return h.svc.ListModels(ctx, req)
+func (h *openAIHandler) HandleListModels(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error) {
+	return util.WrapHTTPResponse(h.svc.ListModels(ctx, req))
 }
 
 // HandleChatCompletion 处理聊天补全请求
