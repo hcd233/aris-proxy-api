@@ -110,8 +110,8 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 					logger.Error("[submitMessageStoreTask] failed to get message", zap.Int("idx", idx), zap.Error(err))
 					return err
 				}
-				// record not found
-				if message == nil {
+
+				if errors.Is(err, gorm.ErrRecordNotFound) {
 					logger.Info("[submitMessageStoreTask] message not found, creating message", zap.Int("idx", idx))
 					err = pm.messageDAO.Create(tx, m)
 					if err != nil {
