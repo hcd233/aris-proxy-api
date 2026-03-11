@@ -10,9 +10,10 @@ import (
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
@@ -90,9 +91,13 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 	logger := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 	return pm.messageStorePool.Go(func() {
-		messages := lo.Map(task.Messages, func(m *dto.ChatCompletionMessageParam, _ int) *model.Message {
-			return &model.Message{
-				Model:    task.Model,
+		messages := lo.Map(task.Messages, func(m *dto.ChatCompletionMessageParam, _ int) *dbmodel.Message {
+			model := ""
+			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
+				model = task.Model
+			}
+			return &dbmodel.Message{
+				Model:    model,
 				Message:  m,
 				CheckSum: util.ComputeMessageChecksum(m),
 			}
@@ -100,7 +105,7 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 		err := db.Transaction(func(tx *gorm.DB) error {
 			messageIDs := make([]uint, 0)
 			for idx, m := range messages {
-				message, err := pm.messageDAO.Get(tx, &model.Message{CheckSum: m.CheckSum, Model: m.Model}, []string{"id"})
+				message, err := pm.messageDAO.Get(tx, &dbmodel.Message{CheckSum: m.CheckSum, Model: m.Model}, []string{"id"})
 				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 					logger.Error("[submitMessageStoreTask] failed to get message", zap.Int("idx", idx), zap.Error(err))
 					return err
@@ -118,7 +123,7 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 				messageIDs = append(messageIDs, message.ID)
 			}
 
-			session := &model.Session{
+			session := &dbmodel.Session{
 				APIKeyName: task.APIKeyName,
 				MessageIDs: messageIDs,
 			}
