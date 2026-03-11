@@ -12,6 +12,6 @@ import (
 //
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
-type MessageDAO struct {
-	baseDAO[dbmodel.Message]
+type SessionDAO struct {
+	baseDAO[dbmodel.Session]
 }

@@ -21,4 +21,5 @@ type BaseModel struct {
 var Models = []interface{}{
 	&User{},
 	&Message{},
+	&Session{},
 }

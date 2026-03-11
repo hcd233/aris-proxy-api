@@ -5,12 +5,19 @@
 package pool
 
 import (
+	"errors"
+
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // Manager 全局协程池管理器
@@ -18,8 +25,8 @@ import (
 //	author centonhuang
 //	update 2026-01-31 16:00:00
 type Manager struct {
-	messageDAO *dao.MessageDAO
-
+	messageDAO       *dao.MessageDAO
+	sessionDAO       *dao.SessionDAO
 	pingPool         pond.Pool
 	messageStorePool pond.Pool
 }
@@ -32,8 +39,8 @@ var poolManager *Manager
 //	@update 2026-01-31 03:37:28
 func InitPoolManager() {
 	poolManager = &Manager{
-		messageDAO: dao.GetMessageDAO(),
-
+		messageDAO:       dao.GetMessageDAO(),
+		sessionDAO:       dao.GetSessionDAO(),
 		pingPool:         pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 		messageStorePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 	}
@@ -80,13 +87,52 @@ func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
+	logger := logger.WithCtx(task.Ctx)
+	db := database.GetDBInstance(task.Ctx)
 	return pm.messageStorePool.Go(func() {
-		logger := logger.WithCtx(task.Ctx)
-		if err := pm.messageDAO.StoreMessageChain(task.Ctx, task.APIKeyName, task.Model, task.Messages, task.Response); err != nil {
-			logger.Error("[PoolManager] failed to store message chain", zap.Error(err))
-		} else {
-			logger.Info("[PoolManager] message chain stored successfully")
+		messages := lo.Map(task.Messages, func(m *dto.ChatCompletionMessageParam, _ int) *model.Message {
+			return &model.Message{
+				Model:    task.Model,
+				Message:  m,
+				CheckSum: util.ComputeMessageChecksum(m),
+			}
+		})
+		err := db.Transaction(func(tx *gorm.DB) error {
+			messageIDs := make([]uint, 0)
+			for idx, m := range messages {
+				message, err := pm.messageDAO.Get(tx, &model.Message{CheckSum: m.CheckSum, Model: m.Model}, []string{"id"})
+				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+					logger.Error("[submitMessageStoreTask] failed to get message", zap.Int("idx", idx), zap.Error(err))
+					return err
+				}
+				// record not found
+				if message == nil {
+					logger.Info("[submitMessageStoreTask] message not found, creating message", zap.Int("idx", idx))
+					err = pm.messageDAO.Create(tx, m)
+					if err != nil {
+						logger.Error("[submitMessageStoreTask] failed to create message", zap.Int("idx", idx), zap.Error(err))
+						return err
+					}
+					message = m
+				}
+				messageIDs = append(messageIDs, message.ID)
+			}
+
+			session := &model.Session{
+				APIKeyName: task.APIKeyName,
+				MessageIDs: messageIDs,
+			}
+			err := pm.sessionDAO.Create(tx, session)
+			if err != nil {
+				logger.Error("[submitMessageStoreTask] failed to create session", zap.Error(err))
+			}
+			return err
+		})
+		if err != nil {
+			logger.Error("[submitMessageStoreTask] failed to store messages", zap.Error(err))
+			return
 		}
+		logger.Info("[submitMessageStoreTask] messages stored successfully")
 	})
 }
 

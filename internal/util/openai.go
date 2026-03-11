@@ -8,6 +8,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/samber/lo"
 )
 
 // ConcatChatCompletionChunks 合并聊天完成流式块
@@ -124,11 +125,7 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
-func ComputeMessageChecksum(msg *dto.ChatCompletionMessageParam) (string, error) {
-	if msg == nil {
-		return "", nil
-	}
-
+func ComputeMessageChecksum(msg *dto.ChatCompletionMessageParam) string {
 	// 构建用于计算校验和的数据结构
 	data := struct {
 		Content   any                                  `json:"content"`
@@ -138,11 +135,6 @@ func ComputeMessageChecksum(msg *dto.ChatCompletionMessageParam) (string, error)
 		ToolCalls: msg.ToolCalls,
 	}
 
-	jsonBytes, err := json.Marshal(data)
-	if err != nil {
-		return "", err
-	}
-
-	hash := sha256.Sum256(jsonBytes)
-	return hex.EncodeToString(hash[:]), nil
+	hash := sha256.Sum256(lo.Must1(json.Marshal(data)))
+	return hex.EncodeToString(hash[:])
 }
