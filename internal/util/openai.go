@@ -1,6 +1,7 @@
 package util
 
 import (
+	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -101,7 +102,7 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	for _, idx := range choiceOrder {
 		cs := choiceMap[idx]
 		message := &dto.ChatCompletionMessageParam{
-			Role:             cs.role,
+			Role:             cmp.Or(cs.role, enum.RoleAssistant),
 			Content:          strings.Join(cs.contentParts, ""),
 			ReasoningContent: strings.Join(cs.reasoningContentParts, ""),
 			Refusal:          strings.Join(cs.refusalParts, ""),
