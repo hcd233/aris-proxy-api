@@ -58,10 +58,11 @@ func NewAnthropicService() AnthropicService {
 func (s *anthropicService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.AnthropicListModelsRsp, error) {
 	config := proxy.GetLLMProxyConfig()
 
-	// Filter models by type=anthropic
+	// Filter models that have an anthropic endpoint configured
 	anthropicKeys := lo.Filter(lo.Keys(config.Models), func(key string, _ int) bool {
 		mc := config.Models[key]
-		return mc.Type == enum.ProviderAnthropic
+		_, hasAnthropic := mc.Endpoints[enum.ProviderAnthropic]
+		return hasAnthropic
 	})
 
 	models := lo.Map(anthropicKeys, func(key string, _ int) *dto.AnthropicModelInfo {
@@ -103,6 +104,12 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
+	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderAnthropic]
+	if !hasEndpoint {
+		logger.Error("[CreateMessage] model has no anthropic endpoint", zap.String("model", req.Body.Model))
+		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
+	}
+
 	// Build upstream request body as map to replace model name
 	bodyBytes := lo.Must1(sonic.Marshal(req.Body))
 
@@ -115,7 +122,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 	bodyMap["model"] = modelCfg.Model
 
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
-	upstreamURL := strings.TrimRight(modelCfg.BaseURL, "/") + "/v1/messages"
+	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages"
 
 	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
@@ -123,12 +130,12 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 		return util.SendAnthropicInternalError(), nil
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
-	upstreamReq.Header.Set("x-api-key", modelCfg.APIKey)
+	upstreamReq.Header.Set("x-api-key", endpoint.APIKey)
 	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
 
 	logger.Info("[CreateMessage] send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", modelCfg.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(modelCfg.APIKey)),
+		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
 	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)

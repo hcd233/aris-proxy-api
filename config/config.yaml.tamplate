@@ -2,18 +2,25 @@ api_keys:
   aris: sk-xxx
 
 model_list:
+  # New format: a model can have multiple protocol endpoints
   deepseek-chat:
     model: deepseek-chat
-    api_key: sk-xxx
-    base_url: https://api.deepseek.com/v1
-    type: openai
+    endpoints:
+      openai:
+        api_key: sk-xxx
+        base_url: https://api.deepseek.com/v1
+      anthropic:
+        api_key: sk-xxx
+        base_url: https://api.deepseek.com
+  claude-sonnet-4-20250514:
+    model: claude-sonnet-4-20250514
+    endpoints:
+      anthropic:
+        api_key: sk-ant-xxx
+        base_url: https://api.anthropic.com
+  # Legacy format (still supported, auto-migrated to endpoints on load)
   kimi-k2.5:
     model: kimi-k2.5
     api_key: sk-xxx
     base_url: https://api.moonshot.cn/v1
     type: openai
-  claude-sonnet-4-20250514:
-    model: claude-sonnet-4-20250514
-    api_key: sk-ant-xxx
-    base_url: https://api.anthropic.com
-    type: anthropic

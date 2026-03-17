@@ -9,12 +9,24 @@ import (
 	"go.uber.org/zap"
 )
 
-// ModelConfig holds the configuration for a single upstream LLM model
+// EndpointConfig holds connection info for a single protocol endpoint
+//
+//	@author centonhuang
+//	@update 2026-03-17 10:00:00
+type EndpointConfig struct {
+	APIKey  string `mapstructure:"api_key" yaml:"api_key"`
+	BaseURL string `mapstructure:"base_url" yaml:"base_url"`
+}
+
+// ModelConfig holds the configuration for a single upstream LLM model.
+// A model may expose multiple protocol endpoints (e.g. both openai and anthropic).
 //
 //	@author centonhuang
 //	@update 2026-03-17 10:00:00
 type ModelConfig struct {
-	Model   string            `mapstructure:"model" yaml:"model"`
+	Model     string                                `mapstructure:"model" yaml:"model"`
+	Endpoints map[enum.ProviderType]*EndpointConfig `mapstructure:"endpoints" yaml:"endpoints"`
+	// Legacy fields kept for backward-compatible YAML parsing; migrated to Endpoints during init.
 	APIKey  string            `mapstructure:"api_key" yaml:"api_key"`
 	BaseURL string            `mapstructure:"base_url" yaml:"base_url"`
 	Type    enum.ProviderType `mapstructure:"type" yaml:"type"`
@@ -44,7 +56,7 @@ func GetLLMProxyConfig() *LLMProxyConfig {
 // A *zap.Logger is accepted to avoid an import cycle (logger -> config).
 //
 //	@author centonhuang
-//	@update 2026-03-06 00:00:00
+//	@update 2026-03-17 10:00:00
 func InitLLMProxyConfig() {
 	// Use "::" as key delimiter to avoid conflicts with "." in model names (e.g. "gpt-4.1")
 	v := viper.NewWithOptions(viper.KeyDelimiter("::"))
@@ -59,23 +71,50 @@ func InitLLMProxyConfig() {
 	lo.Must0(v.ReadInConfig())
 	lo.Must0(v.Unmarshal(llmProxyConfig))
 
-	// Default empty Type to "openai" for backward compatibility
+	// Migrate legacy single-endpoint format to new multi-endpoint format
 	for name, mc := range llmProxyConfig.Models {
-		if mc.Type == "" {
-			mc.Type = enum.ProviderOpenAI
+		if len(mc.Endpoints) == 0 && mc.BaseURL != "" {
+			// Legacy format detected: type + base_url + api_key → endpoints map
+			providerType := mc.Type
+			if providerType == "" {
+				providerType = enum.ProviderOpenAI
+			}
+			mc.Endpoints = map[enum.ProviderType]*EndpointConfig{
+				providerType: {
+					APIKey:  mc.APIKey,
+					BaseURL: mc.BaseURL,
+				},
+			}
+			// Clear legacy fields after migration
+			mc.APIKey = ""
+			mc.BaseURL = ""
+			mc.Type = ""
 			llmProxyConfig.Models[name] = mc
 		}
 	}
 
 	// Build masked model list for structured logging
-	maskedModels := make(map[string]map[string]string, len(llmProxyConfig.Models))
+	type maskedEndpoint struct {
+		BaseURL string `json:"base_url"`
+		APIKey  string `json:"api_key"`
+	}
+	type maskedModel struct {
+		Model     string                     `json:"model"`
+		Endpoints map[string]*maskedEndpoint `json:"endpoints"`
+	}
+	maskedModels := make(map[string]*maskedModel, len(llmProxyConfig.Models))
 	for name, mc := range llmProxyConfig.Models {
-		maskedModels[name] = map[string]string{
-			"model":    mc.Model,
-			"base_url": mc.BaseURL,
-			"api_key":  util.MaskSecret(mc.APIKey),
-			"type":     mc.Type,
+		mm := &maskedModel{
+			Model:     mc.Model,
+			Endpoints: make(map[string]*maskedEndpoint, len(mc.Endpoints)),
 		}
+		for provider, ep := range mc.Endpoints {
+			mm.Endpoints[provider] = &maskedEndpoint{
+				BaseURL: ep.BaseURL,
+				APIKey:  util.MaskSecret(ep.APIKey),
+			}
+		}
+		maskedModels[name] = mm
 	}
 
 	// Build masked API keys for structured logging

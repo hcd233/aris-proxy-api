@@ -60,10 +60,11 @@ func NewOpenAIService() OpenAIService {
 func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.ListModelsRsp, error) {
 	config := proxy.GetLLMProxyConfig()
 
-	// Filter models by type=openai (or empty for backward compatibility)
+	// Filter models that have an openai endpoint configured
 	openaiKeys := lo.Filter(lo.Keys(config.Models), func(key string, _ int) bool {
 		mc := config.Models[key]
-		return mc.Type == enum.ProviderOpenAI
+		_, hasOpenAI := mc.Endpoints[enum.ProviderOpenAI]
+		return hasOpenAI
 	})
 
 	return &dto.ListModelsRsp{
@@ -98,6 +99,12 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
+	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderOpenAI]
+	if !hasEndpoint {
+		logger.Error("[CreateChatCompletion] model has no openai endpoint", zap.String("model", req.Body.Model))
+		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+	}
+
 	if req.Body.MaxTokens != nil {
 		logger.Info("[CreateChatCompletion] max_tokens is deprecated, adapt to max_completion_tokens", zap.Intp("max_tokens", req.Body.MaxTokens))
 		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
@@ -114,7 +121,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 	bodyMap["model"] = modelCfg.Model
 
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
-	upstreamURL := strings.TrimRight(modelCfg.BaseURL, "/") + "/chat/completions"
+	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/chat/completions"
 
 	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
@@ -122,11 +129,11 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		return util.SendOpenAIInternalError(), nil
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
-	upstreamReq.Header.Set("Authorization", "Bearer "+modelCfg.APIKey)
+	upstreamReq.Header.Set("Authorization", "Bearer "+endpoint.APIKey)
 
 	logger.Info("[CreateChatCompletion] send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", modelCfg.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(modelCfg.APIKey)),
+		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
 	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
