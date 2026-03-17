@@ -86,12 +86,12 @@ func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
 //	@param task *dto.MessageStoreTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-10 10:00:00
+//	@update 2026-03-17 10:00:00
 func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 	logger := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 	return pm.messageStorePool.Go(func() {
-		messages := lo.Map(task.Messages, func(m *dto.ChatCompletionMessageParam, _ int) *dbmodel.Message {
+		messages := lo.Map(task.Messages, func(m *dto.UnifiedMessage, _ int) *dbmodel.Message {
 			model := ""
 			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
 				model = task.Model

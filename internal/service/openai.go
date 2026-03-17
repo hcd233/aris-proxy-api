@@ -15,6 +15,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/proxy"
@@ -59,9 +60,15 @@ func NewOpenAIService() OpenAIService {
 func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.ListModelsRsp, error) {
 	config := proxy.GetLLMProxyConfig()
 
+	// Filter models by type=openai (or empty for backward compatibility)
+	openaiKeys := lo.Filter(lo.Keys(config.Models), func(key string, _ int) bool {
+		mc := config.Models[key]
+		return mc.Type == enum.ProviderOpenAI
+	})
+
 	return &dto.ListModelsRsp{
 		Object: "list",
-		Data: lo.Map(lo.Keys(config.Models), func(key string, _ int) *dto.OpenAIModel {
+		Data: lo.Map(openaiKeys, func(key string, _ int) *dto.OpenAIModel {
 			return &dto.OpenAIModel{
 				ID:      key,
 				Created: time.Now().Unix(),
@@ -197,15 +204,15 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 						logger.Warn("[CreateChatCompletion] ai response is empty", zap.Any("response", completion))
 						return
 					}
-					messages := lo.Map(req.Body.Messages, func(message *dto.ChatCompletionMessageParam, _ int) *dto.ChatCompletionMessageParam {
-						return message
+					unifiedMessages := lo.Map(req.Body.Messages, func(message *dto.ChatCompletionMessageParam, _ int) *dto.UnifiedMessage {
+						return dto.FromOpenAIMessage(message)
 					})
-					messages = append(messages, completion.Choices[0].Message)
+					unifiedMessages = append(unifiedMessages, dto.FromOpenAIMessage(completion.Choices[0].Message))
 					err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 						Ctx:        util.CopyContextValues(ctx),
 						APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
 						Model:      modelCfg.Model,
-						Messages:   messages,
+						Messages:   unifiedMessages,
 					})
 					if err != nil {
 						logger.Error("[submitMessageStoreTask] failed to submit message store task", zap.Error(err))
@@ -251,16 +258,16 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				logger.Warn("[CreateChatCompletion] ai response is empty", zap.Any("response", completion))
 				return
 			}
-			messages := lo.Map(req.Body.Messages, func(message *dto.ChatCompletionMessageParam, _ int) *dto.ChatCompletionMessageParam {
-				return message
+			unifiedMessages := lo.Map(req.Body.Messages, func(message *dto.ChatCompletionMessageParam, _ int) *dto.UnifiedMessage {
+				return dto.FromOpenAIMessage(message)
 			})
-			messages = append(messages, completion.Choices[0].Message)
+			unifiedMessages = append(unifiedMessages, dto.FromOpenAIMessage(completion.Choices[0].Message))
 
 			err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 				Ctx:        util.CopyContextValues(ctx),
 				APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
 				Model:      modelCfg.Model,
-				Messages:   messages,
+				Messages:   unifiedMessages,
 			})
 			if err != nil {
 				logger.Error("[submitMessageStoreTask] failed to submit message store task", zap.Error(err))

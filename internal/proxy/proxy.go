@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
@@ -11,11 +12,12 @@ import (
 // ModelConfig holds the configuration for a single upstream LLM model
 //
 //	@author centonhuang
-//	@update 2026-03-05 17:23:02
+//	@update 2026-03-17 10:00:00
 type ModelConfig struct {
-	Model   string `mapstructure:"model" yaml:"model"`
-	APIKey  string `mapstructure:"api_key" yaml:"api_key"`
-	BaseURL string `mapstructure:"base_url" yaml:"base_url"`
+	Model   string            `mapstructure:"model" yaml:"model"`
+	APIKey  string            `mapstructure:"api_key" yaml:"api_key"`
+	BaseURL string            `mapstructure:"base_url" yaml:"base_url"`
+	Type    enum.ProviderType `mapstructure:"type" yaml:"type"`
 }
 
 // LLMProxyConfig holds the full proxy configuration loaded from config.yaml
@@ -57,6 +59,14 @@ func InitLLMProxyConfig() {
 	lo.Must0(v.ReadInConfig())
 	lo.Must0(v.Unmarshal(llmProxyConfig))
 
+	// Default empty Type to "openai" for backward compatibility
+	for name, mc := range llmProxyConfig.Models {
+		if mc.Type == "" {
+			mc.Type = enum.ProviderOpenAI
+			llmProxyConfig.Models[name] = mc
+		}
+	}
+
 	// Build masked model list for structured logging
 	maskedModels := make(map[string]map[string]string, len(llmProxyConfig.Models))
 	for name, mc := range llmProxyConfig.Models {
@@ -64,6 +74,7 @@ func InitLLMProxyConfig() {
 			"model":    mc.Model,
 			"base_url": mc.BaseURL,
 			"api_key":  util.MaskSecret(mc.APIKey),
+			"type":     mc.Type,
 		}
 	}
 

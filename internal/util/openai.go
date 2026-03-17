@@ -119,21 +119,20 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	return cmpl, nil
 }
 
-// ComputeMessageChecksum 计算消息校验和（基于Content和ToolCalls）
+// ComputeMessageChecksum 计算统一消息校验和（基于Provider和RawContent）
 //
-//	@param msg *dto.ChatCompletionMessageParam
+//	@param msg *dto.UnifiedMessage
 //	@return string
-//	@return error
 //	@author centonhuang
-//	@update 2026-03-10 10:00:00
-func ComputeMessageChecksum(msg *dto.ChatCompletionMessageParam) string {
+//	@update 2026-03-17 10:00:00
+func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
 	// 构建用于计算校验和的数据结构
 	data := struct {
-		Content   any                                  `json:"content"`
-		ToolCalls []*dto.ChatCompletionMessageToolCall `json:"tool_calls"`
+		Provider string          `json:"provider"`
+		Raw      json.RawMessage `json:"raw"`
 	}{
-		Content:   msg.Content,
-		ToolCalls: msg.ToolCalls,
+		Provider: msg.Provider,
+		Raw:      msg.RawContent,
 	}
 
 	hash := sha256.Sum256(lo.Must1(json.Marshal(data)))
