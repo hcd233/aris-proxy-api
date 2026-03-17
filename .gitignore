@@ -31,3 +31,6 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# AI
+.codebuddy
