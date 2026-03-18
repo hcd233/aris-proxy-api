@@ -1,7 +1,10 @@
 package dto
 
 import (
+	"reflect"
+
 	"github.com/bytedance/sonic"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -35,6 +38,17 @@ func (c MessageContent) MarshalJSON() ([]byte, error) {
 		return sonic.Marshal(c.Parts)
 	}
 	return sonic.Marshal(c.Text)
+}
+
+// Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或 ContentPart 数组
+func (c MessageContent) Schema(r huma.Registry) *huma.Schema {
+	contentPartSchema := r.Schema(reflect.TypeOf(ChatCompletionContentPart{}), true, "ChatCompletionContentPart")
+	return &huma.Schema{
+		OneOf: []*huma.Schema{
+			{Type: "string"},
+			{Type: "array", Items: contentPartSchema},
+		},
+	}
 }
 
 // ChatCompletionContentPart 内容部分联合结构体（按 Type 区分）
@@ -75,6 +89,16 @@ func (s StopSequence) MarshalJSON() ([]byte, error) {
 		return sonic.Marshal(s.Texts)
 	}
 	return sonic.Marshal(s.Text)
+}
+
+// Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或字符串数组
+func (s StopSequence) Schema(_ huma.Registry) *huma.Schema {
+	return &huma.Schema{
+		OneOf: []*huma.Schema{
+			{Type: "string"},
+			{Type: "array", Items: &huma.Schema{Type: "string"}},
+		},
+	}
 }
 
 // ChatCompletionToolChoiceParam 工具选择参数（字符串或对象的联合类型）

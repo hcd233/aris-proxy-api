@@ -138,3 +138,8 @@ Two auth mechanisms applied per-route:
 - **Pond v2**: Goroutine pool for async tasks
 - **ulule/limiter**: Redis-backed rate limiting
 - **samber/lo**: Functional utilities for Go
+
+### CORE INSTRUCTION
+
+1. **DO NOT** use json.RAWMessage OR any(interface{})
+2. **ALWAYS** check the document in `/docs` before you modify dto of openai or anthropic
