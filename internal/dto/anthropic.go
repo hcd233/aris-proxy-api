@@ -95,7 +95,7 @@ func (c AnthropicMessageContent) MarshalJSON() ([]byte, error) {
 
 // Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或 ContentBlock 数组
 func (c AnthropicMessageContent) Schema(r huma.Registry) *huma.Schema {
-	contentBlockSchema := r.Schema(reflect.TypeOf(AnthropicContentBlock{}), true, "AnthropicContentBlock")
+	contentBlockSchema := r.Schema(reflect.TypeFor[AnthropicContentBlock](), true, "AnthropicContentBlock")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
 			{Type: "string"},
@@ -133,7 +133,7 @@ func (c AnthropicToolResultContent) MarshalJSON() ([]byte, error) {
 
 // Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或 ContentBlock 数组
 func (c AnthropicToolResultContent) Schema(r huma.Registry) *huma.Schema {
-	contentBlockSchema := r.Schema(reflect.TypeOf(AnthropicContentBlock{}), true, "AnthropicContentBlock")
+	contentBlockSchema := r.Schema(reflect.TypeFor[AnthropicContentBlock](), true, "AnthropicContentBlock")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
 			{Type: "string"},

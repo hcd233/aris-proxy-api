@@ -42,7 +42,7 @@ func (c MessageContent) MarshalJSON() ([]byte, error) {
 
 // Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或 ContentPart 数组
 func (c MessageContent) Schema(r huma.Registry) *huma.Schema {
-	contentPartSchema := r.Schema(reflect.TypeOf(ChatCompletionContentPart{}), true, "ChatCompletionContentPart")
+	contentPartSchema := r.Schema(reflect.TypeFor[ChatCompletionContentPart](), true, "ChatCompletionContentPart")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
 			{Type: "string"},
@@ -129,6 +129,17 @@ func (tc ChatCompletionToolChoiceParam) MarshalJSON() ([]byte, error) {
 	return sonic.Marshal(tc.Mode)
 }
 
+// Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或工具选择对象
+func (tc ChatCompletionToolChoiceParam) Schema(r huma.Registry) *huma.Schema {
+	toolChoiceSchema := r.Schema(reflect.TypeFor[ChatCompletionToolChoice](), true, "ChatCompletionToolChoice")
+	return &huma.Schema{
+		OneOf: []*huma.Schema{
+			{Type: "string", Enum: []any{"none", "auto", "required"}},
+			toolChoiceSchema,
+		},
+	}
+}
+
 // VoiceParam 声音参数（字符串或对象 {id} 的联合类型）
 //
 //	@author centonhuang
@@ -161,6 +172,22 @@ func (v VoiceParam) MarshalJSON() ([]byte, error) {
 		return sonic.Marshal(map[string]string{"id": v.CustomID})
 	}
 	return sonic.Marshal(v.Name)
+}
+
+// Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或 {id} 对象
+func (v VoiceParam) Schema(_ huma.Registry) *huma.Schema {
+	return &huma.Schema{
+		OneOf: []*huma.Schema{
+			{Type: "string"},
+			{
+				Type: "object",
+				Properties: map[string]*huma.Schema{
+					"id": {Type: "string"},
+				},
+				Required: []string{"id"},
+			},
+		},
+	}
 }
 
 // ==================== Chat Completion Request DTOs ====================
