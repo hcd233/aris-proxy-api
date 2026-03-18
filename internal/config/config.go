@@ -192,6 +192,8 @@ func initEnvironment() {
 
 	config.AutomaticEnv()
 
+	Env = config.GetString("env")
+
 	ReadTimeout = config.GetDuration("read.timeout")
 	WriteTimeout = config.GetDuration("write.timeout")
 	MaxHeaderBytes = config.GetInt("max.header.bytes")
