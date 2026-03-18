@@ -2,34 +2,53 @@ package dto
 
 import "encoding/json"
 
-// ==================== Anthropic Tool DTOs ====================
+// ==================== Anthropic Common DTOs ====================
 
-// AnthropicToolInputSchema Anthropic 工具输入 Schema
+// CacheControl Anthropic 缓存控制
 //
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
-type AnthropicToolInputSchema struct {
-	Type       string                         `json:"type" doc:"Schema类型，通常为object"`
-	Properties map[string]*JSONSchemaProperty `json:"properties,omitempty" doc:"属性定义"`
-	Required   []string                       `json:"required,omitempty" doc:"必填字段"`
+type CacheControl struct {
+	Type string `json:"type" doc:"缓存类型: ephemeral"`
 }
+
+// ==================== Anthropic Context Management DTOs ====================
+
+// AnthropicContextManagementEdit Anthropic 上下文管理编辑项
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicContextManagementEdit struct {
+	Type string `json:"type" doc:"编辑类型"`
+	Keep string `json:"keep,omitempty" doc:"保留策略"`
+}
+
+// AnthropicContextManagement Anthropic 上下文管理配置
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicContextManagement struct {
+	Edits []*AnthropicContextManagementEdit `json:"edits,omitempty" doc:"上下文编辑操作列表"`
+}
+
+// ==================== Anthropic Tool DTOs ====================
 
 // AnthropicTool Anthropic 工具定义（联合结构体，覆盖所有工具类型）
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 type AnthropicTool struct {
 	// 通用字段
-	Type         string `json:"type,omitempty" doc:"工具类型: custom/bash_20250124/text_editor_20250124/text_editor_20250429/text_editor_20250728/computer_20250124/code_execution_20250522/code_execution_20250825/web_search_20250305 等"`
-	Name         string `json:"name,omitempty" doc:"工具名称"`
-	CacheControl any    `json:"cache_control,omitempty" doc:"缓存控制"`
-	DeferLoading *bool  `json:"defer_loading,omitempty" doc:"延迟加载"`
-	Strict       *bool  `json:"strict,omitempty" doc:"严格模式"`
+	Type         string        `json:"type,omitempty" doc:"工具类型: custom/bash_20250124/text_editor_20250124/text_editor_20250429/text_editor_20250728/computer_20250124/code_execution_20250522/code_execution_20250825/web_search_20250305 等"`
+	Name         string        `json:"name,omitempty" doc:"工具名称"`
+	CacheControl *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
+	DeferLoading *bool         `json:"defer_loading,omitempty" doc:"延迟加载"`
+	Strict       *bool         `json:"strict,omitempty" doc:"严格模式"`
 
 	// 自定义工具字段 (type=custom 或 type 为空)
-	Description   string                    `json:"description,omitempty" doc:"工具描述"`
-	InputSchema   *AnthropicToolInputSchema `json:"input_schema,omitempty" doc:"输入JSON Schema"`
-	InputExamples []map[string]any          `json:"input_examples,omitempty" doc:"输入示例"`
+	Description   string              `json:"description,omitempty" doc:"工具描述"`
+	InputSchema   *JSONSchemaProperty `json:"input_schema,omitempty" doc:"输入JSON Schema"`
+	InputExamples []map[string]string `json:"input_examples,omitempty" doc:"输入示例"`
 
 	// 计算机使用工具字段 (type=computer_20250124)
 	DisplayWidthPx  *int `json:"display_width_px,omitempty" doc:"显示宽度(像素)"`
@@ -45,16 +64,16 @@ type AnthropicTool struct {
 // AnthropicMessageParam Anthropic 消息参数
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 type AnthropicMessageParam struct {
-	Role    string `json:"role" doc:"消息角色: user 或 assistant"`
-	Content any    `json:"content" doc:"消息内容(字符串或ContentBlock数组)"`
+	Role    string          `json:"role" doc:"消息角色: user 或 assistant"`
+	Content json.RawMessage `json:"content" doc:"消息内容(字符串或ContentBlock数组)"`
 }
 
 // AnthropicContentBlock Anthropic 内容块基础结构
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 type AnthropicContentBlock struct {
 	Type string `json:"type" doc:"内容块类型"`
 	// TextBlock 字段
@@ -65,16 +84,16 @@ type AnthropicContentBlock struct {
 	// RedactedThinkingBlock 字段
 	Data string `json:"data,omitempty" doc:"编辑后的思考数据(type=redacted_thinking)"`
 	// ToolUseBlock 字段
-	ID    string `json:"id,omitempty" doc:"工具调用ID(type=tool_use)"`
-	Name  string `json:"name,omitempty" doc:"工具名称(type=tool_use)"`
-	Input any    `json:"input,omitempty" doc:"工具输入(type=tool_use)"`
+	ID    string          `json:"id,omitempty" doc:"工具调用ID(type=tool_use)"`
+	Name  string          `json:"name,omitempty" doc:"工具名称(type=tool_use)"`
+	Input json.RawMessage `json:"input,omitempty" doc:"工具输入(type=tool_use)"`
 	// ToolResultBlock 字段
 	ToolUseID string `json:"tool_use_id,omitempty" doc:"关联的工具调用ID(type=tool_result)"`
 	IsError   *bool  `json:"is_error,omitempty" doc:"是否为错误结果(type=tool_result)"`
 	// ImageBlock 字段
-	Source any `json:"source,omitempty" doc:"图片来源(type=image)"`
+	Source json.RawMessage `json:"source,omitempty" doc:"图片来源(type=image)"`
 	// 通用字段
-	CacheControl any `json:"cache_control,omitempty" doc:"缓存控制"`
+	CacheControl *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
 }
 
 // ==================== Anthropic Output Config DTOs ====================
@@ -84,8 +103,8 @@ type AnthropicContentBlock struct {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicJSONOutputFormat struct {
-	Type   string         `json:"type" doc:"格式类型: json_schema"`
-	Schema map[string]any `json:"schema,omitempty" doc:"JSON Schema对象"`
+	Type   string              `json:"type" doc:"格式类型: json_schema"`
+	Schema *JSONSchemaProperty `json:"schema,omitempty" doc:"JSON Schema对象"`
 }
 
 // AnthropicOutputConfig Anthropic 输出配置
@@ -97,6 +116,39 @@ type AnthropicOutputConfig struct {
 	Format *AnthropicJSONOutputFormat `json:"format,omitempty" doc:"输出格式配置"`
 }
 
+// ==================== Anthropic Thinking Config DTOs ====================
+
+// AnthropicThinkingConfig Anthropic 思考配置
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicThinkingConfig struct {
+	Type         string `json:"type" doc:"思考类型: enabled/disabled"`
+	BudgetTokens *int   `json:"budget_tokens,omitempty" doc:"思考预算token数"`
+}
+
+// ==================== Anthropic Tool Choice DTOs ====================
+
+// AnthropicToolChoice Anthropic 工具选择配置
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicToolChoice struct {
+	Type                   string `json:"type" doc:"工具选择类型: auto/any/tool/none"`
+	Name                   string `json:"name,omitempty" doc:"指定工具名称(type=tool时必填)"`
+	DisableParallelToolUse *bool  `json:"disable_parallel_tool_use,omitempty" doc:"禁用并行工具调用"`
+}
+
+// ==================== Anthropic Metadata DTOs ====================
+
+// AnthropicMetadata Anthropic 请求元数据
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicMetadata struct {
+	UserID string `json:"user_id,omitempty" doc:"用户标识符"`
+}
+
 // ==================== Anthropic Create Message Request DTOs ====================
 
 // AnthropicCreateMessageReq Anthropic Create Message 请求体
@@ -104,24 +156,25 @@ type AnthropicOutputConfig struct {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicCreateMessageReq struct {
-	MaxTokens     int                      `json:"max_tokens" doc:"最大生成 token 数"`
-	Messages      []*AnthropicMessageParam `json:"messages" doc:"消息列表"`
-	Model         string                   `json:"model" doc:"模型ID"`
-	Stream        *bool                    `json:"stream,omitempty" doc:"是否流式"`
-	System        any                      `json:"system,omitempty" doc:"系统提示(字符串或TextBlockParam数组)"`
-	Temperature   *float64                 `json:"temperature,omitempty" doc:"采样温度(0-1)"`
-	TopK          *int                     `json:"top_k,omitempty" doc:"Top-K采样"`
-	TopP          *float64                 `json:"top_p,omitempty" doc:"核采样概率"`
-	StopSequences []string                 `json:"stop_sequences,omitempty" doc:"停止序列"`
-	Tools         []*AnthropicTool         `json:"tools,omitempty" doc:"工具定义列表"`
-	ToolChoice    any                      `json:"tool_choice,omitempty" doc:"工具选择(auto/any/tool/none)"`
-	Thinking      any                      `json:"thinking,omitempty" doc:"思考配置"`
-	Metadata      any                      `json:"metadata,omitempty" doc:"元数据"`
-	ServiceTier   string                   `json:"service_tier,omitempty" doc:"服务层级"`
-	OutputConfig  *AnthropicOutputConfig   `json:"output_config,omitempty" doc:"输出配置(输出格式、努力级别等)"`
-	CacheControl  any                      `json:"cache_control,omitempty" doc:"顶层缓存控制"`
-	Container     string                   `json:"container,omitempty" doc:"容器标识符"`
-	InferenceGeo  string                   `json:"inference_geo,omitempty" doc:"推理地理区域"`
+	MaxTokens         int                         `json:"max_tokens" doc:"最大生成 token 数"`
+	Messages          []*AnthropicMessageParam    `json:"messages" doc:"消息列表"`
+	Model             string                      `json:"model" doc:"模型ID"`
+	Stream            *bool                       `json:"stream,omitempty" doc:"是否流式"`
+	System            json.RawMessage             `json:"system,omitempty" doc:"系统提示(字符串或TextBlockParam数组)"`
+	Temperature       *float64                    `json:"temperature,omitempty" doc:"采样温度(0-1)"`
+	TopK              *int                        `json:"top_k,omitempty" doc:"Top-K采样"`
+	TopP              *float64                    `json:"top_p,omitempty" doc:"核采样概率"`
+	StopSequences     []string                    `json:"stop_sequences,omitempty" doc:"停止序列"`
+	Tools             []*AnthropicTool            `json:"tools,omitempty" doc:"工具定义列表"`
+	ToolChoice        *AnthropicToolChoice        `json:"tool_choice,omitempty" doc:"工具选择配置"`
+	Thinking          *AnthropicThinkingConfig    `json:"thinking,omitempty" doc:"思考配置"`
+	Metadata          *AnthropicMetadata          `json:"metadata,omitempty" doc:"元数据"`
+	ServiceTier       string                      `json:"service_tier,omitempty" doc:"服务层级"`
+	OutputConfig      *AnthropicOutputConfig      `json:"output_config,omitempty" doc:"输出配置(输出格式、努力级别等)"`
+	CacheControl      *CacheControl               `json:"cache_control,omitempty" doc:"顶层缓存控制"`
+	Container         string                      `json:"container,omitempty" doc:"容器标识符"`
+	InferenceGeo      string                      `json:"inference_geo,omitempty" doc:"推理地理区域"`
+	ContextManagement *AnthropicContextManagement `json:"context_management,omitempty" doc:"上下文管理配置"`
 }
 
 // AnthropicCreateMessageRequest Anthropic Create Message 请求包装（Huma格式）

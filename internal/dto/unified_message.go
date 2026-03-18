@@ -79,24 +79,26 @@ func FromAnthropicMessage(msg *AnthropicMessageParam) *UnifiedMessage {
 		Role: msg.Role,
 	}
 
-	// Content 可能是 string 或 []AnthropicContentBlock
-	switch v := msg.Content.(type) {
-	case string:
-		um.Content = v
-	default:
-		// 尝试序列化后解析为 []AnthropicContentBlock
-		data, err := sonic.Marshal(v)
-		if err != nil {
-			um.Content = v
-			return um
-		}
-		var blocks []AnthropicContentBlock
-		if err := sonic.Unmarshal(data, &blocks); err != nil {
-			um.Content = v
-			return um
-		}
-		extractAnthropicBlocks(um, blocks)
+	// Content 是 json.RawMessage，可能是 JSON string 或 []AnthropicContentBlock
+	if len(msg.Content) == 0 {
+		return um
 	}
+
+	// 先尝试作为 string 解析
+	var s string
+	if err := sonic.Unmarshal(msg.Content, &s); err == nil {
+		um.Content = s
+		return um
+	}
+
+	// 尝试解析为 []AnthropicContentBlock
+	var blocks []AnthropicContentBlock
+	if err := sonic.Unmarshal(msg.Content, &blocks); err != nil {
+		// 无法解析，保留原始 JSON
+		um.Content = string(msg.Content)
+		return um
+	}
+	extractAnthropicBlocks(um, blocks)
 
 	return um
 }
@@ -138,7 +140,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []AnthropicContentBlock) 
 		thinkingParts  []string
 		toolCalls      []*UnifiedToolCall
 		toolResultID   string
-		toolResultBody any
+		toolResultBody string
 		hasOtherBlocks bool
 	)
 

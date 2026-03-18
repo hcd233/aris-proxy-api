@@ -1,5 +1,7 @@
 package dto
 
+import "encoding/json"
+
 // JSONSchemaProperty 递归 JSON Schema 属性定义，覆盖标准 JSON Schema 字段
 //
 //	@author centonhuang
@@ -10,14 +12,14 @@ type JSONSchemaProperty struct {
 	Properties           map[string]*JSONSchemaProperty `json:"properties,omitempty" doc:"对象属性定义(递归)"`
 	Items                *JSONSchemaProperty            `json:"items,omitempty" doc:"数组元素定义(递归)"`
 	Required             []string                       `json:"required,omitempty" doc:"必填字段列表"`
-	Enum                 []any                          `json:"enum,omitempty" doc:"枚举值列表"`
-	Const                any                            `json:"const,omitempty" doc:"常量值"`
-	Default              any                            `json:"default,omitempty" doc:"默认值"`
+	Enum                 []json.RawMessage              `json:"enum,omitempty" doc:"枚举值列表"`
+	Const                json.RawMessage                `json:"const,omitempty" doc:"常量值"`
+	Default              json.RawMessage                `json:"default,omitempty" doc:"默认值"`
 	AnyOf                []*JSONSchemaProperty          `json:"anyOf,omitempty" doc:"任意匹配"`
 	OneOf                []*JSONSchemaProperty          `json:"oneOf,omitempty" doc:"唯一匹配"`
 	AllOf                []*JSONSchemaProperty          `json:"allOf,omitempty" doc:"全部匹配"`
 	Not                  *JSONSchemaProperty            `json:"not,omitempty" doc:"取反"`
-	AdditionalProperties any                            `json:"additionalProperties,omitempty" doc:"额外属性(bool或JSONSchemaProperty)"`
+	AdditionalProperties json.RawMessage                `json:"additionalProperties,omitempty" doc:"额外属性(bool或JSONSchemaProperty)"`
 	Strict               *bool                          `json:"strict,omitempty" doc:"是否启用严格模式"`
 
 	// 数值验证
@@ -42,6 +44,7 @@ type JSONSchemaProperty struct {
 	MinProperties     *int                           `json:"minProperties,omitempty" doc:"最小属性数"`
 	MaxProperties     *int                           `json:"maxProperties,omitempty" doc:"最大属性数"`
 	PatternProperties map[string]*JSONSchemaProperty `json:"patternProperties,omitempty" doc:"正则匹配的属性定义"`
+	PropertyNames     *JSONSchemaProperty            `json:"propertyNames,omitempty" doc:"属性名称约束"`
 
 	// 其他标准字段
 	Title  string                         `json:"title,omitempty" doc:"标题"`

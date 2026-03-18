@@ -52,11 +52,7 @@ func FromAnthropicTool(tool *AnthropicTool) *UnifiedTool {
 		Description: tool.Description,
 	}
 	if tool.InputSchema != nil {
-		unified.Parameters = &JSONSchemaProperty{
-			Type:       tool.InputSchema.Type,
-			Properties: tool.InputSchema.Properties,
-			Required:   tool.InputSchema.Required,
-		}
+		unified.Parameters = tool.InputSchema
 	}
 	return unified
 }
