@@ -75,16 +75,18 @@ func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
 //
 //     @param events []AnthropicSSEEvent
 //     @return *dto.AnthropicMessage
+//     @return error
 //     @author centonhuang
-//     @update 2026-03-17 10:00:00
-func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) *dto.AnthropicMessage {
+//     @update 2026-03-18 10:00:00
+func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) (*dto.AnthropicMessage, error) {
 	msg := &dto.AnthropicMessage{}
 
 	// Track content blocks by index
 	type blockState struct {
-		blockType string
-		textParts []string
-		rawStart  json.RawMessage // The initial content_block from content_block_start
+		block         *dto.AnthropicContentBlock
+		textParts     []string
+		thinkingParts []string
+		inputParts    []string // for input_json_delta
 	}
 	blocks := make(map[int]*blockState)
 	blockOrder := make([]int, 0)
@@ -92,11 +94,13 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) *dto.AnthropicMessage 
 	for _, event := range events {
 		switch event.Event {
 		case "message_start":
-			// data: {"type":"message_start","message":{...}}
 			var payload struct {
 				Message *dto.AnthropicMessage `json:"message"`
 			}
-			if err := sonic.Unmarshal(event.Data, &payload); err == nil && payload.Message != nil {
+			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+				return nil, fmt.Errorf("unmarshal message_start: %w", err)
+			}
+			if payload.Message != nil {
 				msg.ID = payload.Message.ID
 				msg.Type = payload.Message.Type
 				msg.Role = payload.Message.Role
@@ -105,43 +109,51 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) *dto.AnthropicMessage 
 			}
 
 		case "content_block_start":
-			// data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
 			var payload struct {
-				Index        int             `json:"index"`
-				ContentBlock json.RawMessage `json:"content_block"`
+				Index        int                        `json:"index"`
+				ContentBlock *dto.AnthropicContentBlock `json:"content_block"`
 			}
-			if err := sonic.Unmarshal(event.Data, &payload); err == nil {
-				var blockInfo struct {
-					Type string `json:"type"`
-				}
-				sonic.Unmarshal(payload.ContentBlock, &blockInfo)
-				bs := &blockState{
-					blockType: blockInfo.Type,
-					rawStart:  payload.ContentBlock,
-				}
-				blocks[payload.Index] = bs
-				blockOrder = append(blockOrder, payload.Index)
+			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+				return nil, fmt.Errorf("unmarshal content_block_start: %w", err)
 			}
+			bs := &blockState{
+				block: payload.ContentBlock,
+			}
+			blocks[payload.Index] = bs
+			blockOrder = append(blockOrder, payload.Index)
 
 		case "content_block_delta":
-			// data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"..."}}
 			var payload struct {
 				Index int `json:"index"`
 				Delta struct {
-					Type string `json:"type"`
-					Text string `json:"text"`
+					Type        string `json:"type"`
+					Text        string `json:"text"`
+					Thinking    string `json:"thinking"`
+					PartialJSON string `json:"partial_json"`
 				} `json:"delta"`
 			}
-			if err := sonic.Unmarshal(event.Data, &payload); err == nil {
-				if bs, ok := blocks[payload.Index]; ok {
-					if payload.Delta.Text != "" {
-						bs.textParts = append(bs.textParts, payload.Delta.Text)
-					}
+			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+				return nil, fmt.Errorf("unmarshal content_block_delta: %w", err)
+			}
+			bs, ok := blocks[payload.Index]
+			if !ok {
+				return nil, fmt.Errorf("content_block_delta for unknown index %d", payload.Index)
+			}
+			switch payload.Delta.Type {
+			case "text_delta":
+				bs.textParts = append(bs.textParts, payload.Delta.Text)
+			case "thinking_delta":
+				bs.thinkingParts = append(bs.thinkingParts, payload.Delta.Thinking)
+			case "input_json_delta":
+				bs.inputParts = append(bs.inputParts, payload.Delta.PartialJSON)
+			case "signature_delta":
+				// signature 累积到 block 的 Signature 字段
+				if bs.block != nil {
+					bs.block.Signature += payload.Delta.Text
 				}
 			}
 
 		case "message_delta":
-			// data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":15}}
 			var payload struct {
 				Delta struct {
 					StopReason   *string `json:"stop_reason"`
@@ -149,35 +161,58 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) *dto.AnthropicMessage 
 				} `json:"delta"`
 				Usage *dto.AnthropicUsage `json:"usage"`
 			}
-			if err := sonic.Unmarshal(event.Data, &payload); err == nil {
-				msg.StopReason = payload.Delta.StopReason
-				msg.StopSequence = payload.Delta.StopSequence
-				if payload.Usage != nil && msg.Usage != nil {
-					msg.Usage.OutputTokens = payload.Usage.OutputTokens
-				}
+			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+				return nil, fmt.Errorf("unmarshal message_delta: %w", err)
 			}
+			msg.StopReason = payload.Delta.StopReason
+			msg.StopSequence = payload.Delta.StopSequence
+			if payload.Usage != nil && msg.Usage != nil {
+				msg.Usage.OutputTokens = payload.Usage.OutputTokens
+			}
+
+		case "content_block_stop", "message_stop", "ping":
+			// 无需处理
+
+		default:
+			return nil, fmt.Errorf("unknown SSE event type: %q", event.Event)
 		}
 	}
 
 	// Build final content blocks
-	msg.Content = make([]json.RawMessage, 0, len(blockOrder))
+	msg.Content = make([]*dto.AnthropicContentBlock, 0, len(blockOrder))
 	for _, idx := range blockOrder {
 		bs := blocks[idx]
-		if bs.blockType == "text" && len(bs.textParts) > 0 {
-			// Reconstruct the text block with accumulated text
-			block := map[string]any{
-				"type": "text",
-				"text": strings.Join(bs.textParts, ""),
-			}
-			data, _ := sonic.Marshal(block)
-			msg.Content = append(msg.Content, data)
-		} else {
-			// For non-text blocks (thinking, tool_use, etc.), use the raw start block
-			msg.Content = append(msg.Content, bs.rawStart)
+		if bs.block == nil {
+			continue
 		}
+
+		block := bs.block
+
+		// 累积文本增量
+		switch block.Type {
+		case "text":
+			if len(bs.textParts) > 0 {
+				block.Text = strings.Join(bs.textParts, "")
+			}
+		case "thinking":
+			if len(bs.thinkingParts) > 0 {
+				block.Thinking = strings.Join(bs.thinkingParts, "")
+			}
+		case "tool_use", "server_tool_use":
+			if len(bs.inputParts) > 0 {
+				inputJSON := strings.Join(bs.inputParts, "")
+				var input map[string]any
+				if err := sonic.UnmarshalString(inputJSON, &input); err != nil {
+					return nil, fmt.Errorf("unmarshal accumulated tool_use input for block[%d]: %w", idx, err)
+				}
+				block.Input = input
+			}
+		}
+
+		msg.Content = append(msg.Content, block)
 	}
 
-	return msg
+	return msg, nil
 }
 
 // AnthropicSSEEvent 表示一个解析后的 Anthropic SSE 事件

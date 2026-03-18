@@ -220,7 +220,11 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 					if len(collectedEvents) == 0 {
 						return
 					}
-					assembledMsg := util.ConcatAnthropicSSEEvents(collectedEvents)
+					assembledMsg, err := util.ConcatAnthropicSSEEvents(collectedEvents)
+					if err != nil {
+						logger.Error("[CreateMessage] failed to assemble SSE events", zap.Error(err))
+						return
+					}
 					if assembledMsg == nil || len(assembledMsg.Content) == 0 {
 						logger.Warn("[CreateMessage] assembled message is empty")
 						return
@@ -282,11 +286,21 @@ func (s *anthropicService) storeAnthropicMessages(
 
 	// Convert request messages to UnifiedMessage
 	for _, msg := range req.Body.Messages {
-		unifiedMessages = append(unifiedMessages, dto.FromAnthropicMessage(msg))
+		um, err := dto.FromAnthropicMessage(msg)
+		if err != nil {
+			logger.Error("[storeAnthropicMessages] failed to convert anthropic message", zap.Error(err))
+			return
+		}
+		unifiedMessages = append(unifiedMessages, um)
 	}
 
 	// Convert assistant response to UnifiedMessage
-	unifiedMessages = append(unifiedMessages, dto.FromAnthropicResponse(assistantMsg))
+	aiMsg, err := dto.FromAnthropicResponse(assistantMsg)
+	if err != nil {
+		logger.Error("[storeAnthropicMessages] failed to convert anthropic response", zap.Error(err))
+		return
+	}
+	unifiedMessages = append(unifiedMessages, aiMsg)
 
 	// Convert request tools to UnifiedTool
 	unifiedTools := make([]*dto.UnifiedTool, 0, len(req.Body.Tools))

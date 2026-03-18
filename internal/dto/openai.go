@@ -1,8 +1,143 @@
 package dto
 
 import (
+	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
+
+// ==================== Union Type Structs for Strong Typing ====================
+
+// MessageContent 消息内容（字符串或内容部分数组的联合类型）
+//
+//	用于 ChatCompletionMessageParam.Content 和 ChatCompletionPredictionContent.Content
+//	当传入 JSON 是字符串时，存入 Text；当传入 JSON 是数组时，存入 Parts
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type MessageContent struct {
+	Text  string                       `json:"-"`
+	Parts []*ChatCompletionContentPart `json:"-"`
+}
+
+// UnmarshalJSON 自定义反序列化：区分字符串和数组
+func (c *MessageContent) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := sonic.Unmarshal(data, &s); err == nil {
+		c.Text = s
+		return nil
+	}
+	return sonic.Unmarshal(data, &c.Parts)
+}
+
+// MarshalJSON 自定义序列化：Parts 优先，否则输出字符串
+func (c MessageContent) MarshalJSON() ([]byte, error) {
+	if len(c.Parts) > 0 {
+		return sonic.Marshal(c.Parts)
+	}
+	return sonic.Marshal(c.Text)
+}
+
+// ChatCompletionContentPart 内容部分联合结构体（按 Type 区分）
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type ChatCompletionContentPart struct {
+	Type       string                           `json:"type"`
+	Text       string                           `json:"text,omitempty"`
+	Refusal    string                           `json:"refusal,omitempty"`
+	ImageURL   *ChatCompletionImageURL          `json:"image_url,omitempty"`
+	InputAudio *ChatCompletionInputAudioContent `json:"input_audio,omitempty"`
+	File       *ChatCompletionFileContent       `json:"file,omitempty"`
+}
+
+// StopSequence 停止序列（字符串或字符串数组的联合类型）
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type StopSequence struct {
+	Text  string   `json:"-"`
+	Texts []string `json:"-"`
+}
+
+// UnmarshalJSON 自定义反序列化：区分字符串和字符串数组
+func (s *StopSequence) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := sonic.Unmarshal(data, &text); err == nil {
+		s.Text = text
+		return nil
+	}
+	return sonic.Unmarshal(data, &s.Texts)
+}
+
+// MarshalJSON 自定义序列化：Texts 优先，否则输出字符串
+func (s StopSequence) MarshalJSON() ([]byte, error) {
+	if len(s.Texts) > 0 {
+		return sonic.Marshal(s.Texts)
+	}
+	return sonic.Marshal(s.Text)
+}
+
+// ChatCompletionToolChoiceParam 工具选择参数（字符串或对象的联合类型）
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type ChatCompletionToolChoiceParam struct {
+	Mode  string                    `json:"-"` // "none" / "auto" / "required"
+	Named *ChatCompletionToolChoice `json:"-"` // 具体的工具选择对象
+}
+
+// UnmarshalJSON 自定义反序列化：区分字符串模式和对象
+func (tc *ChatCompletionToolChoiceParam) UnmarshalJSON(data []byte) error {
+	var mode string
+	if err := sonic.Unmarshal(data, &mode); err == nil {
+		tc.Mode = mode
+		return nil
+	}
+	tc.Named = &ChatCompletionToolChoice{}
+	return sonic.Unmarshal(data, tc.Named)
+}
+
+// MarshalJSON 自定义序列化：Named 优先，否则输出字符串模式
+func (tc ChatCompletionToolChoiceParam) MarshalJSON() ([]byte, error) {
+	if tc.Named != nil {
+		return sonic.Marshal(tc.Named)
+	}
+	return sonic.Marshal(tc.Mode)
+}
+
+// VoiceParam 声音参数（字符串或对象 {id} 的联合类型）
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type VoiceParam struct {
+	Name     string `json:"-"` // 内置声音名称如 "alloy"
+	CustomID string `json:"-"` // 自定义声音 ID
+}
+
+// UnmarshalJSON 自定义反序列化：区分字符串和 {id} 对象
+func (v *VoiceParam) UnmarshalJSON(data []byte) error {
+	var name string
+	if err := sonic.Unmarshal(data, &name); err == nil {
+		v.Name = name
+		return nil
+	}
+	var obj struct {
+		ID string `json:"id"`
+	}
+	if err := sonic.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	v.CustomID = obj.ID
+	return nil
+}
+
+// MarshalJSON 自定义序列化：CustomID 优先输出对象，否则输出字符串
+func (v VoiceParam) MarshalJSON() ([]byte, error) {
+	if v.CustomID != "" {
+		return sonic.Marshal(map[string]string{"id": v.CustomID})
+	}
+	return sonic.Marshal(v.Name)
+}
 
 // ==================== Chat Completion Request DTOs ====================
 
@@ -32,12 +167,12 @@ type ChatCompletionReq struct {
 	SafetyIdentifier     string                           `json:"safety_identifier,omitempty" doc:"安全标识符"`
 	Seed                 *int                             `json:"seed,omitempty" doc:"随机种子"`
 	ServiceTier          enum.ServiceTier                 `json:"service_tier,omitempty" doc:"服务层级"`
-	Stop                 any                              `json:"stop,omitempty" doc:"停止序列(字符串或字符串数组)"`
+	Stop                 *StopSequence                    `json:"stop,omitempty" doc:"停止序列(字符串或字符串数组)"`
 	Store                *bool                            `json:"store,omitempty" doc:"是否存储输出"`
 	Stream               *bool                            `json:"stream,omitempty" doc:"是否流式响应"`
 	StreamOptions        *ChatCompletionStreamOptions     `json:"stream_options,omitempty" doc:"流式选项"`
 	Temperature          *float64                         `json:"temperature,omitempty" doc:"采样温度(0-2)"`
-	ToolChoice           any                              `json:"tool_choice,omitempty" doc:"工具选择(字符串或对象)"`
+	ToolChoice           *ChatCompletionToolChoiceParam   `json:"tool_choice,omitempty" doc:"工具选择(字符串或对象)"`
 	Tools                []ChatCompletionTool             `json:"tools,omitempty" doc:"可用工具列表"`
 	TopLogprobs          *int                             `json:"top_logprobs,omitempty" doc:"返回的最可能token数量(0-20)"`
 	TopP                 *float64                         `json:"top_p,omitempty" doc:"核采样概率质量"`
@@ -51,10 +186,10 @@ type ChatCompletionReq struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionMessageParam struct {
-	Role             enum.Role `json:"role" doc:"消息角色"`
-	Content          any       `json:"content" doc:"消息内容(字符串或数组)"`
-	ReasoningContent string    `json:"reasoning_content,omitempty" doc:"推理内容"`
-	Name             string    `json:"name,omitempty" doc:"参与者名称"`
+	Role             enum.Role       `json:"role" doc:"消息角色"`
+	Content          *MessageContent `json:"content,omitempty" doc:"消息内容(字符串或数组)"`
+	ReasoningContent string          `json:"reasoning_content,omitempty" doc:"推理内容"`
+	Name             string          `json:"name,omitempty" doc:"参与者名称"`
 
 	// 开发者/系统消息特有
 
@@ -80,24 +215,6 @@ type ChatCompletionAudioReference struct {
 	ID string `json:"id" doc:"音频响应的唯一标识符"`
 }
 
-// ChatCompletionContentPartText 文本内容部分
-//
-//	@author centonhuang
-//	@update 2026-03-10 10:00:00
-type ChatCompletionContentPartText struct {
-	Type string `json:"type" doc:"内容类型: text"`
-	Text string `json:"text" doc:"文本内容"`
-}
-
-// ChatCompletionContentPartImage 图片内容部分
-//
-//	@author centonhuang
-//	@update 2026-03-10 10:00:00
-type ChatCompletionContentPartImage struct {
-	Type     string                 `json:"type" doc:"内容类型: image_url"`
-	ImageURL ChatCompletionImageURL `json:"image_url" doc:"图片URL信息"`
-}
-
 // ChatCompletionImageURL 图片URL信息
 //
 //	@author centonhuang
@@ -107,15 +224,6 @@ type ChatCompletionImageURL struct {
 	Detail enum.ImageDetail `json:"detail,omitempty" doc:"细节级别: auto/low/high"`
 }
 
-// ChatCompletionContentPartInputAudio 音频输入内容部分
-//
-//	@author centonhuang
-//	@update 2026-03-10 10:00:00
-type ChatCompletionContentPartInputAudio struct {
-	Type       string                          `json:"type" doc:"内容类型: input_audio"`
-	InputAudio ChatCompletionInputAudioContent `json:"input_audio" doc:"音频输入内容"`
-}
-
 // ChatCompletionInputAudioContent 音频输入内容
 //
 //	@author centonhuang
@@ -123,15 +231,6 @@ type ChatCompletionContentPartInputAudio struct {
 type ChatCompletionInputAudioContent struct {
 	Data   string                `json:"data" doc:"base64编码的音频数据"`
 	Format enum.InputAudioFormat `json:"format" doc:"音频格式: wav/mp3"`
-}
-
-// ChatCompletionContentPartFile 文件内容部分
-//
-//	@author centonhuang
-//	@update 2026-03-10 10:00:00
-type ChatCompletionContentPartFile struct {
-	Type string                    `json:"type" doc:"内容类型: file"`
-	File ChatCompletionFileContent `json:"file" doc:"文件内容"`
 }
 
 // ChatCompletionFileContent 文件内容
@@ -150,7 +249,7 @@ type ChatCompletionFileContent struct {
 //	@update 2026-03-10 10:00:00
 type ChatCompletionAudioParam struct {
 	Format enum.AudioFormat `json:"format" doc:"输出音频格式"`
-	Voice  any              `json:"voice" doc:"声音(字符串或对象{id})"`
+	Voice  *VoiceParam      `json:"voice" doc:"声音(字符串或对象{id})"`
 }
 
 // ChatCompletionPredictionContent 预测输出内容
@@ -158,8 +257,8 @@ type ChatCompletionAudioParam struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionPredictionContent struct {
-	Type    string `json:"type" doc:"类型: content"`
-	Content any    `json:"content" doc:"内容(字符串或数组)"`
+	Type    string          `json:"type" doc:"类型: content"`
+	Content *MessageContent `json:"content" doc:"内容(字符串或数组)"`
 }
 
 // ResponseFormat 响应格式

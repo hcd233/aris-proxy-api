@@ -1,11 +1,61 @@
 package dto
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
+
+// ==================== Unified Content Types ====================
+
+// UnifiedContent 统一消息内容（替代 any），纯文本时仅使用 Text，多部分内容时使用 Parts
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type UnifiedContent struct {
+	Text  string                `json:"-"`
+	Parts []*UnifiedContentPart `json:"-"`
+}
+
+// UnmarshalJSON 自定义反序列化：兼容旧数据（string / array / object）
+func (c *UnifiedContent) UnmarshalJSON(data []byte) error {
+	// 1. 尝试作为字符串
+	var s string
+	if err := sonic.Unmarshal(data, &s); err == nil {
+		c.Text = s
+		return nil
+	}
+	// 2. 尝试作为 Parts 数组
+	return sonic.Unmarshal(data, &c.Parts)
+}
+
+// MarshalJSON 自定义序列化：Parts 优先，否则输出字符串
+func (c UnifiedContent) MarshalJSON() ([]byte, error) {
+	if len(c.Parts) > 0 {
+		return sonic.Marshal(c.Parts)
+	}
+	return sonic.Marshal(c.Text)
+}
+
+// UnifiedContentPart 统一内容部分
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type UnifiedContentPart struct {
+	Type        string `json:"type"`                   // text/image_url/input_audio/file/refusal
+	Text        string `json:"text,omitempty"`         // type=text 或 type=refusal
+	ImageURL    string `json:"image_url,omitempty"`    // type=image_url: URL 或 base64
+	ImageDetail string `json:"image_detail,omitempty"` // type=image_url: 细节级别
+	AudioData   string `json:"audio_data,omitempty"`   // type=input_audio
+	AudioFormat string `json:"audio_format,omitempty"` // type=input_audio
+	FileData    string `json:"file_data,omitempty"`    // type=file
+	FileID      string `json:"file_id,omitempty"`      // type=file
+	Filename    string `json:"filename,omitempty"`     // type=file
+}
+
+// ==================== Unified Message ====================
 
 // UnifiedMessage 统一消息格式，用于跨 Provider 的消息存储
 //
@@ -13,7 +63,7 @@ import (
 //	@update 2026-03-18 10:00:00
 type UnifiedMessage struct {
 	Role             enum.Role          `json:"role" doc:"消息角色"`
-	Content          any                `json:"content,omitempty" doc:"消息内容(字符串或内容块数组)"`
+	Content          *UnifiedContent    `json:"content,omitempty" doc:"消息内容"`
 	ReasoningContent string             `json:"reasoning_content,omitempty" doc:"推理/思考内容"`
 	Name             string             `json:"name,omitempty" doc:"参与者名称"`
 	ToolCalls        []*UnifiedToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
@@ -31,20 +81,31 @@ type UnifiedToolCall struct {
 	Arguments string `json:"arguments" doc:"工具参数(JSON字符串)"`
 }
 
+// ==================== Conversion: OpenAI -> Unified ====================
+
 // FromOpenAIMessage 从 OpenAI ChatCompletionMessageParam 转换为 UnifiedMessage
 //
 //	@param msg *ChatCompletionMessageParam
 //	@return *UnifiedMessage
+//	@return error
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
-func FromOpenAIMessage(msg *ChatCompletionMessageParam) *UnifiedMessage {
+func FromOpenAIMessage(msg *ChatCompletionMessageParam) (*UnifiedMessage, error) {
 	um := &UnifiedMessage{
 		Role:             msg.Role,
-		Content:          msg.Content,
 		ReasoningContent: msg.ReasoningContent,
 		Name:             msg.Name,
 		ToolCallID:       msg.ToolCallID,
 		Refusal:          msg.Refusal,
+	}
+
+	// 转换 Content: *MessageContent -> *UnifiedContent
+	if msg.Content != nil {
+		content, err := convertOpenAIContent(msg.Content)
+		if err != nil {
+			return nil, fmt.Errorf("convert openai content: %w", err)
+		}
+		um.Content = content
 	}
 
 	// 转换 OpenAI ToolCalls -> UnifiedToolCall
@@ -65,105 +126,189 @@ func FromOpenAIMessage(msg *ChatCompletionMessageParam) *UnifiedMessage {
 		}
 	}
 
-	return um
+	return um, nil
 }
+
+// convertOpenAIContent 将 OpenAI MessageContent 转换为 UnifiedContent
+func convertOpenAIContent(mc *MessageContent) (*UnifiedContent, error) {
+	if len(mc.Parts) > 0 {
+		parts := make([]*UnifiedContentPart, 0, len(mc.Parts))
+		for i, p := range mc.Parts {
+			part, err := convertOpenAIContentPart(p)
+			if err != nil {
+				return nil, fmt.Errorf("convert content part[%d]: %w", i, err)
+			}
+			parts = append(parts, part)
+		}
+		return &UnifiedContent{Parts: parts}, nil
+	}
+	return &UnifiedContent{Text: mc.Text}, nil
+}
+
+// convertOpenAIContentPart 将 OpenAI ChatCompletionContentPart 转换为 UnifiedContentPart
+func convertOpenAIContentPart(p *ChatCompletionContentPart) (*UnifiedContentPart, error) {
+	switch p.Type {
+	case "text":
+		return &UnifiedContentPart{Type: "text", Text: p.Text}, nil
+	case "refusal":
+		return &UnifiedContentPart{Type: "refusal", Text: p.Refusal}, nil
+	case "image_url":
+		if p.ImageURL == nil {
+			return nil, fmt.Errorf("image_url part missing image_url field")
+		}
+		return &UnifiedContentPart{
+			Type:        "image_url",
+			ImageURL:    p.ImageURL.URL,
+			ImageDetail: string(p.ImageURL.Detail),
+		}, nil
+	case "input_audio":
+		if p.InputAudio == nil {
+			return nil, fmt.Errorf("input_audio part missing input_audio field")
+		}
+		return &UnifiedContentPart{
+			Type:        "input_audio",
+			AudioData:   p.InputAudio.Data,
+			AudioFormat: string(p.InputAudio.Format),
+		}, nil
+	case "file":
+		if p.File == nil {
+			return nil, fmt.Errorf("file part missing file field")
+		}
+		return &UnifiedContentPart{
+			Type:     "file",
+			FileData: p.File.FileData,
+			FileID:   p.File.FileID,
+			Filename: p.File.Filename,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown content part type: %q", p.Type)
+	}
+}
+
+// ==================== Conversion: Anthropic -> Unified ====================
 
 // FromAnthropicMessage 从 Anthropic 请求消息转换为 UnifiedMessage
 //
 //	@param msg *AnthropicMessageParam
 //	@return *UnifiedMessage
+//	@return error
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
-func FromAnthropicMessage(msg *AnthropicMessageParam) *UnifiedMessage {
+func FromAnthropicMessage(msg *AnthropicMessageParam) (*UnifiedMessage, error) {
 	um := &UnifiedMessage{
 		Role: msg.Role,
 	}
 
-	// Content 是 json.RawMessage，可能是 JSON string 或 []AnthropicContentBlock
-	if len(msg.Content) == 0 {
-		return um
+	if msg.Content == nil {
+		return um, nil
 	}
 
-	// 先尝试作为 string 解析
-	var s string
-	if err := sonic.Unmarshal(msg.Content, &s); err == nil {
-		um.Content = s
-		return um
+	// Content 是 *AnthropicMessageContent，可能是纯字符串或 ContentBlock 数组
+	if msg.Content.Text != "" && len(msg.Content.Blocks) == 0 {
+		// 纯字符串内容
+		um.Content = &UnifiedContent{Text: msg.Content.Text}
+		return um, nil
 	}
 
-	// 尝试解析为 []AnthropicContentBlock
-	var blocks []AnthropicContentBlock
-	if err := sonic.Unmarshal(msg.Content, &blocks); err != nil {
-		// 无法解析，保留原始 JSON
-		um.Content = string(msg.Content)
-		return um
+	if len(msg.Content.Blocks) > 0 {
+		if err := extractAnthropicBlocks(um, msg.Content.Blocks); err != nil {
+			return nil, fmt.Errorf("extract anthropic blocks from request: %w", err)
+		}
+		return um, nil
 	}
-	extractAnthropicBlocks(um, blocks)
 
-	return um
+	// 空内容
+	return um, nil
 }
 
 // FromAnthropicResponse 从 Anthropic 响应消息转换为 UnifiedMessage
 //
 //	@param msg *AnthropicMessage
 //	@return *UnifiedMessage
+//	@return error
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
-func FromAnthropicResponse(msg *AnthropicMessage) *UnifiedMessage {
+func FromAnthropicResponse(msg *AnthropicMessage) (*UnifiedMessage, error) {
 	um := &UnifiedMessage{
 		Role: msg.Role,
 	}
 
-	// 解析 Content []json.RawMessage -> []AnthropicContentBlock
-	blocks := make([]AnthropicContentBlock, 0, len(msg.Content))
-	for _, raw := range msg.Content {
-		var block AnthropicContentBlock
-		if err := sonic.Unmarshal(raw, &block); err != nil {
-			continue
-		}
-		blocks = append(blocks, block)
+	if len(msg.Content) == 0 {
+		return um, nil
 	}
 
-	extractAnthropicBlocks(um, blocks)
-	return um
+	if err := extractAnthropicBlocks(um, msg.Content); err != nil {
+		return nil, fmt.Errorf("extract anthropic blocks from response: %w", err)
+	}
+	return um, nil
 }
 
 // extractAnthropicBlocks 从 Anthropic content blocks 中提取统一字段
 //
 //	@param um *UnifiedMessage
-//	@param blocks []AnthropicContentBlock
+//	@param blocks []*AnthropicContentBlock
+//	@return error
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
-func extractAnthropicBlocks(um *UnifiedMessage, blocks []AnthropicContentBlock) {
+func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock) error {
 	var (
-		textParts      []string
-		thinkingParts  []string
-		toolCalls      []*UnifiedToolCall
-		toolResultID   string
-		toolResultBody string
-		hasOtherBlocks bool
+		textParts         []string
+		thinkingParts     []string
+		toolCalls         []*UnifiedToolCall
+		toolResultID      string
+		toolResultContent *UnifiedContent
 	)
 
-	for i := range blocks {
-		block := &blocks[i]
+	for i, block := range blocks {
 		switch block.Type {
 		case "text":
 			textParts = append(textParts, block.Text)
+
 		case "thinking":
 			thinkingParts = append(thinkingParts, block.Thinking)
-		case "tool_use":
-			args, _ := sonic.MarshalString(block.Input)
+
+		case "redacted_thinking":
+			// redacted_thinking 块不包含用户可见的内容，跳过（data 字段是加密数据）
+			continue
+
+		case "tool_use", "server_tool_use":
+			args, err := sonic.MarshalString(block.Input)
+			if err != nil {
+				return fmt.Errorf("marshal tool_use input for block[%d]: %w", i, err)
+			}
 			toolCalls = append(toolCalls, &UnifiedToolCall{
 				ID:        block.ID,
 				Name:      block.Name,
 				Arguments: args,
 			})
+
 		case "tool_result":
 			toolResultID = block.ToolUseID
-			toolResultBody = block.Text
+			if block.Content != nil {
+				// tool_result 的 content 可以是字符串或 ContentBlock 数组
+				if block.Content.Text != "" && len(block.Content.Blocks) == 0 {
+					toolResultContent = &UnifiedContent{Text: block.Content.Text}
+				} else if len(block.Content.Blocks) > 0 {
+					// 嵌套的 content blocks，提取文本
+					var nestedTexts []string
+					for _, nested := range block.Content.Blocks {
+						if nested.Type == "text" {
+							nestedTexts = append(nestedTexts, nested.Text)
+						}
+						// 其他类型（image 等）也可以在这里扩展
+					}
+					if len(nestedTexts) > 0 {
+						toolResultContent = &UnifiedContent{Text: strings.Join(nestedTexts, "\n")}
+					}
+				}
+			}
+
+		case "web_search_tool_result", "code_execution_tool_result", "web_fetch_tool_result":
+			// 服务器工具结果，content 中包含搜索/执行结果等，跳过详细存储
+			continue
+
 		default:
-			// redacted_thinking, image 等
-			hasOtherBlocks = true
+			return fmt.Errorf("unknown anthropic content block type: %q at block[%d]", block.Type, i)
 		}
 	}
 
@@ -180,14 +325,13 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []AnthropicContentBlock) 
 	// 设置 ToolCallID 和 Content
 	if toolResultID != "" {
 		um.ToolCallID = toolResultID
-		um.Content = toolResultBody
-	} else if !hasOtherBlocks && len(toolCalls) == 0 {
-		// 纯文本消息：将文本合并为字符串
-		if len(textParts) > 0 {
-			um.Content = strings.Join(textParts, "\n")
-		}
+		um.Content = toolResultContent
 	} else {
-		// 混合类型（文本 + tool_use、image 等）：保留原始 blocks 格式
-		um.Content = blocks
+		// 非 tool_result 消息：合并文本
+		if len(textParts) > 0 {
+			um.Content = &UnifiedContent{Text: strings.Join(textParts, "\n")}
+		}
 	}
+
+	return nil
 }

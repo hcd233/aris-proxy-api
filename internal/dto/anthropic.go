@@ -1,6 +1,6 @@
 package dto
 
-import "encoding/json"
+import "github.com/bytedance/sonic"
 
 // ==================== Anthropic Common DTOs ====================
 
@@ -61,13 +61,78 @@ type AnthropicTool struct {
 
 // ==================== Anthropic Message Param DTOs ====================
 
+// AnthropicMessageContent Anthropic 消息内容（字符串或 ContentBlock 数组的联合类型）
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicMessageContent struct {
+	Text   string                   `json:"-"`
+	Blocks []*AnthropicContentBlock `json:"-"`
+}
+
+// UnmarshalJSON 自定义反序列化：区分字符串和数组
+func (c *AnthropicMessageContent) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := sonic.Unmarshal(data, &s); err == nil {
+		c.Text = s
+		return nil
+	}
+	return sonic.Unmarshal(data, &c.Blocks)
+}
+
+// MarshalJSON 自定义序列化：Blocks 优先，否则输出字符串
+func (c AnthropicMessageContent) MarshalJSON() ([]byte, error) {
+	if len(c.Blocks) > 0 {
+		return sonic.Marshal(c.Blocks)
+	}
+	return sonic.Marshal(c.Text)
+}
+
+// AnthropicToolResultContent tool_result 的嵌套内容（字符串或 ContentBlock 数组的联合类型）
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicToolResultContent struct {
+	Text   string                   `json:"-"`
+	Blocks []*AnthropicContentBlock `json:"-"`
+}
+
+// UnmarshalJSON 自定义反序列化：区分字符串和数组
+func (c *AnthropicToolResultContent) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := sonic.Unmarshal(data, &s); err == nil {
+		c.Text = s
+		return nil
+	}
+	return sonic.Unmarshal(data, &c.Blocks)
+}
+
+// MarshalJSON 自定义序列化：Blocks 优先，否则输出字符串
+func (c AnthropicToolResultContent) MarshalJSON() ([]byte, error) {
+	if len(c.Blocks) > 0 {
+		return sonic.Marshal(c.Blocks)
+	}
+	return sonic.Marshal(c.Text)
+}
+
+// AnthropicImageSource Anthropic 图片来源（Base64 或 URL）
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicImageSource struct {
+	Type      string `json:"type" doc:"来源类型: base64/url"`
+	MediaType string `json:"media_type,omitempty" doc:"媒体类型(type=base64时): image/jpeg, image/png, image/gif, image/webp"`
+	Data      string `json:"data,omitempty" doc:"Base64编码的图片数据(type=base64时)"`
+	URL       string `json:"url,omitempty" doc:"图片URL(type=url时)"`
+}
+
 // AnthropicMessageParam Anthropic 消息参数
 //
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicMessageParam struct {
-	Role    string          `json:"role" doc:"消息角色: user 或 assistant"`
-	Content json.RawMessage `json:"content" doc:"消息内容(字符串或ContentBlock数组)"`
+	Role    string                   `json:"role" doc:"消息角色: user 或 assistant"`
+	Content *AnthropicMessageContent `json:"content" doc:"消息内容(字符串或ContentBlock数组)"`
 }
 
 // AnthropicContentBlock Anthropic 内容块基础结构
@@ -84,14 +149,15 @@ type AnthropicContentBlock struct {
 	// RedactedThinkingBlock 字段
 	Data string `json:"data,omitempty" doc:"编辑后的思考数据(type=redacted_thinking)"`
 	// ToolUseBlock 字段
-	ID    string          `json:"id,omitempty" doc:"工具调用ID(type=tool_use)"`
-	Name  string          `json:"name,omitempty" doc:"工具名称(type=tool_use)"`
-	Input json.RawMessage `json:"input,omitempty" doc:"工具输入(type=tool_use)"`
+	ID    string         `json:"id,omitempty" doc:"工具调用ID(type=tool_use)"`
+	Name  string         `json:"name,omitempty" doc:"工具名称(type=tool_use)"`
+	Input map[string]any `json:"input,omitempty" doc:"工具输入(type=tool_use)"`
 	// ToolResultBlock 字段
-	ToolUseID string `json:"tool_use_id,omitempty" doc:"关联的工具调用ID(type=tool_result)"`
-	IsError   *bool  `json:"is_error,omitempty" doc:"是否为错误结果(type=tool_result)"`
+	ToolUseID string                      `json:"tool_use_id,omitempty" doc:"关联的工具调用ID(type=tool_result)"`
+	IsError   *bool                       `json:"is_error,omitempty" doc:"是否为错误结果(type=tool_result)"`
+	Content   *AnthropicToolResultContent `json:"content,omitempty" doc:"工具结果内容(type=tool_result)"`
 	// ImageBlock 字段
-	Source json.RawMessage `json:"source,omitempty" doc:"图片来源(type=image)"`
+	Source *AnthropicImageSource `json:"source,omitempty" doc:"图片来源(type=image)"`
 	// 通用字段
 	CacheControl *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
 }
@@ -160,7 +226,7 @@ type AnthropicCreateMessageReq struct {
 	Messages          []*AnthropicMessageParam    `json:"messages" doc:"消息列表"`
 	Model             string                      `json:"model" doc:"模型ID"`
 	Stream            *bool                       `json:"stream,omitempty" doc:"是否流式"`
-	System            json.RawMessage             `json:"system,omitempty" doc:"系统提示(字符串或TextBlockParam数组)"`
+	System            *AnthropicMessageContent    `json:"system,omitempty" doc:"系统提示(字符串或TextBlockParam数组)"`
 	Temperature       *float64                    `json:"temperature,omitempty" doc:"采样温度(0-1)"`
 	TopK              *int                        `json:"top_k,omitempty" doc:"Top-K采样"`
 	TopP              *float64                    `json:"top_p,omitempty" doc:"核采样概率"`
@@ -192,14 +258,14 @@ type AnthropicCreateMessageRequest struct {
 //	@author centonhuang
 //	@update 2026-03-17 10:00:00
 type AnthropicMessage struct {
-	ID           string            `json:"id"`
-	Type         string            `json:"type"`
-	Role         string            `json:"role"`
-	Content      []json.RawMessage `json:"content"`
-	Model        string            `json:"model"`
-	StopReason   *string           `json:"stop_reason"`
-	StopSequence *string           `json:"stop_sequence"`
-	Usage        *AnthropicUsage   `json:"usage"`
+	ID           string                   `json:"id"`
+	Type         string                   `json:"type"`
+	Role         string                   `json:"role"`
+	Content      []*AnthropicContentBlock `json:"content"`
+	Model        string                   `json:"model"`
+	StopReason   *string                  `json:"stop_reason"`
+	StopSequence *string                  `json:"stop_sequence"`
+	Usage        *AnthropicUsage          `json:"usage"`
 }
 
 // AnthropicUsage Anthropic Token 用量统计

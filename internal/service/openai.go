@@ -205,29 +205,13 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 					if err != nil {
 						logger.Warn("[CreateChatCompletion] concat sse chunks error", zap.Error(err))
 						return
-
 					}
 					if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 						logger.Warn("[CreateChatCompletion] ai response is empty", zap.Any("response", completion))
 						return
 					}
-					unifiedMessages := lo.Map(req.Body.Messages, func(message *dto.ChatCompletionMessageParam, _ int) *dto.UnifiedMessage {
-						return dto.FromOpenAIMessage(message)
-					})
-					unifiedMessages = append(unifiedMessages, dto.FromOpenAIMessage(completion.Choices[0].Message))
-					unifiedTools := lo.Map(req.Body.Tools, func(tool dto.ChatCompletionTool, _ int) *dto.UnifiedTool {
-						return dto.FromOpenAITool(&tool)
-					})
-					err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
-						Ctx:        util.CopyContextValues(ctx),
-						APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
-						Model:      modelCfg.Model,
-						Messages:   unifiedMessages,
-						Tools:      unifiedTools,
-					})
-					if err != nil {
-						logger.Error("[submitMessageStoreTask] failed to submit message store task", zap.Error(err))
-					}
+
+					s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model)
 				}))
 			},
 		}, nil
@@ -269,24 +253,52 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				logger.Warn("[CreateChatCompletion] ai response is empty", zap.Any("response", completion))
 				return
 			}
-			unifiedMessages := lo.Map(req.Body.Messages, func(message *dto.ChatCompletionMessageParam, _ int) *dto.UnifiedMessage {
-				return dto.FromOpenAIMessage(message)
-			})
-			unifiedMessages = append(unifiedMessages, dto.FromOpenAIMessage(completion.Choices[0].Message))
-			unifiedTools := lo.Map(req.Body.Tools, func(tool dto.ChatCompletionTool, _ int) *dto.UnifiedTool {
-				return dto.FromOpenAITool(&tool)
-			})
 
-			err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
-				Ctx:        util.CopyContextValues(ctx),
-				APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
-				Model:      modelCfg.Model,
-				Messages:   unifiedMessages,
-				Tools:      unifiedTools,
-			})
-			if err != nil {
-				logger.Error("[submitMessageStoreTask] failed to submit message store task", zap.Error(err))
-			}
+			s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model)
 		},
 	}, nil
+}
+
+// storeOpenAIMessages 存储 OpenAI 消息到统一消息格式
+func (s *openAIService) storeOpenAIMessages(
+	ctx context.Context,
+	logger *zap.Logger,
+	req *dto.ChatCompletionRequest,
+	assistantMsg *dto.ChatCompletionMessageParam,
+	upstreamModel string,
+) {
+	var unifiedMessages []*dto.UnifiedMessage
+
+	// Convert request messages to UnifiedMessage
+	for _, msg := range req.Body.Messages {
+		um, err := dto.FromOpenAIMessage(msg)
+		if err != nil {
+			logger.Error("[storeOpenAIMessages] failed to convert openai message", zap.Error(err))
+			return
+		}
+		unifiedMessages = append(unifiedMessages, um)
+	}
+
+	// Convert assistant response to UnifiedMessage
+	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
+	if err != nil {
+		logger.Error("[storeOpenAIMessages] failed to convert ai response message", zap.Error(err))
+		return
+	}
+	unifiedMessages = append(unifiedMessages, aiMsg)
+
+	// Convert request tools to UnifiedTool
+	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.ChatCompletionTool, _ int) *dto.UnifiedTool {
+		return dto.FromOpenAITool(&tool)
+	})
+
+	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+		Ctx:        util.CopyContextValues(ctx),
+		APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
+		Model:      upstreamModel,
+		Messages:   unifiedMessages,
+		Tools:      unifiedTools,
+	}); err != nil {
+		logger.Error("[CreateChatCompletion] failed to submit message store task", zap.Error(err))
+	}
 }

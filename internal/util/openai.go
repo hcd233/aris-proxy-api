@@ -179,9 +179,9 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 
 		// Use nil instead of empty string for Content to match non-stream responses
 		// when there is no textual content (e.g. tool-call-only messages).
-		var content any
+		var content *dto.MessageContent
 		if joined := strings.Join(cs.contentParts, ""); joined != "" {
-			content = joined
+			content = &dto.MessageContent{Text: joined}
 		}
 
 		message := &dto.ChatCompletionMessageParam{
