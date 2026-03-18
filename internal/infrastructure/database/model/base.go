@@ -17,9 +17,10 @@ type BaseModel struct {
 
 // Models undefined
 //
-//	update 2024-10-29 12:43:4
+//	update 2026-03-18 10:00:00
 var Models = []interface{}{
 	&User{},
 	&Message{},
 	&Session{},
+	&Tool{},
 }

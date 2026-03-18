@@ -7,11 +7,11 @@ import "encoding/json"
 // AnthropicToolInputSchema Anthropic 工具输入 Schema
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 type AnthropicToolInputSchema struct {
-	Type       string         `json:"type" doc:"Schema类型，通常为object"`
-	Properties map[string]any `json:"properties,omitempty" doc:"属性定义"`
-	Required   []string       `json:"required,omitempty" doc:"必填字段"`
+	Type       string                         `json:"type" doc:"Schema类型，通常为object"`
+	Properties map[string]*JSONSchemaProperty `json:"properties,omitempty" doc:"属性定义"`
+	Required   []string                       `json:"required,omitempty" doc:"必填字段"`
 }
 
 // AnthropicTool Anthropic 工具定义（联合结构体，覆盖所有工具类型）

@@ -204,12 +204,12 @@ type ChatCompletionTool struct {
 // FunctionDefinition 函数定义
 //
 //	@author centonhuang
-//	@update 2026-03-10 10:00:00
+//	@update 2026-03-18 10:00:00
 type FunctionDefinition struct {
-	Name        string         `json:"name" doc:"函数名称"`
-	Description string         `json:"description,omitempty" doc:"函数描述"`
-	Parameters  map[string]any `json:"parameters,omitempty" doc:"参数JSON Schema"`
-	Strict      *bool          `json:"strict,omitempty" doc:"是否启用严格模式"`
+	Name        string              `json:"name" doc:"函数名称"`
+	Description string              `json:"description,omitempty" doc:"函数描述"`
+	Parameters  *JSONSchemaProperty `json:"parameters,omitempty" doc:"参数JSON Schema"`
+	Strict      *bool               `json:"strict,omitempty" doc:"是否启用严格模式"`
 }
 
 // CustomToolDefinition 自定义工具定义

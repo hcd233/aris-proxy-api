@@ -297,11 +297,18 @@ func (s *anthropicService) storeAnthropicMessages(
 	}
 	unifiedMessages = append(unifiedMessages, dto.FromAnthropicMessage(enum.RoleAssistant, assistantRaw))
 
+	// Convert request tools to UnifiedTool
+	unifiedTools := make([]*dto.UnifiedTool, 0, len(req.Body.Tools))
+	for _, tool := range req.Body.Tools {
+		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
+	}
+
 	err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:        util.CopyContextValues(ctx),
 		APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
 		Model:      upstreamModel,
 		Messages:   unifiedMessages,
+		Tools:      unifiedTools,
 	})
 	if err != nil {
 		logger.Error("[CreateMessage] failed to submit message store task", zap.Error(err))

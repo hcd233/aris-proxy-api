@@ -24,10 +24,11 @@ import (
 // Manager 全局协程池管理器
 //
 //	author centonhuang
-//	update 2026-01-31 16:00:00
+//	update 2026-03-18 10:00:00
 type Manager struct {
 	messageDAO       *dao.MessageDAO
 	sessionDAO       *dao.SessionDAO
+	toolDAO          *dao.ToolDAO
 	pingPool         pond.Pool
 	messageStorePool pond.Pool
 }
@@ -42,6 +43,7 @@ func InitPoolManager() {
 	poolManager = &Manager{
 		messageDAO:       dao.GetMessageDAO(),
 		sessionDAO:       dao.GetSessionDAO(),
+		toolDAO:          dao.GetToolDAO(),
 		pingPool:         pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 		messageStorePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 	}
@@ -86,7 +88,7 @@ func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
 //	@param task *dto.MessageStoreTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 	logger := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
@@ -102,7 +104,16 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 				CheckSum: util.ComputeMessageChecksum(m),
 			}
 		})
+
+		tools := lo.Map(task.Tools, func(t *dto.UnifiedTool, _ int) *dbmodel.Tool {
+			return &dbmodel.Tool{
+				Tool:     t,
+				CheckSum: dto.ComputeToolChecksum(t),
+			}
+		})
+
 		err := db.Transaction(func(tx *gorm.DB) error {
+			// 存储消息（去重）
 			messageIDs := make([]uint, 0)
 			for idx, m := range messages {
 				message, err := pm.messageDAO.Get(tx, &dbmodel.Message{CheckSum: m.CheckSum, Model: m.Model}, []string{"id"})
@@ -123,9 +134,31 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 				messageIDs = append(messageIDs, message.ID)
 			}
 
+			// 存储工具（去重）
+			toolIDs := make([]uint, 0)
+			for idx, t := range tools {
+				tool, err := pm.toolDAO.Get(tx, &dbmodel.Tool{CheckSum: t.CheckSum}, []string{"id"})
+				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+					logger.Error("[submitMessageStoreTask] failed to get tool", zap.Int("idx", idx), zap.Error(err))
+					return err
+				}
+
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					logger.Info("[submitMessageStoreTask] tool not found, creating tool", zap.Int("idx", idx))
+					err = pm.toolDAO.Create(tx, t)
+					if err != nil {
+						logger.Error("[submitMessageStoreTask] failed to create tool", zap.Int("idx", idx), zap.Error(err))
+						return err
+					}
+					tool = t
+				}
+				toolIDs = append(toolIDs, tool.ID)
+			}
+
 			session := &dbmodel.Session{
 				APIKeyName: task.APIKeyName,
 				MessageIDs: messageIDs,
+				ToolIDs:    toolIDs,
 			}
 			err := pm.sessionDAO.Create(tx, session)
 			if err != nil {

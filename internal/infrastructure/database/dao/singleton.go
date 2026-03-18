@@ -4,12 +4,14 @@ var (
 	userDAOSingleton    *UserDAO
 	messageDAOSingleton *MessageDAO
 	sessionDAOSingleton *SessionDAO
+	toolDAOSingleton    *ToolDAO
 )
 
 func init() {
 	userDAOSingleton = &UserDAO{}
 	messageDAOSingleton = &MessageDAO{}
 	sessionDAOSingleton = &SessionDAO{}
+	toolDAOSingleton = &ToolDAO{}
 }
 
 // GetUserDAO 获取用户DAO
@@ -37,4 +39,13 @@ func GetMessageDAO() *MessageDAO {
 //	@update 2026-03-10 10:00:00
 func GetSessionDAO() *SessionDAO {
 	return sessionDAOSingleton
+}
+
+// GetToolDAO 获取工具DAO
+//
+//	return *ToolDAO
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+func GetToolDAO() *ToolDAO {
+	return toolDAOSingleton
 }

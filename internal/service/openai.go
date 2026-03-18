@@ -215,11 +215,15 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 						return dto.FromOpenAIMessage(message)
 					})
 					unifiedMessages = append(unifiedMessages, dto.FromOpenAIMessage(completion.Choices[0].Message))
+					unifiedTools := lo.Map(req.Body.Tools, func(tool dto.ChatCompletionTool, _ int) *dto.UnifiedTool {
+						return dto.FromOpenAITool(&tool)
+					})
 					err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 						Ctx:        util.CopyContextValues(ctx),
 						APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
 						Model:      modelCfg.Model,
 						Messages:   unifiedMessages,
+						Tools:      unifiedTools,
 					})
 					if err != nil {
 						logger.Error("[submitMessageStoreTask] failed to submit message store task", zap.Error(err))
@@ -269,12 +273,16 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				return dto.FromOpenAIMessage(message)
 			})
 			unifiedMessages = append(unifiedMessages, dto.FromOpenAIMessage(completion.Choices[0].Message))
+			unifiedTools := lo.Map(req.Body.Tools, func(tool dto.ChatCompletionTool, _ int) *dto.UnifiedTool {
+				return dto.FromOpenAITool(&tool)
+			})
 
 			err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 				Ctx:        util.CopyContextValues(ctx),
 				APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
 				Model:      modelCfg.Model,
 				Messages:   unifiedMessages,
+				Tools:      unifiedTools,
 			})
 			if err != nil {
 				logger.Error("[submitMessageStoreTask] failed to submit message store task", zap.Error(err))
