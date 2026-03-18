@@ -27,12 +27,24 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	}
 
 	// choiceBuilders accumulates per-index delta state.
+	type toolCallState struct {
+		id           string
+		toolType     enum.ToolType
+		functionName []string
+		functionArgs []string
+		customName   []string
+		customInput  []string
+		hasFunction  bool
+		hasCustom    bool
+	}
+
 	type choiceState struct {
 		role                  enum.Role
 		contentParts          []string
 		reasoningContentParts []string
 		refusalParts          []string
-		toolCalls             []*dto.ChatCompletionMessageToolCall
+		toolCallMap           map[int]*toolCallState // keyed by tool_call index
+		toolCallOrder         []int
 		finishReason          enum.FinishReason
 		logprobs              *dto.Logprobs
 		index                 int
@@ -63,7 +75,10 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 		for _, choice := range chunk.Choices {
 			cs, exists := choiceMap[choice.Index]
 			if !exists {
-				cs = &choiceState{index: choice.Index}
+				cs = &choiceState{
+					index:       choice.Index,
+					toolCallMap: make(map[int]*toolCallState),
+				}
 				choiceMap[choice.Index] = cs
 				choiceOrder = append(choiceOrder, choice.Index)
 			}
@@ -80,8 +95,45 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 			if choice.Delta.Refusal != "" {
 				cs.refusalParts = append(cs.refusalParts, choice.Delta.Refusal)
 			}
-			if len(choice.Delta.ToolCalls) > 0 {
-				cs.toolCalls = append(cs.toolCalls, choice.Delta.ToolCalls...)
+
+			// Merge tool_call deltas by their index within the tool_calls array.
+			// Streaming chunks carry tool_calls with an "index" field (encoded in
+			// ChatCompletionMessageToolCall.Index) that indicates which logical
+			// tool_call the delta belongs to. We accumulate id, type, function
+			// name/arguments fragments and merge them into one complete tool_call
+			// per index.
+			for _, tc := range choice.Delta.ToolCalls {
+				tcIdx := tc.Index
+				tcs, ok := cs.toolCallMap[tcIdx]
+				if !ok {
+					tcs = &toolCallState{}
+					cs.toolCallMap[tcIdx] = tcs
+					cs.toolCallOrder = append(cs.toolCallOrder, tcIdx)
+				}
+				if tc.ID != "" {
+					tcs.id = tc.ID
+				}
+				if tc.Type != "" {
+					tcs.toolType = tc.Type
+				}
+				if tc.Function != nil {
+					tcs.hasFunction = true
+					if tc.Function.Name != "" {
+						tcs.functionName = append(tcs.functionName, tc.Function.Name)
+					}
+					if tc.Function.Arguments != "" {
+						tcs.functionArgs = append(tcs.functionArgs, tc.Function.Arguments)
+					}
+				}
+				if tc.Custom != nil {
+					tcs.hasCustom = true
+					if tc.Custom.Name != "" {
+						tcs.customName = append(tcs.customName, tc.Custom.Name)
+					}
+					if tc.Custom.Input != "" {
+						tcs.customInput = append(tcs.customInput, tc.Custom.Input)
+					}
+				}
 			}
 
 			if choice.FinishReason != "" {
@@ -101,12 +153,43 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	cmpl.Choices = make([]*dto.ChatCompletionChoice, 0, len(choiceOrder))
 	for _, idx := range choiceOrder {
 		cs := choiceMap[idx]
+
+		// Build merged tool_calls from accumulated deltas.
+		var mergedToolCalls []*dto.ChatCompletionMessageToolCall
+		for _, tcIdx := range cs.toolCallOrder {
+			tcs := cs.toolCallMap[tcIdx]
+			tc := &dto.ChatCompletionMessageToolCall{
+				ID:   tcs.id,
+				Type: tcs.toolType,
+			}
+			if tcs.hasFunction {
+				tc.Function = &dto.ChatCompletionMessageFunctionToolCall{
+					Name:      strings.Join(tcs.functionName, ""),
+					Arguments: strings.Join(tcs.functionArgs, ""),
+				}
+			}
+			if tcs.hasCustom {
+				tc.Custom = &dto.ChatCompletionMessageCustomToolCall{
+					Name:  strings.Join(tcs.customName, ""),
+					Input: strings.Join(tcs.customInput, ""),
+				}
+			}
+			mergedToolCalls = append(mergedToolCalls, tc)
+		}
+
+		// Use nil instead of empty string for Content to match non-stream responses
+		// when there is no textual content (e.g. tool-call-only messages).
+		var content any
+		if joined := strings.Join(cs.contentParts, ""); joined != "" {
+			content = joined
+		}
+
 		message := &dto.ChatCompletionMessageParam{
 			Role:             cmp.Or(cs.role, enum.RoleAssistant),
-			Content:          strings.Join(cs.contentParts, ""),
+			Content:          content,
 			ReasoningContent: strings.Join(cs.reasoningContentParts, ""),
 			Refusal:          strings.Join(cs.refusalParts, ""),
-			ToolCalls:        cs.toolCalls,
+			ToolCalls:        mergedToolCalls,
 		}
 		cmpl.Choices = append(cmpl.Choices, &dto.ChatCompletionChoice{
 			Index:        cs.index,
@@ -121,18 +204,28 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 
 // ComputeMessageChecksum 计算统一消息校验和（基于Provider和RawContent）
 //
+// 对 RawContent 做规范化处理（反序列化再序列化），确保语义相同但 JSON 表示
+// 不同的消息（如 "content":"" vs "content":null）产生相同的 checksum。
+//
 //	@param msg *dto.UnifiedMessage
 //	@return string
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
-	// 构建用于计算校验和的数据结构
+	// Normalize RawContent: unmarshal to a generic structure then re-marshal
+	// to produce a canonical JSON representation.
+	var normalized any
+	if err := json.Unmarshal(msg.RawContent, &normalized); err != nil {
+		// Fallback: use raw content as-is if unmarshal fails
+		normalized = msg.RawContent
+	}
+
 	data := struct {
-		Provider string          `json:"provider"`
-		Raw      json.RawMessage `json:"raw"`
+		Provider string `json:"provider"`
+		Raw      any    `json:"raw"`
 	}{
 		Provider: msg.Provider,
-		Raw:      msg.RawContent,
+		Raw:      normalized,
 	}
 
 	hash := sha256.Sum256(lo.Must1(json.Marshal(data)))

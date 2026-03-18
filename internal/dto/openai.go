@@ -369,8 +369,9 @@ type ChatCompletionAudio struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type ChatCompletionMessageToolCall struct {
-	ID       string                                 `json:"id" doc:"工具调用ID"`
-	Type     enum.ToolType                          `json:"type" doc:"工具类型: function/custom"`
+	Index    int                                    `json:"index,omitempty" doc:"工具调用索引(流式delta中使用)"`
+	ID       string                                 `json:"id,omitempty" doc:"工具调用ID"`
+	Type     enum.ToolType                          `json:"type,omitempty" doc:"工具类型: function/custom"`
 	Function *ChatCompletionMessageFunctionToolCall `json:"function,omitempty" doc:"函数工具调用"`
 	Custom   *ChatCompletionMessageCustomToolCall   `json:"custom,omitempty" doc:"自定义工具调用"`
 }
