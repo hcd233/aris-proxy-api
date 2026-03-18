@@ -1,6 +1,11 @@
 package dto
 
-import "github.com/bytedance/sonic"
+import (
+	"reflect"
+
+	"github.com/bytedance/sonic"
+	"github.com/danielgtaylor/huma/v2"
+)
 
 // ==================== Anthropic Common DTOs ====================
 
@@ -88,6 +93,17 @@ func (c AnthropicMessageContent) MarshalJSON() ([]byte, error) {
 	return sonic.Marshal(c.Text)
 }
 
+// Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或 ContentBlock 数组
+func (c AnthropicMessageContent) Schema(r huma.Registry) *huma.Schema {
+	contentBlockSchema := r.Schema(reflect.TypeOf(AnthropicContentBlock{}), true, "AnthropicContentBlock")
+	return &huma.Schema{
+		OneOf: []*huma.Schema{
+			{Type: "string"},
+			{Type: "array", Items: contentBlockSchema},
+		},
+	}
+}
+
 // AnthropicToolResultContent tool_result 的嵌套内容（字符串或 ContentBlock 数组的联合类型）
 //
 //	@author centonhuang
@@ -113,6 +129,17 @@ func (c AnthropicToolResultContent) MarshalJSON() ([]byte, error) {
 		return sonic.Marshal(c.Blocks)
 	}
 	return sonic.Marshal(c.Text)
+}
+
+// Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型接受字符串或 ContentBlock 数组
+func (c AnthropicToolResultContent) Schema(r huma.Registry) *huma.Schema {
+	contentBlockSchema := r.Schema(reflect.TypeOf(AnthropicContentBlock{}), true, "AnthropicContentBlock")
+	return &huma.Schema{
+		OneOf: []*huma.Schema{
+			{Type: "string"},
+			{Type: "array", Items: contentBlockSchema},
+		},
+	}
 }
 
 // AnthropicImageSource Anthropic 图片来源（Base64 或 URL）
