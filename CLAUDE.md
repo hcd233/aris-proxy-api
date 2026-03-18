@@ -23,11 +23,19 @@ go mod download
 # Run tests
 go test ./...
 
+# Run a single test
+go test -v -run TestFunctionName ./path/to/package
+
 # Docker (full stack with PostgreSQL + Redis)
+docker volume create postgresql-data
+docker volume create redis-data
 docker compose -f docker/docker-compose-full.yml up -d
 
 # Docker (production single service)
 docker compose -f docker/docker-compose-single.yml up -d
+
+# Docker (dev single service - builds from local Dockerfile)
+docker compose -f docker/docker-compose-dev-single.yml up -d --build
 ```
 
 ## Architecture
@@ -37,7 +45,7 @@ This is a Go backend API that serves as an LLM proxy with user management. It us
 ### Two-Tier Configuration
 
 - **Environment variables** (via Viper): Server settings, database credentials, OAuth2, JWT, storage. Loaded from `env/api.env`. Template at `env/api.env.template`.
-- **YAML config** (`config/config.yaml`): LLM proxy model routing and API keys. Defines upstream model endpoints and their credentials. Template at `config/config.yaml.tamplate`.
+- **YAML config** (`config/config.yaml`): LLM proxy model routing and API keys. Defines upstream model endpoints and their credentials. Template at `config/config.yaml.tamplate`. Uses `::` as the key delimiter to support model names containing dots (e.g., `gpt-4.1`).
 
 ### Request Flow
 
@@ -64,12 +72,20 @@ Middleware executes in order: Recover -> fgprof -> CORS -> Compress -> Trace -> 
 ### Authentication
 
 Two auth mechanisms, applied per-route:
-- **JWT** (`Authorization: Bearer <token>`) - For user-facing routes. Tokens issued after OAuth2 login (GitHub/Google).
-- **API Key** (`Authorization: Bearer <api-key>`) - For OpenAI-compatible routes. Keys defined in `config.yaml`.
+- **JWT** (`Authorization: Bearer <token>`) - For user-facing routes under `/api/v1/`. Tokens issued after OAuth2 login (GitHub/Google).
+- **API Key** (`Authorization: Bearer <api-key>`) - For LLM proxy routes (`/openai/v1/*`, `/anthropic/v1/*`). Keys defined in `config.yaml`.
+
+### Route Structure
+
+- `/api/v1/*` - User-facing API (JWT auth): token refresh, OAuth2, user management
+- `/openai/v1/*` - OpenAI-compatible endpoints (API key auth): `/models`, `/chat/completions`
+- `/anthropic/v1/*` - Anthropic-compatible endpoints (API key auth): `/models`, `/messages`
+- `/health`, `/ssehealth` - Health checks (no auth)
+- `/docs` - Scalar API documentation UI (only in non-production environments)
 
 ### Environment Handling
 
-The `internal/enum/env.go` defines `production` and `development` environments. The `/docs` (Scalar API documentation UI) route is only registered in non-production environments.
+The `internal/enum/env.go` defines `production` and `development` environments. The `/docs` route and OpenAPI schema endpoints are only registered in non-production environments.
 
 ### Key Dependencies
 
