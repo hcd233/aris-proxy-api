@@ -77,12 +77,32 @@ type AnthropicContentBlock struct {
 	CacheControl any `json:"cache_control,omitempty" doc:"缓存控制"`
 }
 
+// ==================== Anthropic Output Config DTOs ====================
+
+// AnthropicJSONOutputFormat Anthropic JSON输出格式配置
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicJSONOutputFormat struct {
+	Type   string         `json:"type" doc:"格式类型: json_schema"`
+	Schema map[string]any `json:"schema,omitempty" doc:"JSON Schema对象"`
+}
+
+// AnthropicOutputConfig Anthropic 输出配置
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type AnthropicOutputConfig struct {
+	Effort string                     `json:"effort,omitempty" doc:"努力级别: low/medium/high/max"`
+	Format *AnthropicJSONOutputFormat `json:"format,omitempty" doc:"输出格式配置"`
+}
+
 // ==================== Anthropic Create Message Request DTOs ====================
 
 // AnthropicCreateMessageReq Anthropic Create Message 请求体
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 type AnthropicCreateMessageReq struct {
 	MaxTokens     int                      `json:"max_tokens" doc:"最大生成 token 数"`
 	Messages      []*AnthropicMessageParam `json:"messages" doc:"消息列表"`
@@ -98,6 +118,10 @@ type AnthropicCreateMessageReq struct {
 	Thinking      any                      `json:"thinking,omitempty" doc:"思考配置"`
 	Metadata      any                      `json:"metadata,omitempty" doc:"元数据"`
 	ServiceTier   string                   `json:"service_tier,omitempty" doc:"服务层级"`
+	OutputConfig  *AnthropicOutputConfig   `json:"output_config,omitempty" doc:"输出配置(输出格式、努力级别等)"`
+	CacheControl  any                      `json:"cache_control,omitempty" doc:"顶层缓存控制"`
+	Container     string                   `json:"container,omitempty" doc:"容器标识符"`
+	InferenceGeo  string                   `json:"inference_geo,omitempty" doc:"推理地理区域"`
 }
 
 // AnthropicCreateMessageRequest Anthropic Create Message 请求包装（Huma格式）
