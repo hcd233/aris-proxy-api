@@ -26,10 +26,6 @@ type EndpointConfig struct {
 type ModelConfig struct {
 	Model     string                                `mapstructure:"model" yaml:"model"`
 	Endpoints map[enum.ProviderType]*EndpointConfig `mapstructure:"endpoints" yaml:"endpoints"`
-	// Legacy fields kept for backward-compatible YAML parsing; migrated to Endpoints during init.
-	APIKey  string            `mapstructure:"api_key" yaml:"api_key"`
-	BaseURL string            `mapstructure:"base_url" yaml:"base_url"`
-	Type    enum.ProviderType `mapstructure:"type" yaml:"type"`
 }
 
 // LLMProxyConfig holds the full proxy configuration loaded from config.yaml
@@ -70,28 +66,6 @@ func InitLLMProxyConfig() {
 
 	lo.Must0(v.ReadInConfig())
 	lo.Must0(v.Unmarshal(llmProxyConfig))
-
-	// Migrate legacy single-endpoint format to new multi-endpoint format
-	for name, mc := range llmProxyConfig.Models {
-		if len(mc.Endpoints) == 0 && mc.BaseURL != "" {
-			// Legacy format detected: type + base_url + api_key → endpoints map
-			providerType := mc.Type
-			if providerType == "" {
-				providerType = enum.ProviderOpenAI
-			}
-			mc.Endpoints = map[enum.ProviderType]*EndpointConfig{
-				providerType: {
-					APIKey:  mc.APIKey,
-					BaseURL: mc.BaseURL,
-				},
-			}
-			// Clear legacy fields after migration
-			mc.APIKey = ""
-			mc.BaseURL = ""
-			mc.Type = ""
-			llmProxyConfig.Models[name] = mc
-		}
-	}
 
 	// Build masked model list for structured logging
 	type maskedEndpoint struct {
