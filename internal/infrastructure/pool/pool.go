@@ -5,7 +5,7 @@
 package pool
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/config"
@@ -113,46 +113,18 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 		})
 
 		err := db.Transaction(func(tx *gorm.DB) error {
-			// 存储消息（去重）
-			messageIDs := make([]uint, 0)
-			for idx, m := range messages {
-				message, err := pm.messageDAO.Get(tx, &dbmodel.Message{CheckSum: m.CheckSum, Model: m.Model}, []string{"id"})
-				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-					logger.Error("[submitMessageStoreTask] failed to get message", zap.Int("idx", idx), zap.Error(err))
-					return err
-				}
-
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					logger.Info("[submitMessageStoreTask] message not found, creating message", zap.Int("idx", idx))
-					err = pm.messageDAO.Create(tx, m)
-					if err != nil {
-						logger.Error("[submitMessageStoreTask] failed to create message", zap.Int("idx", idx), zap.Error(err))
-						return err
-					}
-					message = m
-				}
-				messageIDs = append(messageIDs, message.ID)
+			// 存储消息（批量IN查询去重）
+			messageIDs, err := pm.deduplicateAndStoreMessages(tx, messages)
+			if err != nil {
+				logger.Error("[submitMessageStoreTask] failed to store messages", zap.Error(err))
+				return err
 			}
 
-			// 存储工具（去重）
-			toolIDs := make([]uint, 0)
-			for idx, t := range tools {
-				tool, err := pm.toolDAO.Get(tx, &dbmodel.Tool{CheckSum: t.CheckSum}, []string{"id"})
-				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-					logger.Error("[submitMessageStoreTask] failed to get tool", zap.Int("idx", idx), zap.Error(err))
-					return err
-				}
-
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					logger.Info("[submitMessageStoreTask] tool not found, creating tool", zap.Int("idx", idx))
-					err = pm.toolDAO.Create(tx, t)
-					if err != nil {
-						logger.Error("[submitMessageStoreTask] failed to create tool", zap.Int("idx", idx), zap.Error(err))
-						return err
-					}
-					tool = t
-				}
-				toolIDs = append(toolIDs, tool.ID)
+			// 存储工具（批量IN查询去重）
+			toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
+			if err != nil {
+				logger.Error("[submitMessageStoreTask] failed to store tools", zap.Error(err))
+				return err
 			}
 
 			session := &dbmodel.Session{
@@ -160,11 +132,11 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 				MessageIDs: messageIDs,
 				ToolIDs:    toolIDs,
 			}
-			err := pm.sessionDAO.Create(tx, session)
-			if err != nil {
+			if err := pm.sessionDAO.Create(tx, session); err != nil {
 				logger.Error("[submitMessageStoreTask] failed to create session", zap.Error(err))
+				return err
 			}
-			return err
+			return nil
 		})
 		if err != nil {
 			logger.Error("[submitMessageStoreTask] failed to store messages", zap.Error(err))
@@ -172,6 +144,119 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 		}
 		logger.Info("[submitMessageStoreTask] messages stored successfully")
 	})
+}
+
+// deduplicateAndStoreMessages 批量去重并存储消息
+//
+//	使用 IN 查询一次性获取已存在的消息，批量创建不存在的消息，保持原始顺序返回 ID 列表
+//	@receiver pm *Manager
+//	@param tx *gorm.DB
+//	@param messages []*dbmodel.Message
+//	@return []uint
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+func (pm *Manager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmodel.Message) ([]uint, error) {
+	if len(messages) == 0 {
+		return []uint{}, nil
+	}
+
+	// 提取所有 checksum，用 IN 一次性查询已存在的消息
+	checksums := lo.Map(messages, func(m *dbmodel.Message, _ int) string {
+		return m.CheckSum
+	})
+
+	existingMessages, err := pm.messageDAO.BatchGetByField(tx, "check_sum", checksums, []string{"id", "check_sum", "model"})
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建 checksum+model -> ID 的映射，用于精确匹配
+	existingMap := lo.SliceToMap(existingMessages, func(m *dbmodel.Message) (string, uint) {
+		return fmt.Sprintf("%s:%s", m.CheckSum, m.Model), m.ID
+	})
+
+	// 分离已存在和需要新建的消息
+	newMessages := lo.Filter(messages, func(m *dbmodel.Message, _ int) bool {
+		key := fmt.Sprintf("%s:%s", m.CheckSum, m.Model)
+		_, exists := existingMap[key]
+		return !exists
+	})
+
+	// 批量创建不存在的消息
+	if len(newMessages) > 0 {
+		if err := pm.messageDAO.BatchCreate(tx, newMessages); err != nil {
+			return nil, err
+		}
+		// 将新创建的消息加入映射
+		for _, m := range newMessages {
+			key := fmt.Sprintf("%s:%s", m.CheckSum, m.Model)
+			existingMap[key] = m.ID
+		}
+	}
+
+	// 按原始顺序收集所有消息 ID
+	messageIDs := lo.Map(messages, func(m *dbmodel.Message, _ int) uint {
+		key := fmt.Sprintf("%s:%s", m.CheckSum, m.Model)
+		return existingMap[key]
+	})
+
+	return messageIDs, nil
+}
+
+// deduplicateAndStoreTools 批量去重并存储工具
+//
+//	使用 IN 查询一次性获取已存在的工具，批量创建不存在的工具，保持原始顺序返回 ID 列表
+//	@receiver pm *Manager
+//	@param tx *gorm.DB
+//	@param tools []*dbmodel.Tool
+//	@return []uint
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+func (pm *Manager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.Tool) ([]uint, error) {
+	if len(tools) == 0 {
+		return []uint{}, nil
+	}
+
+	// 提取所有 checksum，用 IN 一次性查询已存在的工具
+	checksums := lo.Map(tools, func(t *dbmodel.Tool, _ int) string {
+		return t.CheckSum
+	})
+
+	existingTools, err := pm.toolDAO.BatchGetByField(tx, "check_sum", checksums, []string{"id", "check_sum"})
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建 checksum -> ID 的映射
+	existingMap := lo.SliceToMap(existingTools, func(t *dbmodel.Tool) (string, uint) {
+		return t.CheckSum, t.ID
+	})
+
+	// 分离需要新建的工具
+	newTools := lo.Filter(tools, func(t *dbmodel.Tool, _ int) bool {
+		_, exists := existingMap[t.CheckSum]
+		return !exists
+	})
+
+	// 批量创建不存在的工具
+	if len(newTools) > 0 {
+		if err := pm.toolDAO.BatchCreate(tx, newTools); err != nil {
+			return nil, err
+		}
+		// 将新创建的工具加入映射
+		for _, t := range newTools {
+			existingMap[t.CheckSum] = t.ID
+		}
+	}
+
+	// 按原始顺序收集所有工具 ID
+	toolIDs := lo.Map(tools, func(t *dbmodel.Tool, _ int) uint {
+		return existingMap[t.CheckSum]
+	})
+
+	return toolIDs, nil
 }
 
 // Stop 停止所有协程池

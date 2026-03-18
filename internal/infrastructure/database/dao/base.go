@@ -92,6 +92,24 @@ func (dao *baseDAO[ModelT]) Get(db *gorm.DB, where *ModelT, fields []string) (da
 	return
 }
 
+// BatchGetByField 根据指定字段的多个值批量查询数据
+//
+//	@param db *gorm.DB
+//	@param field string 字段名
+//	@param values []string 字段值列表
+//	@param selectFields []string 查询字段
+//	@return data []*ModelT
+//	@return err error
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, values []string, selectFields []string) (data []*ModelT, err error) {
+	if len(values) == 0 {
+		return []*ModelT{}, nil
+	}
+	err = db.Select(selectFields).Where(whereField+" IN ?", values).Where("deleted_at = 0").Find(&data).Error
+	return
+}
+
 // Paginate 分页查询
 //
 //	param dao *BaseDAO[T]
