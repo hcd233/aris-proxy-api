@@ -47,7 +47,7 @@ func init() {
 		},
 		OpenAPIPath:   lo.If(config.Env != enum.EnvProduction, "/openapi").Else(""),
 		DocsPath:      "",
-		SchemasPath:   "/schemas",
+		SchemasPath:   lo.If(config.Env != enum.EnvProduction, "/schemas").Else(""),
 		Formats:       huma.DefaultFormats,
 		DefaultFormat: "application/json",
 	})
