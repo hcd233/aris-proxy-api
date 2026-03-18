@@ -282,20 +282,11 @@ func (s *anthropicService) storeAnthropicMessages(
 
 	// Convert request messages to UnifiedMessage
 	for _, msg := range req.Body.Messages {
-		rawMsg, err := sonic.Marshal(msg)
-		if err != nil {
-			continue
-		}
-		unifiedMessages = append(unifiedMessages, dto.FromAnthropicMessage(msg.Role, rawMsg))
+		unifiedMessages = append(unifiedMessages, dto.FromAnthropicMessage(msg))
 	}
 
 	// Convert assistant response to UnifiedMessage
-	assistantRaw, err := sonic.Marshal(assistantMsg)
-	if err != nil {
-		logger.Warn("[CreateMessage] marshal assistant message error", zap.Error(err))
-		return
-	}
-	unifiedMessages = append(unifiedMessages, dto.FromAnthropicMessage(enum.RoleAssistant, assistantRaw))
+	unifiedMessages = append(unifiedMessages, dto.FromAnthropicResponse(assistantMsg))
 
 	// Convert request tools to UnifiedTool
 	unifiedTools := make([]*dto.UnifiedTool, 0, len(req.Body.Tools))
@@ -303,14 +294,13 @@ func (s *anthropicService) storeAnthropicMessages(
 		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
 	}
 
-	err = pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:        util.CopyContextValues(ctx),
 		APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
 		Model:      upstreamModel,
 		Messages:   unifiedMessages,
 		Tools:      unifiedTools,
-	})
-	if err != nil {
+	}); err != nil {
 		logger.Error("[CreateMessage] failed to submit message store task", zap.Error(err))
 	}
 }

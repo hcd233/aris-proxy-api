@@ -4,9 +4,9 @@ import (
 	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
@@ -202,32 +202,39 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	return cmpl, nil
 }
 
-// ComputeMessageChecksum 计算统一消息校验和（基于Provider和RawContent）
+// ComputeMessageChecksum 计算统一消息校验和
 //
-// 对 RawContent 做规范化处理（反序列化再序列化），确保语义相同但 JSON 表示
-// 不同的消息（如 "content":"" vs "content":null）产生相同的 checksum。
+// 对 UnifiedMessage 做规范化处理，确保语义相同但表示不同的消息产生相同的 checksum：
 //
-//	@param msg *dto.UnifiedMessage
-//	@return string
-//	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//   - 清除 ToolCalls 中的 ID（上游分配的标识符，不影响消息语义，
+//     且同一条消息在流式和非流式路径中可能产生不同的 ID 格式）
+//
+//   - 清除 ToolCallID（工具结果消息中引用的调用 ID，同理不影响语义）
+//
+//   - 序列化规范化后的结构体，计算 SHA256
+//
+//     @param msg *dto.UnifiedMessage
+//     @return string
+//     @author centonhuang
+//     @update 2026-03-18 10:00:00
 func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
-	// Normalize RawContent: unmarshal to a generic structure then re-marshal
-	// to produce a canonical JSON representation.
-	var normalized any
-	if err := json.Unmarshal(msg.RawContent, &normalized); err != nil {
-		// Fallback: use raw content as-is if unmarshal fails
-		normalized = msg.RawContent
+	// 深拷贝以避免修改原始消息
+	normalized := *msg
+
+	// 清除易变的标识符字段
+	normalized.ToolCallID = ""
+
+	if len(normalized.ToolCalls) > 0 {
+		cleanedCalls := make([]*dto.UnifiedToolCall, len(normalized.ToolCalls))
+		for i, tc := range normalized.ToolCalls {
+			cleanedCalls[i] = &dto.UnifiedToolCall{
+				Name:      tc.Name,
+				Arguments: tc.Arguments,
+			}
+		}
+		normalized.ToolCalls = cleanedCalls
 	}
 
-	data := struct {
-		Provider string `json:"provider"`
-		Raw      any    `json:"raw"`
-	}{
-		Provider: msg.Provider,
-		Raw:      normalized,
-	}
-
-	hash := sha256.Sum256(lo.Must1(json.Marshal(data)))
+	hash := sha256.Sum256(lo.Must1(sonic.Marshal(normalized)))
 	return hex.EncodeToString(hash[:])
 }

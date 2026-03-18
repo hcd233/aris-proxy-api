@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -11,12 +10,25 @@ import (
 // UnifiedMessage 统一消息格式，用于跨 Provider 的消息存储
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 type UnifiedMessage struct {
-	Provider    enum.ProviderType `json:"provider" doc:"消息来源提供者"`
-	Role        enum.Role         `json:"role" doc:"消息角色"`
-	TextContent string            `json:"text_content" doc:"提取的纯文本内容"`
-	RawContent  json.RawMessage   `json:"raw_content" doc:"原始完整JSON"`
+	Role             enum.Role          `json:"role" doc:"消息角色"`
+	Content          any                `json:"content,omitempty" doc:"消息内容(字符串或内容块数组)"`
+	ReasoningContent string             `json:"reasoning_content,omitempty" doc:"推理/思考内容"`
+	Name             string             `json:"name,omitempty" doc:"参与者名称"`
+	ToolCalls        []*UnifiedToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
+	ToolCallID       string             `json:"tool_call_id,omitempty" doc:"工具调用ID(工具结果消息)"`
+	Refusal          string             `json:"refusal,omitempty" doc:"拒绝消息"`
+}
+
+// UnifiedToolCall 统一工具调用
+//
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+type UnifiedToolCall struct {
+	ID        string `json:"id,omitempty" doc:"工具调用ID"`
+	Name      string `json:"name" doc:"工具/函数名称"`
+	Arguments string `json:"arguments" doc:"工具参数(JSON字符串)"`
 }
 
 // FromOpenAIMessage 从 OpenAI ChatCompletionMessageParam 转换为 UnifiedMessage
@@ -24,96 +36,156 @@ type UnifiedMessage struct {
 //	@param msg *ChatCompletionMessageParam
 //	@return *UnifiedMessage
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-18 10:00:00
 func FromOpenAIMessage(msg *ChatCompletionMessageParam) *UnifiedMessage {
-	textContent := extractOpenAITextContent(msg)
-	rawContent, _ := sonic.Marshal(msg)
-	return &UnifiedMessage{
-		Provider:    enum.ProviderOpenAI,
-		Role:        msg.Role,
-		TextContent: textContent,
-		RawContent:  rawContent,
+	um := &UnifiedMessage{
+		Role:             msg.Role,
+		Content:          msg.Content,
+		ReasoningContent: msg.ReasoningContent,
+		Name:             msg.Name,
+		ToolCallID:       msg.ToolCallID,
+		Refusal:          msg.Refusal,
 	}
+
+	// 转换 OpenAI ToolCalls -> UnifiedToolCall
+	if len(msg.ToolCalls) > 0 {
+		um.ToolCalls = make([]*UnifiedToolCall, 0, len(msg.ToolCalls))
+		for _, tc := range msg.ToolCalls {
+			utc := &UnifiedToolCall{
+				ID: tc.ID,
+			}
+			if tc.Function != nil {
+				utc.Name = tc.Function.Name
+				utc.Arguments = tc.Function.Arguments
+			} else if tc.Custom != nil {
+				utc.Name = tc.Custom.Name
+				utc.Arguments = tc.Custom.Input
+			}
+			um.ToolCalls = append(um.ToolCalls, utc)
+		}
+	}
+
+	return um
 }
 
-// FromAnthropicMessage 从 Anthropic 消息数据转换为 UnifiedMessage
+// FromAnthropicMessage 从 Anthropic 请求消息转换为 UnifiedMessage
 //
-//	@param role enum.Role
-//	@param rawContent json.RawMessage 原始消息JSON（包含完整的 Anthropic content blocks）
+//	@param msg *AnthropicMessageParam
 //	@return *UnifiedMessage
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
-func FromAnthropicMessage(role enum.Role, rawContent json.RawMessage) *UnifiedMessage {
-	textContent := extractAnthropicTextContent(rawContent)
-	return &UnifiedMessage{
-		Provider:    enum.ProviderAnthropic,
-		Role:        role,
-		TextContent: textContent,
-		RawContent:  rawContent,
+//	@update 2026-03-18 10:00:00
+func FromAnthropicMessage(msg *AnthropicMessageParam) *UnifiedMessage {
+	um := &UnifiedMessage{
+		Role: msg.Role,
 	}
-}
 
-// extractOpenAITextContent 从 OpenAI 消息中提取纯文本内容
-func extractOpenAITextContent(msg *ChatCompletionMessageParam) string {
-	if msg.Content == nil {
-		return ""
-	}
-	// Content 可能是 string 或 array
+	// Content 可能是 string 或 []AnthropicContentBlock
 	switch v := msg.Content.(type) {
 	case string:
-		return v
+		um.Content = v
 	default:
-		// 尝试序列化后解析数组格式
+		// 尝试序列化后解析为 []AnthropicContentBlock
 		data, err := sonic.Marshal(v)
 		if err != nil {
-			return ""
+			um.Content = v
+			return um
 		}
-		var parts []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
+		var blocks []AnthropicContentBlock
+		if err := sonic.Unmarshal(data, &blocks); err != nil {
+			um.Content = v
+			return um
 		}
-		if err := sonic.Unmarshal(data, &parts); err != nil {
-			return string(data)
-		}
-		var texts []string
-		for _, p := range parts {
-			if p.Type == "text" && p.Text != "" {
-				texts = append(texts, p.Text)
-			}
-		}
-		return strings.Join(texts, "\n")
+		extractAnthropicBlocks(um, blocks)
 	}
+
+	return um
 }
 
-// extractAnthropicTextContent 从 Anthropic 原始 JSON 中提取纯文本内容
-func extractAnthropicTextContent(rawContent json.RawMessage) string {
-	// Anthropic 消息结构: {"role":"...","content":"..." 或 "content":[...]}
-	var msg struct {
-		Content json.RawMessage `json:"content"`
-	}
-	if err := sonic.Unmarshal(rawContent, &msg); err != nil || len(msg.Content) == 0 {
-		return ""
-	}
-
-	// content 可能是字符串
-	var strContent string
-	if err := sonic.Unmarshal(msg.Content, &strContent); err == nil {
-		return strContent
+// FromAnthropicResponse 从 Anthropic 响应消息转换为 UnifiedMessage
+//
+//	@param msg *AnthropicMessage
+//	@return *UnifiedMessage
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+func FromAnthropicResponse(msg *AnthropicMessage) *UnifiedMessage {
+	um := &UnifiedMessage{
+		Role: msg.Role,
 	}
 
-	// content 是 ContentBlock 数组
-	var blocks []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
+	// 解析 Content []json.RawMessage -> []AnthropicContentBlock
+	blocks := make([]AnthropicContentBlock, 0, len(msg.Content))
+	for _, raw := range msg.Content {
+		var block AnthropicContentBlock
+		if err := sonic.Unmarshal(raw, &block); err != nil {
+			continue
+		}
+		blocks = append(blocks, block)
 	}
-	if err := sonic.Unmarshal(msg.Content, &blocks); err != nil {
-		return ""
-	}
-	var texts []string
-	for _, block := range blocks {
-		if block.Type == "text" && block.Text != "" {
-			texts = append(texts, block.Text)
+
+	extractAnthropicBlocks(um, blocks)
+	return um
+}
+
+// extractAnthropicBlocks 从 Anthropic content blocks 中提取统一字段
+//
+//	@param um *UnifiedMessage
+//	@param blocks []AnthropicContentBlock
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+func extractAnthropicBlocks(um *UnifiedMessage, blocks []AnthropicContentBlock) {
+	var (
+		textParts      []string
+		thinkingParts  []string
+		toolCalls      []*UnifiedToolCall
+		toolResultID   string
+		toolResultBody any
+		hasOtherBlocks bool
+	)
+
+	for i := range blocks {
+		block := &blocks[i]
+		switch block.Type {
+		case "text":
+			textParts = append(textParts, block.Text)
+		case "thinking":
+			thinkingParts = append(thinkingParts, block.Thinking)
+		case "tool_use":
+			args, _ := sonic.MarshalString(block.Input)
+			toolCalls = append(toolCalls, &UnifiedToolCall{
+				ID:        block.ID,
+				Name:      block.Name,
+				Arguments: args,
+			})
+		case "tool_result":
+			toolResultID = block.ToolUseID
+			toolResultBody = block.Text
+		default:
+			// redacted_thinking, image 等
+			hasOtherBlocks = true
 		}
 	}
-	return strings.Join(texts, "\n")
+
+	// 设置 ReasoningContent
+	if len(thinkingParts) > 0 {
+		um.ReasoningContent = strings.Join(thinkingParts, "\n")
+	}
+
+	// 设置 ToolCalls
+	if len(toolCalls) > 0 {
+		um.ToolCalls = toolCalls
+	}
+
+	// 设置 ToolCallID 和 Content
+	if toolResultID != "" {
+		um.ToolCallID = toolResultID
+		um.Content = toolResultBody
+	} else if !hasOtherBlocks && len(toolCalls) == 0 {
+		// 纯文本消息：将文本合并为字符串
+		if len(textParts) > 0 {
+			um.Content = strings.Join(textParts, "\n")
+		}
+	} else {
+		// 混合类型（文本 + tool_use、image 等）：保留原始 blocks 格式
+		um.Content = blocks
+	}
 }
