@@ -41,6 +41,15 @@ var startServerCmd = &cobra.Command{
 		}()
 		host, port := lo.Must1(cmd.Flags().GetString("host")), lo.Must1(cmd.Flags().GetString("port"))
 
+		logger.Logger().Info("[Server] Environment",
+			zap.String("env", config.Env),
+			zap.Duration("readTimeout", config.ReadTimeout),
+			zap.Duration("writeTimeout", config.WriteTimeout),
+			zap.Int("maxHeaderBytes", config.MaxHeaderBytes),
+			zap.Int("poolWorkers", config.PoolWorkers),
+			zap.Int("poolQueueSize", config.PoolQueueSize),
+		)
+
 		database.InitDatabase()
 		cache.InitCache()
 		// storage.InitObjectStorage()
