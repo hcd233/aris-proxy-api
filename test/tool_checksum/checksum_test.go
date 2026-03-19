@@ -108,23 +108,12 @@ func TestComputeToolChecksum_SingleToolCases(t *testing.T) {
 }
 
 func TestComputeToolChecksum_Deterministic(t *testing.T) {
-	tool := &dto.UnifiedTool{
-		Provider:    "openai",
-		Name:        "Bash",
-		Description: "Execute a bash command",
-		Parameters: &dto.JSONSchemaProperty{
-			Type: "object",
-			Properties: map[string]*dto.JSONSchemaProperty{
-				"command": {Type: "string", Description: "The bash command"},
-				"timeout": {Type: "integer", Description: "Timeout in seconds"},
-			},
-			Required: []string{"command"},
-		},
-	}
+	allCases := loadToolCases(t)
+	tc := findCase(t, allCases, "deterministic")
 
 	checksums := make(map[string]bool)
 	for i := range 100 {
-		checksum := util.ComputeToolChecksum(tool)
+		checksum := util.ComputeToolChecksum(tc.Tools[0])
 		checksums[checksum] = true
 		if i == 0 {
 			t.Logf("first checksum: %s", checksum)
@@ -139,22 +128,13 @@ func TestComputeToolChecksum_Deterministic(t *testing.T) {
 }
 
 func TestComputeToolChecksum_NilVsEmptyProperties(t *testing.T) {
-	toolNilParams := &dto.UnifiedTool{
-		Provider:    "openai",
-		Name:        "GetTime",
-		Description: "Get the current time",
-	}
-	toolEmptySchema := &dto.UnifiedTool{
-		Provider:    "openai",
-		Name:        "GetTime",
-		Description: "Get the current time",
-		Parameters: &dto.JSONSchemaProperty{
-			Type: "object",
-		},
-	}
+	allCases := loadToolCases(t)
 
-	checksum1 := util.ComputeToolChecksum(toolNilParams)
-	checksum2 := util.ComputeToolChecksum(toolEmptySchema)
+	nilCase := findCase(t, allCases, "nil_vs_empty_properties_nil")
+	emptyCase := findCase(t, allCases, "nil_vs_empty_properties_empty")
+
+	checksum1 := util.ComputeToolChecksum(nilCase.Tools[0])
+	checksum2 := util.ComputeToolChecksum(emptyCase.Tools[0])
 
 	t.Logf("nil params checksum: %s", checksum1)
 	t.Logf("empty schema checksum: %s", checksum2)

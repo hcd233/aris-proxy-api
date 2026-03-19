@@ -1,0 +1,267 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-03-19T09:00:08.893Z
+provider: 
+---
+
+# Testing Rule - 测试规范
+
+## 适用范围
+
+本规则适用于在本仓库 **新增/修改/重构任何功能代码** 后的测试用例编写与维护。
+
+**优先级说明**：测试规范是开发流程的强制要求，与 Clean Code Rule 同等优先级。
+
+---
+
+## 核心原则
+
+1. **每次功能开发/修改完成后，必须沉淀对应的测试用例**
+2. **每次提交前，必须运行全量测试用例并确保全部通过**
+3. 测试用例是项目资产，和业务代码同等重要
+4. 用例应具备可读性和可维护性，未来其他人能快速理解测试意图
+5. 用例应该尽可能覆盖全边界条件，确保业务功能得到充分验证
+6. 测试代码日志使用英文
+
+---
+
+## 📁 测试目录规范
+
+### 目录结构
+
+**所有测试文件（`*_test.go`）必须且只能放在 `test/` 目录下，`internal/` 目录内禁止存放任何测试文件。**
+
+```
+test/                              # 所有测试文件的唯一存放位置
+├── message_checksum/              # 按"测试主题"组织子目录
+│   ├── fixtures/                  # 测试数据文件（必须放在 fixtures/ 子目录）
+│   │   └── cases.json
+│   └── checksum_test.go           # 测试代码
+├── session_dto/                   # Session DTO 相关测试
+│   ├── fixtures/
+│   │   └── cases.json
+│   └── session_dto_test.go
+├── session_service/               # Session Service 相关测试
+│   ├── fixtures/
+│   │   └── cases.json
+│   └── session_service_test.go
+└── ...
+
+internal/                          # 禁止存放任何 *_test.go 文件
+├── dto/
+│   └── session.go                 # 仅源码，无测试
+├── service/
+│   └── session.go                 # 需要被测试的辅助函数必须导出
+└── ...
+```
+
+### 分类规则
+
+| 测试类型 | 存放位置 | 说明 |
+|---------|---------|------|
+| **单元测试** | `test/<主题>/` | 通过导出的公开 API 测试单个函数/方法的行为 |
+| **集成测试** | `test/<主题>/` | 跨包/跨层测试，或需要外部依赖（DB/Redis）的测试 |
+| **专项调查测试** | `test/<主题>/` | 用于定位 Bug 根因、验证边界行为等专项测试 |
+| **端到端测试** | `test/<主题>/` | 模拟完整请求链路的测试 |
+
+### `test/` 目录组织原则
+
+1. **按测试主题命名子目录**，使用 `snake_case`，如 `message_checksum`、`openai_proxy`、`rate_limiter`
+2. **每个子目录是一个独立的 Go test package**，package 名与目录名一致（下划线形式）
+3. **测试数据文件**（JSON、YAML 等）**必须**放在对应子目录的 `fixtures/` 子目录中
+4. **禁止**在 `test/` 下直接放散落的 `_test.go` 文件，必须归入主题子目录
+5. 如果需要测试 `internal/` 包中的私有函数，**必须将其导出**（大写开头），然后在 `test/` 目录中通过公开 API 进行测试
+
+### 设计理由
+
+- 测试与源码分离，保持 `internal/` 目录的纯净
+- 所有测试从外部视角验证公开 API，更贴近真实使用场景
+- 统一测试入口，便于管理和检索
+
+---
+
+## 📦 测试数据管理规范
+
+### 核心原则：数据与代码完全分离
+
+**所有测试数据必须放到 `fixtures/` 目录的 JSON 文件中，测试代码中只做加载和断言，禁止在代码中内联构造测试数据。**
+
+### fixtures 目录结构
+
+```
+test/<主题>/
+├── fixtures/
+│   └── cases.json          # 主测试数据文件
+└── xxx_test.go             # 测试代码（只做加载 + 断言）
+```
+
+### fixture 文件格式
+
+每个 case 必须包含 `name` 和 `description` 字段，其他字段根据测试需要定义：
+
+```json
+[
+    {
+        "name": "case_unique_name",
+        "description": "what this case tests",
+        ...
+    }
+]
+```
+
+### 测试代码模板
+
+```go
+// 1. 定义与 fixture JSON 对齐的结构体
+type testCase struct {
+    Name        string `json:"name"`
+    Description string `json:"description"`
+    // ...其他字段
+}
+
+// 2. 加载 fixture 的 helper 函数（必须 t.Helper()）
+func loadCases(t *testing.T) []testCase {
+    t.Helper()
+    data, err := os.ReadFile("./fixtures/cases.json")
+    if err != nil {
+        t.Fatalf("failed to read fixtures/cases.json: %v", err)
+    }
+    var cases []testCase
+    if err := sonic.Unmarshal(data, &cases); err != nil {
+        t.Fatalf("failed to unmarshal fixtures/cases.json: %v", err)
+    }
+    return cases
+}
+
+// 3. 按名称查找用例的 helper
+func findCase(t *testing.T, cases []testCase, name string) testCase {
+    t.Helper()
+    for _, c := range cases {
+        if c.Name == name {
+            return c
+        }
+    }
+    t.Fatalf("case %q not found", name)
+    return testCase{}
+}
+
+// 4. 测试函数：加载 → 查找 → 断言
+func TestXxx(t *testing.T) {
+    allCases := loadCases(t)
+    tc := findCase(t, allCases, "case_name")
+    // ... 执行逻辑 + 断言
+}
+```
+
+### 🚫 禁止事项
+
+1. **禁止在测试代码中内联构造测试数据** — 所有数据必须来自 `fixtures/` 文件
+2. **禁止使用 `encoding/json`** — 统一使用 `github.com/bytedance/sonic`
+
+---
+
+## ✏️ 用例编写规范
+
+### 命名规范
+
+```go
+// 函数级测试
+func TestComputeMessageChecksum(t *testing.T) { ... }
+
+// 场景级测试（子测试）
+func TestComputeMessageChecksum(t *testing.T) {
+    t.Run("相同消息应产生相同checksum", func(t *testing.T) { ... })
+    t.Run("不同键序的Arguments应产生相同checksum", func(t *testing.T) { ... })
+    t.Run("空ToolCalls应正常处理", func(t *testing.T) { ... })
+}
+```
+
+### 结构规范
+
+1. **必须使用 `t.Helper()`** 标记辅助函数
+2. **优先使用表驱动模式**：通过 fixture 中的 case 名称列表驱动子测试
+3. **测试数据与测试逻辑完全分离** — 数据放 fixtures/ JSON 文件，代码只做加载和断言
+4. **每个测试函数只验证一个行为** — 不要在一个 Test 函数中塞入多个不相关的断言
+5. **测试中的日志必须有上下文** — 使用 `t.Logf` 输出关键中间值，便于失败时快速定位
+
+### 断言规范
+
+```go
+// ✅ 好：清晰的失败信息
+if got != want {
+    t.Errorf("ComputeChecksum() = %s, want %s", got, want)
+}
+
+// ✅ 好：使用子测试隔离
+t.Run("empty input", func(t *testing.T) {
+    result := ComputeChecksum(nil)
+    if result != "" {
+        t.Errorf("expected empty string, got %q", result)
+    }
+})
+
+// ❌ 差：无上下文的断言
+if result != expected {
+    t.Fatal("not equal")
+}
+```
+
+---
+
+## 🔄 开发流程强制要求
+
+### 功能开发完成后
+
+1. **必须编写/更新对应的测试用例**，覆盖：
+   - 正常路径（Happy Path）
+   - 边界条件（空值、零值、极端输入）
+   - 错误路径（预期的错误处理）
+2. 新增的 `util/` 函数必须有对应的测试（放在 `test/` 目录下）
+3. 新增的 `dto/` 类型如有自定义序列化逻辑，必须有序列化/反序列化测试
+4. 新增的 `service/` 方法建议有单元测试或集成测试
+5. Bug 修复必须附带**回归测试**，防止问题复现
+
+### 提交前
+
+1. **必须运行全量测试**：
+
+```bash
+go test -count=1 ./...
+```
+
+2. **全部测试必须 PASS**，任何 FAIL 都不允许提交
+3. 如有临时跳过的测试（`t.Skip()`），必须在注释中说明原因和恢复时间
+
+### 运行命令速查
+
+```bash
+# 运行全量测试
+go test -count=1 ./...
+
+# 运行指定目录测试
+go test -v -count=1 ./test/message_checksum/
+
+# 运行指定测试函数
+go test -v -count=1 -run TestChecksumDifference ./test/message_checksum/
+
+# 带覆盖率运行
+go test -count=1 -cover ./test/...
+
+# 生成覆盖率报告
+go test -count=1 -coverprofile=coverage.out ./test/...
+go tool cover -html=coverage.out -o coverage.html
+```
+
+---
+
+## 🚫 禁止事项
+
+1. **禁止在 `internal/` 任何子目录中创建 `*_test.go` 文件** — 所有测试只能放在 `test/` 目录
+2. **禁止提交不通过的测试** — 所有测试必须 PASS 才能提交
+3. **禁止删除已有的测试用例** — 除非对应功能已删除
+4. **禁止在测试中硬编码环境相关路径** — 使用 `t.TempDir()`、`os.CreateTemp()` 等
+5. **禁止测试间相互依赖** — 每个测试必须独立可运行
+6. **禁止使用 `time.Sleep()` 做同步** — 使用 channel、WaitGroup 或 deadline
+7. **禁止在测试代码中内联构造测试数据** — 所有数据必须来自 `fixtures/` 文件

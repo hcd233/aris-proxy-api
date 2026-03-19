@@ -150,35 +150,38 @@ Two auth mechanisms applied per-route:
 
 ### 测试目录结构
 
+**所有测试文件（`*_test.go`）必须且只能放在 `test/` 目录下，`internal/` 目录内禁止存放任何测试文件。**
+
 ```
-test/                              # 集成测试、端到端测试、专项调查测试
+test/                              # 所有测试文件的唯一存放位置
 ├── <主题名>/                       # 按测试主题组织，snake_case 命名
-│   ├── fixtures/                  # 测试数据文件（JSON/YAML）
+│   ├── fixtures/                  # 测试数据文件（必须放在 fixtures/ 子目录）
+│   │   └── cases.json
 │   └── xxx_test.go                # 测试代码，package 名与目录名一致
-│
-internal/                          # 单元测试（与源码同目录同包）
-├── util/
-│   ├── openai.go
-│   └── openai_test.go             # 文件名：<source_file>_test.go
+└── ...
+
+internal/                          # 禁止存放任何 *_test.go 文件
 ├── dto/
-│   ├── unified_message.go
-│   └── unified_message_test.go
+│   └── session.go                 # 仅源码，无测试
 ├── service/
-│   └── openai_test.go
+│   └── session.go                 # 需要被测试的辅助函数必须导出
 └── ...
 ```
 
 | 测试类型 | 存放位置 | 说明 |
 |---------|---------|------|
-| 单元测试 | `internal/<package>/<file>_test.go` | 与源码同目录同包 |
+| 单元测试 | `test/<主题>/` | 通过导出的公开 API 测试单个函数/方法的行为 |
 | 集成测试 / 专项测试 / E2E 测试 | `test/<主题>/` | 跨包跨层、需外部依赖、或 Bug 根因调查 |
+
+### 测试数据管理：数据与代码完全分离
+
+**所有测试数据必须放到 `fixtures/` 目录的 JSON 文件中，测试代码中只做加载和断言，禁止在代码中内联构造测试数据。**
 
 ### 用例编写规范
 
 - **命名格式**：`Test<FunctionName>_<场景描述>`，如 `TestComputeToolChecksum_NilParameters`
-- 优先使用**表驱动测试（Table-Driven Tests）** + `t.Run()` 子测试
+- 优先使用 **fixture 驱动模式**：通过 fixture 中的 case 名称列表驱动子测试
 - 辅助函数**必须**标记 `t.Helper()`
-- 复杂测试数据放 JSON/YAML 文件至 `fixtures/` 子目录，通过辅助函数加载
 - 每个测试函数只验证一个行为
 - 测试代码日志**使用英文**，通过 `t.Logf` 输出关键中间值
 
@@ -270,13 +273,15 @@ go test -count=1 ./...
 
 ### 🚫 测试禁止事项
 
-1. **禁止提交不通过的测试** — 所有测试必须 PASS 才能提交
-2. **禁止删除已有的测试用例** — 除非对应功能已删除
-3. **禁止在测试中硬编码环境相关路径** — 使用 `t.TempDir()`、`os.CreateTemp()` 等
-4. **禁止测试间相互依赖** — 每个测试必须独立可运行
-5. **禁止使用 `time.Sleep()` 做同步** — 使用 channel、WaitGroup 或 deadline
-6. **禁止使用 `encoding/json`** — 统一使用 `github.com/bytedance/sonic`
-7. **禁止使用第三方断言库（如 testify）** — 使用标准库 `testing` 包的 `t.Errorf` / `t.Fatalf`
+1. **禁止在 `internal/` 任何子目录中创建 `*_test.go` 文件** — 所有测试只能放在 `test/` 目录
+2. **禁止提交不通过的测试** — 所有测试必须 PASS 才能提交
+3. **禁止删除已有的测试用例** — 除非对应功能已删除
+4. **禁止在测试中硬编码环境相关路径** — 使用 `t.TempDir()`、`os.CreateTemp()` 等
+5. **禁止测试间相互依赖** — 每个测试必须独立可运行
+6. **禁止使用 `time.Sleep()` 做同步** — 使用 channel、WaitGroup 或 deadline
+7. **禁止使用 `encoding/json`** — 统一使用 `github.com/bytedance/sonic`
+8. **禁止使用第三方断言库（如 testify）** — 使用标准库 `testing` 包的 `t.Errorf` / `t.Fatalf`
+9. **禁止在测试代码中内联构造测试数据** — 所有数据必须来自 `fixtures/` 文件
 
 ### 常用命令
 
@@ -290,13 +295,10 @@ go test -v -count=1 ./test/message_checksum/
 # 指定函数
 go test -v -count=1 -run TestChecksumDifference ./test/message_checksum/
 
-# internal 包单元测试
-go test -v -count=1 ./internal/util/
-
 # 带覆盖率
-go test -count=1 -cover ./internal/...
+go test -count=1 -cover ./test/...
 
 # 生成覆盖率报告
-go test -count=1 -coverprofile=coverage.out ./internal/...
+go test -count=1 -coverprofile=coverage.out ./test/...
 go tool cover -html=coverage.out -o coverage.html
 ```

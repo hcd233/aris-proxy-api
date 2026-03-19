@@ -46,5 +46,102 @@
                 "arguments": "{\"fileType\":\"go\",\"path\":\"/root/code\",\"recursive\":true,\"caseSensitive\":false,\"limit\":10,\"query\":\"hello world\"}"
             }
         ]
+    },
+    {
+        "name": "tool_call_id_ignored_a",
+        "role": "assistant",
+        "reasoning_content": "thinking",
+        "tool_calls": [
+            {
+                "id": "call_001",
+                "name": "Bash",
+                "arguments": "{\"command\":\"ls\"}"
+            }
+        ]
+    },
+    {
+        "name": "tool_call_id_ignored_b",
+        "role": "assistant",
+        "reasoning_content": "thinking",
+        "tool_calls": [
+            {
+                "id": "call_999",
+                "name": "Bash",
+                "arguments": "{\"command\":\"ls\"}"
+            }
+        ]
+    },
+    {
+        "name": "different_tool_call_id_on_message_a",
+        "role": "tool",
+        "tool_call_id": "call_001",
+        "content": "result"
+    },
+    {
+        "name": "different_tool_call_id_on_message_b",
+        "role": "tool",
+        "tool_call_id": "call_999",
+        "content": "result"
+    },
+    {
+        "name": "different_messages_a",
+        "role": "assistant",
+        "reasoning_content": "thinking about A",
+        "tool_calls": [
+            {
+                "id": "call_001",
+                "name": "Bash",
+                "arguments": "{\"command\":\"ls\"}"
+            }
+        ]
+    },
+    {
+        "name": "different_messages_b",
+        "role": "assistant",
+        "reasoning_content": "thinking about B",
+        "tool_calls": [
+            {
+                "id": "call_001",
+                "name": "Bash",
+                "arguments": "{\"command\":\"pwd\"}"
+            }
+        ]
+    },
+    {
+        "name": "empty_tool_calls",
+        "role": "assistant",
+        "content": "hello"
+    },
+    {
+        "name": "multiple_tool_calls_key_order_a",
+        "role": "assistant",
+        "tool_calls": [
+            {
+                "id": "call_1",
+                "name": "Search",
+                "arguments": "{\"query\":\"hello\",\"limit\":10}"
+            },
+            {
+                "id": "call_2",
+                "name": "Fetch",
+                "arguments": "{\"url\":\"https://example.com\",\"method\":\"GET\"}"
+            }
+        ]
+    },
+    {
+        "name": "multiple_tool_calls_key_order_b",
+        "role": "assistant",
+        "tool_calls": [
+            {
+                "id": "call_1",
+                "name": "Search",
+                "arguments": "{\"limit\":10,\"query\":\"hello\"}"
+            },
+            {
+                "id": "call_2",
+                "name": "Fetch",
+                "arguments": "{\"method\":\"GET\",\"url\":\"https://example.com\"}"
+            }
+        ]
     }
 ]

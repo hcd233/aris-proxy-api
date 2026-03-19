@@ -14,6 +14,8 @@ type testCase struct {
 	Name             string          `json:"name"`
 	Role             string          `json:"role"`
 	ReasoningContent string          `json:"reasoning_content,omitempty"`
+	Content          string          `json:"content,omitempty"`
+	ToolCallID       string          `json:"tool_call_id,omitempty"`
 	ToolCalls        []*testToolCall `json:"tool_calls,omitempty"`
 }
 
@@ -55,6 +57,10 @@ func toUnifiedMessage(t *testing.T, tc testCase) *dto.UnifiedMessage {
 	msg := &dto.UnifiedMessage{
 		Role:             tc.Role,
 		ReasoningContent: tc.ReasoningContent,
+		ToolCallID:       tc.ToolCallID,
+	}
+	if tc.Content != "" {
+		msg.Content = &dto.UnifiedContent{Text: tc.Content}
 	}
 	if len(tc.ToolCalls) > 0 {
 		msg.ToolCalls = make([]*dto.UnifiedToolCall, len(tc.ToolCalls))
@@ -103,87 +109,67 @@ func TestComputeMessageChecksum_DifferentKeyOrder(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_ToolCallIDIgnored(t *testing.T) {
-	msg1 := &dto.UnifiedMessage{
-		Role:             "assistant",
-		ReasoningContent: "thinking",
-		ToolCalls: []*dto.UnifiedToolCall{
-			{ID: "call_001", Name: "Bash", Arguments: `{"command":"ls"}`},
-		},
-	}
-	msg2 := &dto.UnifiedMessage{
-		Role:             "assistant",
-		ReasoningContent: "thinking",
-		ToolCalls: []*dto.UnifiedToolCall{
-			{ID: "call_999", Name: "Bash", Arguments: `{"command":"ls"}`},
-		},
-	}
+	cases := loadCases(t)
 
-	checksum1 := util.ComputeMessageChecksum(msg1)
-	checksum2 := util.ComputeMessageChecksum(msg2)
+	tcA := findCase(t, cases, "tool_call_id_ignored_a")
+	tcB := findCase(t, cases, "tool_call_id_ignored_b")
+	msgA := toUnifiedMessage(t, tcA)
+	msgB := toUnifiedMessage(t, tcB)
 
-	t.Logf("checksum1 (ID=call_001): %s", checksum1)
-	t.Logf("checksum2 (ID=call_999): %s", checksum2)
+	checksumA := util.ComputeMessageChecksum(msgA)
+	checksumB := util.ComputeMessageChecksum(msgB)
 
-	if checksum1 != checksum2 {
-		t.Errorf("ComputeMessageChecksum() should ignore ToolCall ID: got %s and %s", checksum1, checksum2)
+	t.Logf("checksumA (ID=call_001): %s", checksumA)
+	t.Logf("checksumB (ID=call_999): %s", checksumB)
+
+	if checksumA != checksumB {
+		t.Errorf("ComputeMessageChecksum() should ignore ToolCall ID: got %s and %s", checksumA, checksumB)
 	}
 }
 
 func TestComputeMessageChecksum_DifferentToolCallIDOnMessage(t *testing.T) {
-	msg1 := &dto.UnifiedMessage{
-		Role:       "tool",
-		ToolCallID: "call_001",
-		Content:    &dto.UnifiedContent{Text: "result"},
-	}
-	msg2 := &dto.UnifiedMessage{
-		Role:       "tool",
-		ToolCallID: "call_999",
-		Content:    &dto.UnifiedContent{Text: "result"},
-	}
+	cases := loadCases(t)
 
-	checksum1 := util.ComputeMessageChecksum(msg1)
-	checksum2 := util.ComputeMessageChecksum(msg2)
+	tcA := findCase(t, cases, "different_tool_call_id_on_message_a")
+	tcB := findCase(t, cases, "different_tool_call_id_on_message_b")
+	msgA := toUnifiedMessage(t, tcA)
+	msgB := toUnifiedMessage(t, tcB)
 
-	t.Logf("checksum1 (ToolCallID=call_001): %s", checksum1)
-	t.Logf("checksum2 (ToolCallID=call_999): %s", checksum2)
+	checksumA := util.ComputeMessageChecksum(msgA)
+	checksumB := util.ComputeMessageChecksum(msgB)
 
-	if checksum1 != checksum2 {
-		t.Errorf("ComputeMessageChecksum() should ignore ToolCallID: got %s and %s", checksum1, checksum2)
+	t.Logf("checksumA (ToolCallID=call_001): %s", checksumA)
+	t.Logf("checksumB (ToolCallID=call_999): %s", checksumB)
+
+	if checksumA != checksumB {
+		t.Errorf("ComputeMessageChecksum() should ignore ToolCallID: got %s and %s", checksumA, checksumB)
 	}
 }
 
 func TestComputeMessageChecksum_DifferentMessages(t *testing.T) {
-	msg1 := &dto.UnifiedMessage{
-		Role:             "assistant",
-		ReasoningContent: "thinking about A",
-		ToolCalls: []*dto.UnifiedToolCall{
-			{ID: "call_001", Name: "Bash", Arguments: `{"command":"ls"}`},
-		},
-	}
-	msg2 := &dto.UnifiedMessage{
-		Role:             "assistant",
-		ReasoningContent: "thinking about B",
-		ToolCalls: []*dto.UnifiedToolCall{
-			{ID: "call_001", Name: "Bash", Arguments: `{"command":"pwd"}`},
-		},
-	}
+	cases := loadCases(t)
 
-	checksum1 := util.ComputeMessageChecksum(msg1)
-	checksum2 := util.ComputeMessageChecksum(msg2)
+	tcA := findCase(t, cases, "different_messages_a")
+	tcB := findCase(t, cases, "different_messages_b")
+	msgA := toUnifiedMessage(t, tcA)
+	msgB := toUnifiedMessage(t, tcB)
 
-	t.Logf("checksum1: %s", checksum1)
-	t.Logf("checksum2: %s", checksum2)
+	checksumA := util.ComputeMessageChecksum(msgA)
+	checksumB := util.ComputeMessageChecksum(msgB)
 
-	if checksum1 == checksum2 {
-		t.Errorf("ComputeMessageChecksum() should produce different checksums for different messages, both got %s", checksum1)
+	t.Logf("checksumA: %s", checksumA)
+	t.Logf("checksumB: %s", checksumB)
+
+	if checksumA == checksumB {
+		t.Errorf("ComputeMessageChecksum() should produce different checksums for different messages, both got %s", checksumA)
 	}
 }
 
 func TestComputeMessageChecksum_EmptyToolCalls(t *testing.T) {
-	msg := &dto.UnifiedMessage{
-		Role:    "assistant",
-		Content: &dto.UnifiedContent{Text: "hello"},
-	}
+	cases := loadCases(t)
+
+	tc := findCase(t, cases, "empty_tool_calls")
+	msg := toUnifiedMessage(t, tc)
 
 	checksum := util.ComputeMessageChecksum(msg)
 	t.Logf("checksum: %s", checksum)
@@ -194,28 +180,20 @@ func TestComputeMessageChecksum_EmptyToolCalls(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_MultipleToolCallsKeyOrder(t *testing.T) {
-	msg1 := &dto.UnifiedMessage{
-		Role: "assistant",
-		ToolCalls: []*dto.UnifiedToolCall{
-			{ID: "call_1", Name: "Search", Arguments: `{"query":"hello","limit":10}`},
-			{ID: "call_2", Name: "Fetch", Arguments: `{"url":"https://example.com","method":"GET"}`},
-		},
-	}
-	msg2 := &dto.UnifiedMessage{
-		Role: "assistant",
-		ToolCalls: []*dto.UnifiedToolCall{
-			{ID: "call_1", Name: "Search", Arguments: `{"limit":10,"query":"hello"}`},
-			{ID: "call_2", Name: "Fetch", Arguments: `{"method":"GET","url":"https://example.com"}`},
-		},
-	}
+	cases := loadCases(t)
 
-	checksum1 := util.ComputeMessageChecksum(msg1)
-	checksum2 := util.ComputeMessageChecksum(msg2)
+	tcA := findCase(t, cases, "multiple_tool_calls_key_order_a")
+	tcB := findCase(t, cases, "multiple_tool_calls_key_order_b")
+	msgA := toUnifiedMessage(t, tcA)
+	msgB := toUnifiedMessage(t, tcB)
 
-	t.Logf("checksum1: %s", checksum1)
-	t.Logf("checksum2: %s", checksum2)
+	checksumA := util.ComputeMessageChecksum(msgA)
+	checksumB := util.ComputeMessageChecksum(msgB)
 
-	if checksum1 != checksum2 {
-		t.Errorf("ComputeMessageChecksum() mismatch with multiple tool calls: got %s and %s", checksum1, checksum2)
+	t.Logf("checksumA: %s", checksumA)
+	t.Logf("checksumB: %s", checksumB)
+
+	if checksumA != checksumB {
+		t.Errorf("ComputeMessageChecksum() mismatch with multiple tool calls: got %s and %s", checksumA, checksumB)
 	}
 }

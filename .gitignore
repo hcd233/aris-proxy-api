@@ -32,5 +32,7 @@ logs/
 *.tmp
 *.temp
 
-# AI
-.codebuddy
+# Code Buddy
+.codebuddy/plans
+.codebuddy/memory
+.codebuddy/*.md

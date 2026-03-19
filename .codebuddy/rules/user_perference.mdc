@@ -1,0 +1,287 @@
+---
+description: 用户代码偏好与风格规范，基于对现有代码库的全面分析总结
+alwaysApply: true
+enabled: true
+updatedAt: 2026-03-19T00:00:00.000Z
+provider: codebuddy
+---
+
+# User Preference - 用户代码偏好
+
+## 语言与框架
+
+- **Go** 为主要开发语言，使用最新版本特性（Go 1.25+，泛型等）
+- **Fiber v2** + **Huma v2** 作为 HTTP 框架组合
+- **GORM** 作为 ORM（PostgreSQL）
+- **Cobra / Viper** 作为 CLI 和配置管理框架
+- **bytedance/sonic** 替代 `encoding/json`，**禁止使用标准库 json**
+- **samber/lo** 作为函数式工具库，积极使用 `lo.Must0/1/2`、`lo.Map`、`lo.Filter`、`lo.SliceToMap` 等
+- **go.uber.org/zap** 作为日志库
+- **Pond v2** 作为协程池
+
+---
+
+## 架构分层
+
+严格遵循分层架构，**层间通过接口解耦**：
+
+```
+cmd → router → handler → service → dao/infrastructure
+```
+
+| 层 | 职责 | 规则 |
+|---|---|---|
+| `cmd/` | CLI 入口 | 仅编排初始化和启动顺序 |
+| `router/` | 路由注册 | 仅绑定中间件和 Handler，不含业务逻辑 |
+| `handler/` | 请求处理 | 薄包装层，调用 Service 并用 `util.WrapHTTPResponse()` 统一包装响应 |
+| `service/` | 业务逻辑 | 核心逻辑所在，不直接依赖基础设施实现 |
+| `dao/` | 数据访问 | 泛型 `baseDAO[ModelT]` 提供 CRUD |
+| `dto/` | 数据传输 | 请求/响应定义 + 跨 Provider 格式转换 |
+| `enum/` | 枚举常量 | 分 `internal/enum/`（LLM 业务枚举）和 `internal/common/enum/`（通用枚举） |
+
+---
+
+## 核心设计模式
+
+### 1. 接口 + 私有实现 + 工厂函数（三件套）
+
+所有 Handler、Service、DAO、JWT、OAuth2、Lock 等均采用此模式：
+
+```go
+// 1. 公开接口
+type XxxService interface {
+    DoSomething(ctx context.Context, req *dto.XxxReq) (*dto.XxxRsp, error)
+}
+
+// 2. 私有实现结构体（camelCase）
+type xxxService struct {
+    userDAO *dao.UserDAO
+}
+
+// 3. 公开工厂函数（返回接口类型）
+func NewXxxService() XxxService {
+    return &xxxService{
+        userDAO: dao.GetUserDAO(),
+    }
+}
+```
+
+### 2. 单例模式
+
+- DAO、Logger、DB、Redis、JWT Signer、PoolManager 等基础设施均为单例
+- 使用 `init()` 或 `InitXxx()` 初始化，通过 `GetXxx()` / `GetXxxInstance()` 获取
+- DAO 单例在 `init()` 中初始化，其他基础设施在 `cmd/server.go` 中按序初始化
+
+### 3. 泛型 DAO
+
+```go
+type baseDAO[ModelT any] struct{}
+```
+具体 DAO 通过嵌入 `baseDAO[ModelT]` 继承通用 CRUD 能力。
+
+### 4. 策略模式
+
+- OAuth2 平台适配：`Platform` 接口 + `githubPlatform` / `googlePlatform` 实现
+- 对象存储适配：`ObjDAO` 接口 + MinIO / COS 实现
+
+---
+
+## 命名规范
+
+| 类别 | 风格 | 示例 |
+|------|------|------|
+| 包名 | 全小写，不用下划线 | `handler`, `service`, `dto`, `objdao` |
+| 导出函数 | PascalCase，动词开头 | `NewOpenAIHandler()`, `InitLLMProxyConfig()` |
+| 私有函数 | camelCase | `writeSSEErrorResponse()`, `extractAnthropicBlocks()` |
+| 接口 | PascalCase，名词/形容词 | `AnthropicService`, `TokenSigner`, `Locker`, `Platform` |
+| 接口实现 | camelCase，与接口对应 | `anthropicService`, `tokenSigner`, `redisLocker` |
+| 常量 | PascalCase + 类型名前缀 | `CtxKeyUserID`, `ErrUnauthorized`, `ProviderOpenAI`, `RoleAssistant` |
+| DTO 请求 | `XxxReq` / `XxxReqBody` | `LoginReq`, `ChatCompletionReq` |
+| DTO 响应 | `XxxRsp` / `XxxResp` | `LoginResp`, `ListModelsRsp` |
+| Handler 方法 | `Handle` 前缀 | `HandleListModels`, `HandleChatCompletion` |
+| JSON tag | 外部 API 用 `snake_case`，内部业务用 `camelCase` | `json:"api_key"` vs `json:"userName"` |
+| GORM tag | 完整标注 column、约束、comment | `gorm:"column:id;primary_key;auto_increment;comment:消息ID"` |
+
+---
+
+## 错误处理模式
+
+**业务错误不走 Go error，而是放在响应体的 Error 字段中**：
+
+```go
+// 预定义业务错误
+var ErrUnauthorized = model.NewError(10001, "Unauthorized")
+
+// Service 层：业务错误赋值到 rsp.Error，Go error 返回 nil
+func (s *xxxService) DoSomething(ctx context.Context, req *dto.XxxReq) (*dto.XxxRsp, error) {
+    rsp := &dto.XxxRsp{}
+    if err != nil {
+        rsp.Error = constant.ErrUnauthorized
+        return rsp, nil  // Go error 始终返回 nil
+    }
+    return rsp, nil
+}
+
+// Handler 层：统一用 WrapHTTPResponse 包装
+func (h *xxxHandler) HandleXxx(ctx context.Context, req *dto.XxxReq) (*dto.HTTPResponse[*dto.XxxRsp], error) {
+    return util.WrapHTTPResponse(h.svc.DoSomething(ctx, req))
+}
+```
+
+- 使用 `lo.Must0()` / `lo.Must1()` 处理绝对不应出错的初始化逻辑
+- 中间件中的错误通过 `util.WriteErrorResponse()` 直接写入响应
+
+---
+
+## 注释风格
+
+采用 **godoc 格式 + 中文描述 + `@` 标签**：
+
+```go
+// HandleListModels 获取OpenAI模型列表
+//
+//  @receiver h *openAIHandler
+//  @param ctx context.Context
+//  @param req *dto.EmptyReq
+//  @return *dto.HTTPResponse[*dto.ListModelsRsp]
+//  @return error
+//  @author centonhuang
+//  @update 2026-03-17 10:00:00
+```
+
+- 类型和函数的第一行用**中文简述**
+- 使用 `@author`、`@update`、`@param`、`@return`、`@receiver` 标签
+- 包注释用 `// Package xxx 中文描述`
+- 行内注释中英混合，关键步骤用中文
+
+---
+
+## import 组织
+
+**三段式分组**，用空行分隔：
+
+```go
+import (
+    // 1. 标准库
+    "context"
+    "fmt"
+
+    // 2. 第三方库
+    "github.com/bytedance/sonic"
+    "github.com/samber/lo"
+    "go.uber.org/zap"
+
+    // 3. 项目内部包
+    "github.com/hcd233/aris-proxy-api/internal/dto"
+    "github.com/hcd233/aris-proxy-api/internal/service"
+)
+```
+
+- 包路径有冲突时使用别名导入：`dbmodel "...database/model"`、`objdao "...storage/obj_dao"`
+
+---
+
+## 日志规范
+
+- 使用 `logger.WithCtx(ctx)` 获取带上下文（traceID、userID）的 logger
+- Fiber 上下文使用 `logger.WithFCtx(c)`
+- 消息前缀统一用 `[ClassName]` 或 `[ModuleName]` 方括号格式
+- 敏感信息用 `util.MaskSecret()` 掩码
+- 结构化字段用 `zap.String()`、`zap.Error()`、`zap.Int()` 等
+
+```go
+logger.Info("[CreateChatCompletion] send upstream request",
+    zap.String("upstreamURL", upstreamURL),
+    zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)))
+```
+
+---
+
+## 枚举定义
+
+### LLM 业务枚举（`internal/enum/`）— 类型别名风格
+
+```go
+type ProviderType = string  // 类型别名，可直接赋值 string
+
+const (
+    ProviderOpenAI    ProviderType = "openai"
+    ProviderAnthropic ProviderType = "anthropic"
+)
+```
+
+### 通用业务枚举（`internal/common/enum/`）— 自定义类型风格
+
+```go
+type Permission string  // 自定义类型，需显式转换
+
+const (
+    PermissionPending Permission = "pending"
+    PermissionUser    Permission = "user"
+)
+
+func (p Permission) Level() int8 { ... }
+```
+
+---
+
+## DTO 定义风格
+
+- 请求：`XxxReq` 包含 `Body *XxxReqBody` 字段（Huma 自动绑定）
+- 响应：`XxxRsp` 内嵌 `CommonRsp`（含 `Error *model.Error`）
+- 使用 `doc:"..."` tag 提供 OpenAPI 文档描述
+- 复杂联合类型通过自定义 `UnmarshalJSON` / `MarshalJSON` + `Schema()` 实现
+- **禁止使用 `json.RawMessage` 和 `any`（`interface{}`）**
+
+---
+
+## 数据库 Model 风格
+
+- 所有 Model 嵌入 `BaseModel`（ID + CreatedAt + UpdatedAt + DeletedAt）
+- 软删除使用 `deleted_at int64`（0 = 未删除），**非** GORM 默认的 `gorm.DeletedAt`
+- 复杂字段使用 `serializer:json` 存储
+- 时间统一使用 `time.Now().UTC()`
+
+---
+
+## 依赖注入
+
+**手动构造函数注入 + 单例获取器**，不使用 DI 框架：
+
+```go
+func NewTokenHandler() TokenHandler {
+    return &tokenHandler{
+        svc: service.NewTokenService(),
+    }
+}
+
+func NewTokenService() TokenService {
+    return &tokenService{
+        userDAO:            dao.GetUserDAO(),
+        accessTokenSigner:  jwt.GetAccessTokenSigner(),
+        refreshTokenSigner: jwt.GetRefreshTokenSigner(),
+    }
+}
+```
+
+---
+
+## 流式响应（SSE）
+
+- 使用 `*huma.StreamResponse` 作为 Handler 返回类型
+- 直接操作 `fasthttp.StreamWriter` + `bufio.Writer`
+- SSE 格式：`data: {json}\n\n`（OpenAI），`event: xxx\ndata: {json}\n\n`（Anthropic）
+- 流式结束标记：`data: [DONE]\n\n`
+
+---
+
+## 其他偏好
+
+1. **`init()` 函数**：积极使用 `init()` 初始化全局单例（config、logger、fiber app、huma api、dao 单例、jwt signer）
+2. **泛型**：在 DAO 层和工具函数中积极使用 Go 泛型（如 `baseDAO[ModelT]`、`WrapHTTPResponse[rspT]`）
+3. **`lo.Must` 系列**：对绝对不应失败的操作使用 `lo.Must0/1/2` 直接 panic
+4. **上下文传递**：所有业务方法第一个参数为 `context.Context`
+5. **配置分离**：环境变量（Viper）用于运行时配置，YAML 用于 LLM 代理路由配置
+6. **YAML key 分隔符**：使用 `::` 而非 `.`，避免与模型名中的点号冲突
+7. **安全掩码**：日志中对 API Key 等敏感信息统一使用 `util.MaskSecret()` 处理
+8.

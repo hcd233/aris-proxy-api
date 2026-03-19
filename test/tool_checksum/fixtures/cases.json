@@ -433,5 +433,58 @@
             }
         ],
         "expect_equal": false
+    },
+    {
+        "name": "deterministic",
+        "description": "same tool should always produce the same checksum across 100 calls",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "Bash",
+                "description": "Execute a bash command",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The bash command"
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Timeout in seconds"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "nil_vs_empty_properties_nil",
+        "description": "tool with nil parameters (no parameters field at all)",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "GetTime",
+                "description": "Get the current time"
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "nil_vs_empty_properties_empty",
+        "description": "tool with empty schema (parameters with only type, no properties)",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "GetTime",
+                "description": "Get the current time",
+                "parameters": {
+                    "type": "object"
+                }
+            }
+        ],
+        "expect_equal": true
     }
 ]
