@@ -49,8 +49,8 @@ func NewSessionDeduplicateCron() Cron {
 //	@author centonhuang
 //	@update 2026-03-19 10:00:00
 func (c *SessionDeduplicateCron) Start() error {
-	// 每天凌晨3点执行
-	entryID, err := c.cron.AddFunc("*/30 * * * *", c.deduplicate)
+	// 每小时执行一次
+	entryID, err := c.cron.AddFunc("0 * * * *", c.deduplicate)
 	if err != nil {
 		logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
 		return err
