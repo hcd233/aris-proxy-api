@@ -41,11 +41,11 @@ func (c *ExampleCron) Start() error {
 	// debug set 10 seconds
 	entryID, err := c.cron.AddFunc("*/10 * * * * *", c.doSomething)
 	if err != nil {
-		logger.Logger().Error("[ExampleCron] add func error", zap.Error(err))
+		logger.Logger().Error("[ExampleCron] Add func error", zap.Error(err))
 		return err
 	}
 
-	logger.Logger().Info("[ExampleCron] add func success", zap.Int("entryID", int(entryID)))
+	logger.Logger().Info("[ExampleCron] Add func success", zap.Int("entryID", int(entryID)))
 
 	c.cron.Start()
 
@@ -56,5 +56,5 @@ func (c *ExampleCron) doSomething() {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
 	logger := logger.WithCtx(ctx)
 
-	logger.Info("[ExampleCron] doSomething success")
+	logger.Info("[ExampleCron] DoSomething success")
 }

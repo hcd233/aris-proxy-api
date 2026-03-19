@@ -103,7 +103,7 @@ func (s *userService) UpdateUser(ctx context.Context, req *dto.UpdateUserReq) (*
 		"email":  req.Body.User.Email,
 		"avatar": req.Body.User.Avatar,
 	}); err != nil {
-		logger.Error("[UserService] failed to update user", zap.Error(err))
+		logger.Error("[UserService] Failed to update user", zap.Error(err))
 		rsp.Error = constant.ErrInternalError
 		return rsp, nil
 	}

@@ -232,7 +232,7 @@ func (s *oauth2Service) Callback(ctx context.Context, req *dto.CallbackReq) (*dt
 		return rsp, nil
 	}
 
-	logger.Info("[Oauth2Service] callback success",
+	logger.Info("[Oauth2Service] Callback success",
 		zap.String("platform", req.Body.Platform),
 		zap.Uint("userID", user.ID))
 

@@ -30,7 +30,7 @@ func RedisLockMiddleware(serviceName, key string, expire time.Duration) func(ctx
 
 		value := ctx.Context().Value(key)
 		if value == nil {
-			logger.Error("[RedisLockMiddleware] value is nil", zap.String("key", key))
+			logger.Error("[RedisLockMiddleware] Value is nil", zap.String("key", key))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrInternalError))
 			return
 		}
@@ -40,12 +40,12 @@ func RedisLockMiddleware(serviceName, key string, expire time.Duration) func(ctx
 
 		success, err := locker.Lock(ctx.Context(), lockKey, lockValue, expire)
 		if err != nil {
-			logger.Error("[RedisLockMiddleware] lock resource error", zap.Error(err))
+			logger.Error("[RedisLockMiddleware] Lock resource error", zap.Error(err))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrInternalError))
 			return
 		}
 		if !success {
-			logger.Info("[RedisLockMiddleware] lock resource is already locked", zap.String("lockKey", lockKey))
+			logger.Info("[RedisLockMiddleware] Lock resource is already locked", zap.String("lockKey", lockKey))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrTooManyRequests))
 			return
 		}
@@ -53,7 +53,7 @@ func RedisLockMiddleware(serviceName, key string, expire time.Duration) func(ctx
 		defer func() {
 			err = locker.Unlock(ctx.Context(), lockKey, lockValue)
 			if err != nil {
-				logger.Error("[RedisLockMiddleware] unlock resource error", zap.String("lockKey", lockKey), zap.Error(err))
+				logger.Error("[RedisLockMiddleware] Unlock resource error", zap.String("lockKey", lockKey), zap.Error(err))
 			}
 		}()
 		next(ctx)

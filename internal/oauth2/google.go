@@ -96,18 +96,18 @@ func (p *googlePlatform) GetAuthURL() string {
 func (p *googlePlatform) ExchangeToken(ctx context.Context, code string) (*oauth2.Token, error) {
 	logger := logger.WithCtx(ctx)
 
-	logger.Info("[GoogleOauth2] exchanging code for token",
+	logger.Info("[GoogleOauth2] Exchanging code for token",
 		zap.String("clientID", p.oauth2Config.ClientID),
 		zap.String("redirectURL", p.oauth2Config.RedirectURL),
 		zap.Strings("scopes", p.oauth2Config.Scopes))
 
 	token, err := p.oauth2Config.Exchange(ctx, code)
 	if err != nil {
-		logger.Error("[GoogleOauth2] token exchange failed", zap.Error(err))
+		logger.Error("[GoogleOauth2] Token exchange failed", zap.Error(err))
 		return nil, err
 	}
 
-	logger.Info("[GoogleOauth2] token exchange successful")
+	logger.Info("[GoogleOauth2] Token exchange successful")
 	return token, nil
 }
 
@@ -117,17 +117,17 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	// 使用HTTP客户端直接调用Google OAuth2 UserInfo API
 	client := p.oauth2Config.Client(ctx, token)
 
-	logger.Info("[GoogleOauth2] calling Google UserInfo API")
+	logger.Info("[GoogleOauth2] Calling Google UserInfo API")
 
 	// 调用Google UserInfo API
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		logger.Error("[GoogleOauth2] failed to call userinfo API", zap.Error(err))
+		logger.Error("[GoogleOauth2] Failed to call userinfo API", zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	logger.Info("[GoogleOauth2] userinfo API response",
+	logger.Info("[GoogleOauth2] Userinfo API response",
 		zap.Int("statusCode", resp.StatusCode))
 
 	var userInfoResp struct {
@@ -138,11 +138,11 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	}
 
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&userInfoResp); err != nil {
-		logger.Error("[GoogleOauth2] failed to decode userinfo response", zap.Error(err))
+		logger.Error("[GoogleOauth2] Failed to decode userinfo response", zap.Error(err))
 		return nil, err
 	}
 
-	logger.Info("[GoogleOauth2] successfully decoded user info",
+	logger.Info("[GoogleOauth2] Successfully decoded user info",
 		zap.String("userID", userInfoResp.ID),
 		zap.String("userName", userInfoResp.Name),
 		zap.String("userEmail", userInfoResp.Email))

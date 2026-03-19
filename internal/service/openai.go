@@ -95,18 +95,18 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 	cfg := proxy.GetLLMProxyConfig()
 	modelCfg, ok := cfg.Models[req.Body.Model]
 	if !ok {
-		logger.Error("[CreateChatCompletion] model not found", zap.String("model", req.Body.Model))
+		logger.Error("[OpenAIService] Model not found", zap.String("model", req.Body.Model))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
 	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderOpenAI]
 	if !hasEndpoint {
-		logger.Error("[CreateChatCompletion] model has no openai endpoint", zap.String("model", req.Body.Model))
+		logger.Error("[OpenAIService] Model has no openai endpoint", zap.String("model", req.Body.Model))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
 	if req.Body.MaxTokens != nil {
-		logger.Info("[CreateChatCompletion] max_tokens is deprecated, adapt to max_completion_tokens", zap.Intp("max_tokens", req.Body.MaxTokens))
+		logger.Info("[OpenAIService] Adapt max_tokens to max_completion_tokens", zap.Intp("max_tokens", req.Body.MaxTokens))
 		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
 	}
 	// Build upstream request body as map to replace model name
@@ -114,7 +114,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 
 	var bodyMap map[string]any
 	if err := sonic.Unmarshal(bodyBytes, &bodyMap); err != nil {
-		logger.Error("[CreateChatCompletion] unmarshal body error", zap.Error(err))
+		logger.Error("[OpenAIService] Unmarshal body error", zap.Error(err))
 		return util.SendOpenAIInternalError(), nil
 	}
 
@@ -125,20 +125,20 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 
 	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
-		logger.Error("[CreateChatCompletion] new request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		logger.Error("[OpenAIService] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendOpenAIInternalError(), nil
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
 	upstreamReq.Header.Set("Authorization", "Bearer "+endpoint.APIKey)
 
-	logger.Info("[CreateChatCompletion] send upstream request", zap.String("upstreamURL", upstreamURL),
+	logger.Info("[OpenAIService] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", modelCfg.Model),
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
 	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
 	if err != nil {
-		logger.Error("[CreateChatCompletion] send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		logger.Error("[OpenAIService] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendOpenAIInternalError(), nil
 	}
 
@@ -174,7 +174,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 								if payload != "[DONE]" {
 									chunk := &dto.ChatCompletionChunk{}
 									if err := sonic.UnmarshalString(payload, chunk); err != nil {
-										logger.Warn("[CreateChatCompletion] unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
+										logger.Warn("[OpenAIService] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
 										continue
 									}
 
@@ -185,14 +185,14 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 							}
 							fmt.Fprintf(w, "%s\n\n", line)
 							if err := w.Flush(); err != nil {
-								logger.Warn("[CreateChatCompletion] flush sse error", zap.Error(err))
+								logger.Warn("[OpenAIService] Flush sse error", zap.Error(err))
 								return
 							}
 						}
 
 						if readErr != nil {
 							if readErr != io.EOF {
-								logger.Warn("[CreateChatCompletion] read upstream sse error", zap.Error(readErr))
+								logger.Warn("[OpenAIService] Read upstream sse error", zap.Error(readErr))
 							}
 							break
 						}
@@ -203,11 +203,11 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 					}
 					completion, err := util.ConcatChatCompletionChunks(collectedChunks)
 					if err != nil {
-						logger.Warn("[CreateChatCompletion] concat sse chunks error", zap.Error(err))
+						logger.Warn("[OpenAIService] Concat sse chunks error", zap.Error(err))
 						return
 					}
 					if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
-						logger.Warn("[CreateChatCompletion] ai response is empty", zap.Any("response", completion))
+						logger.Warn("[OpenAIService] AI response is empty", zap.Any("response", completion))
 						return
 					}
 
@@ -242,7 +242,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 			completion := &dto.ChatCompletion{}
 			err = sonic.Unmarshal(respBody, completion)
 			if err != nil {
-				logger.Warn("[CreateChatCompletion] unmarshal upstream response error", zap.Error(err))
+				logger.Warn("[OpenAIService] Unmarshal upstream response error", zap.Error(err))
 				humaCtx.BodyWriter().Write(respBody)
 				return
 			}
@@ -250,7 +250,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(completion)))
 
 			if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
-				logger.Warn("[CreateChatCompletion] ai response is empty", zap.Any("response", completion))
+				logger.Warn("[OpenAIService] AI response is empty", zap.Any("response", completion))
 				return
 			}
 
@@ -273,7 +273,7 @@ func (s *openAIService) storeOpenAIMessages(
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromOpenAIMessage(msg)
 		if err != nil {
-			logger.Error("[storeOpenAIMessages] failed to convert openai message", zap.Error(err))
+			logger.Error("[OpenAIService] Failed to convert openai message", zap.Error(err))
 			return
 		}
 		unifiedMessages = append(unifiedMessages, um)
@@ -282,7 +282,7 @@ func (s *openAIService) storeOpenAIMessages(
 	// Convert assistant response to UnifiedMessage
 	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
 	if err != nil {
-		logger.Error("[storeOpenAIMessages] failed to convert ai response message", zap.Error(err))
+		logger.Error("[OpenAIService] Failed to convert ai response message", zap.Error(err))
 		return
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
@@ -299,6 +299,6 @@ func (s *openAIService) storeOpenAIMessages(
 		Messages:   unifiedMessages,
 		Tools:      unifiedTools,
 	}); err != nil {
-		logger.Error("[CreateChatCompletion] failed to submit message store task", zap.Error(err))
+		logger.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
 	}
 }

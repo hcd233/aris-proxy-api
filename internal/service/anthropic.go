@@ -315,6 +315,6 @@ func (s *anthropicService) storeAnthropicMessages(
 		Messages:   unifiedMessages,
 		Tools:      unifiedTools,
 	}); err != nil {
-		logger.Error("[CreateMessage] failed to submit message store task", zap.Error(err))
+		logger.Error("[AnthropicService] Failed to submit message store task", zap.Error(err))
 	}
 }

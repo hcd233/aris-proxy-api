@@ -51,7 +51,7 @@ func writeSSEErrorResponse(ctx context.Context, w *bufio.Writer, err *model.Erro
 	}
 	fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(rsp)))
 	if err := w.Flush(); err != nil {
-		logger.Error("[WriteErrorResponse] flush error", zap.Error(err))
+		logger.Error("[WriteErrorResponse] Flush error", zap.Error(err))
 	}
 }
 

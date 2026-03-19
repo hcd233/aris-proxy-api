@@ -67,7 +67,7 @@ func RateLimiterMiddleware(serviceName, key string, period time.Duration, limit 
 
 		result, err := instance.Get(ctx.Context(), limiterKey)
 		if err != nil {
-			logger.WithCtx(ctx.Context()).Error("[RateLimiterMiddleware] failed to get rate limit", zap.Error(err))
+			logger.WithCtx(ctx.Context()).Error("[RateLimiterMiddleware] Failed to get rate limit", zap.Error(err))
 			rsp := &dto.CommonRsp{Error: constant.ErrInternalError}
 			_ = lo.Must1(ctx.BodyWriter().Write(lo.Must1(sonic.Marshal(rsp))))
 			return
@@ -81,7 +81,7 @@ func RateLimiterMiddleware(serviceName, key string, period time.Duration, limit 
 				fields = append(fields, zap.String("key", key), zap.String("value", value))
 			}
 
-			logger.WithCtx(ctx.Context()).Error("[RateLimiterMiddleware] rate limit reached", fields...)
+			logger.WithCtx(ctx.Context()).Error("[RateLimiterMiddleware] Rate limit reached", fields...)
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrTooManyRequests))
 			return
 		}

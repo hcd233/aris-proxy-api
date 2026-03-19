@@ -25,7 +25,7 @@ func initMinioClient() {
 
 	_ = lo.Must1(minioClient.ListBuckets(context.Background()))
 
-	logger.Logger().Info("[Object Storage] Connected to Minio", zap.String("endpoint", config.MinioEndpoint))
+	logger.Logger().Info("[ObjectStorage] Connected to Minio", zap.String("endpoint", config.MinioEndpoint))
 }
 
 // GetMinioStorage 获取Minio存储客户端

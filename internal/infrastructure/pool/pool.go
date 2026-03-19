@@ -78,7 +78,7 @@ func StopPoolManager() {
 func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
 	logger := logger.WithCtx(task.Ctx)
 	return pm.pingPool.Go(func() {
-		logger.Info("[PoolManager] async ping success")
+		logger.Info("[PoolManager] Async ping success")
 	})
 }
 
@@ -116,14 +116,14 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 			// 存储消息（批量IN查询去重）
 			messageIDs, err := pm.deduplicateAndStoreMessages(tx, messages)
 			if err != nil {
-				logger.Error("[submitMessageStoreTask] failed to store messages", zap.Error(err))
+				logger.Error("[PoolManager] Failed to store messages", zap.Error(err))
 				return err
 			}
 
 			// 存储工具（批量IN查询去重）
 			toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
 			if err != nil {
-				logger.Error("[submitMessageStoreTask] failed to store tools", zap.Error(err))
+				logger.Error("[PoolManager] Failed to store tools", zap.Error(err))
 				return err
 			}
 
@@ -133,16 +133,16 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 				ToolIDs:    toolIDs,
 			}
 			if err := pm.sessionDAO.Create(tx, session); err != nil {
-				logger.Error("[submitMessageStoreTask] failed to create session", zap.Error(err))
+				logger.Error("[PoolManager] Failed to create session", zap.Error(err))
 				return err
 			}
 			return nil
 		})
 		if err != nil {
-			logger.Error("[submitMessageStoreTask] failed to store messages", zap.Error(err))
+			logger.Error("[PoolManager] Transaction failed", zap.Error(err))
 			return
 		}
-		logger.Info("[submitMessageStoreTask] messages stored successfully")
+		logger.Info("[PoolManager] Messages stored successfully")
 	})
 }
 

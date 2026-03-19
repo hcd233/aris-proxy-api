@@ -72,3 +72,4 @@ provider: codebuddy
 2. **避免敏感信息入日志** - 禁止记录密码、token、身份证号等敏感数据
 3. **日志级别要准确** - Error 用于需要人工介入的错误，Warn 用于可自愈的异常，Info 用于关键业务节点，Debug 用于开发调试
 4. **避免日志轰炸** - 循环内、高频调用路径避免打印日志，防止日志量爆炸影响性能和排查
+5. **日志消息格式** - 统一使用 `[ModuleName] English message` 格式，其中模块名使用 PascalCase（如 `[SessionService]`、`[PoolManager]`），英文日志首字母必须大写。示例：`logger.Info("[SessionService] Get session detail", ...)`

@@ -79,7 +79,7 @@ func (s *sessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 		},
 	)
 	if err != nil {
-		logger.Error("[SessionService] failed to paginate sessions", zap.Error(err))
+		logger.Error("[SessionService] Failed to paginate sessions", zap.Error(err))
 		rsp.Error = constant.ErrInternalError
 		return rsp, nil
 	}
@@ -122,17 +122,17 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 	)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn("[SessionService] session not found", zap.Uint("sessionID", req.SessionID))
+			log.Warn("[SessionService] Session not found", zap.Uint("sessionID", req.SessionID))
 			rsp.Error = constant.ErrDataNotExists
 			return rsp, nil
 		}
-		log.Error("[SessionService] failed to get session", zap.Error(err))
+		log.Error("[SessionService] Failed to get session", zap.Error(err))
 		rsp.Error = constant.ErrInternalError
 		return rsp, nil
 	}
 
 	if session.APIKeyName != apiKeyName {
-		log.Warn("[SessionService] no permission to access session",
+		log.Warn("[SessionService] No permission to access session",
 			zap.Uint("sessionID", req.SessionID),
 			zap.String("apiKeyName", apiKeyName),
 			zap.String("sessionAPIKeyName", session.APIKeyName))
@@ -142,14 +142,14 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 
 	messages, err := s.messageDAO.BatchGetByField(db, "id", lo.Uniq(session.MessageIDs), []string{"id", "model", "message", "created_at"})
 	if err != nil {
-		log.Error("[SessionService] failed to batch get messages", zap.Error(err))
+		log.Error("[SessionService] Failed to batch get messages", zap.Error(err))
 		rsp.Error = constant.ErrInternalError
 		return rsp, nil
 	}
 
 	tools, err := s.toolDAO.BatchGetByField(db, "id", lo.Uniq(session.ToolIDs), []string{"id", "tool", "created_at"})
 	if err != nil {
-		log.Error("[SessionService] failed to batch get tools", zap.Error(err))
+		log.Error("[SessionService] Failed to batch get tools", zap.Error(err))
 		rsp.Error = constant.ErrInternalError
 		return rsp, nil
 	}
@@ -169,7 +169,7 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 		Tools:      toolItems,
 	}
 
-	log.Info("[SessionService] get session detail",
+	log.Info("[SessionService] Get session detail",
 		zap.Uint("sessionID", req.SessionID),
 		zap.String("apiKeyName", apiKeyName),
 		zap.Int("messageCount", len(messageItems)),
