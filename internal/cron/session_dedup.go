@@ -103,15 +103,6 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		zap.Int("deleted", len(redundantIDs)))
 }
 
-// sessionEntry 用于去重算法的轻量结构体
-//
-//	@author centonhuang
-//	@update 2026-03-19 10:00:00
-type sessionEntry struct {
-	id         uint
-	messageIDs []uint
-}
-
 // FindRedundantSessions 查找MessageIDs被其他Session完全包含（子数组）的冗余Session
 //
 // 算法：
@@ -127,6 +118,12 @@ type sessionEntry struct {
 //     @author centonhuang
 //     @update 2026-03-19 10:00:00
 func FindRedundantSessions(sessions []*dbmodel.Session) []uint {
+
+	type sessionEntry struct {
+		id         uint
+		messageIDs []uint
+	}
+
 	entries := lo.Map(sessions, func(s *dbmodel.Session, _ int) sessionEntry {
 		return sessionEntry{id: s.ID, messageIDs: s.MessageIDs}
 	})
