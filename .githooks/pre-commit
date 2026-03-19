@@ -60,5 +60,15 @@ fi
 printf "$PASS go vet\n"
 
 # --------------------------------------------------------------------------
+# 4. go test — run all unit tests, block commit on any failure
+# --------------------------------------------------------------------------
+printf "$INFO Running go test -count=1 ./...\n"
+
+if ! $GO_BIN test -count=1 ./... 2>&1; then
+    fail "go test failed. All tests must pass before committing."
+fi
+printf "$PASS go test\n"
+
+# --------------------------------------------------------------------------
 echo ""
 printf "$PASS All checks passed. Proceeding with commit.\n"

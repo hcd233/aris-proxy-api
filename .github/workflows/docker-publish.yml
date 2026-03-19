@@ -6,8 +6,22 @@ on:
   push:
     branches: [ "master" ]
     tags: [ 'v*.*.*' ]
+    paths:
+      - 'internal/**'
+      - 'docker/**'
+      - 'cmd/**'
+      - 'main.go'
+      - 'go.mod'
+      - 'go.sum'
   pull_request:
     branches: [ "master" ]
+    paths:
+      - 'internal/**'
+      - 'docker/**'
+      - 'cmd/**'
+      - 'main.go'
+      - 'go.mod'
+      - 'go.sum'
 
 env:
   REGISTRY: ghcr.io
