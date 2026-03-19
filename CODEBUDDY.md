@@ -143,3 +143,83 @@ Two auth mechanisms applied per-route:
 
 1. **DO NOT** use json.RAWMessage OR any(interface{})
 2. **ALWAYS** check the document in `/docs` before you modify dto of openai or anthropic
+
+---
+
+## Testing（测试规范）
+
+### 测试目录结构
+
+```
+test/                              # 集成测试、端到端测试、专项调查测试
+├── <主题名>/                       # 按测试主题组织，snake_case 命名
+│   ├── fixtures/                  # 测试数据文件（JSON/YAML）
+│   └── xxx_test.go                # 测试代码，package 名与目录名一致
+│
+internal/                          # 单元测试（与源码同目录同包）
+├── util/
+│   ├── openai.go
+│   └── openai_test.go             # 文件名：<source_file>_test.go
+├── dto/
+│   ├── unified_message.go
+│   └── unified_message_test.go
+├── service/
+│   └── openai_test.go
+└── ...
+```
+
+| 测试类型 | 存放位置 | 说明 |
+|---------|---------|------|
+| 单元测试 | `internal/<package>/<file>_test.go` | 与源码同目录同包 |
+| 集成测试 / 专项测试 / E2E 测试 | `test/<主题>/` | 跨包跨层、需外部依赖、或 Bug 根因调查 |
+
+### 用例编写规范
+
+- 优先使用**表驱动测试（Table-Driven Tests）** + `t.Run()` 子测试
+- 辅助函数标记 `t.Helper()`
+- 复杂测试数据放 JSON/YAML 文件，通过辅助函数加载
+- 断言失败信息必须包含 `got` / `want` 上下文
+- 命名格式：`Test<FunctionName>_<场景描述>`
+
+### ⚠️ 开发流程强制要求（MANDATORY）
+
+**每次功能开发/修改/Bug 修复完成后，必须执行以下两步：**
+
+#### Step 1: 沉淀测试用例
+
+| 变更类型 | 必须沉淀的用例 |
+|---------|-------------|
+| 新增 `util/` 函数 | 对应的单元测试（正常路径 + 边界条件 + 错误路径） |
+| 新增/修改 `dto/` 自定义序列化 | 序列化 + 反序列化往返测试 |
+| 新增/修改 `service/` 方法 | 单元测试或集成测试 |
+| Bug 修复 | **必须**附带回归测试，覆盖触发 Bug 的场景 |
+| 新增中间件 | 认证/鉴权/限流等行为测试 |
+
+#### Step 2: 运行全量测试
+
+```bash
+# 必须在提交前运行，全部 PASS 才允许提交
+go test -count=1 ./...
+```
+
+**全部测试 PASS 后方可提交代码。任何 FAIL 必须修复后才能提交。**
+
+### 常用命令
+
+```bash
+# 全量测试
+go test -count=1 ./...
+
+# 指定目录
+go test -v -count=1 ./test/message_checksum/
+
+# 指定函数
+go test -v -count=1 -run TestChecksumDifference ./test/message_checksum/
+
+# 带覆盖率
+go test -count=1 -cover ./internal/...
+
+# 生成覆盖率报告
+go test -count=1 -coverprofile=coverage.out ./internal/...
+go tool cover -html=coverage.out -o coverage.html
+```

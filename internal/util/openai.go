@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/encoder"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
@@ -235,18 +236,18 @@ func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
 		normalized.ToolCalls = cleanedCalls
 	}
 
-	hash := sha256.Sum256(lo.Must1(sonic.Marshal(normalized)))
+	hash := sha256.Sum256(lo.Must1(encoder.Encode(normalized, encoder.SortMapKeys)))
 	return hex.EncodeToString(hash[:])
 }
 
-// normalizeJSONString 将 JSON 字符串反序列化后重新序列化为紧凑格式，消除空格等格式差异
+// normalizeJSONString 将 JSON 字符串反序列化后重新序列化为紧凑格式（键排序），消除键顺序和空格等格式差异
 //
 //	@param s string JSON字符串
 //	@return string 规范化后的JSON字符串，如果解析失败则返回原始字符串
 //	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//	@update 2026-03-19 10:00:00
 func normalizeJSONString(s string) string {
 	var obj map[string]any
 	lo.Must0(sonic.UnmarshalString(s, &obj))
-	return lo.Must1(sonic.MarshalString(obj))
+	return string(lo.Must1(encoder.Encode(obj, encoder.SortMapKeys)))
 }

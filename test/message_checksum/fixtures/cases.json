@@ -1,0 +1,46 @@
+[
+    {
+        "role": "assistant",
+        "reasoning_content": "用户询问最近3次git提交做了什么事情。我需要查看git log来获取最近3次提交的信息。\n\n让我运行git log命令来查看。",
+        "tool_calls": [
+            {
+                "id": "Bash_0",
+                "name": "Bash",
+                "arguments": "{\"command\":\"git log --oneline -3\",\"description\":\"查看最近3次git提交\"}"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "reasoning_content": "用户询问最近3次git提交做了什么事情。我需要查看git log来获取最近3次提交的信息。\n\n让我运行git log命令来查看。",
+        "tool_calls": [
+            {
+                "id": "Bash_0",
+                "name": "Bash",
+                "arguments": "{\"description\":\"查看最近3次git提交\",\"command\":\"git log --oneline -3\"}"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "reasoning_content": "需要搜索代码仓库中的文件。",
+        "tool_calls": [
+            {
+                "id": "Search_0",
+                "name": "Search",
+                "arguments": "{\"query\":\"hello world\",\"limit\":10,\"caseSensitive\":false,\"recursive\":true,\"path\":\"/root/code\",\"fileType\":\"go\"}"
+            }
+        ]
+    },
+    {
+        "role": "assistant",
+        "reasoning_content": "需要搜索代码仓库中的文件。",
+        "tool_calls": [
+            {
+                "id": "Search_0",
+                "name": "Search",
+                "arguments": "{\"fileType\":\"go\",\"path\":\"/root/code\",\"recursive\":true,\"caseSensitive\":false,\"limit\":10,\"query\":\"hello world\"}"
+            }
+        ]
+    }
+]
