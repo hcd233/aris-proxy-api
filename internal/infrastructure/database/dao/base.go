@@ -9,6 +9,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -18,7 +19,7 @@ import (
 //
 //	author centonhuang
 //	update 2024-10-17 02:32:22
-type baseDAO[ModelT interface{}] struct{}
+type baseDAO[ModelT any] struct{}
 
 // Create 创建数据
 //
@@ -34,11 +35,14 @@ func (dao *baseDAO[ModelT]) Create(db *gorm.DB, data *ModelT) (err error) {
 // BatchCreate 批量创建数据
 //
 //	@param dao *baseDAO[ModelT]
-//	@return BatchCreate
+//	@param db *gorm.DB
+//	@param data []*ModelT
+//	@param batchSize int 每批创建的记录数
+//	@return error
 //	@author centonhuang
-//	@update 2025-11-07 01:57:42
+//	@update 2026-03-19 10:00:00
 func (dao *baseDAO[ModelT]) BatchCreate(db *gorm.DB, data []*ModelT) (err error) {
-	err = db.Create(&data).Error
+	err = db.CreateInBatches(&data, config.SQLBatchSize).Error
 	return
 }
 
@@ -92,6 +96,13 @@ func (dao *baseDAO[ModelT]) Get(db *gorm.DB, where *ModelT, fields []string) (da
 	return
 }
 
+func (dao *baseDAO[ModelT]) BatchGet(db *gorm.DB, where *ModelT, fields []string) (data []*ModelT, err error) {
+	err = db.Select(fields).Where(where).Where("deleted_at = 0").FindInBatches(&data, config.SQLBatchSize, func(tx *gorm.DB, n int) error {
+		return nil
+	}).Error
+	return
+}
+
 // BatchGetByField 根据指定字段的多个值批量查询数据
 //
 //	@param db *gorm.DB
@@ -106,7 +117,9 @@ func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, valu
 	if values == nil {
 		return []*ModelT{}, nil
 	}
-	err = db.Select(selectFields).Where(whereField+" IN ?", values).Where("deleted_at = 0").Find(&data).Error
+	err = db.Select(selectFields).Where(whereField+" IN ?", values).Where("deleted_at = 0").FindInBatches(&data, config.SQLBatchSize, func(tx *gorm.DB, n int) error {
+		return nil
+	}).Error
 	return
 }
 

@@ -166,6 +166,10 @@ var (
 	// PoolQueueSize int 协程池任务队列大小
 	//	@update 2026-01-31 03:26:08
 	PoolQueueSize int
+
+	// SQLBatchSize int SQL批量操作大小
+	//	@update 2026-03-19 10:00:00
+	SQLBatchSize int
 )
 
 func init() {
@@ -187,6 +191,8 @@ func initEnvironment() {
 
 	config.SetDefault("pool.workers", 8)
 	config.SetDefault("pool.queue.size", 64)
+
+	config.SetDefault("sql.batch.size", 500)
 
 	config.SetDefault("postgres.sslmode", "disable")
 
@@ -246,4 +252,6 @@ func initEnvironment() {
 
 	PoolWorkers = config.GetInt("pool.workers")
 	PoolQueueSize = config.GetInt("pool.queue.size")
+
+	SQLBatchSize = config.GetInt("sql.batch.size")
 }

@@ -5,6 +5,7 @@ package cron
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
@@ -27,30 +28,34 @@ func InitCronJobs() {
 	exampleCron := NewExampleCron()
 	lo.Must0(exampleCron.Start())
 
+	sessionDeduplicateCron := NewSessionDeduplicateCron()
+	lo.Must0(sessionDeduplicateCron.Start())
+
 	logger.Logger().Info("[Cron] Init cron jobs")
 }
 
 type cronLoggerAdapter struct {
-	prefix string
+	module string
 	logger *zap.Logger
 }
 
-func newCronLoggerAdapter(prefix string, logger *zap.Logger) cronLoggerAdapter {
-	if prefix == "" {
-		prefix = "[Cron]"
+func newCronLoggerAdapter(module string, logger *zap.Logger) cronLoggerAdapter {
+	if module == "" {
+		module = "Cron"
 	}
-	return cronLoggerAdapter{prefix: prefix, logger: logger}
+	module = strings.TrimSpace(strings.TrimRight(strings.TrimLeft(strings.TrimSpace(module), "["), "]"))
+	return cronLoggerAdapter{module: module, logger: logger}
 }
 
 func (l cronLoggerAdapter) Error(err error, msg string, keysAndValues ...interface{}) {
 	zapKeyValues := []zap.Field{zap.Error(err)}
 	zapKeyValues = append(zapKeyValues, convertZapKeyValues(keysAndValues...)...)
-	l.logger.Error(fmt.Sprintf("[%s] %s", l.prefix, msg), zapKeyValues...)
+	l.logger.Error(fmt.Sprintf("[%s] %s", l.module, msg), zapKeyValues...)
 }
 
 func (l cronLoggerAdapter) Info(msg string, keysAndValues ...interface{}) {
 	zapKeyValues := convertZapKeyValues(keysAndValues...)
-	l.logger.Info(fmt.Sprintf("[%s] %s", l.prefix, msg), zapKeyValues...)
+	l.logger.Info(fmt.Sprintf("[%s] %s", l.module, msg), zapKeyValues...)
 }
 
 func convertZapKeyValues(keysAndValues ...interface{}) []zap.Field {

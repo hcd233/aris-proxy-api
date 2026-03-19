@@ -1,0 +1,93 @@
+[
+    {
+        "name": "basic_subarray_match",
+        "description": "sub [2,3] is a contiguous subarray of arr [1,2,3,4,5]",
+        "sub": [2, 3],
+        "arr": [1, 2, 3, 4, 5],
+        "expected": true
+    },
+    {
+        "name": "prefix_match",
+        "description": "sub [1,2] matches the prefix of arr [1,2,3]",
+        "sub": [1, 2],
+        "arr": [1, 2, 3],
+        "expected": true
+    },
+    {
+        "name": "suffix_match",
+        "description": "sub [4,5] matches the suffix of arr [1,2,3,4,5]",
+        "sub": [4, 5],
+        "arr": [1, 2, 3, 4, 5],
+        "expected": true
+    },
+    {
+        "name": "exact_match",
+        "description": "sub equals arr exactly",
+        "sub": [1, 2, 3],
+        "arr": [1, 2, 3],
+        "expected": true
+    },
+    {
+        "name": "empty_sub",
+        "description": "Empty sub is always a subarray",
+        "sub": [],
+        "arr": [1, 2, 3],
+        "expected": true
+    },
+    {
+        "name": "sub_longer_than_arr",
+        "description": "sub longer than arr cannot be a subarray",
+        "sub": [1, 2, 3, 4],
+        "arr": [1, 2, 3],
+        "expected": false
+    },
+    {
+        "name": "non_contiguous_elements",
+        "description": "sub [1,3] shares elements but is not contiguous in arr [1,2,3]",
+        "sub": [1, 3],
+        "arr": [1, 2, 3],
+        "expected": false
+    },
+    {
+        "name": "no_common_elements",
+        "description": "sub [7,8] has no common elements with arr [1,2,3,4,5]",
+        "sub": [7, 8],
+        "arr": [1, 2, 3, 4, 5],
+        "expected": false
+    },
+    {
+        "name": "single_element_found",
+        "description": "Single element sub [3] exists in arr",
+        "sub": [3],
+        "arr": [1, 2, 3, 4, 5],
+        "expected": true
+    },
+    {
+        "name": "single_element_not_found",
+        "description": "Single element sub [9] does not exist in arr",
+        "sub": [9],
+        "arr": [1, 2, 3, 4, 5],
+        "expected": false
+    },
+    {
+        "name": "partial_overlap_not_subarray",
+        "description": "sub [3,4,6] partially overlaps but is not a contiguous subarray",
+        "sub": [3, 4, 6],
+        "arr": [1, 2, 3, 4, 5, 6],
+        "expected": false
+    },
+    {
+        "name": "repeated_elements_match",
+        "description": "sub [2,2] is a contiguous subarray of arr [1,2,2,3]",
+        "sub": [2, 2],
+        "arr": [1, 2, 2, 3],
+        "expected": true
+    },
+    {
+        "name": "both_empty",
+        "description": "Both sub and arr are empty",
+        "sub": [],
+        "arr": [],
+        "expected": true
+    }
+]

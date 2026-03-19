@@ -1,0 +1,115 @@
+[
+    {
+        "name": "basic_subarray_containment",
+        "description": "Session B [1,2,3] is a subarray of Session A [1,2,3,4,5], B should be removed",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
+            {"id": 2, "message_ids": [1, 2, 3]}
+        ],
+        "expected_redundant_ids": [2]
+    },
+    {
+        "name": "tail_subarray",
+        "description": "Session B [3,4,5] is a tail subarray of Session A [1,2,3,4,5], B should be removed",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
+            {"id": 2, "message_ids": [3, 4, 5]}
+        ],
+        "expected_redundant_ids": [2]
+    },
+    {
+        "name": "middle_subarray",
+        "description": "Session B [2,3,4] is a middle subarray of Session A [1,2,3,4,5], B should be removed",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
+            {"id": 2, "message_ids": [2, 3, 4]}
+        ],
+        "expected_redundant_ids": [2]
+    },
+    {
+        "name": "no_containment",
+        "description": "No session is a subarray of another, nothing should be removed",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3]},
+            {"id": 2, "message_ids": [4, 5, 6]},
+            {"id": 3, "message_ids": [7, 8]}
+        ],
+        "expected_redundant_ids": []
+    },
+    {
+        "name": "identical_sessions_keep_earlier",
+        "description": "Two sessions with identical MessageIDs, the one with larger ID should be removed",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3]},
+            {"id": 2, "message_ids": [1, 2, 3]}
+        ],
+        "expected_redundant_ids": [2]
+    },
+    {
+        "name": "chain_containment",
+        "description": "Session C is subarray of B, B is subarray of A; both B and C should be removed",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
+            {"id": 2, "message_ids": [1, 2, 3, 4]},
+            {"id": 3, "message_ids": [1, 2, 3]}
+        ],
+        "expected_redundant_ids": [2, 3]
+    },
+    {
+        "name": "single_element_subarray",
+        "description": "Single element session [3] is a subarray of [1,2,3,4,5]",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
+            {"id": 2, "message_ids": [3]}
+        ],
+        "expected_redundant_ids": [2]
+    },
+    {
+        "name": "non_contiguous_not_subarray",
+        "description": "Session B [1,3,5] shares elements but is NOT a contiguous subarray of A [1,2,3,4,5]",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
+            {"id": 2, "message_ids": [1, 3, 5]}
+        ],
+        "expected_redundant_ids": []
+    },
+    {
+        "name": "multiple_subarrays_of_same_parent",
+        "description": "Multiple short sessions are subarrays of one long session",
+        "sessions": [
+            {"id": 1, "message_ids": [10, 20, 30, 40, 50]},
+            {"id": 2, "message_ids": [10, 20]},
+            {"id": 3, "message_ids": [30, 40, 50]},
+            {"id": 4, "message_ids": [20, 30]}
+        ],
+        "expected_redundant_ids": [2, 3, 4]
+    },
+    {
+        "name": "empty_message_ids_ignored",
+        "description": "Sessions with empty MessageIDs are ignored and not marked as redundant",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3]},
+            {"id": 2, "message_ids": []},
+            {"id": 3, "message_ids": [1, 2]}
+        ],
+        "expected_redundant_ids": [3]
+    },
+    {
+        "name": "single_session",
+        "description": "Only one session, nothing to deduplicate",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3]}
+        ],
+        "expected_redundant_ids": []
+    },
+    {
+        "name": "three_identical_sessions",
+        "description": "Three sessions with identical MessageIDs, keep the one with smallest ID",
+        "sessions": [
+            {"id": 5, "message_ids": [1, 2, 3]},
+            {"id": 3, "message_ids": [1, 2, 3]},
+            {"id": 7, "message_ids": [1, 2, 3]}
+        ],
+        "expected_redundant_ids": [5, 7]
+    }
+]
