@@ -25,9 +25,6 @@ type Cron interface {
 //	author centonhuang
 //	update 2024-12-09 15:55:20
 func InitCronJobs() {
-	exampleCron := NewExampleCron()
-	lo.Must0(exampleCron.Start())
-
 	sessionDeduplicateCron := NewSessionDeduplicateCron()
 	lo.Must0(sessionDeduplicateCron.Start())
 
