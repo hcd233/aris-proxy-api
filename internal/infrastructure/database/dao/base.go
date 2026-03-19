@@ -76,7 +76,7 @@ func (dao *baseDAO[ModelT]) Delete(db *gorm.DB, data *ModelT) (err error) {
 	return
 }
 
-func (dao *baseDAO[ModelT]) BatchDelete(db *gorm.DB, data *[]ModelT) (err error) {
+func (dao *baseDAO[ModelT]) BatchDelete(db *gorm.DB, data []*ModelT) (err error) {
 	err = db.Model(data).Update("deleted_at", time.Now().UTC().Unix()).Error
 	return
 }

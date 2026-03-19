@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -18,7 +17,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // SessionDeduplicateCron Session去重定时任务，清理MessageIDs被其他Session包含的冗余Session
@@ -73,8 +71,9 @@ func (c *SessionDeduplicateCron) Start() error {
 func (c *SessionDeduplicateCron) deduplicate() {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
 	log := logger.WithCtx(ctx)
+	db := database.GetDBInstance(ctx)
 
-	sessions, err := c.loadAllSessions(ctx)
+	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, []string{"id", "message_ids"})
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to load sessions", zap.Error(err))
 		return
@@ -91,7 +90,9 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		return
 	}
 
-	deleted, err := c.batchSoftDelete(ctx, redundantIDs)
+	err = c.sessionDAO.BatchDelete(db, lo.Map(redundantIDs, func(id uint, _ int) *dbmodel.Session {
+		return &dbmodel.Session{ID: id}
+	}))
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to delete redundant sessions", zap.Error(err))
 		return
@@ -99,20 +100,7 @@ func (c *SessionDeduplicateCron) deduplicate() {
 
 	log.Info("[SessionDeduplicateCron] Deduplication completed",
 		zap.Int("total", len(sessions)),
-		zap.Int("deleted", deleted))
-}
-
-// loadAllSessions 分批加载所有未删除的Session
-//
-//	@receiver c *SessionDeduplicateCron
-//	@param ctx context.Context
-//	@return []*dbmodel.Session
-//	@return error
-//	@author centonhuang
-//	@update 2026-03-19 10:00:00
-func (c *SessionDeduplicateCron) loadAllSessions(ctx context.Context) ([]*dbmodel.Session, error) {
-	db := database.GetDBInstance(ctx)
-	return c.sessionDAO.BatchGet(db, &dbmodel.Session{}, []string{"id", "message_ids"})
+		zap.Int("deleted", len(redundantIDs)))
 }
 
 // sessionEntry 用于去重算法的轻量结构体
@@ -250,37 +238,4 @@ func isEqualSlice(a, b []uint) bool {
 		}
 	}
 	return true
-}
-
-// batchSoftDelete 分批软删除冗余Session
-//
-//	@receiver c *SessionDeduplicateCron
-//	@param ctx context.Context
-//	@param ids []uint 需要删除的Session ID列表
-//	@return int 实际删除数量
-//	@return error
-//	@author centonhuang
-//	@update 2026-03-19 10:00:00
-func (c *SessionDeduplicateCron) batchSoftDelete(ctx context.Context, ids []uint) (int, error) {
-	db := database.GetDBInstance(ctx)
-	log := logger.WithCtx(ctx)
-
-	deleted := 0
-	batches := lo.Chunk(ids, config.SQLBatchSize)
-
-	for _, batch := range batches {
-		result := db.Model(&dbmodel.Session{}).
-			Where("id IN ?", batch).
-			Where("deleted_at = 0").
-			Update("deleted_at", gorm.Expr("EXTRACT(EPOCH FROM NOW())::bigint"))
-		if result.Error != nil {
-			log.Error("[SessionDeduplicateCron] Batch delete failed",
-				zap.Int("batchSize", len(batch)),
-				zap.Error(result.Error))
-			return deleted, result.Error
-		}
-		deleted += int(result.RowsAffected)
-	}
-
-	return deleted, nil
 }
