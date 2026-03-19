@@ -175,11 +175,75 @@ internal/                          # 单元测试（与源码同目录同包）
 
 ### 用例编写规范
 
+- **命名格式**：`Test<FunctionName>_<场景描述>`，如 `TestComputeToolChecksum_NilParameters`
 - 优先使用**表驱动测试（Table-Driven Tests）** + `t.Run()` 子测试
-- 辅助函数标记 `t.Helper()`
-- 复杂测试数据放 JSON/YAML 文件，通过辅助函数加载
-- 断言失败信息必须包含 `got` / `want` 上下文
-- 命名格式：`Test<FunctionName>_<场景描述>`
+- 辅助函数**必须**标记 `t.Helper()`
+- 复杂测试数据放 JSON/YAML 文件至 `fixtures/` 子目录，通过辅助函数加载
+- 每个测试函数只验证一个行为
+- 测试代码日志**使用英文**，通过 `t.Logf` 输出关键中间值
+
+### 测试数据加载模式
+
+项目使用 JSON fixtures + helper 函数的数据驱动模式，**禁止使用标准库 `encoding/json`**，统一用 `github.com/bytedance/sonic`：
+
+```go
+// 定义测试用例结构体
+type testCase struct {
+    Name        string `json:"name"`
+    Description string `json:"description"`
+    // ...其他字段
+}
+
+// 加载 fixture 的 helper 函数（必须 t.Helper()）
+func loadCases(t *testing.T) []testCase {
+    t.Helper()
+    data, err := os.ReadFile("./fixtures/cases.json")
+    if err != nil {
+        t.Fatalf("failed to read fixture: %v", err)
+    }
+    var cases []testCase
+    if err := sonic.Unmarshal(data, &cases); err != nil {
+        t.Fatalf("failed to unmarshal fixture: %v", err)
+    }
+    return cases
+}
+
+// 按名称查找用例的 helper
+func findCase(t *testing.T, cases []testCase, name string) testCase {
+    t.Helper()
+    for _, c := range cases {
+        if c.Name == name {
+            return c
+        }
+    }
+    t.Fatalf("case %q not found", name)
+    return testCase{}
+}
+```
+
+### 断言规范
+
+**不使用** testify/gomock 等第三方断言库，完全依赖标准库 `testing` 包：
+
+```go
+// ✅ 好：清晰的失败信息，包含 got / want 上下文
+if got != want {
+    t.Errorf("ComputeChecksum() = %s, want %s", got, want)
+}
+
+// ✅ 好：使用子测试隔离
+t.Run("empty input", func(t *testing.T) {
+    result := ComputeChecksum(nil)
+    if result != "" {
+        t.Errorf("expected empty string, got %q", result)
+    }
+})
+
+// ❌ 差：无上下文的断言
+if result != expected {
+    t.Fatal("not equal")
+}
+```
 
 ### ⚠️ 开发流程强制要求（MANDATORY）
 
@@ -204,10 +268,20 @@ go test -count=1 ./...
 
 **全部测试 PASS 后方可提交代码。任何 FAIL 必须修复后才能提交。**
 
+### 🚫 测试禁止事项
+
+1. **禁止提交不通过的测试** — 所有测试必须 PASS 才能提交
+2. **禁止删除已有的测试用例** — 除非对应功能已删除
+3. **禁止在测试中硬编码环境相关路径** — 使用 `t.TempDir()`、`os.CreateTemp()` 等
+4. **禁止测试间相互依赖** — 每个测试必须独立可运行
+5. **禁止使用 `time.Sleep()` 做同步** — 使用 channel、WaitGroup 或 deadline
+6. **禁止使用 `encoding/json`** — 统一使用 `github.com/bytedance/sonic`
+7. **禁止使用第三方断言库（如 testify）** — 使用标准库 `testing` 包的 `t.Errorf` / `t.Fatalf`
+
 ### 常用命令
 
 ```bash
-# 全量测试
+# 全量测试（提交前必须运行）
 go test -count=1 ./...
 
 # 指定目录
@@ -215,6 +289,9 @@ go test -v -count=1 ./test/message_checksum/
 
 # 指定函数
 go test -v -count=1 -run TestChecksumDifference ./test/message_checksum/
+
+# internal 包单元测试
+go test -v -count=1 ./internal/util/
 
 # 带覆盖率
 go test -count=1 -cover ./internal/...

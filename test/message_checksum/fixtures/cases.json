@@ -1,5 +1,6 @@
 [
     {
+        "name": "2key_args_order_a",
         "role": "assistant",
         "reasoning_content": "用户询问最近3次git提交做了什么事情。我需要查看git log来获取最近3次提交的信息。\n\n让我运行git log命令来查看。",
         "tool_calls": [
@@ -11,6 +12,7 @@
         ]
     },
     {
+        "name": "2key_args_order_b",
         "role": "assistant",
         "reasoning_content": "用户询问最近3次git提交做了什么事情。我需要查看git log来获取最近3次提交的信息。\n\n让我运行git log命令来查看。",
         "tool_calls": [
@@ -22,6 +24,7 @@
         ]
     },
     {
+        "name": "6key_args_order_a",
         "role": "assistant",
         "reasoning_content": "需要搜索代码仓库中的文件。",
         "tool_calls": [
@@ -33,6 +36,7 @@
         ]
     },
     {
+        "name": "6key_args_order_b",
         "role": "assistant",
         "reasoning_content": "需要搜索代码仓库中的文件。",
         "tool_calls": [
