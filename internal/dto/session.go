@@ -26,8 +26,6 @@ type SessionDetail struct {
 	APIKeyName string         `json:"apiKeyName" doc:"API密钥名称"`
 	CreatedAt  string         `json:"createdAt" doc:"创建时间"`
 	UpdatedAt  string         `json:"updatedAt" doc:"更新时间"`
-	MessageIDs []uint         `json:"messageIds" doc:"消息ID列表"`
-	ToolIDs    []uint         `json:"toolIds" doc:"工具ID列表"`
 	Messages   []*MessageItem `json:"messages" doc:"消息列表"`
 	Tools      []*ToolItem    `json:"tools" doc:"工具列表"`
 }

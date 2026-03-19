@@ -163,8 +163,6 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 		APIKeyName: session.APIKeyName,
 		CreatedAt:  session.CreatedAt.Format(time.DateTime),
 		UpdatedAt:  session.UpdatedAt.Format(time.DateTime),
-		MessageIDs: session.MessageIDs,
-		ToolIDs:    session.ToolIDs,
 		Messages:   messageItems,
 		Tools:      toolItems,
 	}
