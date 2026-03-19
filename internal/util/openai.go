@@ -229,7 +229,7 @@ func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
 		for i, tc := range normalized.ToolCalls {
 			cleanedCalls[i] = &dto.UnifiedToolCall{
 				Name:      tc.Name,
-				Arguments: tc.Arguments,
+				Arguments: normalizeJSONString(tc.Arguments),
 			}
 		}
 		normalized.ToolCalls = cleanedCalls
@@ -237,4 +237,16 @@ func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
 
 	hash := sha256.Sum256(lo.Must1(sonic.Marshal(normalized)))
 	return hex.EncodeToString(hash[:])
+}
+
+// normalizeJSONString 将 JSON 字符串反序列化后重新序列化为紧凑格式，消除空格等格式差异
+//
+//	@param s string JSON字符串
+//	@return string 规范化后的JSON字符串，如果解析失败则返回原始字符串
+//	@author centonhuang
+//	@update 2026-03-18 10:00:00
+func normalizeJSONString(s string) string {
+	var obj map[string]any
+	lo.Must0(sonic.UnmarshalString(s, &obj))
+	return lo.Must1(sonic.MarshalString(obj))
 }
