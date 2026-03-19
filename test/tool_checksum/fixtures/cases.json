@@ -1,0 +1,437 @@
+[
+    {
+        "name": "same_tool_same_params",
+        "description": "相同工具和参数应产生相同checksum",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "Bash",
+                "description": "Execute a bash command",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The bash command to execute"
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Timeout in seconds"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            },
+            {
+                "provider": "openai",
+                "name": "Bash",
+                "description": "Execute a bash command",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The bash command to execute"
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Timeout in seconds"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "same_name_different_description",
+        "description": "相同工具名和参数Schema但不同工具级描述应产生相同checksum（checksum不包含工具级description）",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "Search",
+                "description": "Search for files in the codebase",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "provider": "openai",
+                "name": "Search",
+                "description": "A completely different description for searching",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "different_provider_same_schema",
+        "description": "不同provider但相同工具名和参数应产生相同checksum（checksum不包含provider）",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "WebSearch",
+                "description": "Search the web",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "provider": "anthropic",
+                "name": "WebSearch",
+                "description": "Search the web via Anthropic",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "different_name",
+        "description": "不同工具名应产生不同checksum",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "Bash",
+                "description": "Run bash",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            },
+            {
+                "provider": "openai",
+                "name": "Shell",
+                "description": "Run shell",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            }
+        ],
+        "expect_equal": false
+    },
+    {
+        "name": "different_param_keys",
+        "description": "不同参数键名应产生不同checksum",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "Fetch",
+                "description": "Fetch a URL",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string"
+                        },
+                        "method": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["url"]
+                }
+            },
+            {
+                "provider": "openai",
+                "name": "Fetch",
+                "description": "Fetch a URL",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string"
+                        },
+                        "headers": {
+                            "type": "object"
+                        }
+                    },
+                    "required": ["url"]
+                }
+            }
+        ],
+        "expect_equal": false
+    },
+    {
+        "name": "nil_parameters",
+        "description": "无参数的工具应正常计算checksum",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "GetTime",
+                "description": "Get the current time"
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "empty_properties",
+        "description": "空properties的工具应正常计算checksum",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "Ping",
+                "description": "Ping the server",
+                "parameters": {
+                    "type": "object"
+                }
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "same_params_different_key_order",
+        "description": "参数键相同但顺序不同应产生相同checksum（extractParamKeys会排序）",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "CodeSearch",
+                "description": "Search code in repository",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Programming language filter"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File path prefix"
+                        },
+                        "caseSensitive": {
+                            "type": "boolean",
+                            "description": "Case sensitive search"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "provider": "openai",
+                "name": "CodeSearch",
+                "description": "Search code in repository",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "caseSensitive": {
+                            "type": "boolean",
+                            "description": "Case sensitive search"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File path prefix"
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Programming language filter"
+                        },
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "many_params_same_tool",
+        "description": "多参数工具跨Provider但参数Schema完全相同应产生相同checksum",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "CodeSearch",
+                "description": "Search code in repository",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Programming language filter"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File path prefix"
+                        },
+                        "caseSensitive": {
+                            "type": "boolean",
+                            "description": "Case sensitive search"
+                        },
+                        "maxResults": {
+                            "type": "integer",
+                            "description": "Maximum number of results"
+                        },
+                        "includeTests": {
+                            "type": "boolean",
+                            "description": "Include test files"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "provider": "anthropic",
+                "name": "CodeSearch",
+                "description": "A different description for code search",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Programming language filter"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File path prefix"
+                        },
+                        "caseSensitive": {
+                            "type": "boolean",
+                            "description": "Case sensitive search"
+                        },
+                        "maxResults": {
+                            "type": "integer",
+                            "description": "Maximum number of results"
+                        },
+                        "includeTests": {
+                            "type": "boolean",
+                            "description": "Include test files"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        ],
+        "expect_equal": true
+    },
+    {
+        "name": "same_top_level_keys_different_nested_params",
+        "description": "第一层参数键相同但第二层嵌套参数不同，checksum应不同（extractParamKeys递归提取所有层级key）",
+        "tools": [
+            {
+                "provider": "openai",
+                "name": "CreateResource",
+                "description": "Create a new resource",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Resource name"
+                        },
+                        "config": {
+                            "type": "object",
+                            "description": "Resource configuration",
+                            "properties": {
+                                "timeout": {
+                                    "type": "integer",
+                                    "description": "Timeout in seconds"
+                                },
+                                "retries": {
+                                    "type": "integer",
+                                    "description": "Number of retries"
+                                }
+                            }
+                        }
+                    },
+                    "required": ["name", "config"]
+                }
+            },
+            {
+                "provider": "openai",
+                "name": "CreateResource",
+                "description": "Create a new resource",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Resource name"
+                        },
+                        "config": {
+                            "type": "object",
+                            "description": "Resource configuration",
+                            "properties": {
+                                "endpoint": {
+                                    "type": "string",
+                                    "description": "API endpoint URL"
+                                },
+                                "apiKey": {
+                                    "type": "string",
+                                    "description": "Authentication key"
+                                },
+                                "region": {
+                                    "type": "string",
+                                    "description": "Deployment region"
+                                }
+                            }
+                        }
+                    },
+                    "required": ["name", "config"]
+                }
+            }
+        ],
+        "expect_equal": false
+    }
+]

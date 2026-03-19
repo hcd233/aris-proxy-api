@@ -1,13 +1,7 @@
 package dto
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"sort"
-
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/samber/lo"
 )
 
 // UnifiedTool 统一工具格式，用于跨 Provider 的工具存储
@@ -55,36 +49,4 @@ func FromAnthropicTool(tool *AnthropicTool) *UnifiedTool {
 		unified.Parameters = tool.InputSchema
 	}
 	return unified
-}
-
-// ComputeToolChecksum 计算工具校验和，基于工具名和参数名
-//
-//	@param tool *UnifiedTool
-//	@return string
-//	@author centonhuang
-//	@update 2026-03-18 10:00:00
-func ComputeToolChecksum(tool *UnifiedTool) string {
-	data := struct {
-		Name      string   `json:"name"`
-		ParamKeys []string `json:"param_keys"`
-	}{
-		Name:      tool.Name,
-		ParamKeys: extractParamKeys(tool.Parameters),
-	}
-
-	hash := sha256.Sum256(lo.Must1(json.Marshal(data)))
-	return hex.EncodeToString(hash[:])
-}
-
-// extractParamKeys 从 JSONSchemaProperty 中提取排序后的参数键名列表
-func extractParamKeys(schema *JSONSchemaProperty) []string {
-	if schema == nil || schema.Properties == nil {
-		return nil
-	}
-	keys := make([]string, 0, len(schema.Properties))
-	for k := range schema.Properties {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

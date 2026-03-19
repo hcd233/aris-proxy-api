@@ -108,7 +108,7 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 		tools := lo.Map(task.Tools, func(t *dto.UnifiedTool, _ int) *dbmodel.Tool {
 			return &dbmodel.Tool{
 				Tool:     t,
-				CheckSum: dto.ComputeToolChecksum(t),
+				CheckSum: util.ComputeToolChecksum(t),
 			}
 		})
 
