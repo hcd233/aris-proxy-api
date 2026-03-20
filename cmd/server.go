@@ -49,6 +49,7 @@ var startServerCmd = &cobra.Command{
 			zap.Int("maxHeaderBytes", config.MaxHeaderBytes),
 			zap.Int("poolWorkers", config.PoolWorkers),
 			zap.Int("poolQueueSize", config.PoolQueueSize),
+			zap.Int("sqlBatchSize", config.SQLBatchSize),
 		)
 
 		database.InitDatabase()
