@@ -47,12 +47,12 @@ func newCronLoggerAdapter(module string, logger *zap.Logger) cronLoggerAdapter {
 func (l cronLoggerAdapter) Error(err error, msg string, keysAndValues ...interface{}) {
 	zapKeyValues := []zap.Field{zap.Error(err)}
 	zapKeyValues = append(zapKeyValues, convertZapKeyValues(keysAndValues...)...)
-	l.logger.Error(fmt.Sprintf("[%s] %s", l.module, msg), zapKeyValues...)
+	l.logger.Error(fmt.Sprintf("[%s] %s", l.module, strings.ToTitle(msg)), zapKeyValues...)
 }
 
 func (l cronLoggerAdapter) Info(msg string, keysAndValues ...interface{}) {
 	zapKeyValues := convertZapKeyValues(keysAndValues...)
-	l.logger.Info(fmt.Sprintf("[%s] %s", l.module, msg), zapKeyValues...)
+	l.logger.Info(fmt.Sprintf("[%s] %s", l.module, strings.ToTitle(msg)), zapKeyValues...)
 }
 
 func convertZapKeyValues(keysAndValues ...interface{}) []zap.Field {
