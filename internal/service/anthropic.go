@@ -33,6 +33,7 @@ import (
 type AnthropicService interface {
 	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.AnthropicListModelsRsp, error)
 	CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error)
+	CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error)
 }
 
 type anthropicService struct{}
@@ -317,4 +318,83 @@ func (s *anthropicService) storeAnthropicMessages(
 	}); err != nil {
 		logger.Error("[AnthropicService] Failed to submit message store task", zap.Error(err))
 	}
+}
+
+// CountTokens 计算Token数量
+//
+//	@receiver s *anthropicService
+//	@param ctx context.Context
+//	@param req *dto.AnthropicCountTokensRequest
+//	@return *dto.AnthropicTokensCount
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
+	rsp := &dto.AnthropicTokensCount{InputTokens: 0}
+	logger := logger.WithCtx(ctx)
+
+	cfg := proxy.GetLLMProxyConfig()
+	modelCfg, ok := cfg.Models[req.Body.Model]
+	if !ok {
+		logger.Warn("[CountTokens] model not found, returning 0", zap.String("model", req.Body.Model))
+		return rsp, nil
+	}
+
+	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderAnthropic]
+	if !hasEndpoint {
+		logger.Warn("[CountTokens] model has no anthropic endpoint, returning 0", zap.String("model", req.Body.Model))
+		return rsp, nil
+	}
+
+	// Build upstream request body as map to replace model name
+	bodyBytes := lo.Must1(sonic.Marshal(req.Body))
+
+	var bodyMap map[string]any
+	if err := sonic.Unmarshal(bodyBytes, &bodyMap); err != nil {
+		logger.Warn("[CountTokens] unmarshal body error, returning 0", zap.Error(err))
+		return rsp, nil
+	}
+
+	bodyMap["model"] = modelCfg.Model
+
+	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
+	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages/count_tokens"
+
+	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
+	if err != nil {
+		logger.Warn("[CountTokens] new request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		return rsp, nil
+	}
+	upstreamReq.Header.Set("Content-Type", "application/json")
+	upstreamReq.Header.Set("x-api-key", endpoint.APIKey)
+	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
+
+	logger.Info("[CountTokens] send upstream request", zap.String("upstreamURL", upstreamURL),
+		zap.String("upstreamModel", modelCfg.Model),
+		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)))
+
+	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
+	if err != nil {
+		logger.Warn("[CountTokens] send http request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		return rsp, nil
+	}
+	defer upstreamResp.Body.Close()
+
+	respBody, err := io.ReadAll(upstreamResp.Body)
+	if err != nil {
+		logger.Warn("[CountTokens] read upstream response error, returning 0", zap.Error(err))
+		return rsp, nil
+	}
+
+	if upstreamResp.StatusCode != http.StatusOK {
+		logger.Warn("[CountTokens] upstream error, returning 0", zap.Int("statusCode", upstreamResp.StatusCode), zap.String("body", string(respBody)))
+		return &dto.AnthropicTokensCount{InputTokens: 0}, nil
+	}
+
+	if err := sonic.Unmarshal(respBody, rsp); err != nil {
+		logger.Warn("[CountTokens] unmarshal upstream response error, returning 0", zap.Error(err))
+		return rsp, nil
+	}
+
+	return rsp, nil
 }

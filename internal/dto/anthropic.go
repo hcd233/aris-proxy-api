@@ -349,3 +349,36 @@ type AnthropicErrorResponse struct {
 	Type  string          `json:"type" doc:"对象类型: error"`
 	Error *AnthropicError `json:"error" doc:"错误信息"`
 }
+
+// ==================== Anthropic Count Tokens DTOs ====================
+
+// AnthropicCountTokensReq Anthropic Count Tokens 请求体
+//
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+type AnthropicCountTokensReq struct {
+	Messages     []*AnthropicMessageParam `json:"messages" doc:"消息列表"`
+	Model        string                   `json:"model" doc:"模型ID"`
+	System       *AnthropicMessageContent `json:"system,omitempty" doc:"系统提示(字符串或TextBlockParam数组)"`
+	Tools        []*AnthropicTool         `json:"tools,omitempty" doc:"工具定义列表"`
+	ToolChoice   *AnthropicToolChoice     `json:"tool_choice,omitempty" doc:"工具选择配置"`
+	Thinking     *AnthropicThinkingConfig `json:"thinking,omitempty" doc:"思考配置"`
+	OutputConfig *AnthropicOutputConfig   `json:"output_config,omitempty" doc:"输出配置"`
+	CacheControl *CacheControl            `json:"cache_control,omitempty" doc:"顶层缓存控制"`
+}
+
+// AnthropicCountTokensRequest Anthropic Count Tokens 请求包装（Huma格式）
+//
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+type AnthropicCountTokensRequest struct {
+	Body *AnthropicCountTokensReq `json:"body" doc:"请求体"`
+}
+
+// AnthropicTokensCount Anthropic Token 计数响应
+//
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+type AnthropicTokensCount struct {
+	InputTokens int `json:"input_tokens" doc:"消息、系统提示和工具中的总token数"`
+}

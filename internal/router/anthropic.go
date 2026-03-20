@@ -43,4 +43,17 @@ func initAnthropicRouter(anthropicGroup huma.API) {
 			{"apiKeyAuth": {}},
 		},
 	}, anthropicHandler.HandleCreateMessage)
+
+	huma.Register(anthropicGroup, huma.Operation{
+		OperationID: "anthropicCountTokens",
+		Method:      http.MethodPost,
+		Path:        "/messages/count_tokens",
+		Summary:     "Count Tokens",
+		Description: "Count the number of tokens in a Message, including tools, images, and documents, without creating it.",
+		Tags:        []string{"Anthropic"},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", constant.CtxKeyUserName, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Security: []map[string][]string{
+			{"apiKeyAuth": {}},
+		},
+	}, anthropicHandler.HandleCountTokens)
 }
