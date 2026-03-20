@@ -57,14 +57,14 @@ end
 if tokens < 1 then
     redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
     redis.call('PEXPIRE', key, expire_ms)
-    return {tostring(tokens), 1}
+    return {tostring(tokens), "1"}
 end
 
 tokens = tokens - 1
 redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
 redis.call('PEXPIRE', key, expire_ms)
 
-return {tostring(tokens), 0}
+return {tostring(tokens), "0"}
 `)
 
 // TokenBucketRateLimiterMiddleware 令牌桶限流中间件
