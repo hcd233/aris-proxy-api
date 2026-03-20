@@ -28,6 +28,6 @@ func initOauth2Router(oauth2Group huma.API) {
 		Summary:     "OAuth2Callback",
 		Description: "Handle OAuth2 callback with authorization code and state",
 		Tags:        []string{"OAuth2"},
-		Middlewares: huma.Middlewares{middleware.RateLimiterMiddleware("oauth2Callback", "", constant.PeriodOAuth2Callback, constant.LimitOAuth2Callback)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("oauth2Callback", "", constant.PeriodOAuth2Callback, constant.LimitOAuth2Callback)},
 	}, oauth2Handler.HandleCallback)
 }

@@ -4,44 +4,92 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
-	"github.com/ulule/limiter/v3"
-	"github.com/ulule/limiter/v3/drivers/store/redis"
 	"go.uber.org/zap"
 )
 
-// RateLimiterMiddleware 限频中间件
+// tokenBucketLua 令牌桶限流Lua脚本
 //
-//	@param serviceName string
-//	@param key string
-//	@param period time.Duration
-//	@param limit int64
-//	@return ctx huma.Context
-//	@return next func(huma.Context)
+// 基于 Redis Hash 实现：
+//   - field "tokens": 当前剩余令牌数
+//   - field "last_refill": 上次补充令牌的时间戳（微秒）
+//
+// 每次请求时：
+//  1. 读取桶状态（tokens + last_refill）
+//  2. 按照 elapsed time 计算应补充的令牌数，上限为 capacity
+//  3. 尝试消耗 1 个令牌
+//  4. 返回 [剩余令牌数, 是否被拒绝(0/1)]
+//
+// KEYS[1]: 限流键
+// ARGV[1]: 桶容量（最大令牌数）
+// ARGV[2]: 每微秒补充的令牌数（refillRate = capacity / period_microseconds）
+// ARGV[3]: 当前时间戳（微秒）
+// ARGV[4]: 窗口时长（毫秒），用于设置 key 过期
+var tokenBucketLua = redis.NewScript(`
+local key = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local refill_rate = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+local expire_ms = tonumber(ARGV[4])
+
+local bucket = redis.call('HMGET', key, 'tokens', 'last_refill')
+local tokens = tonumber(bucket[1])
+local last_refill = tonumber(bucket[2])
+
+if tokens == nil then
+    tokens = capacity
+    last_refill = now
+end
+
+local elapsed = now - last_refill
+if elapsed > 0 then
+    local refill = elapsed * refill_rate
+    tokens = math.min(capacity, tokens + refill)
+    last_refill = now
+end
+
+if tokens < 1 then
+    redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
+    redis.call('PEXPIRE', key, expire_ms)
+    return {tostring(tokens), 1}
+end
+
+tokens = tokens - 1
+redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
+redis.call('PEXPIRE', key, expire_ms)
+
+return {tostring(tokens), 0}
+`)
+
+// TokenBucketRateLimiterMiddleware 令牌桶限流中间件
+//
+// 基于 Redis Hash + Lua 脚本实现令牌桶算法。桶以固定速率补充令牌，每个请求消耗 1 个令牌。
+// 当桶为空时拒绝请求。相比固定窗口和滑动窗口，令牌桶允许一定程度的突发流量（最多 capacity 个），
+// 同时保证长期平均速率不超过 capacity/period。
+//
+//	@param serviceName string 服务名称，用作 Redis key 前缀
+//	@param key string 限流维度的 context key，为空则按 IP 限流
+//	@param period time.Duration 令牌完全补满所需时间
+//	@param capacity int64 桶容量（最大令牌数），同时也是突发上限
 //	@return func(ctx huma.Context, next func(huma.Context))
 //	@author centonhuang
-//	@update 2025-11-02 04:17:07
-func RateLimiterMiddleware(serviceName, key string, period time.Duration, limit int64) func(ctx huma.Context, next func(huma.Context)) {
-	rate := limiter.Rate{
-		Period: period,
-		Limit:  limit,
-	}
-
+//	@update 2026-03-20 10:00:00
+func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
 	redisClient := cache.GetRedisClient()
-	store := lo.Must1(redis.NewStoreWithOptions(redisClient, limiter.StoreOptions{
-		Prefix: serviceName,
-	}))
+	prefix := fmt.Sprintf("tb:%s", serviceName)
 
-	instance := limiter.New(store, rate)
+	// 每微秒补充的令牌数
+	refillRate := float64(capacity) / float64(period.Microseconds())
+	expireMs := period.Milliseconds() * 2
 
 	return func(ctx huma.Context, next func(huma.Context)) {
+		logger := logger.WithCtx(ctx.Context())
 		var keyValue, value string
 		if key == "" {
 			keyValue = "ip"
@@ -62,29 +110,35 @@ func RateLimiterMiddleware(serviceName, key string, period time.Duration, limit 
 			}
 		}
 
-		limiterKey := fmt.Sprintf("%s:%v", keyValue, value)
+		limiterKey := fmt.Sprintf("%s:%s:%v", prefix, keyValue, value)
 		ctx = huma.WithValue(ctx, constant.CtxKeyLimiter, limiterKey)
 
-		result, err := instance.Get(ctx.Context(), limiterKey)
+		now := time.Now().UnixMicro()
+
+		result, err := tokenBucketLua.Run(
+			ctx.Context(), redisClient,
+			[]string{limiterKey},
+			capacity, refillRate, now, expireMs,
+		).StringSlice()
 		if err != nil {
-			logger.WithCtx(ctx.Context()).Error("[RateLimiterMiddleware] Failed to get rate limit", zap.Error(err))
-			rsp := &dto.CommonRsp{Error: constant.ErrInternalError}
-			_ = lo.Must1(ctx.BodyWriter().Write(lo.Must1(sonic.Marshal(rsp))))
+			logger.Error("[TokenBucketRateLimiter] Failed to execute rate limit script", zap.Error(err))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrInternalError))
 			return
 		}
 
-		if result.Reached {
-			fields := []zap.Field{zap.String("serviceName", serviceName)}
-			if key == "" {
-				fields = append(fields, zap.String("key", keyValue), zap.String("value", value))
-			} else {
-				fields = append(fields, zap.String("key", key), zap.String("value", value))
-			}
-
-			logger.WithCtx(ctx.Context()).Error("[RateLimiterMiddleware] Rate limit reached", fields...)
+		rejected := result[1] == "1"
+		if rejected {
+			logger.Error("[TokenBucketRateLimiter] Rate limit reached",
+				zap.String("serviceName", serviceName),
+				zap.String("key", keyValue),
+				zap.String("value", value),
+				zap.String("remainingTokens", result[0]),
+				zap.Int64("capacity", capacity),
+			)
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrTooManyRequests))
 			return
 		}
+
 		next(ctx)
 	}
 }
