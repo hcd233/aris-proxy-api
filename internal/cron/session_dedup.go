@@ -42,6 +42,18 @@ func NewSessionDeduplicateCron() Cron {
 	}
 }
 
+// Stop 停止Session去重定时任务
+//
+//	@receiver c *SessionDeduplicateCron
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func (c *SessionDeduplicateCron) Stop() {
+	if c.cron != nil {
+		ctx := c.cron.Stop()
+		<-ctx.Done()
+	}
+}
+
 // Start 启动Session去重定时任务
 //
 //	@receiver c *SessionDeduplicateCron

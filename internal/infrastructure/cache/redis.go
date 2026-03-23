@@ -27,6 +27,18 @@ func GetRedisClient() *redis.Client {
 	return rdb
 }
 
+// CloseCache 关闭Redis客户端连接，用于优雅关闭
+//
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func CloseCache() error {
+	if rdb == nil {
+		return nil
+	}
+	return rdb.Close()
+}
+
 // InitCache 初始化Redis客户端
 //
 //	author centonhuang

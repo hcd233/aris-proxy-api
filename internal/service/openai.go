@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -25,8 +27,35 @@ import (
 	"go.uber.org/zap"
 )
 
+// upstreamHTTPClient 上游 LLM 服务 HTTP 客户端
+//
+// Transport 细粒度超时配置：
+//   - DialContext: 连接建立超时 10s
+//   - TLSHandshakeTimeout: TLS 握手超时 10s
+//   - ResponseHeaderTimeout: 等待响应头超时 30s（仅约束首字节，不影响流式读取）
+//   - MaxIdleConns: 全局空闲连接上限 100
+//   - MaxIdleConnsPerHost: 每个 host 空闲连接上限 20
+//   - IdleConnTimeout: 空闲连接回收时间 90s
+//
+// Client.Timeout 保持 5min，因为 LLM 流式响应的总传输时长可能很长
+//
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
 var upstreamHTTPClient = &http.Client{
 	Timeout: 5 * time.Minute,
+	Transport: &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   20,
+		IdleConnTimeout:       90 * time.Second,
+		ForceAttemptHTTP2:     true,
+	},
 }
 
 // OpenAIService OpenAI服务

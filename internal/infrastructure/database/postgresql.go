@@ -32,6 +32,22 @@ func GetDBInstance(ctx context.Context) *gorm.DB {
 	return db.WithContext(ctx)
 }
 
+// CloseDatabase 关闭数据库连接池，用于优雅关闭
+//
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func CloseDatabase() error {
+	if db == nil {
+		return nil
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("get underlying sql.DB: %w", err)
+	}
+	return sqlDB.Close()
+}
+
 // InitDatabase 初始化数据库
 //
 //	author centonhuang

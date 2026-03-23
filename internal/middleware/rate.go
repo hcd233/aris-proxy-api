@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -24,7 +26,7 @@ import (
 //  1. 读取桶状态（tokens + last_refill）
 //  2. 按照 elapsed time 计算应补充的令牌数，上限为 capacity
 //  3. 尝试消耗 1 个令牌
-//  4. 返回 [剩余令牌数, 是否被拒绝(0/1)]
+//  4. 返回 [剩余令牌数, 是否被拒绝(0/1), 桶容量]
 //
 // KEYS[1]: 限流键
 // ARGV[1]: 桶容量（最大令牌数）
@@ -57,14 +59,14 @@ end
 if tokens < 1 then
     redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
     redis.call('PEXPIRE', key, expire_ms)
-    return {tostring(tokens), "1"}
+    return {tostring(tokens), "1", tostring(capacity)}
 end
 
 tokens = tokens - 1
 redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
 redis.call('PEXPIRE', key, expire_ms)
 
-return {tostring(tokens), "0"}
+return {tostring(tokens), "0", tostring(capacity)}
 `)
 
 // TokenBucketRateLimiterMiddleware 令牌桶限流中间件
@@ -73,13 +75,21 @@ return {tostring(tokens), "0"}
 // 当桶为空时拒绝请求。相比固定窗口和滑动窗口，令牌桶允许一定程度的突发流量（最多 capacity 个），
 // 同时保证长期平均速率不超过 capacity/period。
 //
-//	@param serviceName string 服务名称，用作 Redis key 前缀
-//	@param key string 限流维度的 context key，为空则按 IP 限流
-//	@param period time.Duration 令牌完全补满所需时间
-//	@param capacity int64 桶容量（最大令牌数），同时也是突发上限
-//	@return func(ctx huma.Context, next func(huma.Context))
-//	@author centonhuang
-//	@update 2026-03-20 10:00:00
+// 响应头说明：
+//
+//   - X-RateLimit-Limit: 桶容量（最大令牌数）
+//
+//   - X-RateLimit-Remaining: 当前剩余令牌数（向下取整）
+//
+//   - Retry-After: 被限流时，恢复 1 个令牌所需的秒数（仅在被拒绝时返回）
+//
+//     @param serviceName string 服务名称，用作 Redis key 前缀
+//     @param key string 限流维度的 context key，为空则按 IP 限流
+//     @param period time.Duration 令牌完全补满所需时间
+//     @param capacity int64 桶容量（最大令牌数），同时也是突发上限
+//     @return func(ctx huma.Context, next func(huma.Context))
+//     @author centonhuang
+//     @update 2026-03-20 10:00:00
 func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
 	redisClient := cache.GetRedisClient()
 	prefix := fmt.Sprintf("tb:%s", serviceName)
@@ -87,6 +97,9 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 	// 每微秒补充的令牌数
 	refillRate := float64(capacity) / float64(period.Microseconds())
 	expireMs := period.Milliseconds() * 2
+
+	// 恢复 1 个令牌所需的秒数（用于 Retry-After 头）
+	retryAfterSeconds := int(math.Ceil(1.0 / (refillRate * 1e6)))
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		logger := logger.WithCtx(ctx.Context())
@@ -126,18 +139,28 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 			return
 		}
 
+		remaining, _ := strconv.ParseFloat(result[0], 64)
+		remainingInt := int64(math.Max(0, math.Floor(remaining)))
+		limitStr := result[2]
+
 		rejected := result[1] == "1"
 		if rejected {
 			logger.Error("[TokenBucketRateLimiter] Rate limit reached",
 				zap.String("serviceName", serviceName),
 				zap.String("key", keyValue),
 				zap.String("value", value),
-				zap.String("remainingTokens", result[0]),
-				zap.Int64("capacity", capacity),
+				zap.Int64("remaining", remainingInt),
+				zap.String("capacity", limitStr),
 			)
+			ctx.SetHeader("X-RateLimit-Limit", limitStr)
+			ctx.SetHeader("X-RateLimit-Remaining", "0")
+			ctx.SetHeader("Retry-After", strconv.Itoa(retryAfterSeconds))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrTooManyRequests))
 			return
 		}
+
+		ctx.SetHeader("X-RateLimit-Limit", limitStr)
+		ctx.SetHeader("X-RateLimit-Remaining", strconv.FormatInt(remainingInt, 10))
 
 		next(ctx)
 	}

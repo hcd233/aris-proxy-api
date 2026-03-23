@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"sync/atomic"
+
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -37,23 +39,55 @@ type LLMProxyConfig struct {
 	APIKeys map[string]string      `mapstructure:"api_keys" yaml:"api_keys"`
 }
 
-var llmProxyConfig *LLMProxyConfig
+// llmProxyConfigPtr 使用 atomic.Pointer 实现无锁读取，支持热加载
+//
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+var llmProxyConfigPtr atomic.Pointer[LLMProxyConfig]
 
-// GetLLMProxyConfig returns the singleton LLM proxy config
+// GetLLMProxyConfig 获取当前 LLM 代理配置（无锁读取）
 //
 //	@return *LLMProxyConfig
 //	@author centonhuang
-//	@update 2025-11-12 10:00:00
+//	@update 2026-03-20 10:00:00
 func GetLLMProxyConfig() *LLMProxyConfig {
-	return llmProxyConfig
+	return llmProxyConfigPtr.Load()
 }
 
-// InitLLMProxyConfig initializes the LLM proxy configuration from config.yaml.
-// A *zap.Logger is accepted to avoid an import cycle (logger -> config).
+// InitLLMProxyConfig 初始化 LLM 代理配置，从 config.yaml 首次加载
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-03-20 10:00:00
 func InitLLMProxyConfig() {
+	cfg := lo.Must1(loadLLMProxyConfig())
+	llmProxyConfigPtr.Store(cfg)
+	logProxyConfig(cfg)
+}
+
+// ReloadLLMProxyConfig 热加载 LLM 代理配置，重新读取 config.yaml 并原子替换
+//
+// 调用方应在成功后调用 middleware.RebuildAPIKeyIndex() 刷新 API Key 反向索引
+//
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func ReloadLLMProxyConfig() error {
+	cfg, err := loadLLMProxyConfig()
+	if err != nil {
+		return err
+	}
+	llmProxyConfigPtr.Store(cfg)
+	logProxyConfig(cfg)
+	return nil
+}
+
+// loadLLMProxyConfig 从 config.yaml 读取并反序列化 LLM 代理配置
+//
+//	@return *LLMProxyConfig
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func loadLLMProxyConfig() (*LLMProxyConfig, error) {
 	// Use "::" as key delimiter to avoid conflicts with "." in model names (e.g. "gpt-4.1")
 	v := viper.NewWithOptions(viper.KeyDelimiter("::"))
 
@@ -62,12 +96,24 @@ func InitLLMProxyConfig() {
 	v.AddConfigPath(".")
 	v.AddConfigPath("./config")
 
-	llmProxyConfig = &LLMProxyConfig{}
+	if err := v.ReadInConfig(); err != nil {
+		return nil, err
+	}
 
-	lo.Must0(v.ReadInConfig())
-	lo.Must0(v.Unmarshal(llmProxyConfig))
+	cfg := &LLMProxyConfig{}
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, err
+	}
 
-	// Build masked model list for structured logging
+	return cfg, nil
+}
+
+// logProxyConfig 打印掩码后的代理配置到日志
+//
+//	@param cfg *LLMProxyConfig
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func logProxyConfig(cfg *LLMProxyConfig) {
 	type maskedEndpoint struct {
 		BaseURL string `json:"base_url"`
 		APIKey  string `json:"api_key"`
@@ -76,8 +122,8 @@ func InitLLMProxyConfig() {
 		Model     string                     `json:"model"`
 		Endpoints map[string]*maskedEndpoint `json:"endpoints"`
 	}
-	maskedModels := make(map[string]*maskedModel, len(llmProxyConfig.Models))
-	for name, mc := range llmProxyConfig.Models {
+	maskedModels := make(map[string]*maskedModel, len(cfg.Models))
+	for name, mc := range cfg.Models {
 		mm := &maskedModel{
 			Model:     mc.Model,
 			Endpoints: make(map[string]*maskedEndpoint, len(mc.Endpoints)),
@@ -91,9 +137,8 @@ func InitLLMProxyConfig() {
 		maskedModels[name] = mm
 	}
 
-	// Build masked API keys for structured logging
-	maskedAPIKeys := make(map[string]string, len(llmProxyConfig.APIKeys))
-	for name, key := range llmProxyConfig.APIKeys {
+	maskedAPIKeys := make(map[string]string, len(cfg.APIKeys))
+	for name, key := range cfg.APIKeys {
 		maskedAPIKeys[name] = util.MaskSecret(key)
 	}
 

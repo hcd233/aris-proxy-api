@@ -17,20 +17,36 @@ import (
 // Cron 定时任务接口
 //
 //	@author centonhuang
-//	@update 2025-09-30 16:08:18
+//	@update 2026-03-20 10:00:00
 type Cron interface {
 	Start() error
+	Stop()
 }
+
+var cronInstances []Cron
 
 // InitCronJobs 初始化定时任务
 //
 //	author centonhuang
-//	update 2024-12-09 15:55:20
+//	update 2026-03-20 10:00:00
 func InitCronJobs() {
 	sessionDeduplicateCron := NewSessionDeduplicateCron()
 	lo.Must0(sessionDeduplicateCron.Start())
 
+	cronInstances = append(cronInstances, sessionDeduplicateCron)
+
 	logger.Logger().Info("[Cron] Init cron jobs")
+}
+
+// StopCronJobs 停止所有定时任务，用于优雅关闭
+//
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func StopCronJobs() {
+	for _, c := range cronInstances {
+		c.Stop()
+	}
+	logger.Logger().Info("[Cron] All cron jobs stopped")
 }
 
 type cronLoggerAdapter struct {

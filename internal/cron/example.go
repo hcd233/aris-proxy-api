@@ -31,6 +31,18 @@ func NewExampleCron() Cron {
 	}
 }
 
+// Stop 停止示例定时任务
+//
+//	@receiver c *ExampleCron
+//	@author centonhuang
+//	@update 2026-03-20 10:00:00
+func (c *ExampleCron) Stop() {
+	if c.cron != nil {
+		ctx := c.cron.Stop()
+		<-ctx.Done()
+	}
+}
+
 // Start 启动示例定时任务
 //
 //	@receiver c *ExampleCron
