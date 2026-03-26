@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"github.com/alitto/pond/v2"
+	"github.com/hcd233/aris-proxy-api/internal/agent"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -24,13 +26,14 @@ import (
 // Manager 全局协程池管理器
 //
 //	author centonhuang
-//	update 2026-03-18 10:00:00
+//	update 2026-03-26 10:00:00
 type Manager struct {
-	messageDAO       *dao.MessageDAO
-	sessionDAO       *dao.SessionDAO
-	toolDAO          *dao.ToolDAO
-	pingPool         pond.Pool
-	messageStorePool pond.Pool
+	messageDAO           *dao.MessageDAO
+	sessionDAO           *dao.SessionDAO
+	toolDAO              *dao.ToolDAO
+	pingPool             pond.Pool
+	messageStorePool     pond.Pool
+	sessionSummarizePool pond.Pool
 }
 
 var poolManager *Manager
@@ -41,11 +44,12 @@ var poolManager *Manager
 //	@update 2026-01-31 03:37:28
 func InitPoolManager() {
 	poolManager = &Manager{
-		messageDAO:       dao.GetMessageDAO(),
-		sessionDAO:       dao.GetSessionDAO(),
-		toolDAO:          dao.GetToolDAO(),
-		pingPool:         pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
-		messageStorePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
+		messageDAO:           dao.GetMessageDAO(),
+		sessionDAO:           dao.GetSessionDAO(),
+		toolDAO:              dao.GetToolDAO(),
+		pingPool:             pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
+		messageStorePool:     pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
+		sessionSummarizePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 	}
 }
 
@@ -68,7 +72,7 @@ func StopPoolManager() {
 	}
 }
 
-// SubmitImageUploadTask InitImageUploadPool 初始化图片上传协程池
+// SubmitPingTask 提交Ping任务到协程池
 //
 //	@receiver pm *PoolManager
 //	@param task
@@ -259,15 +263,58 @@ func (pm *Manager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.Tool) 
 	return toolIDs, nil
 }
 
+// SubmitSummarizeTask 提交Session总结任务到协程池
+//
+//	@receiver pm *Manager
+//	@param task *SummarizeTask
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-26 10:00:00
+func (pm *Manager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
+	log := logger.WithCtx(task.Ctx)
+	db := database.GetDBInstance(task.Ctx)
+	return pm.sessionSummarizePool.Go(func() {
+		summarizer, err := agent.NewSummarizer()
+		if err != nil {
+			log.Error("[PoolManager] Failed to create summarizer", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			return
+		}
+
+		summary, err := summarizer.SummarizeWithRetry(task.Ctx, task.Content, constant.SummarizeMaxRetries)
+		if err != nil {
+			log.Error("[PoolManager] Failed to generate summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			return
+		}
+
+		if summary == "" {
+			log.Error("[PoolManager] Summary is empty", zap.Uint("sessionID", task.SessionID))
+			return
+		}
+
+		err = pm.sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+			"summary": summary,
+		})
+		if err != nil {
+			log.Error("[PoolManager] Failed to update session summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			return
+		}
+
+		log.Info("[PoolManager] Session summarized successfully", zap.Uint("sessionID", task.SessionID), zap.String("summary", summary))
+	})
+}
+
 // Stop 停止所有协程池
 //
 //	author centonhuang
-//	update 2026-01-31 16:00:00
+//	update 2026-03-26 10:00:00
 func (pm *Manager) Stop() {
 	if pm.pingPool != nil {
 		pm.pingPool.Stop()
 	}
 	if pm.messageStorePool != nil {
 		pm.messageStorePool.Stop()
+	}
+	if pm.sessionSummarizePool != nil {
+		pm.sessionSummarizePool.Stop()
 	}
 }

@@ -21,3 +21,13 @@ type MessageStoreTask struct {
 	Messages   []*UnifiedMessage // 统一消息格式列表
 	Tools      []*UnifiedTool    // 统一工具格式列表
 }
+
+// SummarizeTask Session总结任务
+//
+//	@author centonhuang
+//	@update 2026-03-26 10:00:00
+type SummarizeTask struct {
+	Ctx       context.Context
+	SessionID uint
+	Content   string
+}

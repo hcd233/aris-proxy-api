@@ -13,4 +13,5 @@ type Session struct {
 	APIKeyName string `json:"api_key_name" gorm:"column:api_key_name;not null;default:'';comment:API密钥名称"`
 	MessageIDs []uint `json:"message_ids" gorm:"column:message_ids;not null;comment:消息ID列表;serializer:json"`
 	ToolIDs    []uint `json:"tool_ids" gorm:"column:tool_ids;not null;comment:工具ID列表;serializer:json"`
+	Summary    string `json:"summary" gorm:"column:summary;not null;default:'';comment:会话总结(5-10字)"`
 }

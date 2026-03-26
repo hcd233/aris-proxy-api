@@ -32,8 +32,11 @@ var cronInstances []Cron
 func InitCronJobs() {
 	sessionDeduplicateCron := NewSessionDeduplicateCron()
 	lo.Must0(sessionDeduplicateCron.Start())
-
 	cronInstances = append(cronInstances, sessionDeduplicateCron)
+
+	sessionSummarizeCron := NewSessionSummarizeCron()
+	lo.Must0(sessionSummarizeCron.Start())
+	cronInstances = append(cronInstances, sessionSummarizeCron)
 
 	logger.Logger().Info("[Cron] Init cron jobs")
 }

@@ -97,3 +97,46 @@ The `internal/enum/env.go` defines `production` and `development` environments. 
 - **Zap** + Lumberjack: Structured logging with rotation
 - **MinIO / Tencent COS**: Object storage (abstracted)
 - **golang-jwt**: JWT token generation and validation
+
+## Development Guidelines & Lessons Learned
+
+### 1. Always Study Existing Patterns First
+Before implementing any feature, thoroughly examine existing similar implementations in the codebase. For example:
+- When creating a new cron job, study `session_dedup.go` for structure, interface compliance, and logging patterns
+- When adding pool tasks, reference `MessageStoreTask` in `dto/asynctask.go` for field naming and structure
+- Follow the established patterns for error handling, logging, and documentation comments
+
+### 2. Use Existing Infrastructure
+- **PoolManager**: Always use the global `PoolManager` (`internal/infrastructure/pool/pool.go`) for goroutine pool operations. Add new pool types to the Manager struct, initialize in `InitPoolManager()`, and stop in `Stop()`.
+- **DAO Layer**: All database operations must go through DAOs (`internal/infrastructure/database/dao/`). Never use `database.GetDBInstance()` directly in business logic - this should only be done in the DAO layer or infrastructure layer.
+
+### 3. Package Organization
+- Place reusable LLM/agent capabilities in `internal/agent/` (not in `internal/cron/` or `internal/llm/`)
+- Keep cron jobs focused on scheduling logic only
+- Task definitions belong in `internal/dto/asynctask.go`
+
+### 4. Constants Management
+- All numeric literals must be extracted to constants in `internal/common/constant/`
+- Create domain-specific constant files (e.g., `llm.go` for LLM-related constants)
+- Never use magic numbers like `3` directly in function calls
+
+### 5. Error Handling
+- Do not wrap errors unnecessarily - let them propagate naturally
+- Use structured logging with Zap for errors (`logger.Error("[Component] Description", zap.Error(err), zap.Fields...)`)
+- Callback patterns should be avoided in favor of direct execution within the pool task
+
+### 6. Complete Message Serialization
+When serializing messages for LLM processing, include ALL fields:
+- Role, Name, Content (Text + Parts with all types: text, image_url, input_audio, file, refusal)
+- ReasoningContent
+- ToolCalls (ID, Name, Arguments)
+- ToolCallID
+- Refusal
+
+### 7. Architecture Compliance Checklist
+Before submitting changes:
+- [ ] No direct database access outside DAO/infrastructure layer
+- [ ] Using PoolManager for all concurrent operations
+- [ ] Constants extracted to appropriate constant files
+- [ ] Following existing code patterns for similar features
+- [ ] Proper package placement (agent/, dto/, cron/)
