@@ -3,6 +3,8 @@ module github.com/hcd233/aris-proxy-api
 go 1.25.1
 
 require (
+	github.com/cloudwego/eino v0.8.5
+	github.com/cloudwego/eino-ext/components/model/openai v0.1.10
 	github.com/danielgtaylor/huma/v2 v2.34.1
 	github.com/gofiber/contrib/fgprof v1.0.4
 	github.com/gofiber/fiber/v2 v2.52.9
@@ -26,8 +28,6 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
-	github.com/cloudwego/eino v0.8.5 // indirect
-	github.com/cloudwego/eino-ext/components/model/openai v0.1.10 // indirect
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.14 // indirect
 	github.com/eino-contrib/jsonschema v1.0.3 // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
@@ -52,7 +52,6 @@ require (
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f // indirect
-	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect

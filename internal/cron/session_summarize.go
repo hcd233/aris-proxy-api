@@ -20,7 +20,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // SessionSummarizeCron Session总结定时任务
@@ -91,7 +90,7 @@ func (c *SessionSummarizeCron) summarize() {
 	db := database.GetDBInstance(ctx)
 	poolManager := pool.GetPoolManager()
 
-	sessions, err := c.getUnsummarizedSessions(db)
+	sessions, err := c.sessionDAO.BatchGetByField(db, "summary", "", []string{"id", "message_ids"})
 	if err != nil {
 		log.Error("[SessionSummarizeCron] Failed to get unsummarized sessions", zap.Error(err))
 		return
@@ -127,22 +126,6 @@ func (c *SessionSummarizeCron) summarize() {
 	}
 
 	log.Info("[SessionSummarizeCron] All summarization tasks submitted")
-}
-
-// getUnsummarizedSessions 获取未总结的sessions
-//
-//	@receiver c *SessionSummarizeCron
-//	@param db *gorm.DB
-//	@return []*dbmodel.Session
-//	@return error
-//	@author centonhuang
-//	@update 2026-03-26 10:00:00
-func (c *SessionSummarizeCron) getUnsummarizedSessions(db *gorm.DB) ([]*dbmodel.Session, error) {
-	var sessions []*dbmodel.Session
-	err := db.Where("summary = ?", "").Where("deleted_at = 0").FindInBatches(&sessions, 100, func(tx *gorm.DB, batch int) error {
-		return nil
-	}).Error
-	return sessions, err
 }
 
 // getSessionContent 获取Session的消息内容
