@@ -66,7 +66,7 @@ func (c *SessionSummarizeCron) Stop() {
 //	@author centonhuang
 //	@update 2026-03-26 10:00:00
 func (c *SessionSummarizeCron) Start() error {
-	entryID, err := c.cron.AddFunc("30 3 * * *", c.summarize)
+	entryID, err := c.cron.AddFunc("30 1 * * *", c.summarize)
 	if err != nil {
 		logger.Logger().Error("[SessionSummarizeCron] Add func error", zap.Error(err))
 		return err
@@ -90,7 +90,7 @@ func (c *SessionSummarizeCron) summarize() {
 	db := database.GetDBInstance(ctx)
 	poolManager := pool.GetPoolManager()
 
-	sessions, err := c.sessionDAO.BatchGetByField(db, "summary", "", []string{"id", "message_ids"})
+	sessions, err := c.sessionDAO.BatchGetByField(db, "summary", []string{""}, []string{"id", "message_ids"})
 	if err != nil {
 		log.Error("[SessionSummarizeCron] Failed to get unsummarized sessions", zap.Error(err))
 		return
