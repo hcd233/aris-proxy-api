@@ -209,12 +209,6 @@ func ExtractAnthropicMetadata(meta *dto.AnthropicMetadata) map[string]string {
 	if meta.UserID != "" {
 		m["user_id"] = meta.UserID
 	}
-	if meta.SessionID != "" {
-		m["session_id"] = meta.SessionID
-	}
-	if meta.AccountUUID != "" {
-		m["account_uuid"] = meta.AccountUUID
-	}
 
 	if len(m) == 0 {
 		return nil

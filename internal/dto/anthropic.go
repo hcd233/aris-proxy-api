@@ -240,9 +240,7 @@ type AnthropicToolChoice struct {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicMetadata struct {
-	UserID      string `json:"user_id,omitempty" doc:"用户标识符"`
-	AccountUUID string `json:"account_uuid,omitempty" doc:"账户UUID"`
-	SessionID   string `json:"session_id,omitempty" doc:"会话标识符"`
+	UserID string `json:"user_id,omitempty" doc:"用户标识符"`
 }
 
 // ==================== Anthropic Create Message Request DTOs ====================
