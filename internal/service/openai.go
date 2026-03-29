@@ -240,7 +240,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 						return
 					}
 
-					s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model)
+					s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model, completion.Usage)
 				}))
 			},
 		}, nil
@@ -283,7 +283,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				return
 			}
 
-			s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model)
+			s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model, completion.Usage)
 		},
 	}, nil
 }
@@ -295,6 +295,7 @@ func (s *openAIService) storeOpenAIMessages(
 	req *dto.ChatCompletionRequest,
 	assistantMsg *dto.ChatCompletionMessageParam,
 	upstreamModel string,
+	usage *dto.CompletionUsage,
 ) {
 	var unifiedMessages []*dto.UnifiedMessage
 
@@ -321,12 +322,20 @@ func (s *openAIService) storeOpenAIMessages(
 		return dto.FromOpenAITool(&tool)
 	})
 
+	var inputTokens, outputTokens int
+	if usage != nil {
+		inputTokens = usage.PromptTokens
+		outputTokens = usage.CompletionTokens
+	}
+
 	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
-		Ctx:        util.CopyContextValues(ctx),
-		APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
-		Model:      upstreamModel,
-		Messages:   unifiedMessages,
-		Tools:      unifiedTools,
+		Ctx:          util.CopyContextValues(ctx),
+		APIKeyName:   ctx.Value(constant.CtxKeyUserName).(string),
+		Model:        upstreamModel,
+		Messages:     unifiedMessages,
+		Tools:        unifiedTools,
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
 	}); err != nil {
 		logger.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
 	}

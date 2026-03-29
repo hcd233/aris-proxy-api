@@ -13,13 +13,15 @@ type PingTask struct {
 // MessageStoreTask 消息存储任务
 //
 //	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//	@update 2026-03-29 10:00:00
 type MessageStoreTask struct {
-	Ctx        context.Context
-	APIKeyName string
-	Model      string
-	Messages   []*UnifiedMessage // 统一消息格式列表
-	Tools      []*UnifiedTool    // 统一工具格式列表
+	Ctx          context.Context
+	APIKeyName   string
+	Model        string
+	Messages     []*UnifiedMessage // 统一消息格式列表
+	Tools        []*UnifiedTool    // 统一工具格式列表
+	InputTokens  int               // 上游返回的输入token数
+	OutputTokens int               // 上游返回的输出token数
 }
 
 // SummarizeTask Session总结任务

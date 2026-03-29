@@ -106,13 +106,16 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 
 		messages := lo.Map(task.Messages, func(m *dto.UnifiedMessage, _ int) *dbmodel.Message {
 			model := ""
+			tokenCount := 0
 			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
 				model = task.Model
+				tokenCount = task.OutputTokens
 			}
 			return &dbmodel.Message{
-				Model:    model,
-				Message:  m,
-				CheckSum: util.ComputeMessageChecksum(m, toolSchemas),
+				Model:      model,
+				Message:    m,
+				CheckSum:   util.ComputeMessageChecksum(m, toolSchemas),
+				TokenCount: tokenCount,
 			}
 		})
 

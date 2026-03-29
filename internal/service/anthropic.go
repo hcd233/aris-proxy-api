@@ -309,12 +309,20 @@ func (s *anthropicService) storeAnthropicMessages(
 		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
 	}
 
+	var inputTokens, outputTokens int
+	if assistantMsg.Usage != nil {
+		inputTokens = assistantMsg.Usage.InputTokens
+		outputTokens = assistantMsg.Usage.OutputTokens
+	}
+
 	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
-		Ctx:        util.CopyContextValues(ctx),
-		APIKeyName: ctx.Value(constant.CtxKeyUserName).(string),
-		Model:      upstreamModel,
-		Messages:   unifiedMessages,
-		Tools:      unifiedTools,
+		Ctx:          util.CopyContextValues(ctx),
+		APIKeyName:   ctx.Value(constant.CtxKeyUserName).(string),
+		Model:        upstreamModel,
+		Messages:     unifiedMessages,
+		Tools:        unifiedTools,
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
 	}); err != nil {
 		logger.Error("[AnthropicService] Failed to submit message store task", zap.Error(err))
 	}
