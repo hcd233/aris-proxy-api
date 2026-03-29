@@ -13,6 +13,7 @@ type SessionSummary struct {
 	ID         uint   `json:"id" doc:"Session ID"`
 	CreatedAt  string `json:"createdAt" doc:"创建时间"`
 	UpdatedAt  string `json:"updatedAt" doc:"更新时间"`
+	Summary    string `json:"summary" doc:"会话总结"`
 	MessageIDs []uint `json:"messageIds" doc:"消息ID列表"`
 	ToolIDs    []uint `json:"toolIds" doc:"工具ID列表"`
 }

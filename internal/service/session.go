@@ -66,7 +66,7 @@ func (s *sessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 	sessions, pageInfo, err := s.sessionDAO.Paginate(
 		db,
 		&dbmodel.Session{APIKeyName: apiKeyName},
-		[]string{"id", "created_at", "updated_at", "message_ids", "tool_ids"},
+		[]string{"id", "created_at", "updated_at", "summary", "message_ids", "tool_ids"},
 		&dao.CommonParam{
 			PageParam: dao.PageParam{
 				Page:     req.Page,
@@ -89,6 +89,7 @@ func (s *sessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 			ID:         session.ID,
 			CreatedAt:  session.CreatedAt.Format(time.DateTime),
 			UpdatedAt:  session.UpdatedAt.Format(time.DateTime),
+			Summary:    session.Summary,
 			MessageIDs: session.MessageIDs,
 			ToolIDs:    session.ToolIDs,
 		}
