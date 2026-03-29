@@ -1,0 +1,132 @@
+[
+    {
+        "name": "schema_default_bool_removed_a",
+        "description": "arguments without optional field (replace_all absent), should match b after schema normalization",
+        "role": "assistant",
+        "reasoning_content": "让我添加内容到文件中。",
+        "tool_calls": [
+            {
+                "id": "Edit_132",
+                "name": "Edit",
+                "arguments": "{\"file_path\":\"/path/to/file.go\",\"old_string\":\"old content\",\"new_string\":\"new content\"}"
+            }
+        ]
+    },
+    {
+        "name": "schema_default_bool_removed_b",
+        "description": "arguments with optional field at default value (replace_all:false), should match a after schema normalization",
+        "role": "assistant",
+        "reasoning_content": "让我添加内容到文件中。",
+        "tool_calls": [
+            {
+                "id": "Edit_132",
+                "name": "Edit",
+                "arguments": "{\"replace_all\":false,\"file_path\":\"/path/to/file.go\",\"old_string\":\"old content\",\"new_string\":\"new content\"}"
+            }
+        ]
+    },
+    {
+        "name": "schema_non_default_kept_a",
+        "description": "arguments without optional field (replace_all absent)",
+        "role": "assistant",
+        "reasoning_content": "让我替换所有内容。",
+        "tool_calls": [
+            {
+                "id": "Edit_200",
+                "name": "Edit",
+                "arguments": "{\"file_path\":\"/path/to/file.go\",\"old_string\":\"old\",\"new_string\":\"new\"}"
+            }
+        ]
+    },
+    {
+        "name": "schema_non_default_kept_b",
+        "description": "arguments with optional field at non-default value (replace_all:true), should differ from a",
+        "role": "assistant",
+        "reasoning_content": "让我替换所有内容。",
+        "tool_calls": [
+            {
+                "id": "Edit_200",
+                "name": "Edit",
+                "arguments": "{\"replace_all\":true,\"file_path\":\"/path/to/file.go\",\"old_string\":\"old\",\"new_string\":\"new\"}"
+            }
+        ]
+    },
+    {
+        "name": "schema_required_default_kept_a",
+        "description": "required field with default value present — should NOT be removed even if equal to default",
+        "role": "assistant",
+        "reasoning_content": "执行命令。",
+        "tool_calls": [
+            {
+                "id": "Bash_1",
+                "name": "MockTool",
+                "arguments": "{\"command\":\"ls\",\"verbose\":false}"
+            }
+        ]
+    },
+    {
+        "name": "schema_required_default_kept_b",
+        "description": "required field with default value absent — should differ from a because required field is kept",
+        "role": "assistant",
+        "reasoning_content": "执行命令。",
+        "tool_calls": [
+            {
+                "id": "Bash_1",
+                "name": "MockTool",
+                "arguments": "{\"command\":\"ls\"}"
+            }
+        ]
+    },
+    {
+        "name": "no_schema_different_a",
+        "description": "without schema, arguments with extra field should produce different checksum from b",
+        "role": "assistant",
+        "reasoning_content": "没有 schema 的场景。",
+        "tool_calls": [
+            {
+                "id": "Edit_300",
+                "name": "Edit",
+                "arguments": "{\"file_path\":\"/path/to/file.go\",\"old_string\":\"old\",\"new_string\":\"new\"}"
+            }
+        ]
+    },
+    {
+        "name": "no_schema_different_b",
+        "description": "without schema, arguments with extra default field should produce different checksum from a",
+        "role": "assistant",
+        "reasoning_content": "没有 schema 的场景。",
+        "tool_calls": [
+            {
+                "id": "Edit_300",
+                "name": "Edit",
+                "arguments": "{\"replace_all\":false,\"file_path\":\"/path/to/file.go\",\"old_string\":\"old\",\"new_string\":\"new\"}"
+            }
+        ]
+    },
+    {
+        "name": "schema_multiple_defaults_removed",
+        "description": "multiple optional fields at default values should all be removed",
+        "role": "assistant",
+        "reasoning_content": "多个默认值字段。",
+        "tool_calls": [
+            {
+                "id": "Multi_1",
+                "name": "MultiDefault",
+                "arguments": "{\"query\":\"hello\",\"limit\":10,\"case_sensitive\":false,\"recursive\":true}"
+            }
+        ]
+    },
+    {
+        "name": "schema_multiple_defaults_absent",
+        "description": "same as above but without the optional fields at default values",
+        "role": "assistant",
+        "reasoning_content": "多个默认值字段。",
+        "tool_calls": [
+            {
+                "id": "Multi_1",
+                "name": "MultiDefault",
+                "arguments": "{\"query\":\"hello\",\"recursive\":true}"
+            }
+        ]
+    }
+]

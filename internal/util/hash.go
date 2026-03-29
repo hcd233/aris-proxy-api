@@ -10,6 +10,12 @@ import (
 	"github.com/samber/lo"
 )
 
+// ToolSchemaMap 工具名 → 参数 Schema 的映射表，用于 schema-aware checksum 计算
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type ToolSchemaMap map[string]*dto.JSONSchemaProperty
+
 // ComputeMessageChecksum 计算统一消息校验和
 //
 // 对 UnifiedMessage 做规范化处理，确保语义相同但表示不同的消息产生相同的 checksum：
@@ -19,25 +25,30 @@ import (
 //
 //   - 清除 ToolCallID（工具结果消息中引用的调用 ID，同理不影响语义）
 //
+//   - 移除 ToolCall arguments 中等于 schema default 的非 required 字段（需提供 toolSchemas）
+//
 //   - 序列化规范化后的结构体，计算 SHA256
 //
 //     @param msg *dto.UnifiedMessage
+//     @param toolSchemas ToolSchemaMap 工具 Schema 映射表（可为 nil，nil 时退化为无 schema 模式）
 //     @return string
 //     @author centonhuang
-//     @update 2026-03-18 10:00:00
-func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
-	// 深拷贝以避免修改原始消息
+//     @update 2026-03-29 10:00:00
+func ComputeMessageChecksum(msg *dto.UnifiedMessage, toolSchemas ToolSchemaMap) string {
 	normalized := *msg
 
-	// 清除易变的标识符字段
 	normalized.ToolCallID = ""
 
 	if len(normalized.ToolCalls) > 0 {
 		cleanedCalls := make([]*dto.UnifiedToolCall, len(normalized.ToolCalls))
 		for i, tc := range normalized.ToolCalls {
+			var schema *dto.JSONSchemaProperty
+			if toolSchemas != nil {
+				schema = toolSchemas[tc.Name]
+			}
 			cleanedCalls[i] = &dto.UnifiedToolCall{
 				Name:      tc.Name,
-				Arguments: normalizeJSONString(tc.Arguments),
+				Arguments: normalizeArgumentsWithSchema(tc.Arguments, schema),
 			}
 		}
 		normalized.ToolCalls = cleanedCalls
@@ -47,16 +58,59 @@ func ComputeMessageChecksum(msg *dto.UnifiedMessage) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// normalizeJSONString 将 JSON 字符串反序列化后重新序列化为紧凑格式（键排序），消除键顺序和空格等格式差异
+// normalizeArgumentsWithSchema 根据 tool schema 规范化 arguments JSON 字符串
 //
-//	@param s string JSON字符串
-//	@return string 规范化后的JSON字符串，如果解析失败则返回原始字符串
+// 移除 arguments 中满足以下全部条件的字段：
+//   - 不在 schema.Required 中
+//   - schema.Properties[key] 存在 Default 值
+//   - arguments 中该字段的值等于 Default 值
+//
+// schema 为 nil 时仅做键排序规范化，行为等价于旧的 normalizeJSONString
+//
+//	@param args string arguments JSON 字符串
+//	@param schema *dto.JSONSchemaProperty 工具参数 schema（可为 nil）
+//	@return string 规范化后的 JSON 字符串
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
-func normalizeJSONString(s string) string {
+//	@update 2026-03-29 10:00:00
+func normalizeArgumentsWithSchema(args string, schema *dto.JSONSchemaProperty) string {
 	var obj map[string]any
-	lo.Must0(sonic.UnmarshalString(s, &obj))
+	lo.Must0(sonic.UnmarshalString(args, &obj))
+
+	if schema != nil && schema.Properties != nil {
+		requiredSet := lo.SliceToMap(schema.Required, func(r string) (string, bool) {
+			return r, true
+		})
+
+		for key, val := range obj {
+			if requiredSet[key] {
+				continue
+			}
+			prop, hasProp := schema.Properties[key]
+			if !hasProp || prop.Default == nil {
+				continue
+			}
+			var defaultVal any
+			lo.Must0(sonic.Unmarshal(prop.Default, &defaultVal))
+			if jsonEqual(val, defaultVal) {
+				delete(obj, key)
+			}
+		}
+	}
+
 	return string(lo.Must1(encoder.Encode(obj, encoder.SortMapKeys)))
+}
+
+// jsonEqual 比较两个通过 JSON 反序列化得到的值是否语义相等
+//
+//	@param a any
+//	@param b any
+//	@return bool
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+func jsonEqual(a, b any) bool {
+	aBytes := lo.Must1(encoder.Encode(a, encoder.SortMapKeys))
+	bBytes := lo.Must1(encoder.Encode(b, encoder.SortMapKeys))
+	return string(aBytes) == string(bBytes)
 }
 
 // ComputeToolChecksum 计算工具校验和，基于工具名和完整参数 Schema

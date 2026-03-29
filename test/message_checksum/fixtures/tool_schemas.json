@@ -1,0 +1,64 @@
+{
+    "Edit": {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "The absolute path to the file to modify"
+            },
+            "new_string": {
+                "type": "string",
+                "description": "The text to replace it with"
+            },
+            "old_string": {
+                "type": "string",
+                "description": "The text to replace"
+            },
+            "replace_all": {
+                "type": "boolean",
+                "description": "Replace all occurrences of old_string (default false)",
+                "default": false
+            }
+        },
+        "required": ["file_path", "old_string", "new_string"]
+    },
+    "MockTool": {
+        "type": "object",
+        "properties": {
+            "command": {
+                "type": "string",
+                "description": "The command to execute"
+            },
+            "verbose": {
+                "type": "boolean",
+                "description": "Enable verbose output (default false)",
+                "default": false
+            }
+        },
+        "required": ["command", "verbose"]
+    },
+    "MultiDefault": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Search query"
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Max results",
+                "default": 10
+            },
+            "case_sensitive": {
+                "type": "boolean",
+                "description": "Case sensitive search",
+                "default": false
+            },
+            "recursive": {
+                "type": "boolean",
+                "description": "Recursive search"
+            }
+        },
+        "required": ["query"]
+    }
+}

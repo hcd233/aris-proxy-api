@@ -97,6 +97,13 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 	logger := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 	return pm.messageStorePool.Go(func() {
+		toolSchemas := util.ToolSchemaMap{}
+		for _, t := range task.Tools {
+			if t.Parameters != nil {
+				toolSchemas[t.Name] = t.Parameters
+			}
+		}
+
 		messages := lo.Map(task.Messages, func(m *dto.UnifiedMessage, _ int) *dbmodel.Message {
 			model := ""
 			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
@@ -105,7 +112,7 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 			return &dbmodel.Message{
 				Model:    model,
 				Message:  m,
-				CheckSum: util.ComputeMessageChecksum(m),
+				CheckSum: util.ComputeMessageChecksum(m, toolSchemas),
 			}
 		})
 
