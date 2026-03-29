@@ -1,0 +1,65 @@
+[
+    {
+        "name": "ctx_value_string_exists",
+        "description": "context contains the key with a string value, should return the value",
+        "function": "CtxValueString",
+        "key": "client",
+        "ctxValue": "Mozilla/5.0",
+        "ctxValueType": "string",
+        "expected": "Mozilla/5.0"
+    },
+    {
+        "name": "ctx_value_string_missing_key",
+        "description": "context does not contain the key, should return empty string",
+        "function": "CtxValueString",
+        "key": "client",
+        "ctxValue": null,
+        "ctxValueType": "nil",
+        "expected": ""
+    },
+    {
+        "name": "ctx_value_string_non_string_value",
+        "description": "context contains the key but with a non-string value, should return empty string",
+        "function": "CtxValueString",
+        "key": "client",
+        "ctxValue": 12345,
+        "ctxValueType": "int",
+        "expected": ""
+    },
+    {
+        "name": "ctx_value_string_empty_value",
+        "description": "context contains the key with an empty string, should return empty string",
+        "function": "CtxValueString",
+        "key": "client",
+        "ctxValue": "",
+        "ctxValueType": "string",
+        "expected": ""
+    },
+    {
+        "name": "extract_anthropic_metadata_nil",
+        "description": "nil metadata input, should return nil",
+        "function": "ExtractAnthropicMetadata",
+        "metadata": null,
+        "expectedMap": null
+    },
+    {
+        "name": "extract_anthropic_metadata_with_user_id",
+        "description": "metadata with user_id set, should return map with user_id entry",
+        "function": "ExtractAnthropicMetadata",
+        "metadata": {
+            "user_id": "user-123"
+        },
+        "expectedMap": {
+            "user_id": "user-123"
+        }
+    },
+    {
+        "name": "extract_anthropic_metadata_empty_user_id",
+        "description": "metadata with empty user_id, should return nil",
+        "function": "ExtractAnthropicMetadata",
+        "metadata": {
+            "user_id": ""
+        },
+        "expectedMap": null
+    }
+]

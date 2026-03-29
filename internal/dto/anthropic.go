@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"reflect"
 
 	"github.com/bytedance/sonic"
@@ -239,7 +240,9 @@ type AnthropicToolChoice struct {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicMetadata struct {
-	UserID string `json:"user_id,omitempty" doc:"用户标识符"`
+	UserID      string `json:"user_id,omitempty" doc:"用户标识符"`
+	AccountUUID string `json:"account_uuid,omitempty" doc:"账户UUID"`
+	SessionID   string `json:"session_id,omitempty" doc:"会话标识符"`
 }
 
 // ==================== Anthropic Create Message Request DTOs ====================
@@ -381,4 +384,70 @@ type AnthropicCountTokensRequest struct {
 //	@update 2026-03-20 10:00:00
 type AnthropicTokensCount struct {
 	InputTokens int `json:"input_tokens" doc:"消息、系统提示和工具中的总token数"`
+}
+
+// AnthropicSSEEvent 表示一个解析后的 Anthropic SSE 事件
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type AnthropicSSEEvent struct {
+	Event string          `json:"event"`
+	Data  json.RawMessage `json:"data"`
+}
+
+// ==================== Anthropic SSE Payload DTOs ====================
+
+// AnthropicSSEMessageStart message_start 事件的 payload
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type AnthropicSSEMessageStart struct {
+	Message *AnthropicMessage `json:"message"`
+}
+
+// AnthropicSSEContentBlockStart content_block_start 事件的 payload
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type AnthropicSSEContentBlockStart struct {
+	Index        int                    `json:"index"`
+	ContentBlock *AnthropicContentBlock `json:"content_block"`
+}
+
+// AnthropicSSEContentBlockDelta content_block_delta 事件的 delta 部分
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type AnthropicSSEContentBlockDeltaPayload struct {
+	Type        string `json:"type"`
+	Text        string `json:"text"`
+	Thinking    string `json:"thinking"`
+	PartialJSON string `json:"partial_json"`
+}
+
+// AnthropicSSEContentBlockDelta content_block_delta 事件的 payload
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type AnthropicSSEContentBlockDelta struct {
+	Index int                                  `json:"index"`
+	Delta AnthropicSSEContentBlockDeltaPayload `json:"delta"`
+}
+
+// AnthropicSSEMessageDeltaPayload message_delta 事件的 delta 部分
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type AnthropicSSEMessageDeltaPayload struct {
+	StopReason   *string `json:"stop_reason"`
+	StopSequence *string `json:"stop_sequence"`
+}
+
+// AnthropicSSEMessageDelta message_delta 事件的 payload
+//
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+type AnthropicSSEMessageDelta struct {
+	Delta AnthropicSSEMessageDeltaPayload `json:"delta"`
+	Usage *AnthropicUsage                 `json:"usage"`
 }

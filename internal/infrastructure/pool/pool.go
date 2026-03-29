@@ -145,6 +145,8 @@ func (pm *Manager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 				APIKeyName: task.APIKeyName,
 				MessageIDs: messageIDs,
 				ToolIDs:    toolIDs,
+				Client:     task.Client,
+				Metadata:   task.Metadata,
 			}
 			if err := pm.sessionDAO.Create(tx, session); err != nil {
 				logger.Error("[PoolManager] Failed to create session", zap.Error(err))

@@ -1,7 +1,6 @@
 package util
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -73,12 +72,12 @@ func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
 //
 //   - ping: 心跳
 //
-//     @param events []AnthropicSSEEvent
+//     @param events []dto.AnthropicSSEEvent
 //     @return *dto.AnthropicMessage
 //     @return error
 //     @author centonhuang
 //     @update 2026-03-18 10:00:00
-func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) (*dto.AnthropicMessage, error) {
+func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMessage, error) {
 	msg := &dto.AnthropicMessage{}
 
 	// Track content blocks by index
@@ -94,9 +93,7 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) (*dto.AnthropicMessage
 	for _, event := range events {
 		switch event.Event {
 		case "message_start":
-			var payload struct {
-				Message *dto.AnthropicMessage `json:"message"`
-			}
+			var payload dto.AnthropicSSEMessageStart
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, fmt.Errorf("unmarshal message_start: %w", err)
 			}
@@ -109,10 +106,7 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) (*dto.AnthropicMessage
 			}
 
 		case "content_block_start":
-			var payload struct {
-				Index        int                        `json:"index"`
-				ContentBlock *dto.AnthropicContentBlock `json:"content_block"`
-			}
+			var payload dto.AnthropicSSEContentBlockStart
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, fmt.Errorf("unmarshal content_block_start: %w", err)
 			}
@@ -123,15 +117,7 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) (*dto.AnthropicMessage
 			blockOrder = append(blockOrder, payload.Index)
 
 		case "content_block_delta":
-			var payload struct {
-				Index int `json:"index"`
-				Delta struct {
-					Type        string `json:"type"`
-					Text        string `json:"text"`
-					Thinking    string `json:"thinking"`
-					PartialJSON string `json:"partial_json"`
-				} `json:"delta"`
-			}
+			var payload dto.AnthropicSSEContentBlockDelta
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, fmt.Errorf("unmarshal content_block_delta: %w", err)
 			}
@@ -147,20 +133,13 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) (*dto.AnthropicMessage
 			case "input_json_delta":
 				bs.inputParts = append(bs.inputParts, payload.Delta.PartialJSON)
 			case "signature_delta":
-				// signature 累积到 block 的 Signature 字段
 				if bs.block != nil {
 					bs.block.Signature += payload.Delta.Text
 				}
 			}
 
 		case "message_delta":
-			var payload struct {
-				Delta struct {
-					StopReason   *string `json:"stop_reason"`
-					StopSequence *string `json:"stop_sequence"`
-				} `json:"delta"`
-				Usage *dto.AnthropicUsage `json:"usage"`
-			}
+			var payload dto.AnthropicSSEMessageDelta
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, fmt.Errorf("unmarshal message_delta: %w", err)
 			}
@@ -215,11 +194,29 @@ func ConcatAnthropicSSEEvents(events []AnthropicSSEEvent) (*dto.AnthropicMessage
 	return msg, nil
 }
 
-// AnthropicSSEEvent 表示一个解析后的 Anthropic SSE 事件
+// ExtractAnthropicMetadata 将 Anthropic 元数据转换为通用 map
 //
+//	@param meta *dto.AnthropicMetadata
+//	@return map[string]string
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
-type AnthropicSSEEvent struct {
-	Event string          `json:"event"`
-	Data  json.RawMessage `json:"data"`
+//	@update 2026-03-29 10:00:00
+func ExtractAnthropicMetadata(meta *dto.AnthropicMetadata) map[string]string {
+	if meta == nil {
+		return nil
+	}
+	m := make(map[string]string)
+	if meta.UserID != "" {
+		m["user_id"] = meta.UserID
+	}
+	if meta.SessionID != "" {
+		m["session_id"] = meta.SessionID
+	}
+	if meta.AccountUUID != "" {
+		m["account_uuid"] = meta.AccountUUID
+	}
+
+	if len(m) == 0 {
+		return nil
+	}
+	return m
 }

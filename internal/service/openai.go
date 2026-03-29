@@ -336,6 +336,8 @@ func (s *openAIService) storeOpenAIMessages(
 		Tools:        unifiedTools,
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
+		Client:       util.CtxValueString(ctx, constant.CtxKeyClient),
+		Metadata:     req.Body.Metadata,
 	}); err != nil {
 		logger.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
 	}

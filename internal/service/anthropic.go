@@ -160,7 +160,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 				fiberCtx.Status(upstreamResp.StatusCode).Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 					defer upstreamResp.Body.Close()
 
-					var collectedEvents []util.AnthropicSSEEvent
+					var collectedEvents []dto.AnthropicSSEEvent
 					var currentEvent string
 
 					reader := bufio.NewReader(upstreamResp.Body)
@@ -195,7 +195,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 									line = fmt.Sprintf("data: %s", string(modifiedPayload))
 
 									// Collect event for message assembly
-									collectedEvents = append(collectedEvents, util.AnthropicSSEEvent{
+									collectedEvents = append(collectedEvents, dto.AnthropicSSEEvent{
 										Event: currentEvent,
 										Data:  json.RawMessage(modifiedPayload),
 									})
@@ -323,6 +323,8 @@ func (s *anthropicService) storeAnthropicMessages(
 		Tools:        unifiedTools,
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
+		Client:       util.CtxValueString(ctx, constant.CtxKeyClient),
+		Metadata:     util.ExtractAnthropicMetadata(req.Body.Metadata),
 	}); err != nil {
 		logger.Error("[AnthropicService] Failed to submit message store task", zap.Error(err))
 	}

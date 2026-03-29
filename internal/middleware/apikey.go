@@ -73,6 +73,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		}
 
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, name)
+		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header("User-Agent"))
 		next(ctx)
 	}
 }

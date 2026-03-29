@@ -21,4 +21,8 @@ const (
 	// CtxKeyLimiter undefined
 	//	@update 2025-09-30 15:57:14
 	CtxKeyLimiter = "limiter"
+
+	// CtxKeyClient 请求客户端User-Agent
+	//	@update 2026-03-29 10:00:00
+	CtxKeyClient = "client"
 )

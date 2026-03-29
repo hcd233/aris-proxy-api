@@ -119,7 +119,7 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 	session, err := s.sessionDAO.Get(
 		db,
 		&dbmodel.Session{ID: req.SessionID},
-		[]string{"id", "api_key_name", "created_at", "updated_at", "message_ids", "tool_ids"},
+		[]string{"id", "api_key_name", "created_at", "updated_at", "message_ids", "tool_ids", "client", "metadata"},
 	)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -164,6 +164,8 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 		APIKeyName: session.APIKeyName,
 		CreatedAt:  session.CreatedAt.Format(time.DateTime),
 		UpdatedAt:  session.UpdatedAt.Format(time.DateTime),
+		Client:     session.Client,
+		Metadata:   session.Metadata,
 		Messages:   messageItems,
 		Tools:      toolItems,
 	}

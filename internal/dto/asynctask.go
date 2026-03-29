@@ -22,6 +22,8 @@ type MessageStoreTask struct {
 	Tools        []*UnifiedTool    // 统一工具格式列表
 	InputTokens  int               // 上游返回的输入token数
 	OutputTokens int               // 上游返回的输出token数
+	Client       string            // 请求客户端User-Agent
+	Metadata     map[string]string // 请求元数据
 }
 
 // SummarizeTask Session总结任务
