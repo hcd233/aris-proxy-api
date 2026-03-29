@@ -127,6 +127,20 @@ func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, valu
 	return
 }
 
+// HardDeleteSoftDeleted 硬删除所有已软删除的记录（deleted_at != 0）
+//
+//	@receiver dao *baseDAO[ModelT]
+//	@param db *gorm.DB
+//	@return int64 删除的记录数
+//	@return error
+//	@author centonhuang
+//	@update 2026-03-29 10:00:00
+func (dao *baseDAO[ModelT]) HardDeleteSoftDeleted(db *gorm.DB) (int64, error) {
+	var m ModelT
+	result := db.Unscoped().Where("deleted_at != 0").Delete(&m)
+	return result.RowsAffected, result.Error
+}
+
 // Paginate 分页查询
 //
 //	param dao *BaseDAO[T]

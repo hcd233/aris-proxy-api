@@ -38,6 +38,10 @@ func InitCronJobs() {
 	lo.Must0(sessionSummarizeCron.Start())
 	cronInstances = append(cronInstances, sessionSummarizeCron)
 
+	softDeletePurgeCron := NewSoftDeletePurgeCron()
+	lo.Must0(softDeletePurgeCron.Start())
+	cronInstances = append(cronInstances, softDeletePurgeCron)
+
 	logger.Logger().Info("[Cron] Init cron jobs")
 }
 
