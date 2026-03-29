@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
@@ -63,7 +63,7 @@ func (s *tokenService) RefreshToken(ctx context.Context, req *dto.RefreshTokenRe
 	userID, err := s.refreshTokenSigner.DecodeToken(req.Body.RefreshToken)
 	if err != nil {
 		logger.Error("[TokenService] Failed to decode refresh token", zap.String("refreshToken", req.Body.RefreshToken), zap.Error(err))
-		rsp.Error = constant.ErrUnauthorized
+		rsp.Error = ierr.ErrJWTDecode.BizError()
 		return rsp, nil
 	}
 
@@ -71,25 +71,25 @@ func (s *tokenService) RefreshToken(ctx context.Context, req *dto.RefreshTokenRe
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			logger.Error("[TokenService] User not found", zap.Uint("userID", userID))
-			rsp.Error = constant.ErrDataNotExists
+			rsp.Error = ierr.ErrDataNotExists.BizError()
 			return rsp, nil
 		}
 		logger.Error("[TokenService] Failed to get user by id", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
 
 	accessToken, err := s.accessTokenSigner.EncodeToken(userID)
 	if err != nil {
 		logger.Error("[TokenService] Failed to encode access token", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrJWTEncode.BizError()
 		return rsp, nil
 	}
 
 	refreshToken, err := s.refreshTokenSigner.EncodeToken(userID)
 	if err != nil {
 		logger.Error("[TokenService] Failed to encode refresh token", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrJWTEncode.BizError()
 		return rsp, nil
 	}
 

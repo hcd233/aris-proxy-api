@@ -8,6 +8,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
@@ -80,7 +81,7 @@ func (s *sessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 	)
 	if err != nil {
 		logger.Error("[SessionService] Failed to paginate sessions", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
 
@@ -124,11 +125,11 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn("[SessionService] Session not found", zap.Uint("sessionID", req.SessionID))
-			rsp.Error = constant.ErrDataNotExists
+			rsp.Error = ierr.ErrDataNotExists.BizError()
 			return rsp, nil
 		}
 		log.Error("[SessionService] Failed to get session", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
 
@@ -137,21 +138,21 @@ func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq)
 			zap.Uint("sessionID", req.SessionID),
 			zap.String("apiKeyName", apiKeyName),
 			zap.String("sessionAPIKeyName", session.APIKeyName))
-		rsp.Error = constant.ErrNoPermission
+		rsp.Error = ierr.ErrNoPermission.BizError()
 		return rsp, nil
 	}
 
 	messages, err := s.messageDAO.BatchGetByField(db, "id", lo.Uniq(session.MessageIDs), []string{"id", "model", "message", "created_at"})
 	if err != nil {
 		log.Error("[SessionService] Failed to batch get messages", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
 
 	tools, err := s.toolDAO.BatchGetByField(db, "id", lo.Uniq(session.ToolIDs), []string{"id", "tool", "created_at"})
 	if err != nil {
 		log.Error("[SessionService] Failed to batch get tools", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
 

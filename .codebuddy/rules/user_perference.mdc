@@ -106,17 +106,40 @@ type baseDAO[ModelT any] struct{}
 
 ## 错误处理模式
 
-**业务错误不走 Go error，而是放在响应体的 Error 字段中**：
+**项目采用两层错误体系**：内部 Go error（`ierr` 包）和面向客户端的业务错误（`*model.Error`）。
+
+### 内部错误（`ierr` 包）
+
+所有内部 Go error 统一通过 `internal/common/ierr` 包创建，禁止直接使用 `fmt.Errorf` 或 `errors.New`：
 
 ```go
-// 预定义业务错误
-var ErrUnauthorized = model.NewError(10001, "Unauthorized")
+import "github.com/hcd233/aris-proxy-api/internal/common/ierr"
 
-// Service 层：业务错误赋值到 rsp.Error，Go error 返回 nil
+// 包装原始错误
+return ierr.Wrap(ierr.ErrDBQuery, err, "get user by id")
+
+// 格式化上下文
+return ierr.Wrapf(ierr.ErrDTOConvert, err, "convert part[%d]", i)
+
+// 纯描述性错误（无原始 cause）
+return ierr.New(ierr.ErrValidation, "user name too short")
+```
+
+### Service 层：业务错误映射
+
+业务错误不走 Go error，而是放在响应体的 Error 字段中。通过 `.BizError()` 从哨兵错误获取对应的业务错误：
+
+```go
+// Service 层：从 ierr 哨兵获取业务错误
 func (s *xxxService) DoSomething(ctx context.Context, req *dto.XxxReq) (*dto.XxxRsp, error) {
     rsp := &dto.XxxRsp{}
+    user, err := s.userDAO.Get(db, where, fields)
     if err != nil {
-        rsp.Error = constant.ErrUnauthorized
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            rsp.Error = ierr.ErrDataNotExists.BizError()
+            return rsp, nil
+        }
+        rsp.Error = ierr.ErrDBQuery.BizError()
         return rsp, nil  // Go error 始终返回 nil
     }
     return rsp, nil
@@ -128,8 +151,16 @@ func (h *xxxHandler) HandleXxx(ctx context.Context, req *dto.XxxReq) (*dto.HTTPR
 }
 ```
 
+### Middleware 层
+
+中间件通过 `ierr.ErrXxx.BizError()` + `WriteErrorResponse` 直接写入 HTTP 响应：
+
+```go
+lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+```
+
 - 使用 `lo.Must0()` / `lo.Must1()` 处理绝对不应出错的初始化逻辑
-- 中间件中的错误通过 `util.WriteErrorResponse()` 直接写入响应
+- **禁止使用 `constant.ErrXxx`**（已废弃），统一使用 `ierr.ErrXxx.BizError()`
 
 ---
 

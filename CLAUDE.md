@@ -121,9 +121,13 @@ Before implementing any feature, thoroughly examine existing similar implementat
 - Never use magic numbers like `3` directly in function calls
 
 ### 5. Error Handling
-- Do not wrap errors unnecessarily - let them propagate naturally
+- All internal Go errors must be created via `internal/common/ierr` package — never use `fmt.Errorf` or `errors.New` directly
+- Use `ierr.Wrap(ierr.ErrXxx, err, "context")` to wrap errors with context
+- Use `ierr.New(ierr.ErrValidation, "description")` for errors without a cause
+- In Service layer, map to business errors via `ierr.ErrXxx.BizError()` and set `rsp.Error`
+- In Middleware layer, use `ierr.ErrXxx.BizError()` with `WriteErrorResponse`
+- `constant/error.go` (`constant.ErrXxx`) is **deprecated** — use `ierr.ErrXxx.BizError()` instead
 - Use structured logging with Zap for errors (`logger.Error("[Component] Description", zap.Error(err), zap.Fields...)`)
-- Callback patterns should be avoided in favor of direct execution within the pool task
 
 ### 6. Complete Message Serialization
 When serializing messages for LLM processing, include ALL fields:

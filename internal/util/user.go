@@ -1,8 +1,9 @@
 package util
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
 const (
@@ -40,7 +41,7 @@ func ValidateUserName(userName string) (err error) {
 
 func validateUserNameLength(userName string) error {
 	if len(userName) < minNameLen || len(userName) > maxNameLen {
-		return fmt.Errorf("user name length must be %d-%d", minNameLen, maxNameLen)
+		return ierr.Newf(ierr.ErrValidation, "user name length must be %d-%d", minNameLen, maxNameLen)
 	}
 	return nil
 }
@@ -48,7 +49,7 @@ func validateUserNameLength(userName string) error {
 func validateUserNameSpecialChars(userName string) error {
 	for _, c := range userName {
 		if strings.ContainsRune(specialChars, c) {
-			return fmt.Errorf("user name can't contain special characters")
+			return ierr.New(ierr.ErrValidation, "user name can't contain special characters")
 		}
 	}
 	return nil
@@ -57,7 +58,7 @@ func validateUserNameSpecialChars(userName string) error {
 func validateUserNameSpecialName(userName string) error {
 	for _, specialName := range specialNameblackList {
 		if strings.EqualFold(userName, specialName) {
-			return fmt.Errorf("user name can't be %s", specialName)
+			return ierr.Newf(ierr.ErrValidation, "user name can't be %s", specialName)
 		}
 	}
 	return nil

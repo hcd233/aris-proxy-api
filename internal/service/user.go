@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
@@ -59,12 +60,12 @@ func (s *userService) GetCurUser(ctx context.Context, _ *dto.EmptyReq) (*dto.Get
 	user, err := s.userDAO.Get(db, &model.User{ID: userID}, []string{"id", "name", "email", "avatar", "created_at", "last_login", "permission"})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			logger.Error("[UserService] user not found")
-			rsp.Error = constant.ErrDataNotExists
+			logger.Error("[UserService] User not found")
+			rsp.Error = ierr.ErrDataNotExists.BizError()
 			return rsp, nil
 		}
-		logger.Error("[UserService] failed to get user by id", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		logger.Error("[UserService] Failed to get user by id", zap.Error(err))
+		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
 
@@ -104,7 +105,7 @@ func (s *userService) UpdateUser(ctx context.Context, req *dto.UpdateUserReq) (*
 		"avatar": req.Body.User.Avatar,
 	}); err != nil {
 		logger.Error("[UserService] Failed to update user", zap.Error(err))
-		rsp.Error = constant.ErrInternalError
+		rsp.Error = ierr.ErrDBUpdate.BizError()
 		return rsp, nil
 	}
 

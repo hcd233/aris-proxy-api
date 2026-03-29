@@ -4,6 +4,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
@@ -23,7 +24,7 @@ func LimitUserPermissionMiddleware(serviceName string, requiredPermission enum.P
 	return func(ctx huma.Context, next func(huma.Context)) {
 		permission, ok := ctx.Context().Value(constant.CtxKeyPermission).(enum.Permission)
 		if !ok {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrNoPermission))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrNoPermission.BizError()))
 			return
 		}
 
@@ -32,7 +33,7 @@ func LimitUserPermissionMiddleware(serviceName string, requiredPermission enum.P
 				zap.String("serviceName", serviceName),
 				zap.String("requiredPermission", string(requiredPermission)),
 				zap.String("permission", string(permission)))
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrNoPermission))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrNoPermission.BizError()))
 			return
 		}
 

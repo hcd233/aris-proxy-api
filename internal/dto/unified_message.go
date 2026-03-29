@@ -1,10 +1,10 @@
 package dto
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -103,7 +103,7 @@ func FromOpenAIMessage(msg *ChatCompletionMessageParam) (*UnifiedMessage, error)
 	if msg.Content != nil {
 		content, err := convertOpenAIContent(msg.Content)
 		if err != nil {
-			return nil, fmt.Errorf("convert openai content: %w", err)
+			return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert openai content")
 		}
 		um.Content = content
 	}
@@ -136,7 +136,7 @@ func convertOpenAIContent(mc *MessageContent) (*UnifiedContent, error) {
 		for i, p := range mc.Parts {
 			part, err := convertOpenAIContentPart(p)
 			if err != nil {
-				return nil, fmt.Errorf("convert content part[%d]: %w", i, err)
+				return nil, ierr.Wrapf(ierr.ErrDTOConvert, err, "convert content part[%d]", i)
 			}
 			parts = append(parts, part)
 		}
@@ -154,7 +154,7 @@ func convertOpenAIContentPart(p *ChatCompletionContentPart) (*UnifiedContentPart
 		return &UnifiedContentPart{Type: "refusal", Text: p.Refusal}, nil
 	case "image_url":
 		if p.ImageURL == nil {
-			return nil, fmt.Errorf("image_url part missing image_url field")
+			return nil, ierr.New(ierr.ErrDTOConvert, "image_url part missing image_url field")
 		}
 		return &UnifiedContentPart{
 			Type:        "image_url",
@@ -163,7 +163,7 @@ func convertOpenAIContentPart(p *ChatCompletionContentPart) (*UnifiedContentPart
 		}, nil
 	case "input_audio":
 		if p.InputAudio == nil {
-			return nil, fmt.Errorf("input_audio part missing input_audio field")
+			return nil, ierr.New(ierr.ErrDTOConvert, "input_audio part missing input_audio field")
 		}
 		return &UnifiedContentPart{
 			Type:        "input_audio",
@@ -172,7 +172,7 @@ func convertOpenAIContentPart(p *ChatCompletionContentPart) (*UnifiedContentPart
 		}, nil
 	case "file":
 		if p.File == nil {
-			return nil, fmt.Errorf("file part missing file field")
+			return nil, ierr.New(ierr.ErrDTOConvert, "file part missing file field")
 		}
 		return &UnifiedContentPart{
 			Type:     "file",
@@ -181,7 +181,7 @@ func convertOpenAIContentPart(p *ChatCompletionContentPart) (*UnifiedContentPart
 			Filename: p.File.Filename,
 		}, nil
 	default:
-		return nil, fmt.Errorf("unknown content part type: %q", p.Type)
+		return nil, ierr.Newf(ierr.ErrDTOConvert, "unknown content part type: %q", p.Type)
 	}
 }
 
@@ -212,7 +212,7 @@ func FromAnthropicMessage(msg *AnthropicMessageParam) (*UnifiedMessage, error) {
 
 	if len(msg.Content.Blocks) > 0 {
 		if err := extractAnthropicBlocks(um, msg.Content.Blocks); err != nil {
-			return nil, fmt.Errorf("extract anthropic blocks from request: %w", err)
+			return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "extract anthropic blocks from request")
 		}
 		return um, nil
 	}
@@ -238,7 +238,7 @@ func FromAnthropicResponse(msg *AnthropicMessage) (*UnifiedMessage, error) {
 	}
 
 	if err := extractAnthropicBlocks(um, msg.Content); err != nil {
-		return nil, fmt.Errorf("extract anthropic blocks from response: %w", err)
+		return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "extract anthropic blocks from response")
 	}
 	return um, nil
 }
@@ -274,7 +274,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 		case "tool_use", "server_tool_use":
 			args, err := sonic.MarshalString(block.Input)
 			if err != nil {
-				return fmt.Errorf("marshal tool_use input for block[%d]: %w", i, err)
+				return ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
 			}
 			toolCalls = append(toolCalls, &UnifiedToolCall{
 				ID:        block.ID,
@@ -308,7 +308,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 			continue
 
 		default:
-			return fmt.Errorf("unknown anthropic content block type: %q at block[%d]", block.Type, i)
+			return ierr.Newf(ierr.ErrDTOConvert, "unknown anthropic content block type: %q at block[%d]", block.Type, i)
 		}
 	}
 

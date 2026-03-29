@@ -4,10 +4,10 @@
 package jwt
 
 import (
-	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
 // Claims 鉴权结构体
@@ -63,7 +63,7 @@ func (s *tokenSigner) EncodeToken(userID uint) (token string, err error) {
 func (s *tokenSigner) DecodeToken(tokenString string) (userID uint, err error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
+			return nil, ierr.New(ierr.ErrJWTDecode, "unexpected signing method")
 		}
 		return []byte(s.JwtTokenSecret), nil
 	})
@@ -74,7 +74,7 @@ func (s *tokenSigner) DecodeToken(tokenString string) (userID uint, err error) {
 	claims, ok := token.Claims.(*Claims)
 
 	if !ok || !token.Valid {
-		err = errors.New("token is invalid")
+		err = ierr.New(ierr.ErrJWTDecode, "token is invalid")
 		return
 	}
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -55,20 +56,20 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		tokenString = strings.TrimSpace(tokenString)
 
 		if tokenString == "" {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrUnauthorized))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
 		}
 
 		keyToName := apiKeyIndex.Load()
 		if keyToName == nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] API key index not initialized")
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrInternalError))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
 			return
 		}
 
 		name, ok := (*keyToName)[tokenString]
 		if !ok {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrUnauthorized))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
 		}
 

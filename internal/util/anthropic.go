@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
 )
@@ -95,7 +96,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 		case "message_start":
 			var payload dto.AnthropicSSEMessageStart
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, fmt.Errorf("unmarshal message_start: %w", err)
+				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_start")
 			}
 			if payload.Message != nil {
 				msg.ID = payload.Message.ID
@@ -108,7 +109,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 		case "content_block_start":
 			var payload dto.AnthropicSSEContentBlockStart
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, fmt.Errorf("unmarshal content_block_start: %w", err)
+				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_start")
 			}
 			bs := &blockState{
 				block: payload.ContentBlock,
@@ -119,11 +120,11 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 		case "content_block_delta":
 			var payload dto.AnthropicSSEContentBlockDelta
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, fmt.Errorf("unmarshal content_block_delta: %w", err)
+				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_delta")
 			}
 			bs, ok := blocks[payload.Index]
 			if !ok {
-				return nil, fmt.Errorf("content_block_delta for unknown index %d", payload.Index)
+				return nil, ierr.Newf(ierr.ErrSSEParse, "content_block_delta for unknown index %d", payload.Index)
 			}
 			switch payload.Delta.Type {
 			case "text_delta":
@@ -141,7 +142,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 		case "message_delta":
 			var payload dto.AnthropicSSEMessageDelta
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, fmt.Errorf("unmarshal message_delta: %w", err)
+				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_delta")
 			}
 			msg.StopReason = payload.Delta.StopReason
 			msg.StopSequence = payload.Delta.StopSequence
@@ -153,7 +154,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 			// 无需处理
 
 		default:
-			return nil, fmt.Errorf("unknown SSE event type: %q", event.Event)
+			return nil, ierr.Newf(ierr.ErrSSEUnknownEvent, "unknown SSE event type: %q", event.Event)
 		}
 	}
 
@@ -182,7 +183,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 				inputJSON := strings.Join(bs.inputParts, "")
 				var input map[string]any
 				if err := sonic.UnmarshalString(inputJSON, &input); err != nil {
-					return nil, fmt.Errorf("unmarshal accumulated tool_use input for block[%d]: %w", idx, err)
+					return nil, ierr.Wrapf(ierr.ErrSSEParse, err, "unmarshal accumulated tool_use input for block[%d]", idx)
 				}
 				block.Input = input
 			}

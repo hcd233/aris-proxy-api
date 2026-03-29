@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -33,17 +34,17 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		tokenString := ctx.Header("Authorization")
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), "Bearer "))
 		if tokenString == "" {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrUnauthorized))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
 		}
 		userID, err := accessTokenSvc.DecodeToken(tokenString)
 		if err != nil {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrUnauthorized))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError()))
 			return
 		}
 		user, err := dao.Get(db, &model.User{ID: userID}, []string{"id", "name", "permission"})
 		if err != nil {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrInternalError))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
 			return
 		}
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, user.ID)

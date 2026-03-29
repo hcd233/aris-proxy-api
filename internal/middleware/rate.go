@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -118,7 +119,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 				keyValue = key
 				value = fmt.Sprintf("%v", ctxValue)
 			} else {
-				lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrUnauthorized))
+				lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 				return
 			}
 		}
@@ -135,7 +136,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 		).StringSlice()
 		if err != nil {
 			logger.Error("[TokenBucketRateLimiter] Failed to execute rate limit script", zap.Error(err))
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrInternalError))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
 			return
 		}
 
@@ -155,7 +156,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 			ctx.SetHeader("X-RateLimit-Limit", limitStr)
 			ctx.SetHeader("X-RateLimit-Remaining", "0")
 			ctx.SetHeader("Retry-After", strconv.Itoa(retryAfterSeconds))
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), constant.ErrTooManyRequests))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError()))
 			return
 		}
 

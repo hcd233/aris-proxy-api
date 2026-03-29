@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
@@ -43,7 +44,7 @@ func CloseDatabase() error {
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		return fmt.Errorf("get underlying sql.DB: %w", err)
+		return ierr.Wrap(ierr.ErrDBClose, err, "get underlying sql.DB")
 	}
 	return sqlDB.Close()
 }
