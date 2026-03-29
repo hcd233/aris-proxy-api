@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/api"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -26,9 +27,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
-
-// shutdownTimeout 优雅关闭的最大超时时间
-const shutdownTimeout = 60 * time.Second
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
@@ -138,7 +136,7 @@ func handleConfigReload() {
 //	@author centonhuang
 //	@update 2026-03-20 10:00:00
 func gracefulShutdown(app *fiber.App) {
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), constant.ShutdownTimeout)
 	defer cancel()
 
 	done := make(chan struct{})
@@ -178,7 +176,7 @@ func gracefulShutdown(app *fiber.App) {
 	case <-done:
 		// 正常关闭完成
 	case <-ctx.Done():
-		logger.Logger().Error("[Server] Graceful shutdown timed out, forcing exit", zap.Duration("timeout", shutdownTimeout))
+		logger.Logger().Error("[Server] Graceful shutdown timed out, forcing exit", zap.Duration("timeout", constant.ShutdownTimeout))
 	}
 }
 

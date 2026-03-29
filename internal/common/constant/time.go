@@ -16,4 +16,7 @@ const (
 	// IdleTimeout Fiber应用空闲超时时间
 	//	@update 2025-11-19 16:00:00
 	IdleTimeout = 2 * time.Minute
+
+	// ShutdownTimeout 优雅关闭的最大超时时间
+	ShutdownTimeout = 60 * time.Second
 )
