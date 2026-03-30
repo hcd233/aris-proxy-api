@@ -1,7 +1,8 @@
 FROM golang:1.25.1-alpine3.22 AS builder
 
-ENV GO111MODULE=on
 ENV CGO_ENABLED=0
+
+RUN apk add --no-cache upx
 
 WORKDIR /app
 
@@ -17,17 +18,16 @@ COPY main.go ./
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -ldflags="-s -w" -o /go/bin/aris-proxy-api
+    go build -trimpath -ldflags="-s -w" -o /go/bin/aris-proxy-api \
+    && upx --best --lzma /go/bin/aris-proxy-api
 
+# 运行阶段：使用最小基础镜像 + curl 调试工具
 FROM alpine:3.22
 
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata curl \
+    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
-RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 ENV TZ=Asia/Shanghai
-
-# RUN ln -sf /usr/share/zoneinfo/UTC /etc/localtime
-# ENV TZ=UTC
 
 WORKDIR /app
 
@@ -35,7 +35,5 @@ COPY --from=builder /go/bin/aris-proxy-api /app/aris-proxy-api
 
 EXPOSE 8080
 
-# CMD ["/app/aris-proxy-api", "server", "start", "--host", "0.0.0.0", "--port", "8080"]
-
-# docker buildx build --platform linux/amd64 -t aris-proxy-api:latest .
+# docker buildx build --platform linux/amd64 -t aris-proxy-api:latest -f docker/dockerfile .
 # docker run -d -p 8080:8080 --env-file api.env --name aris-proxy-api -t aris-proxy-api:latest /app/aris-proxy-api server start --host 0.0.0.0 --port 8080

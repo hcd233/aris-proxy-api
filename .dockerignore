@@ -1,0 +1,36 @@
+# VCS
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# CI/CD & Docs
+.github/
+docs/
+*.md
+LICENSE
+
+# Docker
+docker/
+
+# Tests & Scripts
+test/
+script/
+
+# Config templates & env
+env/
+config/
+
+# Build artifacts
+aris-proxy-api
+coverage.out
+coverage.html
+
+# CodeBuddy
+.codebuddy/
+CODEBUDDY.md
+CLAUDE.md
