@@ -23,6 +23,7 @@ type isSubArrayCase struct {
 type sessionFixture struct {
 	ID         uint   `json:"id"`
 	MessageIDs []uint `json:"message_ids"`
+	ToolIDs    []uint `json:"tool_ids"`
 }
 
 // findRedundantSessionsCase represents a test case for FindRedundantSessions
@@ -91,6 +92,7 @@ func toDBSessions(fixtures []sessionFixture) []*dbmodel.Session {
 	for _, f := range fixtures {
 		s := &dbmodel.Session{
 			MessageIDs: f.MessageIDs,
+			ToolIDs:    f.ToolIDs,
 		}
 		s.ID = f.ID
 		sessions = append(sessions, s)
@@ -129,6 +131,70 @@ func TestIsSubArray(t *testing.T) {
 
 			if got != tc.Expected {
 				t.Errorf("IsSubArray(%v, %v) = %v, want %v", tc.Sub, tc.Arr, got, tc.Expected)
+			}
+		})
+	}
+}
+
+// TestFindRedundantSessionsWithMerge tests the tool_ids merging functionality
+func TestFindRedundantSessionsWithMerge(t *testing.T) {
+	allCases := loadFindRedundantSessionsCases(t)
+
+	testCases := []struct {
+		name                  string
+		expectedMergedToolIDs map[uint][]uint // session ID -> expected merged tool IDs
+	}{
+		{
+			name: "merge_tool_ids",
+			expectedMergedToolIDs: map[uint][]uint{
+				1: {1, 2, 3}, // Session 1 should have tool_ids [1, 2, 3] (union of [1,2] and [2,3])
+			},
+		},
+		{
+			name: "merge_multiple_tool_ids",
+			expectedMergedToolIDs: map[uint][]uint{
+				1: {1, 2, 3}, // Session 1 should have tool_ids [1, 2, 3] (union of [1], [2], and [3])
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		fixtureCase := findFindRedundantSessionsCase(t, allCases, tc.name)
+
+		t.Run(tc.name, func(t *testing.T) {
+			sessions := toDBSessions(fixtureCase.Sessions)
+			result := cron.FindRedundantSessionsWithMerge(sessions)
+
+			t.Logf("description: %s", fixtureCase.Description)
+			t.Logf("merge mapping: %v", result.MergeMapping)
+
+			// Check that the merge mapping contains the expected tool IDs
+			for sessionID, expectedToolIDs := range tc.expectedMergedToolIDs {
+				toolIDSet, exists := result.MergeMapping[sessionID]
+				if !exists {
+					t.Errorf("Expected merge mapping for session %d, but not found", sessionID)
+					continue
+				}
+
+				// Convert set to sorted slice
+				actualToolIDs := make([]uint, 0, len(toolIDSet))
+				for tid := range toolIDSet {
+					actualToolIDs = append(actualToolIDs, tid)
+				}
+				sort.Slice(actualToolIDs, func(i, j int) bool { return actualToolIDs[i] < actualToolIDs[j] })
+
+				if len(actualToolIDs) != len(expectedToolIDs) {
+					t.Errorf("Session %d: expected %d tool IDs, got %d; got=%v, want=%v",
+						sessionID, len(expectedToolIDs), len(actualToolIDs), actualToolIDs, expectedToolIDs)
+					continue
+				}
+
+				for i := range actualToolIDs {
+					if actualToolIDs[i] != expectedToolIDs[i] {
+						t.Errorf("Session %d: tool ID mismatch at index %d: got %d, want %d; full got=%v, want=%v",
+							sessionID, i, actualToolIDs[i], expectedToolIDs[i], actualToolIDs, expectedToolIDs)
+					}
+				}
 			}
 		})
 	}

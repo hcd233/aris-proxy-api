@@ -79,13 +79,13 @@ func (c *SessionDeduplicateCron) Start() error {
 //
 //	@receiver c *SessionDeduplicateCron
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-03-30 10:00:00
 func (c *SessionDeduplicateCron) deduplicate() {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
 	log := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
 
-	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, []string{"id", "message_ids"})
+	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, []string{"id", "message_ids", "tool_ids"})
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to load sessions", zap.Error(err))
 		return
@@ -96,13 +96,42 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		return
 	}
 
-	redundantIDs := FindRedundantSessions(sessions)
-	if len(redundantIDs) == 0 {
+	mergeResult := FindRedundantSessionsWithMerge(sessions)
+	if len(mergeResult.RedundantIDs) == 0 {
 		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", len(sessions)))
 		return
 	}
 
-	err = c.sessionDAO.BatchDelete(db, lo.Map(redundantIDs, func(id uint, _ int) *dbmodel.Session {
+	// 合并ToolIDs到保留的Session
+	mergedCount := 0
+	for sessionID, toolIDSet := range mergeResult.MergeMapping {
+		if len(toolIDSet) == 0 {
+			continue
+		}
+
+		// 将集合转换为排序后的切片
+		mergedToolIDs := make([]uint, 0, len(toolIDSet))
+		for tid := range toolIDSet {
+			mergedToolIDs = append(mergedToolIDs, tid)
+		}
+		sort.Slice(mergedToolIDs, func(i, j int) bool {
+			return mergedToolIDs[i] < mergedToolIDs[j]
+		})
+
+		// 更新Session的ToolIDs
+		err := c.sessionDAO.Update(db, &dbmodel.Session{ID: sessionID}, map[string]interface{}{
+			"tool_ids": mergedToolIDs,
+		})
+		if err != nil {
+			log.Error("[SessionDeduplicateCron] Failed to update session tool_ids",
+				zap.Uint("sessionID", sessionID),
+				zap.Error(err))
+			continue
+		}
+		mergedCount++
+	}
+
+	err = c.sessionDAO.BatchDelete(db, lo.Map(mergeResult.RedundantIDs, func(id uint, _ int) *dbmodel.Session {
 		return &dbmodel.Session{ID: id}
 	}))
 	if err != nil {
@@ -112,10 +141,22 @@ func (c *SessionDeduplicateCron) deduplicate() {
 
 	log.Info("[SessionDeduplicateCron] Deduplication completed",
 		zap.Int("total", len(sessions)),
-		zap.Int("deleted", len(redundantIDs)))
+		zap.Int("deleted", len(mergeResult.RedundantIDs)),
+		zap.Int("merged", mergedCount))
 }
 
-// FindRedundantSessions 查找MessageIDs被其他Session完全包含（子数组）的冗余Session
+// MergeResult 表示Session去重后的合并结果
+//
+//	@author centonhuang
+//	@update 2026-03-30 10:00:00
+type MergeResult struct {
+	// RedundantIDs 需要删除的Session ID列表
+	RedundantIDs []uint
+	// MergeMapping 长Session ID -> 需要合并的ToolIDs（来自被删除的短Session）
+	MergeMapping map[uint]map[uint]struct{}
+}
+
+// FindRedundantSessionsWithMerge 查找MessageIDs被其他Session完全包含（子数组）的冗余Session，并返回ToolIDs合并信息
 //
 // 算法：
 //
@@ -125,19 +166,21 @@ func (c *SessionDeduplicateCron) deduplicate() {
 //
 //  3. 短Session的MessageIDs如果是某个长Session的连续子数组，则标记为冗余
 //
+//  4. 将被标记为冗余的Session的ToolIDs与保留的Session取并集
+//
 //     @param sessions []*dbmodel.Session
-//     @return []uint 需要删除的Session ID列表
+//     @return MergeResult 包含需要删除的Session ID和ToolIDs合并映射
 //     @author centonhuang
-//     @update 2026-03-19 10:00:00
-func FindRedundantSessions(sessions []*dbmodel.Session) []uint {
-
+//     @update 2026-03-30 10:00:00
+func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
 	type sessionEntry struct {
 		id         uint
 		messageIDs []uint
+		toolIDs    []uint
 	}
 
 	entries := lo.Map(sessions, func(s *dbmodel.Session, _ int) sessionEntry {
-		return sessionEntry{id: s.ID, messageIDs: s.MessageIDs}
+		return sessionEntry{id: s.ID, messageIDs: s.MessageIDs, toolIDs: s.ToolIDs}
 	})
 
 	// 按MessageIDs长度降序排序，长度相同按ID升序（保留较早的）
@@ -155,6 +198,8 @@ func FindRedundantSessions(sessions []*dbmodel.Session) []uint {
 
 	redundantIDs := make([]uint, 0)
 	redundantSet := make(map[uint]struct{})
+	// mergeMapping: 长Session ID -> 需要合并的ToolID集合
+	mergeMapping := make(map[uint]map[uint]struct{})
 
 	// 对每个Session，检查它是否是已知非冗余Session的子数组
 	// 从长到短遍历，短的只需要和比它长的比较
@@ -168,27 +213,66 @@ func FindRedundantSessions(sessions []*dbmodel.Session) []uint {
 				continue
 			}
 
-			shorter := entries[j].messageIDs
-			longer := entries[i].messageIDs
+			shorter := entries[j]
+			longer := entries[i]
+
+			isRedundant := false
 
 			// 长度相同时检查完全相等（保留ID较小的，即entries[i]）
-			if len(shorter) == len(longer) {
-				if isEqualSlice(shorter, longer) {
-					redundantSet[entries[j].id] = struct{}{}
-					redundantIDs = append(redundantIDs, entries[j].id)
+			if len(shorter.messageIDs) == len(longer.messageIDs) {
+				if isEqualSlice(shorter.messageIDs, longer.messageIDs) {
+					isRedundant = true
 				}
-				continue
+			} else if IsSubArray(shorter.messageIDs, longer.messageIDs) {
+				// shorter 比 longer 短，检查 shorter 是否是 longer 的连续子数组
+				isRedundant = true
 			}
 
-			// shorter 比 longer 短，检查 shorter 是否是 longer 的连续子数组
-			if IsSubArray(shorter, longer) {
-				redundantSet[entries[j].id] = struct{}{}
-				redundantIDs = append(redundantIDs, entries[j].id)
+			if isRedundant {
+				redundantSet[shorter.id] = struct{}{}
+				redundantIDs = append(redundantIDs, shorter.id)
+
+				// 将短Session的ToolIDs合并到长Session
+				if len(shorter.toolIDs) > 0 {
+					if mergeMapping[longer.id] == nil {
+						mergeMapping[longer.id] = make(map[uint]struct{})
+						// 先把长Session自己的ToolIDs加入集合
+						for _, tid := range longer.toolIDs {
+							mergeMapping[longer.id][tid] = struct{}{}
+						}
+					}
+					// 合并短Session的ToolIDs
+					for _, tid := range shorter.toolIDs {
+						mergeMapping[longer.id][tid] = struct{}{}
+					}
+				}
 			}
 		}
 	}
 
-	return redundantIDs
+	return MergeResult{
+		RedundantIDs: redundantIDs,
+		MergeMapping: mergeMapping,
+	}
+}
+
+// FindRedundantSessions 查找MessageIDs被其他Session完全包含（子数组）的冗余Session
+//
+// 算法：
+//
+//  1. 按MessageIDs长度降序排序，长度相同则按ID升序（保留较早的Session）
+//
+//  2. 对每个Session，构建首元素索引加速查找
+//
+//  3. 短Session的MessageIDs如果是某个长Session的连续子数组，则标记为冗余
+//
+//     @param sessions []*dbmodel.Session
+//     @return []uint 需要删除的Session ID列表
+//     @author centonhuang
+//     @update 2026-03-19 10:00:00
+func FindRedundantSessions(sessions []*dbmodel.Session) []uint {
+	result := FindRedundantSessionsWithMerge(sessions)
+	return result.RedundantIDs
 }
 
 // IsSubArray 判断 sub 是否是 arr 的连续子数组

@@ -111,5 +111,24 @@
             {"id": 7, "message_ids": [1, 2, 3]}
         ],
         "expected_redundant_ids": [5, 7]
+    },
+    {
+        "name": "merge_tool_ids",
+        "description": "When session B is a subarray of A, B's tool_ids should be merged into A",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5], "tool_ids": [1, 2]},
+            {"id": 2, "message_ids": [1, 2, 3], "tool_ids": [2, 3]}
+        ],
+        "expected_redundant_ids": [2]
+    },
+    {
+        "name": "merge_multiple_tool_ids",
+        "description": "Multiple redundant sessions' tool_ids should all be merged into the parent session",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5], "tool_ids": [1]},
+            {"id": 2, "message_ids": [1, 2, 3], "tool_ids": [2]},
+            {"id": 3, "message_ids": [3, 4, 5], "tool_ids": [3]}
+        ],
+        "expected_redundant_ids": [2, 3]
     }
 ]
