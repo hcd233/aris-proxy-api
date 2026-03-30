@@ -19,4 +19,34 @@ const (
 
 	// ShutdownTimeout 优雅关闭的最大超时时间
 	ShutdownTimeout = 60 * time.Second
+
+	// HTTPClientTimeout HTTP客户端总超时时间（用于LLM请求）
+	//	@author centonhuang
+	//	@update 2026-03-31 10:00:00
+	HTTPClientTimeout = 5 * time.Minute
+
+	// HTTPDialTimeout TCP连接建立超时时间
+	//	@author centonhuang
+	//	@update 2026-03-31 10:00:00
+	HTTPDialTimeout = 10 * time.Second
+
+	// HTTPKeepAlive TCP连接保活间隔
+	//	@author centonhuang
+	//	@update 2026-03-31 10:00:00
+	HTTPKeepAlive = 30 * time.Second
+
+	// HTTPTLSHandshakeTimeout TLS握手超时时间
+	//	@author centonhuang
+	//	@update 2026-03-31 10:00:00
+	HTTPTLSHandshakeTimeout = 10 * time.Second
+
+	// HTTPResponseHeaderTimeout 等待响应头超时时间
+	//	@author centonhuang
+	//	@update 2026-03-31 10:00:00
+	HTTPResponseHeaderTimeout = 30 * time.Second
+
+	// HTTPIdleConnTimeout 空闲连接回收时间
+	//	@author centonhuang
+	//	@update 2026-03-31 10:00:00
+	HTTPIdleConnTimeout = 90 * time.Second
 )

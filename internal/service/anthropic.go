@@ -317,7 +317,7 @@ func (s *anthropicService) storeAnthropicMessages(
 
 	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
-		APIKeyName:   ctx.Value(constant.CtxKeyUserName).(string),
+		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
 		Model:        upstreamModel,
 		Messages:     unifiedMessages,
 		Tools:        unifiedTools,

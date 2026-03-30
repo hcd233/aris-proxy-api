@@ -8,8 +8,8 @@ import (
 
 // CopyContextValues 复制上下文值
 //
-//	@param src context.Context
-//	@return dst context.Context
+//	param src context.Context
+//	return dst context.Context
 //	@author centonhuang
 //	@update 2026-03-29 10:00:00
 func CopyContextValues(src context.Context) (dst context.Context) {
@@ -21,9 +21,9 @@ func CopyContextValues(src context.Context) (dst context.Context) {
 
 // CtxValueString 安全获取上下文中的字符串值
 //
-//	@param ctx context.Context
-//	@param key string
-//	@return string
+//	param ctx context.Context
+//	param key string
+//	return string
 //	@author centonhuang
 //	@update 2026-03-29 10:00:00
 func CtxValueString(ctx context.Context, key string) string {
@@ -33,4 +33,25 @@ func CtxValueString(ctx context.Context, key string) string {
 		}
 	}
 	return ""
+}
+
+// CtxValueUint 安全获取上下文中的uint值
+//
+//	param ctx context.Context
+//	param key string
+//	return uint
+//	@author centonhuang
+//	@update 2026-03-31 10:00:00
+func CtxValueUint(ctx context.Context, key string) uint {
+	if v := ctx.Value(key); v != nil {
+		switch n := v.(type) {
+		case uint:
+			return n
+		case int:
+			if n >= 0 {
+				return uint(n)
+			}
+		}
+	}
+	return 0
 }

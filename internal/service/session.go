@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -59,7 +60,7 @@ func NewSessionService() SessionService {
 func (s *sessionService) ListSessions(ctx context.Context, req *dto.ListSessionsReq) (*dto.ListSessionsRsp, error) {
 	rsp := &dto.ListSessionsRsp{}
 
-	apiKeyName := ctx.Value(constant.CtxKeyUserName).(string)
+	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyUserName)
 
 	logger := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
@@ -112,7 +113,7 @@ func (s *sessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 func (s *sessionService) GetSession(ctx context.Context, req *dto.GetSessionReq) (*dto.GetSessionRsp, error) {
 	rsp := &dto.GetSessionRsp{}
 
-	apiKeyName := ctx.Value(constant.CtxKeyUserName).(string)
+	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyUserName)
 
 	log := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)

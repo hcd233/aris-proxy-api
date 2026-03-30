@@ -25,7 +25,7 @@ import (
 //	@author centonhuang
 //	@update 2025-11-02 04:17:04
 func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
-	dao := dao.GetUserDAO()
+	userDAO := dao.GetUserDAO()
 	accessTokenSvc := jwt.GetAccessTokenSigner()
 
 	return func(ctx huma.Context, next func(huma.Context)) {
@@ -42,7 +42,7 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError()))
 			return
 		}
-		user, err := dao.Get(db, &model.User{ID: userID}, []string{"id", "name", "permission"})
+		user, err := userDAO.Get(db, &model.User{ID: userID}, []string{"id", "name", "permission"})
 		if err != nil {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
 			return

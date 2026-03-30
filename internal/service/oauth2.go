@@ -8,7 +8,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
@@ -75,12 +74,27 @@ func NewGoogleOauth2Service() Oauth2Service {
 func (s *oauth2Service) Login(ctx context.Context, req *dto.LoginReq) (rsp *dto.LoginResp, err error) {
 	rsp = &dto.LoginResp{}
 
-	logger := logger.WithCtx(ctx)
+	log := logger.WithCtx(ctx)
 
-	url := s.platform.GetAuthURL()
+	// 生成加密安全的随机state
+	state, err := oauth2.GenerateOAuth2State()
+	if err != nil {
+		log.Error("[Oauth2Service] Failed to generate state", zap.Error(err))
+		rsp.Error = ierr.ErrInternal.BizError()
+		return rsp, nil
+	}
+
+	// 使用类型断言获取带state的URL
+	var url string
+	switch p := s.platform.(type) {
+	case interface{ GetAuthURLWithState(string) string }:
+		url = p.GetAuthURLWithState(state)
+	default:
+		url = p.GetAuthURL()
+	}
 	rsp.RedirectURL = url
 
-	logger.Info("[Oauth2Service] login", zap.String("platform", req.Platform), zap.String("redirectURL", url))
+	log.Info("[Oauth2Service] login", zap.String("platform", req.Platform), zap.String("redirectURL", url))
 
 	return rsp, nil
 }
@@ -100,25 +114,22 @@ func (s *oauth2Service) Callback(ctx context.Context, req *dto.CallbackReq) (*dt
 	logger := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
 
-	if req.Body.State != config.Oauth2StateString {
-		logger.Error("[Oauth2Service] Invalid state",
+	// 验证state，防止CSRF攻击
+	if !oauth2.VerifyOAuth2State(req.Body.State) {
+		logger.Error("[Oauth2Service] Invalid or expired state",
 			zap.String("platform", req.Body.Platform),
-			zap.String("state", req.Body.State),
-			zap.String("expectedState", config.Oauth2StateString))
+			zap.String("state", req.Body.State))
 		rsp.Error = ierr.ErrUnauthorized.BizError()
 		return rsp, nil
 	}
 
 	logger.Info("[Oauth2Service] Exchanging token",
-		zap.String("platform", req.Body.Platform),
-		zap.String("code", req.Body.Code),
-		zap.String("state", req.Body.State))
+		zap.String("platform", req.Body.Platform))
 
 	token, err := s.platform.ExchangeToken(ctx, req.Body.Code)
 	if err != nil {
 		logger.Error("[Oauth2Service] Failed to exchange token",
 			zap.String("platform", req.Body.Platform),
-			zap.String("code", req.Body.Code),
 			zap.Error(err))
 		rsp.Error = ierr.ErrOAuth2Exchange.BizError()
 		return rsp, nil

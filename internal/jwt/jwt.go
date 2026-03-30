@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
@@ -46,6 +47,8 @@ func (s *tokenSigner) EncodeToken(userID uint) (token string, err error) {
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(s.JwtTokenExpired)),
+			Issuer:    constant.ProjectName,
+			Audience:  jwt.ClaimStrings{constant.ProjectName},
 		},
 	}
 
@@ -66,7 +69,7 @@ func (s *tokenSigner) DecodeToken(tokenString string) (userID uint, err error) {
 			return nil, ierr.New(ierr.ErrJWTDecode, "unexpected signing method")
 		}
 		return []byte(s.JwtTokenSecret), nil
-	})
+	}, jwt.WithIssuer(constant.ProjectName), jwt.WithAudience(constant.ProjectName))
 	if err != nil {
 		return
 	}

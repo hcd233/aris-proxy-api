@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -52,7 +53,7 @@ func NewUserService() UserService {
 func (s *userService) GetCurUser(ctx context.Context, _ *dto.EmptyReq) (*dto.GetCurUserRsp, error) {
 	rsp := &dto.GetCurUserRsp{}
 
-	userID := ctx.Value(constant.CtxKeyUserID).(uint)
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	logger := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
@@ -94,7 +95,7 @@ func (s *userService) GetCurUser(ctx context.Context, _ *dto.EmptyReq) (*dto.Get
 func (s *userService) UpdateUser(ctx context.Context, req *dto.UpdateUserReq) (*dto.EmptyRsp, error) {
 	rsp := &dto.EmptyRsp{}
 
-	userID := ctx.Value(constant.CtxKeyUserID).(uint)
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	logger := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)

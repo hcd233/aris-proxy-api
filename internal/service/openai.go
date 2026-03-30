@@ -42,18 +42,18 @@ import (
 //	@author centonhuang
 //	@update 2026-03-20 10:00:00
 var upstreamHTTPClient = &http.Client{
-	Timeout: 5 * time.Minute,
+	Timeout: constant.HTTPClientTimeout,
 	Transport: &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout:   10 * time.Second,
-			KeepAlive: 30 * time.Second,
+			Timeout:   constant.HTTPDialTimeout,
+			KeepAlive: constant.HTTPKeepAlive,
 		}).DialContext,
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: 30 * time.Second,
-		MaxIdleConns:          100,
-		MaxIdleConnsPerHost:   20,
-		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   constant.HTTPTLSHandshakeTimeout,
+		ResponseHeaderTimeout: constant.HTTPResponseHeaderTimeout,
+		MaxIdleConns:          constant.HTTPMaxIdleConns,
+		MaxIdleConnsPerHost:   constant.HTTPMaxIdleConnsPerHost,
+		IdleConnTimeout:       constant.HTTPIdleConnTimeout,
 		ForceAttemptHTTP2:     true,
 	},
 }
@@ -330,7 +330,7 @@ func (s *openAIService) storeOpenAIMessages(
 
 	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
-		APIKeyName:   ctx.Value(constant.CtxKeyUserName).(string),
+		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
 		Model:        upstreamModel,
 		Messages:     unifiedMessages,
 		Tools:        unifiedTools,

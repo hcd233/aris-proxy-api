@@ -93,6 +93,10 @@ func (p *googlePlatform) GetAuthURL() string {
 	return p.oauth2Config.AuthCodeURL(config.Oauth2StateString, oauth2.AccessTypeOffline)
 }
 
+func (p *googlePlatform) GetAuthURLWithState(state string) string {
+	return p.oauth2Config.AuthCodeURL(state, oauth2.AccessTypeOffline)
+}
+
 func (p *googlePlatform) ExchangeToken(ctx context.Context, code string) (*oauth2.Token, error) {
 	logger := logger.WithCtx(ctx)
 

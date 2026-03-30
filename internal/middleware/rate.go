@@ -146,7 +146,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 
 		rejected := result[1] == "1"
 		if rejected {
-			logger.Error("[TokenBucketRateLimiter] Rate limit reached",
+			logger.Warn("[TokenBucketRateLimiter] Rate limit reached",
 				zap.String("serviceName", serviceName),
 				zap.String("key", keyValue),
 				zap.String("value", value),
