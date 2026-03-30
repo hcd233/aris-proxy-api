@@ -45,8 +45,8 @@ func NewSummarizer() (*Summarizer, error) {
 
 	agentConfig := &adk.ChatModelAgentConfig{
 		Name:        "SessionSummarizer",
-		Description: "An agent that summarizes conversation sessions into 5-10 characters.",
-		Instruction: "你是一个对话总结助手。请将以下对话内容总结为5-10个字的简短摘要，捕捉对话的核心主题。只输出总结文字，不要添加任何解释或标点。",
+		Description: "将对话会话总结为5-10个中文字符的摘要",
+		Instruction: "你是一个对话总结助手。请严格遵循以下规则：\n1. 将对话内容总结为5-10个中文字的简短摘要\n2. 必须使用中文输出，禁止使用英文或其他语言\n3. 捕捉对话的核心主题\n4. 只输出总结文字，不要添加任何解释、标点或前缀",
 		Model:       chatModel,
 	}
 
