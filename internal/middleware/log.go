@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -11,19 +12,70 @@ import (
 	"go.uber.org/zap"
 )
 
+// LogSamplingRule 日志采样规则
+//
+//	@author centonhuang
+//	@update 2026-03-30 10:00:00
+type LogSamplingRule struct {
+	Path     string        // 需要采样的路径
+	Interval time.Duration // 采样间隔，在此时间内最多打印一次日志
+}
+
+// LogMiddlewareConfig 日志中间件配置
+//
+//	@author centonhuang
+//	@update 2026-03-30 10:00:00
+type LogMiddlewareConfig struct {
+	SamplingRules []LogSamplingRule // 路径采样规则列表
+}
+
+// logSampler 日志采样器，记录每个路径的上次打印时间
+type logSampler struct {
+	mu       sync.Mutex
+	lastLogs map[string]time.Time
+}
+
+func (s *logSampler) shouldLog(path string, interval time.Duration) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	if last, ok := s.lastLogs[path]; ok && now.Sub(last) < interval {
+		return false
+	}
+	s.lastLogs[path] = now
+	return true
+}
+
 // LogMiddleware 日志中间件
 //
-//	param logger *zap.Logger
-//	return fiber.Handler
-//	author centonhuang
-//	update 2025-01-05 21:21:46
-func LogMiddleware() fiber.Handler {
+//	@param cfg LogMiddlewareConfig
+//	@return fiber.Handler
+//	@author centonhuang
+//	@update 2026-03-30 10:00:00
+func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
+	samplingIndex := make(map[string]time.Duration, len(cfg.SamplingRules))
+	for _, rule := range cfg.SamplingRules {
+		samplingIndex[rule.Path] = rule.Interval
+	}
+
+	sampler := &logSampler{lastLogs: make(map[string]time.Time, len(cfg.SamplingRules))}
+
 	return func(c *fiber.Ctx) error {
 		start := time.Now().UTC()
 		path := c.Path()
 		query := string(c.Request().URI().QueryString())
 
 		err := c.Next()
+
+		// 对匹配采样规则的路径，按间隔控制日志频率（错误始终打印）
+		if err == nil {
+			if interval, ok := samplingIndex[path]; ok {
+				if !sampler.shouldLog(path, interval) {
+					return err
+				}
+			}
+		}
 
 		logger := logger.WithFCtx(c)
 

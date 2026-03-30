@@ -72,7 +72,12 @@ var startServerCmd = &cobra.Command{
 			middleware.CORSMiddleware(),
 			middleware.CompressMiddleware(),
 			middleware.TraceMiddleware(),
-			middleware.LogMiddleware(),
+			middleware.LogMiddleware(middleware.LogMiddlewareConfig{
+				SamplingRules: []middleware.LogSamplingRule{
+					{Path: "/health", Interval: 5 * time.Minute},
+					{Path: "/ssehealth", Interval: 5 * time.Minute},
+				},
+			}),
 		)
 
 		if config.Env != enum.EnvProduction {
