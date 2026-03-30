@@ -12,8 +12,10 @@ import (
 	openai "github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
 
@@ -35,18 +37,19 @@ func NewSummarizer() (*Summarizer, error) {
 	ctx := context.Background()
 
 	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-		Model:   config.OpenAIModel,
-		APIKey:  config.OpenAIAPIKey,
-		BaseURL: config.OpenAIBaseURL,
+		Model:     config.OpenAIModel,
+		APIKey:    config.OpenAIAPIKey,
+		BaseURL:   config.OpenAIBaseURL,
+		MaxTokens: lo.ToPtr(constant.SummarizeMaxTokens),
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	agentConfig := &adk.ChatModelAgentConfig{
-		Name:        "SessionSummarizer",
-		Description: "将对话会话总结为5-10个中文字符的摘要",
-		Instruction: "你是一个对话总结助手。请严格遵循以下规则：\n1. 将对话内容总结为5-10个中文字的简短摘要\n2. 必须使用中文输出，禁止使用英文或其他语言\n3. 捕捉对话的核心主题\n4. 只输出总结文字，不要添加任何解释、标点或前缀",
+		Name:        constant.SessionSummarizerAgentName,
+		Description: constant.SessionSummarizerAgentDescription,
+		Instruction: constant.SessionSummarizerAgentInstruction,
 		Model:       chatModel,
 	}
 
