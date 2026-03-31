@@ -616,10 +616,10 @@ type ChatCompletionRequest struct {
 	Body *ChatCompletionReq `json:"body" doc:"请求体"`
 }
 
-// ListModelsResponseBody 模型列表响应体
+// ListModelsRsp 模型列表响应体
 //
 //	@author centonhuang
-//	@update 2026-03-10 10:00:00
+//	@update 2026-03-31 21:58:01
 type ListModelsRsp struct {
 	Object string         `json:"object" doc:"对象类型: list"`
 	Data   []*OpenAIModel `json:"data" doc:"模型列表"`
