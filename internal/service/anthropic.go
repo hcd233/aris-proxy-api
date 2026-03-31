@@ -101,13 +101,13 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 	cfg := proxy.GetLLMProxyConfig()
 	modelCfg, ok := cfg.Models[req.Body.Model]
 	if !ok {
-		logger.Error("[CreateMessage] model not found", zap.String("model", req.Body.Model))
+		logger.Error("[AnthropicService] Model not found", zap.String("model", req.Body.Model))
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
 	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderAnthropic]
 	if !hasEndpoint {
-		logger.Error("[CreateMessage] model has no anthropic endpoint", zap.String("model", req.Body.Model))
+		logger.Error("[AnthropicService] Model has no anthropic endpoint", zap.String("model", req.Body.Model))
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
@@ -116,7 +116,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 
 	var bodyMap map[string]any
 	if err := sonic.Unmarshal(bodyBytes, &bodyMap); err != nil {
-		logger.Error("[CreateMessage] unmarshal body error", zap.Error(err))
+		logger.Error("[AnthropicService] Unmarshal body error", zap.Error(err))
 		return util.SendAnthropicInternalError(), nil
 	}
 
@@ -127,21 +127,21 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 
 	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
-		logger.Error("[CreateMessage] new request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		logger.Error("[AnthropicService] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendAnthropicInternalError(), nil
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
 	upstreamReq.Header.Set("x-api-key", endpoint.APIKey)
 	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
 
-	logger.Info("[CreateMessage] send upstream request", zap.String("upstreamURL", upstreamURL),
+	logger.Info("[AnthropicService] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", modelCfg.Model),
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
 	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
 	if err != nil {
-		logger.Error("[CreateMessage] send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		logger.Error("[AnthropicService] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendAnthropicInternalError(), nil
 	}
 
@@ -149,7 +149,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 	if upstreamResp.StatusCode != http.StatusOK {
 		errorBody, _ := io.ReadAll(upstreamResp.Body)
 		upstreamResp.Body.Close()
-		logger.Error("[CreateMessage] upstream returned non-200 status",
+		logger.Error("[AnthropicService] Upstream returned non-200 status",
 			zap.String("upstreamURL", upstreamURL),
 			zap.Int("statusCode", upstreamResp.StatusCode),
 			zap.String("responseBody", string(errorBody)),
@@ -216,7 +216,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 
 								fmt.Fprintf(w, "%s\n\n", line)
 								if err := w.Flush(); err != nil {
-									logger.Warn("[CreateMessage] flush sse error", zap.Error(err))
+									logger.Warn("[AnthropicService] Flush sse error", zap.Error(err))
 									return
 								}
 							}
@@ -224,7 +224,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 
 						if readErr != nil {
 							if readErr != io.EOF {
-								logger.Warn("[CreateMessage] read upstream sse error", zap.Error(readErr))
+								logger.Warn("[AnthropicService] Read upstream sse error", zap.Error(readErr))
 							}
 							break
 						}
@@ -236,11 +236,11 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 					}
 					assembledMsg, err := util.ConcatAnthropicSSEEvents(collectedEvents)
 					if err != nil {
-						logger.Error("[CreateMessage] failed to assemble SSE events", zap.Error(err))
+						logger.Error("[AnthropicService] Failed to concat SSE events", zap.Error(err))
 						return
 					}
 					if assembledMsg == nil || len(assembledMsg.Content) == 0 {
-						logger.Warn("[CreateMessage] assembled message is empty")
+						logger.Warn("[AnthropicService] Assembled message is empty")
 						return
 					}
 
@@ -276,7 +276,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 			message := &dto.AnthropicMessage{}
 			err = sonic.Unmarshal(respBody, message)
 			if err != nil {
-				logger.Warn("[CreateMessage] unmarshal upstream response error", zap.Error(err))
+				logger.Warn("[AnthropicService] Unmarshal upstream response error", zap.Error(err))
 				humaCtx.BodyWriter().Write(respBody)
 				return
 			}
@@ -302,7 +302,7 @@ func (s *anthropicService) storeAnthropicMessages(
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromAnthropicMessage(msg)
 		if err != nil {
-			logger.Error("[storeAnthropicMessages] failed to convert anthropic message", zap.Error(err))
+		logger.Error("[AnthropicService] Failed to convert anthropic message", zap.Error(err))
 			return
 		}
 		unifiedMessages = append(unifiedMessages, um)
@@ -311,7 +311,7 @@ func (s *anthropicService) storeAnthropicMessages(
 	// Convert assistant response to UnifiedMessage
 	aiMsg, err := dto.FromAnthropicResponse(assistantMsg)
 	if err != nil {
-		logger.Error("[storeAnthropicMessages] failed to convert anthropic response", zap.Error(err))
+		logger.Error("[AnthropicService] Failed to convert anthropic response", zap.Error(err))
 		return
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
@@ -359,13 +359,13 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	cfg := proxy.GetLLMProxyConfig()
 	modelCfg, ok := cfg.Models[req.Body.Model]
 	if !ok {
-		logger.Warn("[CountTokens] model not found, returning 0", zap.String("model", req.Body.Model))
+		logger.Warn("[AnthropicService] Model not found, returning 0", zap.String("model", req.Body.Model))
 		return rsp, nil
 	}
 
 	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderAnthropic]
 	if !hasEndpoint {
-		logger.Warn("[CountTokens] model has no anthropic endpoint, returning 0", zap.String("model", req.Body.Model))
+		logger.Warn("[AnthropicService] Model has no anthropic endpoint, returning 0", zap.String("model", req.Body.Model))
 		return rsp, nil
 	}
 
@@ -374,7 +374,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 
 	var bodyMap map[string]any
 	if err := sonic.Unmarshal(bodyBytes, &bodyMap); err != nil {
-		logger.Warn("[CountTokens] unmarshal body error, returning 0", zap.Error(err))
+		logger.Warn("[AnthropicService] Unmarshal body error, returning 0", zap.Error(err))
 		return rsp, nil
 	}
 
@@ -385,37 +385,37 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 
 	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
-		logger.Warn("[CountTokens] new request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		logger.Warn("[AnthropicService] New request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return rsp, nil
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
 	upstreamReq.Header.Set("x-api-key", endpoint.APIKey)
 	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
 
-	logger.Info("[CountTokens] send upstream request", zap.String("upstreamURL", upstreamURL),
+	logger.Info("[AnthropicService] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", modelCfg.Model),
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)))
 
 	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
 	if err != nil {
-		logger.Warn("[CountTokens] send http request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
+		logger.Warn("[AnthropicService] Send http request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return rsp, nil
 	}
 	defer upstreamResp.Body.Close()
 
 	respBody, err := io.ReadAll(upstreamResp.Body)
 	if err != nil {
-		logger.Warn("[CountTokens] read upstream response error, returning 0", zap.Error(err))
+		logger.Warn("[AnthropicService] Read upstream response error, returning 0", zap.Error(err))
 		return rsp, nil
 	}
 
 	if upstreamResp.StatusCode != http.StatusOK {
-		logger.Warn("[CountTokens] upstream error, returning 0", zap.Int("statusCode", upstreamResp.StatusCode), zap.String("body", string(respBody)))
+		logger.Warn("[AnthropicService] Upstream error, returning 0", zap.Int("statusCode", upstreamResp.StatusCode), zap.String("body", string(respBody)))
 		return &dto.AnthropicTokensCount{InputTokens: 0}, nil
 	}
 
 	if err := sonic.Unmarshal(respBody, rsp); err != nil {
-		logger.Warn("[CountTokens] unmarshal upstream response error, returning 0", zap.Error(err))
+		logger.Warn("[AnthropicService] Unmarshal upstream response error, returning 0", zap.Error(err))
 		return rsp, nil
 	}
 
