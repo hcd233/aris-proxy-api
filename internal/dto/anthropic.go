@@ -13,9 +13,26 @@ import (
 // CacheControl Anthropic 缓存控制
 //
 //	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//	@update 2026-03-31 10:00:00
 type CacheControl struct {
-	Type string `json:"type" doc:"缓存类型: ephemeral"`
+	Type  string `json:"type" doc:"缓存类型: ephemeral"`
+	TTL   string `json:"ttl,omitempty" doc:"缓存存活时间: 5m/1h"`
+	Scope string `json:"scope,omitempty" doc:"缓存作用域: global 等(非标准扩展字段)"`
+}
+
+// Schema 实现 huma.SchemaProvider 接口，允许额外属性透传
+func (c CacheControl) Schema(_ huma.Registry) *huma.Schema {
+	t := true
+	return &huma.Schema{
+		Type: "object",
+		Properties: map[string]*huma.Schema{
+			"type":  {Type: "string"},
+			"ttl":   {Type: "string"},
+			"scope": {Type: "string"},
+		},
+		Required:             []string{"type"},
+		AdditionalProperties: &t,
+	}
 }
 
 // ==================== Anthropic Context Management DTOs ====================
