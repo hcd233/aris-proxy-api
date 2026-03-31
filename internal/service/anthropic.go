@@ -302,7 +302,7 @@ func (s *anthropicService) storeAnthropicMessages(
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromAnthropicMessage(msg)
 		if err != nil {
-		logger.Error("[AnthropicService] Failed to convert anthropic message", zap.Error(err))
+			logger.Error("[AnthropicService] Failed to convert anthropic message", zap.Error(err))
 			return
 		}
 		unifiedMessages = append(unifiedMessages, um)
