@@ -171,8 +171,8 @@ func TestComputeMessageChecksum_DifferentToolCallIDOnMessage(t *testing.T) {
 	t.Logf("checksumA (ToolCallID=call_001): %s", checksumA)
 	t.Logf("checksumB (ToolCallID=call_999): %s", checksumB)
 
-	if checksumA != checksumB {
-		t.Errorf("ComputeMessageChecksum() should ignore ToolCallID: got %s and %s", checksumA, checksumB)
+	if checksumA == checksumB {
+		t.Errorf("ComputeMessageChecksum() should include ToolCallID: expected different checksums, both got %s", checksumA)
 	}
 }
 

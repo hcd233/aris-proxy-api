@@ -23,7 +23,7 @@ type ToolSchemaMap map[string]*dto.JSONSchemaProperty
 //   - 清除 ToolCalls 中的 ID（上游分配的标识符，不影响消息语义，
 //     且同一条消息在流式和非流式路径中可能产生不同的 ID 格式）
 //
-//   - 清除 ToolCallID（工具结果消息中引用的调用 ID，同理不影响语义）
+//   - 保留 ToolCallID（工具结果消息中引用的调用 ID，用于区分不同的工具调用结果）
 //
 //   - 移除 ToolCall arguments 中等于 schema default 的非 required 字段（需提供 toolSchemas）
 //
@@ -33,11 +33,9 @@ type ToolSchemaMap map[string]*dto.JSONSchemaProperty
 //     @param toolSchemas ToolSchemaMap 工具 Schema 映射表（可为 nil，nil 时退化为无 schema 模式）
 //     @return string
 //     @author centonhuang
-//     @update 2026-03-29 10:00:00
+//     @update 2026-04-01 10:00:00
 func ComputeMessageChecksum(msg *dto.UnifiedMessage, toolSchemas ToolSchemaMap) string {
 	normalized := *msg
-
-	normalized.ToolCallID = ""
 
 	if len(normalized.ToolCalls) > 0 {
 		cleanedCalls := make([]*dto.UnifiedToolCall, len(normalized.ToolCalls))
