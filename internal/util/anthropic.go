@@ -9,6 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
 )
 
@@ -93,7 +94,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 
 	for _, event := range events {
 		switch event.Event {
-		case "message_start":
+		case enum.AnthropicSSEEventTypeMessageStart:
 			var payload dto.AnthropicSSEMessageStart
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_start")
@@ -106,7 +107,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 				msg.Usage = payload.Message.Usage
 			}
 
-		case "content_block_start":
+		case enum.AnthropicSSEEventTypeContentBlockStart:
 			var payload dto.AnthropicSSEContentBlockStart
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_start")
@@ -117,7 +118,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 			blocks[payload.Index] = bs
 			blockOrder = append(blockOrder, payload.Index)
 
-		case "content_block_delta":
+		case enum.AnthropicSSEEventTypeContentBlockDelta:
 			var payload dto.AnthropicSSEContentBlockDelta
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_delta")
@@ -127,19 +128,19 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 				return nil, ierr.Newf(ierr.ErrSSEParse, "content_block_delta for unknown index %d", payload.Index)
 			}
 			switch payload.Delta.Type {
-			case "text_delta":
+			case enum.AnthropicDeltaTypeTextDelta:
 				bs.textParts = append(bs.textParts, payload.Delta.Text)
-			case "thinking_delta":
+			case enum.AnthropicDeltaTypeThinkingDelta:
 				bs.thinkingParts = append(bs.thinkingParts, payload.Delta.Thinking)
-			case "input_json_delta":
+			case enum.AnthropicDeltaTypeInputJSONDelta:
 				bs.inputParts = append(bs.inputParts, payload.Delta.PartialJSON)
-			case "signature_delta":
+			case enum.AnthropicDeltaTypeSignatureDelta:
 				if bs.block != nil {
 					bs.block.Signature += payload.Delta.Text
 				}
 			}
 
-		case "message_delta":
+		case enum.AnthropicSSEEventTypeMessageDelta:
 			var payload dto.AnthropicSSEMessageDelta
 			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
 				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_delta")
@@ -150,7 +151,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 				msg.Usage.OutputTokens = payload.Usage.OutputTokens
 			}
 
-		case "content_block_stop", "message_stop", "ping":
+		case enum.AnthropicSSEEventTypeContentBlockStop, enum.AnthropicSSEEventTypeMessageStop, enum.AnthropicSSEEventTypePing:
 			// 无需处理
 
 		default:
@@ -170,15 +171,15 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 
 		// 累积文本增量
 		switch block.Type {
-		case "text":
+		case enum.AnthropicContentBlockTypeText:
 			if len(bs.textParts) > 0 {
 				block.Text = strings.Join(bs.textParts, "")
 			}
-		case "thinking":
+		case enum.AnthropicContentBlockTypeThinking:
 			if len(bs.thinkingParts) > 0 {
 				block.Thinking = strings.Join(bs.thinkingParts, "")
 			}
-		case "tool_use", "server_tool_use":
+		case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
 			if len(bs.inputParts) > 0 {
 				inputJSON := strings.Join(bs.inputParts, "")
 				var input map[string]any

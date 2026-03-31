@@ -148,34 +148,34 @@ func convertOpenAIContent(mc *MessageContent) (*UnifiedContent, error) {
 // convertOpenAIContentPart 将 OpenAI ChatCompletionContentPart 转换为 UnifiedContentPart
 func convertOpenAIContentPart(p *ChatCompletionContentPart) (*UnifiedContentPart, error) {
 	switch p.Type {
-	case "text":
-		return &UnifiedContentPart{Type: "text", Text: p.Text}, nil
-	case "refusal":
-		return &UnifiedContentPart{Type: "refusal", Text: p.Refusal}, nil
-	case "image_url":
+	case enum.ContentPartTypeText:
+		return &UnifiedContentPart{Type: enum.ContentPartTypeText, Text: p.Text}, nil
+	case enum.ContentPartTypeRefusal:
+		return &UnifiedContentPart{Type: enum.ContentPartTypeRefusal, Text: p.Refusal}, nil
+	case enum.ContentPartTypeImageURL:
 		if p.ImageURL == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "image_url part missing image_url field")
 		}
 		return &UnifiedContentPart{
-			Type:        "image_url",
+			Type:        enum.ContentPartTypeImageURL,
 			ImageURL:    p.ImageURL.URL,
 			ImageDetail: string(p.ImageURL.Detail),
 		}, nil
-	case "input_audio":
+	case enum.ContentPartTypeInputAudio:
 		if p.InputAudio == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "input_audio part missing input_audio field")
 		}
 		return &UnifiedContentPart{
-			Type:        "input_audio",
+			Type:        enum.ContentPartTypeInputAudio,
 			AudioData:   p.InputAudio.Data,
 			AudioFormat: string(p.InputAudio.Format),
 		}, nil
-	case "file":
+	case enum.ContentPartTypeFile:
 		if p.File == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "file part missing file field")
 		}
 		return &UnifiedContentPart{
-			Type:     "file",
+			Type:     enum.ContentPartTypeFile,
 			FileData: p.File.FileData,
 			FileID:   p.File.FileID,
 			Filename: p.File.Filename,
@@ -261,17 +261,17 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 
 	for i, block := range blocks {
 		switch block.Type {
-		case "text":
+		case enum.AnthropicContentBlockTypeText:
 			textParts = append(textParts, block.Text)
 
-		case "thinking":
+		case enum.AnthropicContentBlockTypeThinking:
 			thinkingParts = append(thinkingParts, block.Thinking)
 
-		case "redacted_thinking":
+		case enum.AnthropicContentBlockTypeRedactedThinking:
 			// redacted_thinking 块不包含用户可见的内容，跳过（data 字段是加密数据）
 			continue
 
-		case "tool_use", "server_tool_use":
+		case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
 			args, err := sonic.MarshalString(block.Input)
 			if err != nil {
 				return ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
@@ -282,7 +282,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 				Arguments: args,
 			})
 
-		case "tool_result":
+		case enum.AnthropicContentBlockTypeToolResult:
 			toolResultID = block.ToolUseID
 			if block.Content != nil {
 				// tool_result 的 content 可以是字符串或 ContentBlock 数组
@@ -292,7 +292,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 					// 嵌套的 content blocks，提取文本
 					var nestedTexts []string
 					for _, nested := range block.Content.Blocks {
-						if nested.Type == "text" {
+						if nested.Type == enum.AnthropicContentBlockTypeText {
 							nestedTexts = append(nestedTexts, nested.Text)
 						}
 						// 其他类型（image 等）也可以在这里扩展
@@ -303,7 +303,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 				}
 			}
 
-		case "web_search_tool_result", "code_execution_tool_result", "web_fetch_tool_result":
+		case enum.AnthropicContentBlockTypeWebSearchToolResult, enum.AnthropicContentBlockTypeCodeExecutionToolResult, enum.AnthropicContentBlockTypeWebFetchToolResult:
 			// 服务器工具结果，content 中包含搜索/执行结果等，跳过详细存储
 			continue
 

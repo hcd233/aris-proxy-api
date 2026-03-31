@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -192,17 +193,17 @@ func formatMessage(msg *dto.UnifiedMessage) string {
 		}
 		for _, p := range msg.Content.Parts {
 			switch p.Type {
-			case "text":
+			case enum.ContentPartTypeText:
 				if p.Text != "" {
 					parts = append(parts, fmt.Sprintf("Content[text]: %s", p.Text))
 				}
-			case "image_url":
+			case enum.ContentPartTypeImageURL:
 				parts = append(parts, fmt.Sprintf("Content[image]: %s", p.ImageURL))
-			case "input_audio":
+			case enum.ContentPartTypeInputAudio:
 				parts = append(parts, fmt.Sprintf("Content[audio]: %s", p.AudioFormat))
-			case "file":
+			case enum.ContentPartTypeFile:
 				parts = append(parts, fmt.Sprintf("Content[file]: %s", p.Filename))
-			case "refusal":
+			case enum.ContentPartTypeRefusal:
 				parts = append(parts, fmt.Sprintf("Content[refusal]: %s", p.Text))
 			}
 		}

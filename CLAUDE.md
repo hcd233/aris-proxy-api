@@ -117,8 +117,9 @@ Before implementing any feature, thoroughly examine existing similar implementat
 
 ### 4. Constants Management
 - All numeric literals must be extracted to constants in `internal/common/constant/`
-- Create domain-specific constant files (e.g., `llm.go` for LLM-related constants)
-- Never use magic numbers like `3` directly in function calls
+- **All string literals in `switch case` statements must be extracted to constants** in `internal/enum/` (e.g., content types, event types, error types)
+- Create domain-specific constant files (e.g., `llm.go` for LLM-related constants, `anthropic.go` for Anthropic-specific enums)
+- Never use magic numbers like `3` or string literals like `"text"` directly in function calls or case statements
 
 ### 5. Error Handling
 - All internal Go errors must be created via `internal/common/ierr` package — never use `fmt.Errorf` or `errors.New` directly
@@ -142,5 +143,6 @@ Before submitting changes:
 - [ ] No direct database access outside DAO/infrastructure layer
 - [ ] Using PoolManager for all concurrent operations
 - [ ] Constants extracted to appropriate constant files
+- [ ] **All switch case values use constants instead of string literals**
 - [ ] Following existing code patterns for similar features
 - [ ] Proper package placement (agent/, dto/, cron/)
