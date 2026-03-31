@@ -8,6 +8,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
@@ -17,7 +18,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // SessionDeduplicateCron Session去重定时任务，清理MessageIDs被其他Session包含的冗余Session
@@ -119,9 +119,9 @@ func (c *SessionDeduplicateCron) deduplicate() {
 			return mergedToolIDs[i] < mergedToolIDs[j]
 		})
 
-		// 更新Session的ToolIDs，使用gorm.Expr和::jsonb类型转换修复PostgreSQL参数类型推断问题
+		// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
 		err := c.sessionDAO.Update(db, &dbmodel.Session{ID: sessionID}, map[string]interface{}{
-			"tool_ids": gorm.Expr("?::jsonb", mergedToolIDs),
+			"tool_ids": lo.Must1(sonic.MarshalString(mergedToolIDs)),
 		})
 		if err != nil {
 			log.Error("[SessionDeduplicateCron] Failed to update session tool_ids",
