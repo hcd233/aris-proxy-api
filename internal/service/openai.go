@@ -171,6 +171,19 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		return util.SendOpenAIInternalError(), nil
 	}
 
+	// 检查上游响应状态码，非200时记录详细错误信息
+	if upstreamResp.StatusCode != http.StatusOK {
+		errorBody, _ := io.ReadAll(upstreamResp.Body)
+		upstreamResp.Body.Close()
+		logger.Error("[OpenAIService] Upstream returned non-200 status",
+			zap.String("upstreamURL", upstreamURL),
+			zap.Int("statusCode", upstreamResp.StatusCode),
+			zap.String("responseBody", string(errorBody)),
+			zap.Any("headers", upstreamResp.Header),
+		)
+		return util.SendOpenAIUpstreamError(upstreamResp.StatusCode, string(errorBody)), nil
+	}
+
 	if req.Body.Stream != nil && *req.Body.Stream {
 		return &huma.StreamResponse{
 			Body: func(humaCtx huma.Context) {

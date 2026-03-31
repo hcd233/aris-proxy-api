@@ -145,6 +145,19 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 		return util.SendAnthropicInternalError(), nil
 	}
 
+	// 检查上游响应状态码，非200时记录详细错误信息
+	if upstreamResp.StatusCode != http.StatusOK {
+		errorBody, _ := io.ReadAll(upstreamResp.Body)
+		upstreamResp.Body.Close()
+		logger.Error("[CreateMessage] upstream returned non-200 status",
+			zap.String("upstreamURL", upstreamURL),
+			zap.Int("statusCode", upstreamResp.StatusCode),
+			zap.String("responseBody", string(errorBody)),
+			zap.Any("headers", upstreamResp.Header),
+		)
+		return util.SendAnthropicUpstreamError(upstreamResp.StatusCode, string(errorBody)), nil
+	}
+
 	exposedModel := req.Body.Model
 
 	if req.Body.Stream != nil && *req.Body.Stream {

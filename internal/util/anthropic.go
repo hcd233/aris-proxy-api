@@ -195,6 +195,29 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 	return msg, nil
 }
 
+// SendAnthropicUpstreamError 发送上游错误响应
+//
+//	@param statusCode int
+//	@param body string
+//	@return rsp
+//	@author centonhuang
+//	@update 2026-03-31 10:00:00
+func SendAnthropicUpstreamError(statusCode int, body string) (rsp *huma.StreamResponse) {
+	return &huma.StreamResponse{
+		Body: func(humaCtx huma.Context) {
+			humaCtx.SetStatus(statusCode)
+			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+				Type: "error",
+				Error: &dto.AnthropicError{
+					Type:    "upstream_error",
+					Message: "Upstream error: " + body,
+				},
+			})))
+		},
+	}
+}
+
 // ExtractAnthropicMetadata 将 Anthropic 元数据转换为通用 map
 //
 //	@param meta *dto.AnthropicMetadata

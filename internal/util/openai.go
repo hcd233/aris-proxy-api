@@ -4,8 +4,11 @@ import (
 	"cmp"
 	"strings"
 
+	"github.com/bytedance/sonic"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/samber/lo"
 )
 
 // ConcatChatCompletionChunks 合并聊天完成流式块
@@ -196,4 +199,27 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 	}
 
 	return cmpl, nil
+}
+
+// SendOpenAIUpstreamError 发送上游错误响应
+//
+//	@param statusCode int
+//	@param body string
+//	@return rsp
+//	@author centonhuang
+//	@update 2026-03-31 10:00:00
+func SendOpenAIUpstreamError(statusCode int, body string) (rsp *huma.StreamResponse) {
+	return &huma.StreamResponse{
+		Body: func(humaCtx huma.Context) {
+			humaCtx.SetStatus(statusCode)
+			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
+				Error: &dto.OpenAIError{
+					Message: "Upstream error: " + body,
+					Type:    "upstream_error",
+					Code:    "upstream_error",
+				},
+			})))
+		},
+	}
 }
