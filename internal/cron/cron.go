@@ -28,7 +28,7 @@ var cronInstances []Cron
 // InitCronJobs 初始化定时任务
 //
 //	author centonhuang
-//	update 2026-03-20 10:00:00
+//	update 2026-04-02 10:00:00
 func InitCronJobs() {
 	sessionDeduplicateCron := NewSessionDeduplicateCron()
 	lo.Must0(sessionDeduplicateCron.Start())
@@ -37,6 +37,10 @@ func InitCronJobs() {
 	sessionSummarizeCron := NewSessionSummarizeCron()
 	lo.Must0(sessionSummarizeCron.Start())
 	cronInstances = append(cronInstances, sessionSummarizeCron)
+
+	sessionScoreCron := NewSessionScoreCron()
+	lo.Must0(sessionScoreCron.Start())
+	cronInstances = append(cronInstances, sessionScoreCron)
 
 	softDeletePurgeCron := NewSoftDeletePurgeCron()
 	lo.Must0(softDeletePurgeCron.Start())

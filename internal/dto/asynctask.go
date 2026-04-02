@@ -35,3 +35,13 @@ type SummarizeTask struct {
 	SessionID uint
 	Content   string
 }
+
+// ScoreTask Session评分任务
+//
+//	@author centonhuang
+//	@update 2026-04-02 10:00:00
+type ScoreTask struct {
+	Ctx       context.Context
+	SessionID uint
+	Content   string
+}

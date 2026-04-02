@@ -6,6 +6,7 @@ package pool
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/agent"
@@ -26,7 +27,7 @@ import (
 // Manager 全局协程池管理器
 //
 //	author centonhuang
-//	update 2026-03-26 10:00:00
+//	update 2026-04-02 10:00:00
 type Manager struct {
 	messageDAO           *dao.MessageDAO
 	sessionDAO           *dao.SessionDAO
@@ -34,6 +35,7 @@ type Manager struct {
 	pingPool             pond.Pool
 	messageStorePool     pond.Pool
 	sessionSummarizePool pond.Pool
+	sessionScorePool     pond.Pool
 }
 
 var poolManager *Manager
@@ -41,7 +43,7 @@ var poolManager *Manager
 // InitPoolManager 初始化全局协程池管理器
 //
 //	@author centonhuang
-//	@update 2026-01-31 03:37:28
+//	@update 2026-04-02 10:00:00
 func InitPoolManager() {
 	poolManager = &Manager{
 		messageDAO:           dao.GetMessageDAO(),
@@ -50,6 +52,7 @@ func InitPoolManager() {
 		pingPool:             pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 		messageStorePool:     pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 		sessionSummarizePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
+		sessionScorePool:     pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 	}
 }
 
@@ -315,10 +318,60 @@ func (pm *Manager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 	})
 }
 
+// SubmitScoreTask 提交Session评分任务到协程池
+//
+//	@receiver pm *Manager
+//	@param task *ScoreTask
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-02 10:00:00
+func (pm *Manager) SubmitScoreTask(task *dto.ScoreTask) error {
+	log := logger.WithCtx(task.Ctx)
+	db := database.GetDBInstance(task.Ctx)
+	return pm.sessionScorePool.Go(func() {
+		scorer, err := agent.NewScorer()
+		if err != nil {
+			log.Error("[PoolManager] Failed to create scorer", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			return
+		}
+
+		result, err := scorer.ScoreWithRetry(task.Ctx, task.Content, constant.ScoreMaxRetries)
+		if err != nil {
+			log.Error("[PoolManager] Failed to generate score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			return
+		}
+
+		if result == nil {
+			log.Error("[PoolManager] Score result is nil", zap.Uint("sessionID", task.SessionID))
+			return
+		}
+
+		err = pm.sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+			"coherence_score": result.Coherence,
+			"depth_score":     result.Depth,
+			"value_score":     result.Value,
+			"total_score":     result.Total(),
+			"score_version":   constant.ScoreVersion,
+			"scored_at":       lo.ToPtr(time.Now()),
+		})
+		if err != nil {
+			log.Error("[PoolManager] Failed to update session score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			return
+		}
+
+		log.Info("[PoolManager] Session scored successfully",
+			zap.Uint("sessionID", task.SessionID),
+			zap.Float64("coherence", float64(result.Coherence)),
+			zap.Float64("depth", float64(result.Depth)),
+			zap.Float64("value", float64(result.Value)),
+			zap.Float64("total", result.Total()))
+	})
+}
+
 // Stop 停止所有协程池
 //
 //	author centonhuang
-//	update 2026-03-26 10:00:00
+//	update 2026-04-02 10:00:00
 func (pm *Manager) Stop() {
 	if pm.pingPool != nil {
 		pm.pingPool.Stop()
@@ -328,5 +381,8 @@ func (pm *Manager) Stop() {
 	}
 	if pm.sessionSummarizePool != nil {
 		pm.sessionSummarizePool.Stop()
+	}
+	if pm.sessionScorePool != nil {
+		pm.sessionScorePool.Stop()
 	}
 }

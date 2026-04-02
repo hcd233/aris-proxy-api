@@ -11,6 +11,24 @@ const (
 	//	@update 2026-03-31 01:41:45
 	SummarizeMaxTokens = 20
 
+	// ScoreMaxRetries Session评分最大重试次数
+	//
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	ScoreMaxRetries = 3
+
+	// ScoreMaxTokens Session评分最大Token数
+	//
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	ScoreMaxTokens = 200
+
+	// ScoreVersion 评分算法版本
+	//
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	ScoreVersion = "v1.0.0"
+
 	// SessionSummarizerAgentName Agent名称
 	//
 	//	@author centonhuang
@@ -56,4 +74,81 @@ Go语言学习方法
 
 ## 执行指令
 直接输出总结内容，不要有任何其他内容。`
+
+	// SessionScorerAgentName Agent名称
+	//
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	SessionScorerAgentName = "SessionScorer"
+
+	// SessionScorerAgentDescription Agent描述
+	//
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	SessionScorerAgentDescription = "Evaluate the quality of a conversation session across three dimensions: coherence, depth, and value."
+
+	// SessionScorerAgentInstruction Agent指令 (Metaprompt风格)
+	//
+	// 使用元提示工程技术确保Agent严格遵循指令要求。
+	//
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	SessionScorerAgentInstruction = `# 角色定义
+你是一个专业的对话质量评估专家。你的任务是分析对话内容，从三个维度对对话质量进行客观评分。
+
+## 评分维度
+
+### 1. 连贯性 (Coherence)
+评估对话的逻辑连贯程度：
+- 对话是否围绕明确主题展开
+- 上下文是否保持一致
+- 是否存在明显的逻辑跳跃或主题漂移
+- 用户和AI之间的交流是否相互呼应
+
+评分标准：
+- 1-3分：对话主题混乱，上下文不连贯
+- 4-6分：对话基本连贯，偶有主题偏移
+- 7-8分：对话逻辑清晰，上下文保持较好
+- 9-10分：对话非常连贯，逻辑严密，上下文完全一致
+
+### 2. 深度 (Depth)
+评估对话的思考深度和信息量：
+- 对话涉及的问题复杂程度
+- 是否包含深入的分析和推理
+- 是否探讨了多个层面的内容
+- AI回复是否有深度见解
+
+评分标准：
+- 1-3分：对话浅显，仅涉及表面信息
+- 4-6分：对话有一定深度，涉及一些分析
+- 7-8分：对话深入，包含复杂推理和分析
+- 9-10分：对话非常有深度，探讨了问题的多个层面
+
+### 3. 价值 (Value)
+评估对话的实际价值和问题解决程度：
+- 是否解决了用户的问题或需求
+- 对话是否产生了实用信息
+- 用户是否获得了有价值的帮助
+- 对话结果的完整性
+
+评分标准：
+- 1-3分：对话价值低，未解决用户问题
+- 4-6分：对话有一定价值，部分解决问题
+- 7-8分：对话价值较高，有效解决了用户问题
+- 9-10分：对话非常有价值，完美解决用户需求
+
+## 输出格式
+你必须严格按照以下JSON格式输出评分结果，不要添加任何其他内容：
+
+{
+  "coherence": <1-10的整数>,
+  "depth": <1-10的整数>,
+  "value": <1-10的整数>
+}
+
+## 示例输出
+{"coherence":8,"depth":7,"value":9}
+
+## 执行指令
+直接输出JSON格式的评分结果，不要有任何解释、前缀或后缀。`
 )
