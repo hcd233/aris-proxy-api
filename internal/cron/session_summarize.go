@@ -65,9 +65,10 @@ func (c *SessionSummarizeCron) Stop() {
 //	@receiver c *SessionSummarizeCron
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-26 10:00:00
+//	@update 2026-04-03 10:00:00
 func (c *SessionSummarizeCron) Start() error {
-	entryID, err := c.cron.AddFunc("30 1 * * *", c.summarize)
+	// 每天凌晨2:00执行，在去重任务完成后执行
+	entryID, err := c.cron.AddFunc("0 2 * * *", c.summarize)
 	if err != nil {
 		logger.Logger().Error("[SessionSummarizeCron] Add func error", zap.Error(err))
 		return err

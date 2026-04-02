@@ -63,10 +63,10 @@ func (c *SessionScoreCron) Stop() {
 //	@receiver c *SessionScoreCron
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-02 10:00:00
+//	@update 2026-04-03 10:00:00
 func (c *SessionScoreCron) Start() error {
-	// 每周一凌晨2:00运行
-	entryID, err := c.cron.AddFunc("0 2 * * 1", c.score)
+	// 每天凌晨3:00执行，在摘要任务完成后执行
+	entryID, err := c.cron.AddFunc("0 3 * * *", c.score)
 	if err != nil {
 		logger.Logger().Error("[SessionScoreCron] Add func error", zap.Error(err))
 		return err

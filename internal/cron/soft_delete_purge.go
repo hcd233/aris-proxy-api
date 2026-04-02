@@ -60,10 +60,10 @@ func (c *SoftDeletePurgeCron) Stop() {
 //	@receiver c *SoftDeletePurgeCron
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-29 10:00:00
+//	@update 2026-04-03 10:00:00
 func (c *SoftDeletePurgeCron) Start() error {
-	// 每周日凌晨3:00执行
-	entryID, err := c.cron.AddFunc("0 3 * * 0", c.purge)
+	// 每周日凌晨4:00执行，确保所有任务完成后再清理
+	entryID, err := c.cron.AddFunc("0 4 * * 0", c.purge)
 	if err != nil {
 		logger.Logger().Error("[SoftDeletePurgeCron] Add func error", zap.Error(err))
 		return err

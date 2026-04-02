@@ -60,10 +60,10 @@ func (c *SessionDeduplicateCron) Stop() {
 //	@receiver c *SessionDeduplicateCron
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-04-03 10:00:00
 func (c *SessionDeduplicateCron) Start() error {
-	// 每小时执行一次
-	entryID, err := c.cron.AddFunc("0 * * * *", c.deduplicate)
+	// 每天凌晨1:00执行，为后续摘要和评分任务减少处理量
+	entryID, err := c.cron.AddFunc("0 1 * * *", c.deduplicate)
 	if err != nil {
 		logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
 		return err
