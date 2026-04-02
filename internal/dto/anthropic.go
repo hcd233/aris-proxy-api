@@ -17,6 +17,7 @@ import (
 type CacheControl struct {
 	Type string `json:"type" doc:"缓存类型: ephemeral"`
 	TTL  string `json:"ttl,omitempty" doc:"缓存存活时间: 5m/1h"`
+	Scope string `json:"scope,omitempty" doc:"beta cache scope (e.g. global)"`
 }
 
 // CitationsConfig Anthropic 引用配置
