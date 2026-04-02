@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -62,7 +63,7 @@ func (s *tokenService) RefreshToken(ctx context.Context, req *dto.RefreshTokenRe
 
 	userID, err := s.refreshTokenSigner.DecodeToken(req.Body.RefreshToken)
 	if err != nil {
-		logger.Error("[TokenService] Failed to decode refresh token", zap.String("refreshToken", req.Body.RefreshToken), zap.Error(err))
+		logger.Error("[TokenService] Failed to decode refresh token", zap.String("refreshToken", util.MaskSecret(req.Body.RefreshToken)), zap.Error(err))
 		rsp.Error = ierr.ErrJWTDecode.BizError()
 		return rsp, nil
 	}

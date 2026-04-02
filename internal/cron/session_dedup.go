@@ -132,9 +132,7 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		mergedCount++
 	}
 
-	err = c.sessionDAO.BatchDelete(db, lo.Map(mergeResult.RedundantIDs, func(id uint, _ int) *dbmodel.Session {
-		return &dbmodel.Session{ID: id}
-	}))
+	err = c.sessionDAO.BatchDeleteByField(db, "id", mergeResult.RedundantIDs)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to delete redundant sessions", zap.Error(err))
 		return

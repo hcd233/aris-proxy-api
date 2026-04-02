@@ -76,8 +76,21 @@ func (dao *baseDAO[ModelT]) Delete(db *gorm.DB, data *ModelT) (err error) {
 	return
 }
 
-func (dao *baseDAO[ModelT]) BatchDelete(db *gorm.DB, data []*ModelT) (err error) {
-	err = db.Model(data).Update("deleted_at", time.Now().UTC().Unix()).Error
+// BatchDeleteByField 根据指定字段的多个值批量软删除数据
+//
+//	@receiver dao *baseDAO[ModelT]
+//	@param db *gorm.DB
+//	@param whereField string 字段名
+//	@param values any 字段值列表（切片类型，如 []string、[]uint 等）
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-02 10:00:00
+func (dao *baseDAO[ModelT]) BatchDeleteByField(db *gorm.DB, whereField string, values any) (err error) {
+	if values == nil {
+		return nil
+	}
+	var m ModelT
+	err = db.Model(&m).Where(whereField+" IN ?", values).Update("deleted_at", time.Now().UTC().Unix()).Error
 	return
 }
 

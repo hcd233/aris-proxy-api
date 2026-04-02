@@ -125,7 +125,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
 	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages"
 
-	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
+	upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
 		logger.Error("[AnthropicService] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendAnthropicInternalError(), nil
@@ -383,7 +383,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
 	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages/count_tokens"
 
-	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
+	upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
 		logger.Warn("[AnthropicService] New request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return rsp, nil

@@ -19,4 +19,14 @@ const (
 	// LimitCallProxyLLM 调用代理LLM限频
 	//	@update 2025-11-12 11:26:56
 	LimitCallProxyLLM = 100
+
+	// PeriodRefreshToken Token刷新限频周期
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	PeriodRefreshToken = 1 * time.Minute
+
+	// LimitRefreshToken Token刷新限频（每分钟最多10次）
+	//	@author centonhuang
+	//	@update 2026-04-02 10:00:00
+	LimitRefreshToken = 10
 )

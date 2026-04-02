@@ -152,7 +152,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
 	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/chat/completions"
 
-	upstreamReq, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
+	upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
 	if err != nil {
 		logger.Error("[OpenAIService] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendOpenAIInternalError(), nil
