@@ -170,6 +170,10 @@ var (
 	// SQLBatchSize int SQL批量操作大小
 	//	@update 2026-03-19 10:00:00
 	SQLBatchSize int
+
+	// TrustedProxies []string 可信代理IP列表
+	//	@update 2026-04-04 10:00:00
+	TrustedProxies []string
 )
 
 func init() {
@@ -195,6 +199,8 @@ func initEnvironment() {
 	config.SetDefault("sql.batch.size", 500)
 
 	config.SetDefault("postgres.sslmode", "disable")
+
+	config.SetDefault("trusted.proxies", []string{"172.18.0.1"})
 
 	config.AutomaticEnv()
 
@@ -254,4 +260,14 @@ func initEnvironment() {
 	PoolQueueSize = config.GetInt("pool.queue.size")
 
 	SQLBatchSize = config.GetInt("sql.batch.size")
+
+	if raw := config.GetString("trusted.proxies"); raw != "" {
+		parts := strings.Split(raw, ",")
+		TrustedProxies = make([]string, 0, len(parts))
+		for _, p := range parts {
+			if trimmed := strings.TrimSpace(p); trimmed != "" {
+				TrustedProxies = append(TrustedProxies, trimmed)
+			}
+		}
+	}
 }

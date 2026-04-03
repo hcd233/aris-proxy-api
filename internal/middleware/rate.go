@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
@@ -107,13 +108,8 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 		var keyValue, value string
 		if key == "" {
 			keyValue = "ip"
-			value = ctx.Header("X-Forwarded-For")
-			if value == "" {
-				value = ctx.Header("X-Real-IP")
-			}
-			if value == "" {
-				value = "unknown"
-			}
+			fCtx := humafiber.Unwrap(ctx)
+			value = fCtx.IP()
 		} else {
 			if ctxValue := ctx.Context().Value(key); ctxValue != nil {
 				keyValue = key
