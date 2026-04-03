@@ -1,6 +1,6 @@
 package dto
 
-import "encoding/json"
+import "github.com/bytedance/sonic"
 
 // JSONSchemaProperty 递归 JSON Schema 属性定义，覆盖标准 JSON Schema 字段
 //
@@ -12,14 +12,14 @@ type JSONSchemaProperty struct {
 	Properties           map[string]*JSONSchemaProperty `json:"properties,omitempty" doc:"对象属性定义(递归)"`
 	Items                *JSONSchemaProperty            `json:"items,omitempty" doc:"数组元素定义(递归)"`
 	Required             []string                       `json:"required,omitempty" doc:"必填字段列表"`
-	Enum                 []json.RawMessage              `json:"enum,omitempty" doc:"枚举值列表"`
-	Const                json.RawMessage                `json:"const,omitempty" doc:"常量值"`
-	Default              json.RawMessage                `json:"default,omitempty" doc:"默认值"`
+	Enum                 []sonic.NoCopyRawMessage       `json:"enum,omitempty" doc:"枚举值列表"`
+	Const                sonic.NoCopyRawMessage         `json:"const,omitempty" doc:"常量值"`
+	Default              sonic.NoCopyRawMessage         `json:"default,omitempty" doc:"默认值"`
 	AnyOf                []*JSONSchemaProperty          `json:"anyOf,omitempty" doc:"任意匹配"`
 	OneOf                []*JSONSchemaProperty          `json:"oneOf,omitempty" doc:"唯一匹配"`
 	AllOf                []*JSONSchemaProperty          `json:"allOf,omitempty" doc:"全部匹配"`
 	Not                  *JSONSchemaProperty            `json:"not,omitempty" doc:"取反"`
-	AdditionalProperties json.RawMessage                `json:"additionalProperties,omitempty" doc:"额外属性(bool或JSONSchemaProperty)"`
+	AdditionalProperties sonic.NoCopyRawMessage         `json:"additionalProperties,omitempty" doc:"额外属性(bool或JSONSchemaProperty)"`
 	Strict               *bool                          `json:"strict,omitempty" doc:"是否启用严格模式"`
 
 	// 数值验证

@@ -302,3 +302,106 @@ go test -count=1 -cover ./test/...
 go test -count=1 -coverprofile=coverage.out ./test/...
 go tool cover -html=coverage.out -o coverage.html
 ```
+
+---
+
+## Development Workflow（开发流程）
+
+**每次新增/修改/重构代码时，必须遵循以下流程。**
+
+### Step 1: 编码时自检清单
+
+编写每一段代码时，逐项对照：
+
+#### 错误处理（BLOCKING）
+
+- **禁止** `fmt.Errorf` / `errors.New` — 统一用 `ierr.Wrap` / `ierr.New`
+- **禁止** `constant.ErrXxx` — 统一用 `ierr.ErrXxx.BizError()`
+- DAO/Util 层：`ierr.Wrap(ierr.ErrXxx, err, "context")`
+- Service 层：`rsp.Error = ierr.ErrXxx.BizError()` + `return rsp, nil`（Go error 始终 nil）
+- Handler 层：一行 `return util.WrapHTTPResponse(h.svc.Method(ctx, req))`
+- Middleware 层：`lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrXxx.BizError()))`
+- 选择最精确的哨兵错误，不要一律映射为 `ErrInternal`
+
+#### 日志（BLOCKING）
+
+- 格式：`"[PascalCaseModule] English message"`，如 `"[SessionService] Get session detail"`
+- 上下文：`logger.WithCtx(ctx)` 或 `logger.WithFCtx(c)`
+- 敏感信息（Key/Token/Secret/Password）必须 `util.MaskSecret()`
+- 结构化字段：`zap.String()`, `zap.Error()`, `zap.Uint()` 等
+- 级别：Error=需人工介入, Warn=可自愈, Info=关键节点, Debug=调试
+- 禁止循环内/高频路径打日志
+
+#### 命名（BLOCKING）
+
+- 接口 PascalCase 无 `I` 前缀，实现 camelCase 私有 struct
+- 工厂函数 `NewXxx()` 返回接口类型
+- Handler 方法 `Handle` 前缀
+- DTO：`XxxReq` / `XxxRsp` / `XxxReqBody`
+- 禁止 `data1`, `tmp`, `userList`, `userMap` 等无意义/暴露实现的命名
+
+#### 代码结构
+
+- 函数优先 10 行，不超过 20 行
+- if 嵌套不超过 2 层，优先 guard clauses
+- 参数 0-3 个，超过用参数对象
+- 出现 2 次的逻辑必须抽取，禁止复制粘贴
+- 禁止死代码（注释掉的旧代码必须删除）
+- 能私有就私有，禁止随意导出
+
+#### Import 与依赖
+
+- 三段式分组：标准库 → 第三方 → 项目内部（空行分隔）
+- 禁止 `encoding/json`，统一 `github.com/bytedance/sonic`
+- 禁止 `json.RawMessage` 和 `any`/`interface{}`
+
+#### 注释
+
+- godoc 格式：第一行中文简述 + `@receiver`/`@param`/`@return`/`@author`/`@update` 标签
+- 包注释：`// Package xxx 中文描述`
+
+#### 架构分层
+
+- Handler 只做薄包装，不含业务逻辑
+- Service 不直接依赖基础设施实现
+- 所有业务方法第一个参数 `context.Context`
+- 单例通过 `GetXxx()` 获取
+
+### Step 2: 运行规范扫描
+
+```bash
+make lint-conv
+```
+
+修复所有 ERROR，评估所有 WARN。
+
+脚本位于 `script/lint-conventions.sh`，覆盖以下检查项：
+
+| 检查项 | 级别 | 说明 |
+|--------|------|------|
+| `fmt.Errorf` / `errors.New` 使用 | ERROR | 必须用 ierr 包 |
+| `constant.ErrXxx` 使用 | ERROR | 已废弃 |
+| `encoding/json` / `json.RawMessage` | ERROR | 用 sonic |
+| internal/ 下测试文件 | ERROR | 必须放 test/ |
+| test/ 根目录散落测试 | ERROR | 必须放子目录 |
+| testify 等第三方断言库 | ERROR | 用标准库 |
+| `time.Sleep` 在测试中 | ERROR | 用 channel/WaitGroup |
+| Handler 直接操作 DAO/DB | ERROR | 业务逻辑放 Service |
+| 日志缺少 `[Module]` 前缀 | WARN | 建议修复 |
+| 敏感信息未 MaskSecret | WARN | 建议修复 |
+| 可能的死代码 | WARN | 人工确认 |
+| 暴露实现细节的命名 | WARN | 建议改为复数 |
+| Service 返回非 nil error | WARN | 确认是否正确 |
+| 核心业务层 `interface{}` | WARN | 优先具体类型/泛型 |
+
+### Step 3: 沉淀测试用例
+
+参照上方「测试规范」章节。
+
+### Step 4: 运行全量测试
+
+```bash
+make test
+```
+
+全部 PASS 后方可提交代码。

@@ -13,12 +13,6 @@ import (
 //	update 2025-01-05 15:30:00
 func TraceMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// traceID := c.Get("X-Trace-Id")
-
-		// if traceID == "" {
-		// 	traceID = uuid.New().String()
-		// }
-
 		traceID := uuid.New().String()
 
 		c.Locals(constant.CtxKeyTraceID, traceID)

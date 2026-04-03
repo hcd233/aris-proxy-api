@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -210,7 +209,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 									// Collect event for message assembly
 									collectedEvents = append(collectedEvents, dto.AnthropicSSEEvent{
 										Event: currentEvent,
-										Data:  json.RawMessage(modifiedPayload),
+										Data:  modifiedPayload,
 									})
 								}
 

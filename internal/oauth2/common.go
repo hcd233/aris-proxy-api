@@ -5,10 +5,10 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"sync"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"golang.org/x/oauth2"
 )
 
@@ -51,7 +51,7 @@ func NewStateManager() *StateManager {
 func (sm *StateManager) GenerateState() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("failed to generate random state: %w", err)
+		return "", ierr.Wrap(ierr.ErrInternal, err, "generate random state")
 	}
 	state := hex.EncodeToString(b)
 

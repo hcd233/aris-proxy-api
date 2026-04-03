@@ -146,3 +146,102 @@ Before submitting changes:
 - [ ] **All switch case values use constants instead of string literals**
 - [ ] Following existing code patterns for similar features
 - [ ] Proper package placement (agent/, dto/, cron/)
+
+---
+
+## Development Workflow（开发流程）
+
+**Every code change MUST follow this workflow. No exceptions.**
+
+### Step 1: Self-Check While Coding
+
+#### Error Handling (BLOCKING)
+
+- **NEVER** use `fmt.Errorf` / `errors.New` — use `ierr.Wrap` / `ierr.New`
+- **NEVER** use `constant.ErrXxx` — use `ierr.ErrXxx.BizError()`
+- DAO/Util layer: `ierr.Wrap(ierr.ErrXxx, err, "context")`
+- Service layer: `rsp.Error = ierr.ErrXxx.BizError()` + `return rsp, nil` (Go error always nil)
+- Handler layer: one-liner `return util.WrapHTTPResponse(h.svc.Method(ctx, req))`
+- Middleware layer: `lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrXxx.BizError()))`
+- Choose the most precise sentinel error, not just `ErrInternal`
+
+#### Logging (BLOCKING)
+
+- Format: `"[PascalCaseModule] English message"`, e.g. `"[SessionService] Get session detail"`
+- Context: `logger.WithCtx(ctx)` or `logger.WithFCtx(c)`
+- Sensitive data (Key/Token/Secret/Password) MUST use `util.MaskSecret()`
+- Structured fields: `zap.String()`, `zap.Error()`, `zap.Uint()`, etc.
+- Levels: Error=needs human intervention, Warn=self-recoverable, Info=key business nodes, Debug=dev
+- NEVER log inside loops or high-frequency paths
+
+#### Naming (BLOCKING)
+
+- Interface: PascalCase, no `I` prefix; Implementation: camelCase private struct
+- Factory: `NewXxx()` returns interface type
+- Handler methods: `Handle` prefix
+- DTO: `XxxReq` / `XxxRsp` / `XxxReqBody`
+- NEVER use `data1`, `tmp`, `userList`, `userMap` — use plural forms like `users`, `orders`
+
+#### Code Structure
+
+- Functions: prefer ≤10 lines, max 20 lines
+- if nesting ≤2 levels, prefer guard clauses
+- Parameters 0-3, use param object beyond that
+- Extract logic appearing 2+ times — no copy-paste
+- Delete dead code (commented-out code must be removed)
+- Keep private unless export is necessary
+
+#### Imports & Dependencies
+
+- Three groups separated by blank lines: stdlib → third-party → internal
+- NEVER use `encoding/json` — use `github.com/bytedance/sonic`
+- NEVER use `json.RawMessage` or `any`/`interface{}`
+
+#### Comments
+
+- godoc format: Chinese summary on first line + `@receiver`/`@param`/`@return`/`@author`/`@update` tags
+- Package comment: `// Package xxx 中文描述`
+
+#### Architecture
+
+- Handler: thin wrapper only, no business logic
+- Service: no direct infrastructure dependencies
+- All business methods: first param is `context.Context`
+- Singletons: access via `GetXxx()`
+
+### Step 2: Run Convention Linter
+
+```bash
+make lint-conv
+```
+
+Fix all ERRORs, evaluate all WARNs. Script at `script/lint-conventions.sh`.
+
+| Check | Level | Description |
+|-------|-------|-------------|
+| `fmt.Errorf` / `errors.New` usage | ERROR | Must use ierr package |
+| `constant.ErrXxx` usage | ERROR | Deprecated |
+| `encoding/json` / `json.RawMessage` | ERROR | Use sonic |
+| Test files in internal/ | ERROR | Must be in test/ |
+| Scattered test files in test/ root | ERROR | Must be in subdirectory |
+| testify usage | ERROR | Use stdlib testing |
+| `time.Sleep` in tests | ERROR | Use channel/WaitGroup |
+| Handler direct DAO/DB access | ERROR | Business logic in Service |
+| Log missing `[Module]` prefix | WARN | Should fix |
+| Sensitive data without MaskSecret | WARN | Should fix |
+| Possible dead code | WARN | Manual review |
+| Implementation-exposing names | WARN | Use plural forms |
+| Service returning non-nil error | WARN | Verify correctness |
+| `interface{}` in core business | WARN | Prefer concrete types/generics |
+
+### Step 3: Write/Update Tests
+
+See Testing section in CODEBUDDY.md.
+
+### Step 4: Run All Tests
+
+```bash
+make test
+```
+
+All tests MUST pass before committing.

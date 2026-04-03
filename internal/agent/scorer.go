@@ -6,7 +6,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
@@ -143,7 +143,7 @@ func (s *Scorer) Score(ctx context.Context, content string) (*ScoreResult, error
 			zap.Int("coherence", scoreResult.Coherence),
 			zap.Int("depth", scoreResult.Depth),
 			zap.Int("value", scoreResult.Value))
-		return nil, fmt.Errorf("incomplete score result: coherence=%d, depth=%d, value=%d",
+		return nil, ierr.Newf(ierr.ErrValidation, "incomplete score result: coherence=%d, depth=%d, value=%d",
 			scoreResult.Coherence, scoreResult.Depth, scoreResult.Value)
 	}
 
