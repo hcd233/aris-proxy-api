@@ -200,7 +200,7 @@ func initEnvironment() {
 
 	config.SetDefault("postgres.sslmode", "disable")
 
-	config.SetDefault("trusted.proxies", []string{"172.18.0.1"})
+	config.SetDefault("trusted.proxies", "172.18.0.1")
 
 	config.AutomaticEnv()
 
