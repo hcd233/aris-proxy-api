@@ -1,0 +1,91 @@
+[
+    {
+        "name": "basic_openai_model",
+        "description": "single model with openai endpoint only",
+        "endpoints": [
+            {
+                "alias": "gpt-4o",
+                "model": "gpt-4o-2024-08-06",
+                "provider": "openai",
+                "api_key": "sk-test-openai-key",
+                "base_url": "https://api.openai.com/v1"
+            }
+        ],
+        "api_keys": [
+            {"name": "alice", "key": "sk-alice-key"}
+        ],
+        "expect_models": ["gpt-4o"],
+        "expect_openai_providers": ["gpt-4o"],
+        "expect_anthropic_providers": []
+    },
+    {
+        "name": "multi_provider_model",
+        "description": "single model alias with both openai and anthropic endpoints",
+        "endpoints": [
+            {
+                "alias": "deepseek-chat",
+                "model": "deepseek-chat",
+                "provider": "openai",
+                "api_key": "sk-ds-openai",
+                "base_url": "https://api.deepseek.com/v1"
+            },
+            {
+                "alias": "deepseek-chat",
+                "model": "deepseek-chat",
+                "provider": "anthropic",
+                "api_key": "sk-ds-anthropic",
+                "base_url": "https://api.deepseek.com"
+            }
+        ],
+        "api_keys": [
+            {"name": "bob", "key": "sk-bob-key"}
+        ],
+        "expect_models": ["deepseek-chat"],
+        "expect_openai_providers": ["deepseek-chat"],
+        "expect_anthropic_providers": ["deepseek-chat"]
+    },
+    {
+        "name": "multiple_models_and_keys",
+        "description": "multiple models with multiple api keys",
+        "endpoints": [
+            {
+                "alias": "gpt-4o",
+                "model": "gpt-4o-2024-08-06",
+                "provider": "openai",
+                "api_key": "sk-openai-1",
+                "base_url": "https://api.openai.com/v1"
+            },
+            {
+                "alias": "claude-sonnet",
+                "model": "claude-sonnet-4-20250514",
+                "provider": "anthropic",
+                "api_key": "sk-ant-1",
+                "base_url": "https://api.anthropic.com"
+            }
+        ],
+        "api_keys": [
+            {"name": "alice", "key": "sk-alice"},
+            {"name": "bob", "key": "sk-bob"}
+        ],
+        "expect_models": ["claude-sonnet", "gpt-4o"],
+        "expect_openai_providers": ["gpt-4o"],
+        "expect_anthropic_providers": ["claude-sonnet"]
+    },
+    {
+        "name": "api_key_lookup",
+        "description": "verify api key reverse lookup works correctly",
+        "endpoints": [],
+        "api_keys": [
+            {"name": "alice", "key": "sk-alice-key-123"},
+            {"name": "bob", "key": "sk-bob-key-456"}
+        ],
+        "expect_models": [],
+        "expect_openai_providers": [],
+        "expect_anthropic_providers": [],
+        "key_lookup_tests": [
+            {"key": "sk-alice-key-123", "expect_name": "alice", "expect_found": true},
+            {"key": "sk-bob-key-456", "expect_name": "bob", "expect_found": true},
+            {"key": "sk-unknown-key", "expect_name": "", "expect_found": false}
+        ]
+    }
+]
