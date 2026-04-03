@@ -1,6 +1,24 @@
 package dto
 
-import "github.com/bytedance/sonic"
+import (
+	"github.com/bytedance/sonic"
+	"github.com/danielgtaylor/huma/v2"
+)
+
+// Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型是自由格式的 JSON Schema 对象
+//
+// JSON Schema 本身是递归多态结构，字段如 additionalProperties 可以是 bool 或嵌套 schema、
+// default 可以是任意 JSON 值，无法用固定的 OpenAPI schema 描述。
+// 因此直接声明为 object 类型，跳过 Huma 的严格类型校验。
+//
+//	@receiver JSONSchemaProperty
+//	@param r huma.Registry
+//	@return *huma.Schema
+//	@author centonhuang
+//	@update 2026-04-04 10:00:00
+func (JSONSchemaProperty) Schema(r huma.Registry) *huma.Schema {
+	return &huma.Schema{Type: "object"}
+}
 
 // JSONSchemaProperty 递归 JSON Schema 属性定义，覆盖标准 JSON Schema 字段
 //
@@ -47,8 +65,8 @@ type JSONSchemaProperty struct {
 	PropertyNames     *JSONSchemaProperty            `json:"propertyNames,omitempty" doc:"属性名称约束"`
 
 	// 其他标准字段
-	Title  string                         `json:"title,omitempty" doc:"标题"`
-	Ref    string                         `json:"$ref,omitempty" doc:"JSON Schema引用"`
-	Schema string                         `json:"$schema,omitempty" doc:"JSON Schema版本"`
-	Defs   map[string]*JSONSchemaProperty `json:"$defs,omitempty" doc:"JSON Schema定义"`
+	Title     string                         `json:"title,omitempty" doc:"标题"`
+	Ref       string                         `json:"$ref,omitempty" doc:"JSON Schema引用"`
+	SchemaURI string                         `json:"$schema,omitempty" doc:"JSON Schema版本"`
+	Defs      map[string]*JSONSchemaProperty `json:"$defs,omitempty" doc:"JSON Schema定义"`
 }
