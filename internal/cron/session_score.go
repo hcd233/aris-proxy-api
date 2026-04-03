@@ -19,6 +19,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // SessionScoreCron Session评分定时任务
@@ -105,7 +106,7 @@ func (c *SessionScoreCron) score() {
 	log.Info("[SessionScoreCron] Starting scoring", zap.Int("count", len(sessions)))
 
 	for _, session := range sessions {
-		content, err := c.getSessionContent(ctx, session)
+		content, err := c.getSessionContent(ctx, db, session)
 		if err != nil {
 			log.Error("[SessionScoreCron] Failed to get session content",
 				zap.Uint("sessionID", session.ID),
@@ -138,12 +139,12 @@ func (c *SessionScoreCron) score() {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-02 10:00:00
-func (c *SessionScoreCron) getSessionContent(ctx context.Context, session *dbmodel.Session) (string, error) {
+func (c *SessionScoreCron) getSessionContent(ctx context.Context, db *gorm.DB, session *dbmodel.Session) (string, error) {
 	if len(session.MessageIDs) == 0 {
 		return "", nil
 	}
 
-	messages, err := c.messageDAO.BatchGetByField(database.GetDBInstance(ctx), "id", session.MessageIDs, []string{"id", "message"})
+	messages, err := c.messageDAO.BatchGetByField(db, "id", session.MessageIDs, []string{"id", "message"})
 	if err != nil {
 		return "", err
 	}
