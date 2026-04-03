@@ -27,7 +27,6 @@ services:
     env_file:
       - ../env/api.env
     volumes:
-      - ../config/config.yaml:/app/config/config.yaml:ro
       - ../logs:/app/logs
     depends_on:
       aris-proxy-api-db-migrate:
