@@ -7,6 +7,7 @@ package agent
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	openai "github.com/cloudwego/eino-ext/components/model/openai"
@@ -59,6 +60,23 @@ func NewSummarizer() (*Summarizer, error) {
 	}
 
 	return &Summarizer{agent: agent}, nil
+}
+
+var (
+	summarizer     *Summarizer
+	summarizerOnce sync.Once
+)
+
+// GetSummarizer 获取全局 Summarizer 单例
+//
+//	@return *Summarizer
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func GetSummarizer() *Summarizer {
+	summarizerOnce.Do(func() {
+		summarizer = lo.Must1(NewSummarizer())
+	})
+	return summarizer
 }
 
 // Summarize 总结对话内容

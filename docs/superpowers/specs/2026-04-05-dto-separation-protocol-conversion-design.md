@@ -4,6 +4,8 @@
 
 当前项目中 OpenAI 和 Anthropic 的协议定义（请求/响应 DTO）混在 `internal/dto/openai.go` 和 `internal/dto/anthropic.go` 中，且没有跨协议转换能力。现有的 `UnifiedMessage` / `UnifiedTool` 仅用于 session 存储，不支持反向转换。
 
+模型端点配置已从 YAML 迁移到数据库（`ModelEndpoint` 表，通过 `dao.ModelEndpointDAO` 查询），`internal/proxy/proxy.go` 已删除。
+
 本设计将 API DTO 与上游 DTO 分离，建立通用 DTO 层和独立 converter 包，实现 OpenAI 协议和 Anthropic 协议的完整互转，支持跨协议路由（客户端发 OpenAI 格式，上游仅有 Anthropic 端点时自动转换转发）。
 
 ## 目标
@@ -50,7 +52,7 @@ internal/
     user.go                    # 保持不变
     oauth2.go                  # 保持不变
     ping.go                    # 保持不变
-    json_schema.go             # JSONSchemaProperty（保持不变，被 common 和各协议共用）
+    json_schema.go             # JSONSchemaProperty（被 common 和各协议共用，字段使用 sonic.NoCopyRawMessage，Schema 字段名改为 SchemaURI）
 
   converter/                   # 协议转换器
     openai.go                  # OpenAI ↔ Common 转换（请求+响应+消息+工具）
@@ -322,12 +324,15 @@ func (w *AnthropicStreamWriter) Write(chunk *common.StreamChunk) error
 
 ## Service 层改造
 
+模型端点配置已从 YAML (`proxy.GetLLMProxyConfig()`) 迁移到数据库 (`dao.ModelEndpointDAO`)。
+`ModelEndpoint` 表结构：`(ID, Alias, Model, Provider, APIKey, BaseURL)`，通过 `(Alias, Provider)` 唯一索引查询。
+
 改造后的请求流程：
 
 ```
 客户端 (OpenAI) → handler → OpenAIReqToCommon() → common.ChatRequest
-  → service 查找模型配置，确定目标上游协议
-  → 目标是 OpenAI: CommonReqToOpenAI() → 直接转发
+  → service 通过 dao.ModelEndpointDAO 查询模型端点，确定目标上游协议
+  → 目标是 OpenAI: CommonReqToOpenAI() → 转发
   → 目标是 Anthropic: CommonReqToAnthropic() → 转发
 
 客户端 (Anthropic) → handler → AnthropicReqToCommon() → common.ChatRequest
@@ -339,16 +344,32 @@ Service 层的核心改造：
 ```go
 // 在 service 层新增统一路由逻辑
 func routeRequest(ctx context.Context, req *common.ChatRequest, clientProtocol enum.ProviderType) (*huma.StreamResponse, error) {
-    modelCfg := getModelConfig(req.Model)
-    upstreamProtocol := selectUpstreamProtocol(modelCfg, clientProtocol)
+    db := database.GetDBInstance(ctx)
+    modelEndpointDAO := dao.GetModelEndpointDAO()
 
-    if upstreamProtocol == clientProtocol {
-        // 同协议：直接转换回原始格式转发
-        return forwardSameProtocol(ctx, req, clientProtocol, modelCfg)
+    // 优先查找客户端同协议端点
+    endpoint, err := modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
+        Alias: req.Model, Provider: clientProtocol,
+    }, []string{"model", "api_key", "base_url"})
+
+    if err == nil {
+        // 同协议：直接转发
+        return forwardSameProtocol(ctx, req, clientProtocol, endpoint)
     }
 
-    // 跨协议：转换到目标协议格式转发
-    return forwardCrossProtocol(ctx, req, clientProtocol, upstreamProtocol, modelCfg)
+    // 尝试其他协议端点
+    for _, provider := range []enum.ProviderType{enum.ProviderOpenAI, enum.ProviderAnthropic} {
+        if provider == clientProtocol { continue }
+        endpoint, err := modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
+            Alias: req.Model, Provider: provider,
+        }, []string{"model", "api_key", "base_url"})
+        if err == nil {
+            // 跨协议：转换到目标协议转发
+            return forwardCrossProtocol(ctx, req, clientProtocol, provider, endpoint)
+        }
+    }
+
+    return sendModelNotFoundError(req.Model, clientProtocol)
 }
 ```
 
@@ -362,12 +383,12 @@ func routeRequest(ctx context.Context, req *common.ChatRequest, clientProtocol e
 
 ## 实施步骤
 
-1. **创建 `internal/dto/common/` 包**: 定义通用 DTO 结构体
+1. **创建 `internal/dto/common/` 包**: 定义通用 DTO 结构体（使用 `sonic.NoCopyRawMessage` 替代 `json.RawMessage`）
 2. **创建 `internal/dto/openai/` 包**: 从现有 `openai.go` 拆分
 3. **创建 `internal/dto/anthropic/` 包**: 从现有 `anthropic.go` 拆分
 4. **创建 `internal/converter/` 包**: 实现 OpenAI 和 Anthropic 的双向转换
 5. **实现流式转换器**: StreamReader / StreamWriter
-6. **改造 service 层**: 引入通用路由逻辑，支持跨协议转发
+6. **改造 service 层**: 引入通用路由逻辑，通过 `dao.ModelEndpointDAO` 查询端点，支持跨协议转发
 7. **适配 unified_message**: 增加 Common → Unified 的转换函数
 8. **更新所有 import 引用**: 确保 handler、router 等层的引用正确
 9. **编写测试**: 转换器的单元测试

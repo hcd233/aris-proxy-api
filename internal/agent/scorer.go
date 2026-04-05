@@ -7,6 +7,7 @@ package agent
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -80,6 +81,23 @@ func NewScorer() (*Scorer, error) {
 	}
 
 	return &Scorer{agent: agent}, nil
+}
+
+var (
+	scorer     *Scorer
+	scorerOnce sync.Once
+)
+
+// GetScorer 获取全局 Scorer 单例
+//
+//	@return *Scorer
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func GetScorer() *Scorer {
+	scorerOnce.Do(func() {
+		scorer = lo.Must1(NewScorer())
+	})
+	return scorer
 }
 
 // Score 对对话内容进行评分
