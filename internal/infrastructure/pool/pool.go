@@ -55,10 +55,10 @@ func InitPoolManager() {
 		toolDAO:              dao.GetToolDAO(),
 		summarizer:           summarizer,
 		scorer:               scorer,
-		pingPool:             pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
-		messageStorePool:     pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
-		sessionSummarizePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
-		sessionScorePool:     pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
+		pingPool:             pond.NewPool(config.Pool.Store.Workers, pond.WithQueueSize(config.Pool.Store.QueueSize)),
+		messageStorePool:     pond.NewPool(config.Pool.Store.Workers, pond.WithQueueSize(config.Pool.Store.QueueSize)),
+		sessionSummarizePool: pond.NewPool(config.Pool.Store.Workers, pond.WithQueueSize(config.Pool.Store.QueueSize)),
+		sessionScorePool:     pond.NewPool(config.Pool.Store.Workers, pond.WithQueueSize(config.Pool.Store.QueueSize)),
 	}
 }
 

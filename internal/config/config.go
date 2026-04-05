@@ -159,14 +159,6 @@ var (
 	//	update 2024-06-22 11:15:55
 	JwtRefreshTokenSecret string
 
-	// PoolWorkers int 协程池工作协程数
-	//	@update 2026-01-31 03:26:11
-	PoolWorkers int
-
-	// PoolQueueSize int 协程池任务队列大小
-	//	@update 2026-01-31 03:26:08
-	PoolQueueSize int
-
 	// SQLBatchSize int SQL批量操作大小
 	//	@update 2026-03-19 10:00:00
 	SQLBatchSize int
@@ -175,6 +167,27 @@ var (
 	//	@update 2026-04-04 10:00:00
 	TrustedProxies []string
 )
+
+// PoolGroupConfig 协程池分组配置
+//
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+type PoolGroupConfig struct {
+	Workers   int
+	QueueSize int
+}
+
+// PoolConfig 协程池配置
+//
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+type PoolConfig struct {
+	Store PoolGroupConfig
+	Agent PoolGroupConfig
+}
+
+// Pool Store 池和 Agent 池的全局配置
+var Pool PoolConfig
 
 func init() {
 	initEnvironment()
@@ -193,8 +206,10 @@ func initEnvironment() {
 	config.SetDefault("log.level", "info")
 	config.SetDefault("log.dir", "./logs")
 
-	config.SetDefault("pool.workers", 8)
-	config.SetDefault("pool.queue.size", 64)
+	config.SetDefault("pool.store.workers", 50)
+	config.SetDefault("pool.store.queue_size", 1000)
+	config.SetDefault("pool.agent.workers", 10)
+	config.SetDefault("pool.agent.queue_size", 100)
 
 	config.SetDefault("sql.batch.size", 500)
 
@@ -256,8 +271,16 @@ func initEnvironment() {
 	JwtRefreshTokenExpired = config.GetDuration("jwt.refresh.token.expired")
 	JwtRefreshTokenSecret = config.GetString("jwt.refresh.token.secret")
 
-	PoolWorkers = config.GetInt("pool.workers")
-	PoolQueueSize = config.GetInt("pool.queue.size")
+	Pool = PoolConfig{
+		Store: PoolGroupConfig{
+			Workers:   config.GetInt("pool.store.workers"),
+			QueueSize: config.GetInt("pool.store.queue_size"),
+		},
+		Agent: PoolGroupConfig{
+			Workers:   config.GetInt("pool.agent.workers"),
+			QueueSize: config.GetInt("pool.agent.queue_size"),
+		},
+	}
 
 	SQLBatchSize = config.GetInt("sql.batch.size")
 
