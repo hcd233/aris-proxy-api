@@ -15,12 +15,12 @@ import (
 // ConcatChatCompletionChunks 合并聊天完成流式块
 //
 //	@param chunks
-//	@return *dto.ChatCompletionChunk
+//	@return *dto.OpenAIChatCompletionChunk
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-06 18:08:53
-func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCompletion, error) {
-	cmpl := &dto.ChatCompletion{}
+func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.OpenAIChatCompletion, error) {
+	cmpl := &dto.OpenAIChatCompletion{}
 
 	if len(chunks) == 0 {
 		return cmpl, nil
@@ -46,7 +46,7 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 		toolCallMap           map[int]*toolCallState // keyed by tool_call index
 		toolCallOrder         []int
 		finishReason          enum.FinishReason
-		logprobs              *dto.Logprobs
+		logprobs              *dto.OpenAILogprobs
 		index                 int
 	}
 	choiceMap := make(map[int]*choiceState)
@@ -98,7 +98,7 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 
 			// Merge tool_call deltas by their index within the tool_calls array.
 			// Streaming chunks carry tool_calls with an "index" field (encoded in
-			// ChatCompletionMessageToolCall.Index) that indicates which logical
+			// OpenAIChatCompletionMessageToolCall.Index) that indicates which logical
 			// tool_call the delta belongs to. We accumulate id, type, function
 			// name/arguments fragments and merge them into one complete tool_call
 			// per index.
@@ -140,36 +140,36 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 				cs.finishReason = choice.FinishReason
 			}
 
-			if choice.Logprobs != nil {
+			if choice.OpenAILogprobs != nil {
 				if cs.logprobs == nil {
-					cs.logprobs = &dto.Logprobs{}
+					cs.logprobs = &dto.OpenAILogprobs{}
 				}
-				cs.logprobs.Content = append(cs.logprobs.Content, choice.Logprobs.Content...)
-				cs.logprobs.Refusal = append(cs.logprobs.Refusal, choice.Logprobs.Refusal...)
+				cs.logprobs.Content = append(cs.logprobs.Content, choice.OpenAILogprobs.Content...)
+				cs.logprobs.Refusal = append(cs.logprobs.Refusal, choice.OpenAILogprobs.Refusal...)
 			}
 		}
 	}
 
-	cmpl.Choices = make([]*dto.ChatCompletionChoice, 0, len(choiceOrder))
+	cmpl.Choices = make([]*dto.OpenAIChatCompletionChoice, 0, len(choiceOrder))
 	for _, idx := range choiceOrder {
 		cs := choiceMap[idx]
 
 		// Build merged tool_calls from accumulated deltas.
-		var mergedToolCalls []*dto.ChatCompletionMessageToolCall
+		var mergedToolCalls []*dto.OpenAIChatCompletionMessageToolCall
 		for _, tcIdx := range cs.toolCallOrder {
 			tcs := cs.toolCallMap[tcIdx]
-			tc := &dto.ChatCompletionMessageToolCall{
+			tc := &dto.OpenAIChatCompletionMessageToolCall{
 				ID:   tcs.id,
 				Type: tcs.toolType,
 			}
 			if tcs.hasFunction {
-				tc.Function = &dto.ChatCompletionMessageFunctionToolCall{
+				tc.Function = &dto.OpenAIChatCompletionMessageFunctionToolCall{
 					Name:      strings.Join(tcs.functionName, ""),
 					Arguments: strings.Join(tcs.functionArgs, ""),
 				}
 			}
 			if tcs.hasCustom {
-				tc.Custom = &dto.ChatCompletionMessageCustomToolCall{
+				tc.Custom = &dto.OpenAIChatCompletionMessageCustomToolCall{
 					Name:  strings.Join(tcs.customName, ""),
 					Input: strings.Join(tcs.customInput, ""),
 				}
@@ -179,23 +179,23 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 
 		// Use nil instead of empty string for Content to match non-stream responses
 		// when there is no textual content (e.g. tool-call-only messages).
-		var content *dto.MessageContent
+		var content *dto.OpenAIMessageContent
 		if joined := strings.Join(cs.contentParts, ""); joined != "" {
-			content = &dto.MessageContent{Text: joined}
+			content = &dto.OpenAIMessageContent{Text: joined}
 		}
 
-		message := &dto.ChatCompletionMessageParam{
+		message := &dto.OpenAIChatCompletionMessageParam{
 			Role:             cmp.Or(cs.role, enum.RoleAssistant),
 			Content:          content,
 			ReasoningContent: strings.Join(cs.reasoningContentParts, ""),
 			Refusal:          strings.Join(cs.refusalParts, ""),
 			ToolCalls:        mergedToolCalls,
 		}
-		cmpl.Choices = append(cmpl.Choices, &dto.ChatCompletionChoice{
+		cmpl.Choices = append(cmpl.Choices, &dto.OpenAIChatCompletionChoice{
 			Index:        cs.index,
 			Message:      message,
 			FinishReason: cs.finishReason,
-			Logprobs:     cs.logprobs,
+			OpenAILogprobs:     cs.logprobs,
 		})
 	}
 

@@ -28,19 +28,19 @@ type OpenAIProxy interface {
 	//	@param ctx context.Context
 	//	@param ep UpstreamEndpoint
 	//	@param body []byte
-	//	@return *dto.ChatCompletion
+	//	@return *dto.OpenAIChatCompletion
 	//	@return error
-	ForwardChatCompletion(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.ChatCompletion, error)
+	ForwardChatCompletion(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error)
 
 	// ForwardChatCompletionStream 流式转发，每个 chunk 调用 onChunk 回调，返回合并后的完整响应
 	//
 	//	@param ctx context.Context
 	//	@param ep UpstreamEndpoint
 	//	@param body []byte
-	//	@param onChunk func(*dto.ChatCompletionChunk) error
-	//	@return *dto.ChatCompletion
+	//	@param onChunk func(*dto.OpenAIChatCompletionChunk) error
+	//	@return *dto.OpenAIChatCompletion
 	//	@return error
-	ForwardChatCompletionStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onChunk func(*dto.ChatCompletionChunk) error) (*dto.ChatCompletion, error)
+	ForwardChatCompletionStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error)
 }
 
 type openAIProxy struct{}
@@ -54,7 +54,7 @@ func NewOpenAIProxy() OpenAIProxy {
 	return &openAIProxy{}
 }
 
-func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.ChatCompletion, error) {
+func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
 	logger := logger.WithCtx(ctx)
 
 	resp, err := p.sendRequest(ctx, ep, body)
@@ -69,7 +69,7 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndp
 		return nil, fmt.Errorf("read upstream response: %w", err)
 	}
 
-	completion := &dto.ChatCompletion{}
+	completion := &dto.OpenAIChatCompletion{}
 	if err := sonic.Unmarshal(respBody, completion); err != nil {
 		logger.Warn("[OpenAIProxy] Unmarshal upstream response error", zap.Error(err))
 		return nil, fmt.Errorf("unmarshal upstream response: %w", err)
@@ -78,7 +78,7 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndp
 	return completion, nil
 }
 
-func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onChunk func(*dto.ChatCompletionChunk) error) (*dto.ChatCompletion, error) {
+func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
 	logger := logger.WithCtx(ctx)
 
 	resp, err := p.sendRequest(ctx, ep, body)
@@ -87,7 +87,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 	}
 	defer resp.Body.Close()
 
-	var collectedChunks []*dto.ChatCompletionChunk
+	var collectedChunks []*dto.OpenAIChatCompletionChunk
 
 	reader := bufio.NewReader(resp.Body)
 	for {
@@ -99,7 +99,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 			if strings.HasPrefix(line, dataPrefix) {
 				payload := line[len(dataPrefix):]
 				if payload != "[DONE]" {
-					chunk := &dto.ChatCompletionChunk{}
+					chunk := &dto.OpenAIChatCompletionChunk{}
 					if err := sonic.UnmarshalString(payload, chunk); err != nil {
 						logger.Warn("[OpenAIProxy] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
 						continue

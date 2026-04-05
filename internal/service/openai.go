@@ -51,8 +51,8 @@ func toUpstream(ep *dbmodel.ModelEndpoint) proxy.UpstreamEndpoint {
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
 type OpenAIService interface {
-	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsRsp, error)
-	CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error)
+	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.OpenAIListModelsRsp, error)
+	CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error)
 }
 
 type openAIService struct {
@@ -79,20 +79,20 @@ func NewOpenAIService() OpenAIService {
 //	@receiver s *openAIService
 //	@param ctx context.Context
 //	@param _ *dto.EmptyReq
-//	@return *dto.ListModelsRsp
+//	@return *dto.OpenAIListModelsRsp
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-04 10:00:00
-func (s *openAIService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.ListModelsRsp, error) {
+func (s *openAIService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.OpenAIListModelsRsp, error) {
 	db := database.GetDBInstance(ctx)
 
 	endpoints, err := s.modelEndpointDAO.BatchGet(db, &dbmodel.ModelEndpoint{Provider: enum.ProviderOpenAI}, []string{"alias"})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[OpenAIService] Failed to query model endpoints", zap.Error(err))
-		return &dto.ListModelsRsp{Object: "list", Data: []*dto.OpenAIModel{}}, nil
+		return &dto.OpenAIListModelsRsp{Object: "list", Data: []*dto.OpenAIModel{}}, nil
 	}
 
-	return &dto.ListModelsRsp{
+	return &dto.OpenAIListModelsRsp{
 		Object: "list",
 		Data: lo.Map(endpoints, func(ep *dbmodel.ModelEndpoint, _ int) *dto.OpenAIModel {
 			return &dto.OpenAIModel{
@@ -109,12 +109,12 @@ func (s *openAIService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.L
 //
 //	@receiver s *openAIService
 //	@param ctx context.Context
-//	@param req *dto.ChatCompletionRequest
+//	@param req *dto.OpenAIChatCompletionRequest
 //	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error) {
+func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
 	logger := logger.WithCtx(ctx)
 
 	endpoint, err := findEndpoint(ctx, s.modelEndpointDAO, req.Body.Model, enum.ProviderOpenAI, enum.ProviderAnthropic)
@@ -133,7 +133,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 }
 
 // forwardNative 原生 OpenAI 协议转发
-func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
+func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
 	if req.Body.MaxTokens != nil {
 		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
 	}
@@ -142,7 +142,7 @@ func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, r
 
 	if stream {
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
-			completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.ChatCompletionChunk) error {
+			completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 				chunk.Model = req.Body.Model
 				fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(chunk)))
 				return w.Flush()
@@ -168,7 +168,7 @@ func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, r
 }
 
 // forwardViaAnthropic 通过 Anthropic 协议上游转发 OpenAI 请求
-func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
+func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
 	conv := converter.AnthropicProtocolConverter{}
 	anthropicReq, err := conv.FromOpenAIRequest(req.Body)
 	if err != nil {
@@ -222,14 +222,14 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 
 // ==================== Store Messages ====================
 
-func (s *openAIService) storeFromCompletion(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, completion *dto.ChatCompletion, proxyErr error, upstreamModel string) {
+func (s *openAIService) storeFromCompletion(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return
 	}
 	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
 }
 
-func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
 		return
 	}
@@ -245,7 +245,7 @@ func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, logger *zap.L
 	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
 }
 
-func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, assistantMsg *dto.ChatCompletionMessageParam, upstreamModel string, usage *dto.CompletionUsage) {
+func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
 	var unifiedMessages []*dto.UnifiedMessage
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromOpenAIMessage(msg)
@@ -263,7 +263,7 @@ func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Log
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
 
-	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.ChatCompletionTool, _ int) *dto.UnifiedTool {
+	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *dto.UnifiedTool {
 		return dto.FromOpenAITool(&tool)
 	})
 

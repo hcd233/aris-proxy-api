@@ -17,15 +17,15 @@ import (
 //	@update 2026-04-05 10:00:00
 type AnthropicProtocolConverter struct{}
 
-// FromOpenAIRequest 将 OpenAI ChatCompletion 请求转换为 Anthropic CreateMessage 请求
+// FromOpenAIRequest 将 OpenAI OpenAIChatCompletion 请求转换为 Anthropic CreateMessage 请求
 //
 //	@receiver AnthropicProtocolConverter
-//	@param req *dto.ChatCompletionReq
+//	@param req *dto.OpenAIChatCompletionReq
 //	@return *dto.AnthropicCreateMessageReq
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (*AnthropicProtocolConverter) FromOpenAIRequest(req *dto.ChatCompletionReq) (*dto.AnthropicCreateMessageReq, error) {
+func (*AnthropicProtocolConverter) FromOpenAIRequest(req *dto.OpenAIChatCompletionReq) (*dto.AnthropicCreateMessageReq, error) {
 	anthropicReq := &dto.AnthropicCreateMessageReq{
 		Model:       req.Model,
 		Stream:      req.Stream,
@@ -62,16 +62,16 @@ func (*AnthropicProtocolConverter) FromOpenAIRequest(req *dto.ChatCompletionReq)
 	return anthropicReq, nil
 }
 
-// ToOpenAIResponse 将 Anthropic Message 响应转换为 OpenAI ChatCompletion 响应
+// ToOpenAIResponse 将 Anthropic Message 响应转换为 OpenAI OpenAIChatCompletion 响应
 //
 //	@receiver AnthropicProtocolConverter
 //	@param msg *dto.AnthropicMessage
-//	@return *dto.ChatCompletion
+//	@return *dto.OpenAIChatCompletion
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (*dto.ChatCompletion, error) {
-	completion := &dto.ChatCompletion{
+func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (*dto.OpenAIChatCompletion, error) {
+	completion := &dto.OpenAIChatCompletion{
 		ID:      msg.ID,
 		Object:  "chat.completion",
 		Created: time.Now().Unix(),
@@ -80,7 +80,7 @@ func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (
 
 	// 转换 usage
 	if msg.Usage != nil {
-		completion.Usage = &dto.CompletionUsage{
+		completion.Usage = &dto.OpenAICompletionUsage{
 			PromptTokens:     msg.Usage.InputTokens,
 			CompletionTokens: msg.Usage.OutputTokens,
 			TotalTokens:      msg.Usage.InputTokens + msg.Usage.OutputTokens,
@@ -93,27 +93,27 @@ func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (
 		return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert anthropic content to openai message")
 	}
 
-	choice := &dto.ChatCompletionChoice{
+	choice := &dto.OpenAIChatCompletionChoice{
 		Index:        0,
 		Message:      message,
 		FinishReason: convertAnthropicStopReasonToOpenAI(msg.StopReason),
 	}
-	completion.Choices = []*dto.ChatCompletionChoice{choice}
+	completion.Choices = []*dto.OpenAIChatCompletionChoice{choice}
 
 	return completion, nil
 }
 
-// ToOpenAISSEResponse 将 Anthropic SSE 事件转换为 OpenAI ChatCompletionChunk 流式块
+// ToOpenAISSEResponse 将 Anthropic SSE 事件转换为 OpenAI OpenAIChatCompletionChunk 流式块
 //
 //	@receiver AnthropicProtocolConverter
 //	@param event dto.AnthropicSSEEvent
 //	@param model string
 //	@param chunkID string
-//	@return []*dto.ChatCompletionChunk
+//	@return []*dto.OpenAIChatCompletionChunk
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (*AnthropicProtocolConverter) ToOpenAISSEResponse(event dto.AnthropicSSEEvent, model string, chunkID string) ([]*dto.ChatCompletionChunk, error) {
+func (*AnthropicProtocolConverter) ToOpenAISSEResponse(event dto.AnthropicSSEEvent, model string, chunkID string) ([]*dto.OpenAIChatCompletionChunk, error) {
 	switch event.Event {
 	case enum.AnthropicSSEEventTypeContentBlockDelta:
 		return convertContentBlockDeltaToChunks(event.Data, model, chunkID)
@@ -137,7 +137,7 @@ func (*AnthropicProtocolConverter) ToOpenAISSEResponse(event dto.AnthropicSSEEve
 
 // ==================== Internal Helpers ====================
 
-func resolveMaxTokens(req *dto.ChatCompletionReq) int {
+func resolveMaxTokens(req *dto.OpenAIChatCompletionReq) int {
 	if req.MaxCompletionTokens != nil {
 		return *req.MaxCompletionTokens
 	}
@@ -147,7 +147,7 @@ func resolveMaxTokens(req *dto.ChatCompletionReq) int {
 	return 0
 }
 
-func resolveStopSequences(stop *dto.StopSequence) []string {
+func resolveStopSequences(stop *dto.OpenAIStopSequence) []string {
 	if len(stop.Texts) > 0 {
 		return stop.Texts
 	}
@@ -157,7 +157,7 @@ func resolveStopSequences(stop *dto.StopSequence) []string {
 	return nil
 }
 
-func extractOpenAISystemAndMessages(messages []*dto.ChatCompletionMessageParam) (*dto.AnthropicMessageContent, []*dto.AnthropicMessageParam, error) {
+func extractOpenAISystemAndMessages(messages []*dto.OpenAIChatCompletionMessageParam) (*dto.AnthropicMessageContent, []*dto.AnthropicMessageParam, error) {
 	var systemTexts []string
 	var anthropicMessages []*dto.AnthropicMessageParam
 
@@ -199,7 +199,7 @@ func extractOpenAISystemAndMessages(messages []*dto.ChatCompletionMessageParam) 
 	return system, anthropicMessages, nil
 }
 
-func resolveOpenAIContentText(content *dto.MessageContent) string {
+func resolveOpenAIContentText(content *dto.OpenAIMessageContent) string {
 	if content.Text != "" {
 		return content.Text
 	}
@@ -215,7 +215,7 @@ func resolveOpenAIContentText(content *dto.MessageContent) string {
 	return ""
 }
 
-func convertOpenAIUserMessageToAnthropic(msg *dto.ChatCompletionMessageParam) (*dto.AnthropicMessageParam, error) {
+func convertOpenAIUserMessageToAnthropic(msg *dto.OpenAIChatCompletionMessageParam) (*dto.AnthropicMessageParam, error) {
 	am := &dto.AnthropicMessageParam{
 		Role: enum.RoleUser,
 	}
@@ -245,7 +245,7 @@ func convertOpenAIUserMessageToAnthropic(msg *dto.ChatCompletionMessageParam) (*
 	return am, nil
 }
 
-func convertOpenAIPartsToAnthropicBlocks(parts []*dto.ChatCompletionContentPart) ([]*dto.AnthropicContentBlock, error) {
+func convertOpenAIPartsToAnthropicBlocks(parts []*dto.OpenAIChatCompletionContentPart) ([]*dto.AnthropicContentBlock, error) {
 	var blocks []*dto.AnthropicContentBlock
 	for _, part := range parts {
 		switch part.Type {
@@ -266,7 +266,7 @@ func convertOpenAIPartsToAnthropicBlocks(parts []*dto.ChatCompletionContentPart)
 	return blocks, nil
 }
 
-func convertOpenAIImageURLToAnthropicBlock(img *dto.ChatCompletionImageURL) *dto.AnthropicContentBlock {
+func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL) *dto.AnthropicContentBlock {
 	block := &dto.AnthropicContentBlock{
 		Type: enum.AnthropicContentBlockTypeImage,
 	}
@@ -293,7 +293,7 @@ func convertOpenAIImageURLToAnthropicBlock(img *dto.ChatCompletionImageURL) *dto
 	return block
 }
 
-func convertOpenAIAssistantMessageToAnthropic(msg *dto.ChatCompletionMessageParam) (*dto.AnthropicMessageParam, error) {
+func convertOpenAIAssistantMessageToAnthropic(msg *dto.OpenAIChatCompletionMessageParam) (*dto.AnthropicMessageParam, error) {
 	am := &dto.AnthropicMessageParam{
 		Role: enum.RoleAssistant,
 	}
@@ -346,7 +346,7 @@ func convertOpenAIAssistantMessageToAnthropic(msg *dto.ChatCompletionMessagePara
 	return am, nil
 }
 
-func convertOpenAIToolMessageToAnthropic(msg *dto.ChatCompletionMessageParam) *dto.AnthropicContentBlock {
+func convertOpenAIToolMessageToAnthropic(msg *dto.OpenAIChatCompletionMessageParam) *dto.AnthropicContentBlock {
 	block := &dto.AnthropicContentBlock{
 		Type:      enum.AnthropicContentBlockTypeToolResult,
 		ToolUseID: msg.ToolCallID,
@@ -379,7 +379,7 @@ func mergeToolResultIntoLastUser(messages []*dto.AnthropicMessageParam, toolResu
 	})
 }
 
-func convertOpenAIToolsToAnthropic(tools []dto.ChatCompletionTool) []*dto.AnthropicTool {
+func convertOpenAIToolsToAnthropic(tools []dto.OpenAIChatCompletionTool) []*dto.AnthropicTool {
 	anthropicTools := make([]*dto.AnthropicTool, 0, len(tools))
 	for _, tool := range tools {
 		if tool.Function != nil {
@@ -394,7 +394,7 @@ func convertOpenAIToolsToAnthropic(tools []dto.ChatCompletionTool) []*dto.Anthro
 	return anthropicTools
 }
 
-func convertOpenAIToolChoiceToAnthropic(tc *dto.ChatCompletionToolChoiceParam) *dto.AnthropicToolChoice {
+func convertOpenAIToolChoiceToAnthropic(tc *dto.OpenAIChatCompletionToolChoiceParam) *dto.AnthropicToolChoice {
 	if tc.Named != nil && tc.Named.Function != nil {
 		return &dto.AnthropicToolChoice{
 			Type: "tool",
@@ -428,14 +428,14 @@ func convertAnthropicStopReasonToOpenAI(stopReason *string) enum.FinishReason {
 	}
 }
 
-func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock) (*dto.ChatCompletionMessageParam, error) {
-	msg := &dto.ChatCompletionMessageParam{
+func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock) (*dto.OpenAIChatCompletionMessageParam, error) {
+	msg := &dto.OpenAIChatCompletionMessageParam{
 		Role: enum.RoleAssistant,
 	}
 
 	var textParts []string
 	var thinkingParts []string
-	var toolCalls []*dto.ChatCompletionMessageToolCall
+	var toolCalls []*dto.OpenAIChatCompletionMessageToolCall
 
 	for i, block := range blocks {
 		switch block.Type {
@@ -450,10 +450,10 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 			if err != nil {
 				return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
 			}
-			toolCalls = append(toolCalls, &dto.ChatCompletionMessageToolCall{
+			toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
 				ID:   block.ID,
 				Type: enum.ToolTypeFunction,
-				Function: &dto.ChatCompletionMessageFunctionToolCall{
+				Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
 					Name:      block.Name,
 					Arguments: args,
 				},
@@ -468,7 +468,7 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 	}
 
 	if joined := strings.Join(textParts, "\n"); joined != "" {
-		msg.Content = &dto.MessageContent{Text: joined}
+		msg.Content = &dto.OpenAIMessageContent{Text: joined}
 	}
 	if len(thinkingParts) > 0 {
 		msg.ReasoningContent = strings.Join(thinkingParts, "\n")
@@ -480,20 +480,20 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 	return msg, nil
 }
 
-func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID string) ([]*dto.ChatCompletionChunk, error) {
+func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID string) ([]*dto.OpenAIChatCompletionChunk, error) {
 	var payload dto.AnthropicSSEContentBlockDelta
 	if err := sonic.Unmarshal(data, &payload); err != nil {
 		return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_delta")
 	}
 
-	chunk := &dto.ChatCompletionChunk{
+	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      chunkID,
 		Object:  "chat.completion.chunk",
 		Created: time.Now().Unix(),
 		Model:   model,
 	}
 
-	delta := &dto.ChatCompletionChunkDelta{}
+	delta := &dto.OpenAIChatCompletionChunkDelta{}
 
 	switch payload.Delta.Type {
 	case enum.AnthropicDeltaTypeTextDelta:
@@ -507,21 +507,21 @@ func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkI
 		return nil, nil
 	}
 
-	chunk.Choices = []*dto.ChatCompletionChunkChoice{{
+	chunk.Choices = []*dto.OpenAIChatCompletionChunkChoice{{
 		Index: payload.Index,
 		Delta: delta,
 	}}
 
-	return []*dto.ChatCompletionChunk{chunk}, nil
+	return []*dto.OpenAIChatCompletionChunk{chunk}, nil
 }
 
-func convertMessageDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID string) ([]*dto.ChatCompletionChunk, error) {
+func convertMessageDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID string) ([]*dto.OpenAIChatCompletionChunk, error) {
 	var payload dto.AnthropicSSEMessageDelta
 	if err := sonic.Unmarshal(data, &payload); err != nil {
 		return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_delta")
 	}
 
-	chunk := &dto.ChatCompletionChunk{
+	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      chunkID,
 		Object:  "chat.completion.chunk",
 		Created: time.Now().Unix(),
@@ -530,24 +530,24 @@ func convertMessageDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID str
 
 	finishReason := convertAnthropicStopReasonToOpenAI(payload.Delta.StopReason)
 
-	chunk.Choices = []*dto.ChatCompletionChunkChoice{{
+	chunk.Choices = []*dto.OpenAIChatCompletionChunkChoice{{
 		Index:        0,
-		Delta:        &dto.ChatCompletionChunkDelta{},
+		Delta:        &dto.OpenAIChatCompletionChunkDelta{},
 		FinishReason: finishReason,
 	}}
 
 	if payload.Usage != nil {
-		chunk.Usage = &dto.CompletionUsage{
+		chunk.Usage = &dto.OpenAICompletionUsage{
 			PromptTokens:     payload.Usage.InputTokens,
 			CompletionTokens: payload.Usage.OutputTokens,
 			TotalTokens:      payload.Usage.InputTokens + payload.Usage.OutputTokens,
 		}
 	}
 
-	return []*dto.ChatCompletionChunk{chunk}, nil
+	return []*dto.OpenAIChatCompletionChunk{chunk}, nil
 }
 
-func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkID string) ([]*dto.ChatCompletionChunk, error) {
+func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkID string) ([]*dto.OpenAIChatCompletionChunk, error) {
 	var payload dto.AnthropicSSEContentBlockStart
 	if err := sonic.Unmarshal(data, &payload); err != nil {
 		return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_start")
@@ -559,44 +559,44 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 
 	// tool_use 开始事件 -> OpenAI tool_calls chunk
 	if payload.ContentBlock.Type == enum.AnthropicContentBlockTypeToolUse {
-		chunk := &dto.ChatCompletionChunk{
+		chunk := &dto.OpenAIChatCompletionChunk{
 			ID:      chunkID,
 			Object:  "chat.completion.chunk",
 			Created: time.Now().Unix(),
 			Model:   model,
-			Choices: []*dto.ChatCompletionChunkChoice{{
+			Choices: []*dto.OpenAIChatCompletionChunkChoice{{
 				Index: 0,
-				Delta: &dto.ChatCompletionChunkDelta{
-					ToolCalls: []*dto.ChatCompletionMessageToolCall{{
+				Delta: &dto.OpenAIChatCompletionChunkDelta{
+					ToolCalls: []*dto.OpenAIChatCompletionMessageToolCall{{
 						Index: payload.Index,
 						ID:    payload.ContentBlock.ID,
 						Type:  enum.ToolTypeFunction,
-						Function: &dto.ChatCompletionMessageFunctionToolCall{
+						Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
 							Name: payload.ContentBlock.Name,
 						},
 					}},
 				},
 			}},
 		}
-		return []*dto.ChatCompletionChunk{chunk}, nil
+		return []*dto.OpenAIChatCompletionChunk{chunk}, nil
 	}
 
 	// text/thinking 开始事件 -> OpenAI role chunk
 	if payload.ContentBlock.Type == enum.AnthropicContentBlockTypeText ||
 		payload.ContentBlock.Type == enum.AnthropicContentBlockTypeThinking {
-		chunk := &dto.ChatCompletionChunk{
+		chunk := &dto.OpenAIChatCompletionChunk{
 			ID:      chunkID,
 			Object:  "chat.completion.chunk",
 			Created: time.Now().Unix(),
 			Model:   model,
-			Choices: []*dto.ChatCompletionChunkChoice{{
+			Choices: []*dto.OpenAIChatCompletionChunkChoice{{
 				Index: 0,
-				Delta: &dto.ChatCompletionChunkDelta{
+				Delta: &dto.OpenAIChatCompletionChunkDelta{
 					Role: enum.RoleAssistant,
 				},
 			}},
 		}
-		return []*dto.ChatCompletionChunk{chunk}, nil
+		return []*dto.OpenAIChatCompletionChunk{chunk}, nil
 	}
 
 	return nil, nil

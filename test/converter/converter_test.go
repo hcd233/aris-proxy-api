@@ -15,11 +15,11 @@ import (
 type testCase struct {
 	Name             string                          `json:"name"`
 	Description      string                          `json:"description"`
-	OpenAIRequest    *dto.ChatCompletionReq          `json:"openai_request"`
+	OpenAIRequest    *dto.OpenAIChatCompletionReq          `json:"openai_request"`
 	AnthropicRequest *dto.AnthropicCreateMessageReq  `json:"anthropic_request"`
-	OpenAIResponse   *dto.ChatCompletion             `json:"openai_response"`
+	OpenAIResponse   *dto.OpenAIChatCompletion             `json:"openai_response"`
 	AnthropicResponse *dto.AnthropicMessage          `json:"anthropic_response"`
-	OpenAIToolChoice *dto.ChatCompletionToolChoiceParam `json:"openai_tool_choice"`
+	OpenAIToolChoice *dto.OpenAIChatCompletionToolChoiceParam `json:"openai_tool_choice"`
 	AnthropicToolChoice *dto.AnthropicToolChoice     `json:"anthropic_tool_choice"`
 }
 
@@ -677,14 +677,14 @@ func TestRoundtrip_OpenAIResponse_ToAnthropic_BackToOpenAI(t *testing.T) {
 func TestOpenAIProtocolConverter_ToAnthropicSSEResponse(t *testing.T) {
 	conv := converter.OpenAIProtocolConverter{}
 
-	chunk := &dto.ChatCompletionChunk{
+	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      "chatcmpl-test",
 		Object:  "chat.completion.chunk",
 		Created: 1700000000,
 		Model:   "gpt-4",
-		Choices: []*dto.ChatCompletionChunkChoice{{
+		Choices: []*dto.OpenAIChatCompletionChunkChoice{{
 			Index: 0,
-			Delta: &dto.ChatCompletionChunkDelta{
+			Delta: &dto.OpenAIChatCompletionChunkDelta{
 				Content: "Hello",
 			},
 		}},

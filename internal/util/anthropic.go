@@ -146,7 +146,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_delta")
 			}
 			msg.StopReason = payload.Delta.StopReason
-			msg.StopSequence = payload.Delta.StopSequence
+			msg.OpenAIStopSequence = payload.Delta.OpenAIStopSequence
 			if payload.Usage != nil && msg.Usage != nil {
 				msg.Usage.OutputTokens = payload.Usage.OutputTokens
 			}

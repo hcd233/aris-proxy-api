@@ -165,7 +165,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 	if stream {
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
 			isFirst := true
-			completion, proxyErr := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.ChatCompletionChunk) error {
+			completion, proxyErr := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 				events, err := conv.ToAnthropicSSEResponse(chunk, isFirst, exposedModel)
 				if err != nil {
 					return err

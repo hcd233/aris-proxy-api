@@ -83,14 +83,14 @@ type UnifiedToolCall struct {
 
 // ==================== Conversion: OpenAI -> Unified ====================
 
-// FromOpenAIMessage 从 OpenAI ChatCompletionMessageParam 转换为 UnifiedMessage
+// FromOpenAIMessage 从 OpenAI OpenAIChatCompletionMessageParam 转换为 UnifiedMessage
 //
-//	@param msg *ChatCompletionMessageParam
+//	@param msg *OpenAIChatCompletionMessageParam
 //	@return *UnifiedMessage
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
-func FromOpenAIMessage(msg *ChatCompletionMessageParam) (*UnifiedMessage, error) {
+func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*UnifiedMessage, error) {
 	um := &UnifiedMessage{
 		Role:             msg.Role,
 		ReasoningContent: msg.ReasoningContent,
@@ -99,7 +99,7 @@ func FromOpenAIMessage(msg *ChatCompletionMessageParam) (*UnifiedMessage, error)
 		Refusal:          msg.Refusal,
 	}
 
-	// 转换 Content: *MessageContent -> *UnifiedContent
+	// 转换 Content: *OpenAIMessageContent -> *UnifiedContent
 	if msg.Content != nil {
 		content, err := convertOpenAIContent(msg.Content)
 		if err != nil {
@@ -129,8 +129,8 @@ func FromOpenAIMessage(msg *ChatCompletionMessageParam) (*UnifiedMessage, error)
 	return um, nil
 }
 
-// convertOpenAIContent 将 OpenAI MessageContent 转换为 UnifiedContent
-func convertOpenAIContent(mc *MessageContent) (*UnifiedContent, error) {
+// convertOpenAIContent 将 OpenAI OpenAIMessageContent 转换为 UnifiedContent
+func convertOpenAIContent(mc *OpenAIMessageContent) (*UnifiedContent, error) {
 	if len(mc.Parts) > 0 {
 		parts := make([]*UnifiedContentPart, 0, len(mc.Parts))
 		for i, p := range mc.Parts {
@@ -145,8 +145,8 @@ func convertOpenAIContent(mc *MessageContent) (*UnifiedContent, error) {
 	return &UnifiedContent{Text: mc.Text}, nil
 }
 
-// convertOpenAIContentPart 将 OpenAI ChatCompletionContentPart 转换为 UnifiedContentPart
-func convertOpenAIContentPart(p *ChatCompletionContentPart) (*UnifiedContentPart, error) {
+// convertOpenAIContentPart 将 OpenAI OpenAIChatCompletionContentPart 转换为 UnifiedContentPart
+func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*UnifiedContentPart, error) {
 	switch p.Type {
 	case enum.ContentPartTypeText:
 		return &UnifiedContentPart{Type: enum.ContentPartTypeText, Text: p.Text}, nil
