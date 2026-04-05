@@ -5,7 +5,6 @@
 package pool
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/alitto/pond/v2"
@@ -192,20 +191,19 @@ func (pm *Manager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmodel.
 		return m.CheckSum
 	})
 
-	existingMessages, err := pm.messageDAO.BatchGetByField(tx, "check_sum", checksums, []string{"id", "check_sum", "model"})
+	existingMessages, err := pm.messageDAO.BatchGetByField(tx, "check_sum", checksums, []string{"id", "check_sum"})
 	if err != nil {
 		return nil, err
 	}
 
-	// 构建 checksum+model -> ID 的映射，用于精确匹配
+	// 构建 checksum -> ID 的映射，用于精确匹配
 	existingMap := lo.SliceToMap(existingMessages, func(m *dbmodel.Message) (string, uint) {
-		return fmt.Sprintf("%s:%s", m.CheckSum, m.Model), m.ID
+		return m.CheckSum, m.ID
 	})
 
 	// 分离已存在和需要新建的消息
 	newMessages := lo.Filter(messages, func(m *dbmodel.Message, _ int) bool {
-		key := fmt.Sprintf("%s:%s", m.CheckSum, m.Model)
-		_, exists := existingMap[key]
+		_, exists := existingMap[m.CheckSum]
 		return !exists
 	})
 
@@ -216,15 +214,13 @@ func (pm *Manager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmodel.
 		}
 		// 将新创建的消息加入映射
 		for _, m := range newMessages {
-			key := fmt.Sprintf("%s:%s", m.CheckSum, m.Model)
-			existingMap[key] = m.ID
+			existingMap[m.CheckSum] = m.ID
 		}
 	}
 
 	// 按原始顺序收集所有消息 ID
 	messageIDs := lo.Map(messages, func(m *dbmodel.Message, _ int) uint {
-		key := fmt.Sprintf("%s:%s", m.CheckSum, m.Model)
-		return existingMap[key]
+		return existingMap[m.CheckSum]
 	})
 
 	return messageIDs, nil
