@@ -4,10 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -21,6 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -28,37 +27,6 @@ import (
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
-
-// upstreamHTTPClient 上游 LLM 服务 HTTP 客户端
-//
-// Transport 细粒度超时配置：
-//   - DialContext: 连接建立超时 10s
-//   - TLSHandshakeTimeout: TLS 握手超时 10s
-//   - ResponseHeaderTimeout: 等待响应头超时 30s（仅约束首字节，不影响流式读取）
-//   - MaxIdleConns: 全局空闲连接上限 100
-//   - MaxIdleConnsPerHost: 每个 host 空闲连接上限 20
-//   - IdleConnTimeout: 空闲连接回收时间 90s
-//
-// Client.Timeout 保持 5min，因为 LLM 流式响应的总传输时长可能很长
-//
-//	@author centonhuang
-//	@update 2026-03-20 10:00:00
-var upstreamHTTPClient = &http.Client{
-	Timeout: constant.HTTPClientTimeout,
-	Transport: &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout:   constant.HTTPDialTimeout,
-			KeepAlive: constant.HTTPKeepAlive,
-		}).DialContext,
-		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
-		TLSHandshakeTimeout:   constant.HTTPTLSHandshakeTimeout,
-		ResponseHeaderTimeout: constant.HTTPResponseHeaderTimeout,
-		MaxIdleConns:          constant.HTTPMaxIdleConns,
-		MaxIdleConnsPerHost:   constant.HTTPMaxIdleConnsPerHost,
-		IdleConnTimeout:       constant.HTTPIdleConnTimeout,
-		ForceAttemptHTTP2:     true,
-	},
-}
 
 // OpenAIService OpenAI服务
 //
@@ -168,7 +136,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
-	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
+	upstreamResp, err := httpclient.GetHTTPClient().Do(upstreamReq)
 	if err != nil {
 		logger.Error("[OpenAIService] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendOpenAIInternalError(), nil

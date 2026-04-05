@@ -19,6 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -140,7 +141,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
-	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
+	upstreamResp, err := httpclient.GetHTTPClient().Do(upstreamReq)
 	if err != nil {
 		logger.Error("[AnthropicService] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return util.SendAnthropicInternalError(), nil
@@ -383,7 +384,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 		zap.String("upstreamModel", endpoint.Model),
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)))
 
-	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)
+	upstreamResp, err := httpclient.GetHTTPClient().Do(upstreamReq)
 	if err != nil {
 		logger.Warn("[AnthropicService] Send http request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return rsp, nil

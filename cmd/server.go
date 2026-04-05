@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
@@ -60,6 +61,7 @@ var startServerCmd = &cobra.Command{
 
 		database.InitDatabase()
 		cache.InitCache()
+		httpclient.InitHTTPClient()
 		pool.InitPoolManager()
 		cron.InitCronJobs()
 
