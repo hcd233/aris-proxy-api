@@ -8,6 +8,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -18,16 +19,16 @@ import (
 
 // submitMessageStoreTask 提交消息存储任务到 Store 池
 //
-//	@param pm *Manager
+//	@param pm *PoolManager
 //	@param task *dto.MessageStoreTask
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (pm *Manager) submitMessageStoreTask(task *dto.MessageStoreTask) error {
+func (pm *PoolManager) submitMessageStoreTask(task *dto.MessageStoreTask) error {
 	logger := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 
-	return pm.messageStorePool.Go(func() {
+	return pm.storePool.Go(func() {
 		toolSchemas := util.ToolSchemaMap{}
 		for _, t := range task.Tools {
 			if t.Parameters != nil {
@@ -77,7 +78,7 @@ func (pm *Manager) submitMessageStoreTask(task *dto.MessageStoreTask) error {
 				Client:     task.Client,
 				Metadata:   task.Metadata,
 			}
-			if err := pm.sessionDAO.Create(tx, session); err != nil {
+			if err := dao.GetSessionDAO().Create(tx, session); err != nil {
 				logger.Error("[StorePool] Failed to create session", zap.Error(err))
 				return err
 			}
