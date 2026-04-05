@@ -2,12 +2,18 @@
 package util
 
 import (
+	"bufio"
+	"errors"
 	"io"
 
 	"github.com/bytedance/sonic"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
+	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
 // WrapHTTPResponse 包装HTTP响应错误
@@ -34,4 +40,91 @@ func WrapHTTPResponse[rspT any](rsp rspT, err error) (*dto.HTTPResponse[rspT], e
 func WriteErrorResponse(bodyWriter io.Writer, err *model.Error) error {
 	_, writeErr := bodyWriter.Write(lo.Must1(sonic.Marshal(&dto.CommonRsp{Error: err})))
 	return writeErr
+}
+
+// WrapStreamResponse 创建 SSE 流式响应包装
+//
+//	@param handler func(w *bufio.Writer)
+//	@return *huma.StreamResponse
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
+	return &huma.StreamResponse{
+		Body: func(humaCtx huma.Context) {
+			fiberCtx := humafiber.Unwrap(humaCtx)
+			fiberCtx.Set("Content-Type", "text/event-stream")
+			fiberCtx.Set("Cache-Control", "no-cache")
+			fiberCtx.Set("Connection", "keep-alive")
+			fiberCtx.Set("Transfer-Encoding", "chunked")
+			fiberCtx.Set("X-Accel-Buffering", "no")
+			fiberCtx.Status(200).Response().SetBodyStreamWriter(fasthttp.StreamWriter(handler))
+		},
+	}
+}
+
+// JSONResponseWriter JSON 响应写入器
+//
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+type JSONResponseWriter struct {
+	HumaCtx huma.Context
+}
+
+// WriteJSON 写入 JSON 响应
+//
+//	@receiver rw JSONResponseWriter
+//	@param v any
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func (rw JSONResponseWriter) WriteJSON(v any) {
+	rw.HumaCtx.SetStatus(200)
+	rw.HumaCtx.SetHeader("Content-Type", "application/json")
+	rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v)))
+}
+
+// WriteError 写入自定义状态码和 JSON body 的错误响应
+//
+//	@receiver rw JSONResponseWriter
+//	@param statusCode int
+//	@param body []byte
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func (rw JSONResponseWriter) WriteError(statusCode int, body []byte) {
+	rw.HumaCtx.SetStatus(statusCode)
+	rw.HumaCtx.SetHeader("Content-Type", "application/json")
+	rw.HumaCtx.BodyWriter().Write(body)
+}
+
+// WrapJSONResponse 创建 JSON 响应包装
+//
+//	@param handler func(writer JSONResponseWriter)
+//	@return *huma.StreamResponse
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func WrapJSONResponse(handler func(writer JSONResponseWriter)) *huma.StreamResponse {
+	return &huma.StreamResponse{
+		Body: func(humaCtx huma.Context) {
+			handler(JSONResponseWriter{HumaCtx: humaCtx})
+		},
+	}
+}
+
+// WriteUpstreamError 将上游错误写入响应，支持上游错误透传和兜底错误
+//
+//	@param logger *zap.Logger
+//	@param writer JSONResponseWriter
+//	@param err error
+//	@param fallbackBody []byte
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error, fallbackBody []byte) {
+	var upstreamErr *model.UpstreamError
+	if errors.As(err, &upstreamErr) {
+		writer.HumaCtx.SetStatus(upstreamErr.StatusCode)
+		writer.HumaCtx.SetHeader("Content-Type", "application/json")
+		writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body))
+		return
+	}
+	logger.Error("[ProxyService] Proxy error", zap.Error(err))
+	writer.WriteError(502, fallbackBody)
 }

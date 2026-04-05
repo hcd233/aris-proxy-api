@@ -97,9 +97,11 @@ Fiber (HTTP) → 全局中间件 → Huma Router → 路由组中间件 → Hand
 - **`internal/api/`** — Fiber App 和 Huma API 单例，通过 `GetFiberApp()` / `GetHumaAPI()` 获取。`fiber.go` 初始化 Fiber App（含 JSON 编解码、超时、可信代理配置）；`huma.go` 初始化 Huma API（含 OpenAPI 3.1 规范、安全方案定义）。Fiber 使用 Sonic 作为 JSON 编解码器。Huma 注册 `jwtAuth` 和 `apiKeyAuth` 两种安全方案
 - **`internal/router/`** — 按领域分组的路由注册。每个文件绑定中间件和 Handler，使用 `huma.Register()` 注册操作
 - **`internal/handler/`** — 每个 Handler 为**接口**，私有结构体实现，通过 `NewXxxHandler()` 创建。Handler 持有 Service 引用，用 `util.WrapHTTPResponse()` 包装响应。流式响应（SSE/LLM）返回 `*huma.StreamResponse`。关键 Handler：OpenAIHandler、AnthropicHandler、SessionHandler、TokenHandler、UserHandler、Oauth2Handler
-- **`internal/service/`** — 业务逻辑层。按领域分组（session、token、openai、anthropic、oauth2、user）。Service 处理上游请求构建、SSE 流式转发、模型名替换、异步任务提交和业务逻辑。Oauth2Service 有 `NewGithubOauth2Service()` 和 `NewGoogleOauth2Service()` 两个工厂方法
+- **`internal/service/`** — 业务编排层（薄）。按领域分组（session、token、openai、anthropic、oauth2、user）。LLM 代理 Service 只负责：端点查找（含 Provider 回退）→ 调用 Converter 转换 → 调用 Proxy 转发 → 消息存储。不含 HTTP 通信和 SSE 读取逻辑。Oauth2Service 有 `NewGithubOauth2Service()` 和 `NewGoogleOauth2Service()` 两个工厂方法
+- **`internal/proxy/`** — 上游代理层（纯传输）。负责与上游 LLM 提供者的 HTTP/SSE 通信。`OpenAIProxy` 提供 `ForwardChatCompletion`/`ForwardChatCompletionStream`，`AnthropicProxy` 提供 `ForwardCreateMessage`/`ForwardCreateMessageStream`/`ForwardCountTokens`。流式方法通过**回调函数**将 SSE 事件逐个交给调用方。包含 `UpstreamEndpoint`（端点信息）、`ReplaceModelInBody`/`ReplaceModelInSSEData`（model 替换工具）
+- **`internal/converter/`** — 协议转换层（纯 DTO 转换）。`OpenAIProtocolConverter`：Anthropic→OpenAI 转换（`FromAnthropicRequest`/`ToAnthropicResponse`/`ToAnthropicSSEResponse`）。`AnthropicProtocolConverter`：OpenAI→Anthropic 转换（`FromOpenAIRequest`/`ToOpenAIResponse`/`ToOpenAISSEResponse`）。支持文本、工具调用、图片、推理内容的双向转换
 - **`internal/infrastructure/database/dao/`** — 泛型 `baseDAO[ModelT]` 提供类型安全的 CRUD、分页和批量操作。具体 DAO 嵌入它。含 `singleton.go` 提供 `GetXxxDAO()` 单例访问。关键 DAO：MessageDAO、SessionDAO、ToolDAO、UserDAO、ModelEndpointDAO、ProxyAPIKeyDAO。软删除使用 `deleted_at`（int64 时间戳，0 = 未删除）
-- **`internal/infrastructure/database/model/`** — GORM 模型。`BaseModel` 包含 ID/CreatedAt/UpdatedAt/DeletedAt。关键模型：User、Message（存储 UnifiedMessage JSON + SHA256 CheckSum）、Session（跟踪 APIKeyName + MessageIDs + ToolIDs 为 JSON 数组，含 Summary/Scores 字段）、Tool（存储 UnifiedTool JSON + CheckSum）、ModelEndpoint、ProxyAPIKey
+- **`internal/infrastructure/database/model/`** — GORM 模型。`BaseModel` 包含 ID/CreatedAt/UpdatedAt/DeletedAt。关键模型：User、Message（存储 UnifiedMessage JSON + SHA256 CheckSum）、Session（跟踪 APIKeyName + MessageIDs + ToolIDs 为 JSON 数组，含 Summary/Scores 字段）、Tool（存储 UnifiedTool JSON + CheckSum）、ModelEndpoint（含 Provider 字段区分上游协议）、ProxyAPIKey
 - **`internal/dto/`** — 请求/响应 DTO。包含完整的 OpenAI 和 Anthropic API 类型定义，以及 `UnifiedMessage` 和 `UnifiedTool` 跨 Provider 格式及双向转换函数。`UnifiedContent` 使用自定义 JSON 序列化/反序列化处理联合类型（string | array | object）。含 `asynctask.go`（`MessageStoreTask`、`SummarizeTask`、`ScoreTask`）、`json_schema.go`（JSON Schema）等
 - **`internal/middleware/`** — Recover、Fgprof、CORS、Compress、Fiber 级中间件（全局生效）；JWT、APIKey、RateLimiter、Permission、Lock、Trace、Log Huma 级中间件（按路由生效）。JWT 解码 Token 并注入 userID/userName/permission 到上下文。APIKey 中间件每次请求从数据库查询 API Key 验证，并注入 userName。RateLimiter 使用自定义 Redis Lua 脚本实现令牌桶算法（`redis/go-redis/v9`）。Lock 中间件使用 Redis SETNX + Lua 脚本原子解锁。Trace 中间件生成 UUID 并注入 `X-Trace-Id` 响应头
 - **`internal/infrastructure/pool/`** — `PoolManager` 管理 Pond v2 协程池：`storePool` 和 `agentPool`。`storePool` 处理消息存储任务（通过 SHA256 CheckSum 去重，批量 IN 查询后事务创建 messages/tools/sessions）；`agentPool` 处理 Session 总结和评分任务。使用 `util.CopyContextValues()` 安全传递上下文到异步任务
@@ -109,13 +111,13 @@ Fiber (HTTP) → 全局中间件 → Huma Router → 路由组中间件 → Hand
 - **`internal/common/constant/`** — 项目常量（上下文 Key、HTTP、Agent、时间、速率、字符串）。含 `agent.go`（Agent 指令和参数）、`rate.go`（速率限制配置）等
 - **`internal/common/enum/`** — 公共枚举
 - **`internal/common/ierr/`** — 统一错误创建和处理包
-- **`internal/common/model/`** — 通用数据模型
+- **`internal/common/model/`** — 通用数据模型（`Error` 业务错误、`UpstreamError` 上游通信错误）
 - **`internal/enum/`** — 业务枚举（环境、Provider 类型、内容类型、角色、语音、模态、Anthropic SSE 事件/内容块/Delta 类型等）
 - **`internal/jwt/`** — JWT 签发和验证单例
 - **`internal/lock/`** — Redis 分布式锁
 - **`internal/logger/`** — Zap 结构化日志。四路输出：控制台（彩色 Console 编码）+ info.log（JSON）+ error.log（JSON）+ panic.log（JSON），Lumberjack 轮转
 - **`internal/oauth2/`** — OAuth2 策略模式实现（GitHub、Google 等）
-- **`internal/util/`** — 工具函数（上下文、哈希、HTTP、SSE、字符串、用户、OpenAI/Anthropic 适配）。含 `CopyContextValues()`、`MaskSecret()`、`ComputeMessageChecksum()`、`ComputeToolChecksum()`、`ConcatChatCompletionChunks()`、`ConcatAnthropicSSEEvents()` 等
+- **`internal/util/`** — 工具函数。含上下文（`CopyContextValues`）、哈希（`ComputeMessageChecksum`/`ComputeToolChecksum`）、HTTP 响应工具（`WrapHTTPResponse`/`WrapStreamResponse`/`WrapJSONResponse`/`JSONResponseWriter`/`WriteUpstreamError`/`WriteErrorResponse`）、SSE（`WrapErrorSSE`/`ConcatChatCompletionChunks`/`ConcatAnthropicSSEEvents`）、字符串（`MaskSecret`）、错误响应（`SendOpenAIModelNotFoundError`/`SendAnthropicModelNotFoundError`）等
 
 ### 安全方案
 
@@ -127,32 +129,62 @@ Huma 注册 `jwtAuth` 和 `apiKeyAuth` 两种安全方案，分别对应 JWT 和
 - **JWT**（`Authorization: Bearer <token>`）— 用户路由。双 Token：AccessToken（短期）+ RefreshToken（长期），不同密钥和过期时间。OAuth2 登录后签发
 - **API Key**（`Authorization: Bearer <api-key>`）— LLM 代理路由。Key 存储在 `ProxyAPIKey` 表中
 
-### LLM 代理流
+### LLM 代理流（三层架构）
 
 ```
+Service 层（编排）      → 端点查找 + Converter 调用 + Proxy 调用 + 消息存储
+  ↓
+Proxy 层（传输）        → HTTP 请求构建 + 发送 + SSE 读取循环 + 事件合并
+  ↓
+Converter 层（转换）    → 纯 DTO 格式转换（OpenAI ↔ Anthropic）
+```
+
+**原生协议流（OpenAI 接口 → OpenAI 上游）：**
+```
 Client → /api/openai/v1/chat/completions (model=my-alias)
-  → APIKeyMiddleware 从 ProxyAPIKey 表验证 Key
-  → Service 查找 my-alias → 从 ModelEndpoint 表找到上游 endpoint 配置
+  → APIKeyMiddleware 验证 Key
+  → Service 查找 my-alias → ModelEndpoint 表 (provider=openai)
   → 兼容性处理（如 max_tokens → max_completion_tokens）
   → 序列化请求，替换 model 为上游实际名称
-  → 构建 HTTP 请求，附加上游 Authorization 头
-  → 转发至上游 LLM 提供者
-  → 流式：逐行读取 SSE → 替换 model 名 → 转发客户端 → 收集 chunks → 合并完整消息
-  → 非流式：读取响应 → 替换 model 名 → 返回
+  → Proxy 构建 HTTP 请求 → 转发至上游 → SSE 读取 → 回调返回 chunk
+  → Service 在回调中替换 model 名 → 写入客户端
   → 异步：转换为 UnifiedMessage → 通过 Pool 存储（CheckSum 去重）
 ```
 
-Anthropic 代理遵循相同模式，但使用 `x-api-key` 头、`/v1/messages` 路径、`anthropic-version` 头，以及不同的 SSE 事件格式（event + data 双行）。
+**跨协议流（OpenAI 接口 → Anthropic 上游）：**
+```
+Client → /api/openai/v1/chat/completions (model=my-alias)
+  → Service 查找 my-alias → ModelEndpoint 表 (provider=anthropic)
+  → Converter 将 OpenAI 请求转为 Anthropic 格式
+  → Proxy 通过 Anthropic 协议发送到上游
+  → Service 在回调中用 Converter 将 Anthropic 事件转回 OpenAI chunk → 写入客户端
+  → 异步：Converter 转回 OpenAI 格式 → 通过 Pool 存储
+```
+
+Anthropic 接口同理支持 OpenAI 上游（反向转换）。
+
+**Proxy 层流式回调模式：**
+```go
+// Proxy 通过回调将 SSE 事件逐个交给 Service
+proxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.ChatCompletionChunk) error {
+    chunk.Model = exposedModel
+    fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(chunk)))
+    return w.Flush()
+})
+```
 
 ### 核心设计模式
 
-1. **接口驱动**：Handler、Service、DAO、TokenSigner、Locker、ObjDAO 均定义接口
+1. **接口驱动**：Handler、Service、DAO、Proxy、TokenSigner、Locker、ObjDAO 均定义接口
 2. **单例模式**：Fiber App、Huma API、DB、Redis、DAO、JWT Signers、PoolManager
 3. **泛型 DAO**：`baseDAO[ModelT]` 使用 Go 泛型
 4. **策略模式**：OAuth2 平台切换、对象存储平台切换
 5. **统一消息格式**：OpenAI/Anthropic DTO → UnifiedMessage/UnifiedTool 跨 Provider 存储
 6. **异步协程池**：LLM 请求后的消息存储通过 Pool，SHA256 CheckSum 去重
 7. **上下文感知日志**：`logger.WithCtx(ctx)` / `logger.WithFCtx(fctx)` 自动附加 traceID、userID、userName
+8. **三层 LLM 代理架构**：Service（编排）→ Proxy（传输）→ Converter（转换），职责分离
+9. **回调函数流式处理**：Proxy 通过 `onChunk`/`onEvent` 回调将 SSE 事件逐个交给 Service，Service 在回调中做协议转换和客户端写入
+10. **跨协议转换**：注册为 `provider=openai` 的模型可通过 Anthropic 接口调用，反之亦然
 
 ### 核心指令
 
@@ -328,6 +360,49 @@ go tool cover -html=coverage.out -o coverage.html
 
 ---
 
+## 代码组织规范
+
+### 公共函数位置规则
+
+**导出的公共函数只能放在 `internal/util/` 或 `internal/common/` 下**，不允许在业务包（如 `service/`、`handler/`）中创建 `common.go` 存放公共函数。
+
+| 类型 | 位置 | 示例 |
+|------|------|------|
+| HTTP 响应工具 | `util/http.go` | `WrapStreamResponse`、`WrapJSONResponse`、`JSONResponseWriter`、`WriteUpstreamError` |
+| SSE 工具 | `util/sse.go` | `WrapErrorSSE`、`ConcatChatCompletionChunks`、`ConcatAnthropicSSEEvents` |
+| 哈希/字符串工具 | `util/hash.go`、`util/string.go` | `ComputeMessageChecksum`、`MaskSecret` |
+| 公共错误模型 | `common/model/error.go` | `Error`（业务错误）、`UpstreamError`（上游通信错误） |
+| 公共枚举 | `common/enum/` | `Permission`、`SSEDataType` 等 |
+| 统一错误创建 | `common/ierr/` | `ierr.Wrap`、`ierr.New`、哨兵错误 |
+
+### 包内私有辅助函数
+
+业务包（如 `service/`）内部的辅助函数（未导出）应：
+- 直接放在使用它们的文件中（如 `findEndpoint` 放在 `openai.go`）
+- 或放在同一包的某个业务文件中（当被多个文件共享时）
+- **不建立独立的 `common.go`**
+
+### 循环依赖避免
+
+`util/` 是底层工具包，不允许依赖上层业务包。如果 `util/` 需要引用某个类型，应将该类型下沉到 `common/model/`。
+
+示例：`UpstreamError` 原在 `proxy/` 中定义，但 `util/http.go` 的 `WriteUpstreamError` 需要引用它。由于 `proxy/` → `util/`（已有依赖），反向依赖会产生循环。因此 `UpstreamError` 下沉到 `common/model/`。
+
+### LLM 代理分层规范
+
+```
+Handler → Service → Proxy → upstream HTTP
+                 ↘ Converter (纯转换)
+```
+
+| 层 | 职责 | 规则 |
+|---|---|---|
+| Service | 端点查找 + 分发 + Converter 调用 + 消息存储 | 不含 HTTP 请求构建/SSE 读取 |
+| Proxy | HTTP 请求构建 + 发送 + SSE 读取 + 事件合并 | 不含协议转换逻辑，通过回调交出事件 |
+| Converter | 纯 DTO 格式转换 | 无状态、无副作用、不依赖外部服务 |
+
+---
+
 ## 开发流程
 
 **每次新增/修改/重构代码时，必须遵循以下流程。**
@@ -386,7 +461,11 @@ go tool cover -html=coverage.out -o coverage.html
 #### 架构分层
 
 - Handler 只做薄包装，不含业务逻辑
-- Service 不直接依赖基础设施实现
+- Service 不直接依赖基础设施实现，不含 HTTP/SSE 通信逻辑
+- LLM 代理 Service 只做编排：端点查找 → Converter 转换 → Proxy 转发 → 存储
+- Proxy 只做传输：HTTP 请求构建 + SSE 读取 + 回调交出事件
+- Converter 只做转换：纯函数，无状态，不依赖外部服务
+- 导出的公共函数只放 `util/` 或 `common/`，不在 service 等业务包建 `common.go`
 - 所有业务方法第一个参数 `context.Context`
 - 单例通过 `GetXxx()` 获取
 

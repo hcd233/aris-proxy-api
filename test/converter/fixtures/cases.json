@@ -1,0 +1,310 @@
+[
+    {
+        "name": "simple_text_message",
+        "description": "simple text user+assistant messages convert bidirectionally",
+        "openai_request": {
+            "model": "gpt-4",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Hello!"},
+                {"role": "assistant", "content": "Hi there!"},
+                {"role": "user", "content": "How are you?"}
+            ],
+            "max_completion_tokens": 1024,
+            "temperature": 0.7
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "system": "You are a helpful assistant.",
+            "messages": [
+                {"role": "user", "content": "Hello!"},
+                {"role": "assistant", "content": "Hi there!"},
+                {"role": "user", "content": "How are you?"}
+            ],
+            "temperature": 0.7
+        }
+    },
+    {
+        "name": "tool_call_flow",
+        "description": "tool definitions and tool call/result messages convert bidirectionally",
+        "openai_request": {
+            "model": "gpt-4",
+            "messages": [
+                {"role": "user", "content": "What's the weather in Tokyo?"},
+                {"role": "assistant", "content": null, "tool_calls": [
+                    {
+                        "id": "call_abc123",
+                        "type": "function",
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": "{\"city\":\"Tokyo\"}"
+                        }
+                    }
+                ]},
+                {"role": "tool", "tool_call_id": "call_abc123", "content": "Sunny, 25°C"},
+                {"role": "user", "content": "Thanks!"}
+            ],
+            "max_completion_tokens": 512,
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "description": "Get current weather for a city",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "city": {"type": "string", "description": "City name"}
+                            },
+                            "required": ["city"]
+                        }
+                    }
+                }
+            ],
+            "tool_choice": "auto"
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 512,
+            "messages": [
+                {"role": "user", "content": "What's the weather in Tokyo?"},
+                {"role": "assistant", "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "call_abc123",
+                        "name": "get_weather",
+                        "input": {"city": "Tokyo"}
+                    }
+                ]},
+                {"role": "user", "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "call_abc123",
+                        "content": "Sunny, 25°C"
+                    }
+                ]},
+                {"role": "user", "content": "Thanks!"}
+            ],
+            "tools": [
+                {
+                    "name": "get_weather",
+                    "description": "Get current weather for a city",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "city": {"type": "string", "description": "City name"}
+                        },
+                        "required": ["city"]
+                    }
+                }
+            ],
+            "tool_choice": {"type": "auto"}
+        }
+    },
+    {
+        "name": "reasoning_content",
+        "description": "reasoning/thinking content converts between openai and anthropic formats",
+        "openai_request": {
+            "model": "o1-preview",
+            "messages": [
+                {"role": "user", "content": "Solve x^2 + 2x + 1 = 0"}
+            ],
+            "max_completion_tokens": 2048
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 2048,
+            "messages": [
+                {"role": "user", "content": "Solve x^2 + 2x + 1 = 0"}
+            ]
+        },
+        "openai_response": {
+            "id": "chatcmpl-test",
+            "object": "chat.completion",
+            "created": 1700000000,
+            "model": "o1-preview",
+            "choices": [
+                {
+                    "index": 0,
+                    "finish_reason": "stop",
+                    "message": {
+                        "role": "assistant",
+                        "content": "x = -1",
+                        "reasoning_content": "This is a perfect square: (x+1)^2 = 0"
+                    }
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 20,
+                "total_tokens": 30
+            }
+        },
+        "anthropic_response": {
+            "id": "msg-test",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-3-5-sonnet",
+            "content": [
+                {
+                    "type": "thinking",
+                    "thinking": "This is a perfect square: (x+1)^2 = 0"
+                },
+                {
+                    "type": "text",
+                    "text": "x = -1"
+                }
+            ],
+            "stop_reason": "end_turn",
+            "stop_sequence": null,
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 20
+            }
+        }
+    },
+    {
+        "name": "tool_use_response",
+        "description": "response with tool_use converts between protocols",
+        "openai_response": {
+            "id": "chatcmpl-tool",
+            "object": "chat.completion",
+            "created": 1700000000,
+            "model": "gpt-4",
+            "choices": [
+                {
+                    "index": 0,
+                    "finish_reason": "tool_calls",
+                    "message": {
+                        "role": "assistant",
+                        "tool_calls": [
+                            {
+                                "id": "call_xyz",
+                                "type": "function",
+                                "function": {
+                                    "name": "search",
+                                    "arguments": "{\"query\":\"hello\"}"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 50,
+                "completion_tokens": 30,
+                "total_tokens": 80
+            }
+        },
+        "anthropic_response": {
+            "id": "msg-tool",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-3-5-sonnet",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "call_xyz",
+                    "name": "search",
+                    "input": {"query": "hello"}
+                }
+            ],
+            "stop_reason": "tool_use",
+            "stop_sequence": null,
+            "usage": {
+                "input_tokens": 50,
+                "output_tokens": 30
+            }
+        }
+    },
+    {
+        "name": "stop_sequences",
+        "description": "stop sequences convert between protocols",
+        "openai_request": {
+            "model": "gpt-4",
+            "messages": [{"role": "user", "content": "Hello"}],
+            "max_completion_tokens": 100,
+            "stop": ["END", "STOP"]
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 100,
+            "messages": [{"role": "user", "content": "Hello"}],
+            "stop_sequences": ["END", "STOP"]
+        }
+    },
+    {
+        "name": "tool_choice_required",
+        "description": "tool_choice required/any convert between protocols",
+        "openai_request": {
+            "model": "gpt-4",
+            "messages": [{"role": "user", "content": "Use a tool"}],
+            "max_completion_tokens": 100,
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "my_tool",
+                        "description": "A tool"
+                    }
+                }
+            ],
+            "tool_choice": "required"
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 100,
+            "messages": [{"role": "user", "content": "Use a tool"}],
+            "tools": [
+                {
+                    "name": "my_tool",
+                    "description": "A tool"
+                }
+            ],
+            "tool_choice": {"type": "any"}
+        }
+    },
+    {
+        "name": "tool_choice_named",
+        "description": "named tool_choice converts between protocols",
+        "openai_tool_choice": {
+            "type": "function",
+            "function": {"name": "specific_tool"}
+        },
+        "anthropic_tool_choice": {
+            "type": "tool",
+            "name": "specific_tool"
+        }
+    },
+    {
+        "name": "image_content",
+        "description": "image content in user messages converts between protocols",
+        "openai_request": {
+            "model": "gpt-4-vision",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What is in this image?"},
+                        {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo="}}
+                    ]
+                }
+            ],
+            "max_completion_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What is in this image?"},
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "iVBORw0KGgo="}}
+                    ]
+                }
+            ]
+        }
+    }
+]

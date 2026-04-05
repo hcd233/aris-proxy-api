@@ -2,36 +2,54 @@ package service
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/converter"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
-	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
+
+// endpointFields 查询端点时统一使用的字段列表
+var endpointFields = []string{"model", "api_key", "base_url", "provider"}
+
+// openAIInternalErrorBody OpenAI 内部错误响应 body（预序列化，避免重复 marshal）
+var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
+	Error: &dto.OpenAIError{Message: "Internal server error", Type: "server_error", Code: "internal_error"},
+}))
+
+// findEndpoint 按优先 provider 查找端点，未找到则回退到另一个 provider
+func findEndpoint(ctx context.Context, modelEndpointDAO *dao.ModelEndpointDAO, alias string, primary, fallback enum.ProviderType) (*dbmodel.ModelEndpoint, error) {
+	db := database.GetDBInstance(ctx)
+	ep, err := modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{Alias: alias, Provider: primary}, endpointFields)
+	if err == nil {
+		return ep, nil
+	}
+	return modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{Alias: alias, Provider: fallback}, endpointFields)
+}
+
+// toUpstream 将数据库模型转换为 proxy 层端点
+func toUpstream(ep *dbmodel.ModelEndpoint) proxy.UpstreamEndpoint {
+	return proxy.UpstreamEndpoint{Model: ep.Model, APIKey: ep.APIKey, BaseURL: ep.BaseURL}
+}
 
 // OpenAIService OpenAI服务
 //
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-05 10:00:00
 type OpenAIService interface {
 	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsRsp, error)
 	CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error)
@@ -39,16 +57,20 @@ type OpenAIService interface {
 
 type openAIService struct {
 	modelEndpointDAO *dao.ModelEndpointDAO
+	openAIProxy      proxy.OpenAIProxy
+	anthropicProxy   proxy.AnthropicProxy
 }
 
 // NewOpenAIService 创建OpenAI服务
 //
 //	@return OpenAIService
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-05 10:00:00
 func NewOpenAIService() OpenAIService {
 	return &openAIService{
 		modelEndpointDAO: dao.GetModelEndpointDAO(),
+		openAIProxy:      proxy.NewOpenAIProxy(),
+		anthropicProxy:   proxy.NewAnthropicProxy(),
 	}
 }
 
@@ -91,192 +113,140 @@ func (s *openAIService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.L
 //	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-05 10:00:00
 func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error) {
 	logger := logger.WithCtx(ctx)
 
-	db := database.GetDBInstance(ctx)
-	endpoint, err := s.modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
-		Alias:    req.Body.Model,
-		Provider: enum.ProviderOpenAI,
-	}, []string{"model", "api_key", "base_url"})
+	endpoint, err := findEndpoint(ctx, s.modelEndpointDAO, req.Body.Model, enum.ProviderOpenAI, enum.ProviderAnthropic)
 	if err != nil {
 		logger.Error("[OpenAIService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
-	if req.Body.MaxTokens != nil {
-		logger.Info("[OpenAIService] Adapt max_tokens to max_completion_tokens", zap.Intp("max_tokens", req.Body.MaxTokens))
-		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
+	ep := toUpstream(endpoint)
+	stream := req.Body.Stream != nil && *req.Body.Stream
+
+	if endpoint.Provider == enum.ProviderAnthropic {
+		return s.forwardViaAnthropic(ctx, logger, req, ep, stream)
 	}
-	// Build upstream request body as map to replace model name
-	bodyBytes := lo.Must1(sonic.Marshal(req.Body))
-
-	var bodyMap map[string]any
-	if err := sonic.Unmarshal(bodyBytes, &bodyMap); err != nil {
-		logger.Error("[OpenAIService] Unmarshal body error", zap.Error(err))
-		return util.SendOpenAIInternalError(), nil
-	}
-
-	bodyMap["model"] = endpoint.Model
-
-	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
-	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/chat/completions"
-
-	upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
-	if err != nil {
-		logger.Error("[OpenAIService] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return util.SendOpenAIInternalError(), nil
-	}
-	upstreamReq.Header.Set("Content-Type", "application/json")
-	upstreamReq.Header.Set("Authorization", "Bearer "+endpoint.APIKey)
-
-	logger.Info("[OpenAIService] Send upstream request", zap.String("upstreamURL", upstreamURL),
-		zap.String("upstreamModel", endpoint.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
-		zap.Any("upstreamBody", bodyMap))
-
-	upstreamResp, err := httpclient.GetHTTPClient().Do(upstreamReq)
-	if err != nil {
-		logger.Error("[OpenAIService] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return util.SendOpenAIInternalError(), nil
-	}
-
-	// 检查上游响应状态码，非200时记录详细错误信息
-	if upstreamResp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(upstreamResp.Body)
-		upstreamResp.Body.Close()
-		logger.Error("[OpenAIService] Upstream returned non-200 status",
-			zap.String("upstreamURL", upstreamURL),
-			zap.Int("statusCode", upstreamResp.StatusCode),
-			zap.String("responseBody", string(errorBody)),
-			zap.Any("headers", upstreamResp.Header),
-		)
-		return util.SendOpenAIUpstreamError(upstreamResp.StatusCode, string(errorBody)), nil
-	}
-
-	if req.Body.Stream != nil && *req.Body.Stream {
-		return &huma.StreamResponse{
-			Body: func(humaCtx huma.Context) {
-				fiberCtx := humafiber.Unwrap(humaCtx)
-				fiberCtx.Set("Content-Type", "text/event-stream")
-				fiberCtx.Set("Cache-Control", "no-cache")
-				fiberCtx.Set("Connection", "keep-alive")
-				fiberCtx.Set("Transfer-Encoding", "chunked")
-				fiberCtx.Set("X-Accel-Buffering", "no")
-
-				fiberCtx.Status(upstreamResp.StatusCode).Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-					defer upstreamResp.Body.Close()
-
-					var collectedChunks []*dto.ChatCompletionChunk
-
-					reader := bufio.NewReader(upstreamResp.Body)
-					for {
-						raw, readErr := reader.ReadString('\n')
-						line := strings.TrimRight(raw, "\r\n")
-
-						if line != "" {
-							const dataPrefix = "data: "
-							if strings.HasPrefix(line, dataPrefix) {
-								payload := line[len(dataPrefix):]
-								if payload != "[DONE]" {
-									chunk := &dto.ChatCompletionChunk{}
-									if err := sonic.UnmarshalString(payload, chunk); err != nil {
-										logger.Warn("[OpenAIService] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
-										continue
-									}
-
-									chunk.Model = req.Body.Model
-									collectedChunks = append(collectedChunks, chunk)
-									line = fmt.Sprintf("%s%s", dataPrefix, lo.Must1(sonic.Marshal(chunk)))
-								}
-							}
-							fmt.Fprintf(w, "%s\n\n", line)
-							if err := w.Flush(); err != nil {
-								logger.Warn("[OpenAIService] Flush sse error", zap.Error(err))
-								return
-							}
-						}
-
-						if readErr != nil {
-							if readErr != io.EOF {
-								logger.Warn("[OpenAIService] Read upstream sse error", zap.Error(readErr))
-							}
-							break
-						}
-					}
-
-					if len(collectedChunks) == 0 {
-						return
-					}
-					completion, err := util.ConcatChatCompletionChunks(collectedChunks)
-					if err != nil {
-						logger.Warn("[OpenAIService] Concat sse chunks error", zap.Error(err))
-						return
-					}
-					if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
-						logger.Warn("[OpenAIService] AI response is empty", zap.Any("response", completion))
-						return
-					}
-
-					s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, endpoint.Model, completion.Usage)
-				}))
-			},
-		}, nil
-	}
-
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			defer upstreamResp.Body.Close()
-
-			respBody, err := io.ReadAll(upstreamResp.Body)
-			if err != nil {
-				humaCtx.SetStatus(http.StatusBadGateway)
-				humaCtx.SetHeader("Content-Type", "application/json")
-				humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
-					Error: &dto.OpenAIError{
-						Message: "Failed to read upstream response",
-						Type:    "server_error",
-						Code:    "upstream_error",
-					},
-				})))
-				return
-			}
-
-			humaCtx.SetStatus(upstreamResp.StatusCode)
-			humaCtx.SetHeader("Content-Type", "application/json")
-
-			completion := &dto.ChatCompletion{}
-			err = sonic.Unmarshal(respBody, completion)
-			if err != nil {
-				logger.Warn("[OpenAIService] Unmarshal upstream response error", zap.Error(err))
-				humaCtx.BodyWriter().Write(respBody)
-				return
-			}
-			completion.Model = req.Body.Model
-			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(completion)))
-
-			if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
-				logger.Warn("[OpenAIService] AI response is empty", zap.Any("response", completion))
-				return
-			}
-
-			s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, endpoint.Model, completion.Usage)
-		},
-	}, nil
+	return s.forwardNative(ctx, logger, req, ep, stream)
 }
 
-// storeOpenAIMessages 存储 OpenAI 消息到统一消息格式
-func (s *openAIService) storeOpenAIMessages(
-	ctx context.Context,
-	logger *zap.Logger,
-	req *dto.ChatCompletionRequest,
-	assistantMsg *dto.ChatCompletionMessageParam,
-	upstreamModel string,
-	usage *dto.CompletionUsage,
-) {
-	var unifiedMessages []*dto.UnifiedMessage
+// forwardNative 原生 OpenAI 协议转发
+func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
+	if req.Body.MaxTokens != nil {
+		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
+	}
 
+	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
+
+	if stream {
+		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.ChatCompletionChunk) error {
+				chunk.Model = req.Body.Model
+				fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(chunk)))
+				return w.Flush()
+			})
+			fmt.Fprintf(w, "data: [DONE]\n\n")
+			w.Flush()
+
+			s.storeFromCompletion(ctx, logger, req, completion, err, ep.Model)
+		}), nil
+	}
+
+	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
+		if err != nil {
+			util.WriteUpstreamError(logger, writer, err, openAIInternalErrorBody)
+			return
+		}
+		completion.Model = req.Body.Model
+		writer.WriteJSON(completion)
+
+		s.storeFromCompletion(ctx, logger, req, completion, nil, ep.Model)
+	}), nil
+}
+
+// forwardViaAnthropic 通过 Anthropic 协议上游转发 OpenAI 请求
+func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
+	conv := converter.AnthropicProtocolConverter{}
+	anthropicReq, err := conv.FromOpenAIRequest(req.Body)
+	if err != nil {
+		logger.Error("[OpenAIService] Failed to convert request to Anthropic format", zap.Error(err))
+		return util.SendOpenAIInternalError(), nil
+	}
+	anthropicReq.Model = ep.Model
+	body := lo.Must1(sonic.Marshal(anthropicReq))
+
+	if stream {
+		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			chunkID := converter.GenerateOpenAIChunkID()
+			anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
+				chunks, err := conv.ToOpenAISSEResponse(event, req.Body.Model, chunkID)
+				if err != nil {
+					return err
+				}
+				for _, chunk := range chunks {
+					fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(chunk)))
+					if err := w.Flush(); err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			fmt.Fprintf(w, "data: [DONE]\n\n")
+			w.Flush()
+
+			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
+		}), nil
+	}
+
+	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
+		if err != nil {
+			util.WriteUpstreamError(logger, writer, err, openAIInternalErrorBody)
+			return
+		}
+		completion, err := conv.ToOpenAIResponse(anthropicMsg)
+		if err != nil {
+			logger.Error("[OpenAIService] Failed to convert Anthropic response", zap.Error(err))
+			writer.WriteError(500, openAIInternalErrorBody)
+			return
+		}
+		completion.Model = req.Body.Model
+		writer.WriteJSON(completion)
+
+		s.storeFromCompletion(ctx, logger, req, completion, nil, ep.Model)
+	}), nil
+}
+
+// ==================== Store Messages ====================
+
+func (s *openAIService) storeFromCompletion(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, completion *dto.ChatCompletion, proxyErr error, upstreamModel string) {
+	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
+		return
+	}
+	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+}
+
+func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
+		return
+	}
+	conv := converter.AnthropicProtocolConverter{}
+	completion, err := conv.ToOpenAIResponse(msg)
+	if err != nil {
+		logger.Error("[OpenAIService] Failed to convert for storage", zap.Error(err))
+		return
+	}
+	if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
+		return
+	}
+	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+}
+
+func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Logger, req *dto.ChatCompletionRequest, assistantMsg *dto.ChatCompletionMessageParam, upstreamModel string, usage *dto.CompletionUsage) {
+	var unifiedMessages []*dto.UnifiedMessage
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromOpenAIMessage(msg)
 		if err != nil {

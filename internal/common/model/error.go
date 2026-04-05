@@ -28,3 +28,16 @@ func NewError(code int, message string) *Error {
 func (e *Error) Error() string {
 	return fmt.Sprintf("code: %d, message: %s", e.Code, e.Message)
 }
+
+// UpstreamError 上游返回非 200 状态码的错误
+//
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+type UpstreamError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *UpstreamError) Error() string {
+	return fmt.Sprintf("upstream returned status %d", e.StatusCode)
+}

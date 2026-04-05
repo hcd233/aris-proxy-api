@@ -2,36 +2,37 @@ package service
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/converter"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
-	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
+
+// anthropicInternalErrorBody Anthropic 内部错误响应 body（预序列化）
+var anthropicInternalErrorBody = lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+	Type:  "error",
+	Error: &dto.AnthropicError{Type: "api_error", Message: "Internal server error"},
+}))
 
 // AnthropicService Anthropic服务
 //
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-05 10:00:00
 type AnthropicService interface {
 	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.AnthropicListModelsRsp, error)
 	CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error)
@@ -40,16 +41,20 @@ type AnthropicService interface {
 
 type anthropicService struct {
 	modelEndpointDAO *dao.ModelEndpointDAO
+	anthropicProxy   proxy.AnthropicProxy
+	openAIProxy      proxy.OpenAIProxy
 }
 
 // NewAnthropicService 创建Anthropic服务
 //
 //	@return AnthropicService
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-05 10:00:00
 func NewAnthropicService() AnthropicService {
 	return &anthropicService{
 		modelEndpointDAO: dao.GetModelEndpointDAO(),
+		anthropicProxy:   proxy.NewAnthropicProxy(),
+		openAIProxy:      proxy.NewOpenAIProxy(),
 	}
 }
 
@@ -80,10 +85,7 @@ func (s *anthropicService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dt
 		}
 	})
 
-	rsp := &dto.AnthropicListModelsRsp{
-		Data:    models,
-		HasMore: false,
-	}
+	rsp := &dto.AnthropicListModelsRsp{Data: models, HasMore: false}
 	if len(models) > 0 {
 		rsp.FirstID = models[0].ID
 		rsp.LastID = models[len(models)-1].ID
@@ -99,200 +101,130 @@ func (s *anthropicService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dt
 //	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-05 10:00:00
 func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
 	logger := logger.WithCtx(ctx)
 
-	db := database.GetDBInstance(ctx)
-	endpoint, err := s.modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
-		Alias:    req.Body.Model,
-		Provider: enum.ProviderAnthropic,
-	}, []string{"model", "api_key", "base_url"})
+	endpoint, err := findEndpoint(ctx, s.modelEndpointDAO, req.Body.Model, enum.ProviderAnthropic, enum.ProviderOpenAI)
 	if err != nil {
 		logger.Error("[AnthropicService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
-	// Build upstream request body as map to replace model name
-	bodyBytes := lo.Must1(sonic.Marshal(req.Body))
-
-	var bodyMap map[string]any
-	if err := sonic.Unmarshal(bodyBytes, &bodyMap); err != nil {
-		logger.Error("[AnthropicService] Unmarshal body error", zap.Error(err))
-		return util.SendAnthropicInternalError(), nil
-	}
-
-	bodyMap["model"] = endpoint.Model
-
-	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
-	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages"
-
-	upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
-	if err != nil {
-		logger.Error("[AnthropicService] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return util.SendAnthropicInternalError(), nil
-	}
-	upstreamReq.Header.Set("Content-Type", "application/json")
-	upstreamReq.Header.Set("x-api-key", endpoint.APIKey)
-	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
-
-	logger.Info("[AnthropicService] Send upstream request", zap.String("upstreamURL", upstreamURL),
-		zap.String("upstreamModel", endpoint.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
-		zap.Any("upstreamBody", bodyMap))
-
-	upstreamResp, err := httpclient.GetHTTPClient().Do(upstreamReq)
-	if err != nil {
-		logger.Error("[AnthropicService] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return util.SendAnthropicInternalError(), nil
-	}
-
-	// 检查上游响应状态码，非200时记录详细错误信息
-	if upstreamResp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(upstreamResp.Body)
-		upstreamResp.Body.Close()
-		logger.Error("[AnthropicService] Upstream returned non-200 status",
-			zap.String("upstreamURL", upstreamURL),
-			zap.Int("statusCode", upstreamResp.StatusCode),
-			zap.String("responseBody", string(errorBody)),
-			zap.Any("headers", upstreamResp.Header),
-		)
-		return util.SendAnthropicUpstreamError(upstreamResp.StatusCode, string(errorBody)), nil
-	}
-
+	ep := toUpstream(endpoint)
+	stream := req.Body.Stream != nil && *req.Body.Stream
 	exposedModel := req.Body.Model
 
-	if req.Body.Stream != nil && *req.Body.Stream {
-		return &huma.StreamResponse{
-			Body: func(humaCtx huma.Context) {
-				fiberCtx := humafiber.Unwrap(humaCtx)
-				fiberCtx.Set("Content-Type", "text/event-stream")
-				fiberCtx.Set("Cache-Control", "no-cache")
-				fiberCtx.Set("Connection", "keep-alive")
-				fiberCtx.Set("Transfer-Encoding", "chunked")
-				fiberCtx.Set("X-Accel-Buffering", "no")
-
-				fiberCtx.Status(upstreamResp.StatusCode).Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-					defer upstreamResp.Body.Close()
-
-					var collectedEvents []dto.AnthropicSSEEvent
-					var currentEvent string
-
-					reader := bufio.NewReader(upstreamResp.Body)
-					for {
-						raw, readErr := reader.ReadString('\n')
-						line := strings.TrimRight(raw, "\r\n")
-
-						if line != "" {
-							if strings.HasPrefix(line, "event: ") {
-								currentEvent = strings.TrimPrefix(line, "event: ")
-								fmt.Fprintf(w, "%s\n", line)
-							} else if strings.HasPrefix(line, "data: ") {
-								payload := line[len("data: "):]
-
-								var dataMap map[string]any
-								if err := sonic.UnmarshalString(payload, &dataMap); err == nil {
-									if msgRaw, ok := dataMap["message"]; ok {
-										if msgMap, ok := msgRaw.(map[string]any); ok {
-											if _, hasModel := msgMap["model"]; hasModel {
-												msgMap["model"] = exposedModel
-											}
-										}
-									}
-									if _, hasModel := dataMap["model"]; hasModel {
-										dataMap["model"] = exposedModel
-									}
-									modifiedPayload := lo.Must1(sonic.Marshal(dataMap))
-									line = fmt.Sprintf("data: %s", string(modifiedPayload))
-
-									collectedEvents = append(collectedEvents, dto.AnthropicSSEEvent{
-										Event: currentEvent,
-										Data:  modifiedPayload,
-									})
-								}
-
-								fmt.Fprintf(w, "%s\n\n", line)
-								if err := w.Flush(); err != nil {
-									logger.Warn("[AnthropicService] Flush sse error", zap.Error(err))
-									return
-								}
-							}
-						}
-
-						if readErr != nil {
-							if readErr != io.EOF {
-								logger.Warn("[AnthropicService] Read upstream sse error", zap.Error(readErr))
-							}
-							break
-						}
-					}
-
-					if len(collectedEvents) == 0 {
-						return
-					}
-					assembledMsg, err := util.ConcatAnthropicSSEEvents(collectedEvents)
-					if err != nil {
-						logger.Error("[AnthropicService] Failed to concat SSE events", zap.Error(err))
-						return
-					}
-					if assembledMsg == nil || len(assembledMsg.Content) == 0 {
-						logger.Warn("[AnthropicService] Assembled message is empty")
-						return
-					}
-
-					s.storeAnthropicMessages(ctx, logger, req, assembledMsg, endpoint.Model)
-				}))
-			},
-		}, nil
+	if endpoint.Provider == enum.ProviderOpenAI {
+		return s.forwardViaOpenAI(ctx, logger, req, ep, exposedModel, stream)
 	}
-
-	// Non-streaming response
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			defer upstreamResp.Body.Close()
-
-			respBody, err := io.ReadAll(upstreamResp.Body)
-			if err != nil {
-				humaCtx.SetStatus(http.StatusBadGateway)
-				humaCtx.SetHeader("Content-Type", "application/json")
-				humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
-					Type: "error",
-					Error: &dto.AnthropicError{
-						Type:    "api_error",
-						Message: "Failed to read upstream response",
-					},
-				})))
-				return
-			}
-
-			humaCtx.SetStatus(upstreamResp.StatusCode)
-			humaCtx.SetHeader("Content-Type", "application/json")
-
-			message := &dto.AnthropicMessage{}
-			err = sonic.Unmarshal(respBody, message)
-			if err != nil {
-				logger.Warn("[AnthropicService] Unmarshal upstream response error", zap.Error(err))
-				humaCtx.BodyWriter().Write(respBody)
-				return
-			}
-			message.Model = exposedModel
-			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(message)))
-
-			s.storeAnthropicMessages(ctx, logger, req, message, endpoint.Model)
-		},
-	}, nil
+	return s.forwardNative(ctx, logger, req, ep, exposedModel, stream)
 }
 
-// storeAnthropicMessages 存储 Anthropic 消息到统一消息格式
-func (s *anthropicService) storeAnthropicMessages(
-	ctx context.Context,
-	logger *zap.Logger,
-	req *dto.AnthropicCreateMessageRequest,
-	assistantMsg *dto.AnthropicMessage,
-	upstreamModel string,
-) {
-	var unifiedMessages []*dto.UnifiedMessage
+// forwardNative 原生 Anthropic 协议转发
+func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep proxy.UpstreamEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
+	if stream {
+		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
+				modifiedData := proxy.ReplaceModelInSSEData(event.Data, exposedModel)
+				fmt.Fprintf(w, "event: %s\n", event.Event)
+				fmt.Fprintf(w, "data: %s\n\n", modifiedData)
+				return w.Flush()
+			})
+
+			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
+		}), nil
+	}
+
+	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
+		if err != nil {
+			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
+			return
+		}
+		anthropicMsg.Model = exposedModel
+		writer.WriteJSON(anthropicMsg)
+
+		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+	}), nil
+}
+
+// forwardViaOpenAI 通过 OpenAI 协议上游转发 Anthropic 请求
+func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep proxy.UpstreamEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+	conv := converter.OpenAIProtocolConverter{}
+	openAIReq, err := conv.FromAnthropicRequest(req.Body)
+	if err != nil {
+		logger.Error("[AnthropicService] Failed to convert request to OpenAI format", zap.Error(err))
+		return util.SendAnthropicInternalError(), nil
+	}
+	openAIReq.Model = ep.Model
+	body := lo.Must1(sonic.Marshal(openAIReq))
+
+	if stream {
+		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			isFirst := true
+			completion, proxyErr := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.ChatCompletionChunk) error {
+				events, err := conv.ToAnthropicSSEResponse(chunk, isFirst, exposedModel)
+				if err != nil {
+					return err
+				}
+				isFirst = false
+				for _, event := range events {
+					fmt.Fprintf(w, "event: %s\n", event.Event)
+					fmt.Fprintf(w, "data: %s\n\n", string(event.Data))
+					if err := w.Flush(); err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			fmt.Fprintf(w, "event: message_stop\ndata: {}\n\n")
+			w.Flush()
+
+			if proxyErr != nil || completion == nil {
+				return
+			}
+			anthropicMsg, err := conv.ToAnthropicResponse(completion)
+			if err != nil {
+				logger.Error("[AnthropicService] Failed to convert for storage", zap.Error(err))
+				return
+			}
+			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+		}), nil
+	}
+
+	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
+		if err != nil {
+			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
+			return
+		}
+		anthropicMsg, err := conv.ToAnthropicResponse(completion)
+		if err != nil {
+			logger.Error("[AnthropicService] Failed to convert OpenAI response", zap.Error(err))
+			writer.WriteError(500, anthropicInternalErrorBody)
+			return
+		}
+		anthropicMsg.Model = exposedModel
+		writer.WriteJSON(anthropicMsg)
+
+		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+	}), nil
+}
+
+// ==================== Store Messages ====================
+
+func (s *anthropicService) storeFromAnthropicMsg(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
+		return
+	}
+	s.storeAnthropicMessages(ctx, logger, req, msg, upstreamModel)
+}
+
+func (s *anthropicService) storeAnthropicMessages(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
+	var unifiedMessages []*dto.UnifiedMessage
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromAnthropicMessage(msg)
 		if err != nil {
@@ -343,9 +275,8 @@ func (s *anthropicService) storeAnthropicMessages(
 //	@return *dto.AnthropicTokensCount
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-05 10:00:00
 func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
-	rsp := &dto.AnthropicTokensCount{InputTokens: 0}
 	logger := logger.WithCtx(ctx)
 
 	db := database.GetDBInstance(ctx)
@@ -355,56 +286,16 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	}, []string{"model", "api_key", "base_url"})
 	if err != nil {
 		logger.Warn("[AnthropicService] Model not found, returning 0", zap.String("model", req.Body.Model), zap.Error(err))
-		return rsp, nil
+		return &dto.AnthropicTokensCount{}, nil
 	}
 
-	bodyBytes := lo.Must1(sonic.Marshal(req.Body))
+	ep := toUpstream(endpoint)
+	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
-	var bodyMap map[string]any
-	if err := sonic.Unmarshal(bodyBytes, &bodyMap); err != nil {
-		logger.Warn("[AnthropicService] Unmarshal body error, returning 0", zap.Error(err))
-		return rsp, nil
-	}
-
-	bodyMap["model"] = endpoint.Model
-
-	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
-	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages/count_tokens"
-
-	upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(upstreamBody))
+	rsp, err := s.anthropicProxy.ForwardCountTokens(ctx, ep, body)
 	if err != nil {
-		logger.Warn("[AnthropicService] New request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return rsp, nil
-	}
-	upstreamReq.Header.Set("Content-Type", "application/json")
-	upstreamReq.Header.Set("x-api-key", endpoint.APIKey)
-	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
-
-	logger.Info("[AnthropicService] Send upstream request", zap.String("upstreamURL", upstreamURL),
-		zap.String("upstreamModel", endpoint.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)))
-
-	upstreamResp, err := httpclient.GetHTTPClient().Do(upstreamReq)
-	if err != nil {
-		logger.Warn("[AnthropicService] Send http request error, returning 0", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return rsp, nil
-	}
-	defer upstreamResp.Body.Close()
-
-	respBody, err := io.ReadAll(upstreamResp.Body)
-	if err != nil {
-		logger.Warn("[AnthropicService] Read upstream response error, returning 0", zap.Error(err))
-		return rsp, nil
-	}
-
-	if upstreamResp.StatusCode != http.StatusOK {
-		logger.Warn("[AnthropicService] Upstream error, returning 0", zap.Int("statusCode", upstreamResp.StatusCode), zap.String("body", string(respBody)))
-		return &dto.AnthropicTokensCount{InputTokens: 0}, nil
-	}
-
-	if err := sonic.Unmarshal(respBody, rsp); err != nil {
-		logger.Warn("[AnthropicService] Unmarshal upstream response error, returning 0", zap.Error(err))
-		return rsp, nil
+		logger.Warn("[AnthropicService] Count tokens error, returning 0", zap.Error(err))
+		return &dto.AnthropicTokensCount{}, nil
 	}
 
 	return rsp, nil
