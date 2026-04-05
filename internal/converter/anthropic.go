@@ -17,7 +17,7 @@ import (
 //	@update 2026-04-05 10:00:00
 type AnthropicProtocolConverter struct{}
 
-// FromOpenAIRequest 将 OpenAI OpenAIChatCompletion 请求转换为 Anthropic CreateMessage 请求
+// FromOpenAIRequest 将 OpenAIChatCompletionReq 请求转换为 Anthropic CreateMessage 请求
 //
 //	@receiver AnthropicProtocolConverter
 //	@param req *dto.OpenAIChatCompletionReq
@@ -62,7 +62,7 @@ func (*AnthropicProtocolConverter) FromOpenAIRequest(req *dto.OpenAIChatCompleti
 	return anthropicReq, nil
 }
 
-// ToOpenAIResponse 将 Anthropic Message 响应转换为 OpenAI OpenAIChatCompletion 响应
+// ToOpenAIResponse 将 Anthropic Message 响应转换为 OpenAIChatCompletion 响应
 //
 //	@receiver AnthropicProtocolConverter
 //	@param msg *dto.AnthropicMessage
@@ -103,7 +103,7 @@ func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (
 	return completion, nil
 }
 
-// ToOpenAISSEResponse 将 Anthropic SSE 事件转换为 OpenAI OpenAIChatCompletionChunk 流式块
+// ToOpenAISSEResponse 将 Anthropic SSE 事件转换为 OpenAIChatCompletionChunk 流式块
 //
 //	@receiver AnthropicProtocolConverter
 //	@param event dto.AnthropicSSEEvent

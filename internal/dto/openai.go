@@ -202,7 +202,7 @@ type OpenAIChatCompletionReq struct {
 	Audio                *OpenAIChatCompletionAudioParam        `json:"audio,omitempty" doc:"音频输出参数"`
 	FrequencyPenalty     *float64                         `json:"frequency_penalty,omitempty" doc:"频率惩罚(-2.0到2.0)"`
 	LogitBias            map[string]int                   `json:"logit_bias,omitempty" doc:"token偏差映射"`
-	OpenAILogprobs             *bool                            `json:"logprobs,omitempty" doc:"是否返回log概率"`
+	Logprobs             *bool                            `json:"logprobs,omitempty" doc:"是否返回log概率"`
 	MaxCompletionTokens  *int                             `json:"max_completion_tokens,omitempty" doc:"最大完成token数（包含推理token）"`
 	MaxTokens            *int                             `json:"max_tokens,omitempty" doc:"最大token数（已废弃）"`
 	Metadata             map[string]string                `json:"metadata,omitempty" doc:"元数据(最多16个键值对)"`
@@ -214,7 +214,7 @@ type OpenAIChatCompletionReq struct {
 	PromptCacheKey       string                           `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`
 	PromptCacheRetention enum.PromptCacheRetention        `json:"prompt_cache_retention,omitempty" doc:"提示缓存保留策略"`
 	ReasoningEffort      enum.ReasoningEffort             `json:"reasoning_effort,omitempty" doc:"推理努力级别"`
-	OpenAIResponseFormat       *OpenAIResponseFormat                  `json:"response_format,omitempty" doc:"响应格式"`
+	ResponseFormat       *OpenAIResponseFormat                  `json:"response_format,omitempty" doc:"响应格式"`
 	SafetyIdentifier     string                           `json:"safety_identifier,omitempty" doc:"安全标识符"`
 	Seed                 *int                             `json:"seed,omitempty" doc:"随机种子"`
 	ServiceTier          enum.ServiceTier                 `json:"service_tier,omitempty" doc:"服务层级"`
@@ -229,7 +229,7 @@ type OpenAIChatCompletionReq struct {
 	TopP                 *float64                         `json:"top_p,omitempty" doc:"核采样概率质量"`
 	User                 string                           `json:"user,omitempty" doc:"用户标识符(已废弃，使用safety_identifier或prompt_cache_key)"`
 	Verbosity            enum.Verbosity                   `json:"verbosity,omitempty" doc:"响应详细程度"`
-	OpenAIWebSearchOptions     *OpenAIWebSearchOptions                `json:"web_search_options,omitempty" doc:"网页搜索选项"`
+	WebSearchOptions     *OpenAIWebSearchOptions                `json:"web_search_options,omitempty" doc:"网页搜索选项"`
 }
 
 // OpenAIChatCompletionMessageParam 聊天完成消息参数接口
@@ -432,7 +432,7 @@ type OpenAIAllowedToolsConfig struct {
 //	@update 2026-03-10 10:00:00
 type OpenAIWebSearchOptions struct {
 	SearchContextSize enum.SearchContextSize `json:"search_context_size,omitempty" doc:"搜索上下文大小"`
-	OpenAIUserLocation      *OpenAIUserLocation          `json:"user_location,omitempty" doc:"用户位置信息"`
+	UserLocation      *OpenAIUserLocation          `json:"user_location,omitempty" doc:"用户位置信息"`
 }
 
 // OpenAIUserLocation 用户位置
@@ -479,7 +479,7 @@ type OpenAIChatCompletion struct {
 type OpenAIChatCompletionChoice struct {
 	FinishReason enum.FinishReason           `json:"finish_reason" doc:"完成原因"`
 	Index        int                         `json:"index" doc:"选择索引"`
-	OpenAILogprobs     *OpenAILogprobs                   `json:"logprobs,omitempty" doc:"Log概率信息"`
+	Logprobs     *OpenAILogprobs                   `json:"logprobs,omitempty" doc:"Log概率信息"`
 	Message      *OpenAIChatCompletionMessageParam `json:"message" doc:"消息内容"`
 }
 
@@ -489,7 +489,7 @@ type OpenAIChatCompletionChoice struct {
 //	@update 2026-03-10 10:00:00
 type OpenAIMessageAnnotation struct {
 	Type        string       `json:"type" doc:"注释类型: url_citation"`
-	OpenAIURLCitation *OpenAIURLCitation `json:"url_citation,omitempty" doc:"URL引用"`
+	URLCitation *OpenAIURLCitation `json:"url_citation,omitempty" doc:"URL引用"`
 }
 
 // OpenAIURLCitation URL引用
@@ -582,8 +582,8 @@ type OpenAICompletionUsage struct {
 	CompletionTokens        int                      `json:"completion_tokens" doc:"生成的token数"`
 	PromptTokens            int                      `json:"prompt_tokens" doc:"提示的token数"`
 	TotalTokens             int                      `json:"total_tokens" doc:"总token数"`
-	OpenAICompletionTokensDetails *OpenAICompletionTokensDetails `json:"completion_tokens_details,omitempty" doc:"完成token详细信息"`
-	OpenAIPromptTokensDetails     *OpenAIPromptTokensDetails     `json:"prompt_tokens_details,omitempty" doc:"提示token详细信息"`
+	CompletionTokensDetails *OpenAICompletionTokensDetails `json:"completion_tokens_details,omitempty" doc:"完成token详细信息"`
+	PromptTokensDetails     *OpenAIPromptTokensDetails     `json:"prompt_tokens_details,omitempty" doc:"提示token详细信息"`
 }
 
 // OpenAICompletionTokensDetails 完成Token详细信息
@@ -681,7 +681,7 @@ type OpenAIChatCompletionChunkChoice struct {
 	Delta        *OpenAIChatCompletionChunkDelta `json:"delta" doc:"增量内容"`
 	FinishReason enum.FinishReason         `json:"finish_reason,omitempty" doc:"完成原因"`
 	Index        int                       `json:"index" doc:"选择索引"`
-	OpenAILogprobs     *OpenAILogprobs                 `json:"logprobs,omitempty" doc:"Log概率信息"`
+	Logprobs     *OpenAILogprobs                 `json:"logprobs,omitempty" doc:"Log概率信息"`
 }
 
 // OpenAIChatCompletionChunkDelta 流式增量内容

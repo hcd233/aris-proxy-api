@@ -140,12 +140,12 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 				cs.finishReason = choice.FinishReason
 			}
 
-			if choice.OpenAILogprobs != nil {
+			if choice.Logprobs != nil {
 				if cs.logprobs == nil {
 					cs.logprobs = &dto.OpenAILogprobs{}
 				}
-				cs.logprobs.Content = append(cs.logprobs.Content, choice.OpenAILogprobs.Content...)
-				cs.logprobs.Refusal = append(cs.logprobs.Refusal, choice.OpenAILogprobs.Refusal...)
+				cs.logprobs.Content = append(cs.logprobs.Content, choice.Logprobs.Content...)
+				cs.logprobs.Refusal = append(cs.logprobs.Refusal, choice.Logprobs.Refusal...)
 			}
 		}
 	}
@@ -195,7 +195,7 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 			Index:        cs.index,
 			Message:      message,
 			FinishReason: cs.finishReason,
-			OpenAILogprobs:     cs.logprobs,
+			Logprobs:     cs.logprobs,
 		})
 	}
 

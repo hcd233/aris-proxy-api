@@ -83,7 +83,7 @@ type UnifiedToolCall struct {
 
 // ==================== Conversion: OpenAI -> Unified ====================
 
-// FromOpenAIMessage 从 OpenAI OpenAIChatCompletionMessageParam 转换为 UnifiedMessage
+// FromOpenAIMessage 从 OpenAIChatCompletionMessageParam 转换为 UnifiedMessage
 //
 //	@param msg *OpenAIChatCompletionMessageParam
 //	@return *UnifiedMessage
@@ -129,7 +129,7 @@ func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*UnifiedMessage, 
 	return um, nil
 }
 
-// convertOpenAIContent 将 OpenAI OpenAIMessageContent 转换为 UnifiedContent
+// convertOpenAIContent 将 OpenAIMessageContent 转换为 UnifiedContent
 func convertOpenAIContent(mc *OpenAIMessageContent) (*UnifiedContent, error) {
 	if len(mc.Parts) > 0 {
 		parts := make([]*UnifiedContentPart, 0, len(mc.Parts))
@@ -145,7 +145,7 @@ func convertOpenAIContent(mc *OpenAIMessageContent) (*UnifiedContent, error) {
 	return &UnifiedContent{Text: mc.Text}, nil
 }
 
-// convertOpenAIContentPart 将 OpenAI OpenAIChatCompletionContentPart 转换为 UnifiedContentPart
+// convertOpenAIContentPart 将 OpenAIChatCompletionContentPart 转换为 UnifiedContentPart
 func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*UnifiedContentPart, error) {
 	switch p.Type {
 	case enum.ContentPartTypeText:

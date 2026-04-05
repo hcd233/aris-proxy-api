@@ -91,7 +91,7 @@ type AnthropicTool struct {
 	AllowedDomains   []string               `json:"allowed_domains,omitempty" doc:"允许的域名列表"`
 	BlockedDomains   []string               `json:"blocked_domains,omitempty" doc:"禁止的域名列表"`
 	MaxUses          *int                   `json:"max_uses,omitempty" doc:"最大使用次数"`
-	OpenAIUserLocation     *AnthropicUserLocation `json:"user_location,omitempty" doc:"用户位置(web_search)"`
+	UserLocation     *AnthropicUserLocation `json:"user_location,omitempty" doc:"用户位置(web_search)"`
 	Citations        *CitationsConfig       `json:"citations,omitempty" doc:"引用配置(web_fetch)"`
 	MaxContentTokens *int                   `json:"max_content_tokens,omitempty" doc:"最大内容token数(web_fetch)"`
 	UseCache         *bool                  `json:"use_cache,omitempty" doc:"是否使用缓存(web_fetch_20260309)"`
@@ -355,7 +355,7 @@ type AnthropicMessage struct {
 	Content      []*AnthropicContentBlock `json:"content"`
 	Model        string                   `json:"model"`
 	StopReason   *string                  `json:"stop_reason"`
-	OpenAIStopSequence *string                  `json:"stop_sequence"`
+	StopSequence *string                  `json:"stop_sequence"`
 	Usage        *AnthropicUsage          `json:"usage"`
 }
 
@@ -501,7 +501,7 @@ type AnthropicSSEContentBlockDelta struct {
 //	@update 2026-03-29 10:00:00
 type AnthropicSSEMessageDeltaPayload struct {
 	StopReason   *string `json:"stop_reason"`
-	OpenAIStopSequence *string `json:"stop_sequence"`
+	StopSequence *string `json:"stop_sequence"`
 }
 
 // AnthropicSSEMessageDelta message_delta 事件的 payload

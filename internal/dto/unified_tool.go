@@ -10,7 +10,7 @@ type UnifiedTool struct {
 	Parameters  *JSONSchemaProperty `json:"parameters" doc:"工具参数Schema"`
 }
 
-// FromOpenAITool 从 OpenAI OpenAIChatCompletionTool 转换为 UnifiedTool
+// FromOpenAITool 从 OpenAIChatCompletionTool 转换为 UnifiedTool
 //
 //	@param tool *OpenAIChatCompletionTool
 //	@return *UnifiedTool
