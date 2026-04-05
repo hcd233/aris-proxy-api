@@ -98,6 +98,17 @@ var (
 	// ErrObjStorage 对象存储操作错误
 	ErrObjStorage = newFromSentinel(newSentinel("obj_storage", model.NewError(10000, "InternalError")))
 
+	// ==================== 上游代理错误 ====================
+
+	// ErrProxyRequest 上游请求构建错误
+	ErrProxyRequest = newFromSentinel(newSentinel("proxy_request", model.NewError(10000, "InternalError")))
+
+	// ErrProxyResponse 上游响应读取/解析错误
+	ErrProxyResponse = newFromSentinel(newSentinel("proxy_response", model.NewError(10000, "InternalError")))
+
+	// ErrProxySend 上游请求发送错误
+	ErrProxySend = newFromSentinel(newSentinel("proxy_send", model.NewError(10000, "InternalError")))
+
 	// ==================== 校验错误 ====================
 
 	// ErrValidation 输入校验错误

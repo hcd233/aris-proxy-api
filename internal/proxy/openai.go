@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
@@ -66,13 +66,13 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndp
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("[OpenAIProxy] Read upstream response error", zap.Error(err))
-		return nil, fmt.Errorf("read upstream response: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "read upstream response")
 	}
 
 	completion := &dto.OpenAIChatCompletion{}
 	if err := sonic.Unmarshal(respBody, completion); err != nil {
 		logger.Warn("[OpenAIProxy] Unmarshal upstream response error", zap.Error(err))
-		return nil, fmt.Errorf("unmarshal upstream response: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "unmarshal upstream response")
 	}
 
 	return completion, nil
@@ -138,7 +138,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
 	if err != nil {
 		logger.Error("[OpenAIProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, fmt.Errorf("create request: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create request")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+ep.APIKey)
@@ -150,7 +150,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
 		logger.Error("[OpenAIProxy] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, fmt.Errorf("send request: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxySend, err, "send request")
 	}
 
 	if resp.StatusCode != http.StatusOK {

@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
@@ -76,13 +76,13 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEn
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("[AnthropicProxy] Read upstream response error", zap.Error(err))
-		return nil, fmt.Errorf("read upstream response: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "read upstream response")
 	}
 
 	message := &dto.AnthropicMessage{}
 	if err := sonic.Unmarshal(respBody, message); err != nil {
 		logger.Warn("[AnthropicProxy] Unmarshal upstream response error", zap.Error(err))
-		return nil, fmt.Errorf("unmarshal upstream response: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "unmarshal upstream response")
 	}
 
 	return message, nil
@@ -151,13 +151,13 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndp
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Warn("[AnthropicProxy] Read upstream response error", zap.Error(err))
-		return nil, fmt.Errorf("read upstream response: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "read upstream response")
 	}
 
 	rsp := &dto.AnthropicTokensCount{}
 	if err := sonic.Unmarshal(respBody, rsp); err != nil {
 		logger.Warn("[AnthropicProxy] Unmarshal upstream response error", zap.Error(err))
-		return nil, fmt.Errorf("unmarshal upstream response: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "unmarshal upstream response")
 	}
 
 	return rsp, nil
@@ -172,7 +172,7 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
 	if err != nil {
 		logger.Error("[AnthropicProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, fmt.Errorf("create request: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create request")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", ep.APIKey)
@@ -185,7 +185,7 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
 		logger.Error("[AnthropicProxy] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, fmt.Errorf("send request: %w", err)
+		return nil, ierr.Wrap(ierr.ErrProxySend, err, "send request")
 	}
 
 	if resp.StatusCode != http.StatusOK {
