@@ -36,3 +36,6 @@ logs/
 .codebuddy/plans
 .codebuddy/memory
 .codebuddy/*.md
+
+# Worktrees
+.worktrees/

@@ -435,3 +435,22 @@ make test
 ### CI/CD
 
 GitHub Actions（`.github/workflows/docker-publish.yml`）在 push master 和 tag 时自动构建多架构 Docker 镜像（linux/amd64 + linux/arm64），推送到 GHCR。
+
+
+---
+
+## 开发环境配置
+
+### Worktree 目录偏好
+
+项目使用 `.worktrees/` 作为 Git worktree 的默认目录（项目本地隐藏目录）。
+
+```bash
+# 创建 feature worktree
+git worktree add .worktrees/feature-name -b feature/feature-name
+cd .worktrees/feature-name
+```
+
+**配置要求：**
+- Worktree 目录 `.worktrees/` 已添加到 `.gitignore`
+- 新功能开发应在独立 worktree 中进行，避免污染主工作区
