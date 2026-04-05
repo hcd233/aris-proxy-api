@@ -81,20 +81,6 @@ func StopPoolManager() {
 	}
 }
 
-// SubmitPingTask 提交Ping任务到协程池
-//
-//	@receiver pm *PoolManager
-//	@param task
-//	@return error
-//	@author centonhuang
-//	@update 2026-02-04 16:10:57
-func (pm *Manager) SubmitPingTask(task *dto.PingTask) error {
-	logger := logger.WithCtx(task.Ctx)
-	return pm.pingPool.Go(func() {
-		logger.Info("[PoolManager] Async ping success")
-	})
-}
-
 // SubmitMessageStoreTask 提交消息存储任务到协程池
 //
 //	@receiver pm *Manager
