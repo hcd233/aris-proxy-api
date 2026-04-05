@@ -175,7 +175,7 @@ func (s *oauth2Service) Callback(ctx context.Context, req *dto.CallbackReq) (*dt
 
 	if user.ID != 0 {
 		// 更新已存在用户的登录时间
-		if err := s.userDAO.Update(db, user, map[string]interface{}{
+		if err := s.userDAO.Update(db, user, map[string]any{
 			"last_login": time.Now().UTC(),
 		}); err != nil {
 			logger.Error("[Oauth2Service] Failed to update user login time",

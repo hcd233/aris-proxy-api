@@ -2,6 +2,7 @@ package util
 
 import (
 	"cmp"
+	"fmt"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -209,13 +210,22 @@ func ConcatChatCompletionChunks(chunks []*dto.ChatCompletionChunk) (*dto.ChatCom
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 func SendOpenAIUpstreamError(statusCode int, body string) (rsp *huma.StreamResponse) {
+	// 尝试从上游错误响应中提取安全的 error message
+	var errMsg string
+	var errResp dto.OpenAIErrorResponse
+	if err := sonic.UnmarshalString(body, &errResp); err == nil && errResp.Error != nil && errResp.Error.Message != "" {
+		errMsg = errResp.Error.Message
+	} else {
+		errMsg = fmt.Sprintf("Upstream returned status %d", statusCode)
+	}
+
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
 			humaCtx.SetHeader("Content-Type", "application/json")
 			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
 				Error: &dto.OpenAIError{
-					Message: "Upstream error: " + body,
+					Message: errMsg,
 					Type:    "upstream_error",
 					Code:    "upstream_error",
 				},

@@ -14,6 +14,7 @@ import (
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
@@ -92,7 +93,8 @@ func NewScorer() (*Scorer, error) {
 //	@update 2026-04-02 10:00:00
 func (s *Scorer) Score(ctx context.Context, content string) (*ScoreResult, error) {
 	if strings.TrimSpace(content) == "" {
-		return &ScoreResult{Coherence: 0, Depth: 0, Value: 0}, nil
+		// 返回 nil 表示跳过评分，调用方应不写入 DB
+		return nil, nil
 	}
 
 	messages := []*schema.Message{
@@ -133,6 +135,16 @@ func (s *Scorer) Score(ctx context.Context, content string) (*ScoreResult, error
 			zap.String("result", result),
 			zap.Error(err))
 		return nil, err
+	}
+
+	// 验证评分字段完整性（LLM 可能缺失某些字段，Go 零值为 0）
+	if scoreResult.Coherence < 1 || scoreResult.Depth < 1 || scoreResult.Value < 1 {
+		logger.Logger().Error("[Scorer] Incomplete score result from LLM",
+			zap.Int("coherence", scoreResult.Coherence),
+			zap.Int("depth", scoreResult.Depth),
+			zap.Int("value", scoreResult.Value))
+		return nil, ierr.Newf(ierr.ErrValidation, "incomplete score result: coherence=%d, depth=%d, value=%d",
+			scoreResult.Coherence, scoreResult.Depth, scoreResult.Value)
 	}
 
 	// 验证评分范围

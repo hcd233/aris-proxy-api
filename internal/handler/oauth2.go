@@ -68,8 +68,6 @@ func (h *oauth2Handler) getService(platform string) service.Oauth2Service {
 		return service.NewGithubOauth2Service()
 	case enum.Oauth2PlatformGoogle:
 		return service.NewGoogleOauth2Service()
-	// case "qq":
-	// 	return service.NewQQOauth2Service()
 	default:
 		return service.NewGithubOauth2Service() // 默认返回 github
 	}

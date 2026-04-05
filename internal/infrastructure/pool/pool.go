@@ -32,6 +32,8 @@ type Manager struct {
 	messageDAO           *dao.MessageDAO
 	sessionDAO           *dao.SessionDAO
 	toolDAO              *dao.ToolDAO
+	summarizer           *agent.Summarizer
+	scorer               *agent.Scorer
 	pingPool             pond.Pool
 	messageStorePool     pond.Pool
 	sessionSummarizePool pond.Pool
@@ -45,10 +47,15 @@ var poolManager *Manager
 //	@author centonhuang
 //	@update 2026-04-02 10:00:00
 func InitPoolManager() {
+	summarizer := lo.Must1(agent.NewSummarizer())
+	scorer := lo.Must1(agent.NewScorer())
+
 	poolManager = &Manager{
 		messageDAO:           dao.GetMessageDAO(),
 		sessionDAO:           dao.GetSessionDAO(),
 		toolDAO:              dao.GetToolDAO(),
+		summarizer:           summarizer,
+		scorer:               scorer,
 		pingPool:             pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 		messageStorePool:     pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
 		sessionSummarizePool: pond.NewPool(config.PoolWorkers, pond.WithQueueSize(config.PoolQueueSize)),
@@ -289,13 +296,7 @@ func (pm *Manager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 	log := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 	return pm.sessionSummarizePool.Go(func() {
-		summarizer, err := agent.NewSummarizer()
-		if err != nil {
-			log.Error("[PoolManager] Failed to create summarizer", zap.Uint("sessionID", task.SessionID), zap.Error(err))
-			return
-		}
-
-		summary, err := summarizer.SummarizeWithRetry(task.Ctx, task.Content, constant.SummarizeMaxRetries)
+		summary, err := pm.summarizer.SummarizeWithRetry(task.Ctx, task.Content, constant.SummarizeMaxRetries)
 		if err != nil {
 			log.Error("[PoolManager] Failed to generate summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			return
@@ -329,20 +330,14 @@ func (pm *Manager) SubmitScoreTask(task *dto.ScoreTask) error {
 	log := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 	return pm.sessionScorePool.Go(func() {
-		scorer, err := agent.NewScorer()
-		if err != nil {
-			log.Error("[PoolManager] Failed to create scorer", zap.Uint("sessionID", task.SessionID), zap.Error(err))
-			return
-		}
-
-		result, err := scorer.ScoreWithRetry(task.Ctx, task.Content, constant.ScoreMaxRetries)
+		result, err := pm.scorer.ScoreWithRetry(task.Ctx, task.Content, constant.ScoreMaxRetries)
 		if err != nil {
 			log.Error("[PoolManager] Failed to generate score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			return
 		}
 
 		if result == nil {
-			log.Error("[PoolManager] Score result is nil", zap.Uint("sessionID", task.SessionID))
+			log.Info("[PoolManager] Skipping score for empty content", zap.Uint("sessionID", task.SessionID))
 			return
 		}
 

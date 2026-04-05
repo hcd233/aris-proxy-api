@@ -18,9 +18,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
+	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
@@ -61,46 +63,50 @@ var upstreamHTTPClient = &http.Client{
 // OpenAIService OpenAI服务
 //
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-04-04 10:00:00
 type OpenAIService interface {
 	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.ListModelsRsp, error)
 	CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error)
 }
 
-type openAIService struct{}
+type openAIService struct {
+	modelEndpointDAO *dao.ModelEndpointDAO
+}
 
 // NewOpenAIService 创建OpenAI服务
 //
 //	@return OpenAIService
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-04-04 10:00:00
 func NewOpenAIService() OpenAIService {
-	return &openAIService{}
+	return &openAIService{
+		modelEndpointDAO: dao.GetModelEndpointDAO(),
+	}
 }
 
 // ListModels 获取模型列表
 //
 //	@receiver s *openAIService
-//	@param _ context.Context
-//	@return *huma.StreamResponse
+//	@param ctx context.Context
+//	@param _ *dto.EmptyReq
+//	@return *dto.ListModelsRsp
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.ListModelsRsp, error) {
-	config := proxy.GetLLMProxyConfig()
+//	@update 2026-04-04 10:00:00
+func (s *openAIService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.ListModelsRsp, error) {
+	db := database.GetDBInstance(ctx)
 
-	// Filter models that have an openai endpoint configured
-	openaiKeys := lo.Filter(lo.Keys(config.Models), func(key string, _ int) bool {
-		mc := config.Models[key]
-		_, hasOpenAI := mc.Endpoints[enum.ProviderOpenAI]
-		return hasOpenAI
-	})
+	endpoints, err := s.modelEndpointDAO.BatchGet(db, &dbmodel.ModelEndpoint{Provider: enum.ProviderOpenAI}, []string{"alias"})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[OpenAIService] Failed to query model endpoints", zap.Error(err))
+		return &dto.ListModelsRsp{Object: "list", Data: []*dto.OpenAIModel{}}, nil
+	}
 
 	return &dto.ListModelsRsp{
 		Object: "list",
-		Data: lo.Map(openaiKeys, func(key string, _ int) *dto.OpenAIModel {
+		Data: lo.Map(endpoints, func(ep *dbmodel.ModelEndpoint, _ int) *dto.OpenAIModel {
 			return &dto.OpenAIModel{
-				ID:      key,
+				ID:      ep.Alias,
 				Created: time.Now().Unix(),
 				Object:  "model",
 				OwnedBy: "openai",
@@ -112,25 +118,22 @@ func (s *openAIService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.Lis
 // CreateChatCompletion 创建聊天补全
 //
 //	@receiver s *openAIService
-//	@param _ context.Context
-//	@param req *dto.ChatCompletionRequestBody
-//	@return *ChatCompletionResult
+//	@param ctx context.Context
+//	@param req *dto.ChatCompletionRequest
+//	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-04-04 10:00:00
 func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatCompletionRequest) (*huma.StreamResponse, error) {
 	logger := logger.WithCtx(ctx)
 
-	cfg := proxy.GetLLMProxyConfig()
-	modelCfg, ok := cfg.Models[req.Body.Model]
-	if !ok {
-		logger.Error("[OpenAIService] Model not found", zap.String("model", req.Body.Model))
-		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
-	}
-
-	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderOpenAI]
-	if !hasEndpoint {
-		logger.Error("[OpenAIService] Model has no openai endpoint", zap.String("model", req.Body.Model))
+	db := database.GetDBInstance(ctx)
+	endpoint, err := s.modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
+		Alias:    req.Body.Model,
+		Provider: enum.ProviderOpenAI,
+	}, []string{"model", "api_key", "base_url"})
+	if err != nil {
+		logger.Error("[OpenAIService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
@@ -147,7 +150,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 		return util.SendOpenAIInternalError(), nil
 	}
 
-	bodyMap["model"] = modelCfg.Model
+	bodyMap["model"] = endpoint.Model
 
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
 	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/chat/completions"
@@ -161,7 +164,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 	upstreamReq.Header.Set("Authorization", "Bearer "+endpoint.APIKey)
 
 	logger.Info("[OpenAIService] Send upstream request", zap.String("upstreamURL", upstreamURL),
-		zap.String("upstreamModel", modelCfg.Model),
+		zap.String("upstreamModel", endpoint.Model),
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
@@ -199,17 +202,12 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 
 					var collectedChunks []*dto.ChatCompletionChunk
 
-					// Use bufio.Reader.ReadString instead of bufio.Scanner to avoid
-					// batch pre-reading: ReadString blocks on I/O when upstream has no
-					// data yet, naturally pacing writes to match the upstream token rate
-					// and preventing multiple events from being coalesced (粘包).
 					reader := bufio.NewReader(upstreamResp.Body)
 					for {
 						raw, readErr := reader.ReadString('\n')
 						line := strings.TrimRight(raw, "\r\n")
 
 						if line != "" {
-							// Replace model name in SSE data lines
 							const dataPrefix = "data: "
 							if strings.HasPrefix(line, dataPrefix) {
 								payload := line[len(dataPrefix):]
@@ -253,7 +251,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 						return
 					}
 
-					s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model, completion.Usage)
+					s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, endpoint.Model, completion.Usage)
 				}))
 			},
 		}, nil
@@ -280,7 +278,6 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 			humaCtx.SetStatus(upstreamResp.StatusCode)
 			humaCtx.SetHeader("Content-Type", "application/json")
 
-			// Replace model name in non-stream response
 			completion := &dto.ChatCompletion{}
 			err = sonic.Unmarshal(respBody, completion)
 			if err != nil {
@@ -296,7 +293,7 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.ChatC
 				return
 			}
 
-			s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, modelCfg.Model, completion.Usage)
+			s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, endpoint.Model, completion.Usage)
 		},
 	}, nil
 }
@@ -312,7 +309,6 @@ func (s *openAIService) storeOpenAIMessages(
 ) {
 	var unifiedMessages []*dto.UnifiedMessage
 
-	// Convert request messages to UnifiedMessage
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromOpenAIMessage(msg)
 		if err != nil {
@@ -322,7 +318,6 @@ func (s *openAIService) storeOpenAIMessages(
 		unifiedMessages = append(unifiedMessages, um)
 	}
 
-	// Convert assistant response to UnifiedMessage
 	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
 	if err != nil {
 		logger.Error("[OpenAIService] Failed to convert ai response message", zap.Error(err))
@@ -330,7 +325,6 @@ func (s *openAIService) storeOpenAIMessages(
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
 
-	// Convert request tools to UnifiedTool
 	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.ChatCompletionTool, _ int) *dto.UnifiedTool {
 		return dto.FromOpenAITool(&tool)
 	})

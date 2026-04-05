@@ -13,7 +13,7 @@ LDFLAGS    := -s -w
 # -trimpath: 去除编译路径信息（减小体积 + 安全）
 BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 
-.PHONY: build build-upx build-dev build-debug clean test test-cover help
+.PHONY: build build-upx build-dev build-debug clean test test-cover lint-conv help
 
 ## build: 生产构建（strip 符号）
 build:
@@ -63,6 +63,10 @@ test-cover:
 	go test -count=1 -coverprofile=coverage.out ./test/...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
+
+## lint-conv: 扫描项目编码规范
+lint-conv:
+	@bash script/lint-conventions.sh
 
 ## help: 显示帮助
 help:

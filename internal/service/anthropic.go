@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,9 +16,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
+	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
@@ -29,48 +30,51 @@ import (
 // AnthropicService Anthropic服务
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-04-04 10:00:00
 type AnthropicService interface {
 	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.AnthropicListModelsRsp, error)
 	CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error)
 	CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error)
 }
 
-type anthropicService struct{}
+type anthropicService struct {
+	modelEndpointDAO *dao.ModelEndpointDAO
+}
 
 // NewAnthropicService 创建Anthropic服务
 //
 //	@return AnthropicService
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-04-04 10:00:00
 func NewAnthropicService() AnthropicService {
-	return &anthropicService{}
+	return &anthropicService{
+		modelEndpointDAO: dao.GetModelEndpointDAO(),
+	}
 }
 
 // ListModels 获取Anthropic模型列表
 //
 //	@receiver s *anthropicService
-//	@param _ context.Context
+//	@param ctx context.Context
 //	@param _ *dto.EmptyReq
 //	@return *dto.AnthropicListModelsRsp
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
-func (s *anthropicService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.AnthropicListModelsRsp, error) {
-	config := proxy.GetLLMProxyConfig()
+//	@update 2026-04-04 10:00:00
+func (s *anthropicService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.AnthropicListModelsRsp, error) {
+	db := database.GetDBInstance(ctx)
 
-	// Filter models that have an anthropic endpoint configured
-	anthropicKeys := lo.Filter(lo.Keys(config.Models), func(key string, _ int) bool {
-		mc := config.Models[key]
-		_, hasAnthropic := mc.Endpoints[enum.ProviderAnthropic]
-		return hasAnthropic
-	})
+	endpoints, err := s.modelEndpointDAO.BatchGet(db, &dbmodel.ModelEndpoint{Provider: enum.ProviderAnthropic}, []string{"alias"})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AnthropicService] Failed to query model endpoints", zap.Error(err))
+		return &dto.AnthropicListModelsRsp{Data: []*dto.AnthropicModelInfo{}}, nil
+	}
 
-	models := lo.Map(anthropicKeys, func(key string, _ int) *dto.AnthropicModelInfo {
+	models := lo.Map(endpoints, func(ep *dbmodel.ModelEndpoint, _ int) *dto.AnthropicModelInfo {
 		return &dto.AnthropicModelInfo{
-			ID:          key,
+			ID:          ep.Alias,
 			CreatedAt:   time.Now().UTC().Format(time.RFC3339),
-			DisplayName: key,
+			DisplayName: ep.Alias,
 			Type:        "model",
 		}
 	})
@@ -94,20 +98,17 @@ func (s *anthropicService) ListModels(_ context.Context, _ *dto.EmptyReq) (*dto.
 //	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-04-04 10:00:00
 func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
 	logger := logger.WithCtx(ctx)
 
-	cfg := proxy.GetLLMProxyConfig()
-	modelCfg, ok := cfg.Models[req.Body.Model]
-	if !ok {
-		logger.Error("[AnthropicService] Model not found", zap.String("model", req.Body.Model))
-		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
-	}
-
-	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderAnthropic]
-	if !hasEndpoint {
-		logger.Error("[AnthropicService] Model has no anthropic endpoint", zap.String("model", req.Body.Model))
+	db := database.GetDBInstance(ctx)
+	endpoint, err := s.modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
+		Alias:    req.Body.Model,
+		Provider: enum.ProviderAnthropic,
+	}, []string{"model", "api_key", "base_url"})
+	if err != nil {
+		logger.Error("[AnthropicService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
@@ -120,7 +121,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 		return util.SendAnthropicInternalError(), nil
 	}
 
-	bodyMap["model"] = modelCfg.Model
+	bodyMap["model"] = endpoint.Model
 
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
 	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages"
@@ -135,7 +136,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
 
 	logger.Info("[AnthropicService] Send upstream request", zap.String("upstreamURL", upstreamURL),
-		zap.String("upstreamModel", modelCfg.Model),
+		zap.String("upstreamModel", endpoint.Model),
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)),
 		zap.Any("upstreamBody", bodyMap))
 
@@ -184,15 +185,12 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 						if line != "" {
 							if strings.HasPrefix(line, "event: ") {
 								currentEvent = strings.TrimPrefix(line, "event: ")
-								// Forward event line as-is
 								fmt.Fprintf(w, "%s\n", line)
 							} else if strings.HasPrefix(line, "data: ") {
 								payload := line[len("data: "):]
 
-								// Try to replace model name in data
 								var dataMap map[string]any
 								if err := sonic.UnmarshalString(payload, &dataMap); err == nil {
-									// Replace model in message_start event's nested message object
 									if msgRaw, ok := dataMap["message"]; ok {
 										if msgMap, ok := msgRaw.(map[string]any); ok {
 											if _, hasModel := msgMap["model"]; hasModel {
@@ -200,17 +198,15 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 											}
 										}
 									}
-									// Also check top-level model field
 									if _, hasModel := dataMap["model"]; hasModel {
 										dataMap["model"] = exposedModel
 									}
 									modifiedPayload := lo.Must1(sonic.Marshal(dataMap))
 									line = fmt.Sprintf("data: %s", string(modifiedPayload))
 
-									// Collect event for message assembly
 									collectedEvents = append(collectedEvents, dto.AnthropicSSEEvent{
 										Event: currentEvent,
-										Data:  json.RawMessage(modifiedPayload),
+										Data:  modifiedPayload,
 									})
 								}
 
@@ -230,7 +226,6 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 						}
 					}
 
-					// Assemble complete message for storage
 					if len(collectedEvents) == 0 {
 						return
 					}
@@ -244,7 +239,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 						return
 					}
 
-					s.storeAnthropicMessages(ctx, logger, req, assembledMsg, modelCfg.Model)
+					s.storeAnthropicMessages(ctx, logger, req, assembledMsg, endpoint.Model)
 				}))
 			},
 		}, nil
@@ -272,7 +267,6 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 			humaCtx.SetStatus(upstreamResp.StatusCode)
 			humaCtx.SetHeader("Content-Type", "application/json")
 
-			// Replace model name in non-stream response
 			message := &dto.AnthropicMessage{}
 			err = sonic.Unmarshal(respBody, message)
 			if err != nil {
@@ -283,7 +277,7 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 			message.Model = exposedModel
 			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(message)))
 
-			s.storeAnthropicMessages(ctx, logger, req, message, modelCfg.Model)
+			s.storeAnthropicMessages(ctx, logger, req, message, endpoint.Model)
 		},
 	}, nil
 }
@@ -298,7 +292,6 @@ func (s *anthropicService) storeAnthropicMessages(
 ) {
 	var unifiedMessages []*dto.UnifiedMessage
 
-	// Convert request messages to UnifiedMessage
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromAnthropicMessage(msg)
 		if err != nil {
@@ -308,7 +301,6 @@ func (s *anthropicService) storeAnthropicMessages(
 		unifiedMessages = append(unifiedMessages, um)
 	}
 
-	// Convert assistant response to UnifiedMessage
 	aiMsg, err := dto.FromAnthropicResponse(assistantMsg)
 	if err != nil {
 		logger.Error("[AnthropicService] Failed to convert anthropic response", zap.Error(err))
@@ -316,7 +308,6 @@ func (s *anthropicService) storeAnthropicMessages(
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
 
-	// Convert request tools to UnifiedTool
 	unifiedTools := make([]*dto.UnifiedTool, 0, len(req.Body.Tools))
 	for _, tool := range req.Body.Tools {
 		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
@@ -351,25 +342,21 @@ func (s *anthropicService) storeAnthropicMessages(
 //	@return *dto.AnthropicTokensCount
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-20 10:00:00
+//	@update 2026-04-04 10:00:00
 func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
 	rsp := &dto.AnthropicTokensCount{InputTokens: 0}
 	logger := logger.WithCtx(ctx)
 
-	cfg := proxy.GetLLMProxyConfig()
-	modelCfg, ok := cfg.Models[req.Body.Model]
-	if !ok {
-		logger.Warn("[AnthropicService] Model not found, returning 0", zap.String("model", req.Body.Model))
+	db := database.GetDBInstance(ctx)
+	endpoint, err := s.modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
+		Alias:    req.Body.Model,
+		Provider: enum.ProviderAnthropic,
+	}, []string{"model", "api_key", "base_url"})
+	if err != nil {
+		logger.Warn("[AnthropicService] Model not found, returning 0", zap.String("model", req.Body.Model), zap.Error(err))
 		return rsp, nil
 	}
 
-	endpoint, hasEndpoint := modelCfg.Endpoints[enum.ProviderAnthropic]
-	if !hasEndpoint {
-		logger.Warn("[AnthropicService] Model has no anthropic endpoint, returning 0", zap.String("model", req.Body.Model))
-		return rsp, nil
-	}
-
-	// Build upstream request body as map to replace model name
 	bodyBytes := lo.Must1(sonic.Marshal(req.Body))
 
 	var bodyMap map[string]any
@@ -378,7 +365,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 		return rsp, nil
 	}
 
-	bodyMap["model"] = modelCfg.Model
+	bodyMap["model"] = endpoint.Model
 
 	upstreamBody := lo.Must1(sonic.Marshal(bodyMap))
 	upstreamURL := strings.TrimRight(endpoint.BaseURL, "/") + "/v1/messages/count_tokens"
@@ -393,7 +380,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	upstreamReq.Header.Set("anthropic-version", "2023-06-01")
 
 	logger.Info("[AnthropicService] Send upstream request", zap.String("upstreamURL", upstreamURL),
-		zap.String("upstreamModel", modelCfg.Model),
+		zap.String("upstreamModel", endpoint.Model),
 		zap.Any("upstreamAPIKey", util.MaskSecret(endpoint.APIKey)))
 
 	upstreamResp, err := upstreamHTTPClient.Do(upstreamReq)

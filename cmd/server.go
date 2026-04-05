@@ -17,7 +17,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
-	"github.com/hcd233/aris-proxy-api/internal/proxy"
 	"go.uber.org/zap"
 
 	"github.com/gofiber/fiber/v2"
@@ -59,8 +58,6 @@ var startServerCmd = &cobra.Command{
 
 		database.InitDatabase()
 		cache.InitCache()
-		// storage.InitObjectStorage()
-		proxy.InitLLMProxyConfig()
 		pool.InitPoolManager()
 		cron.InitCronJobs()
 
@@ -92,45 +89,21 @@ var startServerCmd = &cobra.Command{
 			listenErr <- app.Listen(listenAddr)
 		}()
 
-		// 监听关闭信号（SIGINT/SIGTERM）和配置重载信号（SIGHUP）
+		// 监听关闭信号（SIGINT/SIGTERM）
 		quit := make(chan os.Signal, 1)
-		reload := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		signal.Notify(reload, syscall.SIGHUP)
 
-		// 事件循环：处理配置重载和关闭信号
-		for {
-			select {
-			case err := <-listenErr:
-				// HTTP 服务意外退出
-				if err != nil {
-					logger.Logger().Error("[Server] HTTP server exited unexpectedly", zap.Error(err))
-					os.Exit(1)
-				}
-				return
-			case <-reload:
-				handleConfigReload()
-			case sig := <-quit:
-				logger.Logger().Info("[Server] Received shutdown signal, starting graceful shutdown...", zap.String("signal", sig.String()))
-				gracefulShutdown(app)
-				return
+		select {
+		case err := <-listenErr:
+			if err != nil {
+				logger.Logger().Error("[Server] HTTP server exited unexpectedly", zap.Error(err))
+				os.Exit(1)
 			}
+		case sig := <-quit:
+			logger.Logger().Info("[Server] Received shutdown signal, starting graceful shutdown...", zap.String("signal", sig.String()))
+			gracefulShutdown(app)
 		}
 	},
-}
-
-// handleConfigReload 处理 SIGHUP 信号触发的配置热加载
-//
-//	@author centonhuang
-//	@update 2026-03-20 10:00:00
-func handleConfigReload() {
-	logger.Logger().Info("[Server] Received SIGHUP, reloading LLM proxy config...")
-	if err := proxy.ReloadLLMProxyConfig(); err != nil {
-		logger.Logger().Error("[Server] Failed to reload LLM proxy config", zap.Error(err))
-		return
-	}
-	middleware.RebuildAPIKeyIndex()
-	logger.Logger().Info("[Server] LLM proxy config reloaded successfully")
 }
 
 // gracefulShutdown 按序执行优雅关闭流程
@@ -139,7 +112,7 @@ func handleConfigReload() {
 //
 //	@param app *fiber.App
 //	@author centonhuang
-//	@update 2026-03-20 10:00:00
+//	@update 2026-04-04 10:00:00
 func gracefulShutdown(app *fiber.App) {
 	ctx, cancel := context.WithTimeout(context.Background(), constant.ShutdownTimeout)
 	defer cancel()

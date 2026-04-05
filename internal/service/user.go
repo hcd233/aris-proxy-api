@@ -100,7 +100,7 @@ func (s *userService) UpdateUser(ctx context.Context, req *dto.UpdateUserReq) (*
 	logger := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
 
-	if err := s.userDAO.Update(db, &model.User{ID: userID}, map[string]interface{}{
+	if err := s.userDAO.Update(db, &model.User{ID: userID}, map[string]any{
 		"name":   req.Body.User.Name,
 		"email":  req.Body.User.Email,
 		"avatar": req.Body.User.Avatar,

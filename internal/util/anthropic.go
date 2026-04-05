@@ -204,6 +204,15 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 func SendAnthropicUpstreamError(statusCode int, body string) (rsp *huma.StreamResponse) {
+	// 尝试从上游错误响应中提取安全的 error message
+	var errMsg string
+	var errResp dto.AnthropicErrorResponse
+	if err := sonic.UnmarshalString(body, &errResp); err == nil && errResp.Error != nil && errResp.Error.Message != "" {
+		errMsg = errResp.Error.Message
+	} else {
+		errMsg = fmt.Sprintf("Upstream returned status %d", statusCode)
+	}
+
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
@@ -212,7 +221,7 @@ func SendAnthropicUpstreamError(statusCode int, body string) (rsp *huma.StreamRe
 				Type: "error",
 				Error: &dto.AnthropicError{
 					Type:    "upstream_error",
-					Message: "Upstream error: " + body,
+					Message: errMsg,
 				},
 			})))
 		},

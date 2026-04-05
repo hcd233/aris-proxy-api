@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"encoding/json"
 	"reflect"
 
 	"github.com/bytedance/sonic"
@@ -453,8 +452,8 @@ type AnthropicTokensCount struct {
 //	@author centonhuang
 //	@update 2026-03-29 10:00:00
 type AnthropicSSEEvent struct {
-	Event string          `json:"event"`
-	Data  json.RawMessage `json:"data"`
+	Event string                 `json:"event"`
+	Data  sonic.NoCopyRawMessage `json:"data"`
 }
 
 // ==================== Anthropic SSE Payload DTOs ====================

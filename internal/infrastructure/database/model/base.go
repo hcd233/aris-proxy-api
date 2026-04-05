@@ -15,12 +15,14 @@ type BaseModel struct {
 	DeletedAt int64     `json:"deleted_at" gorm:"column:deleted_at;default:0;comment:删除时间，默认为0"`
 }
 
-// Models undefined
+// Models 所有数据库模型
 //
-//	update 2026-03-18 10:00:00
+//	@update 2026-04-04 10:00:00
 var Models = []interface{}{
 	&User{},
 	&Message{},
 	&Session{},
 	&Tool{},
+	&ModelEndpoint{},
+	&ProxyAPIKey{},
 }

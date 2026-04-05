@@ -52,7 +52,7 @@ func (dao *baseDAO[ModelT]) BatchCreate(db *gorm.DB, data []*ModelT) (err error)
 //	return Update
 //	author centonhuang
 //	update 2024-10-17 02:52:18
-func (dao *baseDAO[ModelT]) Update(db *gorm.DB, data *ModelT, info map[string]interface{}) (err error) {
+func (dao *baseDAO[ModelT]) Update(db *gorm.DB, data *ModelT, info map[string]any) (err error) {
 	updateAtField := "updated_at"
 	info[updateAtField] = time.Now().UTC()
 
@@ -94,14 +94,14 @@ func (dao *baseDAO[ModelT]) BatchDeleteByField(db *gorm.DB, whereField string, v
 	return
 }
 
-// func GetByID 使用ID查询指定数据
+// Get 查询指定数据
 //
-//	param dao *BaseDAO[T]
-//	return GetByID
-//	author centonhuang
-//	update 2024-10-17 03:06:57
-//	@param dao
-//	@return Get
+//	@receiver dao *baseDAO[ModelT]
+//	@param db *gorm.DB
+//	@param where *ModelT
+//	@param fields []string
+//	@return *ModelT
+//	@return error
 //	@author centonhuang
 //	@update 2025-11-14 16:05:03
 func (dao *baseDAO[ModelT]) Get(db *gorm.DB, where *ModelT, fields []string) (data *ModelT, err error) {
