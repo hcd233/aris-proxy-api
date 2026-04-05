@@ -1,0 +1,23 @@
+[
+    {
+        "name": "default_pool_config",
+        "store_workers": 50,
+        "store_queue_size": 1000,
+        "agent_workers": 10,
+        "agent_queue_size": 100
+    },
+    {
+        "name": "custom_pool_config",
+        "store_workers": 100,
+        "store_queue_size": 2000,
+        "agent_workers": 20,
+        "agent_queue_size": 200
+    },
+    {
+        "name": "minimal_pool_config",
+        "store_workers": 1,
+        "store_queue_size": 10,
+        "agent_workers": 1,
+        "agent_queue_size": 10
+    }
+]
