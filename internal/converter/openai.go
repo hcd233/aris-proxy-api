@@ -4,9 +4,9 @@ package converter
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -114,17 +114,44 @@ func (*OpenAIProtocolConverter) ToAnthropicResponse(completion *dto.OpenAIChatCo
 	return msg, nil
 }
 
+// SSEContentBlockTracker 追踪已发送过 content_block_start 的内容块索引
+//
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+type SSEContentBlockTracker struct {
+	// startedTextBlocks 已发送 content_block_start（text/thinking）的 choice.Index 集合
+	startedTextBlocks map[int]struct{}
+	// startedToolBlocks 已发送 content_block_start（tool_use）的 tc.Index 集合
+	startedToolBlocks map[int]struct{}
+}
+
+// NewSSEContentBlockTracker 创建内容块追踪器
+//
+//	@return *SSEContentBlockTracker
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func NewSSEContentBlockTracker() *SSEContentBlockTracker {
+	return &SSEContentBlockTracker{
+		startedTextBlocks: make(map[int]struct{}),
+		startedToolBlocks: make(map[int]struct{}),
+	}
+}
+
 // ToAnthropicSSEResponse 将 OpenAI ChatCompletionChunk 流式块转换为 Anthropic SSE 事件序列
+//
+//	使用 tracker 追踪 content_block_start 发送状态，确保每个内容块只发送一次 start 事件。
+//	调用方需为同一流的所有 chunk 共享同一个 tracker 实例。
 //
 //	@receiver OpenAIProtocolConverter
 //	@param chunk *dto.OpenAIChatCompletionChunk
 //	@param isFirst bool
 //	@param model string
+//	@param tracker *SSEContentBlockTracker
 //	@return []dto.AnthropicSSEEvent
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatCompletionChunk, isFirst bool, model string) ([]dto.AnthropicSSEEvent, error) {
+func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatCompletionChunk, isFirst bool, model string, tracker *SSEContentBlockTracker) ([]dto.AnthropicSSEEvent, error) {
 	var events []dto.AnthropicSSEEvent
 
 	if isFirst {
@@ -151,22 +178,25 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 
 		// 文本内容增量
 		if choice.Delta.Content != "" {
-			if isFirst {
+			if _, started := tracker.startedTextBlocks[choice.Index]; !started {
 				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
 					Type: enum.AnthropicContentBlockTypeText,
 					Text: "",
 				}))
+				tracker.startedTextBlocks[choice.Index] = struct{}{}
 			}
 			events = append(events, newTextDeltaEvent(choice.Index, choice.Delta.Content))
 		}
 
-		// 推理内容增量
+		// 推理内容增量（thinking 与 text 共用同一 index，用负数偏移区分）
 		if choice.Delta.ReasoningContent != "" {
-			if isFirst {
+			thinkingKey := -(choice.Index + 1)
+			if _, started := tracker.startedTextBlocks[thinkingKey]; !started {
 				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
 					Type:     enum.AnthropicContentBlockTypeThinking,
 					Thinking: "",
 				}))
+				tracker.startedTextBlocks[thinkingKey] = struct{}{}
 			}
 			events = append(events, newThinkingDeltaEvent(choice.Index, choice.Delta.ReasoningContent))
 		}
@@ -174,12 +204,15 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 		// 工具调用增量
 		for _, tc := range choice.Delta.ToolCalls {
 			if tc.Function != nil && tc.ID != "" {
-				events = append(events, newContentBlockStartEvent(tc.Index, &dto.AnthropicContentBlock{
-					Type:  enum.AnthropicContentBlockTypeToolUse,
-					ID:    tc.ID,
-					Name:  tc.Function.Name,
-					Input: map[string]any{},
-				}))
+				if _, started := tracker.startedToolBlocks[tc.Index]; !started {
+					events = append(events, newContentBlockStartEvent(tc.Index, &dto.AnthropicContentBlock{
+						Type:  enum.AnthropicContentBlockTypeToolUse,
+						ID:    tc.ID,
+						Name:  tc.Function.Name,
+						Input: map[string]any{},
+					}))
+					tracker.startedToolBlocks[tc.Index] = struct{}{}
+				}
 			}
 			if tc.Function != nil && tc.Function.Arguments != "" {
 				events = append(events, newInputJSONDeltaEvent(tc.Index, tc.Function.Arguments))
@@ -573,5 +606,5 @@ func newInputJSONDeltaEvent(index int, partialJSON string) dto.AnthropicSSEEvent
 
 // GenerateAnthropicMessageID 生成 Anthropic 风格的消息 ID
 func GenerateAnthropicMessageID() string {
-	return fmt.Sprintf("msg_%d", time.Now().UnixNano())
+	return fmt.Sprintf("msg_%s", uuid.New().String())
 }

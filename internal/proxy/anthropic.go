@@ -127,6 +127,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep Upst
 		if readErr != nil {
 			if readErr != io.EOF {
 				logger.Warn("[AnthropicProxy] Read upstream sse error", zap.Error(readErr))
+				return nil, ierr.Wrap(ierr.ErrProxyResponse, readErr, "read upstream sse stream")
 			}
 			break
 		}
@@ -150,7 +151,7 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndp
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Warn("[AnthropicProxy] Read upstream response error", zap.Error(err))
+		logger.Error("[AnthropicProxy] Read upstream response error", zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "read upstream response")
 	}
 

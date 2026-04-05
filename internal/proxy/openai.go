@@ -117,6 +117,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 		if readErr != nil {
 			if readErr != io.EOF {
 				logger.Warn("[OpenAIProxy] Read upstream sse error", zap.Error(readErr))
+				return nil, ierr.Wrap(ierr.ErrProxyResponse, readErr, "read upstream sse stream")
 			}
 			break
 		}

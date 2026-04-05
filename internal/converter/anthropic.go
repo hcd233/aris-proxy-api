@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -501,8 +502,13 @@ func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkI
 	case enum.AnthropicDeltaTypeThinkingDelta:
 		delta.ReasoningContent = payload.Delta.Thinking
 	case enum.AnthropicDeltaTypeInputJSONDelta:
-		// 暂不处理 input_json_delta -> tool_calls 的流式映射
-		return nil, nil
+		delta.ToolCalls = []*dto.OpenAIChatCompletionMessageToolCall{{
+			Index: payload.Index,
+			Type:  enum.ToolTypeFunction,
+			Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
+				Arguments: payload.Delta.PartialJSON,
+			},
+		}}
 	default:
 		return nil, nil
 	}
@@ -604,5 +610,5 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 
 // GenerateOpenAIChunkID 生成 OpenAI 风格的 chunk ID
 func GenerateOpenAIChunkID() string {
-	return fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano())
+	return fmt.Sprintf("chatcmpl-%s", uuid.New().String())
 }

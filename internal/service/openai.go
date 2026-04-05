@@ -144,11 +144,18 @@ func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, r
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
 			completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 				chunk.Model = req.Body.Model
-				fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(chunk)))
+				chunkData, marshalErr := sonic.Marshal(chunk)
+				if marshalErr != nil {
+					logger.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
+					return marshalErr
+				}
+				fmt.Fprintf(w, "data: %s\n\n", chunkData)
 				return w.Flush()
 			})
-			fmt.Fprintf(w, "data: [DONE]\n\n")
-			w.Flush()
+			if err == nil {
+				fmt.Fprintf(w, "data: [DONE]\n\n")
+				w.Flush()
+			}
 
 			s.storeFromCompletion(ctx, logger, req, completion, err, ep.Model)
 		}), nil
@@ -187,15 +194,22 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 					return err
 				}
 				for _, chunk := range chunks {
-					fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(chunk)))
+					chunkData, marshalErr := sonic.Marshal(chunk)
+					if marshalErr != nil {
+						logger.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
+						return marshalErr
+					}
+					fmt.Fprintf(w, "data: %s\n\n", chunkData)
 					if err := w.Flush(); err != nil {
 						return err
 					}
 				}
 				return nil
 			})
-			fmt.Fprintf(w, "data: [DONE]\n\n")
-			w.Flush()
+			if err == nil {
+				fmt.Fprintf(w, "data: [DONE]\n\n")
+				w.Flush()
+			}
 
 			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
 		}), nil

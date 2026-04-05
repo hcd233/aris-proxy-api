@@ -27,8 +27,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		tokenString := ctx.Header("Authorization")
-		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), "Bearer"))
-		tokenString = strings.TrimSpace(tokenString)
+		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), "Bearer "))
 
 		if tokenString == "" {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))

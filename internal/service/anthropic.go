@@ -133,6 +133,10 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 				fmt.Fprintf(w, "data: %s\n\n", modifiedData)
 				return w.Flush()
 			})
+			if err == nil {
+				fmt.Fprintf(w, "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n")
+				w.Flush()
+			}
 
 			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
 		}), nil
@@ -165,8 +169,9 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 	if stream {
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
 			isFirst := true
+			tracker := converter.NewSSEContentBlockTracker()
 			completion, proxyErr := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
-				events, err := conv.ToAnthropicSSEResponse(chunk, isFirst, exposedModel)
+				events, err := conv.ToAnthropicSSEResponse(chunk, isFirst, exposedModel, tracker)
 				if err != nil {
 					return err
 				}
@@ -180,8 +185,10 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 				}
 				return nil
 			})
-			fmt.Fprintf(w, "event: message_stop\ndata: {}\n\n")
-			w.Flush()
+			if proxyErr == nil {
+				fmt.Fprintf(w, "event: message_stop\ndata: {}\n\n")
+				w.Flush()
+			}
 
 			if proxyErr != nil || completion == nil {
 				return

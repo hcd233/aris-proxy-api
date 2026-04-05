@@ -122,13 +122,16 @@ func (pm *PoolManager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmo
 	for _, m := range messages {
 		if _, exists := existingMap[m.CheckSum]; !exists {
 			newMessages = append(newMessages, m)
-			existingMap[m.CheckSum] = m.ID
 		}
 	}
 
 	if len(newMessages) > 0 {
 		if err := messageDAO.BatchCreate(tx, newMessages); err != nil {
 			return nil, err
+		}
+		// BatchCreate 后 GORM 已填充 ID，更新 map
+		for _, nm := range newMessages {
+			existingMap[nm.CheckSum] = nm.ID
 		}
 	}
 
@@ -175,13 +178,16 @@ func (pm *PoolManager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.To
 	for _, t := range tools {
 		if _, exists := existingMap[t.CheckSum]; !exists {
 			newTools = append(newTools, t)
-			existingMap[t.CheckSum] = t.ID
 		}
 	}
 
 	if len(newTools) > 0 {
 		if err := toolDAO.BatchCreate(tx, newTools); err != nil {
 			return nil, err
+		}
+		// BatchCreate 后 GORM 已填充 ID，更新 map
+		for _, nt := range newTools {
+			existingMap[nt.CheckSum] = nt.ID
 		}
 	}
 

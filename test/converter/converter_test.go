@@ -690,7 +690,7 @@ func TestOpenAIProtocolConverter_ToAnthropicSSEResponse(t *testing.T) {
 		}},
 	}
 
-	events, err := conv.ToAnthropicSSEResponse(chunk, true, "gpt-4")
+	events, err := conv.ToAnthropicSSEResponse(chunk, true, "gpt-4", converter.NewSSEContentBlockTracker())
 	if err != nil {
 		t.Fatalf("ToAnthropicSSEResponse() error: %v", err)
 	}

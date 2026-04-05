@@ -42,6 +42,8 @@ func (pm *PoolManager) submitMessageStoreTask(task *dto.MessageStoreTask) error 
 			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
 				model = task.Model
 				tokenCount = task.OutputTokens
+			} else if lo.Contains([]enum.Role{enum.RoleUser, enum.RoleSystem}, m.Role) {
+				tokenCount = task.InputTokens
 			}
 			return &dbmodel.Message{
 				Model:      model,

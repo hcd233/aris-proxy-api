@@ -92,30 +92,46 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 		}
 
 		if strings.Contains(string(c.Request().Header.ContentType()), "application/json") {
-			request := make(map[string]interface{})
+			safeFields := make(map[string]interface{})
 			if reqBody := c.Body(); reqBody != nil {
-				if err := sonic.Unmarshal(reqBody, &request); err != nil {
-					logger.Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(err))
+				raw := make(map[string]interface{})
+				if jsonErr := sonic.Unmarshal(reqBody, &raw); jsonErr == nil {
+					// 只记录非敏感的元信息字段，不记录消息内容、工具参数等
+					for _, key := range []string{"model", "stream", "max_tokens", "max_completion_tokens", "temperature", "top_p"} {
+						if v, ok := raw[key]; ok {
+							safeFields[key] = v
+						}
+					}
 				}
 			}
-			fields = append(fields, zap.Dict("request", lo.MapToSlice(request, func(key string, value interface{}) zap.Field {
-				return zap.Any(key, value)
-			})...))
+			if len(safeFields) > 0 {
+				fields = append(fields, zap.Dict("request", lo.MapToSlice(safeFields, func(key string, value interface{}) zap.Field {
+					return zap.Any(key, value)
+				})...))
+			}
 		}
 
 		// FIXME: get response body will break sse
 		// reference: https://github.com/gofiber/fiber/issues/429
 		// reference: https://github.com/samber/slog-fiber/issues/68
 		if strings.Contains(string(c.Response().Header.ContentType()), "application/json") { // response header content-type is not text/event-stream
-			response := make(map[string]interface{})
+			safeFields := make(map[string]interface{})
 			if respBody := c.Response().Body(); respBody != nil {
-				if err := sonic.Unmarshal(respBody, &response); err != nil {
-					logger.Warn("[LogMiddleware] Unmarshal response error", zap.ByteString("response", respBody), zap.Error(err))
+				raw := make(map[string]interface{})
+				if jsonErr := sonic.Unmarshal(respBody, &raw); jsonErr == nil {
+					// 只记录非敏感的元信息字段
+					for _, key := range []string{"id", "model", "object", "error", "usage"} {
+						if v, ok := raw[key]; ok {
+							safeFields[key] = v
+						}
+					}
 				}
 			}
-			fields = append(fields, zap.Dict("response", lo.MapToSlice(response, func(key string, value interface{}) zap.Field {
-				return zap.Any(key, value)
-			})...))
+			if len(safeFields) > 0 {
+				fields = append(fields, zap.Dict("response", lo.MapToSlice(safeFields, func(key string, value interface{}) zap.Field {
+					return zap.Any(key, value)
+				})...))
+			}
 		}
 
 		if err != nil {
