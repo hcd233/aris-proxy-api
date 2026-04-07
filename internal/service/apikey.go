@@ -153,7 +153,7 @@ func (s *apikeyService) CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyR
 		zap.Uint("userID", userID),
 		zap.String("userName", user.Name),
 		zap.String("keyName", req.Body.Name),
-		zap.String("keyID", util.MaskSecret(proxyAPIKey.Key)))
+		zap.String("key", util.MaskSecret(proxyAPIKey.Key)))
 
 	return rsp, nil
 }
@@ -253,7 +253,7 @@ func (s *apikeyService) DeleteAPIKey(ctx context.Context, req *dto.DeleteAPIKeyR
 	// 软删除
 	if err := s.proxyAPIKeyDAO.Delete(db, &dbmodel.ProxyAPIKey{ID: req.ID}); err != nil {
 		log.Error("[APIKeyService] Failed to delete API key", zap.Error(err), zap.Uint("keyID", req.ID))
-		rsp.Error = ierr.ErrDBUpdate.BizError()
+		rsp.Error = ierr.ErrDBDelete.BizError()
 		return rsp, nil
 	}
 
