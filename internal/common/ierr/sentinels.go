@@ -80,6 +80,9 @@ var (
 	// ErrOAuth2UserInfo OAuth2 用户信息获取错误
 	ErrOAuth2UserInfo = newFromSentinel(newSentinel("oauth2_user_info", model.NewError(10000, "InternalError")))
 
+	// ErrOAuth2ConfigInvalid OAuth2 配置不完整（缺少 ClientID/ClientSecret 等）
+	ErrOAuth2ConfigInvalid = newFromSentinel(newSentinel("oauth2_config_invalid", model.NewError(10000, "InternalError")))
+
 	// ==================== DTO 转换错误 ====================
 
 	// ErrDTOConvert DTO 格式转换错误

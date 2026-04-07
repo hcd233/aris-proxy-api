@@ -89,6 +89,10 @@ func NewGooglePlatform() Platform {
 	}
 }
 
+func (p *googlePlatform) ValidateConfig() error {
+	return validateOAuth2Config(p.oauth2Config, "Google")
+}
+
 func (p *googlePlatform) GetAuthURL() string {
 	return p.oauth2Config.AuthCodeURL(config.Oauth2StateString, oauth2.AccessTypeOffline)
 }

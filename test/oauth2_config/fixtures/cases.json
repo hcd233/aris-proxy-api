@@ -1,0 +1,66 @@
+[
+  {
+    "name": "valid_github_config",
+    "description": "GitHub OAuth2 with all required fields populated",
+    "platform": "github",
+    "client_id": "gh-client-id-123",
+    "client_secret": "gh-client-secret-456",
+    "redirect_url": "http://localhost:8080/api/v1/oauth2/callback"
+  },
+  {
+    "name": "valid_google_config",
+    "description": "Google OAuth2 with all required fields populated",
+    "platform": "google",
+    "client_id": "google-client-id-789",
+    "client_secret": "google-client-secret-012",
+    "redirect_url": "http://localhost:8080/api/v1/oauth2/callback"
+  },
+  {
+    "name": "empty_client_id_github",
+    "description": "GitHub OAuth2 with empty client_id should fail validation",
+    "platform": "github",
+    "client_id": "",
+    "client_secret": "gh-client-secret-456",
+    "redirect_url": "http://localhost:8080/api/v1/oauth2/callback"
+  },
+  {
+    "name": "empty_client_secret_github",
+    "description": "GitHub OAuth2 with empty client_secret should fail validation",
+    "platform": "github",
+    "client_id": "gh-client-id-123",
+    "client_secret": "",
+    "redirect_url": "http://localhost:8080/api/v1/oauth2/callback"
+  },
+  {
+    "name": "both_empty_github",
+    "description": "GitHub OAuth2 with both client_id and client_secret empty should fail validation",
+    "platform": "github",
+    "client_id": "",
+    "client_secret": "",
+    "redirect_url": ""
+  },
+  {
+    "name": "empty_client_id_google",
+    "description": "Google OAuth2 with empty client_id should fail validation",
+    "platform": "google",
+    "client_id": "",
+    "client_secret": "google-client-secret-012",
+    "redirect_url": "http://localhost:8080/api/v1/oauth2/callback"
+  },
+  {
+    "name": "empty_client_secret_google",
+    "description": "Google OAuth2 with empty client_secret should fail validation",
+    "platform": "google",
+    "client_id": "google-client-id-789",
+    "client_secret": "",
+    "redirect_url": "http://localhost:8080/api/v1/oauth2/callback"
+  },
+  {
+    "name": "valid_config_url_has_client_id",
+    "description": "Valid config should produce auth URL containing client_id",
+    "platform": "github",
+    "client_id": "test-client-id-abc",
+    "client_secret": "test-client-secret-def",
+    "redirect_url": "http://localhost:8080/api/v1/oauth2/callback"
+  }
+]

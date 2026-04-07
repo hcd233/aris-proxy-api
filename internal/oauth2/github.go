@@ -93,6 +93,10 @@ func NewGithubPlatform() Platform {
 	}
 }
 
+func (p *githubPlatform) ValidateConfig() error {
+	return validateOAuth2Config(p.oauth2Config, "GitHub")
+}
+
 func (p *githubPlatform) GetAuthURL() string {
 	return p.oauth2Config.AuthCodeURL(config.Oauth2StateString, oauth2.AccessTypeOffline)
 }

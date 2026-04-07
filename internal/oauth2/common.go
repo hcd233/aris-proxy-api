@@ -22,12 +22,25 @@ type UserInfo interface {
 
 // Platform OAuth2提供商接口
 type Platform interface {
+	// ValidateConfig 校验 OAuth2 配置是否完整（ClientID、ClientSecret 等）
+	ValidateConfig() error
 	// GetAuthURL 获取授权URL
 	GetAuthURL() string
 	// ExchangeToken 通过授权码获取Access Token
 	ExchangeToken(ctx context.Context, code string) (*oauth2.Token, error)
 	// GetUserInfo 获取用户信息
 	GetUserInfo(ctx context.Context, token *oauth2.Token) (UserInfo, error)
+}
+
+// validateOAuth2Config checks that required fields in oauth2.Config are non-empty
+func validateOAuth2Config(cfg *oauth2.Config, platform string) error {
+	if cfg.ClientID == "" {
+		return ierr.Newf(ierr.ErrOAuth2ConfigInvalid, "%s OAuth2 ClientID is empty", platform)
+	}
+	if cfg.ClientSecret == "" {
+		return ierr.Newf(ierr.ErrOAuth2ConfigInvalid, "%s OAuth2 ClientSecret is empty", platform)
+	}
+	return nil
 }
 
 // StateManager OAuth2 state管理器，防止CSRF攻击

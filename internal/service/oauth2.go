@@ -76,7 +76,12 @@ func (s *oauth2Service) Login(ctx context.Context, req *dto.LoginReq) (rsp *dto.
 
 	log := logger.WithCtx(ctx)
 
-	// 生成加密安全的随机state
+	if err := s.platform.ValidateConfig(); err != nil {
+		log.Error("[Oauth2Service] OAuth2 config invalid", zap.String("platform", req.Platform), zap.Error(err))
+		rsp.Error = ierr.ErrOAuth2ConfigInvalid.BizError()
+		return rsp, nil
+	}
+
 	state, err := oauth2.GenerateOAuth2State()
 	if err != nil {
 		log.Error("[Oauth2Service] Failed to generate state", zap.Error(err))
@@ -84,7 +89,6 @@ func (s *oauth2Service) Login(ctx context.Context, req *dto.LoginReq) (rsp *dto.
 		return rsp, nil
 	}
 
-	// 使用类型断言获取带state的URL
 	var url string
 	switch p := s.platform.(type) {
 	case interface{ GetAuthURLWithState(string) string }:
