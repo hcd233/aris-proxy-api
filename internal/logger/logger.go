@@ -73,6 +73,11 @@ func WithCtx(ctx context.Context) *zap.Logger {
 			logger = logger.With(zap.String(constant.CtxKeyUserName, s))
 		}
 	}
+	if apiKeyID := ctx.Value(constant.CtxKeyAPIKeyID); apiKeyID != nil {
+		if id, ok := apiKeyID.(uint); ok {
+			logger = logger.With(zap.Uint(constant.CtxKeyAPIKeyID, id))
+		}
+	}
 	return logger
 }
 
@@ -97,6 +102,11 @@ func WithFCtx(c *fiber.Ctx) *zap.Logger {
 	if userName := c.Locals(constant.CtxKeyUserName); userName != nil {
 		if s, ok := userName.(string); ok {
 			logger = logger.With(zap.String(constant.CtxKeyUserName, s))
+		}
+	}
+	if apiKeyID := c.Locals(constant.CtxKeyAPIKeyID); apiKeyID != nil {
+		if id, ok := apiKeyID.(uint); ok {
+			logger = logger.With(zap.Uint(constant.CtxKeyAPIKeyID, id))
 		}
 	}
 	return logger
