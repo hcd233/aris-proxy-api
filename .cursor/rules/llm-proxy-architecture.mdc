@@ -1,0 +1,71 @@
+---
+description: LLM proxy three-tier architecture rules for service, proxy, and converter layers
+globs: ["internal/service/**", "internal/proxy/**", "internal/converter/**"]
+---
+
+# LLM Proxy Three-tier Architecture
+
+## Architecture
+
+```
+Handler → Service → Proxy → upstream HTTP
+                 ↘ Converter (pure conversion)
+```
+
+| Layer | Responsibility | Rules |
+|-------|---------------|-------|
+| Service | Endpoint lookup + dispatch + Converter call + message storage | Must NOT contain HTTP request build / SSE read |
+| Proxy | HTTP request build + send + SSE read + event merge | Must NOT contain protocol conversion logic; deliver events via callback |
+| Converter | Pure DTO format conversion | Stateless, no side effects, no external service dependency |
+
+## Native Protocol Flow (OpenAI Interface → OpenAI Upstream)
+
+```
+Client → /api/openai/v1/chat/completions (model=my-alias)
+  → APIKeyMiddleware validates Key
+  → Service looks up my-alias → ModelEndpoint table (provider=openai)
+  → Compatibility handling (e.g. max_tokens → max_completion_tokens)
+  → Serialize request, replace model with upstream actual name
+  → Proxy builds HTTP request → forward to upstream → SSE read → callback returns chunk
+  → Service replaces model name in callback → write to client
+  → Async: convert to UnifiedMessage → store via Pool (CheckSum dedup)
+```
+
+## Cross-protocol Flow (OpenAI Interface → Anthropic Upstream)
+
+```
+Client → /api/openai/v1/chat/completions (model=my-alias)
+  → Service looks up my-alias → ModelEndpoint table (provider=anthropic)
+  → Converter converts OpenAI request to Anthropic format
+  → Proxy sends via Anthropic protocol to upstream
+  → Service uses Converter to convert Anthropic events back to OpenAI chunks in callback → write to client
+  → Async: Converter converts back to OpenAI format → store via Pool
+```
+
+Anthropic interface similarly supports OpenAI upstream (reverse conversion).
+
+## Proxy Streaming Callback Pattern
+
+```go
+proxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.ChatCompletionChunk) error {
+    chunk.Model = exposedModel
+    fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(chunk)))
+    return w.Flush()
+})
+```
+
+## Key Components
+
+- `OpenAIProxy`: `ForwardChatCompletion` / `ForwardChatCompletionStream`
+- `AnthropicProxy`: `ForwardCreateMessage` / `ForwardCreateMessageStream` / `ForwardCountTokens`
+- `OpenAIProtocolConverter`: Anthropic → OpenAI (`FromAnthropicRequest` / `ToAnthropicResponse` / `ToAnthropicSSEResponse`)
+- `AnthropicProtocolConverter`: OpenAI → Anthropic (`FromOpenAIRequest` / `ToOpenAIResponse` / `ToOpenAISSEResponse`)
+- `UpstreamEndpoint`: Endpoint info
+- `ReplaceModelInBody` / `ReplaceModelInSSEData`: Model replacement utilities
+
+## Async Message Storage
+
+After LLM requests, message storage is submitted to the goroutine pool:
+- SHA256 CheckSum-based dedup
+- Batch IN query followed by transactional creation of messages/tools/sessions
+- Must use `util.CopyContextValues(ctx)` for context in async tasks

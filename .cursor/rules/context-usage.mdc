@@ -1,0 +1,64 @@
+---
+description: Context usage rules including creation, propagation, key management, and async task handling
+globs: ["internal/**/*.go"]
+---
+
+# Context Usage Rules (BLOCKING)
+
+## Core Principle
+
+**Context MUST be passed from upper layers. Interface logic layer is FORBIDDEN from creating context on its own.**
+
+## Layer-specific Rules
+
+| Layer | Rule | How to Get |
+|-------|------|-----------|
+| **Fiber middleware** | Use `c.Context()` for fasthttp context, `c.Locals()` for read/write | `c.Context()` / `c.Locals(key)` |
+| **Huma middleware** | Use `ctx.Context()` for underlying `context.Context`, `huma.WithValue()` to inject | `ctx.Context()` / `huma.WithValue(ctx, key, val)` |
+| **Handler / Service / Proxy / Converter / DTO** | **FORBIDDEN** `context.Background()` / `context.TODO()`, must receive `context.Context` as parameter | First parameter `ctx context.Context` |
+| **Cron jobs** | **ALLOWED** `context.Background()`, as independent scheduling entry creating root context, must inject TraceID | `context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())` |
+| **Infrastructure init** | **ALLOWED** `context.Background()`, for startup-phase connection verification | `context.Background()` |
+| **Agent singleton init** | **ALLOWED** `context.Background()`, for startup-phase LLM ChatModel creation | `context.Background()` |
+| **Utility functions (util)** | **ALLOWED** `context.Background()`, only in `CopyContextValues` for independent lifecycle context | `context.Background()` |
+
+## Context Key Management
+
+All context keys defined in `internal/common/constant/ctx.go`, typed as `string` constants:
+
+| Key | Value Type | Injector | Purpose |
+|-----|-----------|----------|---------|
+| `CtxKeyTraceID` | `string` (UUID) | Fiber TraceMiddleware / Cron | Request tracing, log correlation |
+| `CtxKeyUserID` | `uint` | JWT middleware | User identification |
+| `CtxKeyUserName` | `string` | JWT / APIKey middleware | Logging, business logic |
+| `CtxKeyPermission` | `enum.Permission` | JWT middleware | Permission middleware authorization |
+| `CtxKeyLimiter` | `string` | Rate middleware | Rate limit key |
+| `CtxKeyClient` | `string` | APIKey middleware | Request client User-Agent |
+
+## Async Task Context
+
+HTTP request context is cancelled after request ends. Async tasks MUST use `util.CopyContextValues(ctx)` to create independent context:
+
+```go
+pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+    Ctx: util.CopyContextValues(ctx),  // Only copies TraceID + UserID
+    ...
+})
+```
+
+`CopyContextValues` only copies `CtxKeyTraceID` and `CtxKeyUserID`. Other values (Permission, Limiter, etc.) are not propagated to async tasks.
+
+## Safe Value Retrieval
+
+Use `util.CtxValueString()` / `util.CtxValueUint()` for safe context value retrieval (type mismatch returns zero value, no panic):
+
+```go
+userName := util.CtxValueString(ctx, constant.CtxKeyUserName)
+userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+```
+
+## PROHIBITED
+
+1. **NEVER** use `context.Background()` / `context.TODO()` in interface logic layer — `handler/`, `service/`, `middleware/`, `router/`, `proxy/`, `converter/`, `dto/` must receive context from upper layer
+2. **NEVER** use `ctx.Value()` with type assertion directly — prefer `util.CtxValueString()` / `util.CtxValueUint()`
+3. **NEVER** use original request context in async tasks — must use `util.CopyContextValues()`
+4. **NEVER** add new context key without registering in `constant/ctx.go` — all keys must be centrally defined

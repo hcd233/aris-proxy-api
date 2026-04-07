@@ -1,0 +1,100 @@
+---
+description: Project overview, build commands, and key dependencies for the LLM proxy gateway
+alwaysApply: true
+---
+
+# Project Overview
+
+Go backend API serving as an **LLM proxy gateway** with user management. Built with **Fiber v2** + **Huma v2** for type-safe handlers and automatic OpenAPI 3.1 spec generation.
+
+## Build & Run Commands
+
+```bash
+# Build
+make build          # Production (stripped)
+make build-dev      # Development (debug info)
+
+# Run
+go run main.go server start --host localhost --port 8080
+
+# Database
+go run main.go database migrate
+
+# Object storage
+go run main.go object bucket create
+
+# Dependencies
+go mod download
+
+# Test
+make test           # Full test suite
+make test-cover     # With coverage
+
+# Single test
+go test -v -run TestFunctionName ./test/<topic>/
+
+# Convention lint
+make lint-conv
+
+# Docker
+docker compose -f docker/docker-compose-full.yml up -d       # Full stack
+docker compose -f docker/docker-compose-single.yml up -d     # Production
+docker compose -f docker/docker-compose-dev-single.yml up -d --build  # Dev
+```
+
+## Key Dependencies
+
+- **Go 1.25.1**
+- **Fiber v2** + **Huma v2**: HTTP framework + OpenAPI typed handlers
+- **GORM** + PostgreSQL: ORM and database
+- **Redis** (`redis/go-redis/v9`): Cache, rate limiter, distributed lock
+- **Sonic** (`github.com/bytedance/sonic`): High-performance JSON (replaces encoding/json)
+- **Cobra / Viper**: CLI and configuration
+- **Zap** + Lumberjack: Structured logging with multi-output rotation
+- **MinIO / Tencent COS**: Object storage (via ObjDAO interface)
+- **golang-jwt**: JWT signing and verification
+- **Pond v2**: Async task goroutine pool
+- **robfig/cron/v3**: Cron job scheduling
+- **samber/lo**: Go functional utilities
+- **Eino** (cloudwego/eino): AI framework (Agent orchestration, LLM integration)
+
+## Startup Flow
+
+Entry: `main.go` → `cmd.Execute()` → `cmd/server.go` `server start`:
+
+1. `database.InitDatabase()` — PostgreSQL (GORM)
+2. `cache.InitCache()` — Redis (go-redis)
+3. `pool.InitPoolManager()` — Pond v2 goroutine pool
+4. `cron.InitCronJobs()` — Cron jobs
+5. Register global Fiber middleware (Recover → fgprof → CORS → Compress → Trace → Log)
+6. Non-production: register `/docs` route
+7. `router.RegisterAPIRouter()` — Register all API routes
+8. `app.Listen()` — Start server, main goroutine listens SIGINT/SIGTERM for graceful shutdown
+
+## Configuration
+
+- **Environment variables** (Viper `AutomaticEnv()`): Server settings, DB credentials, OAuth2, JWT, pool config. Loaded from `env/api.env`, template at `env/api.env.template`. Keys use `_` separator (e.g. `POSTGRES_HOST`).
+- **Database config** (GORM): LLM proxy model routing and API keys stored in `ModelEndpoint` and `ProxyAPIKey` tables.
+
+## Route Structure
+
+```
+/health, /ssehealth                    — Health check (no auth)
+/api/v1/token/refresh                  — Token refresh (no auth)
+/api/v1/token/*                        — Token management (JWT auth)
+/api/v1/oauth2/{provider}/login        — OAuth2 login (rate limited)
+/api/v1/oauth2/{provider}/callback     — OAuth2 callback (rate limited)
+/api/v1/user/current                   — Current user (JWT auth)
+/api/v1/user/                          — Update user (JWT + permission)
+/api/v1/session/list                   — Session list (API Key auth)
+/api/v1/session/                       — Session detail (API Key auth)
+/api/openai/v1/models                  — OpenAI model list (API Key auth)
+/api/openai/v1/chat/completions        — OpenAI chat completions (API Key auth)
+/api/anthropic/v1/models               — Anthropic model list (API Key auth)
+/api/anthropic/v1/messages             — Anthropic messages (API Key auth)
+```
+
+## Authentication
+
+- **JWT** (`Authorization: Bearer <token>`) — User routes. Dual token: AccessToken (short-lived) + RefreshToken (long-lived). Issued after OAuth2 login.
+- **API Key** (`Authorization: Bearer <api-key>`) — LLM proxy routes. Keys stored in `ProxyAPIKey` table.

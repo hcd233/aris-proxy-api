@@ -1,0 +1,115 @@
+---
+description: Go coding standards including error handling, naming, logging, imports, and code structure
+globs: ["**/*.go"]
+---
+
+# Go Coding Standards
+
+## CRITICAL: Forbidden Patterns
+
+1. **NEVER** use `encoding/json` — use `github.com/bytedance/sonic`
+2. **NEVER** use `json.RawMessage` — find a typed alternative
+3. **NEVER** use `any` / `interface{}` — use concrete types or generics
+4. **NEVER** use `fmt.Errorf` / `errors.New` — use `ierr.Wrap` / `ierr.New`
+5. **NEVER** use `constant.ErrXxx` — use `ierr.ErrXxx.BizError()`
+6. **NEVER** use `context.Background()` / `context.TODO()` in interface logic layer (`handler/`, `service/`, `middleware/`, `router/`, `proxy/`, `converter/`, `dto/`)
+
+## Error Handling (BLOCKING)
+
+Error handling follows a layered pattern:
+
+- **DAO/Util layer**: `ierr.Wrap(ierr.ErrXxx, err, "context")`
+- **Service layer**: `rsp.Error = ierr.ErrXxx.BizError()` + `return rsp, nil` (Go error is always nil)
+- **Handler layer**: One-liner `return util.WrapHTTPResponse(h.svc.Method(ctx, req))`
+- **Middleware layer**: `lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrXxx.BizError()))`
+
+Choose the most precise sentinel error; do not blindly map everything to `ErrInternal`.
+
+## Logging (BLOCKING)
+
+- Format: `"[PascalCaseModule] English message"`, e.g. `"[SessionService] Get session detail"`
+- Context: `logger.WithCtx(ctx)` or `logger.WithFCtx(c)`
+- Sensitive info (Key/Token/Secret/Password) must use `util.MaskSecret()`
+- Structured fields: `zap.String()`, `zap.Error()`, `zap.Uint()`, etc.
+- Levels: Error=requires manual intervention, Warn=self-recoverable, Info=key milestones, Debug=debugging
+- **NEVER** log inside loops or high-frequency paths
+
+## Naming (BLOCKING)
+
+- Interfaces: PascalCase, no `I` prefix; implementations: camelCase private struct
+- Factory functions: `NewXxx()` returning interface type
+- Handler methods: `Handle` prefix
+- DTOs: `XxxReq` / `XxxRsp` / `XxxReqBody`
+- **NEVER** use meaningless names like `data1`, `tmp`
+- **NEVER** use implementation-revealing names like `userList`, `userMap` — use plural forms
+
+## Code Structure
+
+- Functions: prefer 10 lines, max 20 lines
+- if nesting: max 2 levels, prefer guard clauses
+- Parameters: 0-3, use parameter object when exceeding
+- Logic appearing 2+ times must be extracted — no copy-paste
+- No dead code — delete commented-out old code
+- Prefer private; do not export unnecessarily
+
+## Import Organization
+
+Three-section grouping separated by blank lines:
+
+```go
+import (
+    // Standard library
+    "context"
+    "fmt"
+
+    // Third-party
+    "github.com/bytedance/sonic"
+    "github.com/samber/lo"
+
+    // Internal packages
+    "project/internal/common/ierr"
+    "project/internal/util"
+)
+```
+
+## Comments
+
+- godoc format: First line in Chinese summary + `@receiver`/`@param`/`@return`/`@author`/`@update` tags
+- Package comments: `// Package xxx Chinese description`
+- **Use English** for inline code annotations
+
+## String Templates
+
+All string templates (Redis keys, storage paths, ID formats, Data URLs) MUST be defined in `internal/common/constant/string.go`. Never hardcode in business code.
+
+| Type | Naming Convention | Example |
+|------|------------------|---------|
+| Redis Key template | `XxxKeyTemplate` | `JWTUserCacheKeyTemplate = "jwt:user:%d"` |
+| Redis Key prefix | `XxxKeyPrefix` | `ScannerBanKeyPrefix = "scanner:ban:"` |
+| Storage path template | `XxxDirTemplate` / `XxxPathTemplate` | `ObjectStorageDirTemplate = "user-%d/%s"` |
+| ID generation template | `XxxIDTemplate` | `OpenAIChunkIDTemplate = "chatcmpl-%s"` |
+| Data format template | `XxxTemplate` | `DataURLTemplate = "data:%s;base64,%s"` |
+
+## Public Function Placement
+
+Exported public functions MUST be placed in `internal/util/` or `internal/common/` only. Never create `common.go` in business packages (`service/`, `handler/`, etc.).
+
+| Type | Location | Examples |
+|------|----------|---------|
+| HTTP response utils | `util/http.go` | `WrapStreamResponse`, `WrapJSONResponse` |
+| SSE utils | `util/sse.go` | `WrapErrorSSE`, `ConcatChatCompletionChunks` |
+| Hash/string utils | `util/hash.go`, `util/string.go` | `ComputeMessageChecksum`, `MaskSecret` |
+| Error models | `common/model/error.go` | `Error`, `UpstreamError` |
+| Enums | `common/enum/` | `Permission`, `SSEDataType` |
+| Unified errors | `common/ierr/` | `ierr.Wrap`, `ierr.New`, sentinel errors |
+
+## Private Helpers in Business Packages
+
+Unexported helper functions in business packages should:
+- Be placed in the file that uses them (e.g. `findEndpoint` in `openai.go`)
+- Or in a business file within the same package when shared by multiple files
+- **NEVER** create a standalone `common.go`
+
+## Circular Dependency Prevention
+
+`util/` is a bottom-level utility package and MUST NOT depend on upper-level business packages. If `util/` needs a type, sink that type down to `common/model/`.

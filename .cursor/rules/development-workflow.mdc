@@ -1,0 +1,111 @@
+---
+description: Development workflow including mandatory steps before committing code
+alwaysApply: true
+---
+
+# Development Workflow
+
+**Every time code is added, modified, or refactored, the following workflow MUST be followed.**
+
+## Step 1: Self-check While Coding
+
+For every piece of code, check against these items:
+
+### Error Handling (BLOCKING)
+- No `fmt.Errorf` / `errors.New` — use `ierr.Wrap` / `ierr.New`
+- No `constant.ErrXxx` — use `ierr.ErrXxx.BizError()`
+- DAO/Util: `ierr.Wrap(ierr.ErrXxx, err, "context")`
+- Service: `rsp.Error = ierr.ErrXxx.BizError()` + `return rsp, nil`
+- Handler: `return util.WrapHTTPResponse(h.svc.Method(ctx, req))`
+- Middleware: `lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrXxx.BizError()))`
+
+### Logging (BLOCKING)
+- Format: `"[PascalCaseModule] English message"`
+- Context-aware: `logger.WithCtx(ctx)` or `logger.WithFCtx(c)`
+- Mask sensitive data: `util.MaskSecret()`
+- Structured fields: `zap.String()`, `zap.Error()`, `zap.Uint()`
+
+### Naming (BLOCKING)
+- Interface: PascalCase, no `I` prefix
+- Implementation: camelCase private struct
+- Factory: `NewXxx()` returning interface
+- Handler method: `Handle` prefix
+- DTO: `XxxReq` / `XxxRsp` / `XxxReqBody`
+
+### Architecture
+- Handler: thin wrapper, no business logic
+- Service: no HTTP/SSE communication
+- Proxy: no protocol conversion
+- Converter: pure functions, stateless
+- All business methods: first param `context.Context`
+
+## Step 2: Run Convention Lint
+
+```bash
+make lint-conv
+```
+
+Fix ALL ERRORs, evaluate all WARNs. Script at `script/lint-conventions.sh`.
+
+### Checked Items
+
+| Check | Level | Description |
+|-------|-------|-------------|
+| `fmt.Errorf` / `errors.New` | ERROR | Must use ierr package |
+| `constant.ErrXxx` | ERROR | Deprecated |
+| `encoding/json` / `json.RawMessage` | ERROR | Use sonic |
+| Test files under internal/ | ERROR | Must be in test/ |
+| Test files in test/ root | ERROR | Must be in subdirectory |
+| testify and other assertion libs | ERROR | Use stdlib |
+| `time.Sleep` in tests | ERROR | Use channel/WaitGroup |
+| Handler directly using DAO/DB | ERROR | Business logic in Service |
+| `context.Background()`/`context.TODO()` in logic layer | ERROR | Must pass from upper layer |
+| Log missing `[Module]` prefix | WARN | Recommend fix |
+| Sensitive info not MaskSecret | WARN | Recommend fix |
+| Possible dead code | WARN | Manual confirmation |
+| Implementation-revealing naming | WARN | Use plural forms |
+| Service returning non-nil error | WARN | Confirm correctness |
+| `interface{}` in core business layer | WARN | Prefer concrete types/generics |
+
+## Step 3: Write Tests
+
+Every change MUST include corresponding tests. See testing-standards rule for details.
+
+| Change Type | Required Tests |
+|-------------|---------------|
+| New `util/` function | Unit tests (happy + edge + error) |
+| New/modified `dto/` serialization | Roundtrip tests |
+| New/modified `service/` method | Unit or integration tests |
+| Bug fix | Regression test for the bug scenario |
+| New middleware | Behavior tests |
+
+## Step 4: Run Full Test Suite
+
+```bash
+make test
+```
+
+ALL tests must PASS before committing. Any FAIL must be fixed first.
+
+## Step 5: Update Guidelines Documentation
+
+If new conventions, architecture decisions, naming rules, or process requirements were introduced during development, update both `CODEBUDDY.md` and `CLAUDE.md` to keep them in sync.
+
+## Git Workflow
+
+### Pre-commit Hook
+
+Configured at `.githooks/pre-commit`, auto-executes:
+1. `gofmt -w` — Auto-format and re-stage
+2. `go mod tidy` — Verify go.mod/go.sum consistency
+3. `go vet` — Static analysis
+4. `go test -count=1 ./...` — Full test suite
+
+Install: `bash .githooks/setup.sh`
+
+### Worktree
+
+Use `.worktrees/` as Git worktree directory:
+```bash
+git worktree add .worktrees/feature-name -b feature/feature-name
+```

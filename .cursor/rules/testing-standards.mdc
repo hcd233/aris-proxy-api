@@ -1,0 +1,123 @@
+---
+description: Testing standards including directory structure, fixtures, assertions, and prohibited practices
+globs: ["test/**/*.go", "test/**/fixtures/**"]
+---
+
+# Testing Standards
+
+## Directory Structure
+
+**ALL test files (`*_test.go`) MUST be placed in `test/` directory only. NEVER create test files under `internal/`.**
+
+```
+test/                              # The ONLY location for test files
+├── <topic_name>/                  # Organized by topic, snake_case naming
+│   ├── fixtures/                  # Test data files (MUST be in fixtures/ subdirectory)
+│   │   └── cases.json
+│   └── xxx_test.go               # Test code, package name matches directory name
+└── ...
+```
+
+## Test Data: Complete Separation of Data and Code
+
+**ALL test data MUST be placed in `fixtures/` directory JSON files. Test code only loads and asserts. NEVER inline test data in code.**
+
+## Test Case Conventions
+
+- **Naming**: `Test<FunctionName>_<ScenarioDescription>`, e.g. `TestComputeToolChecksum_NilParameters`
+- Prefer **fixture-driven mode**: Drive subtests via case name lists in fixtures
+- Helper functions **MUST** be marked with `t.Helper()`
+- Each test function verifies only one behavior
+- Test log messages **use English**, output key intermediate values via `t.Logf`
+
+## Data Loading Pattern
+
+Use JSON fixtures + helper function pattern. **NEVER use `encoding/json`**, use `github.com/bytedance/sonic`:
+
+```go
+type testCase struct {
+    Name        string `json:"name"`
+    Description string `json:"description"`
+}
+
+func loadCases(t *testing.T) []testCase {
+    t.Helper()
+    data, err := os.ReadFile("./fixtures/cases.json")
+    if err != nil {
+        t.Fatalf("failed to read fixture: %v", err)
+    }
+    var cases []testCase
+    if err := sonic.Unmarshal(data, &cases); err != nil {
+        t.Fatalf("failed to unmarshal fixture: %v", err)
+    }
+    return cases
+}
+
+func findCase(t *testing.T, cases []testCase, name string) testCase {
+    t.Helper()
+    for _, c := range cases {
+        if c.Name == name {
+            return c
+        }
+    }
+    t.Fatalf("case %q not found", name)
+    return testCase{}
+}
+```
+
+## Assertions
+
+**Do NOT** use testify/gomock or any third-party assertion libraries. Use standard library `testing` package only:
+
+```go
+// Good: Clear failure message with got/want context
+if got != want {
+    t.Errorf("ComputeChecksum() = %s, want %s", got, want)
+}
+
+// Good: Use subtests for isolation
+t.Run("empty input", func(t *testing.T) {
+    result := ComputeChecksum(nil)
+    if result != "" {
+        t.Errorf("expected empty string, got %q", result)
+    }
+})
+```
+
+## PROHIBITED Practices
+
+1. **NEVER** create `*_test.go` files under `internal/` — all tests go in `test/`
+2. **NEVER** commit failing tests — all tests must PASS before commit
+3. **NEVER** delete existing test cases — unless corresponding feature is removed
+4. **NEVER** hardcode environment paths in tests — use `t.TempDir()`, `os.CreateTemp()`
+5. **NEVER** create inter-dependent tests — each test must run independently
+6. **NEVER** use `time.Sleep()` for synchronization — use channel, WaitGroup, or deadline
+7. **NEVER** use `encoding/json` — use `github.com/bytedance/sonic`
+8. **NEVER** use third-party assertion libs (testify, etc.) — use `t.Errorf` / `t.Fatalf`
+9. **NEVER** inline test data in code — all data must come from `fixtures/` files
+
+## Mandatory Test Coverage by Change Type
+
+| Change Type | Required Tests |
+|-------------|---------------|
+| New `util/` function | Unit tests (happy path + edge cases + error paths) |
+| New/modified `dto/` custom serialization | Serialize + deserialize roundtrip tests |
+| New/modified `service/` method | Unit tests or integration tests |
+| Bug fix | **MUST** include regression test covering the bug scenario |
+| New middleware | Auth/authz/rate-limit behavior tests |
+
+## Test Commands
+
+```bash
+# Full test suite (MUST run before commit)
+go test -count=1 ./...
+
+# Specific directory
+go test -v -count=1 ./test/message_checksum/
+
+# Specific function
+go test -v -count=1 -run TestChecksumDifference ./test/message_checksum/
+
+# With coverage
+go test -count=1 -cover ./test/...
+```

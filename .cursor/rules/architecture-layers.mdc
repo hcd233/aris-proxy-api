@@ -1,0 +1,70 @@
+---
+description: Architecture layer responsibilities, design patterns, and code organization rules
+alwaysApply: true
+---
+
+# Architecture & Layer Responsibilities
+
+## Request Flow
+
+```
+Fiber (HTTP) → Global Middleware → Huma Router → Route Group Middleware → Handler → Service → DAO/Proxy → PostgreSQL/Redis/Upstream LLM
+```
+
+## Two-tier Middleware Architecture
+
+- **Fiber-level** (`fiber.Handler`): Recover, fgprof, CORS, Compress, Trace, Log — global
+- **Huma-level** (`func(huma.Context, func(huma.Context))`): JWT, APIKey, RateLimiter, Permission, Lock — per-route/group
+
+## Layer Responsibilities
+
+| Layer | Package | Responsibility | Rules |
+|-------|---------|---------------|-------|
+| **cmd** | `cmd/` | Cobra CLI commands | `server start`, `database migrate`, `object bucket create` |
+| **API** | `internal/api/` | Fiber App & Huma API singletons | Access via `GetFiberApp()` / `GetHumaAPI()` |
+| **Router** | `internal/router/` | Domain-grouped route registration | Bind middleware and handlers, use `huma.Register()` |
+| **Handler** | `internal/handler/` | Thin wrapper, no business logic | Interface + private struct, `NewXxxHandler()`, `Handle` prefix, use `util.WrapHTTPResponse()` |
+| **Service** | `internal/service/` | Business orchestration (thin) | No HTTP/SSE communication; no direct infra dependency |
+| **Proxy** | `internal/proxy/` | Upstream transport (pure) | HTTP request build + send + SSE read + event merge; no protocol conversion |
+| **Converter** | `internal/converter/` | Protocol conversion (pure DTO) | Stateless, no side effects, no external service dependency |
+| **DAO** | `internal/infrastructure/database/dao/` | Generic `baseDAO[ModelT]` CRUD | Singleton via `GetXxxDAO()`, soft delete with `deleted_at` (int64 timestamp) |
+| **Model** | `internal/infrastructure/database/model/` | GORM models | `BaseModel` contains ID/CreatedAt/UpdatedAt/DeletedAt |
+| **DTO** | `internal/dto/` | Request/Response DTOs | OpenAI & Anthropic API types, `UnifiedMessage`, `UnifiedTool` |
+| **Middleware** | `internal/middleware/` | Auth, rate limit, trace, etc. | Fiber-level (global) and Huma-level (per-route) |
+| **Pool** | `internal/infrastructure/pool/` | Pond v2 goroutine pools | `storePool` (message storage) + `agentPool` (summarize/score) |
+| **Cache** | `internal/infrastructure/cache/` | Redis cache singleton | |
+| **Storage** | `internal/infrastructure/storage/` | Object storage abstraction | MinIO / COS via `ObjDAO` interface |
+| **Agent** | `internal/agent/` | Reusable LLM/Agent capabilities | `GetSummarizer()` / `GetScorer()` singletons |
+| **Cron** | `internal/cron/` | Scheduled tasks | session_dedup, session_summarize, session_score, soft_delete_purge |
+| **Config** | `internal/config/` | Viper env config loading | |
+| **Constants** | `internal/common/constant/` | Project constants | Context keys, HTTP, Agent, time, rate, string templates |
+| **Enums** | `internal/common/enum/`, `internal/enum/` | Common and business enums | |
+| **Errors** | `internal/common/ierr/` | Unified error creation | Sentinel errors + BizError pattern |
+| **Logger** | `internal/logger/` | Zap structured logging | 4-way output: console + info.log + error.log + panic.log |
+| **Util** | `internal/util/` | Utility functions | Context, hash, HTTP response, SSE, string tools |
+
+## Core Design Patterns
+
+1. **Interface-driven**: Handler, Service, DAO, Proxy, TokenSigner, Locker, ObjDAO all define interfaces
+2. **Singleton**: Fiber App, Huma API, DB, Redis, DAO, JWT Signers, PoolManager — all initialized once, accessed via `GetXxx()`
+3. **Generic DAO**: `baseDAO[ModelT]` using Go generics for type-safe CRUD
+4. **Strategy**: OAuth2 platform switching (`Platform` interface), object storage switching (COS priority > MinIO)
+5. **Unified message format**: OpenAI/Anthropic DTO → `UnifiedMessage`/`UnifiedTool` for cross-provider storage
+6. **Async goroutine pool**: Message storage after LLM requests via Pool, SHA256 CheckSum dedup
+7. **Context-aware logging**: `logger.WithCtx(ctx)` / `logger.WithFCtx(fctx)` auto-attaches traceID, userID, userName
+8. **Three-tier LLM proxy**: Service (orchestration) → Proxy (transport) → Converter (conversion)
+9. **Callback-based streaming**: Proxy delivers SSE events to Service via `onChunk`/`onEvent` callbacks
+10. **Cross-protocol conversion**: Models registered as `provider=openai` can be called via Anthropic interface and vice versa
+
+## Architecture Rules
+
+- Handler: thin wrapper only, no business logic
+- Service: must not depend directly on infrastructure implementations, must not contain HTTP/SSE communication logic
+- LLM proxy Service: orchestration only — endpoint lookup → Converter conversion → Proxy forwarding → storage
+- Proxy: transport only — HTTP request build + SSE read + deliver events via callback
+- Converter: conversion only — pure functions, stateless, no external service dependency
+- Exported public functions: only in `util/` or `common/`, never in business packages
+- All business methods: first parameter `context.Context`
+- Singletons: accessed via `GetXxx()`
+
+## CRITICAL: Before modifying OpenAI or Anthropic DTOs, you MUST first review the documentation in `/docs`.
