@@ -43,6 +43,9 @@ var (
 	// ErrInsufficientQuota 配额不足
 	ErrInsufficientQuota = newFromSentinel(newSentinel("insufficient_quota", model.NewError(10007, "InsufficientQuota")))
 
+	// ErrQuotaExceeded 配额超限
+	ErrQuotaExceeded = newFromSentinel(newSentinel("quota_exceeded", model.NewError(10008, "QuotaExceeded")))
+
 	// ErrResourceLocked 资源锁定
 	ErrResourceLocked = newFromSentinel(newSentinel("resource_locked", model.NewError(10009, "ResourceLocked")))
 

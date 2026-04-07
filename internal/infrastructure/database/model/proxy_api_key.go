@@ -11,6 +11,6 @@ type ProxyAPIKey struct {
 	BaseModel
 	ID     uint   `json:"id" gorm:"column:id;primary_key;auto_increment;comment:密钥ID"`
 	UserID uint   `json:"userId" gorm:"column:user_id;not null;index:idx_user_id_name;comment:所属用户ID"`
-	Name   string `json:"name" gorm:"column:name;not null;index:idx_user_id_name;uniqueIndex:idx_user_id_name,priority:2;comment:密钥名称（对应用户标识）"`
+	Name   string `json:"name" gorm:"column:name;not null;uniqueIndex:idx_user_id_name,priority:2;comment:密钥名称"`
 	Key    string `json:"key" gorm:"column:key;uniqueIndex;not null;comment:API密钥值"`
 }
