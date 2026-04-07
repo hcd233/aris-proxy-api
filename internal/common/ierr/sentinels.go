@@ -60,6 +60,9 @@ var (
 	// ErrDBUpdate 数据库更新错误
 	ErrDBUpdate = newFromSentinel(newSentinel("db_update", model.NewError(10000, "InternalError")))
 
+	// ErrDBDelete 数据库删除错误
+	ErrDBDelete = newFromSentinel(newSentinel("db_delete", model.NewError(10000, "InternalError")))
+
 	// ErrDBClose 数据库关闭错误
 	ErrDBClose = newFromSentinel(newSentinel("db_close", model.NewError(10000, "InternalError")))
 
