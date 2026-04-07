@@ -25,4 +25,8 @@ const (
 	// CtxKeyClient 请求客户端User-Agent
 	//	@update 2026-03-29 10:00:00
 	CtxKeyClient = "client"
+
+	// CtxKeyAPIKeyID API Key ID（用于日志追踪）
+	//	@update 2026-04-08 10:00:00
+	CtxKeyAPIKeyID = "apiKeyID"
 )

@@ -35,14 +35,15 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		}
 
 		db := database.GetDBInstance(ctx.Context())
-		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, []string{"name"})
+		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, []string{"id", "user_id"})
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
 		}
 
-		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, apiKey.Name)
+		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, apiKey.UserID)
+		ctx = huma.WithValue(ctx, constant.CtxKeyAPIKeyID, apiKey.ID)
 		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header("User-Agent"))
 		next(ctx)
 	}
