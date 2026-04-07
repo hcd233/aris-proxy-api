@@ -43,18 +43,20 @@ type anthropicService struct {
 	modelEndpointDAO *dao.ModelEndpointDAO
 	anthropicProxy   proxy.AnthropicProxy
 	openAIProxy      proxy.OpenAIProxy
+	imageService     ImageService
 }
 
 // NewAnthropicService 创建Anthropic服务
 //
 //	@return AnthropicService
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
+//	@update 2026-04-07 10:00:00
 func NewAnthropicService() AnthropicService {
 	return &anthropicService{
 		modelEndpointDAO: dao.GetModelEndpointDAO(),
 		anthropicProxy:   proxy.NewAnthropicProxy(),
 		openAIProxy:      proxy.NewOpenAIProxy(),
+		imageService:     NewImageService(),
 	}
 }
 
@@ -109,6 +111,11 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 	if err != nil {
 		logger.Error("[AnthropicService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
+	}
+
+	userName := util.CtxValueString(ctx, constant.CtxKeyUserName)
+	if err := s.imageService.ReplaceAnthropicBase64Images(ctx, userName, req.Body.Messages); err != nil {
+		logger.Error("[AnthropicService] Failed to replace base64 images", zap.Error(err))
 	}
 
 	ep := toUpstream(endpoint)

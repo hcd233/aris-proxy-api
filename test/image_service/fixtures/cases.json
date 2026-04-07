@@ -1,0 +1,58 @@
+[
+  {
+    "name": "valid_jpeg_data_url",
+    "data_url": "data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+    "expected_media_type": "image/jpeg",
+    "expected_base64": "/9j/4AAQSkZJRg==",
+    "expected_error": false
+  },
+  {
+    "name": "valid_png_data_url",
+    "data_url": "data:image/png;base64,iVBORw0KGgo=",
+    "expected_media_type": "image/png",
+    "expected_base64": "iVBORw0KGgo=",
+    "expected_error": false
+  },
+  {
+    "name": "valid_gif_data_url",
+    "data_url": "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+    "expected_media_type": "image/gif",
+    "expected_base64": "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+    "expected_error": false
+  },
+  {
+    "name": "valid_webp_data_url",
+    "data_url": "data:image/webp;base64,UklGRiQAAABXRUJQ",
+    "expected_media_type": "image/webp",
+    "expected_base64": "UklGRiQAAABXRUJQ",
+    "expected_error": false
+  },
+  {
+    "name": "invalid_no_base64_separator",
+    "data_url": "data:image/jpeg,/9j/4AAQSkZJRg==",
+    "expected_media_type": "",
+    "expected_base64": "",
+    "expected_error": true
+  },
+  {
+    "name": "invalid_empty_media_type",
+    "data_url": "data:;base64,/9j/4AAQSkZJRg==",
+    "expected_media_type": "",
+    "expected_base64": "",
+    "expected_error": true
+  },
+  {
+    "name": "invalid_empty_data",
+    "data_url": "data:image/jpeg;base64,",
+    "expected_media_type": "",
+    "expected_base64": "",
+    "expected_error": true
+  },
+  {
+    "name": "invalid_plain_url",
+    "data_url": "https://example.com/image.jpg",
+    "expected_media_type": "",
+    "expected_base64": "",
+    "expected_error": true
+  }
+]

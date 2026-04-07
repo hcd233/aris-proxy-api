@@ -7,6 +7,7 @@ var (
 	toolDAOSingleton          *ToolDAO
 	modelEndpointDAOSingleton *ModelEndpointDAO
 	proxyAPIKeyDAOSingleton   *ProxyAPIKeyDAO
+	imageDAOSingleton         *ImageDAO
 )
 
 func init() {
@@ -16,6 +17,7 @@ func init() {
 	toolDAOSingleton = &ToolDAO{}
 	modelEndpointDAOSingleton = &ModelEndpointDAO{}
 	proxyAPIKeyDAOSingleton = &ProxyAPIKeyDAO{}
+	imageDAOSingleton = &ImageDAO{}
 }
 
 // GetUserDAO 获取用户DAO
@@ -70,4 +72,13 @@ func GetModelEndpointDAO() *ModelEndpointDAO {
 //	@update 2026-04-04 10:00:00
 func GetProxyAPIKeyDAO() *ProxyAPIKeyDAO {
 	return proxyAPIKeyDAOSingleton
+}
+
+// GetImageDAO 获取图片DAO
+//
+//	@return *ImageDAO
+//	@author centonhuang
+//	@update 2026-04-07 10:00:00
+func GetImageDAO() *ImageDAO {
+	return imageDAOSingleton
 }

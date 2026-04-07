@@ -59,18 +59,20 @@ type openAIService struct {
 	modelEndpointDAO *dao.ModelEndpointDAO
 	openAIProxy      proxy.OpenAIProxy
 	anthropicProxy   proxy.AnthropicProxy
+	imageService     ImageService
 }
 
 // NewOpenAIService 创建OpenAI服务
 //
 //	@return OpenAIService
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
+//	@update 2026-04-07 10:00:00
 func NewOpenAIService() OpenAIService {
 	return &openAIService{
 		modelEndpointDAO: dao.GetModelEndpointDAO(),
 		openAIProxy:      proxy.NewOpenAIProxy(),
 		anthropicProxy:   proxy.NewAnthropicProxy(),
+		imageService:     NewImageService(),
 	}
 }
 
@@ -121,6 +123,11 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	if err != nil {
 		logger.Error("[OpenAIService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+	}
+
+	userName := util.CtxValueString(ctx, constant.CtxKeyUserName)
+	if err := s.imageService.ReplaceOpenAIBase64Images(ctx, userName, req.Body.Messages); err != nil {
+		logger.Error("[OpenAIService] Failed to replace base64 images", zap.Error(err))
 	}
 
 	ep := toUpstream(endpoint)

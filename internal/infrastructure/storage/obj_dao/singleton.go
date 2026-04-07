@@ -34,3 +34,12 @@ func createObjectStorageDAO(objectType enum.ObjectType) ObjDAO {
 func GetAudioObjDAO() ObjDAO {
 	return createObjectStorageDAO(enum.ObjectTypeAudio)
 }
+
+// GetImageObjDAO 获取图片对象DAO单例
+//
+//	@return ObjDAO
+//	@author centonhuang
+//	@update 2026-04-07 10:00:00
+func GetImageObjDAO() ObjDAO {
+	return createObjectStorageDAO(enum.ObjectTypeImage)
+}

@@ -25,4 +25,5 @@ var Models = []interface{}{
 	&Tool{},
 	&ModelEndpoint{},
 	&ProxyAPIKey{},
+	&Image{},
 }

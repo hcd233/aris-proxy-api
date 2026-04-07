@@ -1,0 +1,22 @@
+[
+  {
+    "name": "simple_bytes",
+    "base64_data": "SGVsbG8gV29ybGQ=",
+    "description": "Hello World in base64"
+  },
+  {
+    "name": "empty_bytes",
+    "base64_data": "",
+    "description": "empty input"
+  },
+  {
+    "name": "single_byte",
+    "base64_data": "AA==",
+    "description": "single null byte"
+  },
+  {
+    "name": "png_header",
+    "base64_data": "iVBORw0KGgo=",
+    "description": "PNG header bytes"
+  }
+]

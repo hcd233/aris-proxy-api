@@ -57,4 +57,11 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-07 10:00:00
 	DataURLTemplate = "data:%s;base64,%s"
+
+	// ==================== 图片存储模板 ====================
+
+	// ImageObjectKeyTemplate 图片对象存储文件名模板 (checksum.ext)
+	//	@author centonhuang
+	//	@update 2026-04-07 10:00:00
+	ImageObjectKeyTemplate = "%s%s"
 )
