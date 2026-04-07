@@ -3,6 +3,8 @@ package util
 import (
 	"encoding/base64"
 	"fmt"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 // ToDataURL 将文件转换为 data URL
@@ -14,7 +16,7 @@ import (
 //	@update 2025-11-13 17:49:49
 func ToDataURL(contentType string, bytes []byte) string {
 	base64Data := base64.StdEncoding.EncodeToString(bytes)
-	return fmt.Sprintf("data:%s;base64,%s", contentType, base64Data)
+	return fmt.Sprintf(constant.DataURLTemplate, contentType, base64Data)
 }
 
 // MaskSecret 掩码敏感信息，保留前4和后4个字符

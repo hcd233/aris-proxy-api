@@ -27,7 +27,7 @@ type CosObjDAO struct {
 }
 
 func (dao *CosObjDAO) composeDirName(userID uint) string {
-	return fmt.Sprintf("user-%d/%s", userID, dao.ObjectType)
+	return fmt.Sprintf(constant.ObjectStorageDirTemplate, userID, dao.ObjectType)
 }
 
 // GetBucketName 获取桶名

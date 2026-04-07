@@ -385,6 +385,20 @@ go tool cover -html=coverage.out -o coverage.html
 - 或放在同一包的某个业务文件中（当被多个文件共享时）
 - **不建立独立的 `common.go`**
 
+### 字符串模板集中管理
+
+**所有字符串模板（Redis Key、存储路径、ID 格式、Data URL 等）必须定义在 `internal/common/constant/string.go` 中，禁止在业务代码中硬编码。**
+
+| 类型 | 常量命名风格 | 示例 |
+|------|------------|------|
+| Redis Key 模板 | `XxxKeyTemplate` | `JWTUserCacheKeyTemplate = "jwt:user:%d"` |
+| Redis Key 前缀 | `XxxKeyPrefix` | `ScannerBanKeyPrefix = "scanner:ban:"` |
+| 存储路径模板 | `XxxDirTemplate` / `XxxPathTemplate` | `ObjectStorageDirTemplate = "user-%d/%s"` |
+| ID 生成模板 | `XxxIDTemplate` | `OpenAIChunkIDTemplate = "chatcmpl-%s"` |
+| 数据格式模板 | `XxxTemplate` | `DataURLTemplate = "data:%s;base64,%s"` |
+
+**目的**：Redis Key 的一致性对缓存/锁/限流的正确性至关重要，散落在业务代码中容易因拼写错误或格式不一致导致难以排查的 Bug。
+
 ### 循环依赖避免
 
 `util/` 是底层工具包，不允许依赖上层业务包。如果 `util/` 需要引用某个类型，应将该类型下沉到 `common/model/`。
@@ -472,6 +486,65 @@ Handler → Service → Proxy → upstream HTTP
 - 所有业务方法第一个参数 `context.Context`
 - 单例通过 `GetXxx()` 获取
 
+#### Context 使用规范（BLOCKING）
+
+**核心原则：Context 必须从上层传递，接口逻辑层禁止自行创建。**
+
+##### 分层规则
+
+| 层 | 规则 | 获取方式 |
+|---|---|---|
+| **Fiber 中间件** | 使用 `c.Context()` 获取 fasthttp context，通过 `c.Locals()` 读写值 | `c.Context()` / `c.Locals(key)` |
+| **Huma 中间件** | 使用 `ctx.Context()` 获取底层 `context.Context`，通过 `huma.WithValue()` 注入值 | `ctx.Context()` / `huma.WithValue(ctx, key, val)` |
+| **Handler / Service / Proxy / Converter / DTO** | **禁止** `context.Background()` / `context.TODO()`，必须从参数传递 `context.Context` | 函数第一个参数 `ctx context.Context` |
+| **Cron 定时任务** | **允许** `context.Background()`，作为独立调度入口创建根 context，必须注入 TraceID | `context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())` |
+| **基础设施初始化** | **允许** `context.Background()`，用于启动阶段连接验证（Redis Ping、MinIO ListBuckets 等） | `context.Background()` |
+| **Agent 单例初始化** | **允许** `context.Background()`，用于启动阶段创建 LLM ChatModel | `context.Background()` |
+| **工具函数（util）** | **允许** `context.Background()`，仅限 `CopyContextValues` 创建独立生命周期的 context | `context.Background()` |
+
+##### 上下文 Key 管理
+
+所有 context key 定义在 `internal/common/constant/ctx.go`，类型为 `string` 常量：
+
+| Key | 值类型 | 注入者 | 用途 |
+|---|---|---|---|
+| `CtxKeyTraceID` | `string` (UUID) | Fiber TraceMiddleware / Cron | 请求追踪、日志关联 |
+| `CtxKeyUserID` | `uint` | JWT 中间件 | 用户标识、数据关联 |
+| `CtxKeyUserName` | `string` | JWT / APIKey 中间件 | 日志、业务逻辑 |
+| `CtxKeyPermission` | `enum.Permission` | JWT 中间件 | Permission 中间件鉴权 |
+| `CtxKeyLimiter` | `string` | Rate 中间件 | 限流 key 标识 |
+| `CtxKeyClient` | `string` | APIKey 中间件 | 请求客户端 User-Agent |
+
+##### 异步任务 Context 传递
+
+HTTP 请求结束后原始 context 会被取消，异步任务必须使用 `util.CopyContextValues(ctx)` 创建独立 context：
+
+```go
+// ✅ 正确：异步任务使用 CopyContextValues 脱离请求生命周期
+pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+    Ctx: util.CopyContextValues(ctx),  // 仅复制 TraceID + UserID
+    ...
+})
+```
+
+`CopyContextValues` 仅复制 `CtxKeyTraceID` 和 `CtxKeyUserID`，其他值（Permission、Limiter 等）不传递给异步任务。
+
+##### 安全取值
+
+使用 `util.CtxValueString()` / `util.CtxValueUint()` 安全获取 context 值（类型不匹配返回零值，不 panic）：
+
+```go
+userName := util.CtxValueString(ctx, constant.CtxKeyUserName)
+userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+```
+
+##### 🚫 禁止事项
+
+1. **禁止在接口逻辑层使用 `context.Background()` / `context.TODO()`** — `handler/`、`service/`、`middleware/`、`router/`、`proxy/`、`converter/`、`dto/` 必须从上层传递 context
+2. **禁止直接使用 `ctx.Value()` 做类型断言** — 优先使用 `util.CtxValueString()` / `util.CtxValueUint()` 安全取值
+3. **禁止在异步任务中使用原始请求 context** — 必须通过 `util.CopyContextValues()` 创建独立 context
+4. **禁止新增 context key 时不在 `constant/ctx.go` 注册** — 所有 key 必须集中定义
+
 ### Step 2: 运行规范扫描
 
 ```bash
@@ -492,6 +565,7 @@ make lint-conv
 | testify 等第三方断言库 | ERROR | 用标准库 |
 | `time.Sleep` 在测试中 | ERROR | 用 channel/WaitGroup |
 | Handler 直接操作 DAO/DB | ERROR | 业务逻辑放 Service |
+| 接口逻辑层 `context.Background()`/`context.TODO()` | ERROR | 必须从上层传递 context |
 | 日志缺少 `[Module]` 前缀 | WARN | 建议修复 |
 | 敏感信息未 MaskSecret | WARN | 建议修复 |
 | 可能的死代码 | WARN | 人工确认 |
@@ -510,6 +584,24 @@ make test
 ```
 
 全部 PASS 后方可提交代码。
+
+### Step 5: 沉淀规范到指引文档
+
+**如果本次开发过程中用户提出了任何规范性内容（编码规范、架构约定、命名规则、流程要求等），必须在开发完成后将其更新到 `CODEBUDDY.md` 和 `CLAUDE.md` 中对应的章节，确保后续开发遵守。**
+
+| 场景 | 操作 |
+|------|------|
+| 用户提出新的编码规范/约定 | 追加到对应章节（如「编码时自检清单」「代码组织规范」等） |
+| 用户修正/废弃已有规范 | 更新或删除对应条目 |
+| 用户提出新的架构设计/分层规则 | 更新「分层职责」「LLM 代理分层规范」等相关章节 |
+| 用户提出新的测试要求 | 更新「测试规范」章节 |
+| 用户提出新的 Git/CI 流程 | 更新「Git 工作流」章节 |
+
+**注意事项：**
+1. `CODEBUDDY.md` 和 `CLAUDE.md` 必须同步更新，保持内容一致
+2. 新增规范应放在最相关的已有章节下，避免重复或分散
+3. 如果已有章节无法覆盖，可在合适位置新增子章节
+4. 更新时保持原有文档风格和格式
 
 ---
 

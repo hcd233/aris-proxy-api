@@ -69,6 +69,11 @@ var startServerCmd = &cobra.Command{
 
 		app.Use(
 			middleware.RecoverMiddleware(),
+			middleware.GuardMiddleware(middleware.GuardConfig{
+				StrikeThreshold: constant.GuardStrikeThreshold,
+				StrikeWindow:    constant.GuardStrikeWindow,
+				BanDuration:     constant.GuardBanDuration,
+			}),
 			middleware.FgprofMiddleware(),
 			middleware.CORSMiddleware(),
 			middleware.CompressMiddleware(),

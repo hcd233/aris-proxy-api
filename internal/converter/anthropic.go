@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -610,5 +611,5 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 
 // GenerateOpenAIChunkID 生成 OpenAI 风格的 chunk ID
 func GenerateOpenAIChunkID() string {
-	return fmt.Sprintf("chatcmpl-%s", uuid.New().String())
+	return fmt.Sprintf(constant.OpenAIChunkIDTemplate, uuid.New().String())
 }

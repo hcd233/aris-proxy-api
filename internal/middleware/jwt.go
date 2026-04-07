@@ -4,7 +4,6 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -33,7 +32,7 @@ type jwtUserCache struct {
 
 // jwtUserCacheKey 构造 Redis key
 func jwtUserCacheKey(userID uint) string {
-	return fmt.Sprintf("jwt:user:%d", userID)
+	return fmt.Sprintf(constant.JWTUserCacheKeyTemplate, userID)
 }
 
 // JwtMiddleware JWT 中间件
@@ -71,7 +70,7 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 
 		// 优先读缓存
 		cacheKey := jwtUserCacheKey(userID)
-		if raw, redisErr := rdb.Get(context.Background(), cacheKey).Bytes(); redisErr == nil {
+		if raw, redisErr := rdb.Get(ctx.Context(), cacheKey).Bytes(); redisErr == nil {
 			var cached jwtUserCache
 			if unmarshalErr := sonic.Unmarshal(raw, &cached); unmarshalErr == nil {
 				name = cached.Name
@@ -91,7 +90,7 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 
 			// 写入缓存，TTL 与 AccessToken 过期时间一致
 			if cacheVal, marshalErr := sonic.Marshal(&jwtUserCache{Name: name, Permission: permission}); marshalErr == nil {
-				if setErr := rdb.Set(context.Background(), cacheKey, cacheVal, config.JwtAccessTokenExpired).Err(); setErr != nil {
+				if setErr := rdb.Set(ctx.Context(), cacheKey, cacheVal, config.JwtAccessTokenExpired).Err(); setErr != nil {
 					log.Warn("[JwtMiddleware] Failed to cache user info", zap.Uint("userID", userID), zap.Error(setErr))
 				}
 			}

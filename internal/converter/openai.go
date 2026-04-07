@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -413,7 +414,7 @@ func convertAnthropicImageToOpenAIPart(block *dto.AnthropicContentBlock) *dto.Op
 		return &dto.OpenAIChatCompletionContentPart{
 			Type: enum.ContentPartTypeImageURL,
 			ImageURL: &dto.OpenAIChatCompletionImageURL{
-				URL: fmt.Sprintf("data:%s;base64,%s", block.Source.MediaType, block.Source.Data),
+				URL: fmt.Sprintf(constant.DataURLTemplate, block.Source.MediaType, block.Source.Data),
 			},
 		}
 	case "url":
@@ -606,5 +607,5 @@ func newInputJSONDeltaEvent(index int, partialJSON string) dto.AnthropicSSEEvent
 
 // GenerateAnthropicMessageID 生成 Anthropic 风格的消息 ID
 func GenerateAnthropicMessageID() string {
-	return fmt.Sprintf("msg_%s", uuid.New().String())
+	return fmt.Sprintf(constant.AnthropicMessageIDTemplate, uuid.New().String())
 }

@@ -93,8 +93,7 @@ return {tostring(tokens), "0", tostring(capacity)}
 //     @author centonhuang
 //     @update 2026-03-20 10:00:00
 func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
-	redisClient := cache.GetRedisClient()
-	prefix := fmt.Sprintf("tb:%s", serviceName)
+	rdb := cache.GetRedisClient()
 
 	// 每微秒补充的令牌数
 	refillRate := float64(capacity) / float64(period.Microseconds())
@@ -120,13 +119,13 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 			}
 		}
 
-		limiterKey := fmt.Sprintf("%s:%s:%v", prefix, keyValue, value)
+		limiterKey := fmt.Sprintf(constant.TokenBucketKeyTemplate, serviceName, keyValue, value)
 		ctx = huma.WithValue(ctx, constant.CtxKeyLimiter, limiterKey)
 
 		now := time.Now().UnixMicro()
 
 		result, err := tokenBucketLua.Run(
-			ctx.Context(), redisClient,
+			ctx.Context(), rdb,
 			[]string{limiterKey},
 			capacity, refillRate, now, expireMs,
 		).StringSlice()

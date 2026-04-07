@@ -231,6 +231,17 @@ if [[ -n "$matches" ]]; then
     echo "$matches" | head -10
 fi
 
+# 9.3 接口逻辑层禁止使用 context.Background()/context.TODO()
+# 这些层应从上层传递 context，而非自行创建空 context
+# 排除: cron/（定时任务需要创建根 context）、infrastructure/（基础设施初始化）、util/（工具函数）、agent/（后台异步任务）
+matches=$(grep -rn -E 'context\.(Background|TODO)\(\)' \
+    internal/handler/ internal/service/ internal/middleware/ internal/router/ internal/proxy/ internal/converter/ internal/dto/ \
+    --include='*.go' 2>/dev/null || true)
+if [[ -n "$matches" ]]; then
+    error "接口逻辑层禁止使用 context.Background()/context.TODO()，应从上层传递 context:"
+    echo "$matches" | head -20
+fi
+
 # ─────────────────────────────────────────────
 # 汇总
 # ─────────────────────────────────────────────
