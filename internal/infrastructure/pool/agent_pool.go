@@ -35,6 +35,11 @@ func (pm *PoolManager) submitSummarizeTask(task *dto.SummarizeTask) error {
 		summary, err := summarizer.SummarizeWithRetry(task.Ctx, task.Content, constant.SummarizeMaxRetries)
 		if err != nil {
 			log.Error("[AgentPool] Failed to generate summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			// 记录失败原因
+			sessionDAO := dao.GetSessionDAO()
+			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+				"summarize_error": err.Error(),
+			})
 			return
 		}
 
@@ -73,6 +78,11 @@ func (pm *PoolManager) submitScoreTask(task *dto.ScoreTask) error {
 		result, err := scorer.ScoreWithRetry(task.Ctx, task.Content, constant.ScoreMaxRetries)
 		if err != nil {
 			log.Error("[AgentPool] Failed to generate score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
+			// 记录失败原因
+			sessionDAO := dao.GetSessionDAO()
+			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+				"score_error": err.Error(),
+			})
 			return
 		}
 

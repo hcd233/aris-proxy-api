@@ -8,7 +8,7 @@ import "time"
 // Session 会话数据库模型
 //
 //	@author centonhuang
-//	@update 2026-04-02 10:00:00
+//	@update 2026-04-07 10:00:00
 type Session struct {
 	BaseModel
 	ID             uint              `json:"id" gorm:"column:id;primary_key;auto_increment;comment:会话ID"`
@@ -24,4 +24,6 @@ type Session struct {
 	TotalScore     float64           `json:"total_score" gorm:"column:total_score;default:0;comment:总分(1-10)"`
 	ScoreVersion   string            `json:"score_version" gorm:"column:score_version;not null;default:'';comment:评分算法版本"`
 	ScoredAt       *time.Time        `json:"scored_at" gorm:"column:scored_at;comment:评分时间"`
+	ScoreError     string            `json:"score_error" gorm:"column:score_error;not null;default:'';comment:评分失败原因"`
+	SummarizeError string            `json:"summarize_error" gorm:"column:summarize_error;not null;default:'';comment:总结失败原因"`
 }
