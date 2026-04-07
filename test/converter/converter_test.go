@@ -13,14 +13,14 @@ import (
 
 // testCase 测试用例结构
 type testCase struct {
-	Name             string                          `json:"name"`
-	Description      string                          `json:"description"`
-	OpenAIRequest    *dto.OpenAIChatCompletionReq          `json:"openai_request"`
-	AnthropicRequest *dto.AnthropicCreateMessageReq  `json:"anthropic_request"`
-	OpenAIResponse   *dto.OpenAIChatCompletion             `json:"openai_response"`
-	AnthropicResponse *dto.AnthropicMessage          `json:"anthropic_response"`
-	OpenAIToolChoice *dto.OpenAIChatCompletionToolChoiceParam `json:"openai_tool_choice"`
-	AnthropicToolChoice *dto.AnthropicToolChoice     `json:"anthropic_tool_choice"`
+	Name                string                                   `json:"name"`
+	Description         string                                   `json:"description"`
+	OpenAIRequest       *dto.OpenAIChatCompletionReq             `json:"openai_request"`
+	AnthropicRequest    *dto.AnthropicCreateMessageReq           `json:"anthropic_request"`
+	OpenAIResponse      *dto.OpenAIChatCompletion                `json:"openai_response"`
+	AnthropicResponse   *dto.AnthropicMessage                    `json:"anthropic_response"`
+	OpenAIToolChoice    *dto.OpenAIChatCompletionToolChoiceParam `json:"openai_tool_choice"`
+	AnthropicToolChoice *dto.AnthropicToolChoice                 `json:"anthropic_tool_choice"`
 }
 
 func loadCases(t *testing.T) []testCase {

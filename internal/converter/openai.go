@@ -30,10 +30,10 @@ type OpenAIProtocolConverter struct{}
 //	@update 2026-04-05 10:00:00
 func (*OpenAIProtocolConverter) FromAnthropicRequest(req *dto.AnthropicCreateMessageReq) (*dto.OpenAIChatCompletionReq, error) {
 	openAIReq := &dto.OpenAIChatCompletionReq{
-		Model:       req.Model,
-		Stream:      req.Stream,
-		Temperature: req.Temperature,
-		TopP:        req.TopP,
+		Model:               req.Model,
+		Stream:              req.Stream,
+		Temperature:         req.Temperature,
+		TopP:                req.TopP,
 		MaxCompletionTokens: lo.ToPtr(req.MaxTokens),
 	}
 

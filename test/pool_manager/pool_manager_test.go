@@ -11,11 +11,11 @@ import (
 
 // testCase represents raw JSON structure aligned with fixtures/pool_config_cases.json
 type testCase struct {
-	Name            string `json:"name"`
-	StoreWorkers    int    `json:"store_workers"`
-	StoreQueueSize  int    `json:"store_queue_size"`
-	AgentWorkers    int    `json:"agent_workers"`
-	AgentQueueSize  int    `json:"agent_queue_size"`
+	Name           string `json:"name"`
+	StoreWorkers   int    `json:"store_workers"`
+	StoreQueueSize int    `json:"store_queue_size"`
+	AgentWorkers   int    `json:"agent_workers"`
+	AgentQueueSize int    `json:"agent_queue_size"`
 }
 
 // loadCases loads test cases from fixtures/pool_config_cases.json

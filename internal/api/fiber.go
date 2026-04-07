@@ -20,14 +20,14 @@ func GetFiberApp() *fiber.App {
 
 func init() {
 	fiberApp = fiber.New(fiber.Config{
-		Prefork:               false,
-		ReadTimeout:           config.ReadTimeout,
-		WriteTimeout:          config.WriteTimeout,
-		IdleTimeout:           constant.IdleTimeout,
-		JSONEncoder:           sonic.Marshal,
-		JSONDecoder:           sonic.Unmarshal,
+		Prefork:                 false,
+		ReadTimeout:             config.ReadTimeout,
+		WriteTimeout:            config.WriteTimeout,
+		IdleTimeout:             constant.IdleTimeout,
+		JSONEncoder:             sonic.Marshal,
+		JSONDecoder:             sonic.Unmarshal,
 		EnableTrustedProxyCheck: true,
-		TrustedProxies:        config.TrustedProxies,
-		ProxyHeader:           fiber.HeaderXForwardedFor,
+		TrustedProxies:          config.TrustedProxies,
+		ProxyHeader:             fiber.HeaderXForwardedFor,
 	})
 }

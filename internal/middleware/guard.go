@@ -67,14 +67,16 @@ func isRouteNotFound(err error) bool {
 // GuardMiddleware 路由扫描防护中间件
 //
 // 在 Fiber 层拦截路由扫描行为：
+//
 //   - 请求到达时，检查 IP 是否已被封禁（Redis GET），若封禁则直接返回 403
+//
 //   - 请求处理后，若 Fiber 返回路由未命中错误（Cannot GET/POST/...），
 //     则通过 Lua 脚本原子地记录违规并在达到阈值时自动封禁
 //
-//	@param cfg GuardConfig
-//	@return fiber.Handler
-//	@author centonhuang
-//	@update 2026-04-07 10:00:00
+//     @param cfg GuardConfig
+//     @return fiber.Handler
+//     @author centonhuang
+//     @update 2026-04-07 10:00:00
 func GuardMiddleware(cfg GuardConfig) fiber.Handler {
 
 	rdb := cache.GetRedisClient()
@@ -98,7 +100,7 @@ func GuardMiddleware(cfg GuardConfig) fiber.Handler {
 		nextErr := c.Next()
 
 		if isRouteNotFound(nextErr) {
-			strikeKey := fmt.Sprintf(constant.ScannerStrikeKeyTemplate,ip)
+			strikeKey := fmt.Sprintf(constant.ScannerStrikeKeyTemplate, ip)
 
 			result, luaErr := scannerGuardLua.Run(
 				ctx, rdb,
