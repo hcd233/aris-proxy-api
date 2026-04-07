@@ -22,15 +22,15 @@ const (
 	//	@update 2026-04-07 10:00:00
 	TokenBucketKeyTemplate = "tb:%s:%s:%v"
 
-	// ScannerBanKeyPrefix 路由扫描封禁 Redis key 前缀
+	// ScannerBanKeyTemplate 路由扫描封禁 Redis key 前缀
 	//	@author centonhuang
 	//	@update 2026-04-07 10:00:00
-	ScannerBanKeyPrefix = "scanner:ban:"
+	ScannerBanKeyTemplate = "scanner:ban:%s"
 
-	// ScannerStrikeKeyPrefix 路由扫描违规计数 Redis key 前缀
+	// ScannerStrikeKeyTemplate 路由扫描违规计数 Redis key 前缀
 	//	@author centonhuang
 	//	@update 2026-04-07 10:00:00
-	ScannerStrikeKeyPrefix = "scanner:strike:"
+	ScannerStrikeKeyTemplate = "scanner:strike:%s"
 
 	// ==================== ID 生成模板 ====================
 

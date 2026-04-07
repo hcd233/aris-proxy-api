@@ -33,7 +33,7 @@ const (
 	// GuardStrikeThreshold 路由扫描封禁阈值（观察窗口内命中不存在路由的次数）
 	//	@author centonhuang
 	//	@update 2026-04-07 10:00:00
-	GuardStrikeThreshold = 10
+	GuardStrikeThreshold = 5
 
 	// GuardStrikeWindow 路由扫描违规计数的观察窗口
 	//	@author centonhuang

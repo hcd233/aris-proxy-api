@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -83,7 +84,7 @@ func GuardMiddleware(cfg GuardConfig) fiber.Handler {
 
 	return func(c *fiber.Ctx) error {
 		ip := c.IP()
-		banKey := constant.ScannerBanKeyPrefix + ip
+		banKey := fmt.Sprintf(constant.ScannerBanKeyTemplate, ip)
 		ctx := c.Context()
 
 		banned, err := rdb.Exists(ctx, banKey).Result()
@@ -97,7 +98,7 @@ func GuardMiddleware(cfg GuardConfig) fiber.Handler {
 		nextErr := c.Next()
 
 		if isRouteNotFound(nextErr) {
-			strikeKey := constant.ScannerStrikeKeyPrefix + ip
+			strikeKey := fmt.Sprintf(constant.ScannerStrikeKeyTemplate,ip)
 
 			result, luaErr := scannerGuardLua.Run(
 				ctx, rdb,
