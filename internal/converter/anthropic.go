@@ -388,12 +388,28 @@ func convertOpenAIToolsToAnthropic(tools []dto.OpenAIChatCompletionTool) []*dto.
 			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
 				Name:        tool.Function.Name,
 				Description: tool.Function.Description,
-				InputSchema: tool.Function.Parameters,
+				InputSchema: normalizeJSONSchema(tool.Function.Parameters),
 				Strict:      tool.Function.Strict,
 			})
 		}
 	}
 	return anthropicTools
+}
+
+// normalizeJSONSchema 规范化 JSON Schema，确保符合 Anthropic 要求
+// - 清除 misplaced 的 $schema（不应出现在 parameters 内部）
+// - 当 type=object 时确保 Properties 不为 nil
+func normalizeJSONSchema(schema *dto.JSONSchemaProperty) *dto.JSONSchemaProperty {
+	if schema == nil {
+		return nil
+	}
+	// 清除 SchemaURI（$schema 不应出现在 parameters 内部）
+	schema.SchemaURI = ""
+	// 当 type=object 时，确保 Properties 不为 nil
+	if schema.Type == "object" && schema.Properties == nil {
+		schema.Properties = make(map[string]*dto.JSONSchemaProperty)
+	}
+	return schema
 }
 
 func convertOpenAIToolChoiceToAnthropic(tc *dto.OpenAIChatCompletionToolChoiceParam) *dto.AnthropicToolChoice {
