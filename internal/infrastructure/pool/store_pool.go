@@ -93,3 +93,40 @@ func (pm *PoolManager) submitMessageStoreTask(task *dto.MessageStoreTask) error 
 		logger.Info("[StorePool] Messages stored successfully")
 	})
 }
+
+// submitAuditTask 提交审计任务到 Store 池
+//
+//	@param pm *PoolManager
+//	@param task *dto.ModelCallAuditTask
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+func (pm *PoolManager) submitAuditTask(task *dto.ModelCallAuditTask) error {
+	l := logger.WithCtx(task.Ctx)
+	db := database.GetDBInstance(task.Ctx)
+
+	return pm.storePool.Go(func() {
+		audit := &dbmodel.ModelCallAudit{
+			APIKeyID:                 task.APIKeyID,
+			ModelID:                  task.ModelID,
+			Model:                    task.Model,
+			UpstreamProvider:         task.UpstreamProvider,
+			APIProvider:              task.APIProvider,
+			InputTokens:              task.InputTokens,
+			OutputTokens:             task.OutputTokens,
+			CacheCreationInputTokens: task.CacheCreationInputTokens,
+			CacheReadInputTokens:     task.CacheReadInputTokens,
+			FirstTokenLatencyMs:      task.FirstTokenLatencyMs,
+			StreamDurationMs:         task.StreamDurationMs,
+			UserAgent:                task.UserAgent,
+			UpstreamStatusCode:      task.UpstreamStatusCode,
+			ErrorMessage:            task.ErrorMessage,
+			TraceID:                task.TraceID,
+		}
+		if err := dao.GetModelCallAuditDAO().Create(db, audit); err != nil {
+			l.Error("[StorePool] Failed to store audit record", zap.Error(err))
+			return
+		}
+		l.Info("[StorePool] Audit record stored successfully")
+	})
+}

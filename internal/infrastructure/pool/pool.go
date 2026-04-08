@@ -87,6 +87,17 @@ func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 	return pm.submitScoreTask(task)
 }
 
+// SubmitModelCallAuditTask 提交模型调用审计任务到协程池
+//
+//	@receiver pm *PoolManager
+//	@param task *dto.ModelCallAuditTask
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) error {
+	return pm.submitAuditTask(task)
+}
+
 // deduplicateAndStoreMessages 批量去重并存储消息
 //
 //	使用 IN 查询一次性获取已存在的消息，批量创建不存在的消息，保持原始顺序返回 ID 列表
