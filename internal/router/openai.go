@@ -38,7 +38,7 @@ func initOpenAIRouter(openaiGroup huma.API) {
 		Summary:     "Create chat completion",
 		Description: "Creates a model response for the given chat conversation.",
 		Tags:        []string{"OpenAI"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", constant.CtxKeyUserName, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
 		Security: []map[string][]string{
 			{"apiKeyAuth": {}},
 		},
