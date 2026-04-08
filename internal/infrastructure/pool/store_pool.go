@@ -38,18 +38,13 @@ func (pm *PoolManager) submitMessageStoreTask(task *dto.MessageStoreTask) error 
 
 		messages := lo.Map(task.Messages, func(m *dto.UnifiedMessage, _ int) *dbmodel.Message {
 			model := ""
-			tokenCount := 0
 			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
 				model = task.Model
-				tokenCount = task.OutputTokens
-			} else if lo.Contains([]enum.Role{enum.RoleUser, enum.RoleSystem}, m.Role) {
-				tokenCount = task.InputTokens
 			}
 			return &dbmodel.Message{
-				Model:      model,
-				Message:    m,
-				CheckSum:   util.ComputeMessageChecksum(m, toolSchemas),
-				TokenCount: tokenCount,
+				Model:    model,
+				Message:  m,
+				CheckSum: util.ComputeMessageChecksum(m, toolSchemas),
 			}
 		})
 
