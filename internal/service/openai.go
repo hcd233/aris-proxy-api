@@ -3,12 +3,14 @@ package service
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/converter"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -24,7 +26,7 @@ import (
 )
 
 // endpointFields 查询端点时统一使用的字段列表
-var endpointFields = []string{"model", "api_key", "base_url", "provider"}
+var endpointFields = []string{"id", "model", "api_key", "base_url", "provider"}
 
 // openAIInternalErrorBody OpenAI 内部错误响应 body（预序列化，避免重复 marshal）
 var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
@@ -123,17 +125,17 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
-	ep := toUpstream(endpoint)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 
 	if endpoint.Provider == enum.ProviderAnthropic {
-		return s.forwardViaAnthropic(ctx, logger, req, ep, stream)
+		return s.forwardViaAnthropic(ctx, logger, req, endpoint, stream)
 	}
-	return s.forwardNative(ctx, logger, req, ep, stream)
+	return s.forwardNative(ctx, logger, req, endpoint, stream)
 }
 
 // forwardNative 原生 OpenAI 协议转发
-func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
+func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, stream bool) (*huma.StreamResponse, error) {
+	ep := toUpstream(endpoint)
 	if req.Body.MaxTokens != nil {
 		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
 	}
@@ -142,7 +144,17 @@ func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, r
 
 	if stream {
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			startTime := time.Now()
+			var firstTokenTime time.Time
+			var streamDone time.Time
+			var firstTokenLatencyMs int64
+			var streamDurationMs int64
+
 			completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
+				if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
+					firstTokenTime = time.Now()
+					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+				}
 				chunk.Model = req.Body.Model
 				chunkData, marshalErr := sonic.Marshal(chunk)
 				if marshalErr != nil {
@@ -152,30 +164,44 @@ func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, r
 				fmt.Fprintf(w, "data: %s\n\n", chunkData)
 				return w.Flush()
 			})
+			streamDone = time.Now()
+			if !firstTokenTime.IsZero() {
+				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
+			}
 			if err == nil {
 				fmt.Fprintf(w, "data: [DONE]\n\n")
 				w.Flush()
 			}
 
 			s.storeFromCompletion(ctx, logger, req, completion, err, ep.Model)
+			var usage *dto.OpenAICompletionUsage
+			if completion != nil {
+				usage = completion.Usage
+			}
+			s.submitOpenAIAudit(ctx, endpoint, req.Body.Model, usage, firstTokenLatencyMs, streamDurationMs, err)
 		}), nil
 	}
 
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		startTime := time.Now()
 		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
+		_ = time.Since(startTime)
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, openAIInternalErrorBody)
+			s.submitOpenAIAudit(ctx, endpoint, req.Body.Model, nil, 0, 0, err)
 			return
 		}
 		completion.Model = req.Body.Model
 		writer.WriteJSON(completion)
 
 		s.storeFromCompletion(ctx, logger, req, completion, nil, ep.Model)
+		s.submitOpenAIAudit(ctx, endpoint, req.Body.Model, completion.Usage, 0, 0, nil)
 	}), nil
 }
 
 // forwardViaAnthropic 通过 Anthropic 协议上游转发 OpenAI 请求
-func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
+func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, stream bool) (*huma.StreamResponse, error) {
+	ep := toUpstream(endpoint)
 	conv := converter.AnthropicProtocolConverter{}
 	anthropicReq, err := conv.FromOpenAIRequest(req.Body)
 	if err != nil {
@@ -187,6 +213,12 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 
 	if stream {
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			startTime := time.Now()
+			var firstTokenTime time.Time
+			var streamDone time.Time
+			var firstTokenLatencyMs int64
+			var streamDurationMs int64
+
 			chunkID := converter.GenerateOpenAIChunkID()
 			anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
 				chunks, err := conv.ToOpenAISSEResponse(event, req.Body.Model, chunkID)
@@ -194,6 +226,10 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 					return err
 				}
 				for _, chunk := range chunks {
+					if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
+						firstTokenTime = time.Now()
+						firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+					}
 					chunkData, marshalErr := sonic.Marshal(chunk)
 					if marshalErr != nil {
 						logger.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
@@ -206,12 +242,17 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 				}
 				return nil
 			})
+			streamDone = time.Now()
+			if !firstTokenTime.IsZero() {
+				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
+			}
 			if err == nil {
 				fmt.Fprintf(w, "data: [DONE]\n\n")
 				w.Flush()
 			}
 
 			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
+			s.submitOpenAIAuditFromAnthropicMsg(ctx, endpoint, req.Body.Model, anthropicMsg, err, firstTokenLatencyMs, streamDurationMs)
 		}), nil
 	}
 
@@ -219,6 +260,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, openAIInternalErrorBody)
+			s.submitOpenAIAuditFromAnthropicMsg(ctx, endpoint, req.Body.Model, nil, err, 0, 0)
 			return
 		}
 		completion, err := conv.ToOpenAIResponse(anthropicMsg)
@@ -231,6 +273,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 		writer.WriteJSON(completion)
 
 		s.storeFromCompletion(ctx, logger, req, completion, nil, ep.Model)
+		s.submitOpenAIAuditFromAnthropicMsg(ctx, endpoint, req.Body.Model, anthropicMsg, nil, 0, 0)
 	}), nil
 }
 
@@ -295,9 +338,79 @@ func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Log
 		Tools:        unifiedTools,
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
-		Client:       util.CtxValueString(ctx, constant.CtxKeyClient),
 		Metadata:     req.Body.Metadata,
 	}); err != nil {
 		logger.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
 	}
+}
+
+// extractUpstreamStatusAndError 从 error 中提取上游状态码和错误信息
+func extractUpstreamStatusAndError(err error) (int, string) {
+	if err == nil {
+		return 200, ""
+	}
+	var ue *model.UpstreamError
+	if errors.As(err, &ue) {
+		return ue.StatusCode, ue.Error()
+	}
+	return 0, err.Error()
+}
+
+// submitOpenAIAudit 提交 OpenAI 接口的模型调用审计任务
+func (s *openAIService) submitOpenAIAudit(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, usage *dto.OpenAICompletionUsage, firstTokenLatencyMs, streamDurationMs int64, err error) {
+	statusCode, errorMessage := extractUpstreamStatusAndError(err)
+	inputTokens, outputTokens := 0, 0
+	if usage != nil {
+		inputTokens = usage.PromptTokens
+		outputTokens = usage.CompletionTokens
+	}
+	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
+		Ctx:                     util.CopyContextValues(ctx),
+		APIKeyID:                util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
+		ModelID:                 endpoint.ID,
+		Model:                   model,
+		UpstreamProvider:        endpoint.Provider,
+		APIProvider:             string(enum.ProviderOpenAI),
+		InputTokens:             inputTokens,
+		OutputTokens:            outputTokens,
+		CacheCreationInputTokens: 0,
+		CacheReadInputTokens:    0,
+		FirstTokenLatencyMs:     firstTokenLatencyMs,
+		StreamDurationMs:         streamDurationMs,
+		UserAgent:               util.CtxValueString(ctx, constant.CtxKeyClient),
+		UpstreamStatusCode:      statusCode,
+		ErrorMessage:            errorMessage,
+		TraceID:                 util.CtxValueString(ctx, constant.CtxKeyTraceID),
+	})
+}
+
+// submitOpenAIAuditFromAnthropicMsg 提交 OpenAI 接口调用 Anthropic 上游的审计任务
+func (s *openAIService) submitOpenAIAuditFromAnthropicMsg(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
+	statusCode, errorMessage := extractUpstreamStatusAndError(err)
+	inputTokens, outputTokens := 0, 0
+	cacheCreation, cacheRead := 0, 0
+	if msg != nil && msg.Usage != nil {
+		inputTokens = msg.Usage.InputTokens
+		outputTokens = msg.Usage.OutputTokens
+		cacheCreation = msg.Usage.CacheCreationInputTokens
+		cacheRead = msg.Usage.CacheReadInputTokens
+	}
+	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
+		Ctx:                     util.CopyContextValues(ctx),
+		APIKeyID:                util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
+		ModelID:                 endpoint.ID,
+		Model:                   model,
+		UpstreamProvider:        endpoint.Provider,
+		APIProvider:             string(enum.ProviderOpenAI),
+		InputTokens:             inputTokens,
+		OutputTokens:            outputTokens,
+		CacheCreationInputTokens: cacheCreation,
+		CacheReadInputTokens:    cacheRead,
+		FirstTokenLatencyMs:     firstTokenLatencyMs,
+		StreamDurationMs:         streamDurationMs,
+		UserAgent:               util.CtxValueString(ctx, constant.CtxKeyClient),
+		UpstreamStatusCode:      statusCode,
+		ErrorMessage:            errorMessage,
+		TraceID:                 util.CtxValueString(ctx, constant.CtxKeyTraceID),
+	})
 }
