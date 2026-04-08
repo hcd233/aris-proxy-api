@@ -1,12 +1,13 @@
 package dao
 
 var (
-	userDAOSingleton          *UserDAO
-	messageDAOSingleton       *MessageDAO
-	sessionDAOSingleton       *SessionDAO
-	toolDAOSingleton          *ToolDAO
-	modelEndpointDAOSingleton *ModelEndpointDAO
-	proxyAPIKeyDAOSingleton   *ProxyAPIKeyDAO
+	userDAOSingleton            *UserDAO
+	messageDAOSingleton         *MessageDAO
+	sessionDAOSingleton         *SessionDAO
+	toolDAOSingleton           *ToolDAO
+	modelEndpointDAOSingleton  *ModelEndpointDAO
+	proxyAPIKeyDAOSingleton    *ProxyAPIKeyDAO
+	modelCallAuditDAOSingleton *ModelCallAuditDAO
 )
 
 func init() {
@@ -16,6 +17,7 @@ func init() {
 	toolDAOSingleton = &ToolDAO{}
 	modelEndpointDAOSingleton = &ModelEndpointDAO{}
 	proxyAPIKeyDAOSingleton = &ProxyAPIKeyDAO{}
+	modelCallAuditDAOSingleton = &ModelCallAuditDAO{}
 }
 
 // GetUserDAO 获取用户DAO
@@ -70,4 +72,13 @@ func GetModelEndpointDAO() *ModelEndpointDAO {
 //	@update 2026-04-04 10:00:00
 func GetProxyAPIKeyDAO() *ProxyAPIKeyDAO {
 	return proxyAPIKeyDAOSingleton
+}
+
+// GetModelCallAuditDAO 获取模型调用审计DAO
+//
+//	@return *ModelCallAuditDAO
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+func GetModelCallAuditDAO() *ModelCallAuditDAO {
+	return modelCallAuditDAOSingleton
 }
