@@ -306,5 +306,25 @@
                 }
             ]
         }
+    },
+    {
+        "name": "tool_no_parameters",
+        "description": "tools with no parameters should omit parameters field for OpenAI",
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 100,
+            "messages": [{"role": "user", "content": "List all cron jobs"}],
+            "tools": [
+                {
+                    "name": "CronList",
+                    "description": "List all cron jobs scheduled via CronCreate",
+                    "input_schema": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "$schema": "https://json-schema.org/draft/2020-12/schema"
+                    }
+                }
+            ]
+        }
     }
 ]
