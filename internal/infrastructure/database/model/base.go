@@ -17,7 +17,7 @@ type BaseModel struct {
 
 // Models 所有数据库模型
 //
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-09 10:00:00
 var Models = []interface{}{
 	&User{},
 	&Message{},
@@ -25,4 +25,5 @@ var Models = []interface{}{
 	&Tool{},
 	&ModelEndpoint{},
 	&ProxyAPIKey{},
+	&ModelCallAudit{},
 }
