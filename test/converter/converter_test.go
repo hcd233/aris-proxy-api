@@ -752,6 +752,33 @@ func TestAnthropicProtocolConverter_ToOpenAISSEResponse_TextDelta(t *testing.T) 
 	}
 }
 
+func TestOpenAIProtocolConverter_FromAnthropicRequest_ToolNoParameters(t *testing.T) {
+	allCases := loadCases(t)
+	tc := findCase(t, allCases, "tool_no_parameters")
+
+	conv := converter.OpenAIProtocolConverter{}
+	result, err := conv.FromAnthropicRequest(tc.AnthropicRequest)
+	if err != nil {
+		t.Fatalf("FromAnthropicRequest() error: %v", err)
+	}
+
+	// 检查工具定义
+	if len(result.Tools) != 1 {
+		t.Fatalf("len(Tools) = %d, want 1", len(result.Tools))
+	}
+	if result.Tools[0].Function.Name != "CronList" {
+		t.Errorf("Tools[0].Function.Name = %q, want %q", result.Tools[0].Function.Name, "CronList")
+	}
+
+	// 关键验证：对于无参数工具，parameters 应该为 nil
+	// OpenAI 要求无参数工具直接省略 parameters 字段
+	if result.Tools[0].Function.Parameters != nil {
+		t.Errorf("Tools[0].Function.Parameters should be nil for empty object schema, got %v", result.Tools[0].Function.Parameters)
+	}
+
+	t.Logf("Empty tool parameters correctly set to nil")
+}
+
 func TestAnthropicProtocolConverter_ToOpenAISSEResponse_MessageDelta(t *testing.T) {
 	conv := converter.AnthropicProtocolConverter{}
 

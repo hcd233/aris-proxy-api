@@ -435,17 +435,50 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 		if tool.InputSchema == nil && tool.Name == "" {
 			continue
 		}
+
+		// 对于无参数工具，OpenAI 要求省略 parameters 字段
+		// Anthropic 的 input_schema 可能是 {"type": "object"} 或带有 additionalProperties: false
+		// 这种情况下应该将 parameters 设为 nil
+		var params *dto.JSONSchemaProperty
+		if tool.InputSchema != nil && !isEmptyObjectSchema(tool.InputSchema) {
+			params = normalizeOpenAISchema(tool.InputSchema)
+		}
+
 		openAITools = append(openAITools, dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
 				Name:        tool.Name,
 				Description: tool.Description,
-				Parameters:  tool.InputSchema,
+				Parameters:  params,
 				Strict:      tool.Strict,
 			},
 		})
 	}
 	return openAITools
+}
+
+// isEmptyObjectSchema 检查 schema 是否表示空对象（无参数）
+// OpenAI 对于无参数工具要求省略 parameters 字段，而不是传 {"type": "object"}
+func isEmptyObjectSchema(schema *dto.JSONSchemaProperty) bool {
+	if schema == nil {
+		return true
+	}
+	// 如果 type 是 object 且没有定义任何 properties，认为是空对象
+	if schema.Type == "object" && len(schema.Properties) == 0 {
+		return true
+	}
+	return false
+}
+
+// normalizeOpenAISchema 规范化 JSON Schema，确保符合 OpenAI 要求
+// - 清除 $schema（不应出现在 parameters 内部）
+func normalizeOpenAISchema(schema *dto.JSONSchemaProperty) *dto.JSONSchemaProperty {
+	if schema == nil {
+		return nil
+	}
+	// 清除 SchemaURI（$schema 不应出现在 parameters 内部）
+	schema.SchemaURI = ""
+	return schema
 }
 
 func convertAnthropicToolChoiceToOpenAI(tc *dto.AnthropicToolChoice) *dto.OpenAIChatCompletionToolChoiceParam {
