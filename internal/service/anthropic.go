@@ -3,12 +3,14 @@ package service
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/converter"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -111,34 +113,49 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
-	ep := toUpstream(endpoint)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	exposedModel := req.Body.Model
 
 	if endpoint.Provider == enum.ProviderOpenAI {
-		return s.forwardViaOpenAI(ctx, logger, req, ep, exposedModel, stream)
+		return s.forwardViaOpenAI(ctx, logger, req, endpoint, exposedModel, stream)
 	}
-	return s.forwardNative(ctx, logger, req, ep, exposedModel, stream)
+	return s.forwardNative(ctx, logger, req, endpoint, exposedModel, stream)
 }
 
 // forwardNative 原生 Anthropic 协议转发
-func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep proxy.UpstreamEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, endpoint *dbmodel.ModelEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+	ep := toUpstream(endpoint)
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
 	if stream {
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			startTime := time.Now()
+			var firstTokenTime time.Time
+			var streamDone time.Time
+			var firstTokenLatencyMs int64
+			var streamDurationMs int64
+
 			anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
+				if firstTokenTime.IsZero() {
+					firstTokenTime = time.Now()
+					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+				}
 				modifiedData := proxy.ReplaceModelInSSEData(event.Data, exposedModel)
 				fmt.Fprintf(w, "event: %s\n", event.Event)
 				fmt.Fprintf(w, "data: %s\n\n", modifiedData)
 				return w.Flush()
 			})
+			streamDone = time.Now()
+			if !firstTokenTime.IsZero() {
+				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
+			}
 			if err == nil {
 				fmt.Fprintf(w, "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n")
 				w.Flush()
 			}
 
 			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
+			s.submitAnthropicAudit(ctx, endpoint, exposedModel, anthropicMsg, err, firstTokenLatencyMs, streamDurationMs)
 		}), nil
 	}
 
@@ -146,17 +163,20 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
+			s.submitAnthropicAudit(ctx, endpoint, exposedModel, nil, err, 0, 0)
 			return
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
 		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+		s.submitAnthropicAudit(ctx, endpoint, exposedModel, anthropicMsg, nil, 0, 0)
 	}), nil
 }
 
 // forwardViaOpenAI 通过 OpenAI 协议上游转发 Anthropic 请求
-func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep proxy.UpstreamEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, endpoint *dbmodel.ModelEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+	ep := toUpstream(endpoint)
 	conv := converter.OpenAIProtocolConverter{}
 	openAIReq, err := conv.FromAnthropicRequest(req.Body)
 	if err != nil {
@@ -168,6 +188,11 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 
 	if stream {
 		return util.WrapStreamResponse(func(w *bufio.Writer) {
+			startTime := time.Now()
+			var firstTokenTime time.Time
+			var streamDone time.Time
+			var firstTokenLatencyMs int64
+			var streamDurationMs int64
 			isFirst := true
 			tracker := converter.NewSSEContentBlockTracker()
 			completion, proxyErr := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
@@ -177,6 +202,10 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 				}
 				isFirst = false
 				for _, event := range events {
+					if firstTokenTime.IsZero() && event.Event == "content_block_start" {
+						firstTokenTime = time.Now()
+						firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+					}
 					fmt.Fprintf(w, "event: %s\n", event.Event)
 					fmt.Fprintf(w, "data: %s\n\n", string(event.Data))
 					if err := w.Flush(); err != nil {
@@ -185,20 +214,27 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 				}
 				return nil
 			})
+			streamDone = time.Now()
+			if !firstTokenTime.IsZero() {
+				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
+			}
 			if proxyErr == nil {
 				fmt.Fprintf(w, "event: message_stop\ndata: {}\n\n")
 				w.Flush()
 			}
 
 			if proxyErr != nil || completion == nil {
+				s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, proxyErr, firstTokenLatencyMs, streamDurationMs)
 				return
 			}
 			anthropicMsg, err := conv.ToAnthropicResponse(completion)
 			if err != nil {
 				logger.Error("[AnthropicService] Failed to convert for storage", zap.Error(err))
+				s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, err, firstTokenLatencyMs, streamDurationMs)
 				return
 			}
 			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+			s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, anthropicMsg, nil, firstTokenLatencyMs, streamDurationMs)
 		}), nil
 	}
 
@@ -206,6 +242,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
+			s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, err, 0, 0)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
@@ -218,6 +255,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 		writer.WriteJSON(anthropicMsg)
 
 		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+		s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, anthropicMsg, nil, 0, 0)
 	}), nil
 }
 
@@ -267,7 +305,6 @@ func (s *anthropicService) storeAnthropicMessages(ctx context.Context, logger *z
 		Tools:        unifiedTools,
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
-		Client:       util.CtxValueString(ctx, constant.CtxKeyClient),
 		Metadata:     util.ExtractAnthropicMetadata(req.Body.Metadata),
 	}); err != nil {
 		logger.Error("[AnthropicService] Failed to submit message store task", zap.Error(err))
@@ -306,4 +343,75 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	}
 
 	return rsp, nil
+}
+
+// extractAnthropicUpstreamStatusAndError 从 error 中提取上游状态码和错误信息
+func extractAnthropicUpstreamStatusAndError(err error) (int, string) {
+	if err == nil {
+		return 200, ""
+	}
+	var ue *model.UpstreamError
+	if errors.As(err, &ue) {
+		return ue.StatusCode, ue.Error()
+	}
+	return 0, err.Error()
+}
+
+// submitAnthropicAudit 提交 Anthropic 接口的模型调用审计任务
+func (s *anthropicService) submitAnthropicAudit(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
+	statusCode, errorMessage := extractAnthropicUpstreamStatusAndError(err)
+	inputTokens, outputTokens := 0, 0
+	cacheCreation, cacheRead := 0, 0
+	if msg != nil && msg.Usage != nil {
+		inputTokens = msg.Usage.InputTokens
+		outputTokens = msg.Usage.OutputTokens
+		cacheCreation = msg.Usage.CacheCreationInputTokens
+		cacheRead = msg.Usage.CacheReadInputTokens
+	}
+	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
+		Ctx:                     util.CopyContextValues(ctx),
+		APIKeyID:                util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
+		ModelID:                 endpoint.ID,
+		Model:                   model,
+		UpstreamProvider:        endpoint.Provider,
+		APIProvider:             string(enum.ProviderAnthropic),
+		InputTokens:             inputTokens,
+		OutputTokens:            outputTokens,
+		CacheCreationInputTokens: cacheCreation,
+		CacheReadInputTokens:    cacheRead,
+		FirstTokenLatencyMs:     firstTokenLatencyMs,
+		StreamDurationMs:         streamDurationMs,
+		UserAgent:               util.CtxValueString(ctx, constant.CtxKeyClient),
+		UpstreamStatusCode:      statusCode,
+		ErrorMessage:            errorMessage,
+		TraceID:                 util.CtxValueString(ctx, constant.CtxKeyTraceID),
+	})
+}
+
+// submitAnthropicAuditFromOpenAICompletion 提交 Anthropic 接口调用 OpenAI 上游的审计任务
+func (s *anthropicService) submitAnthropicAuditFromOpenAICompletion(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
+	statusCode, errorMessage := extractAnthropicUpstreamStatusAndError(err)
+	inputTokens, outputTokens := 0, 0
+	if msg != nil && msg.Usage != nil {
+		inputTokens = msg.Usage.InputTokens
+		outputTokens = msg.Usage.OutputTokens
+	}
+	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
+		Ctx:                     util.CopyContextValues(ctx),
+		APIKeyID:                util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
+		ModelID:                 endpoint.ID,
+		Model:                   model,
+		UpstreamProvider:        endpoint.Provider,
+		APIProvider:             string(enum.ProviderAnthropic),
+		InputTokens:             inputTokens,
+		OutputTokens:            outputTokens,
+		CacheCreationInputTokens: 0,
+		CacheReadInputTokens:    0,
+		FirstTokenLatencyMs:     firstTokenLatencyMs,
+		StreamDurationMs:         streamDurationMs,
+		UserAgent:               util.CtxValueString(ctx, constant.CtxKeyClient),
+		UpstreamStatusCode:      statusCode,
+		ErrorMessage:            errorMessage,
+		TraceID:                 util.CtxValueString(ctx, constant.CtxKeyTraceID),
+	})
 }
