@@ -72,7 +72,6 @@ func (pm *PoolManager) submitMessageStoreTask(task *dto.MessageStoreTask) error 
 				APIKeyName: task.APIKeyName,
 				MessageIDs: messageIDs,
 				ToolIDs:    toolIDs,
-				Client:     task.Client,
 				Metadata:   task.Metadata,
 			}
 			if err := dao.GetSessionDAO().Create(tx, session); err != nil {
