@@ -45,3 +45,26 @@ type ScoreTask struct {
 	SessionID uint
 	Content   string
 }
+
+// ModelCallAuditTask 模型调用审计任务
+//
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+type ModelCallAuditTask struct {
+	Ctx                      context.Context
+	APIKeyID                 uint
+	ModelID                  uint
+	Model                    string
+	UpstreamProvider         string
+	APIProvider              string
+	InputTokens              int
+	OutputTokens             int
+	CacheCreationInputTokens int
+	CacheReadInputTokens    int
+	FirstTokenLatencyMs      int64
+	StreamDurationMs          int64
+	UserAgent               string
+	UpstreamStatusCode      int
+	ErrorMessage            string
+	TraceID                 string
+}
