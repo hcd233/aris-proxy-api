@@ -57,4 +57,16 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-07 10:00:00
 	DataURLTemplate = "data:%s;base64,%s"
+
+	// ==================== API Key 常量 ====================
+
+	// APIKeyPrefix API Key 前缀
+	//	@author centonhuang
+	//	@update 2026-04-09 10:00:00
+	APIKeyPrefix = "sk-aris-"
+
+	// APIKeyCharset API Key 字符集
+	//	@author centonhuang
+	//	@update 2026-04-09 10:00:00
+	APIKeyCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 )
