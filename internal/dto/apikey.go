@@ -28,11 +28,11 @@ type CreateAPIKeyRsp struct {
 	Key *APIKeyDetail `json:"key,omitempty" doc:"创建的 API Key 详情"`
 }
 
-// ListAPIKeyRsp 列出 API Key 响应
+// ListAPIKeysRsp 列出 API Key 响应
 //
 //	@author centonhuang
-//	@update 2026-04-08 10:00:00
-type ListAPIKeyRsp struct {
+//	@update 2026-04-09 10:00:00
+type ListAPIKeysRsp struct {
 	CommonRsp
 	Keys []*APIKeyItem `json:"keys,omitempty" doc:"API Key 列表"`
 }
@@ -51,12 +51,12 @@ type APIKeyItem struct {
 // APIKeyDetail API Key 详情（完整 key，仅创建时返回）
 //
 //	@author centonhuang
-//	@update 2026-04-08 10:00:00
+//	@update 2026-04-09 10:00:00
 type APIKeyDetail struct {
-	ID        uint      `json:"id" doc:"API Key ID"`
-	Name      string    `json:"name" doc:"API Key 名称"`
-	Key       string    `json:"key" doc:"完整 API Key 值（仅创建时返回）"`
-	CreatedAt time.Time `json:"-" doc:"创建时间（用于内部）"`
+	ID        uint   `json:"id" doc:"API Key ID"`
+	Name      string `json:"name" doc:"API Key 名称"`
+	Key       string `json:"key" doc:"完整 API Key 值（仅创建时返回）"`
+	CreatedAt string `json:"createdAt" doc:"创建时间"`
 }
 
 // DeleteAPIKeyReq 删除 API Key 请求

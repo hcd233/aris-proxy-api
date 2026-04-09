@@ -118,6 +118,21 @@ func (dao *baseDAO[ModelT]) BatchGet(db *gorm.DB, where *ModelT, fields []string
 	return
 }
 
+// Count 统计满足条件的记录数
+//
+//	@receiver dao *baseDAO[ModelT]
+//	@param db *gorm.DB
+//	@param where *ModelT
+//	@return int64
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+func (dao *baseDAO[ModelT]) Count(db *gorm.DB, where *ModelT) (count int64, err error) {
+	var m ModelT
+	err = db.Model(&m).Where(where).Where("deleted_at = 0").Count(&count).Error
+	return
+}
+
 // BatchGetByField 根据指定字段的多个值批量查询数据
 //
 //	@param db *gorm.DB
