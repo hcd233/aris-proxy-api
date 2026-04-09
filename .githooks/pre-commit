@@ -70,5 +70,15 @@ fi
 printf "$PASS go test\n"
 
 # --------------------------------------------------------------------------
+# 5. lint-conv — project convention lint
+# --------------------------------------------------------------------------
+printf "$INFO Running lint-conv...\n"
+
+if ! bash script/lint-conventions.sh 2>&1; then
+    fail "lint-conv failed. Please fix the convention violations above before committing."
+fi
+printf "$PASS lint-conv\n"
+
+# --------------------------------------------------------------------------
 echo ""
 printf "$PASS All checks passed. Proceeding with commit.\n"
