@@ -57,4 +57,116 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-07 10:00:00
 	DataURLTemplate = "data:%s;base64,%s"
+
+	// ==================== SSE 协议常量 ====================
+
+	// SSEDataPrefix OpenAI SSE 数据行前缀
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	SSEDataPrefix = "data: "
+
+	// SSEDoneSignal OpenAI SSE 流式结束标记
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	SSEDoneSignal = "[DONE]"
+
+	// ==================== 上游 API 版本 ====================
+
+	// AnthropicAPIVersion Anthropic API 版本 header 值
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	AnthropicAPIVersion = "2023-06-01"
+
+	// ==================== 第三方 API URL ====================
+
+	// GithubUserURL GitHub 用户信息 API 地址
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	GithubUserURL = "https://api.github.com/user"
+
+	// GithubUserEmailURL GitHub 用户邮箱 API 地址
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	GithubUserEmailURL = "https://api.github.com/user/emails"
+
+	// ==================== OAuth2 ====================
+
+	// OAuthStateHexString OAuth2 state hex 编码前缀说明（随机字节数 = 32）
+	// 对应 make([]byte, 32) 生成 256-bit 随机数
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+
+	// ==================== 用户默认值 ====================
+
+	// DefaultUserNamePrefix 新 OAuth2 用户名不合法时的默认前缀
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	DefaultUserNamePrefix = "ArisUser"
+
+	// EmptySessionSummary 空会话的默认摘要
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	EmptySessionSummary = "空会话"
+
+	// ==================== 限流 ====================
+
+	// RateLimitKeyByIP 按 IP 限流时的 keyValue 标识
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	RateLimitKeyByIP = "ip"
+
+	// ==================== 日志文件名 ====================
+
+	// LogInfoFileName 通用日志文件名
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	LogInfoFileName = "aris-proxy-api.log"
+
+	// LogErrFileName 错误日志文件名
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	LogErrFileName = "aris-proxy-api-error.log"
+
+	// LogPanicFileName panic 日志文件名
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	LogPanicFileName = "aris-proxy-api-panic.log"
+
+	// ==================== Cron ====================
+
+	// CronDefaultModule 未指定 module 名时 cron 日志的默认模块名
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	CronDefaultModule = "Cron"
+
+	// CronInvalidKey cron key-value 解析失败时的兜底 key 名
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	CronInvalidKey = "invalid_key"
+
+	// ==================== 安全 ====================
+
+	// MaskSecretPlaceholder 短密钥（<=8位）的掩码替换字符串
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	MaskSecretPlaceholder = "***"
+
+	// ==================== API Key ====================
+
+	// APIKeyPrefix API Key 固定前缀
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	APIKeyPrefix = "sk-aris-"
+
+	// APIKeyCharset API Key 随机字符集
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	APIKeyCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	// ==================== CORS ====================
+
+	// CORSAllowOrigins CORS 允许的来源（开发环境前端地址）
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	CORSAllowOrigins = "http://localhost:3000"
 )

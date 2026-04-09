@@ -5,14 +5,10 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
-)
-
-const (
-	githubUserURL      = "https://api.github.com/user"
-	githubUserEmailURL = "https://api.github.com/user/emails"
 )
 
 var githubUserScopes = []string{"user:email", "repo", "read:org"}
@@ -109,7 +105,7 @@ func (p *githubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	client := p.oauth2Config.Client(ctx, token)
 
 	// 获取用户基本信息
-	resp, err := client.Get(githubUserURL)
+	resp, err := client.Get(constant.GithubUserURL)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +117,7 @@ func (p *githubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	}
 
 	// 获取用户邮箱信息
-	emailResp, err := client.Get(githubUserEmailURL)
+	emailResp, err := client.Get(constant.GithubUserEmailURL)
 	if err != nil {
 		return nil, err
 	}

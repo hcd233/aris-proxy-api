@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
@@ -57,7 +58,7 @@ func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
 			fiberCtx.Set("Connection", "keep-alive")
 			fiberCtx.Set("Transfer-Encoding", "chunked")
 			fiberCtx.Set("X-Accel-Buffering", "no")
-			fiberCtx.Status(200).Response().SetBodyStreamWriter(fasthttp.StreamWriter(handler))
+			fiberCtx.Status(fiber.StatusOK).Response().SetBodyStreamWriter(fasthttp.StreamWriter(handler))
 		},
 	}
 }
@@ -77,7 +78,7 @@ type JSONResponseWriter struct {
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
 func (rw JSONResponseWriter) WriteJSON(v any) {
-	rw.HumaCtx.SetStatus(200)
+	rw.HumaCtx.SetStatus(fiber.StatusOK)
 	rw.HumaCtx.SetHeader("Content-Type", "application/json")
 	rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v)))
 }
@@ -126,5 +127,5 @@ func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error
 		return
 	}
 	logger.Error("[ProxyService] Proxy error", zap.Error(err))
-	writer.WriteError(502, fallbackBody)
+	writer.WriteError(fiber.StatusBadGateway, fallbackBody)
 }

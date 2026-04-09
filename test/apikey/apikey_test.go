@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/service"
 )
 
 const (
@@ -21,14 +21,14 @@ const (
 //	@update 2026-04-08 10:00:00
 func TestAPIKeyConstants(t *testing.T) {
 	t.Run("prefix constant", func(t *testing.T) {
-		if service.APIKeyPrefix != apiKeyPrefix {
-			t.Errorf("APIKeyPrefix = %s, want %s", service.APIKeyPrefix, apiKeyPrefix)
+		if constant.APIKeyPrefix != apiKeyPrefix {
+			t.Errorf("APIKeyPrefix = %s, want %s", constant.APIKeyPrefix, apiKeyPrefix)
 		}
 	})
 
 	t.Run("random length constant", func(t *testing.T) {
-		if service.APIKeyRandomLength != apiKeyRandomLength {
-			t.Errorf("APIKeyRandomLength = %d, want %d", service.APIKeyRandomLength, apiKeyRandomLength)
+		if constant.APIKeyRandomLength != apiKeyRandomLength {
+			t.Errorf("APIKeyRandomLength = %d, want %d", constant.APIKeyRandomLength, apiKeyRandomLength)
 		}
 	})
 

@@ -410,14 +410,14 @@ func convertAnthropicImageToOpenAIPart(block *dto.AnthropicContentBlock) *dto.Op
 		return nil
 	}
 	switch block.Source.Type {
-	case "base64":
+	case enum.ImageSourceTypeBase64:
 		return &dto.OpenAIChatCompletionContentPart{
 			Type: enum.ContentPartTypeImageURL,
 			ImageURL: &dto.OpenAIChatCompletionImageURL{
 				URL: fmt.Sprintf(constant.DataURLTemplate, block.Source.MediaType, block.Source.Data),
 			},
 		}
-	case "url":
+	case enum.ImageSourceTypeURL:
 		return &dto.OpenAIChatCompletionContentPart{
 			Type: enum.ContentPartTypeImageURL,
 			ImageURL: &dto.OpenAIChatCompletionImageURL{
@@ -464,7 +464,7 @@ func isEmptyObjectSchema(schema *dto.JSONSchemaProperty) bool {
 		return true
 	}
 	// 如果 type 是 object 且没有定义任何 properties，认为是空对象
-	if schema.Type == "object" && len(schema.Properties) == 0 {
+	if schema.Type == enum.JSONSchemaObjectType && len(schema.Properties) == 0 {
 		return true
 	}
 	return false
@@ -483,13 +483,13 @@ func normalizeOpenAISchema(schema *dto.JSONSchemaProperty) *dto.JSONSchemaProper
 
 func convertAnthropicToolChoiceToOpenAI(tc *dto.AnthropicToolChoice) *dto.OpenAIChatCompletionToolChoiceParam {
 	switch tc.Type {
-	case "auto":
+	case enum.AnthropicToolChoiceTypeAuto:
 		return &dto.OpenAIChatCompletionToolChoiceParam{Mode: enum.ToolChoiceAuto}
-	case "any":
+	case enum.AnthropicToolChoiceTypeAny:
 		return &dto.OpenAIChatCompletionToolChoiceParam{Mode: enum.ToolChoiceRequired}
-	case "none":
+	case enum.AnthropicToolChoiceTypeNone:
 		return &dto.OpenAIChatCompletionToolChoiceParam{Mode: enum.ToolChoiceNone}
-	case "tool":
+	case enum.AnthropicToolChoiceTypeTool:
 		return &dto.OpenAIChatCompletionToolChoiceParam{
 			Named: &dto.OpenAIChatCompletionToolChoice{
 				Type: enum.ToolTypeFunction,

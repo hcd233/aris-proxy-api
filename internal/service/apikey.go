@@ -20,17 +20,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	// APIKeyMaxCount 单用户最大 API Key 数量
-	APIKeyMaxCount = 5
-	// APIKeyPrefix API Key 前缀
-	APIKeyPrefix = "sk-aris-"
-	// APIKeyRandomLength API Key 随机字符串长度
-	APIKeyRandomLength = 24
-	// APIKeyCharset API Key 字符集
-	APIKeyCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-)
-
 // APIKeyService API Key 服务
 //
 //	@author centonhuang
@@ -65,15 +54,15 @@ func NewAPIKeyService() APIKeyService {
 //	@author centonhuang
 //	@update 2026-04-08 10:00:00
 func generateAPIKey() (string, error) {
-	result := make([]byte, APIKeyRandomLength)
-	charsetLen := len(APIKeyCharset)
+	result := make([]byte, constant.APIKeyRandomLength)
+	charsetLen := len(constant.APIKeyCharset)
 	if _, err := rand.Read(result); err != nil {
 		return "", err
 	}
 	for i := range result {
-		result[i] = APIKeyCharset[int(result[i])%charsetLen]
+		result[i] = constant.APIKeyCharset[int(result[i])%charsetLen]
 	}
-	return APIKeyPrefix + strings.ToLower(string(result)), nil
+	return constant.APIKeyPrefix + strings.ToLower(string(result)), nil
 }
 
 // CreateAPIKey 创建 API Key
@@ -113,11 +102,11 @@ func (s *apikeyService) CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyR
 		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
-	if len(existingKeys) >= APIKeyMaxCount {
+	if len(existingKeys) >= constant.APIKeyMaxCount {
 		log.Warn("[APIKeyService] API key count exceeds limit",
 			zap.Uint("userID", userID),
 			zap.Int("existingCount", len(existingKeys)),
-			zap.Int("maxCount", APIKeyMaxCount))
+			zap.Int("maxCount", constant.APIKeyMaxCount))
 		rsp.Error = ierr.ErrQuotaExceeded.BizError()
 		return rsp, nil
 	}
@@ -197,7 +186,7 @@ func (s *apikeyService) ListAPIKeys(ctx context.Context) (*dto.ListAPIKeyRsp, er
 			ID:        key.ID,
 			Name:      key.Name,
 			Key:       util.MaskSecret(key.Key),
-			CreatedAt: key.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt: key.CreatedAt,
 		})
 	}
 

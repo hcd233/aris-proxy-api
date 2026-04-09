@@ -21,10 +21,6 @@ import (
 var defaultLogger *zap.Logger
 
 const (
-	infoLogFile  = "aris-proxy-api.log"
-	errLogFile   = "aris-proxy-api-error.log"
-	panicLogFile = "aris-proxy-api-panic.log"
-
 	logLevelDebug  = "DEBUG"
 	logLevelInfo   = "INFO"
 	logLevelWarn   = "WARN"
@@ -130,28 +126,28 @@ func init() {
 
 	// general logger
 	logFileWriter := zapcore.AddSync(&lumberjack.Logger{
-		Filename:   path.Join(config.LogDirPath, infoLogFile),
-		MaxSize:    100, // MB
-		MaxBackups: 3,
-		MaxAge:     7, // days
+		Filename:   path.Join(config.LogDirPath, constant.LogInfoFileName),
+		MaxSize:    constant.LogInfoMaxSizeMB,
+		MaxBackups: constant.LogInfoMaxBackups,
+		MaxAge:     constant.LogInfoMaxAgeDays,
 		Compress:   false,
 	})
 
 	// error logger
 	errFileWriter := zapcore.AddSync(&lumberjack.Logger{
-		Filename:   path.Join(config.LogDirPath, errLogFile),
-		MaxSize:    500, // MB
-		MaxBackups: 3,
-		MaxAge:     30, // days
+		Filename:   path.Join(config.LogDirPath, constant.LogErrFileName),
+		MaxSize:    constant.LogErrMaxSizeMB,
+		MaxBackups: constant.LogErrMaxBackups,
+		MaxAge:     constant.LogErrMaxAgeDays,
 		Compress:   false,
 	})
 
 	// panic logger
 	panicFileWriter := zapcore.AddSync(&lumberjack.Logger{
-		Filename:   path.Join(config.LogDirPath, panicLogFile),
-		MaxSize:    500, // MB
-		MaxBackups: 3,
-		MaxAge:     30, // days
+		Filename:   path.Join(config.LogDirPath, constant.LogPanicFileName),
+		MaxSize:    constant.LogErrMaxSizeMB,
+		MaxBackups: constant.LogErrMaxBackups,
+		MaxAge:     constant.LogErrMaxAgeDays,
 		Compress:   false,
 	})
 

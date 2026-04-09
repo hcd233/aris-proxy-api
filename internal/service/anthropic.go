@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/converter"
@@ -202,7 +203,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 				}
 				isFirst = false
 				for _, event := range events {
-					if firstTokenTime.IsZero() && event.Event == "content_block_start" {
+					if firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockStart {
 						firstTokenTime = time.Now()
 						firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 					}
@@ -248,7 +249,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
 		if err != nil {
 			logger.Error("[AnthropicService] Failed to convert OpenAI response", zap.Error(err))
-			writer.WriteError(500, anthropicInternalErrorBody)
+			writer.WriteError(fiber.StatusInternalServerError, anthropicInternalErrorBody)
 			return
 		}
 		anthropicMsg.Model = exposedModel
@@ -348,7 +349,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 // extractAnthropicUpstreamStatusAndError 从 error 中提取上游状态码和错误信息
 func extractAnthropicUpstreamStatusAndError(err error) (int, string) {
 	if err == nil {
-		return 200, ""
+		return fiber.StatusOK, ""
 	}
 	var ue *model.UpstreamError
 	if errors.As(err, &ue) {
