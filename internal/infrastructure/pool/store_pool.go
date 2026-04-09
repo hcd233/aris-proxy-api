@@ -18,14 +18,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// submitMessageStoreTask 提交消息存储任务到 Store 池
+// SubmitMessageStoreTask 提交消息存储任务到协程池
 //
-//	@param pm *PoolManager
+//	@receiver pm *PoolManager
 //	@param task *dto.MessageStoreTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func (pm *PoolManager) submitMessageStoreTask(task *dto.MessageStoreTask) error {
+//	@update 2026-04-09 10:00:00
+func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 	logger := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 
@@ -89,14 +89,14 @@ func (pm *PoolManager) submitMessageStoreTask(task *dto.MessageStoreTask) error 
 	})
 }
 
-// submitAuditTask 提交审计任务到 Store 池
+// SubmitModelCallAuditTask 提交模型调用审计任务到协程池
 //
-//	@param pm *PoolManager
+//	@receiver pm *PoolManager
 //	@param task *dto.ModelCallAuditTask
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
-func (pm *PoolManager) submitAuditTask(task *dto.ModelCallAuditTask) error {
+func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) error {
 	l := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 
