@@ -13,7 +13,7 @@ LDFLAGS    := -s -w
 # -trimpath: 去除编译路径信息（减小体积 + 安全）
 BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 
-.PHONY: build build-upx build-dev build-debug clean test test-cover lint-conv help
+.PHONY: build build-upx build-dev build-debug clean test test-cover lint-conv fgprof help
 
 ## build: 生产构建（strip 符号）
 build:
@@ -67,6 +67,16 @@ test-cover:
 ## lint-conv: 扫描项目编码规范
 lint-conv:
 	@bash script/lint-conventions.sh
+
+## fgprof: 从远程服务拉取 fgprof profile 并打开 Web 可视化（火焰图+调用图）
+fgprof:
+	@read -p "Enter fgprof endpoint URL (e.g., http://localhost:8080): " URL; \
+	if [ -z "$$URL" ]; then \
+		echo "URL is required"; \
+		exit 1; \
+	fi; \
+	echo "Fetching fgprof profile from $$URL/debug/fgprof?seconds=30..."; \
+	go tool pprof -http=:8081 "$$URL/debug/fgprof?seconds=30"
 
 ## help: 显示帮助
 help:
