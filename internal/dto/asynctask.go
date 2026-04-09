@@ -59,11 +59,11 @@ type ModelCallAuditTask struct {
 	InputTokens              int
 	OutputTokens             int
 	CacheCreationInputTokens int
-	CacheReadInputTokens    int
+	CacheReadInputTokens     int
 	FirstTokenLatencyMs      int64
-	StreamDurationMs          int64
-	UserAgent               string
-	UpstreamStatusCode      int
-	ErrorMessage            string
-	TraceID                 string
+	StreamDurationMs         int64
+	UserAgent                string
+	UpstreamStatusCode       int
+	ErrorMessage             string
+	TraceID                  string
 }

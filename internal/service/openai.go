@@ -3,14 +3,12 @@ package service
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/converter"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -185,17 +183,17 @@ func (s *openAIService) forwardNative(ctx context.Context, logger *zap.Logger, r
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
-		_ = time.Since(startTime)
+		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, openAIInternalErrorBody)
-			s.submitOpenAIAudit(ctx, endpoint, req.Body.Model, nil, 0, 0, err)
+			s.submitOpenAIAudit(ctx, endpoint, req.Body.Model, nil, totalMs, 0, err)
 			return
 		}
 		completion.Model = req.Body.Model
 		writer.WriteJSON(completion)
 
 		s.storeFromCompletion(ctx, logger, req, completion, nil, ep.Model)
-		s.submitOpenAIAudit(ctx, endpoint, req.Body.Model, completion.Usage, 0, 0, nil)
+		s.submitOpenAIAudit(ctx, endpoint, req.Body.Model, completion.Usage, totalMs, 0, nil)
 	}), nil
 }
 
@@ -344,73 +342,12 @@ func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Log
 	}
 }
 
-// extractUpstreamStatusAndError 从 error 中提取上游状态码和错误信息
-func extractUpstreamStatusAndError(err error) (int, string) {
-	if err == nil {
-		return 200, ""
-	}
-	var ue *model.UpstreamError
-	if errors.As(err, &ue) {
-		return ue.StatusCode, ue.Error()
-	}
-	return 0, err.Error()
-}
-
 // submitOpenAIAudit 提交 OpenAI 接口的模型调用审计任务
 func (s *openAIService) submitOpenAIAudit(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, usage *dto.OpenAICompletionUsage, firstTokenLatencyMs, streamDurationMs int64, err error) {
-	statusCode, errorMessage := extractUpstreamStatusAndError(err)
-	inputTokens, outputTokens := 0, 0
-	if usage != nil {
-		inputTokens = usage.PromptTokens
-		outputTokens = usage.CompletionTokens
-	}
-	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
-		Ctx:                     util.CopyContextValues(ctx),
-		APIKeyID:                util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
-		ModelID:                 endpoint.ID,
-		Model:                   model,
-		UpstreamProvider:        endpoint.Provider,
-		APIProvider:             string(enum.ProviderOpenAI),
-		InputTokens:             inputTokens,
-		OutputTokens:            outputTokens,
-		CacheCreationInputTokens: 0,
-		CacheReadInputTokens:    0,
-		FirstTokenLatencyMs:     firstTokenLatencyMs,
-		StreamDurationMs:         streamDurationMs,
-		UserAgent:               util.CtxValueString(ctx, constant.CtxKeyClient),
-		UpstreamStatusCode:      statusCode,
-		ErrorMessage:            errorMessage,
-		TraceID:                 util.CtxValueString(ctx, constant.CtxKeyTraceID),
-	})
+	submitAuditTask(ctx, endpoint, model, enum.ProviderOpenAI, auditTokensFromOpenAIUsage(usage), firstTokenLatencyMs, streamDurationMs, err)
 }
 
 // submitOpenAIAuditFromAnthropicMsg 提交 OpenAI 接口调用 Anthropic 上游的审计任务
 func (s *openAIService) submitOpenAIAuditFromAnthropicMsg(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
-	statusCode, errorMessage := extractUpstreamStatusAndError(err)
-	inputTokens, outputTokens := 0, 0
-	cacheCreation, cacheRead := 0, 0
-	if msg != nil && msg.Usage != nil {
-		inputTokens = msg.Usage.InputTokens
-		outputTokens = msg.Usage.OutputTokens
-		cacheCreation = msg.Usage.CacheCreationInputTokens
-		cacheRead = msg.Usage.CacheReadInputTokens
-	}
-	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
-		Ctx:                     util.CopyContextValues(ctx),
-		APIKeyID:                util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
-		ModelID:                 endpoint.ID,
-		Model:                   model,
-		UpstreamProvider:        endpoint.Provider,
-		APIProvider:             string(enum.ProviderOpenAI),
-		InputTokens:             inputTokens,
-		OutputTokens:            outputTokens,
-		CacheCreationInputTokens: cacheCreation,
-		CacheReadInputTokens:    cacheRead,
-		FirstTokenLatencyMs:     firstTokenLatencyMs,
-		StreamDurationMs:         streamDurationMs,
-		UserAgent:               util.CtxValueString(ctx, constant.CtxKeyClient),
-		UpstreamStatusCode:      statusCode,
-		ErrorMessage:            errorMessage,
-		TraceID:                 util.CtxValueString(ctx, constant.CtxKeyTraceID),
-	})
+	submitAuditTask(ctx, endpoint, model, enum.ProviderOpenAI, auditTokensFromAnthropicUsage(msg), firstTokenLatencyMs, streamDurationMs, err)
 }

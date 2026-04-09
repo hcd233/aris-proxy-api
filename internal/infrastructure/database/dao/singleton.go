@@ -1,9 +1,9 @@
 package dao
 
 var (
-	userDAOSingleton            *UserDAO
-	messageDAOSingleton         *MessageDAO
-	sessionDAOSingleton         *SessionDAO
+	userDAOSingleton           *UserDAO
+	messageDAOSingleton        *MessageDAO
+	sessionDAOSingleton        *SessionDAO
 	toolDAOSingleton           *ToolDAO
 	modelEndpointDAOSingleton  *ModelEndpointDAO
 	proxyAPIKeyDAOSingleton    *ProxyAPIKeyDAO
