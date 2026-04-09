@@ -74,4 +74,7 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-10 10:00:00
 	FiberShutdownTimeout = 30 * time.Second
+
+	// PostgresConnMaxLifetime PostgreSQL pool connection max lifetime
+	PostgresConnMaxLifetime = 5 * time.Hour
 )

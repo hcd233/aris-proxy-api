@@ -144,6 +144,18 @@ const (
 	//	@update 2026-04-09 15:00:00
 	CronInvalidKey = "invalid_key"
 
+	// ==================== Database ====================
+
+	// DBFieldUpdatedAt GORM updated_at column name
+	//	@author centonhuang
+	//	@update 2026-04-10 12:00:00
+	DBFieldUpdatedAt = "updated_at"
+
+	// MIMETypeOctetStream default binary Content-Type when extension is unknown
+	//	@author centonhuang
+	//	@update 2026-04-10 12:00:00
+	MIMETypeOctetStream = "application/octet-stream"
+
 	// ==================== 安全 ====================
 
 	// MaskSecretPlaceholder 短密钥（<=8位）的掩码替换字符串

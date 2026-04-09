@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -81,9 +82,9 @@ func InitDatabase() {
 
 	sqlDB := lo.Must(db.DB())
 
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(5 * time.Hour)
+	sqlDB.SetMaxIdleConns(constant.PostgresMaxIdleConns)
+	sqlDB.SetMaxOpenConns(constant.PostgresMaxOpenConns)
+	sqlDB.SetConnMaxLifetime(constant.PostgresConnMaxLifetime)
 
 	logger.Logger().Info("[Database] Connected to database",
 		zap.String("host", dbHost),
