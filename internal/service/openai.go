@@ -255,10 +255,12 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 	}
 
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		startTime := time.Now()
 		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
+		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, openAIInternalErrorBody)
-			s.submitOpenAIAuditFromAnthropicMsg(ctx, endpoint, req.Body.Model, nil, err, 0, 0)
+			s.submitOpenAIAuditFromAnthropicMsg(ctx, endpoint, req.Body.Model, nil, err, totalMs, 0)
 			return
 		}
 		completion, err := conv.ToOpenAIResponse(anthropicMsg)
@@ -271,7 +273,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 		writer.WriteJSON(completion)
 
 		s.storeFromCompletion(ctx, logger, req, completion, nil, ep.Model)
-		s.submitOpenAIAuditFromAnthropicMsg(ctx, endpoint, req.Body.Model, anthropicMsg, nil, 0, 0)
+		s.submitOpenAIAuditFromAnthropicMsg(ctx, endpoint, req.Body.Model, anthropicMsg, nil, totalMs, 0)
 	}), nil
 }
 
