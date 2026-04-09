@@ -14,21 +14,21 @@ type testCase struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Task        struct {
-		APIKeyID                uint   `json:"api_key_id"`
-		ModelID                 uint   `json:"model_id"`
-		Model                   string `json:"model"`
-		UpstreamProvider        string `json:"upstream_provider"`
-		APIProvider             string `json:"api_provider"`
-		InputTokens             int    `json:"input_tokens"`
-		OutputTokens            int    `json:"output_tokens"`
+		APIKeyID                 uint   `json:"api_key_id"`
+		ModelID                  uint   `json:"model_id"`
+		Model                    string `json:"model"`
+		UpstreamProvider         string `json:"upstream_provider"`
+		APIProvider              string `json:"api_provider"`
+		InputTokens              int    `json:"input_tokens"`
+		OutputTokens             int    `json:"output_tokens"`
 		CacheCreationInputTokens int    `json:"cache_creation_input_tokens"`
-		CacheReadInputTokens    int    `json:"cache_read_input_tokens"`
-		FirstTokenLatencyMs     int64  `json:"first_token_latency_ms"`
-		StreamDurationMs        int64  `json:"stream_duration_ms"`
-		UserAgent               string `json:"user_agent"`
-		UpstreamStatusCode      int    `json:"upstream_status_code"`
-		ErrorMessage            string `json:"error_message"`
-		TraceID                 string `json:"trace_id"`
+		CacheReadInputTokens     int    `json:"cache_read_input_tokens"`
+		FirstTokenLatencyMs      int64  `json:"first_token_latency_ms"`
+		StreamDurationMs         int64  `json:"stream_duration_ms"`
+		UserAgent                string `json:"user_agent"`
+		UpstreamStatusCode       int    `json:"upstream_status_code"`
+		ErrorMessage             string `json:"error_message"`
+		TraceID                  string `json:"trace_id"`
 	} `json:"task"`
 }
 
@@ -51,22 +51,22 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			task := &dto.ModelCallAuditTask{
-				Ctx:                     context.Background(),
-				APIKeyID:                tc.Task.APIKeyID,
-				ModelID:                 tc.Task.ModelID,
-				Model:                   tc.Task.Model,
-				UpstreamProvider:        tc.Task.UpstreamProvider,
-				APIProvider:             tc.Task.APIProvider,
-				InputTokens:             tc.Task.InputTokens,
-				OutputTokens:            tc.Task.OutputTokens,
+				Ctx:                      context.Background(),
+				APIKeyID:                 tc.Task.APIKeyID,
+				ModelID:                  tc.Task.ModelID,
+				Model:                    tc.Task.Model,
+				UpstreamProvider:         tc.Task.UpstreamProvider,
+				APIProvider:              tc.Task.APIProvider,
+				InputTokens:              tc.Task.InputTokens,
+				OutputTokens:             tc.Task.OutputTokens,
 				CacheCreationInputTokens: tc.Task.CacheCreationInputTokens,
-				CacheReadInputTokens:    tc.Task.CacheReadInputTokens,
-				FirstTokenLatencyMs:     tc.Task.FirstTokenLatencyMs,
-				StreamDurationMs:        tc.Task.StreamDurationMs,
-				UserAgent:               tc.Task.UserAgent,
-				UpstreamStatusCode:      tc.Task.UpstreamStatusCode,
-				ErrorMessage:            tc.Task.ErrorMessage,
-				TraceID:                 tc.Task.TraceID,
+				CacheReadInputTokens:     tc.Task.CacheReadInputTokens,
+				FirstTokenLatencyMs:      tc.Task.FirstTokenLatencyMs,
+				StreamDurationMs:         tc.Task.StreamDurationMs,
+				UserAgent:                tc.Task.UserAgent,
+				UpstreamStatusCode:       tc.Task.UpstreamStatusCode,
+				ErrorMessage:             tc.Task.ErrorMessage,
+				TraceID:                  tc.Task.TraceID,
 			}
 
 			if task.APIKeyID != tc.Task.APIKeyID {
