@@ -419,11 +419,11 @@ func convertAnthropicStopReasonToOpenAI(stopReason *string) enum.FinishReason {
 		return enum.FinishReasonStop
 	}
 	switch *stopReason {
-	case "end_turn", "stop":
+	case enum.AnthropicStopReasonEndTurn, enum.AnthropicStopReasonStop:
 		return enum.FinishReasonStop
-	case "max_tokens":
+	case enum.AnthropicStopReasonMaxTokens:
 		return enum.FinishReasonLength
-	case "tool_use":
+	case enum.AnthropicStopReasonToolUse:
 		return enum.FinishReasonToolCalls
 	default:
 		return enum.FinishReasonStop

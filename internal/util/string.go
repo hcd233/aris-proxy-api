@@ -27,7 +27,7 @@ func ToDataURL(contentType string, bytes []byte) string {
 //	@update 2026-03-06 15:32:06
 func MaskSecret(key string) string {
 	if len(key) <= 8 {
-		return "***"
+		return constant.MaskSecretPlaceholder
 	}
 	return fmt.Sprintf("%s***%s", key[:4], key[len(key)-4:])
 }

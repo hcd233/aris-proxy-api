@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -187,7 +188,7 @@ func (s *oauth2Service) Callback(ctx context.Context, req *dto.CallbackReq) (*dt
 	} else {
 		// 创建新用户
 		if validateErr := util.ValidateUserName(userName); validateErr != nil {
-			userName = "ArisUser" + strconv.FormatInt(time.Now().UTC().Unix(), 10)
+			userName = constant.DefaultUserNamePrefix + strconv.FormatInt(time.Now().UTC().Unix(), 10)
 		}
 		user = &model.User{
 			Name:       userName,

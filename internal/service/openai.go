@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/converter"
@@ -266,7 +267,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, logger *zap.Log
 		completion, err := conv.ToOpenAIResponse(anthropicMsg)
 		if err != nil {
 			logger.Error("[OpenAIService] Failed to convert Anthropic response", zap.Error(err))
-			writer.WriteError(500, openAIInternalErrorBody)
+			writer.WriteError(fiber.StatusInternalServerError, openAIInternalErrorBody)
 			return
 		}
 		completion.Model = req.Body.Model
@@ -347,7 +348,7 @@ func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Log
 // extractUpstreamStatusAndError 从 error 中提取上游状态码和错误信息
 func extractUpstreamStatusAndError(err error) (int, string) {
 	if err == nil {
-		return 200, ""
+		return fiber.StatusOK, ""
 	}
 	var ue *model.UpstreamError
 	if errors.As(err, &ue) {
