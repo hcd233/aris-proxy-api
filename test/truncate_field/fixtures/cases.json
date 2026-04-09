@@ -1,0 +1,38 @@
+[
+  {
+    "name": "short_string_unchanged",
+    "input": "hello",
+    "max_len": 512,
+    "want": "hello"
+  },
+  {
+    "name": "exact_length_unchanged",
+    "input": "abc",
+    "max_len": 3,
+    "want": "abc"
+  },
+  {
+    "name": "long_string_truncated",
+    "input": "abcdefghijklmnopqrstuvwxyz",
+    "max_len": 10,
+    "want": "abcdefghij...(truncated, total 26 chars)"
+  },
+  {
+    "name": "empty_string",
+    "input": "",
+    "max_len": 512,
+    "want": ""
+  },
+  {
+    "name": "single_char_over",
+    "input": "ab",
+    "max_len": 1,
+    "want": "a...(truncated, total 2 chars)"
+  },
+  {
+    "name": "unicode_string_truncated",
+    "input": "你好世界测试数据",
+    "max_len": 6,
+    "want": "你好...(truncated, total 24 chars)"
+  }
+]

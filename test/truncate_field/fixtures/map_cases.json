@@ -1,0 +1,38 @@
+[
+  {
+    "name": "flat_map_short_values",
+    "input": {"key": "value", "num": 42},
+    "max_len": 512,
+    "want": {"key": "value", "num": 42}
+  },
+  {
+    "name": "flat_map_long_string",
+    "input": {"content": "This is a very long message content that should be truncated because it exceeds the maximum allowed length for log fields. This is a very long message content that should be truncated because it exceeds the maximum allowed length for log fields. This is a very long message content that should be truncated because it exceeds the maximum allowed length for log fields."},
+    "max_len": 50,
+    "want": {"content": "This is a very long message content that should be...(truncated, total 368 chars)"}
+  },
+  {
+    "name": "nested_map_truncation",
+    "input": {"outer": {"inner": "short", "long": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},
+    "max_len": 20,
+    "want": {"outer": {"inner": "short", "long": "aaaaaaaaaaaaaaaaaaaa...(truncated, total 135 chars)"}}
+  },
+  {
+    "name": "array_of_strings_truncation",
+    "input": {"messages": ["hello", "this is a very long string that should be truncated when logged"]},
+    "max_len": 10,
+    "want": {"messages": ["hello", "this is a ...(truncated, total 63 chars)"]}
+  },
+  {
+    "name": "mixed_types_preserved",
+    "input": {"str": "text", "num": 123, "bool": true, "nil": null},
+    "max_len": 2,
+    "want": {"str": "te...(truncated, total 4 chars)", "num": 123, "bool": true, "nil": null}
+  },
+  {
+    "name": "empty_map",
+    "input": {},
+    "max_len": 512,
+    "want": {}
+  }
+]
