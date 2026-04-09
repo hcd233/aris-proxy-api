@@ -18,14 +18,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// submitSummarizeTask 提交 Session 总结任务到 Agent 池
+// SubmitSummarizeTask 提交 Session 总结任务到协程池
 //
-//	@param pm *PoolManager
+//	@receiver pm *PoolManager
 //	@param task *dto.SummarizeTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func (pm *PoolManager) submitSummarizeTask(task *dto.SummarizeTask) error {
+//	@update 2026-04-09 10:00:00
+func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 	log := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 
@@ -61,14 +61,14 @@ func (pm *PoolManager) submitSummarizeTask(task *dto.SummarizeTask) error {
 	})
 }
 
-// submitScoreTask 提交 Session 评分任务到 Agent 池
+// SubmitScoreTask 提交 Session 评分任务到协程池
 //
-//	@param pm *PoolManager
+//	@receiver pm *PoolManager
 //	@param task *dto.ScoreTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func (pm *PoolManager) submitScoreTask(task *dto.ScoreTask) error {
+//	@update 2026-04-09 10:00:00
+func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 	log := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 

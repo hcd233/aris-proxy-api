@@ -273,6 +273,94 @@ if [[ -n "$matches" ]]; then
     echo "$matches" | head -20
 fi
 
+# 9.5 禁止透传封装函数（exported 方法仅 1:1 委托调用自身 receiver 的另一个方法）
+# 检测模式：
+#   func (recv) ExportedMethod(args...) ... {
+#       return recv.anotherMethod(args...)
+#   }
+# 排除：
+#   - handler/ 层（接口实现 + 分层架构设计，薄包装是预期行为）
+#   - 工厂函数 NewXxx（返回 &struct{...} 初始化）
+#   - init() 函数
+#   - singleton getter（return someVar，无函数调用）
+#   - 调用 receiver 字段的方法（如 recv.field.Method()，属于适配而非纯透传）
+passthrough_matches=$(awk '
+/^func / {
+    if ($0 ~ /^func init\(/) next
+
+    func_line = $0
+    func_file = FILENAME
+    func_lineno = FNR
+    in_func = 1
+    brace_depth = 0
+    body_lines = 0
+    first_body_line = ""
+
+    # 提取 receiver 变量名（如有）: func (pm *PoolManager) → pm
+    receiver = ""
+    if ($0 ~ /^func \(/) {
+        tmp = $0
+        sub(/^func \(/, "", tmp)
+        sub(/ .*/, "", tmp)
+        receiver = tmp
+    }
+
+    n = split($0, chars, "")
+    for (i = 1; i <= n; i++) {
+        if (chars[i] == "{") brace_depth++
+        if (chars[i] == "}") brace_depth--
+    }
+    next
+}
+
+in_func {
+    n = split($0, chars, "")
+    for (i = 1; i <= n; i++) {
+        if (chars[i] == "{") brace_depth++
+        if (chars[i] == "}") brace_depth--
+    }
+
+    trimmed = $0
+    gsub(/^[[:space:]]+/, "", trimmed)
+    gsub(/[[:space:]]+$/, "", trimmed)
+    if (trimmed != "" && trimmed != "{" && trimmed != "}") {
+        body_lines++
+        if (body_lines == 1) first_body_line = trimmed
+    }
+
+    if (brace_depth == 0) {
+        in_func = 0
+        if (body_lines == 1 && first_body_line ~ /^return [a-zA-Z]/) {
+            # 排除 singleton getter（无括号调用）
+            if (first_body_line !~ /\(/) next
+            # 排除工厂函数
+            if (first_body_line ~ /return &/) next
+
+            # 仅报告: 有 receiver 且 body 直接调用 receiver.method()
+            # 排除 receiver.field.method() 形式（属于字段访问适配，非纯透传）
+            if (receiver != "") {
+                call_target = first_body_line
+                sub(/^return /, "", call_target)
+                sub(/\(.*/, "", call_target)
+                expected_prefix = receiver "."
+                if (index(call_target, expected_prefix) == 1) {
+                    rest = substr(call_target, length(expected_prefix) + 1)
+                    if (index(rest, ".") == 0 && rest != "") {
+                        print func_file ":" func_lineno ": " func_line
+                        print func_file ":" func_lineno+1 ":   " first_body_line
+                    }
+                }
+            }
+        }
+    }
+}
+' $(find internal/ -name '*.go' -not -path '*/handler/*' 2>/dev/null) 2>/dev/null || true)
+
+if [[ -n "$passthrough_matches" ]]; then
+    warn "发现透传封装函数（exported 方法仅透传调用 receiver 的另一个方法），应将逻辑内联或合并方法:"
+    echo "$passthrough_matches" | head -20
+fi
+
 # ─────────────────────────────────────────────
 # 10. 魔法数字 & 魔法字符串
 # ─────────────────────────────────────────────

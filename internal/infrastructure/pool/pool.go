@@ -7,7 +7,6 @@ package pool
 import (
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"gorm.io/gorm"
@@ -52,50 +51,6 @@ func StopPoolManager() {
 	if poolManager != nil {
 		poolManager.Stop()
 	}
-}
-
-// SubmitMessageStoreTask 提交消息存储任务到协程池
-//
-//	@receiver pm *PoolManager
-//	@param task *dto.MessageStoreTask
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
-	return pm.submitMessageStoreTask(task)
-}
-
-// SubmitSummarizeTask 提交 Session 总结任务到协程池
-//
-//	@receiver pm *PoolManager
-//	@param task *dto.SummarizeTask
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
-	return pm.submitSummarizeTask(task)
-}
-
-// SubmitScoreTask 提交 Session 评分任务到协程池
-//
-//	@receiver pm *PoolManager
-//	@param task *dto.ScoreTask
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
-	return pm.submitScoreTask(task)
-}
-
-// SubmitModelCallAuditTask 提交模型调用审计任务到协程池
-//
-//	@receiver pm *PoolManager
-//	@param task *dto.ModelCallAuditTask
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-09 10:00:00
-func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) error {
-	return pm.submitAuditTask(task)
 }
 
 // deduplicateAndStoreMessages 批量去重并存储消息
