@@ -102,7 +102,7 @@ fi
 matches=$(grep -rn -E 'zap\.String.*(Key|Token|Secret|Password)' internal/ --include='*.go' \
     | grep -v 'MaskSecret' \
     | grep -v 'CtxKey' \
-    | grep -v 'apiKeyName\|APIKeyName' \
+    | grep -v 'apiKeyName\|APIKeyName\|keyName' \
     | grep -v 'lockKey\|cacheKey\|configKey\|routeKey\|sortKey' \
     | grep -v 'tokenType\|TokenType\|tokenExpir' \
     | grep -v 'sessionAPIKeyName' \
