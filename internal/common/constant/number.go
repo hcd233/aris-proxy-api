@@ -37,6 +37,15 @@ const (
 	ParseFloat64BitSize = 64
 )
 
+// ==================== 日志字段 ====================
+
+const (
+	// LogFieldValueMaxLength 日志字段值最大长度，超出部分截断
+	//	@author centonhuang
+	//	@update 2026-04-09 15:00:00
+	LogFieldValueMaxLength = 512
+)
+
 // ==================== 日志轮转 ====================
 
 const (
