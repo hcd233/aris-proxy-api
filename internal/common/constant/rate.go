@@ -54,14 +54,4 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-09 10:00:00
 	LimitManageAPIKey = 20
-
-	// APIKeyMaxCount 单用户最大 API Key 数量
-	//	@author centonhuang
-	//	@update 2026-04-09 10:00:00
-	APIKeyMaxCount = 5
-
-	// APIKeyRandomLength API Key 随机字符串长度
-	//	@author centonhuang
-	//	@update 2026-04-09 10:00:00
-	APIKeyRandomLength = 24
 )

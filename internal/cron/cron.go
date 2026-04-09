@@ -9,6 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -67,7 +68,7 @@ type cronLoggerAdapter struct {
 
 func newCronLoggerAdapter(module string, logger *zap.Logger) *cronLoggerAdapter {
 	if module == "" {
-		module = "Cron"
+		module = constant.CronDefaultModule
 	}
 	module = strings.TrimSpace(strings.TrimRight(strings.TrimLeft(strings.TrimSpace(module), "["), "]"))
 	return &cronLoggerAdapter{module: module, logger: logger}
@@ -103,7 +104,7 @@ func convertZapKeyValues(keysAndValues ...interface{}) []zap.Field {
 	for i := 0; i < kvLen; i++ {
 		key, ok := keysAndValues[i*2].(string)
 		if !ok {
-			key = "invalid_key"
+			key = constant.CronInvalidKey
 		}
 		value := keysAndValues[i*2+1]
 		zapKeyValues = append(zapKeyValues, zap.Any(key, value))

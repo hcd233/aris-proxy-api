@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -95,10 +96,9 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 		line := strings.TrimRight(raw, "\r\n")
 
 		if line != "" {
-			const dataPrefix = "data: "
-			if strings.HasPrefix(line, dataPrefix) {
-				payload := line[len(dataPrefix):]
-				if payload != "[DONE]" {
+			if strings.HasPrefix(line, constant.SSEDataPrefix) {
+				payload := line[len(constant.SSEDataPrefix):]
+				if payload != constant.SSEDoneSignal {
 					chunk := &dto.OpenAIChatCompletionChunk{}
 					if err := sonic.UnmarshalString(payload, chunk); err != nil {
 						logger.Warn("[OpenAIProxy] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))

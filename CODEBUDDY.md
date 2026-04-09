@@ -396,6 +396,88 @@ go tool cover -html=coverage.out -o coverage.html
 
 **目的**：Redis Key 的一致性对缓存/锁/限流的正确性至关重要，散落在业务代码中容易因拼写错误或格式不一致导致难以排查的 Bug。
 
+### 魔法值禁止规范
+
+**禁止在业务代码中直接使用魔法数字或魔法字符串，所有字面量必须提取为具名常量。**
+
+#### 常量定义位置规则
+
+| 类型 | 定义位置 | 说明 |
+|------|----------|------|
+| 全局通用字符串（URL、前缀、标识符等） | `internal/common/constant/string.go` | 跨包使用的字符串字面量 |
+| 全局通用数字（容量、长度、超时等） | `internal/common/constant/number.go` | 跨包使用的数字字面量 |
+| LLM 协议枚举值（stop_reason、source_type 等） | `internal/enum/` | 属于 LLM API 规范的字符串枚举 |
+| 通用业务枚举值 | `internal/common/enum/` | 业务通用枚举 |
+
+#### 禁止包内 const
+
+**业务包（`service/`、`handler/`、`proxy/`、`converter/` 等）内禁止定义 `const` 块。**
+所有常量必须定义在 `constant/` 或 `enum/` 中，通过 import 引用，确保可在 lint 扫描中统一发现和追踪。
+
+```go
+// ❌ 禁止：service 包内定义 const
+const APIKeyPrefix = "sk-aris-"
+
+// ✅ 正确：定义在 constant/string.go，业务代码 import 引用
+constant.APIKeyPrefix
+```
+
+#### 禁止转发封装常量
+
+**禁止在 `constant/`、`enum/` 中定义 `const X = pkg.Y` 形式的转发封装。** 这类定义只是给另一个包的具名常量起别名，毫无意义。
+
+```go
+// ❌ 禁止：constant 包中转发封装
+const HTTPStatusOK = fiber.StatusOK
+
+// ✅ 正确：业务代码直接引用 fiber 的具名常量
+fiberCtx.Status(fiber.StatusOK)
+```
+
+#### HTTP 状态码
+
+**禁止使用裸数字 HTTP 状态码，直接使用 `fiber.StatusXxx` 具名常量。**
+
+```go
+// ❌ 禁止
+writer.WriteError(500, body)
+return 200, ""
+
+// ✅ 正确
+writer.WriteError(fiber.StatusInternalServerError, body)
+return fiber.StatusOK, ""
+```
+
+#### 时间字段
+
+**DTO 中的时间字段使用 `time.Time` 类型，禁止在 Service 层格式化为字符串。** 格式化由前端/调用方根据需要处理，或在 JSON 序列化层统一处理。
+
+```go
+// ❌ 禁止
+type APIKeyItem struct {
+    CreatedAt string `json:"createdAt"`
+}
+// Service 层
+CreatedAt: key.CreatedAt.Format("2006-01-02 15:04:05"),
+
+// ✅ 正确
+type APIKeyItem struct {
+    CreatedAt time.Time `json:"createdAt"`
+}
+// Service 层
+CreatedAt: key.CreatedAt,
+```
+
+#### lint 扫描豁免范围
+
+以下路径不参与魔法值扫描（这些包本身就是定义字面量的合法位置）：
+- `internal/common/constant/` — 字符串/数字常量定义处
+- `internal/common/enum/` / `internal/enum/` — 枚举定义处
+- `internal/common/ierr/` — 错误哨兵定义处
+- `internal/infrastructure/` — 基础设施层（DB/Redis/对象存储配置）
+- `internal/config/` — 环境变量默认值配置
+- `internal/logger/` — 日志框架初始化配置
+
 ### 循环依赖避免
 
 `util/` 是底层工具包，不允许依赖上层业务包。如果 `util/` 需要引用某个类型，应将该类型下沉到 `common/model/`。
