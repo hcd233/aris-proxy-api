@@ -46,6 +46,9 @@ func NewAPIKeyService() APIKeyService {
 	}
 }
 
+// byteMax byte 类型的取值范围上限（256）
+const byteMax = 256
+
 // generateAPIKey 生成随机 API Key，使用 rejection sampling 避免字节分布偏差
 //
 //	@return string
@@ -54,8 +57,8 @@ func NewAPIKeyService() APIKeyService {
 //	@update 2026-04-09 10:00:00
 func generateAPIKey() (string, error) {
 	charsetLen := byte(len(constant.APIKeyCharset))
-	// rejection sampling: 只保留 [0, 256 - 256%charsetLen) 范围内的字节，避免分布偏差
-	maxAccepted := byte(256 - 256%int(charsetLen))
+	// rejection sampling: 只保留 [0, byteMax - byteMax%charsetLen) 范围内的字节，避免分布偏差
+	maxAccepted := byte(byteMax - byteMax%int(charsetLen))
 	result := make([]byte, constant.APIKeyRandomLength)
 	buf := make([]byte, constant.APIKeyRandomLength*2)
 	filled := 0
@@ -142,7 +145,7 @@ func (s *apikeyService) CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyR
 		ID:        proxyAPIKey.ID,
 		Name:      proxyAPIKey.Name,
 		Key:       proxyAPIKey.Key,
-		CreatedAt: proxyAPIKey.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt: proxyAPIKey.CreatedAt,
 	}
 
 	log.Info("[APIKeyService] API key created",

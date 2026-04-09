@@ -17,13 +17,14 @@ import (
 
 // APIKeyMiddleware API Key 验证中间件
 //
-// 每次请求从数据库查询 API Key 进行验证。
+// 每次请求从数据库查询 API Key 进行验证，并通过 UserID 查询用户名。
 //
 //	@return func(ctx huma.Context, next func(huma.Context))
 //	@author centonhuang
-//	@update 2026-04-04 10:00:00
+//	@update 2026-04-09 17:10:00
 func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 	proxyAPIKeyDAO := dao.GetProxyAPIKeyDAO()
+	userDAO := dao.GetUserDAO()
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		tokenString := ctx.Header("Authorization")
@@ -35,15 +36,23 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		}
 
 		db := database.GetDBInstance(ctx.Context())
-		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, []string{"id", "user_id", "name"})
+		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, []string{"id", "user_id"})
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
 		}
 
-		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, apiKey.UserID)
-		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, apiKey.Name)
+		// 通过 UserID 查询用户名
+		user, err := userDAO.Get(db, &dbmodel.User{ID: apiKey.UserID}, []string{"id", "name"})
+		if err != nil {
+			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] Failed to get user", zap.Error(err))
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			return
+		}
+
+		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, user.ID)
+		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, user.Name)
 		ctx = huma.WithValue(ctx, constant.CtxKeyAPIKeyID, apiKey.ID)
 		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header("User-Agent"))
 		next(ctx)
