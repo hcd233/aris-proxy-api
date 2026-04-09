@@ -82,7 +82,7 @@ func (dao *CosObjDAO) ListObjects(ctx context.Context, userID uint) (objectInfos
 
 	opt := &cos.BucketGetOptions{
 		Prefix:    dirName,
-		MaxKeys:   1000,
+		MaxKeys:   constant.CosListObjectsMaxKeys,
 		Delimiter: "/",
 	}
 

@@ -197,7 +197,7 @@ func (dao *MinioObjDAO) PresignObject(ctx context.Context, userID uint, objectNa
 	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(objectName)))
 
 	// 根据文件扩展名获取 content type
-	contentType := "application/octet-stream"
+	contentType := constant.MIMETypeOctetStream
 	if ext := filepath.Ext(objectName); ext != "" {
 		if mimeType := mime.TypeByExtension(ext); mimeType != "" {
 			contentType = mimeType

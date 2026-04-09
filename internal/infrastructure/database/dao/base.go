@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/config"
@@ -53,8 +54,7 @@ func (dao *baseDAO[ModelT]) BatchCreate(db *gorm.DB, data []*ModelT) (err error)
 //	author centonhuang
 //	update 2024-10-17 02:52:18
 func (dao *baseDAO[ModelT]) Update(db *gorm.DB, data *ModelT, info map[string]any) (err error) {
-	updateAtField := "updated_at"
-	info[updateAtField] = time.Now().UTC()
+	info[constant.DBFieldUpdatedAt] = time.Now().UTC()
 
 	sql := db.Model(data)
 	selectFields := lo.Filter(lo.Keys(info), func(item string, _ int) bool {
