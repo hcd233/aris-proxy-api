@@ -49,4 +49,29 @@ const (
 	//	@author centonhuang
 	//	@update 2026-03-31 10:00:00
 	HTTPIdleConnTimeout = 90 * time.Second
+
+	// CORSPreflightMaxAge CORS 预检（OPTIONS）结果缓存时长（浏览器 Access-Control-Max-Age）
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	CORSPreflightMaxAge = 12 * time.Hour
+
+	// OAuthStateManagerTTL OAuth2 state 条目有效期（CSRF 防护）
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	OAuthStateManagerTTL = 10 * time.Minute
+
+	// OAuthStateCleanupInterval OAuth2 state 过期条目清理周期
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	OAuthStateCleanupInterval = 5 * time.Minute
+
+	// LogMiddlewareSamplingInterval 日志采样规则默认间隔（如 /health）
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	LogMiddlewareSamplingInterval = 5 * time.Minute
+
+	// FiberShutdownTimeout Fiber ShutdownWithTimeout 等待活跃请求结束的上限
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	FiberShutdownTimeout = 30 * time.Second
 )

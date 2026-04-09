@@ -169,4 +169,98 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-09 15:00:00
 	CORSAllowOrigins = "http://localhost:3000"
+
+	// ==================== HTTP 路由路径 ====================
+
+	// RoutePathRoot 根路径
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathRoot = "/"
+
+	// RoutePathHealth 健康检查
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathHealth = "/health"
+
+	// RoutePathSSEHealth SSE 健康检查
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathSSEHealth = "/ssehealth"
+
+	// RoutePathTokenRefresh 刷新 Token
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathTokenRefresh = "/refresh"
+
+	// RoutePathUserCurrent 当前用户
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathUserCurrent = "/current"
+
+	// RoutePathSessionList 会话列表
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathSessionList = "/list"
+
+	// RoutePathOAuthLogin OAuth2 登录入口
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathOAuthLogin = "/login"
+
+	// RoutePathOAuthCallback OAuth2 回调
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathOAuthCallback = "/callback"
+
+	// RoutePathModels 模型列表（OpenAI / Anthropic）
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathModels = "/models"
+
+	// RoutePathAnthropicMessages Anthropic messages
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathAnthropicMessages = "/messages"
+
+	// RoutePathAnthropicMessagesCountTokens Anthropic count_tokens
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathAnthropicMessagesCountTokens = "/messages/count_tokens"
+
+	// RoutePathOpenAIChatCompletions OpenAI chat completions
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathOpenAIChatCompletions = "/chat/completions"
+
+	// RoutePathAPIKeyByID 按 ID 操作 API Key（路径参数）
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathAPIKeyByID = "/{id}"
+
+	// ==================== Guard: 忽略路由扫描计分的常见探测路径 ====================
+
+	// RoutePathFavicon 站点图标（浏览器默认请求）
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathFavicon = "/favicon.ico"
+
+	// RoutePathRobots robots.txt
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathRobots = "/robots.txt"
+
+	// RoutePathAppleTouchIcon Apple touch 图标
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathAppleTouchIcon = "/apple-touch-icon.png"
+
+	// RoutePathAppleTouchIconPrecomposed Apple touch 预合成图标
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathAppleTouchIconPrecomposed = "/apple-touch-icon-precomposed.png"
+
+	// RoutePathWellKnownSecurity security.txt（/.well-known）
+	//	@author centonhuang
+	//	@update 2026-04-10 10:00:00
+	RoutePathWellKnownSecurity = "/.well-known/security.txt"
 )

@@ -379,9 +379,8 @@ MAGIC_EXCLUDE_PATHS=(
     "internal/common/ierr/"
     "internal/common/model/"
     "internal/enum/"
-    "internal/infrastructure/"
     "internal/config/"
-    "internal/logger/"
+    "internal/router/"
 )
 
 # 构造路径排除的 grep -v 管道
@@ -426,8 +425,36 @@ if [[ -n "$magic_number_matches" ]]; then
     echo "$magic_number_matches" | head -30
 fi
 
+# ── 10.1b 魔法 duration 乘数（N * time.*）───────
+# 检测：白名单目录外出现「整数字面量 * time.」形式的 duration 构造（如 5 * time.Minute、30 * time.Second）
+# 说明：10.1 主要覆盖三位数等；小整数作 time 乘数需单独规则，否则易漏报
+magic_duration_matches=$(grep -rn --include='*.go' \
+    -E '\b[0-9]+\s*\*\s*time\.' \
+    internal/ cmd/ 2>/dev/null || true)
+
+magic_duration_matches=$(magic_path_filter "$magic_duration_matches")
+
+magic_duration_matches=$(echo "$magic_duration_matches" \
+    | grep -v '^\s*//' \
+    | grep -v '\`' \
+    | grep -v 'import' \
+    | grep -v '^\s*const ' \
+    | grep -v '\sconst\s' \
+    | grep -v 'logger\.' \
+    | grep -v '\.go:[0-9]*:\s*//' \
+    | grep -v '^$' \
+    || true)
+
+if [[ -n "$magic_duration_matches" ]]; then
+    error "发现魔法 duration 乘数（N * time.*），应提取为具名常量（constant/time.go 等）:"
+    echo "$magic_duration_matches" | head -30
+fi
+
 # ── 10.2 魔法字符串 ────────────────────────────
-# 检测：白名单排除后的目录内在赋值/return/case/比较 语句中出现长度 >= 2 的裸字符串字面量
+# 10.2a 检测：白名单排除后的 internal/ 内在赋值/return/case/比较 语句中出现长度 >= 2 的裸字符串字面量
+#      （仅扫描 internal/，避免 cmd/ 中 cobra 默认值等噪声）
+# 10.2b 检测：复合字面量中独占一行、以 / 开头的路径字符串（如 []string{ "/x", }），
+#      此类行无法被 10.2a 匹配；扫描 internal/ 与 cmd/
 # 语法层过滤：
 #   - 纯注释行
 #   - struct tag 行（含反引号 `）
@@ -439,6 +466,17 @@ fi
 magic_string_matches=$(grep -rn --include='*.go' \
     -E '(=|:=|return|case|\!=|==)[[:space:]]*"[^"]{2,}"' \
     internal/ 2>/dev/null || true)
+
+magic_string_path_elems=$(grep -rn --include='*.go' \
+    -E '^[[:space:]]*"/[^"]+",[[:space:]]*$' \
+    internal/ cmd/ 2>/dev/null || true)
+
+# 10.2c 检测：键值对形式的路径字面量（如 huma Operation 的 Path: "/health"），10.2a 无法匹配 Field: 语法
+magic_string_struct_kv=$(grep -rn --include='*.go' \
+    -E '[A-Za-z_][A-Za-z0-9_]*:\s*"/[^"]+"' \
+    internal/ cmd/ 2>/dev/null || true)
+
+magic_string_matches=$(printf '%s\n%s\n%s' "$magic_string_matches" "$magic_string_path_elems" "$magic_string_struct_kv")
 
 magic_string_matches=$(magic_path_filter "$magic_string_matches")
 
@@ -455,7 +493,7 @@ magic_string_matches=$(echo "$magic_string_matches" \
     || true)
 
 if [[ -n "$magic_string_matches" ]]; then
-    warn "发现魔法字符串，应提取为具名常量（constant/string.go 或包内 const 块）:"
+    error "发现魔法字符串，应提取为具名常量（constant/string.go 或包内 const 块）:"
     echo "$magic_string_matches" | head -30
 fi
 
