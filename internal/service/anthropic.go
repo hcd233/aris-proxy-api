@@ -3,7 +3,6 @@ package service
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/converter"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -137,7 +135,7 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 			var streamDurationMs int64
 
 			anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
-				if firstTokenTime.IsZero() {
+				if firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
 					firstTokenTime = time.Now()
 					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 				}
@@ -161,17 +159,19 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 	}
 
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		startTime := time.Now()
 		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
+		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
-			s.submitAnthropicAudit(ctx, endpoint, exposedModel, nil, err, 0, 0)
+			s.submitAnthropicAudit(ctx, endpoint, exposedModel, nil, err, totalMs, 0)
 			return
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
 		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
-		s.submitAnthropicAudit(ctx, endpoint, exposedModel, anthropicMsg, nil, 0, 0)
+		s.submitAnthropicAudit(ctx, endpoint, exposedModel, anthropicMsg, nil, totalMs, 0)
 	}), nil
 }
 
@@ -240,10 +240,12 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 	}
 
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		startTime := time.Now()
 		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
+		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
-			s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, err, 0, 0)
+			s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, err, totalMs, 0)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
@@ -256,7 +258,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 		writer.WriteJSON(anthropicMsg)
 
 		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
-		s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, anthropicMsg, nil, 0, 0)
+		s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, anthropicMsg, nil, totalMs, 0)
 	}), nil
 }
 
@@ -346,73 +348,15 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	return rsp, nil
 }
 
-// extractAnthropicUpstreamStatusAndError 从 error 中提取上游状态码和错误信息
-func extractAnthropicUpstreamStatusAndError(err error) (int, string) {
-	if err == nil {
-		return fiber.StatusOK, ""
-	}
-	var ue *model.UpstreamError
-	if errors.As(err, &ue) {
-		return ue.StatusCode, ue.Error()
-	}
-	return 0, err.Error()
-}
-
 // submitAnthropicAudit 提交 Anthropic 接口的模型调用审计任务
 func (s *anthropicService) submitAnthropicAudit(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
-	statusCode, errorMessage := extractAnthropicUpstreamStatusAndError(err)
-	inputTokens, outputTokens := 0, 0
-	cacheCreation, cacheRead := 0, 0
-	if msg != nil && msg.Usage != nil {
-		inputTokens = msg.Usage.InputTokens
-		outputTokens = msg.Usage.OutputTokens
-		cacheCreation = msg.Usage.CacheCreationInputTokens
-		cacheRead = msg.Usage.CacheReadInputTokens
-	}
-	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
-		Ctx:                      util.CopyContextValues(ctx),
-		APIKeyID:                 util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
-		ModelID:                  endpoint.ID,
-		Model:                    model,
-		UpstreamProvider:         endpoint.Provider,
-		APIProvider:              string(enum.ProviderAnthropic),
-		InputTokens:              inputTokens,
-		OutputTokens:             outputTokens,
-		CacheCreationInputTokens: cacheCreation,
-		CacheReadInputTokens:     cacheRead,
-		FirstTokenLatencyMs:      firstTokenLatencyMs,
-		StreamDurationMs:         streamDurationMs,
-		UserAgent:                util.CtxValueString(ctx, constant.CtxKeyClient),
-		UpstreamStatusCode:       statusCode,
-		ErrorMessage:             errorMessage,
-		TraceID:                  util.CtxValueString(ctx, constant.CtxKeyTraceID),
-	})
+	submitAuditTask(ctx, endpoint, model, enum.ProviderAnthropic, auditTokensFromAnthropicUsage(msg), firstTokenLatencyMs, streamDurationMs, err)
 }
 
 // submitAnthropicAuditFromOpenAICompletion 提交 Anthropic 接口调用 OpenAI 上游的审计任务
 func (s *anthropicService) submitAnthropicAuditFromOpenAICompletion(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
-	statusCode, errorMessage := extractAnthropicUpstreamStatusAndError(err)
-	inputTokens, outputTokens := 0, 0
-	if msg != nil && msg.Usage != nil {
-		inputTokens = msg.Usage.InputTokens
-		outputTokens = msg.Usage.OutputTokens
-	}
-	pool.GetPoolManager().SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
-		Ctx:                      util.CopyContextValues(ctx),
-		APIKeyID:                 util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
-		ModelID:                  endpoint.ID,
-		Model:                    model,
-		UpstreamProvider:         endpoint.Provider,
-		APIProvider:              string(enum.ProviderAnthropic),
-		InputTokens:              inputTokens,
-		OutputTokens:             outputTokens,
-		CacheCreationInputTokens: 0,
-		CacheReadInputTokens:     0,
-		FirstTokenLatencyMs:      firstTokenLatencyMs,
-		StreamDurationMs:         streamDurationMs,
-		UserAgent:                util.CtxValueString(ctx, constant.CtxKeyClient),
-		UpstreamStatusCode:       statusCode,
-		ErrorMessage:             errorMessage,
-		TraceID:                  util.CtxValueString(ctx, constant.CtxKeyTraceID),
-	})
+	tokens := auditTokensFromAnthropicUsage(msg)
+	tokens.CacheCreation = 0
+	tokens.CacheRead = 0
+	submitAuditTask(ctx, endpoint, model, enum.ProviderAnthropic, tokens, firstTokenLatencyMs, streamDurationMs, err)
 }
