@@ -11,6 +11,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
 
@@ -51,11 +52,14 @@ return {strikes, 0}
 // GuardConfig 路由扫描防护配置
 //
 //	@author centonhuang
-//	@update 2026-04-07 10:00:00
+//	@update 2026-04-10 10:00:00
 type GuardConfig struct {
 	StrikeThreshold int           // 在观察窗口内触发封禁的违规次数阈值
 	StrikeWindow    time.Duration // 违规计数的观察窗口时长
 	BanDuration     time.Duration // 触发封禁后的封禁时长
+	// IgnoredPaths lists paths where 404 must not increment route-scan strikes.
+	// If nil, DefaultGuardIgnored404Paths is used.
+	IgnoredPaths []string
 }
 
 // isRouteNotFound 判断 Fiber 返回的错误是否为路由未匹配
@@ -76,14 +80,15 @@ func isRouteNotFound(err error) bool {
 //     @param cfg GuardConfig
 //     @return fiber.Handler
 //     @author centonhuang
-//     @update 2026-04-07 10:00:00
+//     @update 2026-04-10 10:00:00
 func GuardMiddleware(cfg GuardConfig) fiber.Handler {
-
 	rdb := cache.GetRedisClient()
 	thresholdStr := strconv.Itoa(cfg.StrikeThreshold)
 	windowTTLStr := strconv.FormatInt(int64(cfg.StrikeWindow.Seconds()), 10)
 	banTTLStr := strconv.FormatInt(int64(cfg.BanDuration.Seconds()), 10)
-
+	ignoredPaths := lo.SliceToMap(cfg.IgnoredPaths, func(p string) (string, struct{}) {
+		return p, struct{}{}
+	})
 	return func(c *fiber.Ctx) error {
 		ip := c.IP()
 		banKey := fmt.Sprintf(constant.ScannerBanKeyTemplate, ip)
@@ -100,6 +105,10 @@ func GuardMiddleware(cfg GuardConfig) fiber.Handler {
 		nextErr := c.Next()
 
 		if isRouteNotFound(nextErr) {
+			// Do not treat common browser/crawler probes as route scanning.
+			if _, skip := ignoredPaths[c.Path()]; skip {
+				return nextErr
+			}
 			strikeKey := fmt.Sprintf(constant.ScannerStrikeKeyTemplate, ip)
 
 			result, luaErr := scannerGuardLua.Run(

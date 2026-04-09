@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"syscall"
-	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -73,6 +72,14 @@ var startServerCmd = &cobra.Command{
 				StrikeThreshold: constant.GuardStrikeThreshold,
 				StrikeWindow:    constant.GuardStrikeWindow,
 				BanDuration:     constant.GuardBanDuration,
+				IgnoredPaths: []string{
+					constant.RoutePathRoot,
+					constant.RoutePathFavicon,
+					constant.RoutePathRobots,
+					constant.RoutePathAppleTouchIcon,
+					constant.RoutePathAppleTouchIconPrecomposed,
+					constant.RoutePathWellKnownSecurity,
+				},
 			}),
 			middleware.FgprofMiddleware(),
 			middleware.CORSMiddleware(),
@@ -80,8 +87,8 @@ var startServerCmd = &cobra.Command{
 			middleware.TraceMiddleware(),
 			middleware.LogMiddleware(middleware.LogMiddlewareConfig{
 				SamplingRules: []middleware.LogSamplingRule{
-					{Path: "/health", Interval: 5 * time.Minute},
-					{Path: "/ssehealth", Interval: 5 * time.Minute},
+					{Path: constant.RoutePathHealth, Interval: constant.LogMiddlewareSamplingInterval},
+					{Path: constant.RoutePathSSEHealth, Interval: constant.LogMiddlewareSamplingInterval},
 				},
 			}),
 		)
@@ -132,7 +139,7 @@ func gracefulShutdown(app *fiber.App) {
 
 		// Step 1: 停止接受新 HTTP 请求，等待现有请求完成
 		logger.Logger().Info("[Server] Step 1/5: Shutting down HTTP server...")
-		if err := app.ShutdownWithTimeout(30 * time.Second); err != nil {
+		if err := app.ShutdownWithTimeout(constant.FiberShutdownTimeout); err != nil {
 			logger.Logger().Error("[Server] HTTP server shutdown error", zap.Error(err))
 		}
 

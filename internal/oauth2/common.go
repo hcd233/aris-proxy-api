@@ -42,7 +42,7 @@ type StateManager struct {
 func NewStateManager() *StateManager {
 	sm := &StateManager{
 		states: make(map[string]time.Time),
-		ttl:    10 * time.Minute,
+		ttl:    constant.OAuthStateManagerTTL,
 	}
 	go sm.cleanup()
 	return sm
@@ -82,7 +82,7 @@ func (sm *StateManager) VerifyState(state string) bool {
 
 // cleanup 定期清理过期state
 func (sm *StateManager) cleanup() {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(constant.OAuthStateCleanupInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {

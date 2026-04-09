@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"time"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -20,6 +18,6 @@ func CORSMiddleware() fiber.Handler {
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Requested-With,X-Trace-Id",
 		ExposeHeaders:    "Content-Length",
 		AllowCredentials: true,
-		MaxAge:           int(12 * time.Hour.Seconds()),
+		MaxAge:           int(constant.CORSPreflightMaxAge.Seconds()),
 	})
 }

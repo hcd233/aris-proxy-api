@@ -13,7 +13,10 @@ LDFLAGS    := -s -w
 # -trimpath: 去除编译路径信息（减小体积 + 安全）
 BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 
-.PHONY: build build-upx build-dev build-debug clean test test-cover lint-conv fgprof help
+# golangci-lint release tag (https://github.com/golangci/golangci-lint/releases)
+GOLANGCI_LINT_VERSION ?= v2.11.4
+
+.PHONY: build build-upx build-dev build-debug clean test test-cover lint lint-conv lint-go fgprof help
 
 ## build: 生产构建（strip 符号）
 build:
@@ -67,6 +70,11 @@ test-cover:
 ## lint-conv: 扫描项目编码规范
 lint-conv:
 	@bash script/lint-conventions.sh
+
+
+
+## lint: 编码规范脚本 + golangci-lint
+lint: lint-conv 
 
 ## fgprof: 从远程服务拉取 fgprof profile 并打开 Web 可视化（火焰图+调用图）
 fgprof:
