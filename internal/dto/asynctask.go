@@ -51,7 +51,6 @@ type ScoreTask struct {
 //	@update 2026-04-09 10:00:00
 type ModelCallAuditTask struct {
 	Ctx                      context.Context
-	APIKeyID                 uint
 	ModelID                  uint
 	Model                    string
 	UpstreamProvider         string
@@ -62,8 +61,36 @@ type ModelCallAuditTask struct {
 	CacheReadInputTokens     int
 	FirstTokenLatencyMs      int64
 	StreamDurationMs         int64
-	UserAgent                string
 	UpstreamStatusCode       int
 	ErrorMessage             string
-	TraceID                  string
+}
+
+// SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数
+//
+//	@receiver t *ModelCallAuditTask
+//	@param usage *OpenAICompletionUsage
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsage) {
+	if usage == nil {
+		return
+	}
+	t.InputTokens = usage.PromptTokens
+	t.OutputTokens = usage.CompletionTokens
+}
+
+// SetTokensFromAnthropicUsage 从 Anthropic Message Usage 设置 token 计数
+//
+//	@receiver t *ModelCallAuditTask
+//	@param msg *AnthropicMessage
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) {
+	if msg == nil || msg.Usage == nil {
+		return
+	}
+	t.InputTokens = msg.Usage.InputTokens
+	t.OutputTokens = msg.Usage.OutputTokens
+	t.CacheCreationInputTokens = msg.Usage.CacheCreationInputTokens
+	t.CacheReadInputTokens = msg.Usage.CacheReadInputTokens
 }

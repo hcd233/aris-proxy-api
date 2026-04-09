@@ -5,6 +5,7 @@
 package pool
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
@@ -101,7 +102,7 @@ func (pm *PoolManager) submitAuditTask(task *dto.ModelCallAuditTask) error {
 
 	return pm.storePool.Go(func() {
 		audit := &dbmodel.ModelCallAudit{
-			APIKeyID:                 task.APIKeyID,
+			APIKeyID:                 util.CtxValueUint(task.Ctx, constant.CtxKeyAPIKeyID),
 			ModelID:                  task.ModelID,
 			Model:                    task.Model,
 			UpstreamProvider:         task.UpstreamProvider,
@@ -112,10 +113,10 @@ func (pm *PoolManager) submitAuditTask(task *dto.ModelCallAuditTask) error {
 			CacheReadInputTokens:     task.CacheReadInputTokens,
 			FirstTokenLatencyMs:      task.FirstTokenLatencyMs,
 			StreamDurationMs:         task.StreamDurationMs,
-			UserAgent:                task.UserAgent,
+			UserAgent:                util.CtxValueString(task.Ctx, constant.CtxKeyClient),
 			UpstreamStatusCode:       task.UpstreamStatusCode,
 			ErrorMessage:             task.ErrorMessage,
-			TraceID:                  task.TraceID,
+			TraceID:                  util.CtxValueString(task.Ctx, constant.CtxKeyTraceID),
 		}
 		if err := dao.GetModelCallAuditDAO().Create(db, audit); err != nil {
 			l.Error("[StorePool] Failed to store audit record", zap.Error(err))

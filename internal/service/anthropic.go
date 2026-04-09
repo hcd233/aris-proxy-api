@@ -154,7 +154,18 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 			}
 
 			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
-			s.submitAnthropicAudit(ctx, endpoint, exposedModel, anthropicMsg, err, firstTokenLatencyMs, streamDurationMs)
+			task := &dto.ModelCallAuditTask{
+				Ctx:                 util.CopyContextValues(ctx),
+				ModelID:             endpoint.ID,
+				Model:               exposedModel,
+				UpstreamProvider:    endpoint.Provider,
+				APIProvider:         string(enum.ProviderAnthropic),
+				FirstTokenLatencyMs: firstTokenLatencyMs,
+				StreamDurationMs:    streamDurationMs,
+			}
+			task.SetTokensFromAnthropicUsage(anthropicMsg)
+			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			pool.GetPoolManager().SubmitModelCallAuditTask(task)
 		}), nil
 	}
 
@@ -164,14 +175,32 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
-			s.submitAnthropicAudit(ctx, endpoint, exposedModel, nil, err, totalMs, 0)
+			task := &dto.ModelCallAuditTask{
+				Ctx:                 util.CopyContextValues(ctx),
+				ModelID:             endpoint.ID,
+				Model:               exposedModel,
+				UpstreamProvider:    endpoint.Provider,
+				APIProvider:         string(enum.ProviderAnthropic),
+				FirstTokenLatencyMs: totalMs,
+			}
+			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			pool.GetPoolManager().SubmitModelCallAuditTask(task)
 			return
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
 		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
-		s.submitAnthropicAudit(ctx, endpoint, exposedModel, anthropicMsg, nil, totalMs, 0)
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               exposedModel,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         string(enum.ProviderAnthropic),
+			FirstTokenLatencyMs: totalMs,
+		}
+		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	}), nil
 }
 
@@ -225,17 +254,47 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 			}
 
 			if proxyErr != nil || completion == nil {
-				s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, proxyErr, firstTokenLatencyMs, streamDurationMs)
+				task := &dto.ModelCallAuditTask{
+					Ctx:                 util.CopyContextValues(ctx),
+					ModelID:             endpoint.ID,
+					Model:               exposedModel,
+					UpstreamProvider:    endpoint.Provider,
+					APIProvider:         string(enum.ProviderAnthropic),
+					FirstTokenLatencyMs: firstTokenLatencyMs,
+					StreamDurationMs:    streamDurationMs,
+				}
+				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(proxyErr)
+				pool.GetPoolManager().SubmitModelCallAuditTask(task)
 				return
 			}
 			anthropicMsg, err := conv.ToAnthropicResponse(completion)
 			if err != nil {
 				logger.Error("[AnthropicService] Failed to convert for storage", zap.Error(err))
-				s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, err, firstTokenLatencyMs, streamDurationMs)
+				task := &dto.ModelCallAuditTask{
+					Ctx:                 util.CopyContextValues(ctx),
+					ModelID:             endpoint.ID,
+					Model:               exposedModel,
+					UpstreamProvider:    endpoint.Provider,
+					APIProvider:         string(enum.ProviderAnthropic),
+					FirstTokenLatencyMs: firstTokenLatencyMs,
+					StreamDurationMs:    streamDurationMs,
+				}
+				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+				pool.GetPoolManager().SubmitModelCallAuditTask(task)
 				return
 			}
 			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
-			s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, anthropicMsg, nil, firstTokenLatencyMs, streamDurationMs)
+			task := &dto.ModelCallAuditTask{
+				Ctx:                 util.CopyContextValues(ctx),
+				ModelID:             endpoint.ID,
+				Model:               exposedModel,
+				UpstreamProvider:    endpoint.Provider,
+				APIProvider:         string(enum.ProviderAnthropic),
+				FirstTokenLatencyMs: firstTokenLatencyMs,
+				StreamDurationMs:    streamDurationMs,
+			}
+			task.SetTokensFromAnthropicUsage(anthropicMsg)
+			pool.GetPoolManager().SubmitModelCallAuditTask(task)
 		}), nil
 	}
 
@@ -245,7 +304,16 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
-			s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, nil, err, totalMs, 0)
+			task := &dto.ModelCallAuditTask{
+				Ctx:                 util.CopyContextValues(ctx),
+				ModelID:             endpoint.ID,
+				Model:               exposedModel,
+				UpstreamProvider:    endpoint.Provider,
+				APIProvider:         string(enum.ProviderAnthropic),
+				FirstTokenLatencyMs: totalMs,
+			}
+			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			pool.GetPoolManager().SubmitModelCallAuditTask(task)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
@@ -258,7 +326,16 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 		writer.WriteJSON(anthropicMsg)
 
 		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
-		s.submitAnthropicAuditFromOpenAICompletion(ctx, endpoint, exposedModel, anthropicMsg, nil, totalMs, 0)
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               exposedModel,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         string(enum.ProviderAnthropic),
+			FirstTokenLatencyMs: totalMs,
+		}
+		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	}), nil
 }
 
@@ -346,17 +423,4 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	}
 
 	return rsp, nil
-}
-
-// submitAnthropicAudit 提交 Anthropic 接口的模型调用审计任务
-func (s *anthropicService) submitAnthropicAudit(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
-	submitAuditTask(ctx, endpoint, model, enum.ProviderAnthropic, auditTokensFromAnthropicUsage(msg), firstTokenLatencyMs, streamDurationMs, err)
-}
-
-// submitAnthropicAuditFromOpenAICompletion 提交 Anthropic 接口调用 OpenAI 上游的审计任务
-func (s *anthropicService) submitAnthropicAuditFromOpenAICompletion(ctx context.Context, endpoint *dbmodel.ModelEndpoint, model string, msg *dto.AnthropicMessage, err error, firstTokenLatencyMs, streamDurationMs int64) {
-	tokens := auditTokensFromAnthropicUsage(msg)
-	tokens.CacheCreation = 0
-	tokens.CacheRead = 0
-	submitAuditTask(ctx, endpoint, model, enum.ProviderAnthropic, tokens, firstTokenLatencyMs, streamDurationMs, err)
 }
