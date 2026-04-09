@@ -3,7 +3,6 @@
     "name": "non_stream",
     "description": "Non-streaming call audit fields",
     "task": {
-      "api_key_id": 1,
       "model_id": 10,
       "model": "gpt-4o",
       "upstream_provider": "openai",
@@ -14,17 +13,14 @@
       "cache_read_input_tokens": 0,
       "first_token_latency_ms": 0,
       "stream_duration_ms": 0,
-      "user_agent": "curl/8.1.2",
       "upstream_status_code": 200,
-      "error_message": "",
-      "trace_id": "trace-123"
+      "error_message": ""
     }
   },
   {
     "name": "stream_success",
     "description": "Streaming call audit fields",
     "task": {
-      "api_key_id": 2,
       "model_id": 20,
       "model": "claude-sonnet-4-20250514",
       "upstream_provider": "anthropic",
@@ -35,17 +31,14 @@
       "cache_read_input_tokens": 150,
       "first_token_latency_ms": 320,
       "stream_duration_ms": 4500,
-      "user_agent": "MyApp/1.0",
       "upstream_status_code": 200,
-      "error_message": "",
-      "trace_id": "trace-456"
+      "error_message": ""
     }
   },
   {
     "name": "upstream_error",
     "description": "Upstream error fields",
     "task": {
-      "api_key_id": 3,
       "model_id": 30,
       "model": "gpt-4o-mini",
       "upstream_provider": "openai",
@@ -56,10 +49,8 @@
       "cache_read_input_tokens": 0,
       "first_token_latency_ms": 0,
       "stream_duration_ms": 0,
-      "user_agent": "TestAgent",
       "upstream_status_code": 429,
-      "error_message": "upstream returned status 429",
-      "trace_id": "trace-789"
+      "error_message": "upstream returned status 429"
     }
   }
 ]

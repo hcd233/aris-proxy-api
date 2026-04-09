@@ -265,6 +265,14 @@ if [[ -n "$matches" ]]; then
     echo "$matches" | head -20
 fi
 
+# 9.4 DTO 层禁止依赖数据库模型层（dto 包禁止导入 infrastructure/database/model）
+matches=$(grep -rn '"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"' \
+    internal/dto/ --include='*.go' 2>/dev/null || true)
+if [[ -n "$matches" ]]; then
+    error "DTO 层禁止依赖数据库模型层（internal/dto/ 禁止导入 infrastructure/database/model），DTO 函数需要 dbmodel 字段时应将具体字段作为参数传入:"
+    echo "$matches" | head -20
+fi
+
 # ─────────────────────────────────────────────
 # 10. 魔法数字 & 魔法字符串
 # ─────────────────────────────────────────────

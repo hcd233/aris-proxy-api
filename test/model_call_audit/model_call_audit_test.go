@@ -14,7 +14,6 @@ type testCase struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Task        struct {
-		APIKeyID                 uint   `json:"api_key_id"`
 		ModelID                  uint   `json:"model_id"`
 		Model                    string `json:"model"`
 		UpstreamProvider         string `json:"upstream_provider"`
@@ -25,10 +24,8 @@ type testCase struct {
 		CacheReadInputTokens     int    `json:"cache_read_input_tokens"`
 		FirstTokenLatencyMs      int64  `json:"first_token_latency_ms"`
 		StreamDurationMs         int64  `json:"stream_duration_ms"`
-		UserAgent                string `json:"user_agent"`
 		UpstreamStatusCode       int    `json:"upstream_status_code"`
 		ErrorMessage             string `json:"error_message"`
-		TraceID                  string `json:"trace_id"`
 	} `json:"task"`
 }
 
@@ -52,7 +49,6 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			task := &dto.ModelCallAuditTask{
 				Ctx:                      context.Background(),
-				APIKeyID:                 tc.Task.APIKeyID,
 				ModelID:                  tc.Task.ModelID,
 				Model:                    tc.Task.Model,
 				UpstreamProvider:         tc.Task.UpstreamProvider,
@@ -63,15 +59,10 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 				CacheReadInputTokens:     tc.Task.CacheReadInputTokens,
 				FirstTokenLatencyMs:      tc.Task.FirstTokenLatencyMs,
 				StreamDurationMs:         tc.Task.StreamDurationMs,
-				UserAgent:                tc.Task.UserAgent,
 				UpstreamStatusCode:       tc.Task.UpstreamStatusCode,
 				ErrorMessage:             tc.Task.ErrorMessage,
-				TraceID:                  tc.Task.TraceID,
 			}
 
-			if task.APIKeyID != tc.Task.APIKeyID {
-				t.Errorf("APIKeyID = %d, want %d", task.APIKeyID, tc.Task.APIKeyID)
-			}
 			if task.Model != tc.Task.Model {
 				t.Errorf("Model = %q, want %q", task.Model, tc.Task.Model)
 			}
@@ -99,17 +90,11 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 			if task.StreamDurationMs != tc.Task.StreamDurationMs {
 				t.Errorf("StreamDurationMs = %d, want %d", task.StreamDurationMs, tc.Task.StreamDurationMs)
 			}
-			if task.UserAgent != tc.Task.UserAgent {
-				t.Errorf("UserAgent = %q, want %q", task.UserAgent, tc.Task.UserAgent)
-			}
 			if task.UpstreamStatusCode != tc.Task.UpstreamStatusCode {
 				t.Errorf("UpstreamStatusCode = %d, want %d", task.UpstreamStatusCode, tc.Task.UpstreamStatusCode)
 			}
 			if task.ErrorMessage != tc.Task.ErrorMessage {
 				t.Errorf("ErrorMessage = %q, want %q", task.ErrorMessage, tc.Task.ErrorMessage)
-			}
-			if task.TraceID != tc.Task.TraceID {
-				t.Errorf("TraceID = %q, want %q", task.TraceID, tc.Task.TraceID)
 			}
 		})
 	}
