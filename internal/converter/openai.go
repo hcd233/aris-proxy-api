@@ -472,13 +472,15 @@ func isEmptyObjectSchema(schema *dto.JSONSchemaProperty) bool {
 
 // normalizeOpenAISchema 规范化 JSON Schema，确保符合 OpenAI 要求
 // - 清除 $schema（不应出现在 parameters 内部）
+// 注意：返回的是浅拷贝，不会修改入参
 func normalizeOpenAISchema(schema *dto.JSONSchemaProperty) *dto.JSONSchemaProperty {
 	if schema == nil {
 		return nil
 	}
-	// 清除 SchemaURI（$schema 不应出现在 parameters 内部）
-	schema.SchemaURI = ""
-	return schema
+	// 创建浅拷贝以避免修改入参（防止污染原始 InputSchema）
+	copied := *schema
+	copied.SchemaURI = ""
+	return &copied
 }
 
 func convertAnthropicToolChoiceToOpenAI(tc *dto.AnthropicToolChoice) *dto.OpenAIChatCompletionToolChoiceParam {
