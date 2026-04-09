@@ -44,4 +44,24 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-07 10:00:00
 	GuardBanDuration = 1 * time.Hour
+
+	// PeriodManageAPIKey API Key 管理接口限频周期
+	//	@author centonhuang
+	//	@update 2026-04-09 10:00:00
+	PeriodManageAPIKey = 1 * time.Minute
+
+	// LimitManageAPIKey API Key 管理接口限频（每分钟最多 20 次）
+	//	@author centonhuang
+	//	@update 2026-04-09 10:00:00
+	LimitManageAPIKey = 20
+
+	// APIKeyMaxCount 单用户最大 API Key 数量
+	//	@author centonhuang
+	//	@update 2026-04-09 10:00:00
+	APIKeyMaxCount = 5
+
+	// APIKeyRandomLength API Key 随机字符串长度
+	//	@author centonhuang
+	//	@update 2026-04-09 10:00:00
+	APIKeyRandomLength = 24
 )
