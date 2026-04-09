@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
@@ -14,6 +15,13 @@ func initAPIKeyRouter(apikeyGroup huma.API) {
 	apiKeyHandler := handler.NewAPIKeyHandler()
 
 	apikeyGroup.UseMiddleware(middleware.JwtMiddleware())
+	// 限流: 防止快速创建 Key 或枚举 ID
+	apikeyGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
+		"apikey-manage",
+		constant.CtxKeyUserID,
+		constant.PeriodManageAPIKey,
+		constant.LimitManageAPIKey,
+	))
 
 	huma.Register(apikeyGroup, huma.Operation{
 		OperationID: "createAPIKey",

@@ -151,16 +151,16 @@ const (
 	//	@update 2026-04-09 15:00:00
 	MaskSecretPlaceholder = "***"
 
-	// ==================== API Key ====================
+	// ==================== API Key 常量 ====================
 
-	// APIKeyPrefix API Key 固定前缀
+	// APIKeyPrefix API Key 前缀
 	//	@author centonhuang
-	//	@update 2026-04-09 15:00:00
+	//	@update 2026-04-09 10:00:00
 	APIKeyPrefix = "sk-aris-"
 
-	// APIKeyCharset API Key 随机字符集
+	// APIKeyCharset API Key 字符集
 	//	@author centonhuang
-	//	@update 2026-04-09 15:00:00
+	//	@update 2026-04-09 10:00:00
 	APIKeyCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 	// ==================== CORS ====================

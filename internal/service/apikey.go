@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -26,7 +25,7 @@ import (
 //	@update 2026-04-08 10:00:00
 type APIKeyService interface {
 	CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyReq) (*dto.CreateAPIKeyRsp, error)
-	ListAPIKeys(ctx context.Context) (*dto.ListAPIKeyRsp, error)
+	ListAPIKeys(ctx context.Context) (*dto.ListAPIKeysRsp, error)
 	DeleteAPIKey(ctx context.Context, req *dto.DeleteAPIKeyReq) (*dto.EmptyRsp, error)
 }
 
@@ -47,22 +46,45 @@ func NewAPIKeyService() APIKeyService {
 	}
 }
 
-// generateAPIKey 生成随机 API Key
+// generateAPIKey 生成随机 API Key，使用 rejection sampling 避免字节分布偏差
 //
 //	@return string
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-08 10:00:00
+//	@update 2026-04-09 10:00:00
 func generateAPIKey() (string, error) {
+	charsetLen := byte(len(constant.APIKeyCharset))
+	// rejection sampling: 只保留 [0, 256 - 256%charsetLen) 范围内的字节，避免分布偏差
+	maxAccepted := byte(256 - 256%int(charsetLen))
 	result := make([]byte, constant.APIKeyRandomLength)
-	charsetLen := len(constant.APIKeyCharset)
-	if _, err := rand.Read(result); err != nil {
-		return "", err
+	buf := make([]byte, constant.APIKeyRandomLength*2)
+	filled := 0
+	for filled < constant.APIKeyRandomLength {
+		if _, err := rand.Read(buf); err != nil {
+			return "", ierr.Wrap(ierr.ErrInternal, err, "generate random bytes for API key")
+		}
+		for _, b := range buf {
+			if filled >= constant.APIKeyRandomLength {
+				break
+			}
+			if b < maxAccepted {
+				result[filled] = constant.APIKeyCharset[int(b)%int(charsetLen)]
+				filled++
+			}
+		}
 	}
-	for i := range result {
-		result[i] = constant.APIKeyCharset[int(result[i])%charsetLen]
-	}
-	return constant.APIKeyPrefix + strings.ToLower(string(result)), nil
+	return constant.APIKeyPrefix + string(result), nil
+}
+
+// countAPIKeys 统计用户已有的 API Key 数量（含历史 user_id=0 的 key）
+//
+//	@receiver s *apikeyService
+//	@param db *gorm.DB
+//	@param userID uint
+//	@return int64
+//	@return error
+func (s *apikeyService) countAPIKeys(db *gorm.DB, userID uint) (int64, error) {
+	return s.proxyAPIKeyDAO.Count(db, &dbmodel.ProxyAPIKey{UserID: userID})
 }
 
 // CreateAPIKey 创建 API Key
@@ -73,16 +95,14 @@ func generateAPIKey() (string, error) {
 //	@return *dto.CreateAPIKeyRsp
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-08 10:00:00
+//	@update 2026-04-09 10:00:00
 func (s *apikeyService) CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyReq) (*dto.CreateAPIKeyRsp, error) {
 	rsp := &dto.CreateAPIKeyRsp{}
 
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-
 	log := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
 
-	// 检查用户是否存在
 	user, err := s.userDAO.Get(db, &dbmodel.User{ID: userID}, []string{"id", "name"})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -95,35 +115,22 @@ func (s *apikeyService) CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyR
 		return rsp, nil
 	}
 
-	// 检查用户已创建的 key 数量
-	existingKeys, err := s.proxyAPIKeyDAO.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, []string{"id"})
-	if err != nil {
-		log.Error("[APIKeyService] Failed to batch get API keys when creating", zap.Error(err))
-		rsp.Error = ierr.ErrDBQuery.BizError()
-		return rsp, nil
-	}
-	if len(existingKeys) >= constant.APIKeyMaxCount {
-		log.Warn("[APIKeyService] API key count exceeds limit",
-			zap.Uint("userID", userID),
-			zap.Int("existingCount", len(existingKeys)),
-			zap.Int("maxCount", constant.APIKeyMaxCount))
-		rsp.Error = ierr.ErrQuotaExceeded.BizError()
+	if err := s.checkAPIKeyQuota(ctx, db, userID, log); err != nil {
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return rsp, nil
 	}
 
-	// 生成 API Key
-	apiKey, err := generateAPIKey()
+	key, err := generateAPIKey()
 	if err != nil {
 		log.Error("[APIKeyService] Failed to generate API key", zap.Error(err))
 		rsp.Error = ierr.ErrInternal.BizError()
 		return rsp, nil
 	}
 
-	// 创建记录
 	proxyAPIKey := &dbmodel.ProxyAPIKey{
 		UserID: userID,
 		Name:   req.Body.Name,
-		Key:    apiKey,
+		Key:    key,
 	}
 	if err := s.proxyAPIKeyDAO.Create(db, proxyAPIKey); err != nil {
 		log.Error("[APIKeyService] Failed to create API key", zap.Error(err), zap.String("name", req.Body.Name))
@@ -135,7 +142,7 @@ func (s *apikeyService) CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyR
 		ID:        proxyAPIKey.ID,
 		Name:      proxyAPIKey.Name,
 		Key:       proxyAPIKey.Key,
-		CreatedAt: proxyAPIKey.CreatedAt,
+		CreatedAt: proxyAPIKey.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	log.Info("[APIKeyService] API key created",
@@ -147,55 +154,85 @@ func (s *apikeyService) CreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyR
 	return rsp, nil
 }
 
+// checkAPIKeyQuota 检查用户是否超出 API Key 数量配额
+//
+//	@receiver s *apikeyService
+//	@param ctx context.Context
+//	@param db *gorm.DB
+//	@param userID uint
+//	@param log *zap.Logger
+//	@return error
+func (s *apikeyService) checkAPIKeyQuota(ctx context.Context, db *gorm.DB, userID uint, log *zap.Logger) error {
+	count, err := s.countAPIKeys(db, userID)
+	if err != nil {
+		log.Error("[APIKeyService] Failed to count API keys", zap.Error(err), zap.Uint("userID", userID))
+		return ierr.Wrap(ierr.ErrDBQuery, err, "count api keys for quota check")
+	}
+	if count >= constant.APIKeyMaxCount {
+		log.Warn("[APIKeyService] API key count exceeds limit",
+			zap.Uint("userID", userID),
+			zap.Int64("existingCount", count),
+			zap.Int("maxCount", constant.APIKeyMaxCount))
+		return ierr.New(ierr.ErrQuotaExceeded, "api key count exceeds limit")
+	}
+	return nil
+}
+
 // ListAPIKeys 列出 API Keys
 //
 //	@receiver s *apikeyService
 //	@param ctx context.Context
-//	@return *dto.ListAPIKeyRsp
+//	@return *dto.ListAPIKeysRsp
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-08 10:00:00
-func (s *apikeyService) ListAPIKeys(ctx context.Context) (*dto.ListAPIKeyRsp, error) {
-	rsp := &dto.ListAPIKeyRsp{}
+//	@update 2026-04-09 10:00:00
+func (s *apikeyService) ListAPIKeys(ctx context.Context) (*dto.ListAPIKeysRsp, error) {
+	rsp := &dto.ListAPIKeysRsp{}
 
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	permission := util.CtxValueString(ctx, constant.CtxKeyPermission)
+	permission := util.CtxValuePermission(ctx)
 
 	log := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
 
-	var keys []*dbmodel.ProxyAPIKey
-	var err error
-
-	if enum.Permission(permission) == enum.PermissionAdmin {
-		// admin: 返回所有 key
-		keys, err = s.proxyAPIKeyDAO.BatchGet(db, &dbmodel.ProxyAPIKey{}, []string{"id", "user_id", "name", "key", "created_at"})
-	} else {
-		// 普通用户: 只返回自己的 key
-		keys, err = s.proxyAPIKeyDAO.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, []string{"id", "user_id", "name", "key", "created_at"})
-	}
+	keys, err := s.queryAPIKeys(db, userID, permission)
 	if err != nil {
 		log.Error("[APIKeyService] Failed to list API keys", zap.Error(err))
 		rsp.Error = ierr.ErrDBQuery.BizError()
 		return rsp, nil
 	}
 
-	rsp.Keys = make([]*dto.APIKeyItem, 0, len(keys))
-	for _, key := range keys {
-		rsp.Keys = append(rsp.Keys, &dto.APIKeyItem{
-			ID:        key.ID,
-			Name:      key.Name,
-			Key:       util.MaskSecret(key.Key),
-			CreatedAt: key.CreatedAt,
-		})
-	}
+	rsp.Keys = toAPIKeyItems(keys)
 
 	log.Info("[APIKeyService] List API keys",
 		zap.Uint("userID", userID),
-		zap.Bool("isAdmin", enum.Permission(permission) == enum.PermissionAdmin),
+		zap.Bool("isAdmin", permission == enum.PermissionAdmin),
 		zap.Int("keyCount", len(rsp.Keys)))
 
 	return rsp, nil
+}
+
+// queryAPIKeys 根据权限查询 API Key 列表
+func (s *apikeyService) queryAPIKeys(db *gorm.DB, userID uint, permission enum.Permission) ([]*dbmodel.ProxyAPIKey, error) {
+	fields := []string{"id", "user_id", "name", "key", "created_at"}
+	if permission == enum.PermissionAdmin {
+		return s.proxyAPIKeyDAO.BatchGet(db, &dbmodel.ProxyAPIKey{}, fields)
+	}
+	return s.proxyAPIKeyDAO.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, fields)
+}
+
+// toAPIKeyItems 将数据库模型列表转为 DTO 列表
+func toAPIKeyItems(keys []*dbmodel.ProxyAPIKey) []*dto.APIKeyItem {
+	items := make([]*dto.APIKeyItem, 0, len(keys))
+	for _, k := range keys {
+		items = append(items, &dto.APIKeyItem{
+			ID:        k.ID,
+			Name:      k.Name,
+			Key:       util.MaskSecret(k.Key),
+			CreatedAt: k.CreatedAt,
+		})
+	}
+	return items
 }
 
 // DeleteAPIKey 删除 API Key
@@ -206,17 +243,16 @@ func (s *apikeyService) ListAPIKeys(ctx context.Context) (*dto.ListAPIKeyRsp, er
 //	@return *dto.EmptyRsp
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-08 10:00:00
+//	@update 2026-04-09 10:00:00
 func (s *apikeyService) DeleteAPIKey(ctx context.Context, req *dto.DeleteAPIKeyReq) (*dto.EmptyRsp, error) {
 	rsp := &dto.EmptyRsp{}
 
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	permission := util.CtxValueString(ctx, constant.CtxKeyPermission)
+	permission := util.CtxValuePermission(ctx)
 
 	log := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
 
-	// 查询要删除的 key
 	apiKey, err := s.proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{ID: req.ID}, []string{"id", "user_id", "name", "key"})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -229,8 +265,9 @@ func (s *apikeyService) DeleteAPIKey(ctx context.Context, req *dto.DeleteAPIKeyR
 		return rsp, nil
 	}
 
-	// 权限检查: admin 可以删除任意 key, 普通用户只能删除自己的 key
-	if enum.Permission(permission) != enum.PermissionAdmin && apiKey.UserID != userID {
+	// user_id == 0 为历史数据，普通用户可操作自己账号下所有历史 key；admin 可操作任意 key
+	isOwner := apiKey.UserID == userID || apiKey.UserID == 0
+	if permission != enum.PermissionAdmin && !isOwner {
 		log.Warn("[APIKeyService] No permission to delete API key",
 			zap.Uint("keyID", req.ID),
 			zap.Uint("keyOwnerID", apiKey.UserID),
@@ -239,7 +276,6 @@ func (s *apikeyService) DeleteAPIKey(ctx context.Context, req *dto.DeleteAPIKeyR
 		return rsp, nil
 	}
 
-	// 软删除
 	if err := s.proxyAPIKeyDAO.Delete(db, &dbmodel.ProxyAPIKey{ID: req.ID}); err != nil {
 		log.Error("[APIKeyService] Failed to delete API key", zap.Error(err), zap.Uint("keyID", req.ID))
 		rsp.Error = ierr.ErrDBDelete.BizError()

@@ -1,0 +1,35 @@
+[
+    {
+        "name": "constant_prefix",
+        "description": "验证 API Key 前缀常量",
+        "expectedPrefix": "sk-aris-"
+    },
+    {
+        "name": "constant_random_length",
+        "description": "验证 API Key 随机部分长度",
+        "expectedLength": 24
+    },
+    {
+        "name": "constant_total_length",
+        "description": "验证 API Key 总长度",
+        "expectedTotalLength": 32
+    },
+    {
+        "name": "dto_unmarshal_valid",
+        "description": "验证 CreateAPIKeyReqBody JSON 反序列化",
+        "jsonInput": "{\"name\":\"Test Key\"}",
+        "expectedName": "Test Key"
+    },
+    {
+        "name": "dto_unmarshal_empty_name",
+        "description": "验证空名称的 CreateAPIKeyReqBody",
+        "jsonInput": "{\"name\":\"\"}",
+        "expectedName": ""
+    },
+    {
+        "name": "dto_unmarshal_unicode_name",
+        "description": "验证 Unicode 名称的 CreateAPIKeyReqBody",
+        "jsonInput": "{\"name\":\"测试 Key 🔑\"}",
+        "expectedName": "测试 Key 🔑"
+    }
+]

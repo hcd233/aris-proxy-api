@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 )
 
 // CopyContextValues 复制上下文值
@@ -54,4 +55,24 @@ func CtxValueUint(ctx context.Context, key string) uint {
 		}
 	}
 	return 0
+}
+
+// CtxValuePermission 安全获取上下文中的 Permission 值
+//
+// JWT 中间件存入的是 enum.Permission（named string），无法用 v.(string) 断言，需单独处理。
+//
+//	param ctx context.Context
+//	return enum.Permission
+//	@author centonhuang
+//	@update 2026-04-09 10:00:00
+func CtxValuePermission(ctx context.Context) enum.Permission {
+	if v := ctx.Value(constant.CtxKeyPermission); v != nil {
+		if p, ok := v.(enum.Permission); ok {
+			return p
+		}
+		if s, ok := v.(string); ok {
+			return enum.Permission(s)
+		}
+	}
+	return ""
 }
