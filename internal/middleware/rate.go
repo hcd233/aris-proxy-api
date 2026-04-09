@@ -106,7 +106,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 		logger := logger.WithCtx(ctx.Context())
 		var keyValue, value string
 		if key == "" {
-			keyValue = "ip"
+			keyValue = constant.RateLimitKeyByIP
 			fCtx := humafiber.Unwrap(ctx)
 			value = fCtx.IP()
 		} else {
@@ -135,7 +135,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 			return
 		}
 
-		remaining, _ := strconv.ParseFloat(result[0], 64)
+		remaining, _ := strconv.ParseFloat(result[0], constant.ParseFloat64BitSize)
 		remainingInt := int64(math.Max(0, math.Floor(remaining)))
 		limitStr := result[2]
 

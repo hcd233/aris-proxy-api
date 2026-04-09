@@ -90,7 +90,7 @@ func GetSummarizer() *Summarizer {
 //	@update 2026-03-26 10:00:00
 func (s *Summarizer) Summarize(ctx context.Context, content string) (string, error) {
 	if strings.TrimSpace(content) == "" {
-		return "空会话", nil
+		return constant.EmptySessionSummary, nil
 	}
 
 	messages := []*schema.Message{

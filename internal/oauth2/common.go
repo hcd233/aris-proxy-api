@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"golang.org/x/oauth2"
 )
@@ -49,7 +50,7 @@ func NewStateManager() *StateManager {
 
 // GenerateState 生成随机state
 func (sm *StateManager) GenerateState() (string, error) {
-	b := make([]byte, 32)
+	b := make([]byte, constant.OAuthStateBytes)
 	if _, err := rand.Read(b); err != nil {
 		return "", ierr.Wrap(ierr.ErrInternal, err, "generate random state")
 	}

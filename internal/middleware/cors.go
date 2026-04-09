@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 // CORSMiddleware 跨域中间件
@@ -14,7 +15,7 @@ import (
 //	update 2024-09-16 04:07:30
 func CORSMiddleware() fiber.Handler {
 	return cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000",
+		AllowOrigins:     constant.CORSAllowOrigins,
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Requested-With,X-Trace-Id",
 		ExposeHeaders:    "Content-Length",

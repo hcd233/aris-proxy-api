@@ -1,6 +1,8 @@
 // Package dto API Key DTO
 package dto
 
+import "time"
+
 // CreateAPIKeyReq 创建 API Key 请求
 //
 //	@author centonhuang
@@ -40,10 +42,10 @@ type ListAPIKeysRsp struct {
 //	@author centonhuang
 //	@update 2026-04-08 10:00:00
 type APIKeyItem struct {
-	ID        uint   `json:"id" doc:"API Key ID"`
-	Name      string `json:"name" doc:"API Key 名称"`
-	Key       string `json:"key" doc:"Masked API Key 值"`
-	CreatedAt string `json:"createdAt" doc:"创建时间"`
+	ID        uint      `json:"id" doc:"API Key ID"`
+	Name      string    `json:"name" doc:"API Key 名称"`
+	Key       string    `json:"key" doc:"Masked API Key 值"`
+	CreatedAt time.Time `json:"createdAt" doc:"创建时间"`
 }
 
 // APIKeyDetail API Key 详情（完整 key，仅创建时返回）

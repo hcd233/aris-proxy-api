@@ -229,7 +229,7 @@ func toAPIKeyItems(keys []*dbmodel.ProxyAPIKey) []*dto.APIKeyItem {
 			ID:        k.ID,
 			Name:      k.Name,
 			Key:       util.MaskSecret(k.Key),
-			CreatedAt: k.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt: k.CreatedAt,
 		})
 	}
 	return items

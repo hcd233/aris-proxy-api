@@ -60,11 +60,34 @@ if [[ -n "$matches" ]]; then
 fi
 
 # ─────────────────────────────────────────────
-# 2. 日志规范
+# 2. 常量定义规范
+# ─────────────────────────────────────────────
+section "Constant Definition"
+
+# 2.1 禁止定义"转发封装常量"：即 const X = pkg.Y 或 const X = pkg.C 形式
+# 这类定义只是给另一个包的具名常量起别名，毫无意义，直接使用原始常量即可
+# 例：const HTTPStatusOK = fiber.StatusOK  ← 禁止
+#     fiber.StatusOK                        ← 正确，直接使用
+# 排除：
+#   - 测试文件
+#   - iota 枚举（不含包路径的纯 iota 表达式）
+matches=$(grep -rn --include='*.go' \
+    -E '^\s+[A-Za-z][A-Za-z0-9_]*\s*=\s*[a-zA-Z][a-zA-Z0-9_]*\.[A-Za-z][A-Za-z0-9_]*$' \
+    internal/common/constant/ internal/enum/ internal/common/enum/ 2>/dev/null \
+    | grep -v '_test.go' \
+    | grep -v '// ' \
+    || true)
+if [[ -n "$matches" ]]; then
+    error "禁止在 constant/enum 中定义转发封装常量（const X = pkg.Y），直接使用原始常量:"
+    echo "$matches" | head -20
+fi
+
+# ─────────────────────────────────────────────
+# 3. 日志规范
 # ─────────────────────────────────────────────
 section "Logging"
 
-# 2.1 日志消息必须使用 [ModuleName] 前缀格式
+# 3.1 日志消息必须使用 [ModuleName] 前缀格式
 # 匹配 logger.Info/Error/Warn/Debug("xxx 但不以 [ 开头的消息
 matches=$(grep -rn -E 'logger\.(Info|Error|Warn|Debug)\(' internal/ --include='*.go' \
     | grep -v '\[' 2>/dev/null || true)
@@ -75,7 +98,7 @@ if [[ -n "$matches" ]]; then
     echo "$matches" | head -20
 fi
 
-# 2.2 日志中禁止裸记录敏感信息（检查常见敏感字段名未用 MaskSecret）
+# 3.2 日志中禁止裸记录敏感信息（检查常见敏感字段名未用 MaskSecret）
 matches=$(grep -rn -E 'zap\.String.*(Key|Token|Secret|Password)' internal/ --include='*.go' \
     | grep -v 'MaskSecret' \
     | grep -v 'CtxKey' \
@@ -90,18 +113,18 @@ if [[ -n "$matches" ]]; then
 fi
 
 # ─────────────────────────────────────────────
-# 3. JSON 库规范
+# 4. JSON 库规范
 # ─────────────────────────────────────────────
 section "JSON Library"
 
-# 3.1 禁止使用 encoding/json
+# 4.1 禁止使用 encoding/json
 matches=$(grep -rn '"encoding/json"' internal/ test/ --include='*.go' 2>/dev/null || true)
 if [[ -n "$matches" ]]; then
     error "禁止使用 encoding/json，统一使用 github.com/bytedance/sonic:"
     echo "$matches" | head -20
 fi
 
-# 3.2 禁止使用 json.RawMessage
+# 4.2 禁止使用 json.RawMessage
 matches=$(grep -rn 'json\.RawMessage' internal/ --include='*.go' 2>/dev/null || true)
 if [[ -n "$matches" ]]; then
     error "禁止使用 json.RawMessage:"
@@ -240,6 +263,104 @@ matches=$(grep -rn -E 'context\.(Background|TODO)\(\)' \
 if [[ -n "$matches" ]]; then
     error "接口逻辑层禁止使用 context.Background()/context.TODO()，应从上层传递 context:"
     echo "$matches" | head -20
+fi
+
+# ─────────────────────────────────────────────
+# 10. 魔法数字 & 魔法字符串
+# ─────────────────────────────────────────────
+section "Magic Values"
+
+# 白名单排除路径：以下包允许定义字面量，不参与魔法值扫描
+# 允许原因说明：
+#   - constant/enum/ierr/     —— 这些本来就是定义常量的地方
+#   - common/model/           —— 业务错误模型定义
+#   - infrastructure/         —— 基础设施层（DB/Redis/对象存储），允许直接使用配置值
+#   - config/                 —— 环境变量默认值配置，允许使用字面量
+#   - logger/                 —— 日志框架初始化，log level/encoder key 属于框架配置
+MAGIC_EXCLUDE_PATHS=(
+    "internal/common/constant/"
+    "internal/common/enum/"
+    "internal/common/ierr/"
+    "internal/common/model/"
+    "internal/enum/"
+    "internal/infrastructure/"
+    "internal/config/"
+    "internal/logger/"
+)
+
+# 构造路径排除的 grep -v 管道
+magic_path_filter() {
+    local input="$1"
+    local result="$input"
+    for exclude_path in "${MAGIC_EXCLUDE_PATHS[@]}"; do
+        result=$(echo "$result" | grep -v "^$exclude_path" 2>/dev/null || true)
+    done
+    echo "$result"
+}
+
+# ── 10.1 魔法数字 ──────────────────────────────
+# 检测：白名单排除后的目录内出现 >= 3 的裸整数字面量
+# 语法层过滤（不属于业务豁免，只是减少 Go 语法噪音）：
+#   - 纯注释行（// 开头）
+#   - struct tag 行（含反引号 `，数字在 tag 内无业务语义）
+#   - import 块行
+#   - 包内 const 声明行（const X = N 是合法常量定义本身）
+#   - logger 调用行中字符串内出现的数字（如 "non-200 status"）
+# 其余所有数字字面量均应报告
+
+magic_number_matches=$(grep -rn --include='*.go' \
+    -E '[^a-zA-Z0-9_.][3-9][0-9][0-9]+[^a-zA-Z0-9_.]|[^a-zA-Z0-9_.][1-9][0-9][0-9]+[^a-zA-Z0-9_.]|[^a-zA-Z0-9_.][3-9][0-9][^a-zA-Z0-9_.]' \
+    internal/ 2>/dev/null || true)
+
+magic_number_matches=$(magic_path_filter "$magic_number_matches")
+
+magic_number_matches=$(echo "$magic_number_matches" \
+    | grep -v '^\s*//' \
+    | grep -v '`' \
+    | grep -v 'import' \
+    | grep -v '^\s*const ' \
+    | grep -v '\sconst\s' \
+    | grep -v 'logger\.' \
+    | grep -v '\.go:[0-9]*:\s*//' \
+    | grep -v '^$' \
+    || true)
+
+if [[ -n "$magic_number_matches" ]]; then
+    error "发现魔法数字，应提取为具名常量（constant/ 或包内 const 块）:"
+    echo "$magic_number_matches" | head -30
+fi
+
+# ── 10.2 魔法字符串 ────────────────────────────
+# 检测：白名单排除后的目录内在赋值/return/case/比较 语句中出现长度 >= 2 的裸字符串字面量
+# 语法层过滤：
+#   - 纯注释行
+#   - struct tag 行（含反引号 `）
+#   - import 块行
+#   - 包内 const 声明行
+#   - logger 调用行（日志消息字面量是可接受的）
+#   - router.go 中的 HTML 内联模板行
+
+magic_string_matches=$(grep -rn --include='*.go' \
+    -E '(=|:=|return|case|\!=|==)[[:space:]]*"[^"]{2,}"' \
+    internal/ 2>/dev/null || true)
+
+magic_string_matches=$(magic_path_filter "$magic_string_matches")
+
+magic_string_matches=$(echo "$magic_string_matches" \
+    | grep -v '^\s*//' \
+    | grep -v '`' \
+    | grep -v 'import' \
+    | grep -v '^\s*const ' \
+    | grep -v '\sconst\s' \
+    | grep -v 'logger\.' \
+    | grep -v 'internal/router/router\.go' \
+    | grep -v '\.go:[0-9]*:\s*//' \
+    | grep -v '^$' \
+    || true)
+
+if [[ -n "$magic_string_matches" ]]; then
+    warn "发现魔法字符串，应提取为具名常量（constant/string.go 或包内 const 块）:"
+    echo "$magic_string_matches" | head -30
 fi
 
 # ─────────────────────────────────────────────
