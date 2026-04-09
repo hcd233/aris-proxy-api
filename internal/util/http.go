@@ -4,6 +4,7 @@ package util
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/bytedance/sonic"
@@ -132,20 +133,24 @@ func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error
 
 // ExtractUpstreamStatusAndError 从 error 中提取上游 HTTP 状态码和错误消息字符串
 //
-//	成功时返回 (200, "")，上游错误返回上游状态码，其他错误返回 (0, err.Error())
+//	成功时返回 (200, "")，上游错误返回上游状态码和错误信息（包含 body），其他错误返回 (0, err.Error())
 //
 //	@param err error
 //	@return int statusCode
 //	@return string errorMessage
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-04-10 10:00:00
 func ExtractUpstreamStatusAndError(err error) (int, string) {
 	if err == nil {
 		return fiber.StatusOK, ""
 	}
 	var ue *model.UpstreamError
 	if errors.As(err, &ue) {
-		return ue.StatusCode, ue.Error()
+		msg := ue.Error()
+		if ue.Body != "" {
+			msg += fmt.Sprintf(": %s", ue.Body)
+		}
+		return ue.StatusCode, msg
 	}
 	return 0, err.Error()
 }
