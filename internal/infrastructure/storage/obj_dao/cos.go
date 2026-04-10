@@ -130,7 +130,7 @@ func (dao *CosObjDAO) DownloadObject(ctx context.Context, userID uint, objectNam
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	head, err := dao.client.Object.Head(ctx, objectName, nil)
 	if err != nil {

@@ -72,7 +72,7 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEn
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -96,7 +96,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep Upst
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var collectedEvents []dto.AnthropicSSEEvent
 	var currentEvent string
@@ -107,11 +107,9 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep Upst
 		line := strings.TrimRight(raw, "\r\n")
 
 		if line != "" {
-			if strings.HasPrefix(line, "event: ") {
-				currentEvent = strings.TrimPrefix(line, "event: ")
-			} else if strings.HasPrefix(line, "data: ") {
-				payload := line[len("data: "):]
-
+			if eventType, ok := strings.CutPrefix(line, "event: "); ok {
+				currentEvent = eventType
+			} else if payload, ok := strings.CutPrefix(line, "data: "); ok {
 				event := dto.AnthropicSSEEvent{
 					Event: currentEvent,
 					Data:  []byte(payload),
@@ -148,7 +146,7 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndp
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -192,7 +190,7 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 
 	if resp.StatusCode != http.StatusOK {
 		errorBody, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		logger.Error("[AnthropicProxy] Upstream returned non-200 status",
 			zap.String("upstreamURL", upstreamURL),
 			zap.Int("statusCode", resp.StatusCode),
@@ -211,12 +209,12 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 //	@return []byte
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func ReplaceModelInBody(body []byte, model string) []byte {
+func ReplaceModelInBody(body []byte, modelName string) []byte {
 	var bodyMap map[string]any
 	if err := sonic.Unmarshal(body, &bodyMap); err != nil {
 		return body
 	}
-	bodyMap["model"] = model
+	bodyMap["model"] = modelName
 	return lo.Must1(sonic.Marshal(bodyMap))
 }
 
@@ -227,7 +225,7 @@ func ReplaceModelInBody(body []byte, model string) []byte {
 //	@return []byte
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func ReplaceModelInSSEData(data []byte, model string) []byte {
+func ReplaceModelInSSEData(data []byte, modelName string) []byte {
 	var dataMap map[string]any
 	if err := sonic.Unmarshal(data, &dataMap); err != nil {
 		return data
@@ -235,12 +233,12 @@ func ReplaceModelInSSEData(data []byte, model string) []byte {
 	if msgRaw, ok := dataMap["message"]; ok {
 		if msgMap, ok := msgRaw.(map[string]any); ok {
 			if _, hasModel := msgMap["model"]; hasModel {
-				msgMap["model"] = model
+				msgMap["model"] = modelName
 			}
 		}
 	}
 	if _, hasModel := dataMap["model"]; hasModel {
-		dataMap["model"] = model
+		dataMap["model"] = modelName
 	}
 	return lo.Must1(sonic.Marshal(dataMap))
 }

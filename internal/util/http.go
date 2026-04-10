@@ -81,7 +81,7 @@ type JSONResponseWriter struct {
 func (rw JSONResponseWriter) WriteJSON(v any) {
 	rw.HumaCtx.SetStatus(fiber.StatusOK)
 	rw.HumaCtx.SetHeader("Content-Type", "application/json")
-	rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v)))
+	_, _ = rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v)))
 }
 
 // WriteError 写入自定义状态码和 JSON body 的错误响应
@@ -94,7 +94,7 @@ func (rw JSONResponseWriter) WriteJSON(v any) {
 func (rw JSONResponseWriter) WriteError(statusCode int, body []byte) {
 	rw.HumaCtx.SetStatus(statusCode)
 	rw.HumaCtx.SetHeader("Content-Type", "application/json")
-	rw.HumaCtx.BodyWriter().Write(body)
+	_, _ = rw.HumaCtx.BodyWriter().Write(body)
 }
 
 // WrapJSONResponse 创建 JSON 响应包装
@@ -124,7 +124,7 @@ func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error
 	if errors.As(err, &upstreamErr) {
 		writer.HumaCtx.SetStatus(upstreamErr.StatusCode)
 		writer.HumaCtx.SetHeader("Content-Type", "application/json")
-		writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body))
+		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body))
 		return
 	}
 	logger.Error("[ProxyService] Proxy error", zap.Error(err))
@@ -140,7 +140,7 @@ func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error
 //	@return string errorMessage
 //	@author centonhuang
 //	@update 2026-04-10 10:00:00
-func ExtractUpstreamStatusAndError(err error) (int, string) {
+func ExtractUpstreamStatusAndError(err error) (statusCode int, errorMessage string) {
 	if err == nil {
 		return fiber.StatusOK, ""
 	}

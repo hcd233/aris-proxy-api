@@ -37,7 +37,7 @@ func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 			log.Error("[AgentPool] Failed to generate summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			// 记录失败原因
 			sessionDAO := dao.GetSessionDAO()
-			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
 				"summarize_error": err.Error(),
 			})
 			return
@@ -49,7 +49,7 @@ func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 		}
 
 		sessionDAO := dao.GetSessionDAO()
-		err = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+		err = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
 			"summary": summary,
 		})
 		if err != nil {
@@ -80,7 +80,7 @@ func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 			log.Error("[AgentPool] Failed to generate score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			// 记录失败原因
 			sessionDAO := dao.GetSessionDAO()
-			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
 				"score_error": err.Error(),
 			})
 			return
@@ -92,7 +92,7 @@ func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 		}
 
 		sessionDAO := dao.GetSessionDAO()
-		err = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]interface{}{
+		err = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
 			"coherence_score": result.Coherence,
 			"depth_score":     result.Depth,
 			"value_score":     result.Value,

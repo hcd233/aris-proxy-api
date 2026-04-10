@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 
@@ -108,7 +109,7 @@ func normalizeArgumentsWithSchema(args string, schema *dto.JSONSchemaProperty) s
 func jsonEqual(a, b any) bool {
 	aBytes := lo.Must1(encoder.Encode(a, encoder.SortMapKeys))
 	bBytes := lo.Must1(encoder.Encode(b, encoder.SortMapKeys))
-	return string(aBytes) == string(bBytes)
+	return bytes.Equal(aBytes, bBytes)
 }
 
 // ComputeToolChecksum 计算工具校验和，基于工具名和完整参数 Schema

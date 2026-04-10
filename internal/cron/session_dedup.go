@@ -6,7 +6,7 @@ package cron
 
 import (
 	"context"
-	"sort"
+	"slices"
 
 	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
@@ -115,12 +115,10 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		for tid := range toolIDSet {
 			mergedToolIDs = append(mergedToolIDs, tid)
 		}
-		sort.Slice(mergedToolIDs, func(i, j int) bool {
-			return mergedToolIDs[i] < mergedToolIDs[j]
-		})
+		slices.Sort(mergedToolIDs)
 
 		// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
-		err := c.sessionDAO.Update(db, &dbmodel.Session{ID: sessionID}, map[string]interface{}{
+		err := c.sessionDAO.Update(db, &dbmodel.Session{ID: sessionID}, map[string]any{
 			"tool_ids": lo.Must1(sonic.MarshalString(mergedToolIDs)),
 		})
 		if err != nil {
@@ -183,11 +181,17 @@ func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
 	})
 
 	// 按MessageIDs长度降序排序，长度相同按ID升序（保留较早的）
-	sort.Slice(entries, func(i, j int) bool {
-		if len(entries[i].messageIDs) != len(entries[j].messageIDs) {
-			return len(entries[i].messageIDs) > len(entries[j].messageIDs)
+	slices.SortFunc(entries, func(a, b sessionEntry) int {
+		if len(a.messageIDs) != len(b.messageIDs) {
+			return len(b.messageIDs) - len(a.messageIDs) // 降序
 		}
-		return entries[i].id < entries[j].id
+		if a.id < b.id {
+			return -1
+		}
+		if a.id > b.id {
+			return 1
+		}
+		return 0
 	})
 
 	// 过滤掉空MessageIDs的Session
@@ -202,7 +206,7 @@ func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
 
 	// 对每个Session，检查它是否是已知非冗余Session的子数组
 	// 从长到短遍历，短的只需要和比它长的比较
-	for i := 0; i < len(entries); i++ {
+	for i := range entries {
 		if _, redundant := redundantSet[entries[i].id]; redundant {
 			continue
 		}

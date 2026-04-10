@@ -26,7 +26,7 @@ import (
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
-	logger := logger.WithCtx(task.Ctx)
+	log := logger.WithCtx(task.Ctx)
 	db := database.GetDBInstance(task.Ctx)
 
 	return pm.storePool.Go(func() {
@@ -59,13 +59,13 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 		err := db.Transaction(func(tx *gorm.DB) error {
 			messageIDs, err := pm.deduplicateAndStoreMessages(tx, messages)
 			if err != nil {
-				logger.Error("[StorePool] Failed to store messages", zap.Error(err))
+				log.Error("[StorePool] Failed to store messages", zap.Error(err))
 				return err
 			}
 
 			toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
 			if err != nil {
-				logger.Error("[StorePool] Failed to store tools", zap.Error(err))
+				log.Error("[StorePool] Failed to store tools", zap.Error(err))
 				return err
 			}
 
@@ -76,16 +76,16 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 				Metadata:   task.Metadata,
 			}
 			if err := dao.GetSessionDAO().Create(tx, session); err != nil {
-				logger.Error("[StorePool] Failed to create session", zap.Error(err))
+				log.Error("[StorePool] Failed to create session", zap.Error(err))
 				return err
 			}
 			return nil
 		})
 		if err != nil {
-			logger.Error("[StorePool] Transaction failed", zap.Error(err))
+			log.Error("[StorePool] Transaction failed", zap.Error(err))
 			return
 		}
-		logger.Info("[StorePool] Messages stored successfully")
+		log.Info("[StorePool] Messages stored successfully")
 	})
 }
 

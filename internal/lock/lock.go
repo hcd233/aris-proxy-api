@@ -36,11 +36,11 @@ type redisLocker struct {
 	rdb *redis.Client
 }
 
-func (l *redisLocker) Lock(ctx context.Context, key string, value string, expire time.Duration) (success bool, err error) {
+func (l *redisLocker) Lock(ctx context.Context, key, value string, expire time.Duration) (success bool, err error) {
 	return l.rdb.SetNX(ctx, key, value, expire).Result()
 }
 
-func (l *redisLocker) Unlock(ctx context.Context, key string, value string) (err error) {
+func (l *redisLocker) Unlock(ctx context.Context, key, value string) (err error) {
 	luaScript := `
 			if redis.call("get", KEYS[1]) == ARGV[1] then
 				return redis.call("del", KEYS[1])

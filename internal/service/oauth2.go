@@ -223,7 +223,6 @@ func (s *oauth2Service) Callback(ctx context.Context, req *dto.CallbackReq) (*dt
 			return rsp, nil
 		}
 		logger.Info("[Oauth2Service] Audio dir created", zap.String("platform", req.Body.Platform))
-
 	}
 
 	accessToken, err := s.accessTokenSigner.EncodeToken(user.ID)

@@ -66,21 +66,21 @@ type cronLoggerAdapter struct {
 	logger *zap.Logger
 }
 
-func newCronLoggerAdapter(module string, logger *zap.Logger) *cronLoggerAdapter {
+func newCronLoggerAdapter(module string, log *zap.Logger) *cronLoggerAdapter {
 	if module == "" {
 		module = constant.CronDefaultModule
 	}
 	module = strings.TrimSpace(strings.TrimRight(strings.TrimLeft(strings.TrimSpace(module), "["), "]"))
-	return &cronLoggerAdapter{module: module, logger: logger}
+	return &cronLoggerAdapter{module: module, logger: log}
 }
 
-func (l *cronLoggerAdapter) Error(err error, msg string, keysAndValues ...interface{}) {
+func (l *cronLoggerAdapter) Error(err error, msg string, keysAndValues ...any) {
 	zapKeyValues := []zap.Field{zap.Error(err)}
 	zapKeyValues = append(zapKeyValues, convertZapKeyValues(keysAndValues...)...)
 	l.logger.Error(fmt.Sprintf("[%s] %s", l.module, capitalizeFirst(msg)), zapKeyValues...)
 }
 
-func (l *cronLoggerAdapter) Info(msg string, keysAndValues ...interface{}) {
+func (l *cronLoggerAdapter) Info(msg string, keysAndValues ...any) {
 	zapKeyValues := convertZapKeyValues(keysAndValues...)
 	l.logger.Info(fmt.Sprintf("[%s] %s", l.module, capitalizeFirst(msg)), zapKeyValues...)
 }
@@ -95,13 +95,13 @@ func capitalizeFirst(s string) string {
 	return s
 }
 
-func convertZapKeyValues(keysAndValues ...interface{}) []zap.Field {
+func convertZapKeyValues(keysAndValues ...any) []zap.Field {
 	if len(keysAndValues)%2 != 0 {
 		return []zap.Field{zap.String("error", "keysAndValues must be a slice of key-value pairs")}
 	}
 	kvLen := len(keysAndValues) / 2
 	zapKeyValues := make([]zap.Field, 0, kvLen)
-	for i := 0; i < kvLen; i++ {
+	for i := range kvLen {
 		key, ok := keysAndValues[i*2].(string)
 		if !ok {
 			key = constant.CronInvalidKey

@@ -47,7 +47,7 @@ func TruncateFieldValue(val string, maxLen int) string {
 	var sb strings.Builder
 	sb.WriteString(val[:maxLen])
 	sb.WriteString("...(truncated, total ")
-	sb.WriteString(fmt.Sprintf("%d", len(val)))
+	fmt.Fprintf(&sb, "%d", len(val))
 	sb.WriteString(" chars)")
 	return sb.String()
 }
@@ -56,25 +56,25 @@ func TruncateFieldValue(val string, maxLen int) string {
 //
 //	@param m 原始 map
 //	@param maxLen 字符串最大长度
-//	@return map[string]interface{} 截断后的 map
+//	@return map[string]any 截断后的 map
 //	@author centonhuang
 //	@update 2026-04-09 15:00:00
-func TruncateMapValues(m map[string]interface{}, maxLen int) map[string]interface{} {
-	result := make(map[string]interface{}, len(m))
+func TruncateMapValues(m map[string]any, maxLen int) map[string]any {
+	result := make(map[string]any, len(m))
 	for k, v := range m {
 		result[k] = truncateValue(v, maxLen)
 	}
 	return result
 }
 
-func truncateValue(val interface{}, maxLen int) interface{} {
+func truncateValue(val any, maxLen int) any {
 	switch v := val.(type) {
 	case string:
 		return TruncateFieldValue(v, maxLen)
-	case map[string]interface{}:
+	case map[string]any:
 		return TruncateMapValues(v, maxLen)
-	case []interface{}:
-		result := make([]interface{}, len(v))
+	case []any:
+		result := make([]any, len(v))
 		for i, item := range v {
 			result[i] = truncateValue(item, maxLen)
 		}

@@ -24,7 +24,7 @@ func SendAnthropicModelNotFoundError(model string) (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusNotFound)
 			humaCtx.SetHeader("Content-Type", "application/json")
-			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
 				Type: "error",
 				Error: &dto.AnthropicError{
 					Type:    "not_found_error",
@@ -45,7 +45,7 @@ func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusInternalServerError)
 			humaCtx.SetHeader("Content-Type", "application/json")
-			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
 				Type: "error",
 				Error: &dto.AnthropicError{
 					Type:    "api_error",
@@ -217,7 +217,7 @@ func SendAnthropicUpstreamError(statusCode int, body string) (rsp *huma.StreamRe
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
 			humaCtx.SetHeader("Content-Type", "application/json")
-			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
 				Type: "error",
 				Error: &dto.AnthropicError{
 					Type:    "upstream_error",

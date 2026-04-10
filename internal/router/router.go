@@ -39,11 +39,11 @@ func RegisterDocsRouter() {
 //	@author centonhuang
 //	@update 2025-11-10 17:26:08
 func RegisterAPIRouter() {
-	api := api.GetHumaAPI()
-	apiGroup := huma.NewGroup(api, "/api")
+	humaAPI := api.GetHumaAPI()
+	apiGroup := huma.NewGroup(humaAPI, "/api")
 	v1Group := huma.NewGroup(apiGroup, "/v1")
 
-	initHealthRouter(api)
+	initHealthRouter(humaAPI)
 
 	tokenGroup := huma.NewGroup(v1Group, "/token")
 	initTokenRouter(tokenGroup)

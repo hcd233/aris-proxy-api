@@ -118,10 +118,10 @@ func (l *GormLoggerAdapter) LogMode(level gormlogger.LogLevel) gormlogger.Interf
 //	receiver l *GormLogger
 //	param _ context.Context
 //	param msg string
-//	param data ...interface{}
+//	param data ...any
 //	author centonhuang
 //	update 2025-01-05 21:11:07
-func (l *GormLoggerAdapter) Info(ctx context.Context, msg string, data ...interface{}) {
+func (l *GormLoggerAdapter) Info(ctx context.Context, msg string, data ...any) {
 	logger.WithCtx(ctx).Info("[GORM] Info", zap.String("msg", fmt.Sprintf(msg, data...)))
 }
 
@@ -130,10 +130,10 @@ func (l *GormLoggerAdapter) Info(ctx context.Context, msg string, data ...interf
 //	receiver l *GormLogger
 //	param _ context.Context
 //	param msg string
-//	param data ...interface{}
+//	param data ...any
 //	author centonhuang
 //	update 2025-01-05 21:11:08
-func (l *GormLoggerAdapter) Warn(ctx context.Context, msg string, data ...interface{}) {
+func (l *GormLoggerAdapter) Warn(ctx context.Context, msg string, data ...any) {
 	logger.WithCtx(ctx).Warn("[GORM] Warn", zap.String("msg", fmt.Sprintf(msg, data...)))
 }
 
@@ -143,10 +143,10 @@ func (l *GormLoggerAdapter) Warn(ctx context.Context, msg string, data ...interf
 //	receiver l *GormLogger
 //	param _ context.Context
 //	param msg string
-//	param data ...interface{}
+//	param data ...any
 //	author centonhuang
 //	update 2025-01-05 21:11:10
-func (l *GormLoggerAdapter) Error(ctx context.Context, msg string, data ...interface{}) {
+func (l *GormLoggerAdapter) Error(ctx context.Context, msg string, data ...any) {
 	logger.WithCtx(ctx).Error("[GORM] Error", zap.String("msg", fmt.Sprintf(msg, data...)))
 }
 

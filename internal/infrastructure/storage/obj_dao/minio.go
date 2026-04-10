@@ -160,7 +160,7 @@ func (dao *MinioObjDAO) DownloadObject(ctx context.Context, userID uint, objectN
 	if err != nil {
 		return
 	}
-	defer object.Close()
+	defer func() { _ = object.Close() }()
 
 	stat := lo.Must1(object.Stat())
 
@@ -194,7 +194,7 @@ func (dao *MinioObjDAO) PresignObject(ctx context.Context, userID uint, objectNa
 
 	// 设置响应头
 	reqParams := make(url.Values)
-	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(objectName)))
+	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(objectName)))
 
 	// 根据文件扩展名获取 content type
 	contentType := constant.MIMETypeOctetStream

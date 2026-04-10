@@ -58,7 +58,7 @@ const byteMax = 256
 func generateAPIKey() (string, error) {
 	charsetLen := byte(len(constant.APIKeyCharset))
 	// rejection sampling: 只保留 [0, byteMax - byteMax%charsetLen) 范围内的字节，避免分布偏差
-	maxAccepted := byte(byteMax - byteMax%int(charsetLen))
+	maxAccepted := byte(byteMax - byteMax%int(charsetLen)) //nolint:gosec // G115 byteMax-byteMax%charsetLen 保证在 byte 范围内
 	result := make([]byte, constant.APIKeyRandomLength)
 	buf := make([]byte, constant.APIKeyRandomLength*2)
 	filled := 0
