@@ -15,8 +15,9 @@ BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 
 # golangci-lint release tag (https://github.com/golangci/golangci-lint/releases)
 GOLANGCI_LINT_VERSION ?= v2.11.4
+GOLANGCI_LINT         := $(shell which golangci-lint 2>/dev/null || echo $(HOME)/go/bin/golangci-lint)
 
-.PHONY: build build-upx build-dev build-debug clean test test-cover lint lint-conv lint-go fgprof help
+.PHONY: build build-upx build-dev build-debug clean test test-cover lint lint-conv lint-all fgprof help
 
 ## build: 生产构建（strip 符号）
 build:
@@ -67,14 +68,21 @@ test-cover:
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 
-## lint-conv: 扫描项目编码规范
+## lint: 运行 golangci-lint 静态分析
+lint:
+	$(GOLANGCI_LINT) run ./...
+
+## lint-conv: 扫描项目自定义编码规范（golangci-lint 无法覆盖的检查）
 lint-conv:
 	@bash script/lint-conventions.sh
 
-
-
-## lint: 编码规范脚本 + golangci-lint
-lint: lint-conv 
+## lint-all: 运行全部 lint（golangci-lint + 自定义规范扫描，带分段输出）
+lint-all:
+	@echo "═══ Running golangci-lint ═══"
+	$(GOLANGCI_LINT) run ./...
+	@echo ""
+	@echo "═══ Running convention checks ═══"
+	@bash script/lint-conventions.sh
 
 ## fgprof: 从远程服务拉取 fgprof profile 并打开 Web 可视化（火焰图+调用图）
 fgprof:

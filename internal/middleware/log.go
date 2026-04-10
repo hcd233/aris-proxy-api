@@ -94,14 +94,14 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 		}
 
 		if strings.Contains(string(c.Request().Header.ContentType()), "application/json") {
-			request := make(map[string]interface{})
+			request := make(map[string]any)
 			if reqBody := c.Body(); reqBody != nil {
 				if jsonErr := sonic.Unmarshal(reqBody, &request); jsonErr != nil {
 					logger.Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(jsonErr))
 				}
 			}
 			truncated := util.TruncateMapValues(request, constant.LogFieldValueMaxLength)
-			fields = append(fields, zap.Dict("request", lo.MapToSlice(truncated, func(key string, value interface{}) zap.Field {
+			fields = append(fields, zap.Dict("request", lo.MapToSlice(truncated, func(key string, value any) zap.Field {
 				return zap.Any(key, value)
 			})...))
 		}
@@ -110,14 +110,14 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 		// reference: https://github.com/gofiber/fiber/issues/429
 		// reference: https://github.com/samber/slog-fiber/issues/68
 		if strings.Contains(string(c.Response().Header.ContentType()), "application/json") { // response header content-type is not text/event-stream
-			response := make(map[string]interface{})
+			response := make(map[string]any)
 			if respBody := c.Response().Body(); respBody != nil {
 				if jsonErr := sonic.Unmarshal(respBody, &response); jsonErr != nil {
 					logger.Warn("[LogMiddleware] Unmarshal response error", zap.ByteString("response", respBody), zap.Error(jsonErr))
 				}
 			}
 			truncated := util.TruncateMapValues(response, constant.LogFieldValueMaxLength)
-			fields = append(fields, zap.Dict("response", lo.MapToSlice(truncated, func(key string, value interface{}) zap.Field {
+			fields = append(fields, zap.Dict("response", lo.MapToSlice(truncated, func(key string, value any) zap.Field {
 				return zap.Any(key, value)
 			})...))
 		}

@@ -58,12 +58,12 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 			fCtx.Set("X-Accel-Buffering", "no")
 
 			fCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-				for i := 0; i < constant.SSEHeartbeatCount; i++ {
+				for i := range constant.SSEHeartbeatCount {
 					data := &dto.SSEResponse{
 						DataType: enum.SSEDataTypeHeartBeat,
 						Data:     strconv.Itoa(i),
 					}
-					fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(data)))
+					_, _ = fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(data)))
 					err := w.Flush()
 					if err != nil {
 						return

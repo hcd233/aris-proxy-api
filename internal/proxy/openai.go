@@ -62,7 +62,7 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndp
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -86,7 +86,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var collectedChunks []*dto.OpenAIChatCompletionChunk
 
@@ -156,7 +156,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 
 	if resp.StatusCode != http.StatusOK {
 		errorBody, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		logger.Error("[OpenAIProxy] Upstream returned non-200 status",
 			zap.String("upstreamURL", upstreamURL),
 			zap.Int("statusCode", resp.StatusCode),

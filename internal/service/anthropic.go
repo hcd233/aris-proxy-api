@@ -104,11 +104,11 @@ func (s *anthropicService) ListModels(ctx context.Context, _ *dto.EmptyReq) (*dt
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
 func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
-	logger := logger.WithCtx(ctx)
+	log := logger.WithCtx(ctx)
 
 	endpoint, err := findEndpoint(ctx, s.modelEndpointDAO, req.Body.Model, enum.ProviderAnthropic, enum.ProviderOpenAI)
 	if err != nil {
-		logger.Error("[AnthropicService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
+		log.Error("[AnthropicService] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
@@ -116,13 +116,13 @@ func (s *anthropicService) CreateMessage(ctx context.Context, req *dto.Anthropic
 	exposedModel := req.Body.Model
 
 	if endpoint.Provider == enum.ProviderOpenAI {
-		return s.forwardViaOpenAI(ctx, logger, req, endpoint, exposedModel, stream)
+		return s.forwardViaOpenAI(ctx, log, req, endpoint, exposedModel, stream)
 	}
-	return s.forwardNative(ctx, logger, req, endpoint, exposedModel, stream)
+	return s.forwardNative(ctx, log, req, endpoint, exposedModel, stream)
 }
 
 // forwardNative 原生 Anthropic 协议转发
-func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, endpoint *dbmodel.ModelEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+func (s *anthropicService) forwardNative(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, endpoint *dbmodel.ModelEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
 	ep := toUpstream(endpoint)
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
@@ -140,8 +140,8 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 				}
 				modifiedData := proxy.ReplaceModelInSSEData(event.Data, exposedModel)
-				fmt.Fprintf(w, "event: %s\n", event.Event)
-				fmt.Fprintf(w, "data: %s\n\n", modifiedData)
+				_, _ = fmt.Fprintf(w, "event: %s\n", event.Event)
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", modifiedData)
 				return w.Flush()
 			})
 			streamDone = time.Now()
@@ -149,23 +149,23 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
 			}
 			if err == nil {
-				fmt.Fprintf(w, "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n")
-				w.Flush()
+				_, _ = fmt.Fprintf(w, "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n")
+				_ = w.Flush()
 			}
 
-			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, err, ep.Model)
+			s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, err, ep.Model)
 			task := &dto.ModelCallAuditTask{
 				Ctx:                 util.CopyContextValues(ctx),
 				ModelID:             endpoint.ID,
 				Model:               exposedModel,
 				UpstreamProvider:    endpoint.Provider,
-				APIProvider:         string(enum.ProviderAnthropic),
+				APIProvider:         enum.ProviderAnthropic,
 				FirstTokenLatencyMs: firstTokenLatencyMs,
 				StreamDurationMs:    streamDurationMs,
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 		}), nil
 	}
 
@@ -174,43 +174,43 @@ func (s *anthropicService) forwardNative(ctx context.Context, logger *zap.Logger
 		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
+			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
 			task := &dto.ModelCallAuditTask{
 				Ctx:                 util.CopyContextValues(ctx),
 				ModelID:             endpoint.ID,
 				Model:               exposedModel,
 				UpstreamProvider:    endpoint.Provider,
-				APIProvider:         string(enum.ProviderAnthropic),
+				APIProvider:         enum.ProviderAnthropic,
 				FirstTokenLatencyMs: totalMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 			return
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
-		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+		s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, nil, ep.Model)
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             endpoint.ID,
 			Model:               exposedModel,
 			UpstreamProvider:    endpoint.Provider,
-			APIProvider:         string(enum.ProviderAnthropic),
+			APIProvider:         enum.ProviderAnthropic,
 			FirstTokenLatencyMs: totalMs,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	}), nil
 }
 
 // forwardViaOpenAI 通过 OpenAI 协议上游转发 Anthropic 请求
-func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, endpoint *dbmodel.ModelEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
+func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, endpoint *dbmodel.ModelEndpoint, exposedModel string, stream bool) (*huma.StreamResponse, error) {
 	ep := toUpstream(endpoint)
 	conv := converter.OpenAIProtocolConverter{}
 	openAIReq, err := conv.FromAnthropicRequest(req.Body)
 	if err != nil {
-		logger.Error("[AnthropicService] Failed to convert request to OpenAI format", zap.Error(err))
+		log.Error("[AnthropicService] Failed to convert request to OpenAI format", zap.Error(err))
 		return util.SendAnthropicInternalError(), nil
 	}
 	openAIReq.Model = ep.Model
@@ -236,8 +236,8 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 						firstTokenTime = time.Now()
 						firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 					}
-					fmt.Fprintf(w, "event: %s\n", event.Event)
-					fmt.Fprintf(w, "data: %s\n\n", string(event.Data))
+					_, _ = fmt.Fprintf(w, "event: %s\n", event.Event)
+					_, _ = fmt.Fprintf(w, "data: %s\n\n", string(event.Data))
 					if err := w.Flush(); err != nil {
 						return err
 					}
@@ -249,8 +249,8 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
 			}
 			if proxyErr == nil {
-				fmt.Fprintf(w, "event: message_stop\ndata: {}\n\n")
-				w.Flush()
+				_, _ = fmt.Fprintf(w, "event: message_stop\ndata: {}\n\n")
+				_ = w.Flush()
 			}
 
 			if proxyErr != nil || completion == nil {
@@ -259,42 +259,42 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 					ModelID:             endpoint.ID,
 					Model:               exposedModel,
 					UpstreamProvider:    endpoint.Provider,
-					APIProvider:         string(enum.ProviderAnthropic),
+					APIProvider:         enum.ProviderAnthropic,
 					FirstTokenLatencyMs: firstTokenLatencyMs,
 					StreamDurationMs:    streamDurationMs,
 				}
 				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(proxyErr)
-				pool.GetPoolManager().SubmitModelCallAuditTask(task)
+				_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 				return
 			}
 			anthropicMsg, err := conv.ToAnthropicResponse(completion)
 			if err != nil {
-				logger.Error("[AnthropicService] Failed to convert for storage", zap.Error(err))
+				log.Error("[AnthropicService] Failed to convert for storage", zap.Error(err))
 				task := &dto.ModelCallAuditTask{
 					Ctx:                 util.CopyContextValues(ctx),
 					ModelID:             endpoint.ID,
 					Model:               exposedModel,
 					UpstreamProvider:    endpoint.Provider,
-					APIProvider:         string(enum.ProviderAnthropic),
+					APIProvider:         enum.ProviderAnthropic,
 					FirstTokenLatencyMs: firstTokenLatencyMs,
 					StreamDurationMs:    streamDurationMs,
 				}
 				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-				pool.GetPoolManager().SubmitModelCallAuditTask(task)
+				_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 				return
 			}
-			s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+			s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, nil, ep.Model)
 			task := &dto.ModelCallAuditTask{
 				Ctx:                 util.CopyContextValues(ctx),
 				ModelID:             endpoint.ID,
 				Model:               exposedModel,
 				UpstreamProvider:    endpoint.Provider,
-				APIProvider:         string(enum.ProviderAnthropic),
+				APIProvider:         enum.ProviderAnthropic,
 				FirstTokenLatencyMs: firstTokenLatencyMs,
 				StreamDurationMs:    streamDurationMs,
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
-			pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 		}), nil
 	}
 
@@ -303,39 +303,39 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, logger *zap.Log
 		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(logger, writer, err, anthropicInternalErrorBody)
+			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
 			task := &dto.ModelCallAuditTask{
 				Ctx:                 util.CopyContextValues(ctx),
 				ModelID:             endpoint.ID,
 				Model:               exposedModel,
 				UpstreamProvider:    endpoint.Provider,
-				APIProvider:         string(enum.ProviderAnthropic),
+				APIProvider:         enum.ProviderAnthropic,
 				FirstTokenLatencyMs: totalMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
 		if err != nil {
-			logger.Error("[AnthropicService] Failed to convert OpenAI response", zap.Error(err))
+			log.Error("[AnthropicService] Failed to convert OpenAI response", zap.Error(err))
 			writer.WriteError(fiber.StatusInternalServerError, anthropicInternalErrorBody)
 			return
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
-		s.storeFromAnthropicMsg(ctx, logger, req, anthropicMsg, nil, ep.Model)
+		s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, nil, ep.Model)
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             endpoint.ID,
 			Model:               exposedModel,
 			UpstreamProvider:    endpoint.Provider,
-			APIProvider:         string(enum.ProviderAnthropic),
+			APIProvider:         enum.ProviderAnthropic,
 			FirstTokenLatencyMs: totalMs,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	}), nil
 }
 
@@ -401,7 +401,7 @@ func (s *anthropicService) storeAnthropicMessages(ctx context.Context, logger *z
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
 func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
-	logger := logger.WithCtx(ctx)
+	log := logger.WithCtx(ctx)
 
 	db := database.GetDBInstance(ctx)
 	endpoint, err := s.modelEndpointDAO.Get(db, &dbmodel.ModelEndpoint{
@@ -409,7 +409,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 		Provider: enum.ProviderAnthropic,
 	}, []string{"model", "api_key", "base_url"})
 	if err != nil {
-		logger.Warn("[AnthropicService] Model not found, returning 0", zap.String("model", req.Body.Model), zap.Error(err))
+		log.Warn("[AnthropicService] Model not found, returning 0", zap.String("model", req.Body.Model), zap.Error(err))
 		return &dto.AnthropicTokensCount{}, nil
 	}
 
@@ -418,7 +418,7 @@ func (s *anthropicService) CountTokens(ctx context.Context, req *dto.AnthropicCo
 
 	rsp, err := s.anthropicProxy.ForwardCountTokens(ctx, ep, body)
 	if err != nil {
-		logger.Warn("[AnthropicService] Count tokens error, returning 0", zap.Error(err))
+		log.Warn("[AnthropicService] Count tokens error, returning 0", zap.Error(err))
 		return &dto.AnthropicTokensCount{}, nil
 	}
 

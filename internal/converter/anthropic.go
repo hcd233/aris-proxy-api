@@ -115,7 +115,7 @@ func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (*AnthropicProtocolConverter) ToOpenAISSEResponse(event dto.AnthropicSSEEvent, model string, chunkID string) ([]*dto.OpenAIChatCompletionChunk, error) {
+func (*AnthropicProtocolConverter) ToOpenAISSEResponse(event dto.AnthropicSSEEvent, model, chunkID string) ([]*dto.OpenAIChatCompletionChunk, error) {
 	switch event.Event {
 	case enum.AnthropicSSEEventTypeContentBlockDelta:
 		return convertContentBlockDeltaToChunks(event.Data, model, chunkID)

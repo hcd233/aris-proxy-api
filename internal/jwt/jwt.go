@@ -64,7 +64,7 @@ func (s *tokenSigner) EncodeToken(userID uint) (token string, err error) {
 //	author centonhuang
 //	update 2024-06-22 11:25:00
 func (s *tokenSigner) DecodeToken(tokenString string) (userID uint, err error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ierr.New(ierr.ErrJWTDecode, "unexpected signing method")
 		}

@@ -1,0 +1,300 @@
+version: "2"
+
+# golangci-lint v2 配置
+# 将原 script/lint-conventions.sh 中可迁移的检查项统一至此
+# 不可迁移的自定义检查（日志格式、架构约束、魔法值等）保留在 lint-conventions.sh
+
+run:
+  # 扫描 test 目录
+  tests: true
+  # 超时时间
+  timeout: 5m
+  go: "1.25.1"
+
+linters:
+  # 关闭默认 linter 集合，完全自定义
+  default: none
+  enable:
+    # ── 默认推荐 ──
+    - errcheck        # 检查未处理的 error 返回值
+    - govet           # go vet 静态分析
+    - ineffassign     # 检测无效赋值
+    - staticcheck     # 高级静态分析
+    - unused          # 未使用的常量、变量、函数、类型
+
+    # ── 错误处理 ──
+    - nilerr          # 检测 err != nil 但返回 nil error
+    - noctx           # 检测 HTTP 请求缺少 context
+
+    # ── 代码质量 ──
+    - misspell        # 拼写检查
+    - dupword         # 重复单词检查
+    - goconst         # 重复字符串提取常量
+    - nestif          # 嵌套 if 深度检查
+    - unconvert       # 不必要的类型转换
+    - unparam         # 未使用的函数参数
+    - wastedassign    # 浪费的赋值
+    - predeclared     # 预声明标识符覆盖检查
+
+    # ── 安全 ──
+    - gosec           # 安全问题扫描
+
+    # ── 现代化 ──
+    - modernize       # 使用现代 Go 特性
+    - intrange        # 使用整数 range
+
+    # ── 代码风格 ──
+    - whitespace      # 函数首尾多余空行
+    - revive          # 综合代码规范检查
+    - gocritic        # 代码风格和性能检查
+
+    # ── 项目约定（迁移自 lint-conventions.sh）──
+    - forbidigo       # 禁止特定函数/标识符
+    - depguard        # 禁止特定包导入
+
+    # ── 测试规范 ──
+    - thelper         # 检查 test helper 是否调用 t.Helper()
+    - usetesting      # 检查测试包内函数使用
+
+  settings:
+    # ── forbidigo: 禁止特定函数调用 ──
+    # 迁移自 lint-conventions.sh 1.1, 1.2, 4.2
+    forbidigo:
+      forbid:
+        # 1.1 禁止使用 fmt.Errorf 创建内部错误
+        - pattern: "fmt.Errorf"
+          msg: "禁止使用 fmt.Errorf，必须通过 ierr.Wrap/ierr.New 创建错误"
+          pkg: "fmt"
+
+        # 1.2 禁止使用 errors.New 创建内部错误
+        - pattern: "errors.New"
+          msg: "禁止使用 errors.New()，必须通过 ierr.New 创建错误"
+          pkg: "errors"
+
+        # 4.2 禁止使用 json.RawMessage
+        - pattern: "json.RawMessage"
+          msg: "禁止使用 json.RawMessage"
+
+      analyze-types: true
+
+    # ── depguard: 包导入约束 ──
+    # 迁移自 lint-conventions.sh 4.1, 9.4
+    depguard:
+      rules:
+        # 4.1 禁止使用 encoding/json（全局）
+        no-encoding-json:
+          files:
+            - "**/*.go"
+          deny:
+            - pkg: "encoding/json"
+              desc: "禁止使用 encoding/json，统一使用 github.com/bytedance/sonic"
+
+        # 9.4 DTO 层禁止导入数据库模型层
+        dto-no-dbmodel:
+          files:
+            - "**/internal/dto/**"
+          deny:
+            - pkg: "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+              desc: "DTO 层禁止依赖数据库模型层，DTO 函数需要 dbmodel 字段时应将具体字段作为参数传入"
+
+    # ── nestif: 嵌套深度 ──
+    nestif:
+      min-complexity: 5
+
+    # ── goconst: 重复字符串 ──
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+      ignore-tests: true
+
+    # ── revive: 代码规范 ──
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          disabled: true   # godoc 风格用中文，与默认规则冲突
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+          disabled: true   # unparam 已覆盖
+        - name: var-declaration
+
+    # ── gocritic: 代码检查 ──
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - hugeParam          # 项目中大 struct 传值是有意为之
+        - rangeValCopy       # 与 govet 的 rangeloops 可能重复
+        - ifElseChain        # switch 和 if-else 的选择是主观的
+        - commentedOutCode   # shell 脚本已有死代码检查
+        - importShadow       # 项目中 logger := logger.WithCtx(ctx) 是常见模式，importShadow 误报多
+        - typeDefFirst       # DTO 中方法和类型交错定义是有意为之
+        - elseif             # else { if } 在某些场景可读性更好
+
+    # ── gosec: 安全 ──
+    gosec:
+      excludes:
+        - G104  # errcheck 已覆盖
+        - G304  # 文件路径注入，项目中路径是可控的
+        - G101  # 误报：常量命名包含 Token/Key 不代表是硬编码凭证
+
+    # ── thelper ──
+    thelper:
+      test:
+        begin: true
+      benchmark:
+        begin: true
+
+    # ── misspell ──
+    misspell:
+      locale: US
+
+  exclusions:
+    # 按 linter 排除
+    rules:
+      # ierr 包本身需要使用 fmt.Errorf 和 errors.New
+      - linters:
+          - forbidigo
+        path: "internal/common/ierr/"
+
+      # 基础设施层允许使用 encoding/json（第三方库适配）
+      - linters:
+          - depguard
+        path: "internal/infrastructure/"
+        text: "encoding/json"
+
+      # 测试代码放宽部分检查
+      - linters:
+          - gosec
+          - errcheck
+          - goconst
+        path: "test/"
+
+      # DTO 层的 Schema() 方法通常较长，放宽长度限制
+      - linters:
+          - gocritic
+        path: "internal/dto/"
+        text: "commentFormatting"
+
+      # enum/constant 定义文件放宽 goconst
+      - linters:
+          - goconst
+        path: "(internal/enum/|internal/common/constant/|internal/common/enum/)"
+
+      # api 层初始化文件可能用到 encoding/json（Fiber JSON 编解码器配置）
+      - linters:
+          - depguard
+        path: "internal/api/"
+        text: "encoding/json"
+
+      # 测试代码放宽 revive context-keys-type（测试中使用 string key 更直观）
+      - linters:
+          - revive
+        path: "test/"
+        text: "context-keys-type"
+
+      # cron 层需要创建根 context（定时任务无上层 context）
+      - linters:
+          - staticcheck
+        path: "internal/cron/"
+        text: "SA1029"
+
+      # converter/dto 层的复杂嵌套是业务逻辑固有复杂度
+      - linters:
+          - nestif
+        path: "(internal/converter/|internal/dto/|internal/cron/|internal/middleware/)"
+
+      # 测试代码放宽嵌套复杂度
+      - linters:
+          - nestif
+        path: "test/"
+
+      # 测试代码放宽 modernize（sort.Slice 等旧写法在测试中可接受）
+      - linters:
+          - modernize
+        path: "test/"
+
+      # converter 层 unparam: 保留 error 返回值以备未来扩展
+      - linters:
+          - unparam
+        path: "internal/converter/"
+
+      # cron/service 层 unparam: ctx 参数保留以便未来使用
+      - linters:
+          - unparam
+        path: "(internal/cron/|internal/service/)"
+
+      # DTO 层 unconvert: 类型别名的显式转换提高可读性
+      - linters:
+          - unconvert
+        path: "internal/dto/"
+
+      # 测试代码放宽 unused（helper 函数可能暂未使用）
+      - linters:
+          - unused
+        path: "test/"
+
+      # 测试代码放宽 intrange
+      - linters:
+          - intrange
+        path: "test/"
+
+      # 测试代码放宽 staticcheck SA1029（测试中使用 string context key 更直观）
+      - linters:
+          - staticcheck
+        path: "test/"
+        text: "SA1029"
+
+      # service 层 stream 逻辑固有嵌套复杂度
+      - linters:
+          - nestif
+        path: "internal/service/"
+
+      # proxy 层 SSE 解析逻辑固有嵌套复杂度
+      - linters:
+          - nestif
+        path: "internal/proxy/"
+
+      # middleware 日志层 unlambda: lo.MapToSlice + zap.Any 的 lambda 比直接传 zap.Any 更清晰
+      - linters:
+          - gocritic
+        path: "internal/middleware/"
+        text: "unlambda"
+
+      # gocritic nestingReduce 在测试中不强制
+      - linters:
+          - gocritic
+        path: "test/"
+        text: "nestingReduce"
+
+    # 按路径完全排除
+    paths:
+      - "third_party"
+      - "vendor"
+
+output:
+  formats:
+    text:
+      print-linter-name: true
+      print-issued-lines: true
+
+  sort-order:
+    - linter
+    - severity
+    - file

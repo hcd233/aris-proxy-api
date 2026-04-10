@@ -223,7 +223,7 @@ func SendOpenAIUpstreamError(statusCode int, body string) (rsp *huma.StreamRespo
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
 			humaCtx.SetHeader("Content-Type", "application/json")
-			humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
 				Error: &dto.OpenAIError{
 					Message: errMsg,
 					Type:    "upstream_error",
