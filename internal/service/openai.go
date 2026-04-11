@@ -221,6 +221,7 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 			UpstreamProvider:    endpoint.Provider,
 			APIProvider:         enum.ProviderOpenAI,
 			FirstTokenLatencyMs: totalMs,
+			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromOpenAIUsage(completion.Usage)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
@@ -330,6 +331,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 			UpstreamProvider:    endpoint.Provider,
 			APIProvider:         enum.ProviderOpenAI,
 			FirstTokenLatencyMs: totalMs,
+			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)

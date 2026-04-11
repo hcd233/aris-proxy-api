@@ -198,6 +198,7 @@ func (s *anthropicService) forwardNative(ctx context.Context, log *zap.Logger, r
 			UpstreamProvider:    endpoint.Provider,
 			APIProvider:         enum.ProviderAnthropic,
 			FirstTokenLatencyMs: totalMs,
+			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
@@ -292,6 +293,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 				APIProvider:         enum.ProviderAnthropic,
 				FirstTokenLatencyMs: firstTokenLatencyMs,
 				StreamDurationMs:    streamDurationMs,
+				UpstreamStatusCode:  fiber.StatusOK,
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
 			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
@@ -333,6 +335,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 			UpstreamProvider:    endpoint.Provider,
 			APIProvider:         enum.ProviderAnthropic,
 			FirstTokenLatencyMs: totalMs,
+			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
