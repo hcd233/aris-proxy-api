@@ -164,7 +164,11 @@ func (s *anthropicService) forwardNative(ctx context.Context, log *zap.Logger, r
 				StreamDurationMs:    streamDurationMs,
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
-			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			if err != nil {
+				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			} else {
+				task.UpstreamStatusCode = fiber.StatusOK
+			}
 			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 		}), nil
 	}

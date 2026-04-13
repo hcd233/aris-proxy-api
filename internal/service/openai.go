@@ -187,7 +187,11 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 				StreamDurationMs:    streamDurationMs,
 			}
 			task.SetTokensFromOpenAIUsage(usage)
-			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			if err != nil {
+				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			} else {
+				task.UpstreamStatusCode = fiber.StatusOK
+			}
 			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 		}), nil
 	}
@@ -291,7 +295,11 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 				StreamDurationMs:    streamDurationMs,
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
-			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			if err != nil {
+				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			} else {
+				task.UpstreamStatusCode = fiber.StatusOK
+			}
 			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 		}), nil
 	}
