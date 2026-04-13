@@ -46,9 +46,6 @@ func NewAPIKeyService() APIKeyService {
 	}
 }
 
-// byteMax byte 类型的取值范围上限（256）
-const byteMax = 256
-
 // generateAPIKey 生成随机 API Key，使用 rejection sampling 避免字节分布偏差
 //
 //	@return string
@@ -57,8 +54,8 @@ const byteMax = 256
 //	@update 2026-04-09 10:00:00
 func generateAPIKey() (string, error) {
 	charsetLen := byte(len(constant.APIKeyCharset))
-	// rejection sampling: 只保留 [0, byteMax - byteMax%charsetLen) 范围内的字节，避免分布偏差
-	maxAccepted := byte(byteMax - byteMax%int(charsetLen)) //nolint:gosec // G115 byteMax-byteMax%charsetLen 保证在 byte 范围内
+	// rejection sampling: 只保留 [0, ByteMax - ByteMax%charsetLen) 范围内的字节，避免分布偏差
+	maxAccepted := byte(constant.ByteMax - constant.ByteMax%int(charsetLen)) //nolint:gosec // G115 ByteMax-ByteMax%charsetLen 保证在 byte 范围内
 	result := make([]byte, constant.APIKeyRandomLength)
 	buf := make([]byte, constant.APIKeyRandomLength*2)
 	filled := 0
