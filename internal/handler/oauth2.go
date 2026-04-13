@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/service"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -39,7 +40,13 @@ func NewOauth2Handler() Oauth2Handler {
 //	@author centonhuang
 //	@update 2025-11-11 04:57:58
 func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dto.HTTPResponse[*dto.LoginResp], error) {
-	return util.WrapHTTPResponse(h.getService(req.Platform).Login(ctx, req))
+	svc, err := h.getService(req.Platform)
+	if err != nil {
+		rsp := &dto.LoginResp{}
+		rsp.Error = ierr.ErrBadRequest.BizError()
+		return util.WrapHTTPResponse(rsp, err)
+	}
+	return util.WrapHTTPResponse(svc.Login(ctx, req))
 }
 
 // HandleCallback OAuth2回调
@@ -52,7 +59,13 @@ func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dt
 //	@author centonhuang
 //	@update 2025-11-11 04:58:11
 func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq) (*dto.HTTPResponse[*dto.CallbackRsp], error) {
-	return util.WrapHTTPResponse(h.getService(req.Body.Platform).Callback(ctx, req))
+	svc, err := h.getService(req.Body.Platform)
+	if err != nil {
+		rsp := &dto.CallbackRsp{}
+		rsp.Error = ierr.ErrBadRequest.BizError()
+		return util.WrapHTTPResponse(rsp, err)
+	}
+	return util.WrapHTTPResponse(svc.Callback(ctx, req))
 }
 
 // getService 根据platform获取对应的service
@@ -60,15 +73,16 @@ func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq
 //	receiver h *oauth2Handler
 //	param platform string
 //	return service.Oauth2Service
+//	return error
 //	author centonhuang
 //	update 2025-01-05 21:00:00
-func (h *oauth2Handler) getService(platform string) service.Oauth2Service {
+func (h *oauth2Handler) getService(platform string) (service.Oauth2Service, error) {
 	switch platform {
 	case enum.Oauth2PlatformGithub:
-		return service.NewGithubOauth2Service()
+		return service.NewGithubOauth2Service(), nil
 	case enum.Oauth2PlatformGoogle:
-		return service.NewGoogleOauth2Service()
+		return service.NewGoogleOauth2Service(), nil
 	default:
-		return service.NewGithubOauth2Service() // 默认返回 github
+		return nil, ierr.New(ierr.ErrBadRequest, "unsupported oauth2 platform")
 	}
 }
