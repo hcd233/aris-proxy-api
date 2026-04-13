@@ -340,35 +340,35 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 
 // ==================== Store Messages ====================
 
-func (s *openAIService) storeFromCompletion(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
+func (s *openAIService) storeFromCompletion(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return
 	}
-	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+	s.storeOpenAIMessages(ctx, log, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
 }
 
-func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
 		return
 	}
 	conv := converter.AnthropicProtocolConverter{}
 	completion, err := conv.ToOpenAIResponse(msg)
 	if err != nil {
-		logger.Error("[OpenAIService] Failed to convert for storage", zap.Error(err))
+		log.Error("[OpenAIService] Failed to convert for storage", zap.Error(err))
 		return
 	}
 	if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return
 	}
-	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+	s.storeOpenAIMessages(ctx, log, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
 }
 
-func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
+func (s *openAIService) storeOpenAIMessages(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
 	var unifiedMessages []*dto.UnifiedMessage
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromOpenAIMessage(msg)
 		if err != nil {
-			logger.Error("[OpenAIService] Failed to convert openai message", zap.Error(err))
+			log.Error("[OpenAIService] Failed to convert openai message", zap.Error(err))
 			return
 		}
 		unifiedMessages = append(unifiedMessages, um)
@@ -376,7 +376,7 @@ func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Log
 
 	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
 	if err != nil {
-		logger.Error("[OpenAIService] Failed to convert ai response message", zap.Error(err))
+		log.Error("[OpenAIService] Failed to convert ai response message", zap.Error(err))
 		return
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
@@ -401,6 +401,6 @@ func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Log
 		OutputTokens: outputTokens,
 		Metadata:     req.Body.Metadata,
 	}); err != nil {
-		logger.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
+		log.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
 	}
 }

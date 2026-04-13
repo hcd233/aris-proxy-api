@@ -344,19 +344,19 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 
 // ==================== Store Messages ====================
 
-func (s *anthropicService) storeFromAnthropicMsg(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+func (s *anthropicService) storeFromAnthropicMsg(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
 		return
 	}
-	s.storeAnthropicMessages(ctx, logger, req, msg, upstreamModel)
+	s.storeAnthropicMessages(ctx, log, req, msg, upstreamModel)
 }
 
-func (s *anthropicService) storeAnthropicMessages(ctx context.Context, logger *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
+func (s *anthropicService) storeAnthropicMessages(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
 	var unifiedMessages []*dto.UnifiedMessage
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromAnthropicMessage(msg)
 		if err != nil {
-			logger.Error("[AnthropicService] Failed to convert anthropic message", zap.Error(err))
+			log.Error("[AnthropicService] Failed to convert anthropic message", zap.Error(err))
 			return
 		}
 		unifiedMessages = append(unifiedMessages, um)
@@ -364,7 +364,7 @@ func (s *anthropicService) storeAnthropicMessages(ctx context.Context, logger *z
 
 	aiMsg, err := dto.FromAnthropicResponse(assistantMsg)
 	if err != nil {
-		logger.Error("[AnthropicService] Failed to convert anthropic response", zap.Error(err))
+		log.Error("[AnthropicService] Failed to convert anthropic response", zap.Error(err))
 		return
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
@@ -390,7 +390,7 @@ func (s *anthropicService) storeAnthropicMessages(ctx context.Context, logger *z
 		OutputTokens: outputTokens,
 		Metadata:     util.ExtractAnthropicMetadata(req.Body.Metadata),
 	}); err != nil {
-		logger.Error("[AnthropicService] Failed to submit message store task", zap.Error(err))
+		log.Error("[AnthropicService] Failed to submit message store task", zap.Error(err))
 	}
 }
 
