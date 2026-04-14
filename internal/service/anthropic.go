@@ -250,7 +250,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
 			}
 			if proxyErr == nil {
-				_, _ = fmt.Fprintf(w, "event: message_stop\ndata: {}\n\n")
+				_, _ = fmt.Fprintf(w, "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n")
 				_ = w.Flush()
 			}
 
