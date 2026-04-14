@@ -53,12 +53,13 @@ func TruncateFieldValue(val string, maxLen int) string {
 }
 
 // TruncateMapValues 递归截断 map 中过长的字符串值
+// 注意：此函数专用于日志中间件等边界层的 JSON 截断场景，不作为核心业务接口使用
 //
 //	@param m 原始 map
 //	@param maxLen 字符串最大长度
 //	@return map[string]any 截断后的 map
 //	@author centonhuang
-//	@update 2026-04-09 15:00:00
+//	@update 2026-04-14 17:30:00
 func TruncateMapValues(m map[string]any, maxLen int) map[string]any {
 	result := make(map[string]any, len(m))
 	for k, v := range m {

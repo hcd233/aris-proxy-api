@@ -27,6 +27,13 @@ import (
 // endpointFields 查询端点时统一使用的字段列表
 var endpointFields = []string{"id", "model", "api_key", "base_url", "provider"}
 
+// submitAuditTask 提交模型调用审计任务，失败时打印 warn 日志
+func submitAuditTask(log *zap.Logger, task *dto.ModelCallAuditTask) {
+	if err := pool.GetPoolManager().SubmitModelCallAuditTask(task); err != nil {
+		log.Warn("[Service] Failed to submit audit task", zap.Error(err))
+	}
+}
+
 // openAIInternalErrorBody OpenAI 内部错误响应 body（预序列化，避免重复 marshal）
 var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
 	Error: &dto.OpenAIError{Message: "Internal server error", Type: "server_error", Code: "internal_error"},
@@ -188,7 +195,7 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 			}
 			task.SetTokensFromOpenAIUsage(usage)
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 		}), nil
 	}
 
@@ -207,7 +214,7 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 				FirstTokenLatencyMs: totalMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 			return
 		}
 		completion.Model = req.Body.Model
@@ -224,7 +231,7 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromOpenAIUsage(completion.Usage)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		submitAuditTask(log, task)
 	}), nil
 }
 
@@ -292,7 +299,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 		}), nil
 	}
 
@@ -311,7 +318,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 				FirstTokenLatencyMs: totalMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 			return
 		}
 		completion, err := conv.ToOpenAIResponse(anthropicMsg)
@@ -334,7 +341,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		submitAuditTask(log, task)
 	}), nil
 }
 

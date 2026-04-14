@@ -6,7 +6,4 @@ const (
 
 	// PostgresMaxOpenConns PostgreSQL connection pool max open connections
 	PostgresMaxOpenConns = 100
-
-	// CosListObjectsMaxKeys COS ListBucket max keys per request
-	CosListObjectsMaxKeys = 1000
 )

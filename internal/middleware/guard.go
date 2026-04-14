@@ -86,8 +86,8 @@ func GuardMiddleware(cfg GuardConfig) fiber.Handler {
 	thresholdStr := strconv.Itoa(cfg.StrikeThreshold)
 	windowTTLStr := strconv.FormatInt(int64(cfg.StrikeWindow.Seconds()), 10)
 	banTTLStr := strconv.FormatInt(int64(cfg.BanDuration.Seconds()), 10)
-	ignoredPaths := lo.SliceToMap(cfg.IgnoredPaths, func(p string) (string, struct{}) {
-		return p, struct{}{}
+	ignoredPaths := lo.SliceToMap(cfg.IgnoredPaths, func(p string) (string, bool) {
+		return p, true
 	})
 	return func(c *fiber.Ctx) error {
 		ip := c.IP()

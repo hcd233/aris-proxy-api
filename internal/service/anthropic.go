@@ -165,7 +165,7 @@ func (s *anthropicService) forwardNative(ctx context.Context, log *zap.Logger, r
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 		}), nil
 	}
 
@@ -184,7 +184,7 @@ func (s *anthropicService) forwardNative(ctx context.Context, log *zap.Logger, r
 				FirstTokenLatencyMs: totalMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 			return
 		}
 		anthropicMsg.Model = exposedModel
@@ -201,7 +201,7 @@ func (s *anthropicService) forwardNative(ctx context.Context, log *zap.Logger, r
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		submitAuditTask(log, task)
 	}), nil
 }
 
@@ -265,7 +265,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 					StreamDurationMs:    streamDurationMs,
 				}
 				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(proxyErr)
-				_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+				submitAuditTask(log, task)
 				return
 			}
 			anthropicMsg, err := conv.ToAnthropicResponse(completion)
@@ -281,7 +281,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 					StreamDurationMs:    streamDurationMs,
 				}
 				task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-				_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+				submitAuditTask(log, task)
 				return
 			}
 			s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, nil, ep.Model)
@@ -296,7 +296,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 				UpstreamStatusCode:  fiber.StatusOK,
 			}
 			task.SetTokensFromAnthropicUsage(anthropicMsg)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 		}), nil
 	}
 
@@ -315,7 +315,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 				FirstTokenLatencyMs: totalMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			submitAuditTask(log, task)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
@@ -338,7 +338,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		submitAuditTask(log, task)
 	}), nil
 }
 
