@@ -32,7 +32,13 @@
   {
     "name": "unicode_string_truncated",
     "input": "你好世界测试数据",
-    "max_len": 6,
-    "want": "你好...(truncated, total 24 chars)"
+    "max_len": 3,
+    "want": "你好世...(truncated, total 8 chars)"
+  },
+  {
+    "name": "unicode_multibyte_midchar_safety",
+    "input": "你好世界",
+    "max_len": 3,
+    "want": "你好世...(truncated, total 4 chars)"
   }
 ]

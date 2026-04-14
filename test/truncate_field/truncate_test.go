@@ -16,10 +16,10 @@ type fieldCase struct {
 }
 
 type mapCase struct {
-	Name   string                 `json:"name"`
-	Input  map[string]interface{} `json:"input"`
-	MaxLen int                    `json:"max_len"`
-	Want   map[string]interface{} `json:"want"`
+	Name   string         `json:"name"`
+	Input  map[string]any `json:"input"`
+	MaxLen int            `json:"max_len"`
+	Want   map[string]any `json:"want"`
 }
 
 func loadFieldCases(t *testing.T) []fieldCase {
@@ -158,14 +158,14 @@ func TestTruncateMapValues_NestedMap(t *testing.T) {
 	tc := findMapCase(t, cases, "nested_map_truncation")
 
 	got := util.TruncateMapValues(tc.Input, tc.MaxLen)
-	outer, ok := got["outer"].(map[string]interface{})
+	outer, ok := got["outer"].(map[string]any)
 	if !ok {
-		t.Fatalf("TruncateMapValues() outer is not map[string]interface{}, got %T", got["outer"])
+		t.Fatalf("TruncateMapValues() outer is not map[string]any, got %T", got["outer"])
 	}
 	if outer["inner"] != "short" {
 		t.Errorf("TruncateMapValues() inner=%q, want %q", outer["inner"], "short")
 	}
-	wantOuter := tc.Want["outer"].(map[string]interface{})
+	wantOuter := tc.Want["outer"].(map[string]any)
 	if outer["long"] != wantOuter["long"] {
 		t.Errorf("TruncateMapValues() long mismatch:\n  got:  %q\n  want: %q", outer["long"], wantOuter["long"])
 	}
@@ -176,11 +176,11 @@ func TestTruncateMapValues_ArrayOfStrings(t *testing.T) {
 	tc := findMapCase(t, cases, "array_of_strings_truncation")
 
 	got := util.TruncateMapValues(tc.Input, tc.MaxLen)
-	messages, ok := got["messages"].([]interface{})
+	messages, ok := got["messages"].([]any)
 	if !ok {
-		t.Fatalf("TruncateMapValues() messages is not []interface{}, got %T", got["messages"])
+		t.Fatalf("TruncateMapValues() messages is not []any, got %T", got["messages"])
 	}
-	wantMessages := tc.Want["messages"].([]interface{})
+	wantMessages := tc.Want["messages"].([]any)
 	if messages[0] != wantMessages[0] {
 		t.Errorf("TruncateMapValues() messages[0]=%q, want %q", messages[0], wantMessages[0])
 	}
