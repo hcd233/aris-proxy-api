@@ -37,6 +37,15 @@ const (
 	ParseFloat64BitSize = 64
 )
 
+// ==================== 字节范围 ====================
+
+const (
+	// ByteMax byte 类型的取值范围上限（256），用于 rejection sampling 避免字节分布偏差
+	//	@author centonhuang
+	//	@update 2026-04-14 00:00:00
+	ByteMax = 256
+)
+
 // ==================== 日志字段 ====================
 
 const (
