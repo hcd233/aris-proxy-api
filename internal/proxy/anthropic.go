@@ -77,13 +77,13 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEn
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("[AnthropicProxy] Read upstream response error", zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "read upstream response")
+		return nil, &model.UpstreamConnectionError{Cause: err}
 	}
 
 	message := &dto.AnthropicMessage{}
 	if err := sonic.Unmarshal(respBody, message); err != nil {
 		logger.Warn("[AnthropicProxy] Unmarshal upstream response error", zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "unmarshal upstream response")
+		return nil, &model.UpstreamConnectionError{Cause: err}
 	}
 
 	return message, nil
@@ -126,7 +126,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep Upst
 		if readErr != nil {
 			if readErr != io.EOF {
 				logger.Warn("[AnthropicProxy] Read upstream sse error", zap.Error(readErr))
-				return nil, ierr.Wrap(ierr.ErrProxyResponse, readErr, "read upstream sse stream")
+				return nil, &model.UpstreamConnectionError{Cause: readErr}
 			}
 			break
 		}
@@ -185,7 +185,7 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
 		logger.Error("[AnthropicProxy] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrProxySend, err, "send request")
+		return nil, &model.UpstreamConnectionError{Cause: err}
 	}
 
 	if resp.StatusCode != http.StatusOK {
