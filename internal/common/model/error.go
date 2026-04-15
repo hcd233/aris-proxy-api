@@ -41,3 +41,18 @@ type UpstreamError struct {
 func (e *UpstreamError) Error() string {
 	return fmt.Sprintf("upstream returned status %d", e.StatusCode)
 }
+
+// UpstreamConnectionError 上游连接错误（网络层错误，无法获取 HTTP 状态码）
+//
+//	@author centonhuang
+//	@update 2026-04-15 19:00:00
+type UpstreamConnectionError struct {
+	Cause error
+}
+
+func (e *UpstreamConnectionError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("upstream connection error: %v", e.Cause)
+	}
+	return "upstream connection error"
+}

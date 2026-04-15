@@ -67,13 +67,13 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndp
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("[OpenAIProxy] Read upstream response error", zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "read upstream response")
+		return nil, &model.UpstreamConnectionError{Cause: err}
 	}
 
 	completion := &dto.OpenAIChatCompletion{}
 	if err := sonic.Unmarshal(respBody, completion); err != nil {
 		logger.Warn("[OpenAIProxy] Unmarshal upstream response error", zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrProxyResponse, err, "unmarshal upstream response")
+		return nil, &model.UpstreamConnectionError{Cause: err}
 	}
 
 	return completion, nil
@@ -117,7 +117,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 		if readErr != nil {
 			if readErr != io.EOF {
 				logger.Warn("[OpenAIProxy] Read upstream sse error", zap.Error(readErr))
-				return nil, ierr.Wrap(ierr.ErrProxyResponse, readErr, "read upstream sse stream")
+				return nil, &model.UpstreamConnectionError{Cause: readErr}
 			}
 			break
 		}
@@ -151,7 +151,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
 		logger.Error("[OpenAIProxy] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrProxySend, err, "send request")
+		return nil, &model.UpstreamConnectionError{Cause: err}
 	}
 
 	if resp.StatusCode != http.StatusOK {

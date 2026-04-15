@@ -133,13 +133,13 @@ func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error
 
 // ExtractUpstreamStatusAndError 从 error 中提取上游 HTTP 状态码和错误消息字符串
 //
-//	成功时返回 (200, "")，上游错误返回上游状态码和错误信息（包含 body），其他错误返回 (0, err.Error())
+//	成功时返回 (200, "")，上游错误返回上游状态码和错误信息（包含 body），连接错误返回 (-1, errorMessage)
 //
 //	@param err error
 //	@return int statusCode
 //	@return string errorMessage
 //	@author centonhuang
-//	@update 2026-04-10 10:00:00
+//	@update 2026-04-15 19:00:00
 func ExtractUpstreamStatusAndError(err error) (statusCode int, errorMessage string) {
 	if err == nil {
 		return fiber.StatusOK, ""
@@ -152,5 +152,9 @@ func ExtractUpstreamStatusAndError(err error) (statusCode int, errorMessage stri
 		}
 		return ue.StatusCode, msg
 	}
-	return 0, err.Error()
+	var connErr *model.UpstreamConnectionError
+	if errors.As(err, &connErr) {
+		return -1, connErr.Error()
+	}
+	return -1, err.Error()
 }
