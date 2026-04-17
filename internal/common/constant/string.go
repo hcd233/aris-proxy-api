@@ -70,6 +70,11 @@ const (
 	//	@update 2026-04-09 15:00:00
 	SSEDoneSignal = "[DONE]"
 
+	// SSEEventPrefix Response API SSE event 行前缀
+	//	@author centonhuang
+	//	@update 2026-04-17 10:00:00
+	SSEEventPrefix = "event: "
+
 	// ==================== 上游 API 版本 ====================
 
 	// AnthropicAPIVersion Anthropic API 版本 header 值
