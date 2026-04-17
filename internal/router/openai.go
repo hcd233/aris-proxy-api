@@ -43,4 +43,17 @@ func initOpenAIRouter(openaiGroup huma.API) {
 			{"apiKeyAuth": {}},
 		},
 	}, openaiHandler.HandleChatCompletion)
+
+	huma.Register(openaiGroup, huma.Operation{
+		OperationID: "createResponse",
+		Method:      http.MethodPost,
+		Path:        "/responses",
+		Summary:     "Create response",
+		Description: "Creates a model response for the given input.",
+		Tags:        []string{"OpenAI"},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Security: []map[string][]string{
+			{"apiKeyAuth": {}},
+		},
+	}, openaiHandler.HandleCreateResponse)
 }

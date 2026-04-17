@@ -50,10 +50,11 @@ func toUpstream(ep *dbmodel.ModelEndpoint) proxy.UpstreamEndpoint {
 // OpenAIService OpenAI服务
 //
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
+//	@update 2026-04-17 10:00:00
 type OpenAIService interface {
 	ListModels(ctx context.Context, req *dto.EmptyReq) (*dto.OpenAIListModelsRsp, error)
 	CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error)
+	CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error)
 }
 
 type openAIService struct {
@@ -334,6 +335,119 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+	}), nil
+}
+
+// CreateResponse 创建 Response API 响应
+//
+//	@receiver s *openAIService
+//	@param ctx context.Context
+//	@param req *dto.OpenAICreateResponseRequest
+//	@return *huma.StreamResponse
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-17 10:00:00
+func (s *openAIService) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
+	log := logger.WithCtx(ctx)
+
+	endpoint, err := findEndpoint(ctx, s.modelEndpointDAO, req.Body.Model, enum.ProviderOpenAI, enum.ProviderAnthropic)
+	if err != nil {
+		log.Error("[OpenAIService] Response API model not found", zap.String("model", req.Body.Model), zap.Error(err))
+		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+	}
+
+	// Response API 仅支持 OpenAI 上游
+	if endpoint.Provider != enum.ProviderOpenAI {
+		log.Error("[OpenAIService] Response API does not support non-OpenAI provider", zap.String("model", req.Body.Model), zap.String("provider", endpoint.Provider))
+		return util.SendOpenAIInternalError(), nil
+	}
+
+	ep := toUpstream(endpoint)
+	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
+	stream := req.Body.Stream != nil && *req.Body.Stream
+
+	if stream {
+		return s.forwardResponseStream(ctx, log, req, endpoint, ep, body)
+	}
+	return s.forwardResponseNonStream(ctx, log, req, endpoint, ep, body)
+}
+
+// forwardResponseStream Response API 流式转发
+func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) (*huma.StreamResponse, error) {
+	return util.WrapStreamResponse(func(w *bufio.Writer) {
+		startTime := time.Now()
+		var firstTokenTime time.Time
+		var firstTokenLatencyMs int64
+		var streamDurationMs int64
+
+		proxyErr := s.openAIProxy.ForwardCreateResponseStream(ctx, ep, body, func(event string, data []byte) error {
+			if firstTokenTime.IsZero() {
+				firstTokenTime = time.Now()
+				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+			}
+			replaced := proxy.ReplaceModelInSSEData(data, req.Body.Model)
+			_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, replaced)
+			return w.Flush()
+		})
+
+		streamDone := time.Now()
+		if !firstTokenTime.IsZero() {
+			streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
+		}
+		if proxyErr != nil {
+			log.Error("[OpenAIService] Response API stream error", zap.Error(proxyErr))
+		}
+
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               req.Body.Model,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         enum.ProviderOpenAI,
+			FirstTokenLatencyMs: firstTokenLatencyMs,
+			StreamDurationMs:    streamDurationMs,
+		}
+		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(proxyErr)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+	}), nil
+}
+
+// forwardResponseNonStream Response API 非流式转发
+func (s *openAIService) forwardResponseNonStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) (*huma.StreamResponse, error) {
+	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		startTime := time.Now()
+		respBody, err := s.openAIProxy.ForwardCreateResponse(ctx, ep, body)
+		totalMs := time.Since(startTime).Milliseconds()
+		if err != nil {
+			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
+			task := &dto.ModelCallAuditTask{
+				Ctx:                 util.CopyContextValues(ctx),
+				ModelID:             endpoint.ID,
+				Model:               req.Body.Model,
+				UpstreamProvider:    endpoint.Provider,
+				APIProvider:         enum.ProviderOpenAI,
+				FirstTokenLatencyMs: totalMs,
+			}
+			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			return
+		}
+
+		replaced := proxy.ReplaceModelInBody(respBody, req.Body.Model)
+		writer.HumaCtx.SetStatus(fiber.StatusOK)
+		writer.HumaCtx.SetHeader("Content-Type", "application/json")
+		_, _ = writer.HumaCtx.BodyWriter().Write(replaced)
+
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               req.Body.Model,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         enum.ProviderOpenAI,
+			FirstTokenLatencyMs: totalMs,
+			UpstreamStatusCode:  fiber.StatusOK,
+		}
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	}), nil
 }
