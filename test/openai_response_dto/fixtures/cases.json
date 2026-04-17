@@ -1,0 +1,224 @@
+[
+  {
+    "name": "create_response_codex_full",
+    "description": "Full Codex Desktop /responses body must round-trip through the typed DTO",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": [
+        {
+          "content": [
+            {"text": "<permissions instructions>", "type": "input_text"},
+            {"text": "<skills_instructions>", "type": "input_text"}
+          ],
+          "role": "developer",
+          "type": "message"
+        },
+        {
+          "content": [
+            {"text": "AGENTS.md", "type": "input_text"}
+          ],
+          "role": "user",
+          "type": "message"
+        }
+      ],
+      "reasoning": {"effort": "medium", "summary": "auto"},
+      "store": false,
+      "stream": true,
+      "parallel_tool_calls": true,
+      "text": {
+        "format": {
+          "name": "codex_output_schema",
+          "schema": {"type": "object"},
+          "strict": true,
+          "type": "json_schema"
+        },
+        "verbosity": "low"
+      },
+      "instructions": "You are Codex.",
+      "tools": [
+        {"name": "exec_command", "type": "function", "parameters": {"type": "object"}, "strict": true}
+      ],
+      "tool_choice": "auto",
+      "include": ["reasoning.encrypted_content"],
+      "prompt_cache_key": "019d9a65-3421-7fb0-80c6-a68384557ac7"
+    }
+  },
+  {
+    "name": "create_response_minimal",
+    "description": "Minimal request with only model",
+    "request_body": {"model": "gpt-4o"},
+    "expected_model": "gpt-4o"
+  },
+  {
+    "name": "create_response_scalars",
+    "description": "max_output_tokens and other scalar fields must be typed integers/booleans",
+    "request_body": {
+      "model": "gpt-4o",
+      "max_output_tokens": 4096,
+      "max_tool_calls": 32,
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "top_logprobs": 5,
+      "truncation": "auto",
+      "service_tier": "flex",
+      "user": "user-123",
+      "safety_identifier": "safety-abc",
+      "metadata": {"k1": "v1"}
+    }
+  },
+  {
+    "name": "tool_choice_string",
+    "description": "tool_choice accepts the string variant",
+    "request_body": {"model": "gpt-4o", "tool_choice": "required"}
+  },
+  {
+    "name": "tool_choice_object_function",
+    "description": "tool_choice accepts ToolChoiceFunction object",
+    "request_body": {
+      "model": "gpt-4o",
+      "tool_choice": {"type": "function", "name": "get_weather"}
+    }
+  },
+  {
+    "name": "tool_choice_object_mcp",
+    "description": "tool_choice accepts ToolChoiceMcp object",
+    "request_body": {
+      "model": "gpt-4o",
+      "tool_choice": {"type": "mcp", "server_label": "deepwiki", "name": "search"}
+    }
+  },
+  {
+    "name": "input_string",
+    "description": "input accepts the string shortcut (TextInput)",
+    "request_body": {"model": "gpt-4o", "input": "hello"}
+  },
+  {
+    "name": "input_array_message_string_content",
+    "description": "input accepts EasyInputMessage whose content is a bare string",
+    "request_body": {
+      "model": "gpt-4o",
+      "input": [{"role": "user", "content": "hi there"}]
+    }
+  },
+  {
+    "name": "include_enum",
+    "description": "include is an array of ResponseIncludable strings",
+    "request_body": {
+      "model": "gpt-4o",
+      "include": [
+        "reasoning.encrypted_content",
+        "web_search_call.action.sources",
+        "message.output_text.logprobs"
+      ]
+    }
+  },
+  {
+    "name": "reasoning_all_fields",
+    "description": "reasoning object accepts effort + summary",
+    "request_body": {
+      "model": "gpt-5",
+      "reasoning": {"effort": "xhigh", "summary": "detailed"}
+    }
+  },
+  {
+    "name": "text_json_schema",
+    "description": "text.format json_schema variant with nested JSONSchemaProperty",
+    "request_body": {
+      "model": "gpt-4o",
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "name": "person",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "age": {"type": "integer"}
+            },
+            "required": ["name"]
+          }
+        },
+        "verbosity": "medium"
+      }
+    }
+  },
+  {
+    "name": "conversation_string",
+    "description": "conversation field accepts a plain string ID",
+    "request_body": {"model": "gpt-4o", "conversation": "conv_abc"}
+  },
+  {
+    "name": "conversation_object",
+    "description": "conversation field accepts a { id } object",
+    "request_body": {"model": "gpt-4o", "conversation": {"id": "conv_xyz"}}
+  },
+  {
+    "name": "context_management",
+    "description": "context_management is an array of { type, compact_threshold }",
+    "request_body": {
+      "model": "gpt-4o",
+      "context_management": [{"type": "compaction", "compact_threshold": 4096}]
+    }
+  },
+  {
+    "name": "tools_mcp_with_allowed_array",
+    "description": "MCP tool with allowed_tools as string array",
+    "request_body": {
+      "model": "gpt-4o",
+      "tools": [{
+        "type": "mcp",
+        "server_label": "deepwiki",
+        "allowed_tools": ["search", "fetch"],
+        "server_url": "https://mcp.example.com"
+      }]
+    }
+  },
+  {
+    "name": "tools_mcp_with_allowed_filter",
+    "description": "MCP tool with allowed_tools as filter object",
+    "request_body": {
+      "model": "gpt-4o",
+      "tools": [{
+        "type": "mcp",
+        "server_label": "deepwiki",
+        "allowed_tools": {"read_only": true, "tool_names": ["search"]},
+        "require_approval": "never"
+      }]
+    }
+  },
+  {
+    "name": "tools_image_generation",
+    "description": "ImageGeneration tool with optional fields",
+    "request_body": {
+      "model": "gpt-4o",
+      "tools": [{
+        "type": "image_generation",
+        "action": "auto",
+        "background": "transparent",
+        "quality": "high",
+        "size": "1024x1024",
+        "output_format": "png"
+      }]
+    }
+  },
+  {
+    "name": "tools_file_search",
+    "description": "FileSearch tool with compound filter",
+    "request_body": {
+      "model": "gpt-4o",
+      "tools": [{
+        "type": "file_search",
+        "vector_store_ids": ["vs_abc"],
+        "max_num_results": 10,
+        "filters": {
+          "type": "and",
+          "filters": [
+            {"type": "eq", "key": "lang", "value": "zh"},
+            {"type": "gte", "key": "year", "value": 2024}
+          ]
+        }
+      }]
+    }
+  }
+]
