@@ -1,5 +1,9 @@
 echo -e "\033[1;36mDeploying production environment...\033[0m"
 
+echo -e "\"\033[1;36mPulling the latest code from GitHub...\033[0m"
+git checkout master
+git pull origin master
+
 echo -e "\033[1;32mPulling the latest Docker image...\033[0m"
 docker pull ghcr.io/hcd233/aris-proxy-api:master
 
