@@ -1,6 +1,6 @@
 echo -e "\033[1;36mDeploying development environment...\033[0m"
 
-echo -e "\"\033[1;36mPulling the latest code from GitHub...\033[0m"
+echo -e "\033[1;36mPulling the latest code from GitHub...\033[0m"
 git checkout master
 git pull origin master
 
