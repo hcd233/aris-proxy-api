@@ -75,6 +75,28 @@ const (
 	//	@update 2026-04-17 10:00:00
 	SSEEventPrefix = "event: "
 
+	// ==================== Response API 审计错误消息 ====================
+
+	// ResponseFailedAuditReason response.failed 终态事件无 error payload 时的审计兜底文案
+	//	@author centonhuang
+	//	@update 2026-04-18 17:00:00
+	ResponseFailedAuditReason = "response.failed"
+
+	// ResponseFailedAuditReasonTemplate response.failed 附带 error.message 时的审计文案模板
+	//	@author centonhuang
+	//	@update 2026-04-18 17:00:00
+	ResponseFailedAuditReasonTemplate = "response.failed: %s"
+
+	// ResponseIncompleteAuditReason response.incomplete 终态事件无 incomplete_details 时的审计兜底文案
+	//	@author centonhuang
+	//	@update 2026-04-18 17:00:00
+	ResponseIncompleteAuditReason = "response.incomplete"
+
+	// ResponseIncompleteAuditReasonTemplate response.incomplete 附带 reason 时的审计文案模板
+	//	@author centonhuang
+	//	@update 2026-04-18 17:00:00
+	ResponseIncompleteAuditReasonTemplate = "response.incomplete: %s"
+
 	// ==================== 上游 API 版本 ====================
 
 	// AnthropicAPIVersion Anthropic API 版本 header 值

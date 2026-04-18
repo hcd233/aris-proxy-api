@@ -1,6 +1,12 @@
 package dto
 
-import "context"
+import (
+	"context"
+	"fmt"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
+)
 
 // PingTask 健康检查任务
 //
@@ -109,5 +115,38 @@ func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateRespons
 	t.OutputTokens = rsp.Usage.OutputTokens
 	if rsp.Usage.InputTokensDetails != nil {
 		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
+	}
+}
+
+// SetErrorFromResponseStatus 将 Response API 终态中的 in-band 失败/未完成原因
+// 注入到审计任务 ErrorMessage。
+//
+// 场景：上游 HTTP 200 正常返回，但 Response 对象 status=failed 或
+// status=incomplete，此时 ExtractUpstreamStatusAndError 只能看到 HTTP
+// 层，拿到的是成功；网关需要从响应对象本身抽取失败/未完成原因（error.message
+// 或 incomplete_details.reason），审计仪表盘才能区分"业务失败"和"成功"。
+// 若 t.ErrorMessage 已非空（传输层已经报错），则不覆盖。
+//
+//	@receiver t *ModelCallAuditTask
+//	@param rsp *OpenAICreateResponseRsp
+//	@author centonhuang
+//	@update 2026-04-18 17:00:00
+func (t *ModelCallAuditTask) SetErrorFromResponseStatus(rsp *OpenAICreateResponseRsp) {
+	if rsp == nil || t.ErrorMessage != "" {
+		return
+	}
+	switch rsp.Status {
+	case enum.ResponseStatusFailed:
+		if rsp.Error != nil && rsp.Error.Message != "" {
+			t.ErrorMessage = fmt.Sprintf(constant.ResponseFailedAuditReasonTemplate, rsp.Error.Message)
+			return
+		}
+		t.ErrorMessage = constant.ResponseFailedAuditReason
+	case enum.ResponseStatusIncomplete:
+		if rsp.IncompleteDetails != nil && rsp.IncompleteDetails.Reason != "" {
+			t.ErrorMessage = fmt.Sprintf(constant.ResponseIncompleteAuditReasonTemplate, rsp.IncompleteDetails.Reason)
+			return
+		}
+		t.ErrorMessage = constant.ResponseIncompleteAuditReason
 	}
 }
