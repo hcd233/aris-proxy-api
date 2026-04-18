@@ -12,6 +12,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type conversionCase struct {
@@ -241,5 +242,198 @@ func TestResponseStreamTerminalEvent_Parse(t *testing.T) {
 	}
 	if ev.Response.Usage == nil || ev.Response.Usage.InputTokens != 2 {
 		t.Errorf("Usage mismatch: %+v", ev.Response.Usage)
+	}
+}
+
+// TestResponseStreamTerminalEvent_ParseFailed and Incomplete verify the
+// same typed wrapper also handles the two other terminal events
+// (response.failed, response.incomplete). Both carry the final Response
+// object and must populate Usage + diagnostic fields (error /
+// incomplete_details) so audit accounting is not lost on in-band failure.
+func TestResponseStreamTerminalEvent_ParseFailed(t *testing.T) {
+	payload := []byte(`{"type":"response.failed","response":{"id":"resp_f","object":"response","status":"failed","output":[],"error":{"code":"server_error","message":"upstream model unavailable"},"usage":{"input_tokens":4,"output_tokens":0,"total_tokens":4}}}`)
+	var ev dto.ResponseStreamTerminalEvent
+	if err := sonic.Unmarshal(payload, &ev); err != nil {
+		t.Fatalf("unmarshal failed event: %v", err)
+	}
+	if ev.Type != "response.failed" {
+		t.Errorf("Type = %q, want response.failed", ev.Type)
+	}
+	if ev.Response == nil || ev.Response.Status != "failed" {
+		t.Fatalf("Response mismatch: %+v", ev.Response)
+	}
+	if ev.Response.Error == nil || ev.Response.Error.Message != "upstream model unavailable" {
+		t.Errorf("Error mismatch: %+v", ev.Response.Error)
+	}
+	if ev.Response.Usage == nil || ev.Response.Usage.InputTokens != 4 {
+		t.Errorf("Usage mismatch: %+v", ev.Response.Usage)
+	}
+}
+
+func TestResponseStreamTerminalEvent_ParseIncomplete(t *testing.T) {
+	payload := []byte(`{"type":"response.incomplete","response":{"id":"resp_i","object":"response","status":"incomplete","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"partial"}]}],"incomplete_details":{"reason":"max_output_tokens"},"usage":{"input_tokens":3,"output_tokens":9,"total_tokens":12}}}`)
+	var ev dto.ResponseStreamTerminalEvent
+	if err := sonic.Unmarshal(payload, &ev); err != nil {
+		t.Fatalf("unmarshal incomplete event: %v", err)
+	}
+	if ev.Type != "response.incomplete" {
+		t.Errorf("Type = %q, want response.incomplete", ev.Type)
+	}
+	if ev.Response == nil || ev.Response.IncompleteDetails == nil {
+		t.Fatalf("Response/IncompleteDetails mismatch: %+v", ev.Response)
+	}
+	if ev.Response.IncompleteDetails.Reason != "max_output_tokens" {
+		t.Errorf("Reason = %q, want max_output_tokens", ev.Response.IncompleteDetails.Reason)
+	}
+}
+
+// TestIsResponseAPIDeltaEvent verifies the delta-event classifier used by
+// the service layer to measure time-to-first-token. All of the metadata
+// framing events (response.created / response.in_progress / *.added /
+// *.done) must not count; every generated-token event (regardless of
+// modality) must.
+func TestIsResponseAPIDeltaEvent(t *testing.T) {
+	cases := []struct {
+		event string
+		want  bool
+	}{
+		{"response.created", false},
+		{"response.in_progress", false},
+		{"response.output_item.added", false},
+		{"response.content_part.added", false},
+		{"response.output_text.done", false},
+		{"response.output_item.done", false},
+		{"response.completed", false},
+		{"response.failed", false},
+		{"response.incomplete", false},
+
+		{"response.output_text.delta", true},
+		{"response.reasoning_text.delta", true},
+		{"response.reasoning_summary_text.delta", true},
+		{"response.function_call_arguments.delta", true},
+		{"response.custom_tool_call_input.delta", true},
+		{"response.audio.delta", true},
+	}
+	for _, tc := range cases {
+		if got := util.IsResponseAPIDeltaEvent(tc.event); got != tc.want {
+			t.Errorf("IsResponseAPIDeltaEvent(%q) = %v, want %v", tc.event, got, tc.want)
+		}
+	}
+}
+
+// TestIsResponseAPITerminalEvent covers the three terminal events that
+// carry the final Response object. Everything else must report false so
+// the service doesn't try to unmarshal an intermediate event body as a
+// ResponseStreamTerminalEvent.
+func TestIsResponseAPITerminalEvent(t *testing.T) {
+	cases := []struct {
+		event string
+		want  bool
+	}{
+		{"response.completed", true},
+		{"response.failed", true},
+		{"response.incomplete", true},
+
+		{"response.created", false},
+		{"response.in_progress", false},
+		{"response.output_text.delta", false},
+		{"", false},
+	}
+	for _, tc := range cases {
+		if got := util.IsResponseAPITerminalEvent(tc.event); got != tc.want {
+			t.Errorf("IsResponseAPITerminalEvent(%q) = %v, want %v", tc.event, got, tc.want)
+		}
+	}
+}
+
+// TestSetErrorFromResponseStatus_Failed covers the case where HTTP
+// transport returned 200 but the response object carried status=failed
+// with an error payload; the reason must land on the audit task.
+func TestSetErrorFromResponseStatus_Failed(t *testing.T) {
+	tc := findCase(t, loadCases(t), "failed_response")
+	_, rsp := parseBodies(t, tc)
+
+	task := &dto.ModelCallAuditTask{}
+	task.SetTokensFromResponseUsage(rsp)
+	task.SetErrorFromResponseStatus(rsp)
+
+	if task.InputTokens != 2 {
+		t.Errorf("InputTokens = %d, want 2", task.InputTokens)
+	}
+	want := "response.failed: upstream model unavailable"
+	if task.ErrorMessage != want {
+		t.Errorf("ErrorMessage = %q, want %q", task.ErrorMessage, want)
+	}
+}
+
+// TestSetErrorFromResponseStatus_Incomplete verifies the reason from
+// incomplete_details (e.g. max_output_tokens) is also surfaced.
+func TestSetErrorFromResponseStatus_Incomplete(t *testing.T) {
+	tc := findCase(t, loadCases(t), "incomplete_with_output")
+	_, rsp := parseBodies(t, tc)
+
+	task := &dto.ModelCallAuditTask{}
+	task.SetErrorFromResponseStatus(rsp)
+
+	want := "response.incomplete: max_output_tokens"
+	if task.ErrorMessage != want {
+		t.Errorf("ErrorMessage = %q, want %q", task.ErrorMessage, want)
+	}
+}
+
+// TestSetErrorFromResponseStatus_PreservesTransportError asserts the
+// helper never overwrites an existing ErrorMessage (set by a real
+// transport-level error extracted upstream), matching the intent of
+// distinguishing transport vs. in-band failures.
+func TestSetErrorFromResponseStatus_PreservesTransportError(t *testing.T) {
+	tc := findCase(t, loadCases(t), "failed_response")
+	_, rsp := parseBodies(t, tc)
+
+	task := &dto.ModelCallAuditTask{ErrorMessage: "http timeout"}
+	task.SetErrorFromResponseStatus(rsp)
+	if task.ErrorMessage != "http timeout" {
+		t.Errorf("ErrorMessage overwritten: got %q, want %q", task.ErrorMessage, "http timeout")
+	}
+}
+
+// TestSetErrorFromResponseStatus_CompletedIsNoop asserts a healthy
+// response never produces an ErrorMessage.
+func TestSetErrorFromResponseStatus_CompletedIsNoop(t *testing.T) {
+	tc := findCase(t, loadCases(t), "text_in_text_out")
+	_, rsp := parseBodies(t, tc)
+
+	task := &dto.ModelCallAuditTask{}
+	task.SetErrorFromResponseStatus(rsp)
+	if task.ErrorMessage != "" {
+		t.Errorf("ErrorMessage = %q, want empty", task.ErrorMessage)
+	}
+}
+
+// TestFromResponseAPI_IncompleteWithOutputPersists asserts that an
+// in-band `incomplete` response with partial Output still produces
+// UnifiedMessages. This matches /chat/completions, which stores
+// completions even when finish_reason=length.
+func TestFromResponseAPI_IncompleteWithOutputPersists(t *testing.T) {
+	tc := findCase(t, loadCases(t), "incomplete_with_output")
+	req, rsp := parseBodies(t, tc)
+
+	// Precondition: status must be incomplete so we're really testing the
+	// incomplete path (otherwise the assertion is vacuous).
+	if rsp.Status != enum.ResponseStatus("incomplete") {
+		t.Fatalf("fixture status = %q, want incomplete", rsp.Status)
+	}
+
+	msgs := buildConversation(t, req, rsp)
+	if len(msgs) != 2 {
+		t.Fatalf("len(msgs) = %d, want 2 (user + partial assistant)", len(msgs))
+	}
+	if msgs[0].Role != enum.RoleUser {
+		t.Errorf("msgs[0] role = %q, want user", msgs[0].Role)
+	}
+	if msgs[1].Role != enum.RoleAssistant {
+		t.Errorf("msgs[1] role = %q, want assistant", msgs[1].Role)
+	}
+	if msgs[1].Content == nil || len(msgs[1].Content.Parts) != 1 || msgs[1].Content.Parts[0].Text != "Once upon a time," {
+		t.Errorf("partial assistant content mismatch: %+v", msgs[1].Content)
 	}
 }
