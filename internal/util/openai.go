@@ -202,6 +202,46 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 	return cmpl, nil
 }
 
+// IsResponseAPITerminalEvent reports whether event is one of the three
+// terminal SSE events emitted by the OpenAI Response API
+// (response.completed / response.failed / response.incomplete). Each of
+// them carries the final Response object with usage, which the gateway
+// needs for both audit accounting and error reporting.
+//
+//	@param event string
+//	@return bool
+//	@author centonhuang
+//	@update 2026-04-18 17:00:00
+func IsResponseAPITerminalEvent(event string) bool {
+	switch event {
+	case enum.ResponseStreamEventCompleted,
+		enum.ResponseStreamEventFailed,
+		enum.ResponseStreamEventIncomplete:
+		return true
+	}
+	return false
+}
+
+// IsResponseAPIDeltaEvent reports whether event is a delta SSE event that
+// carries real generated tokens.
+//
+// All events that deliver generated content share the `.delta` suffix
+// (response.output_text.delta, response.reasoning_text.delta,
+// response.function_call_arguments.delta, response.audio.delta,
+// response.custom_tool_call_input.delta, ...). Metadata events like
+// response.created / response.in_progress / response.output_item.added do
+// not. Measuring time-to-first-token on delta events keeps the audit
+// metric comparable to /chat/completions (which only points on content
+// deltas) instead of the first SSE frame of the stream.
+//
+//	@param event string
+//	@return bool
+//	@author centonhuang
+//	@update 2026-04-18 17:00:00
+func IsResponseAPIDeltaEvent(event string) bool {
+	return strings.HasSuffix(event, enum.ResponseStreamEventDeltaSuffix)
+}
+
 // SendOpenAIUpstreamError 发送上游错误响应
 //
 //	@param statusCode int
