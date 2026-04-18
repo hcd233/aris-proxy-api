@@ -5,6 +5,59 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
+// JSONSchemaTypeValue JSON Schema `type` 字段联合类型（string 或 string[]）
+//
+// 部分客户端（如 Codex Desktop）会在工具参数 schema 中传递
+// `"type": ["string", "null"]`。为兼容该合法写法，这里支持
+// 字符串和字符串数组两种形态。
+type JSONSchemaTypeValue struct {
+	Single string   `json:"-"`
+	Multi  []string `json:"-"`
+}
+
+// UnmarshalJSON 解析 string 或 string[]
+func (t *JSONSchemaTypeValue) UnmarshalJSON(data []byte) error {
+	var single string
+	if err := sonic.Unmarshal(data, &single); err == nil {
+		t.Single = single
+		t.Multi = nil
+		return nil
+	}
+
+	var multi []string
+	if err := sonic.Unmarshal(data, &multi); err == nil {
+		t.Single = ""
+		t.Multi = multi
+		return nil
+	}
+
+	return sonic.Unmarshal(data, &single)
+}
+
+// MarshalJSON 按原始分支输出
+func (t JSONSchemaTypeValue) MarshalJSON() ([]byte, error) {
+	if len(t.Multi) > 0 {
+		return sonic.Marshal(t.Multi)
+	}
+	return sonic.Marshal(t.Single)
+}
+
+// HasType 判断是否包含目标 type 字面量
+func (t *JSONSchemaTypeValue) HasType(typeName string) bool {
+	if t == nil {
+		return false
+	}
+	if t.Single == typeName {
+		return true
+	}
+	for _, v := range t.Multi {
+		if v == typeName {
+			return true
+		}
+	}
+	return false
+}
+
 // Schema 实现 huma.SchemaProvider 接口，告诉 Huma 此类型是自由格式的 JSON Schema 对象
 //
 // JSON Schema 本身是递归多态结构，字段如 additionalProperties 可以是 bool 或嵌套 schema、
@@ -25,7 +78,7 @@ func (JSONSchemaProperty) Schema(r huma.Registry) *huma.Schema {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type JSONSchemaProperty struct {
-	Type                 string                         `json:"type,omitempty" doc:"数据类型(string/number/integer/boolean/array/object/null)"`
+	Type                 *JSONSchemaTypeValue           `json:"type,omitempty" doc:"数据类型(string/number/integer/boolean/array/object/null，支持 string 或 string[])"`
 	Description          string                         `json:"description,omitempty" doc:"属性描述"`
 	Properties           map[string]*JSONSchemaProperty `json:"properties,omitempty" doc:"对象属性定义(递归)"`
 	Items                *JSONSchemaProperty            `json:"items,omitempty" doc:"数组元素定义(递归)"`
@@ -69,4 +122,12 @@ type JSONSchemaProperty struct {
 	Ref       string                         `json:"$ref,omitempty" doc:"JSON Schema引用"`
 	SchemaURI string                         `json:"$schema,omitempty" doc:"JSON Schema版本"`
 	Defs      map[string]*JSONSchemaProperty `json:"$defs,omitempty" doc:"JSON Schema定义"`
+}
+
+// HasType 判断 JSON Schema 的 type 是否包含给定类型
+func (p *JSONSchemaProperty) HasType(typeName string) bool {
+	if p == nil {
+		return false
+	}
+	return p.Type.HasType(typeName)
 }
