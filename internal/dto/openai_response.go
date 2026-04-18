@@ -163,7 +163,14 @@ type ResponseContextManagementEntry struct {
 // ==================== 顶层请求 ====================
 
 // OpenAICreateResponseReq Response API 请求体（按文档精确建模）
+//
+// The `_` field with `additionalProperties:"true"` allows forward-compatible
+// clients (e.g. Codex Desktop sending `client_metadata`) to send extra fields
+// without triggering a 422 Unprocessable Entity response. Unknown fields are
+// dropped during forwarding — this mirrors upstream OpenAI behavior.
 type OpenAICreateResponseReq struct {
+	_ struct{} `json:"-" additionalProperties:"true"`
+
 	// ---------- 布尔/标量 ----------
 	Background           *bool             `json:"background,omitempty" doc:"是否后台运行"`
 	Instructions         *string           `json:"instructions,omitempty" doc:"系统指令"`
