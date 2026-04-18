@@ -48,6 +48,56 @@
     }
   },
   {
+    "name": "responses_reasoning_null",
+    "description": "Regression for clients sending explicit null reasoning field; schema should accept optional null and return 200.",
+    "path": "/api/openai/v1/responses",
+    "want_status": 200,
+    "request_body": {
+      "model": "minimax-m2.7",
+      "stream": true,
+      "reasoning": null,
+      "input": [
+        {
+          "content": [{"text": "hello", "type": "input_text"}],
+          "role": "user",
+          "type": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "responses_function_tool_schema_type_array",
+    "description": "Regression for function tool JSON Schema using union type array (e.g. [\"string\", \"null\"]) in nested properties.",
+    "path": "/api/openai/v1/responses",
+    "want_status": 200,
+    "request_body": {
+      "model": "minimax-m2.7",
+      "stream": true,
+      "tools": [
+        {
+          "type": "function",
+          "name": "automation_update",
+          "strict": false,
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "localEnvironmentConfigPath": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        }
+      ],
+      "input": [
+        {
+          "content": [{"text": "hello", "type": "input_text"}],
+          "role": "user",
+          "type": "message"
+        }
+      ]
+    }
+  },
+  {
     "name": "responses_web_search_with_external_web_access",
     "description": "Regression for tools oneOf mismatch: web_search tool with external_web_access must pass request validation.",
     "path": "/api/openai/v1/responses",

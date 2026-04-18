@@ -324,7 +324,7 @@ func TestOpenAICreateResponseReq_TextJSONSchema(t *testing.T) {
 	if f.Type != "json_schema" || f.Name != "person" || f.Strict == nil || *f.Strict != true {
 		t.Errorf("unexpected format: %+v", f)
 	}
-	if f.Schema == nil || f.Schema.Type != "object" {
+	if f.Schema == nil || !f.Schema.HasType("object") {
 		t.Errorf("schema not populated: %+v", f.Schema)
 	}
 	if len(f.Schema.Required) != 1 || f.Schema.Required[0] != "name" {
