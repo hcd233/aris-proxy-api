@@ -163,14 +163,7 @@ type ResponseContextManagementEntry struct {
 // ==================== 顶层请求 ====================
 
 // OpenAICreateResponseReq Response API 请求体（按文档精确建模）
-//
-// The `_` field with `additionalProperties:"true"` allows forward-compatible
-// clients (e.g. Codex Desktop sending `client_metadata`) to send extra fields
-// without triggering a 422 Unprocessable Entity response. Unknown fields are
-// dropped during forwarding — this mirrors upstream OpenAI behavior.
 type OpenAICreateResponseReq struct {
-	_ struct{} `json:"-" additionalProperties:"true"`
-
 	// ---------- 布尔/标量 ----------
 	Background           *bool             `json:"background,omitempty" doc:"是否后台运行"`
 	Instructions         *string           `json:"instructions,omitempty" doc:"系统指令"`
@@ -183,6 +176,7 @@ type OpenAICreateResponseReq struct {
 	PromptCacheKey       *string           `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`
 	PromptCacheRetention *string           `json:"prompt_cache_retention,omitempty" doc:"提示缓存保留策略: in-memory/24h"`
 	SafetyIdentifier     *string           `json:"safety_identifier,omitempty" doc:"安全标识符"`
+	ClientMetadata       map[string]string `json:"client_metadata,omitempty" doc:"客户端元数据(由 Codex Desktop 等客户端填充，如 x-codex-installation-id)"`
 	ServiceTier          *string           `json:"service_tier,omitempty" doc:"服务层级: auto/default/flex/scale/priority"`
 	Store                *bool             `json:"store,omitempty" doc:"是否存储响应"`
 	Stream               *bool             `json:"stream,omitempty" doc:"是否流式响应"`

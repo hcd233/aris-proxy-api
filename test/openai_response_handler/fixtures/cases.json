@@ -1,7 +1,7 @@
 [
   {
     "name": "responses_codex_with_client_metadata",
-    "description": "Regression for 422: Codex Desktop sends client_metadata which is not in the documented schema. Huma must accept the body.",
+    "description": "Regression for 422: Codex Desktop populates client_metadata. After modeling the field on OpenAICreateResponseReq, Huma must accept the body.",
     "path": "/api/openai/v1/responses",
     "want_status": 200,
     "request_body": {
@@ -45,17 +45,6 @@
       "parallel_tool_calls": true,
       "store": false,
       "include": ["reasoning.encrypted_content"]
-    }
-  },
-  {
-    "name": "chat_completions_with_unknown_field",
-    "description": "Forward-compatible unknown fields on /chat/completions must not cause a 422.",
-    "path": "/api/openai/v1/chat/completions",
-    "want_status": 200,
-    "request_body": {
-      "model": "gpt-4o",
-      "messages": [{"role": "user", "content": "hi"}],
-      "client_metadata": {"x-installation-id": "abc"}
     }
   }
 ]

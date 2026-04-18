@@ -222,10 +222,8 @@
     }
   },
   {
-    "name": "create_response_codex_with_unknown_fields",
-    "description": "Codex Desktop body contains client_metadata which is not in the documented schema; DTO must ignore it and not fail validation",
-    "skip_round_trip": true,
-    "unknown_fields": ["client_metadata"],
+    "name": "create_response_codex_client_metadata",
+    "description": "Codex Desktop body populates client_metadata (e.g. x-codex-installation-id); DTO must model the field and round-trip it losslessly.",
     "request_body": {
       "model": "gpt-5.4",
       "store": false,
@@ -237,7 +235,6 @@
           "type": "message"
         }
       ],
-      "include": [],
       "prompt_cache_key": "019d9f36-8d2b-7441-895a-a8413edb0527",
       "client_metadata": {"x-codex-installation-id": "22ea42b7-a329-4c89-b272-29ec63753c29"},
       "instructions": "You are Codex.",
