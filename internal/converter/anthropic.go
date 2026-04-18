@@ -613,3 +613,367 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 func GenerateOpenAIChunkID() string {
 	return fmt.Sprintf(constant.OpenAIChunkIDTemplate, uuid.New().String())
 }
+
+// FromResponseAPIRequest 将 OpenAI Response API 请求转换为 Anthropic CreateMessage 请求
+//
+//	@receiver *AnthropicProtocolConverter
+//	@param req *dto.OpenAICreateResponseReq
+//	@return *dto.AnthropicCreateMessageReq
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-18 18:00:00
+func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateResponseReq) (*dto.AnthropicCreateMessageReq, error) {
+	anthropicReq := &dto.AnthropicCreateMessageReq{
+		Model: req.Model,
+	}
+
+	// 转换 max_tokens
+	if req.MaxOutputTokens != nil {
+		anthropicReq.MaxTokens = int(*req.MaxOutputTokens)
+	}
+
+	// 转换 temperature/top_p
+	anthropicReq.Temperature = req.Temperature
+	anthropicReq.TopP = req.TopP
+
+	// 转换 reasoning 配置
+	if req.Reasoning != nil {
+		anthropicReq.Thinking = &dto.AnthropicThinkingConfig{}
+		switch strings.ToLower(req.Reasoning.Effort) {
+		case "low":
+			anthropicReq.Thinking.Type = "low"
+		case "medium":
+			anthropicReq.Thinking.Type = "medium"
+		case "high", "xhigh":
+			anthropicReq.Thinking.Type = "high"
+		case "minimal":
+			anthropicReq.Thinking.Type = "minimal"
+		case "none":
+			anthropicReq.Thinking.Type = "disabled"
+		default:
+			// 默认使用 medium
+			anthropicReq.Thinking.Type = "medium"
+		}
+	}
+
+	// 转换 text format 配置
+	if req.Text != nil && req.Text.Format != nil {
+		switch req.Text.Format.Type {
+		case enum.ResponseTextFormatTypeJSONObject, enum.ResponseTextFormatTypeJSONSchema:
+			anthropicReq.OutputConfig = &dto.AnthropicOutputConfig{}
+			if req.Text.Format.Type == enum.ResponseTextFormatTypeJSONSchema && req.Text.Format.Schema != nil {
+				// JSON Schema 序列化后作为 map[string]any
+				schemaBytes, err := sonic.Marshal(req.Text.Format.Schema)
+				if err == nil {
+					var schemaMap map[string]any
+					if err := sonic.Unmarshal(schemaBytes, &schemaMap); err == nil {
+						anthropicReq.OutputConfig.Format = &dto.AnthropicJSONOutputFormat{
+							Type:   "json_schema",
+							Schema: schemaMap,
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 构建消息列表
+	var messages []*dto.AnthropicMessageParam
+
+	// instructions → system 消息
+	if req.Instructions != nil && *req.Instructions != "" {
+		messages = append(messages, &dto.AnthropicMessageParam{
+			Role:    string(enum.RoleSystem),
+			Content: &dto.AnthropicMessageContent{Text: *req.Instructions},
+		})
+	}
+
+	// input 处理
+	if req.Input != nil {
+		// 优先处理 Items（消息数组）
+		if len(req.Input.Items) > 0 {
+			for _, item := range req.Input.Items {
+				amsg, err := convertResponseInputItemToAnthropic(item)
+				if err != nil {
+					return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert response input item")
+				}
+				if amsg != nil {
+					messages = append(messages, amsg)
+				}
+			}
+		} else if req.Input.Text != "" {
+			// 纯文本 input → user 消息
+			messages = append(messages, &dto.AnthropicMessageParam{
+				Role:    string(enum.RoleUser),
+				Content: &dto.AnthropicMessageContent{Text: req.Input.Text},
+			})
+		}
+	}
+
+	anthropicReq.Messages = messages
+
+	// 转换工具
+	if len(req.Tools) > 0 {
+		anthropicReq.Tools = convertResponseToolsToAnthropic(req.Tools)
+	}
+
+	// 转换 tool_choice
+	if req.ToolChoice != nil {
+		anthropicReq.ToolChoice = convertResponseToolChoiceToAnthropic(req.ToolChoice)
+	}
+
+	return anthropicReq, nil
+}
+
+// convertResponseInputItemToAnthropic 将 Response API input item 转换为 Anthropic 消息
+func convertResponseInputItemToAnthropic(item *dto.ResponseInputItem) (*dto.AnthropicMessageParam, error) {
+	if item == nil {
+		return nil, nil
+	}
+
+	switch item.Type {
+	case "", enum.ResponseInputItemTypeMessage:
+		return convertResponseMessageToAnthropic(item)
+	case enum.ResponseInputItemTypeFunctionCall, enum.ResponseInputItemTypeCustomToolCall:
+		return convertResponseFunctionCallToAnthropic(item), nil
+	case enum.ResponseInputItemTypeFunctionCallOutput, enum.ResponseInputItemTypeCustomToolCallOutput:
+		return convertResponseFunctionCallOutputToAnthropic(item), nil
+	case enum.ResponseInputItemTypeReasoning:
+		return convertResponseReasoningToAnthropic(item), nil
+	default:
+		// 不支持的 item 类型返回 nil
+		return nil, nil
+	}
+}
+
+// convertResponseMessageToAnthropic 将 message 类型 item 转换为 Anthropic 消息
+func convertResponseMessageToAnthropic(item *dto.ResponseInputItem) (*dto.AnthropicMessageParam, error) {
+	role := resolveResponseAPIRole(item.Role)
+	msg := &dto.AnthropicMessageParam{
+		Role: role,
+	}
+
+	if item.Content == nil {
+		msg.Content = &dto.AnthropicMessageContent{Text: ""}
+		return msg, nil
+	}
+
+	// content 是字符串形态
+	if len(item.Content.Parts) == 0 {
+		msg.Content = &dto.AnthropicMessageContent{Text: item.Content.Text}
+		return msg, nil
+	}
+
+	// 数组形态 → content blocks
+	blocks, err := convertResponseContentPartsToAnthropicBlocks(item.Content.Parts)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert response content parts")
+	}
+	msg.Content = &dto.AnthropicMessageContent{Blocks: blocks}
+	return msg, nil
+}
+
+// resolveResponseAPIRole 将 Response API 角色字符串解析为 Anthropic 角色
+func resolveResponseAPIRole(role string) string {
+	switch role {
+	case string(enum.RoleAssistant), "":
+		return string(enum.RoleAssistant)
+	case string(enum.RoleUser):
+		return string(enum.RoleUser)
+	case string(enum.RoleSystem):
+		return string(enum.RoleSystem)
+	case string(enum.RoleDeveloper):
+		return string(enum.RoleDeveloper)
+	default:
+		return string(enum.RoleUser)
+	}
+}
+
+// convertResponseContentPartsToAnthropicBlocks 将 Response API content parts 转换为 Anthropic content blocks
+func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputContent) ([]*dto.AnthropicContentBlock, error) {
+	var blocks []*dto.AnthropicContentBlock
+	for _, p := range parts {
+		if p == nil {
+			continue
+		}
+		switch p.Type {
+		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
+			if p.Text != "" {
+				blocks = append(blocks, &dto.AnthropicContentBlock{
+					Type: enum.AnthropicContentBlockTypeText,
+					Text: p.Text,
+				})
+			}
+		case enum.ResponseContentTypeInputImage:
+			block := &dto.AnthropicContentBlock{
+				Type: enum.AnthropicContentBlockTypeImage,
+			}
+			if strings.HasPrefix(p.ImageURL, "data:") {
+				parts := strings.SplitN(p.ImageURL, ";base64,", 2)
+				if len(parts) == 2 {
+					mediaType := strings.TrimPrefix(parts[0], "data:")
+					block.Source = &dto.AnthropicContentSource{
+						Type:      "base64",
+						MediaType: mediaType,
+						Data:      parts[1],
+					}
+				}
+			} else {
+				block.Source = &dto.AnthropicContentSource{
+					Type: "url",
+					URL:  p.ImageURL,
+				}
+			}
+			blocks = append(blocks, block)
+		case enum.ResponseContentTypeRefusal:
+			// refusal 暂时忽略（Anthropic 不支持）
+		default:
+			// 其他类型忽略
+		}
+	}
+	return blocks, nil
+}
+
+// convertResponseFunctionCallToAnthropic 将 function_call / custom_tool_call 转换为 Anthropic assistant 消息
+func convertResponseFunctionCallToAnthropic(item *dto.ResponseInputItem) *dto.AnthropicMessageParam {
+	args := item.Arguments
+	if args == "" {
+		args = item.Input
+	}
+	return &dto.AnthropicMessageParam{
+		Role: string(enum.RoleAssistant),
+		Content: &dto.AnthropicMessageContent{
+			Blocks: []*dto.AnthropicContentBlock{{
+				Type:  enum.AnthropicContentBlockTypeToolUse,
+				ID:    item.CallID,
+				Name:  item.Name,
+				Input: parseJSONToMap(args),
+			}},
+		},
+	}
+}
+
+// convertResponseFunctionCallOutputToAnthropic 将 function_call_output / custom_tool_call_output 转换为 Anthropic 消息
+func convertResponseFunctionCallOutputToAnthropic(item *dto.ResponseInputItem) *dto.AnthropicMessageParam {
+	msg := &dto.AnthropicMessageParam{
+		Role: string(enum.RoleUser),
+	}
+
+	if item.Output == nil || (item.Output.Text == "" && item.Output.FunctionOutput == nil) {
+		msg.Content = &dto.AnthropicMessageContent{Text: ""}
+		return msg
+	}
+
+	var text string
+	if item.Output.Text != "" {
+		text = item.Output.Text
+	} else if item.Output.FunctionOutput != nil {
+		if item.Output.FunctionOutput.Text != "" {
+			text = item.Output.FunctionOutput.Text
+		} else if len(item.Output.FunctionOutput.Parts) > 0 {
+			var parts []string
+			for _, p := range item.Output.FunctionOutput.Parts {
+				if p != nil && (p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText) {
+					parts = append(parts, p.Text)
+				}
+			}
+			text = strings.Join(parts, "\n")
+		}
+	}
+
+	msg.Content = &dto.AnthropicMessageContent{
+		Blocks: []*dto.AnthropicContentBlock{{
+			Type:      enum.AnthropicContentBlockTypeToolResult,
+			ToolUseID: item.CallID,
+			Content:   &dto.AnthropicToolResultContent{Text: text},
+		}},
+	}
+	return msg
+}
+
+// convertResponseReasoningToAnthropic 将 reasoning item 转换为 Anthropic thinking block
+func convertResponseReasoningToAnthropic(item *dto.ResponseInputItem) *dto.AnthropicMessageParam {
+	var thinkingParts []string
+	for _, s := range item.Summary {
+		if s != nil && s.Text != "" {
+			thinkingParts = append(thinkingParts, s.Text)
+		}
+	}
+	for _, c := range item.ReasoningContent {
+		if c != nil && c.Text != "" {
+			thinkingParts = append(thinkingParts, c.Text)
+		}
+	}
+	thinking := strings.Join(thinkingParts, "\n")
+	if thinking == "" {
+		return nil
+	}
+	return &dto.AnthropicMessageParam{
+		Role: string(enum.RoleAssistant),
+		Content: &dto.AnthropicMessageContent{
+			Blocks: []*dto.AnthropicContentBlock{{
+				Type:     enum.AnthropicContentBlockTypeThinking,
+				Thinking: thinking,
+			}},
+		},
+	}
+}
+
+// convertResponseToolsToAnthropic 将 Response API tools 转换为 Anthropic tools
+func convertResponseToolsToAnthropic(tools []*dto.ResponseTool) []*dto.AnthropicTool {
+	anthropicTools := make([]*dto.AnthropicTool, 0, len(tools))
+	for _, tool := range tools {
+		if tool == nil {
+			continue
+		}
+		switch {
+		case tool.Function != nil:
+			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
+				Name:        tool.Function.Name,
+				Description: tool.Function.Description,
+				InputSchema: tool.Function.Parameters,
+				Strict:      &tool.Function.Strict,
+			})
+		case tool.Custom != nil:
+			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
+				Name:        tool.Custom.Name,
+				Description: tool.Custom.Description,
+			})
+		}
+	}
+	return anthropicTools
+}
+
+// convertResponseToolChoiceToAnthropic 将 Response API tool_choice 转换为 Anthropic tool_choice
+func convertResponseToolChoiceToAnthropic(tc *dto.ResponseToolChoiceParam) *dto.AnthropicToolChoice {
+	if tc == nil {
+		return nil
+	}
+	switch tc.Mode {
+	case enum.ResponseToolChoiceOptionNone:
+		return &dto.AnthropicToolChoice{Type: "none"}
+	case enum.ResponseToolChoiceOptionAuto:
+		return &dto.AnthropicToolChoice{Type: "auto"}
+	case enum.ResponseToolChoiceOptionRequired:
+		return &dto.AnthropicToolChoice{Type: "any"}
+	}
+	if tc.Object != nil && tc.Object.Type == string(enum.ResponseToolChoiceTypeFunction) {
+		return &dto.AnthropicToolChoice{
+			Type: "tool",
+			Name: tc.Object.Name,
+		}
+	}
+	return nil
+}
+
+// parseJSONToMap 解析 JSON 字符串为 map
+func parseJSONToMap(jsonStr string) map[string]any {
+	if jsonStr == "" {
+		return nil
+	}
+	var result map[string]any
+	if err := sonic.UnmarshalString(jsonStr, &result); err != nil {
+		return nil
+	}
+	return result
+}
