@@ -235,6 +235,28 @@
     }
   },
   {
+    "name": "tools_function_schema_type_array",
+    "description": "Function tool JSON Schema should accept type as string array, e.g. [\"string\", \"null\"].",
+    "request_body": {
+      "model": "gpt-5.4",
+      "tools": [
+        {
+          "type": "function",
+          "name": "automation_update",
+          "strict": false,
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "localEnvironmentConfigPath": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
     "name": "create_response_codex_client_metadata",
     "description": "Codex Desktop body populates client_metadata (e.g. x-codex-installation-id); DTO must model the field and round-trip it losslessly.",
     "request_body": {
