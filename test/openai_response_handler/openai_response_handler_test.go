@@ -1,7 +1,7 @@
 // Package openai_response_handler verifies that Huma's schema-based request
-// validation for the OpenAI Response API (and Chat Completions) does not
-// reject forward-compatible unknown fields such as Codex Desktop's
-// `client_metadata`, which previously produced a 422 Unprocessable Entity.
+// validation for the OpenAI Response API accepts modeled client fields such as
+// Codex Desktop's `client_metadata`, which previously produced a 422
+// Unprocessable Entity because the field was missing from the DTO schema.
 package openai_response_handler
 
 import (
@@ -41,9 +41,9 @@ func loadHandlerCases(t *testing.T) []handlerCase {
 	return cases
 }
 
-// buildTestAPI registers /responses and /chat/completions handlers that return
-// 200 OK on successful body binding. The handlers do not perform any upstream
-// I/O; they only assert that Huma's schema validation accepts the payload.
+// buildTestAPI registers a /responses handler that returns 200 OK on
+// successful body binding. The handler performs no upstream I/O; it only
+// asserts that Huma's schema validation accepts the payload.
 func buildTestAPI(t *testing.T) *http.ServeMux {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -59,24 +59,15 @@ func buildTestAPI(t *testing.T) *http.ServeMux {
 		return &struct{ Body string }{Body: "ok"}, nil
 	})
 
-	huma.Register(api, huma.Operation{
-		OperationID: "createChatCompletion",
-		Method:      http.MethodPost,
-		Path:        "/api/openai/v1/chat/completions",
-	}, func(_ context.Context, _ *dto.OpenAIChatCompletionRequest) (*struct {
-		Body string
-	}, error) {
-		return &struct{ Body string }{Body: "ok"}, nil
-	})
-
 	return mux
 }
 
-// TestCreateResponse_AcceptsUnknownFields drives every handler case from
+// TestCreateResponse_HandlesModeledFields drives every handler case from
 // fixtures/cases.json and asserts the returned HTTP status matches the
 // fixture expectation. The regression scenario is a Codex Desktop payload
-// containing `client_metadata`, which must NOT trigger a 422.
-func TestCreateResponse_AcceptsUnknownFields(t *testing.T) {
+// containing `client_metadata`, which must NOT trigger a 422 now that the
+// field is modeled on OpenAICreateResponseReq.
+func TestCreateResponse_HandlesModeledFields(t *testing.T) {
 	mux := buildTestAPI(t)
 	cases := loadHandlerCases(t)
 

@@ -310,15 +310,9 @@ type AnthropicMetadata struct {
 
 // AnthropicCreateMessageReq Anthropic Create Message 请求体
 //
-// The `_` field with `additionalProperties:"true"` marker allows
-// forward-compatible clients to send fields not yet modeled here without
-// triggering a 422. Unknown fields are dropped during forwarding.
-//
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type AnthropicCreateMessageReq struct {
-	_ struct{} `json:"-" additionalProperties:"true"`
-
 	MaxTokens         int                         `json:"max_tokens" doc:"最大生成 token 数"`
 	Messages          []*AnthropicMessageParam    `json:"messages" doc:"消息列表"`
 	Model             string                      `json:"model" doc:"模型ID"`
