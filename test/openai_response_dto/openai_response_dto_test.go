@@ -324,7 +324,7 @@ func TestOpenAICreateResponseReq_TextJSONSchema(t *testing.T) {
 	if f.Type != "json_schema" || f.Name != "person" || f.Strict == nil || *f.Strict != true {
 		t.Errorf("unexpected format: %+v", f)
 	}
-	if f.Schema == nil || f.Schema.Type != "object" {
+	if f.Schema == nil || !f.Schema.HasType("object") {
 		t.Errorf("schema not populated: %+v", f.Schema)
 	}
 	if len(f.Schema.Required) != 1 || f.Schema.Required[0] != "name" {
@@ -354,6 +354,26 @@ func TestOpenAICreateResponseReq_ToolsFileSearch(t *testing.T) {
 	}
 	if v := fs.Filters.Filters[1].Value; v == nil || v.NumberValue == nil || *v.NumberValue != 2024 {
 		t.Errorf("second filter value mismatch: %+v", v)
+	}
+}
+
+// TestOpenAICreateResponseReq_ToolsFunctionTypeArray verifies function tool
+// JSON Schema accepts union `type` arrays such as ["string","null"].
+func TestOpenAICreateResponseReq_ToolsFunctionTypeArray(t *testing.T) {
+	tc := findCase(t, loadCases(t), "tools_function_schema_type_array")
+	var req dto.OpenAICreateResponseReq
+	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(req.Tools) != 1 || req.Tools[0].Function == nil || req.Tools[0].Function.Parameters == nil {
+		t.Fatalf("expected function tool parameters, got %+v", req.Tools)
+	}
+	property := req.Tools[0].Function.Parameters.Properties["localEnvironmentConfigPath"]
+	if property == nil || property.Type == nil {
+		t.Fatalf("expected localEnvironmentConfigPath.type to be populated, got %+v", property)
+	}
+	if !property.Type.HasType("string") || !property.Type.HasType("null") {
+		t.Errorf("schema type should contain string and null, got %+v", property.Type)
 	}
 }
 
