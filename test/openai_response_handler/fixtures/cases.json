@@ -1,0 +1,50 @@
+[
+  {
+    "name": "responses_codex_with_client_metadata",
+    "description": "Regression for 422: Codex Desktop populates client_metadata. After modeling the field on OpenAICreateResponseReq, Huma must accept the body.",
+    "path": "/api/openai/v1/responses",
+    "want_status": 200,
+    "request_body": {
+      "store": false,
+      "tool_choice": "auto",
+      "model": "minimax-m2.7",
+      "input": [
+        {
+          "content": [{"text": "hello", "type": "input_text"}],
+          "role": "user",
+          "type": "message"
+        }
+      ],
+      "include": [],
+      "prompt_cache_key": "019d9f36-8d2b-7441-895a-a8413edb0527",
+      "client_metadata": {"x-codex-installation-id": "22ea42b7-a329-4c89-b272-29ec63753c29"},
+      "instructions": "You are Codex.",
+      "parallel_tool_calls": false,
+      "stream": true
+    }
+  },
+  {
+    "name": "responses_minimal",
+    "description": "Minimal documented body with only model must return 200.",
+    "path": "/api/openai/v1/responses",
+    "want_status": 200,
+    "request_body": {"model": "gpt-4o"}
+  },
+  {
+    "name": "responses_all_documented_fields",
+    "description": "Representative documented fields must return 200.",
+    "path": "/api/openai/v1/responses",
+    "want_status": 200,
+    "request_body": {
+      "model": "gpt-5.4",
+      "instructions": "You are Codex.",
+      "reasoning": {"effort": "medium", "summary": "auto"},
+      "text": {"format": {"type": "text"}, "verbosity": "low"},
+      "tool_choice": "auto",
+      "stream": true,
+      "parallel_tool_calls": true,
+      "store": false,
+      "include": ["reasoning.encrypted_content"]
+    }
+  }
+]
