@@ -147,5 +147,49 @@
         }
       ]
     }
+  },
+  {
+    "name": "incomplete_with_output",
+    "description": "status=incomplete (e.g. hit max_output_tokens) but output has content — must still be persisted, matching /chat/completions behavior where truncated completions are stored.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": "Write a long essay."
+    },
+    "response_body": {
+      "id": "resp_5",
+      "object": "response",
+      "status": "incomplete",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "incomplete",
+          "content": [
+            {"type": "output_text", "text": "Once upon a time,"}
+          ]
+        }
+      ],
+      "usage": {"input_tokens": 4, "output_tokens": 6, "total_tokens": 10},
+      "incomplete_details": {"reason": "max_output_tokens"}
+    }
+  },
+  {
+    "name": "failed_response",
+    "description": "status=failed — no content to persist; audit should capture the in-band failure reason from response.error.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": "trigger error"
+    },
+    "response_body": {
+      "id": "resp_6",
+      "object": "response",
+      "status": "failed",
+      "model": "gpt-5.4",
+      "output": [],
+      "error": {"code": "server_error", "message": "upstream model unavailable"},
+      "usage": {"input_tokens": 2, "output_tokens": 0, "total_tokens": 2}
+    }
   }
 ]
