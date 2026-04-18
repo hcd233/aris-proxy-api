@@ -194,9 +194,17 @@ func (v OpenAIVoiceParam) Schema(_ huma.Registry) *huma.Schema {
 
 // OpenAIChatCompletionReq Chat Completions请求
 //
+// The `_` field with `additionalProperties:"true"` marker allows
+// forward-compatible clients to send extra fields (for example
+// `client_metadata` or other newly-added OpenAI params) without triggering
+// a 422 Unprocessable Entity response. Unknown fields are dropped during
+// forwarding — this matches upstream behavior.
+//
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionReq struct {
+	_ struct{} `json:"-" additionalProperties:"true"`
+
 	Messages             []*OpenAIChatCompletionMessageParam    `json:"messages" doc:"对话消息列表"`
 	Model                string                                 `json:"model" doc:"模型ID"`
 	Audio                *OpenAIChatCompletionAudioParam        `json:"audio,omitempty" doc:"音频输出参数"`

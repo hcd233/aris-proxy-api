@@ -18,6 +18,8 @@ type responseDTOCase struct {
 	Description   string                 `json:"description"`
 	RequestBody   sonic.NoCopyRawMessage `json:"request_body"`
 	ExpectedModel string                 `json:"expected_model,omitempty"`
+	SkipRoundTrip bool                   `json:"skip_round_trip,omitempty"`
+	UnknownFields []string               `json:"unknown_fields,omitempty"`
 }
 
 func loadCases(t *testing.T) []responseDTOCase {
@@ -60,6 +62,8 @@ func jsonEqual(t *testing.T, got, want []byte) bool {
 
 // TestOpenAICreateResponseReq_RoundTripAll verifies that every fixture body
 // unmarshals and re-marshals to the same semantic JSON through the typed DTO.
+// Cases with skip_round_trip=true only verify unmarshal success; their body
+// may contain forward-compat/unknown fields that the DTO drops on re-marshal.
 func TestOpenAICreateResponseReq_RoundTripAll(t *testing.T) {
 	allCases := loadCases(t)
 	for _, tc := range allCases {
@@ -67,6 +71,9 @@ func TestOpenAICreateResponseReq_RoundTripAll(t *testing.T) {
 			var req dto.OpenAICreateResponseReq
 			if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
 				t.Fatalf("unmarshal failed: %v\nbody: %s", err, string(tc.RequestBody))
+			}
+			if tc.SkipRoundTrip {
+				return
 			}
 			got, err := sonic.Marshal(&req)
 			if err != nil {
