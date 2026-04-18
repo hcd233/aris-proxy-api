@@ -380,11 +380,20 @@ func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logg
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs int64
 		var streamDurationMs int64
+		var finalResponse *dto.OpenAICreateResponseRsp
 
 		proxyErr := s.openAIProxy.ForwardCreateResponseStream(ctx, ep, body, func(event string, data []byte) error {
 			if firstTokenTime.IsZero() {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+			}
+			if event == enum.ResponseStreamEventCompleted && finalResponse == nil {
+				var ev dto.ResponseStreamTerminalEvent
+				if err := sonic.Unmarshal(data, &ev); err != nil {
+					log.Warn("[OpenAIService] Failed to parse response.completed event", zap.Error(err))
+				} else {
+					finalResponse = ev.Response
+				}
 			}
 			replaced := proxy.ReplaceModelInSSEData(data, req.Body.Model)
 			_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, replaced)
@@ -399,6 +408,8 @@ func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logg
 			log.Error("[OpenAIService] Response API stream error", zap.Error(proxyErr))
 		}
 
+		s.storeFromResponseRsp(ctx, log, req, finalResponse, proxyErr, ep.Model)
+
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             endpoint.ID,
@@ -408,6 +419,7 @@ func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logg
 			FirstTokenLatencyMs: firstTokenLatencyMs,
 			StreamDurationMs:    streamDurationMs,
 		}
+		task.SetTokensFromResponseUsage(finalResponse)
 		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(proxyErr)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	}), nil
@@ -439,6 +451,13 @@ func (s *openAIService) forwardResponseNonStream(ctx context.Context, log *zap.L
 		writer.HumaCtx.SetHeader("Content-Type", "application/json")
 		_, _ = writer.HumaCtx.BodyWriter().Write(replaced)
 
+		var rsp dto.OpenAICreateResponseRsp
+		if err := sonic.Unmarshal(respBody, &rsp); err != nil {
+			log.Warn("[OpenAIService] Failed to parse Response API non-stream body", zap.Error(err))
+		} else {
+			s.storeFromResponseRsp(ctx, log, req, &rsp, nil, ep.Model)
+		}
+
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             endpoint.ID,
@@ -448,6 +467,7 @@ func (s *openAIService) forwardResponseNonStream(ctx context.Context, log *zap.L
 			FirstTokenLatencyMs: totalMs,
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
+		task.SetTokensFromResponseUsage(&rsp)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	}), nil
 }
@@ -475,6 +495,83 @@ func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, logger *zap.L
 		return
 	}
 	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+}
+
+// storeFromResponseRsp 将 Response API 请求+响应转换为 UnifiedMessage 并投递存储任务
+//
+// 当 proxyErr 非 nil 或响应为空时直接返回，不落盘。input 为字符串形态时
+// 作为单条 user 消息处理；instructions 若非空则以 system 消息前置插入。
+func (s *openAIService) storeFromResponseRsp(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, rsp *dto.OpenAICreateResponseRsp, proxyErr error, upstreamModel string) {
+	if proxyErr != nil || rsp == nil {
+		return
+	}
+	if rsp.Status != "" && rsp.Status != enum.ResponseStatusCompleted {
+		return
+	}
+	if len(rsp.Output) == 0 {
+		return
+	}
+
+	var unifiedMessages []*dto.UnifiedMessage
+
+	if req.Body.Instructions != nil && *req.Body.Instructions != "" {
+		unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
+			Role:    enum.RoleSystem,
+			Content: &dto.UnifiedContent{Text: *req.Body.Instructions},
+		})
+	}
+
+	if req.Body.Input != nil {
+		if len(req.Body.Input.Items) > 0 {
+			inputMsgs, err := dto.FromResponseAPIInputItems(req.Body.Input.Items)
+			if err != nil {
+				log.Error("[OpenAIService] Failed to convert response input items", zap.Error(err))
+				return
+			}
+			unifiedMessages = append(unifiedMessages, inputMsgs...)
+		} else if req.Body.Input.Text != "" {
+			unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
+				Role:    enum.RoleUser,
+				Content: &dto.UnifiedContent{Text: req.Body.Input.Text},
+			})
+		}
+	}
+
+	outputMsgs, err := dto.FromResponseAPIOutputItems(rsp.Output)
+	if err != nil {
+		log.Error("[OpenAIService] Failed to convert response output items", zap.Error(err))
+		return
+	}
+	if len(outputMsgs) == 0 {
+		return
+	}
+	unifiedMessages = append(unifiedMessages, outputMsgs...)
+
+	var unifiedTools []*dto.UnifiedTool
+	for _, tool := range req.Body.Tools {
+		if ut := dto.FromResponseAPITool(tool); ut != nil {
+			unifiedTools = append(unifiedTools, ut)
+		}
+	}
+
+	var inputTokens, outputTokens int
+	if rsp.Usage != nil {
+		inputTokens = rsp.Usage.InputTokens
+		outputTokens = rsp.Usage.OutputTokens
+	}
+
+	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+		Ctx:          util.CopyContextValues(ctx),
+		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
+		Model:        upstreamModel,
+		Messages:     unifiedMessages,
+		Tools:        unifiedTools,
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+		Metadata:     req.Body.Metadata,
+	}); err != nil {
+		log.Error("[OpenAIService] Failed to submit response message store task", zap.Error(err))
+	}
 }
 
 func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {

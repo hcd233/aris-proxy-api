@@ -337,6 +337,36 @@ const (
 	ResponseContextManagementTypeCompaction ResponseContextManagementType = "compaction"
 )
 
+// ResponseStatus Response API 响应生命周期状态
+type ResponseStatus = string
+
+const (
+	// ResponseStatusInProgress 响应进行中
+	ResponseStatusInProgress ResponseStatus = "in_progress"
+	// ResponseStatusCompleted 响应成功完成
+	ResponseStatusCompleted ResponseStatus = "completed"
+	// ResponseStatusFailed 响应失败
+	ResponseStatusFailed ResponseStatus = "failed"
+	// ResponseStatusIncomplete 响应未完成
+	ResponseStatusIncomplete ResponseStatus = "incomplete"
+	// ResponseStatusCancelled 响应被取消
+	ResponseStatusCancelled ResponseStatus = "cancelled"
+	// ResponseStatusQueued 响应排队中
+	ResponseStatusQueued ResponseStatus = "queued"
+)
+
+// ResponseStreamEventType Response API SSE 事件类型（只枚举网关感知的终态事件）
+type ResponseStreamEventType = string
+
+const (
+	// ResponseStreamEventCompleted 响应成功完成
+	ResponseStreamEventCompleted ResponseStreamEventType = "response.completed"
+	// ResponseStreamEventFailed 响应失败
+	ResponseStreamEventFailed ResponseStreamEventType = "response.failed"
+	// ResponseStreamEventIncomplete 响应未完成
+	ResponseStreamEventIncomplete ResponseStreamEventType = "response.incomplete"
+)
+
 // ResponseIncludable include 字段单项枚举
 type ResponseIncludable = string
 

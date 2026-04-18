@@ -1,0 +1,151 @@
+[
+  {
+    "name": "text_in_text_out",
+    "description": "Plain user text -> assistant output_text. Expects 2 UnifiedMessages.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "instructions": "You are Codex.",
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [{"type": "input_text", "text": "Hello"}]
+        }
+      ]
+    },
+    "response_body": {
+      "id": "resp_1",
+      "object": "response",
+      "status": "completed",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {"type": "output_text", "text": "Hi there!"}
+          ]
+        }
+      ],
+      "usage": {
+        "input_tokens": 37,
+        "output_tokens": 11,
+        "total_tokens": 48,
+        "output_tokens_details": {"reasoning_tokens": 0}
+      }
+    }
+  },
+  {
+    "name": "reasoning_then_message",
+    "description": "Reasoning item followed by assistant message — reasoning text should be merged into the assistant message's ReasoningContent.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": "ping"
+    },
+    "response_body": {
+      "id": "resp_2",
+      "object": "response",
+      "status": "completed",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "id": "rs_1",
+          "type": "reasoning",
+          "summary": [{"type": "summary_text", "text": "Thinking about ping."}]
+        },
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {"type": "output_text", "text": "pong"}
+          ]
+        }
+      ],
+      "usage": {
+        "input_tokens": 5,
+        "output_tokens": 3,
+        "total_tokens": 8,
+        "input_tokens_details": {"cached_tokens": 1}
+      }
+    }
+  },
+  {
+    "name": "function_call_and_output",
+    "description": "Turn with assistant function_call output and user-side function_call_output must produce a tool_calls assistant message and a tool-role message.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [{"type": "input_text", "text": "What is the weather?"}]
+        },
+        {
+          "type": "function_call",
+          "call_id": "call_abc",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Shanghai\"}"
+        },
+        {
+          "type": "function_call_output",
+          "call_id": "call_abc",
+          "output": "Sunny, 25C"
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "parameters": {"type": "object"}
+        }
+      ]
+    },
+    "response_body": {
+      "id": "resp_3",
+      "object": "response",
+      "status": "completed",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {"type": "output_text", "text": "It's sunny, 25C in Shanghai."}
+          ]
+        }
+      ],
+      "usage": {"input_tokens": 10, "output_tokens": 7, "total_tokens": 17}
+    }
+  },
+  {
+    "name": "string_input",
+    "description": "input is a plain string — should produce a single user message.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": "Hello"
+    },
+    "response_body": {
+      "id": "resp_4",
+      "object": "response",
+      "status": "completed",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {"type": "output_text", "text": "Hi"}
+          ]
+        }
+      ]
+    }
+  }
+]
