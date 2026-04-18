@@ -94,3 +94,20 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	t.CacheCreationInputTokens = msg.Usage.CacheCreationInputTokens
 	t.CacheReadInputTokens = msg.Usage.CacheReadInputTokens
 }
+
+// SetTokensFromResponseUsage 从 Response API 响应设置 token 计数
+//
+//	@receiver t *ModelCallAuditTask
+//	@param rsp *OpenAICreateResponseRsp
+//	@author centonhuang
+//	@update 2026-04-18 15:00:00
+func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateResponseRsp) {
+	if rsp == nil || rsp.Usage == nil {
+		return
+	}
+	t.InputTokens = rsp.Usage.InputTokens
+	t.OutputTokens = rsp.Usage.OutputTokens
+	if rsp.Usage.InputTokensDetails != nil {
+		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
+	}
+}
