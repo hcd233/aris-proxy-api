@@ -337,6 +337,46 @@ const (
 	ResponseContextManagementTypeCompaction ResponseContextManagementType = "compaction"
 )
 
+// ResponseStatus Response API 响应生命周期状态
+type ResponseStatus = string
+
+const (
+	// ResponseStatusInProgress 响应进行中
+	ResponseStatusInProgress ResponseStatus = "in_progress"
+	// ResponseStatusCompleted 响应成功完成
+	ResponseStatusCompleted ResponseStatus = "completed"
+	// ResponseStatusFailed 响应失败
+	ResponseStatusFailed ResponseStatus = "failed"
+	// ResponseStatusIncomplete 响应未完成
+	ResponseStatusIncomplete ResponseStatus = "incomplete"
+	// ResponseStatusCancelled 响应被取消
+	ResponseStatusCancelled ResponseStatus = "cancelled"
+	// ResponseStatusQueued 响应排队中
+	ResponseStatusQueued ResponseStatus = "queued"
+)
+
+// ResponseStreamEventType Response API SSE 事件类型（只枚举网关感知的终态事件）
+type ResponseStreamEventType = string
+
+const (
+	// ResponseStreamEventCompleted 响应成功完成
+	ResponseStreamEventCompleted ResponseStreamEventType = "response.completed"
+	// ResponseStreamEventFailed 响应失败
+	ResponseStreamEventFailed ResponseStreamEventType = "response.failed"
+	// ResponseStreamEventIncomplete 响应未完成
+	ResponseStreamEventIncomplete ResponseStreamEventType = "response.incomplete"
+)
+
+// ResponseStreamEventDeltaSuffix Response API 承载增量 token 的 SSE 事件后缀
+//
+// 所有真正携带模型生成内容的流式事件（response.output_text.delta、
+// response.reasoning_text.delta、response.function_call_arguments.delta、
+// response.audio.delta、response.custom_tool_call_input.delta 等）都以
+// `.delta` 结尾；而 response.created / response.in_progress /
+// response.output_item.added / response.content_part.added 等元数据事件
+// 不带 token。用统一后缀判定可以兼容上游未来新增的 delta 类型。
+const ResponseStreamEventDeltaSuffix = ".delta"
+
 // ResponseIncludable include 字段单项枚举
 type ResponseIncludable = string
 

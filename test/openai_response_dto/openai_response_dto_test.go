@@ -79,6 +79,24 @@ func TestOpenAICreateResponseReq_RoundTripAll(t *testing.T) {
 	}
 }
 
+// TestOpenAICreateResponseReq_ClientMetadata asserts that Codex Desktop's
+// client_metadata field is modeled as a typed map and round-trips cleanly.
+func TestOpenAICreateResponseReq_ClientMetadata(t *testing.T) {
+	tc := findCase(t, loadCases(t), "create_response_codex_client_metadata")
+	var req dto.OpenAICreateResponseReq
+	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if len(req.ClientMetadata) != 1 {
+		t.Fatalf("ClientMetadata len = %d, want 1", len(req.ClientMetadata))
+	}
+	got := req.ClientMetadata["x-codex-installation-id"]
+	want := "22ea42b7-a329-4c89-b272-29ec63753c29"
+	if got != want {
+		t.Errorf("ClientMetadata[x-codex-installation-id] = %q, want %q", got, want)
+	}
+}
+
 // TestOpenAICreateResponseReq_CodexFullBody asserts the key routing fields
 // (model/stream/store/parallel_tool_calls/input/tools/tool_choice/reasoning/text/
 // include/prompt_cache_key/instructions) parse correctly from the Codex body.

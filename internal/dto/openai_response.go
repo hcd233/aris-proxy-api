@@ -176,6 +176,7 @@ type OpenAICreateResponseReq struct {
 	PromptCacheKey       *string           `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`
 	PromptCacheRetention *string           `json:"prompt_cache_retention,omitempty" doc:"提示缓存保留策略: in-memory/24h"`
 	SafetyIdentifier     *string           `json:"safety_identifier,omitempty" doc:"安全标识符"`
+	ClientMetadata       map[string]string `json:"client_metadata,omitempty" doc:"客户端元数据(由 Codex Desktop 等客户端填充，如 x-codex-installation-id)"`
 	ServiceTier          *string           `json:"service_tier,omitempty" doc:"服务层级: auto/default/flex/scale/priority"`
 	Store                *bool             `json:"store,omitempty" doc:"是否存储响应"`
 	Stream               *bool             `json:"stream,omitempty" doc:"是否流式响应"`
