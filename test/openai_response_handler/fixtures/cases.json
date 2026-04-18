@@ -46,5 +46,26 @@
       "store": false,
       "include": ["reasoning.encrypted_content"]
     }
+  },
+  {
+    "name": "responses_web_search_with_external_web_access",
+    "description": "Regression for tools oneOf mismatch: web_search tool with external_web_access must pass request validation.",
+    "path": "/api/openai/v1/responses",
+    "want_status": 200,
+    "request_body": {
+      "model": "minimax-m2.7",
+      "stream": true,
+      "tools": [
+        {"type": "function", "name": "exec_command", "parameters": {"type": "object"}, "strict": false},
+        {"type": "web_search", "external_web_access": false}
+      ],
+      "input": [
+        {
+          "content": [{"text": "hello", "type": "input_text"}],
+          "role": "user",
+          "type": "message"
+        }
+      ]
+    }
   }
 ]

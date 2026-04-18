@@ -222,6 +222,19 @@
     }
   },
   {
+    "name": "tools_web_search_with_external_web_access",
+    "description": "WebSearch tool should preserve external_web_access from Codex Desktop payloads",
+    "request_body": {
+      "model": "gpt-5.4",
+      "tools": [
+        {
+          "type": "web_search",
+          "external_web_access": false
+        }
+      ]
+    }
+  },
+  {
     "name": "create_response_codex_client_metadata",
     "description": "Codex Desktop body populates client_metadata (e.g. x-codex-installation-id); DTO must model the field and round-trip it losslessly.",
     "request_body": {
