@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 // ==================== Anthropic Common DTOs ====================
@@ -250,6 +251,58 @@ type AnthropicContentBlock struct {
 
 	// 通用字段
 	CacheControl *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
+}
+
+// anthropicContentBlockWire aliases AnthropicContentBlock for default JSON marshaling without MarshalJSON recursion.
+type anthropicContentBlockWire AnthropicContentBlock
+
+// anthropicToolUseContentBlockWire is the on-wire JSON shape for tool_use / server_tool_use blocks.
+// Input uses json:"input" without omitempty so no-argument tool calls serialize as "input":{}.
+type anthropicToolUseContentBlockWire struct {
+	Type         string                       `json:"type"`
+	ID           string                       `json:"id,omitempty"`
+	Name         string                       `json:"name,omitempty"`
+	Input        map[string]any               `json:"input"`
+	Caller       *AnthropicContentBlockCaller `json:"caller,omitempty"`
+	CacheControl *CacheControl                `json:"cache_control,omitempty"`
+}
+
+func newAnthropicToolUseContentBlockWire(b *AnthropicContentBlock) anthropicToolUseContentBlockWire {
+	input := b.Input
+	if input == nil {
+		input = map[string]any{}
+	}
+	return anthropicToolUseContentBlockWire{
+		Type:         b.Type,
+		ID:           b.ID,
+		Name:         b.Name,
+		Input:        input,
+		Caller:       b.Caller,
+		CacheControl: b.CacheControl,
+	}
+}
+
+// MarshalJSON ensures tool_use blocks always emit a JSON object for "input".
+//
+// The struct field uses `input,omitempty` on map[string]any; encoding/json omits nil and empty maps, so
+// valid no-argument tool calls lose the "input" key. Some Anthropic-compatible upstreams require an
+// explicit object (e.g. "{}").
+//
+//	@receiver b *AnthropicContentBlock
+//	@return []byte
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-19 10:00:00
+func (b *AnthropicContentBlock) MarshalJSON() ([]byte, error) {
+	if b == nil {
+		return []byte("null"), nil
+	}
+	switch enum.AnthropicContentBlockType(b.Type) {
+	case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
+		return sonic.Marshal(newAnthropicToolUseContentBlockWire(b))
+	default:
+		return sonic.Marshal((*anthropicContentBlockWire)(b))
+	}
 }
 
 // ==================== Anthropic Output Config DTOs ====================

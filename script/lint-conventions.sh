@@ -4,7 +4,7 @@
 # golangci-lint 已覆盖的检查（fmt.Errorf/errors.New/encoding/json/json.RawMessage/DTO 依赖等）
 # 请参见 .golangci.yml
 #
-# 扫描 internal/ 和 test/ 目录，检查是否违反项目约定
+# 扫描 internal/ 和 test/ 目录；其中「匿名 struct」规则仅扫描 internal/、cmd/（test/ 表驱动 []struct 豁免）
 # 退出码: 0=全部通过, 1=存在违规
 set -euo pipefail
 
@@ -398,6 +398,32 @@ if [[ -n "$magic_string_matches" ]]; then
     error "发现魔法字符串，应提取为具名常量（constant/string.go 或包内 const 块）:"
     echo "$magic_string_matches" | head -30
 fi
+
+# ─────────────────────────────────────────────
+# 9. 匿名 struct
+# ─────────────────────────────────────────────
+section "Anonymous struct literals"
+
+# 9.1 禁止在 internal/、cmd/ 使用匿名 struct（如 var x struct { ... }、struct { ... }{ ... }）。
+#     请改为包内命名类型（含未导出 type）。test/ 不扫描：表驱动测试 []struct{} 为惯用写法。
+anon_struct_violations=""
+while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if [[ ! "$line" =~ ^(.+):([0-9]+):(.*)$ ]]; then
+        continue
+    fi
+    content="${BASH_REMATCH[3]}"
+    if [[ "$content" =~ ^[[:space:]]*type[[:space:]]+ ]] && [[ "$content" =~ struct[[:space:]]*\{ ]]; then
+        continue
+    fi
+    anon_struct_violations+="${line}"$'\n'
+done < <(grep -rn 'struct {' internal/ cmd/ --include='*.go' 2>/dev/null || true)
+
+if [[ -n "$anon_struct_violations" ]]; then
+    error "禁止使用匿名 struct，请提取为包内命名类型（internal/、cmd/）:"
+    echo -n "$anon_struct_violations" | head -30
+fi
+
 
 # ─────────────────────────────────────────────
 # 汇总

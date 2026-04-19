@@ -27,6 +27,14 @@ type GoogleUserInfo struct {
 	PhotoURL string `json:"picture"`
 }
 
+// googleUserInfoAPIResponse decodes JSON from Google OAuth2 UserInfo HTTP API.
+type googleUserInfoAPIResponse struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	Picture string `json:"picture"`
+}
+
 // GetID 获取Google用户ID
 //
 //	@receiver u *GoogleUserInfo
@@ -134,12 +142,7 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	logger.Info("[GoogleOauth2] Userinfo API response",
 		zap.Int("statusCode", resp.StatusCode))
 
-	var userInfoResp struct {
-		ID      string `json:"id"`
-		Name    string `json:"name"`
-		Email   string `json:"email"`
-		Picture string `json:"picture"`
-	}
+	var userInfoResp googleUserInfoAPIResponse
 
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&userInfoResp); err != nil {
 		logger.Error("[GoogleOauth2] Failed to decode userinfo response", zap.Error(err))
