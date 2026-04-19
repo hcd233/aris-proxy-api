@@ -818,3 +818,256 @@ func TestAnthropicProtocolConverter_ToOpenAISSEResponse_MessageDelta(t *testing.
 		t.Errorf("Usage.PromptTokens = %d, want 100", chunk.Usage.PromptTokens)
 	}
 }
+
+// ==================== Response API -> Anthropic Tests ====================
+
+// responseTestCase Response API 测试用例结构
+type responseTestCase struct {
+	Name                string                                   `json:"name"`
+	Description         string                                   `json:"description"`
+	OpenAIResponseReq  *dto.OpenAICreateResponseReq            `json:"openai_response_request"`
+	AnthropicRequest    *dto.AnthropicCreateMessageReq           `json:"anthropic_request"`
+}
+
+func loadResponseCases(t *testing.T) []responseTestCase {
+	t.Helper()
+	data, err := os.ReadFile("./fixtures/response_cases.json")
+	if err != nil {
+		t.Fatalf("failed to read fixtures/response_cases.json: %v", err)
+	}
+	var cases []responseTestCase
+	if err := sonic.Unmarshal(data, &cases); err != nil {
+		t.Fatalf("failed to unmarshal fixtures/response_cases.json: %v", err)
+	}
+	return cases
+}
+
+func findResponseCase(t *testing.T, cases []responseTestCase, name string) responseTestCase {
+	t.Helper()
+	for _, c := range cases {
+		if c.Name == name {
+			return c
+		}
+	}
+	t.Fatalf("response test case %q not found in fixtures", name)
+	return responseTestCase{}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_SimpleText(t *testing.T) {
+	allCases := loadResponseCases(t)
+	tc := findResponseCase(t, allCases, "response_simple_text")
+
+	conv := converter.AnthropicProtocolConverter{}
+	result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
+	if err != nil {
+		t.Fatalf("FromResponseAPIRequest() error: %v", err)
+	}
+
+	// 检查 model
+	if result.Model != tc.OpenAIResponseReq.Model {
+		t.Errorf("Model = %q, want %q", result.Model, tc.OpenAIResponseReq.Model)
+	}
+
+	// 检查 messages: instructions 作为 system 消息 + user 消息
+	if len(result.Messages) != 2 {
+		t.Fatalf("len(Messages) = %d, want 2", len(result.Messages))
+	}
+
+	// 第一条是 system（来自 instructions）
+	if result.Messages[0].Role != enum.RoleSystem {
+		t.Errorf("Messages[0].Role = %q, want %q", result.Messages[0].Role, enum.RoleSystem)
+	}
+	if result.Messages[0].Content == nil || result.Messages[0].Content.Text != "You are a helpful assistant." {
+		t.Errorf("Messages[0].Content.Text = %q, want %q", result.Messages[0].Content.Text, "You are a helpful assistant.")
+	}
+
+	// 第二条是 user
+	if result.Messages[1].Role != enum.RoleUser {
+		t.Errorf("Messages[1].Role = %q, want %q", result.Messages[1].Role, enum.RoleUser)
+	}
+
+	// 检查 max_tokens
+	if result.MaxTokens != 1024 {
+		t.Errorf("MaxTokens = %d, want 1024", result.MaxTokens)
+	}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_ReasoningEffort(t *testing.T) {
+	allCases := loadResponseCases(t)
+
+	tests := []struct {
+		caseName       string
+		effort         string
+		wantThinking   string
+	}{
+		{"low", "low", enum.AnthropicThinkingTypeLow},
+		{"medium", "medium", enum.AnthropicThinkingTypeMedium},
+		{"high", "high", enum.AnthropicThinkingTypeHigh},
+		{"xhigh", "xhigh", enum.AnthropicThinkingTypeHigh},
+		{"minimal", "minimal", enum.AnthropicThinkingTypeMinimal},
+		{"none", "none", enum.AnthropicThinkingTypeDisabled},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.effort, func(t *testing.T) {
+			tc := findResponseCase(t, allCases, "response_reasoning_effort_"+tt.effort)
+
+			conv := converter.AnthropicProtocolConverter{}
+			result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
+			if err != nil {
+				t.Fatalf("FromResponseAPIRequest() error: %v", err)
+			}
+
+			if result.Thinking == nil {
+				t.Fatal("Thinking should not be nil")
+			}
+			if result.Thinking.Type != tt.wantThinking {
+				t.Errorf("Thinking.Type = %q, want %q", result.Thinking.Type, tt.wantThinking)
+			}
+		})
+	}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_DeveloperRoleMappedToSystem(t *testing.T) {
+	allCases := loadResponseCases(t)
+	tc := findResponseCase(t, allCases, "response_developer_role_mapped_to_system")
+
+	conv := converter.AnthropicProtocolConverter{}
+	result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
+	if err != nil {
+		t.Fatalf("FromResponseAPIRequest() error: %v", err)
+	}
+
+	// developer 角色应该被映射为 system
+	if len(result.Messages) != 2 {
+		t.Fatalf("len(Messages) = %d, want 2", len(result.Messages))
+	}
+
+	// 第一条是 developer -> system
+	if result.Messages[0].Role != enum.RoleSystem {
+		t.Errorf("Messages[0].Role = %q, want %q (developer mapped to system)", result.Messages[0].Role, enum.RoleSystem)
+	}
+
+	// 第二条是 user
+	if result.Messages[1].Role != enum.RoleUser {
+		t.Errorf("Messages[1].Role = %q, want %q", result.Messages[1].Role, enum.RoleUser)
+	}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_TextFormatJSONSchema(t *testing.T) {
+	allCases := loadResponseCases(t)
+	tc := findResponseCase(t, allCases, "response_text_format_json_schema")
+
+	conv := converter.AnthropicProtocolConverter{}
+	result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
+	if err != nil {
+		t.Fatalf("FromResponseAPIRequest() error: %v", err)
+	}
+
+	if result.OutputConfig == nil {
+		t.Fatal("OutputConfig should not be nil")
+	}
+	if result.OutputConfig.Format == nil {
+		t.Fatal("OutputConfig.Format should not be nil")
+	}
+	if result.OutputConfig.Format.Type != enum.ResponseFormatTypeJSONSchema {
+		t.Errorf("OutputConfig.Format.Type = %q, want %q", result.OutputConfig.Format.Type, enum.ResponseFormatTypeJSONSchema)
+	}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_TextFormatJSONObject(t *testing.T) {
+	allCases := loadResponseCases(t)
+	tc := findResponseCase(t, allCases, "response_text_format_json_object")
+
+	conv := converter.AnthropicProtocolConverter{}
+	result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
+	if err != nil {
+		t.Fatalf("FromResponseAPIRequest() error: %v", err)
+	}
+
+	if result.OutputConfig == nil {
+		t.Fatal("OutputConfig should not be nil")
+	}
+	// json_object 格式的 OutputConfig 存在但 Format 为 nil
+	// 这是因为 convertResponseOutputFormat 只在有 schema 时才设置 Format
+	if result.OutputConfig.Format != nil {
+		t.Errorf("OutputConfig.Format = %v, want nil for json_object", result.OutputConfig.Format)
+	}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_FunctionCall(t *testing.T) {
+	allCases := loadResponseCases(t)
+	tc := findResponseCase(t, allCases, "response_function_call")
+
+	conv := converter.AnthropicProtocolConverter{}
+	result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
+	if err != nil {
+		t.Fatalf("FromResponseAPIRequest() error: %v", err)
+	}
+
+	// 检查工具定义
+	if len(result.Tools) != 1 {
+		t.Fatalf("len(Tools) = %d, want 1", len(result.Tools))
+	}
+	if result.Tools[0].Name != "get_weather" {
+		t.Errorf("Tools[0].Name = %q, want %q", result.Tools[0].Name, "get_weather")
+	}
+
+	// 检查 tool_choice
+	if result.ToolChoice == nil {
+		t.Fatal("ToolChoice should not be nil")
+	}
+	if result.ToolChoice.Type != "auto" {
+		t.Errorf("ToolChoice.Type = %q, want %q", result.ToolChoice.Type, "auto")
+	}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_NoReasoning(t *testing.T) {
+	// 测试没有 reasoning 配置时 Thinking 为 nil
+	conv := converter.AnthropicProtocolConverter{}
+	req := &dto.OpenAICreateResponseReq{
+		Model: "gpt-4o",
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{
+				{
+					Type:   enum.ResponseInputItemTypeMessage,
+					Role:   enum.RoleUser,
+					Content: &dto.ResponseInputMessageContent{
+						Parts: []*dto.ResponseInputContent{
+							{Type: enum.ResponseContentTypeInputText, Text: "Hello"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result, err := conv.FromResponseAPIRequest(req)
+	if err != nil {
+		t.Fatalf("FromResponseAPIRequest() error: %v", err)
+	}
+
+	if result.Thinking != nil {
+		t.Errorf("Thinking = %v, want nil when no reasoning config", result.Thinking)
+	}
+}
+
+func TestAnthropicProtocolConverter_FromResponseAPIRequest_EmptyInput(t *testing.T) {
+	// 测试空 input 时不崩溃
+	conv := converter.AnthropicProtocolConverter{}
+	req := &dto.OpenAICreateResponseReq{
+		Model: "gpt-4o",
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{},
+		},
+	}
+
+	result, err := conv.FromResponseAPIRequest(req)
+	if err != nil {
+		t.Fatalf("FromResponseAPIRequest() error: %v", err)
+	}
+
+	if len(result.Messages) != 0 {
+		t.Errorf("len(Messages) = %d, want 0", len(result.Messages))
+	}
+}
