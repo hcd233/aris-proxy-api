@@ -636,46 +636,27 @@ func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateR
 	anthropicReq.Temperature = req.Temperature
 	anthropicReq.TopP = req.TopP
 
-	// 转换 reasoning 配置
+	// 转换 reasoning → Anthropic thinking
 	if req.Reasoning != nil {
 		anthropicReq.Thinking = &dto.AnthropicThinkingConfig{}
 		switch strings.ToLower(req.Reasoning.Effort) {
-		case "low":
-			anthropicReq.Thinking.Type = "low"
-		case "medium":
-			anthropicReq.Thinking.Type = "medium"
-		case "high", "xhigh":
-			anthropicReq.Thinking.Type = "high"
-		case "minimal":
-			anthropicReq.Thinking.Type = "minimal"
-		case "none":
-			anthropicReq.Thinking.Type = "disabled"
+		case enum.ResponseEffortLow:
+			anthropicReq.Thinking.Type = enum.AnthropicThinkingTypeLow
+		case enum.ResponseEffortMedium:
+			anthropicReq.Thinking.Type = enum.AnthropicThinkingTypeMedium
+		case enum.ResponseEffortHigh, enum.ResponseEffortXHigh:
+			anthropicReq.Thinking.Type = enum.AnthropicThinkingTypeHigh
+		case enum.ResponseEffortMinimal:
+			anthropicReq.Thinking.Type = enum.AnthropicThinkingTypeMinimal
+		case enum.ResponseEffortNone:
+			anthropicReq.Thinking.Type = enum.AnthropicThinkingTypeDisabled
 		default:
-			// 默认使用 medium
-			anthropicReq.Thinking.Type = "medium"
+			anthropicReq.Thinking.Type = enum.AnthropicThinkingTypeMedium
 		}
 	}
 
 	// 转换 text format 配置
-	if req.Text != nil && req.Text.Format != nil {
-		switch req.Text.Format.Type {
-		case enum.ResponseTextFormatTypeJSONObject, enum.ResponseTextFormatTypeJSONSchema:
-			anthropicReq.OutputConfig = &dto.AnthropicOutputConfig{}
-			if req.Text.Format.Type == enum.ResponseTextFormatTypeJSONSchema && req.Text.Format.Schema != nil {
-				// JSON Schema 序列化后作为 map[string]any
-				schemaBytes, err := sonic.Marshal(req.Text.Format.Schema)
-				if err == nil {
-					var schemaMap map[string]any
-					if err := sonic.Unmarshal(schemaBytes, &schemaMap); err == nil {
-						anthropicReq.OutputConfig.Format = &dto.AnthropicJSONOutputFormat{
-							Type:   "json_schema",
-							Schema: schemaMap,
-						}
-					}
-				}
-			}
-		}
-	}
+	anthropicReq.OutputConfig = convertResponseOutputFormat(req.Text)
 
 	// 构建消息列表
 	var messages []*dto.AnthropicMessageParam
@@ -723,6 +704,31 @@ func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateR
 	}
 
 	return anthropicReq, nil
+}
+
+// convertResponseOutputFormat 将 Response API 文本格式配置转换为 Anthropic 输出格式
+func convertResponseOutputFormat(text *dto.ResponseTextConfig) *dto.AnthropicOutputConfig {
+	if text == nil || text.Format == nil {
+		return nil
+	}
+	switch text.Format.Type {
+	case enum.ResponseTextFormatTypeJSONObject, enum.ResponseTextFormatTypeJSONSchema:
+		cfg := &dto.AnthropicOutputConfig{}
+		if text.Format.Type == enum.ResponseTextFormatTypeJSONSchema && text.Format.Schema != nil {
+			schemaBytes, err := sonic.Marshal(text.Format.Schema)
+			if err == nil {
+				var schema map[string]any
+				if err := sonic.Unmarshal(schemaBytes, &schema); err == nil {
+					cfg.Format = &dto.AnthropicJSONOutputFormat{
+						Type:   enum.ResponseFormatTypeJSONSchema,
+						Schema: schema,
+					}
+				}
+			}
+		}
+		return cfg
+	}
+	return nil
 }
 
 // convertResponseInputItemToAnthropic 将 Response API input item 转换为 Anthropic 消息
@@ -783,7 +789,8 @@ func resolveResponseAPIRole(role string) string {
 	case string(enum.RoleSystem):
 		return string(enum.RoleSystem)
 	case string(enum.RoleDeveloper):
-		return string(enum.RoleDeveloper)
+		// Anthropic 不支持 developer 角色，将其映射为 system
+		return string(enum.RoleSystem)
 	default:
 		return string(enum.RoleUser)
 	}
@@ -966,14 +973,15 @@ func convertResponseToolChoiceToAnthropic(tc *dto.ResponseToolChoiceParam) *dto.
 	return nil
 }
 
-// parseJSONToMap 解析 JSON 字符串为 map
+// parseJSONToMap 解析 JSON 字符串为 map，解析失败时保留原始内容
 func parseJSONToMap(jsonStr string) map[string]any {
 	if jsonStr == "" {
 		return nil
 	}
 	var result map[string]any
 	if err := sonic.UnmarshalString(jsonStr, &result); err != nil {
-		return nil
+		// 解析失败时保留原始 JSON 字符串，交由上游尝试解释
+		return map[string]any{"raw": jsonStr}
 	}
 	return result
 }
