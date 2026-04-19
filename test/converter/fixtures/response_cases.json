@@ -1,0 +1,339 @@
+[
+    {
+        "name": "response_simple_text",
+        "description": "simple text conversation with instructions",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "instructions": "You are a helpful assistant.",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Hello!"}
+                    ]
+                }
+            ],
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Hello!"}
+            ]
+        }
+    },
+    {
+        "name": "response_reasoning_effort_low",
+        "description": "reasoning effort low maps to Anthropic thinking type low",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Solve math"}
+                    ]
+                }
+            ],
+            "reasoning": {"effort": "low"},
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Solve math"}
+            ],
+            "thinking": {"type": "low"}
+        }
+    },
+    {
+        "name": "response_reasoning_effort_medium",
+        "description": "reasoning effort medium maps to Anthropic thinking type medium",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Solve math"}
+                    ]
+                }
+            ],
+            "reasoning": {"effort": "medium"},
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Solve math"}
+            ],
+            "thinking": {"type": "medium"}
+        }
+    },
+    {
+        "name": "response_reasoning_effort_high",
+        "description": "reasoning effort high maps to Anthropic thinking type high",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Solve math"}
+                    ]
+                }
+            ],
+            "reasoning": {"effort": "high"},
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Solve math"}
+            ],
+            "thinking": {"type": "high"}
+        }
+    },
+    {
+        "name": "response_reasoning_effort_xhigh",
+        "description": "reasoning effort xhigh maps to Anthropic thinking type high",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Solve math"}
+                    ]
+                }
+            ],
+            "reasoning": {"effort": "xhigh"},
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Solve math"}
+            ],
+            "thinking": {"type": "high"}
+        }
+    },
+    {
+        "name": "response_reasoning_effort_minimal",
+        "description": "reasoning effort minimal maps to Anthropic thinking type minimal",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Solve math"}
+                    ]
+                }
+            ],
+            "reasoning": {"effort": "minimal"},
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Solve math"}
+            ],
+            "thinking": {"type": "minimal"}
+        }
+    },
+    {
+        "name": "response_reasoning_effort_none",
+        "description": "reasoning effort none maps to Anthropic thinking type disabled",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Solve math"}
+                    ]
+                }
+            ],
+            "reasoning": {"effort": "none"},
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Solve math"}
+            ],
+            "thinking": {"type": "disabled"}
+        }
+    },
+    {
+        "name": "response_developer_role_mapped_to_system",
+        "description": "developer role is mapped to system role for Anthropic",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "developer",
+                    "content": [
+                        {"type": "input_text", "text": "You are a mathematician."}
+                    ]
+                },
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "What is 2+2?"}
+                    ]
+                }
+            ],
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "system", "content": "You are a mathematician."},
+                {"role": "user", "content": "What is 2+2?"}
+            ]
+        }
+    },
+    {
+        "name": "response_text_format_json_schema",
+        "description": "text format json_schema converts to Anthropic output config",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Return JSON"}
+                    ]
+                }
+            ],
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "answer": {"type": "string"}
+                        }
+                    }
+                }
+            },
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Return JSON"}
+            ],
+            "output_config": {
+                "type": "json_schema",
+                "schema": {
+                    "properties": {"answer": {"type": "string"}},
+                    "type": "object"
+                }
+            }
+        }
+    },
+    {
+        "name": "response_text_format_json_object",
+        "description": "text format json_object converts to Anthropic output config without schema",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Return JSON"}
+                    ]
+                }
+            ],
+            "text": {
+                "format": {
+                    "type": "json_object"
+                }
+            },
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Return JSON"}
+            ],
+            "output_config": {}
+        }
+    },
+    {
+        "name": "response_function_call",
+        "description": "function call converts to Anthropic tool_use block",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "What's the weather?"}
+                    ]
+                }
+            ],
+            "tools": [
+                {
+                    "type": "function",
+                    "name": "get_weather",
+                    "description": "Get current weather",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "city": {"type": "string"}
+                        }
+                    }
+                }
+            ],
+            "tool_choice": "auto",
+            "max_output_tokens": 1024
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "What's the weather?"}
+            ],
+            "tools": [
+                {
+                    "name": "get_weather",
+                    "description": "Get current weather",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "city": {"type": "string"}
+                        }
+                    }
+                }
+            ],
+            "tool_choice": {"type": "auto"}
+        }
+    }
+]
