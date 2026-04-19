@@ -149,6 +149,11 @@ type OpenAIVoiceParam struct {
 	CustomID string `json:"-"` // 自定义声音 ID
 }
 
+// openAIVoiceParamCustomObject decodes {"id":"..."} for OpenAIVoiceParam.UnmarshalJSON.
+type openAIVoiceParamCustomObject struct {
+	ID string `json:"id"`
+}
+
 // UnmarshalJSON 自定义反序列化：区分字符串和 {id} 对象
 func (v *OpenAIVoiceParam) UnmarshalJSON(data []byte) error {
 	var name string
@@ -156,9 +161,7 @@ func (v *OpenAIVoiceParam) UnmarshalJSON(data []byte) error {
 		v.Name = name
 		return nil
 	}
-	var obj struct {
-		ID string `json:"id"`
-	}
+	var obj openAIVoiceParamCustomObject
 	if err := sonic.Unmarshal(data, &obj); err != nil {
 		return err
 	}

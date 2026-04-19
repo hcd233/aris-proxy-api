@@ -112,6 +112,12 @@ func jsonEqual(a, b any) bool {
 	return bytes.Equal(aBytes, bBytes)
 }
 
+// toolChecksumWire is the JSON-shaped payload for stable tool checksum hashing.
+type toolChecksumWire struct {
+	Name       string                  `json:"name"`
+	Parameters *dto.JSONSchemaProperty `json:"parameters"`
+}
+
 // ComputeToolChecksum 计算工具校验和，基于工具名和完整参数 Schema
 //
 // 使用 encoder.Encode + SortMapKeys 对 Name 和 Parameters 进行规范化序列化，
@@ -122,10 +128,7 @@ func jsonEqual(a, b any) bool {
 //	@author centonhuang
 //	@update 2026-03-19 10:00:00
 func ComputeToolChecksum(tool *dto.UnifiedTool) string {
-	data := struct {
-		Name       string                  `json:"name"`
-		Parameters *dto.JSONSchemaProperty `json:"parameters"`
-	}{
+	data := toolChecksumWire{
 		Name:       tool.Name,
 		Parameters: tool.Parameters,
 	}
