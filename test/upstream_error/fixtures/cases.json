@@ -1,0 +1,57 @@
+[
+    {
+        "name": "nil_error_returns_200",
+        "description": "no error should yield HTTP 200 with empty message",
+        "error_kind": "nil",
+        "expected_status": 200,
+        "expected_message_contains": ""
+    },
+    {
+        "name": "upstream_http_error_with_body",
+        "description": "UpstreamError with non-200 status and body should surface status code and body in message",
+        "error_kind": "upstream_http",
+        "upstream_status": 429,
+        "upstream_body": "{\"error\":{\"message\":\"rate limited\"}}",
+        "expected_status": 429,
+        "expected_message_contains": "rate limited"
+    },
+    {
+        "name": "upstream_http_error_without_body",
+        "description": "UpstreamError with empty body should still return status code and default message",
+        "error_kind": "upstream_http",
+        "upstream_status": 500,
+        "upstream_body": "",
+        "expected_status": 500,
+        "expected_message_contains": "500"
+    },
+    {
+        "name": "upstream_connection_error",
+        "description": "network-level error should map to -1 with upstream connection error prefix",
+        "error_kind": "upstream_connection",
+        "cause_message": "dial tcp: i/o timeout",
+        "expected_status": -1,
+        "expected_message_contains": "upstream connection error"
+    },
+    {
+        "name": "upstream_connection_error_nil_cause",
+        "description": "UpstreamConnectionError without cause should still map to -1 with default message",
+        "error_kind": "upstream_connection_nil_cause",
+        "expected_status": -1,
+        "expected_message_contains": "upstream connection error"
+    },
+    {
+        "name": "unknown_plain_error",
+        "description": "non-upstream error (e.g. conversion failure) should map to 0 to distinguish from transport errors",
+        "error_kind": "plain",
+        "cause_message": "convert openai message: invalid role",
+        "expected_status": 0,
+        "expected_message_contains": "convert openai message"
+    },
+    {
+        "name": "unknown_context_canceled",
+        "description": "context.Canceled is not an upstream failure; must fall through to unknown category (0)",
+        "error_kind": "context_canceled",
+        "expected_status": 0,
+        "expected_message_contains": "context canceled"
+    }
+]

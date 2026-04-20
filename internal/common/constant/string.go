@@ -75,6 +75,16 @@ const (
 	//	@update 2026-04-17 10:00:00
 	SSEEventPrefix = "event: "
 
+	// AnthropicMessageStopSSEFrame Anthropic 流式结束帧（event + data 完整 SSE frame）。
+	//
+	// 两条转发路径（forwardNative / forwardViaOpenAI）都需要在上游流正常结束时
+	// 补发一次 message_stop 事件，以符合 Anthropic SSE 协议规范：
+	// data 段必须为 `{"type":"message_stop"}` 而非空对象 `{}`。
+	// 参见提交 184dcf9 的回归修复。
+	//	@author centonhuang
+	//	@update 2026-04-20 11:00:00
+	AnthropicMessageStopSSEFrame = "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+
 	// ==================== Response API 审计错误消息 ====================
 
 	// ResponseFailedAuditReason response.failed 终态事件无 error payload 时的审计兜底文案

@@ -24,10 +24,10 @@ const (
 type ResponseReasoningEffort = string
 
 const (
-	ResponseEffortLow    ResponseReasoningEffort = "low"
-	ResponseEffortMedium ResponseReasoningEffort = "medium"
-	ResponseEffortHigh   ResponseReasoningEffort = "high"
-	ResponseEffortXHigh  ResponseReasoningEffort = "xhigh"
-	ResponseEffortNone   ResponseReasoningEffort = "none"
+	ResponseEffortLow     ResponseReasoningEffort = "low"
+	ResponseEffortMedium  ResponseReasoningEffort = "medium"
+	ResponseEffortHigh    ResponseReasoningEffort = "high"
+	ResponseEffortXHigh   ResponseReasoningEffort = "xhigh"
+	ResponseEffortNone    ResponseReasoningEffort = "none"
 	ResponseEffortMinimal ResponseReasoningEffort = "minimal"
 )

@@ -823,10 +823,10 @@ func TestAnthropicProtocolConverter_ToOpenAISSEResponse_MessageDelta(t *testing.
 
 // responseTestCase Response API 测试用例结构
 type responseTestCase struct {
-	Name                string                                   `json:"name"`
-	Description         string                                   `json:"description"`
-	OpenAIResponseReq  *dto.OpenAICreateResponseReq            `json:"openai_response_request"`
-	AnthropicRequest    *dto.AnthropicCreateMessageReq           `json:"anthropic_request"`
+	Name              string                         `json:"name"`
+	Description       string                         `json:"description"`
+	OpenAIResponseReq *dto.OpenAICreateResponseReq   `json:"openai_response_request"`
+	AnthropicRequest  *dto.AnthropicCreateMessageReq `json:"anthropic_request"`
 }
 
 func loadResponseCases(t *testing.T) []responseTestCase {
@@ -896,9 +896,9 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_ReasoningEffort(t *te
 	allCases := loadResponseCases(t)
 
 	tests := []struct {
-		caseName       string
-		effort         string
-		wantThinking   string
+		caseName     string
+		effort       string
+		wantThinking string
 	}{
 		{"low", "low", enum.AnthropicThinkingTypeLow},
 		{"medium", "medium", enum.AnthropicThinkingTypeMedium},
@@ -1030,8 +1030,8 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_NoReasoning(t *testin
 		Input: &dto.ResponseInput{
 			Items: []*dto.ResponseInputItem{
 				{
-					Type:   enum.ResponseInputItemTypeMessage,
-					Role:   enum.RoleUser,
+					Type: enum.ResponseInputItemTypeMessage,
+					Role: enum.RoleUser,
 					Content: &dto.ResponseInputMessageContent{
 						Parts: []*dto.ResponseInputContent{
 							{Type: enum.ResponseContentTypeInputText, Text: "Hello"},

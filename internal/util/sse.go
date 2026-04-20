@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -53,6 +54,23 @@ func writeSSEErrorResponse(ctx context.Context, w *bufio.Writer, err *model.Erro
 	if err := w.Flush(); err != nil {
 		logger.Error("[WriteErrorResponse] Flush error", zap.Error(err))
 	}
+}
+
+// WriteAnthropicMessageStop 向客户端写入 Anthropic 协议的 message_stop 结束帧。
+//
+// 两条转发路径（forwardNative / forwardViaOpenAI）都通过此函数发送结束帧，
+// 保证 event 类型和 data payload 一致（参见提交 184dcf9 的回归修复）。
+// 返回 flush 错误而不 panic，调用方可按需处理（通常忽略即可）。
+//
+//	@param w *bufio.Writer
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-20 11:00:00
+func WriteAnthropicMessageStop(w *bufio.Writer) error {
+	if _, err := w.WriteString(constant.AnthropicMessageStopSSEFrame); err != nil {
+		return err
+	}
+	return w.Flush()
 }
 
 // SendOpenAIModelNotFoundError 发送OpenAI模型不存在错误

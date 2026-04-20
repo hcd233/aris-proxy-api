@@ -18,7 +18,7 @@ type ModelCallAudit struct {
 	FirstTokenLatencyMs      int64  `json:"first_token_latency_ms" gorm:"column:first_token_latency_ms;not null;default:0;comment:首token延迟(ms)，非流式为总延迟"`
 	StreamDurationMs         int64  `json:"stream_duration_ms" gorm:"column:stream_duration_ms;not null;default:0;comment:流式传输持续时间(ms)，非流式为0"`
 	UserAgent                string `json:"user_agent" gorm:"column:user_agent;not null;default:'';comment:请求客户端User-Agent"`
-	UpstreamStatusCode       int    `json:"upstream_status_code" gorm:"column:upstream_status_code;not null;default:0;comment:上游HTTP状态码，成功为200，-1表示连接错误"`
+	UpstreamStatusCode       int    `json:"upstream_status_code" gorm:"column:upstream_status_code;not null;default:0;comment:上游HTTP状态码：200成功，>0为上游返回码，-1为连接错误，0为未知错误"`
 	ErrorMessage             string `json:"error_message" gorm:"column:error_message;not null;default:'';comment:错误信息，成功时为空"`
 	TraceID                  string `json:"trace_id" gorm:"column:trace_id;not null;default:'';comment:请求追踪ID;index"`
 }
