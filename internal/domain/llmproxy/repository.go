@@ -26,3 +26,36 @@ type EndpointRepository interface {
 	//	@return error
 	FindByAliasAndProvider(ctx context.Context, alias vo.EndpointAlias, provider enum.ProviderType) (*aggregate.Endpoint, error)
 }
+
+// ==================== CQRS 读模型 ====================
+
+// EndpointAliasProjection 模型别名只读投影
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type EndpointAliasProjection struct {
+	Alias string
+}
+
+// EndpointCredentialProjection 端点凭证只读投影（用于 token 计数等无需聚合重建的场景）
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type EndpointCredentialProjection struct {
+	Model   string
+	APIKey  string
+	BaseURL string
+}
+
+// EndpointReadRepository 模型端点只读查询仓储（CQRS 读模型）
+//
+// 与 EndpointRepository 分离，避免写仓储受读模型查询字段需求污染。
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type EndpointReadRepository interface {
+	// ListAliasesByProvider 按 Provider 查询所有别名
+	ListAliasesByProvider(ctx context.Context, provider enum.ProviderType) ([]*EndpointAliasProjection, error)
+	// FindCredentialByAliasAndProvider 按 alias + provider 查询端点凭证
+	FindCredentialByAliasAndProvider(ctx context.Context, alias string, provider enum.ProviderType) (*EndpointCredentialProjection, error)
+}

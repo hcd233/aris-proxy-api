@@ -35,14 +35,15 @@ type anthropicHandler struct {
 //	@update 2026-04-22 21:00:00
 func NewAnthropicHandler() AnthropicHandler {
 	endpointRepo := repository.NewEndpointRepository()
+	endpointReadRepo := repository.NewEndpointReadRepository()
 	resolver := service.NewEndpointResolver(endpointRepo)
 	anthropicProxy := transport.NewAnthropicProxy()
 
 	return &anthropicHandler{
 		uc: usecase.NewAnthropicUseCase(
 			resolver,
-			usecase.NewListAnthropicModels(),
-			usecase.NewCountTokens(anthropicProxy),
+			usecase.NewListAnthropicModels(endpointReadRepo),
+			usecase.NewCountTokens(endpointReadRepo, anthropicProxy),
 			transport.NewOpenAIProxy(),
 			anthropicProxy,
 		),

@@ -1,10 +1,11 @@
-// Package session Session 域根（仓储接口）
 package session
 
 import (
 	"context"
+	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
 )
 
@@ -30,4 +31,69 @@ type SessionRepository interface {
 type PageParam struct {
 	Page     int
 	PageSize int
+}
+
+// ==================== CQRS 读模型 ====================
+
+// SessionSummaryProjection Session 列表只读投影
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type SessionSummaryProjection struct {
+	ID         uint
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Summary    string
+	MessageIDs []uint
+	ToolIDs    []uint
+}
+
+// MessageDetailProjection 消息详情只读投影
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type MessageDetailProjection struct {
+	ID        uint
+	Model     string
+	Message   *vo.UnifiedMessage
+	CreatedAt time.Time
+}
+
+// ToolDetailProjection 工具详情只读投影
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type ToolDetailProjection struct {
+	ID        uint
+	Tool      *vo.UnifiedTool
+	CreatedAt time.Time
+}
+
+// SessionDetailProjection Session 详情只读投影
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type SessionDetailProjection struct {
+	ID         uint
+	APIKeyName string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Metadata   map[string]string
+	MessageIDs []uint
+	ToolIDs    []uint
+	Messages   []*MessageDetailProjection
+	Tools      []*ToolDetailProjection
+}
+
+// SessionReadRepository Session 只读查询仓储（CQRS 读模型）
+//
+// 与 SessionRepository 分离，避免写仓储受读模型查询的字段/投影需求污染。
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type SessionReadRepository interface {
+	// ListSessions 分页查询 Session 列表投影
+	ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
+	GetSessionDetail(ctx context.Context, id uint, owner string) (*SessionDetailProjection, error)
 }

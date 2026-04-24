@@ -33,23 +33,16 @@ type ModelCallAudit struct {
 	createdAt        time.Time
 }
 
-// RecordCompletedCall 构造一条「成功」审计聚合
+// RecordCall 构造一条审计聚合（成功/失败由 CallInput.Status 区分，工厂不重复表达）
+//
+// RecordCompletedCall / RecordFailedCall 曾作为两条独立工厂存在，但二者行为完全等价
+// （差异仅在于入参 RecordCallInput.Status 本身），因此在职能上合并为 RecordCall。
 //
 //	@param input RecordCallInput
 //	@return *ModelCallAudit
 //	@author centonhuang
-//	@update 2026-04-23 10:45:00
-func RecordCompletedCall(input RecordCallInput) *ModelCallAudit {
-	return newAudit(input)
-}
-
-// RecordFailedCall 构造一条「失败」审计聚合
-//
-//	@param input RecordCallInput
-//	@return *ModelCallAudit
-//	@author centonhuang
-//	@update 2026-04-23 10:45:00
-func RecordFailedCall(input RecordCallInput) *ModelCallAudit {
+//	@update 2026-04-24 20:00:00
+func RecordCall(input RecordCallInput) *ModelCallAudit {
 	return newAudit(input)
 }
 

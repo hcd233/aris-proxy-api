@@ -31,9 +31,9 @@ func (c UpstreamCreds) IsValid() bool {
 // MaskedAPIKey 返回 APIKey 的脱敏形式用于日志输出
 //
 //	@receiver c UpstreamCreds
-//	@return any
+//	@return string
 //	@author centonhuang
-//	@update 2026-04-22 16:30:00
-func (c UpstreamCreds) MaskedAPIKey() any {
+//	@update 2026-04-24 20:00:00
+func (c UpstreamCreds) MaskedAPIKey() string {
 	return util.MaskSecret(c.APIKey)
 }

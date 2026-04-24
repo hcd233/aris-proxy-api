@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -34,11 +35,12 @@ type sessionHandler struct {
 //
 //	@return SessionHandler
 //	@author centonhuang
-//	@update 2026-04-23 11:00:00
+//	@update 2026-04-24 20:00:00
 func NewSessionHandler() SessionHandler {
+	sessionReadRepo := repository.NewSessionReadRepository()
 	return &sessionHandler{
-		list: sessionquery.NewListSessionsHandler(),
-		get:  sessionquery.NewGetSessionHandler(),
+		list: sessionquery.NewListSessionsHandler(sessionReadRepo),
+		get:  sessionquery.NewGetSessionHandler(sessionReadRepo),
 	}
 }
 
