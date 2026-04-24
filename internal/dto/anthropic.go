@@ -427,7 +427,7 @@ type AnthropicCreateMessageRequest struct {
 // AnthropicMessage Anthropic Message 响应
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-04-25 10:00:00
 type AnthropicMessage struct {
 	ID           string                   `json:"id"`
 	Type         string                   `json:"type"`
@@ -436,7 +436,18 @@ type AnthropicMessage struct {
 	Model        string                   `json:"model"`
 	StopReason   *string                  `json:"stop_reason"`
 	StopSequence *string                  `json:"stop_sequence"`
+	StopDetails  *AnthropicRefusalStopDetails `json:"stop_details,omitempty"`
 	Usage        *AnthropicUsage          `json:"usage"`
+}
+
+// AnthropicRefusalStopDetails Anthropic 拒绝停止详细信息
+//
+//	@author centonhuang
+//	@update 2026-04-25 10:00:00
+type AnthropicRefusalStopDetails struct {
+	Type        string  `json:"type"`
+	Category    *string `json:"category"`
+	Explanation *string `json:"explanation"`
 }
 
 // AnthropicUsage Anthropic Token 用量统计
@@ -578,10 +589,11 @@ type AnthropicSSEContentBlockDelta struct {
 // AnthropicSSEMessageDeltaPayload message_delta 事件的 delta 部分
 //
 //	@author centonhuang
-//	@update 2026-03-29 10:00:00
+//	@update 2026-04-25 10:00:00
 type AnthropicSSEMessageDeltaPayload struct {
-	StopReason   *string `json:"stop_reason"`
-	StopSequence *string `json:"stop_sequence"`
+	StopReason   *string                    `json:"stop_reason"`
+	StopSequence *string                    `json:"stop_sequence"`
+	StopDetails  *AnthropicRefusalStopDetails `json:"stop_details,omitempty"`
 }
 
 // AnthropicSSEMessageDelta message_delta 事件的 payload
