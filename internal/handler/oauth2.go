@@ -9,9 +9,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
-	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -37,9 +38,9 @@ type oauth2Handler struct {
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
 func NewOauth2Handler() Oauth2Handler {
-	platforms := map[string]infraoauth2.Platform{
-		constant.OAuthProviderGithub: infraoauth2.NewGithubPlatform(),
-		constant.OAuthProviderGoogle: infraoauth2.NewGooglePlatform(),
+	platforms := map[string]service.Platform{
+		constant.OAuthProviderGithub: oauth2.NewGithubPlatform(),
+		constant.OAuthProviderGoogle: oauth2.NewGooglePlatform(),
 	}
 
 	userRepo := repository.NewUserRepository()

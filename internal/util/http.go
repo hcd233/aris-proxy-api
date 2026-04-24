@@ -11,6 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
@@ -158,7 +159,7 @@ func ExtractUpstreamStatusAndError(err error) (statusCode int, errorMessage stri
 	}
 	var connErr *model.UpstreamConnectionError
 	if errors.As(err, &connErr) {
-		return -1, connErr.Error()
+		return constant.CallStatusConnectionError, connErr.Error()
 	}
-	return 0, err.Error()
+	return constant.CallStatusUnknownError, err.Error()
 }

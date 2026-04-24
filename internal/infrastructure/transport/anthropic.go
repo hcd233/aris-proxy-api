@@ -180,7 +180,7 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 
 	log.Info("[AnthropicProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
+		zap.String("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {

@@ -1,5 +1,7 @@
 package vo
 
+import "github.com/hcd233/aris-proxy-api/internal/common/constant"
+
 // CallStatus 模型调用状态值对象
 //
 // UpstreamStatusCode 语义（与原 util.ExtractUpstreamStatusAndError 一致）：
@@ -19,15 +21,6 @@ type CallStatus struct {
 	ErrorMessage       string
 }
 
-// StatusCodeSuccess HTTP 成功状态码（非流式成功路径硬编码）
-const StatusCodeSuccess = 200
-
-// StatusCodeConnectionError 连接层错误状态码
-const StatusCodeConnectionError = -1
-
-// StatusCodeUnknownError 未知错误状态码
-const StatusCodeUnknownError = 0
-
 // IsSuccess 判断是否成功（HTTP 200）
 //
 //	@receiver s CallStatus
@@ -35,5 +28,5 @@ const StatusCodeUnknownError = 0
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
 func (s CallStatus) IsSuccess() bool {
-	return s.UpstreamStatusCode == StatusCodeSuccess && s.ErrorMessage == ""
+	return s.UpstreamStatusCode == constant.CallStatusSuccess && s.ErrorMessage == ""
 }

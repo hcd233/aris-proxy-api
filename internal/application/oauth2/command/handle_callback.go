@@ -19,6 +19,7 @@ import (
 	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	identityvo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
+	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -47,16 +48,16 @@ type InitiateLoginHandler interface {
 }
 
 type initiateLoginHandler struct {
-	platforms map[string]infraoauth2.Platform
+	platforms map[string]oauth2service.Platform
 }
 
 // NewInitiateLoginHandler 构造发起登录处理器
 //
-//	@param platforms map[string]infraoauth2.Platform 按平台名索引的策略实例（github / google）
+//	@param platforms map[string]oauth2service.Platform 按平台名索引的策略实例（github / google）
 //	@return InitiateLoginHandler
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
-func NewInitiateLoginHandler(platforms map[string]infraoauth2.Platform) InitiateLoginHandler {
+func NewInitiateLoginHandler(platforms map[string]oauth2service.Platform) InitiateLoginHandler {
 	return &initiateLoginHandler{platforms: platforms}
 }
 
@@ -134,7 +135,7 @@ type HandleCallbackHandler interface {
 }
 
 type handleCallbackHandler struct {
-	platforms      map[string]infraoauth2.Platform
+	platforms      map[string]oauth2service.Platform
 	userRepo       identity.UserRepository
 	accessSigner   identityservice.TokenSigner
 	refreshSigner  identityservice.TokenSigner
@@ -143,7 +144,7 @@ type handleCallbackHandler struct {
 
 // NewHandleCallbackHandler 构造回调处理器
 //
-//	@param platforms map[string]infraoauth2.Platform
+//	@param platforms map[string]oauth2service.Platform
 //	@param userRepo identity.UserRepository
 //	@param accessSigner identityservice.TokenSigner
 //	@param refreshSigner identityservice.TokenSigner
@@ -152,7 +153,7 @@ type handleCallbackHandler struct {
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
 func NewHandleCallbackHandler(
-	platforms map[string]infraoauth2.Platform,
+	platforms map[string]oauth2service.Platform,
 	userRepo identity.UserRepository,
 	accessSigner, refreshSigner identityservice.TokenSigner,
 	objStorageDirC ObjectStorageDirCreator,
@@ -207,8 +208,8 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 		return nil, ierr.Wrap(ierr.ErrOAuth2UserInfo, err, "get oauth user info")
 	}
 
-	thirdPartyID := userInfo.GetID()
-	userName, email, avatar := userInfo.GetName(), userInfo.GetEmail(), userInfo.GetAvatar()
+	thirdPartyID := userInfo.ID
+	userName, email, avatar := userInfo.Name, userInfo.Email, userInfo.Avatar
 
 	existing, err := h.findByBindID(ctx, cmd.Platform, thirdPartyID)
 	if err != nil {
