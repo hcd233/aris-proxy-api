@@ -265,7 +265,9 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 			textParts = append(textParts, block.Text)
 
 		case enum.AnthropicContentBlockTypeThinking:
-			thinkingParts = append(thinkingParts, block.Thinking)
+			if block.Thinking != nil {
+				thinkingParts = append(thinkingParts, *block.Thinking)
+			}
 
 		case enum.AnthropicContentBlockTypeRedactedThinking:
 			// redacted_thinking 块不包含用户可见的内容，跳过（data 字段是加密数据）

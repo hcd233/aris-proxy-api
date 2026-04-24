@@ -195,7 +195,7 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 			if _, started := tracker.startedTextBlocks[thinkingKey]; !started {
 				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
 					Type:     enum.AnthropicContentBlockTypeThinking,
-					Thinking: "",
+					Thinking: lo.ToPtr(""),
 				}))
 				tracker.startedTextBlocks[thinkingKey] = struct{}{}
 			}
@@ -304,7 +304,7 @@ func convertAnthropicBlocksToOpenAIMessages(role string, blocks []*dto.Anthropic
 			})
 
 		case enum.AnthropicContentBlockTypeThinking:
-			thinkingParts = append(thinkingParts, block.Thinking)
+			thinkingParts = append(thinkingParts, lo.FromPtr(block.Thinking))
 
 		case enum.AnthropicContentBlockTypeToolUse:
 			args, err := sonic.MarshalString(block.Input)
@@ -530,7 +530,7 @@ func convertOpenAIMessageToAnthropicContent(msg *dto.OpenAIChatCompletionMessage
 	if msg.ReasoningContent != "" {
 		blocks = append(blocks, &dto.AnthropicContentBlock{
 			Type:     enum.AnthropicContentBlockTypeThinking,
-			Thinking: msg.ReasoningContent,
+			Thinking: lo.ToPtr(msg.ReasoningContent),
 		})
 	}
 

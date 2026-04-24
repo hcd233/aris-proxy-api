@@ -780,7 +780,7 @@ func anthropicResponseContentToUnified(log *zap.Logger, blocks []*dto.AnthropicC
 		case enum.AnthropicContentBlockTypeThinking:
 			messages = append(messages, &dto.UnifiedMessage{
 				Role:             enum.RoleAssistant,
-				ReasoningContent: block.Thinking,
+				ReasoningContent: lo.FromPtr(block.Thinking),
 			})
 		case enum.AnthropicContentBlockTypeToolUse:
 			args, err := sonic.MarshalString(block.Input)
