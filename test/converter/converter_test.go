@@ -497,8 +497,9 @@ func TestOpenAIProtocolConverter_ToAnthropicResponse_WithReasoning(t *testing.T)
 	if result.Content[0].Type != enum.AnthropicContentBlockTypeThinking {
 		t.Errorf("Content[0].Type = %q, want %q", result.Content[0].Type, enum.AnthropicContentBlockTypeThinking)
 	}
-	if result.Content[0].Thinking != "This is a perfect square: (x+1)^2 = 0" {
-		t.Errorf("Content[0].Thinking = %q, want %q", result.Content[0].Thinking, "This is a perfect square: (x+1)^2 = 0")
+	wantThinking := "This is a perfect square: (x+1)^2 = 0"
+	if result.Content[0].Thinking == nil || *result.Content[0].Thinking != wantThinking {
+		t.Errorf("Content[0].Thinking = %v, want %q", result.Content[0].Thinking, wantThinking)
 	}
 
 	// 第二个应该是 text

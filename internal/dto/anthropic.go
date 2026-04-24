@@ -222,9 +222,11 @@ type AnthropicContentBlock struct {
 	Citations *CitationsConfig `json:"citations,omitempty" doc:"引用配置(type=text/document/search_result)"`
 
 	// ThinkingBlock 字段
-	// thinking 字段在 type=thinking 时为必填，不能使用 omitempty，否则空字符串会被省略导致上游 API 报错
-	Thinking  string `json:"thinking" doc:"思考内容(type=thinking)"`
-	Signature string `json:"signature,omitempty" doc:"思考签名(type=thinking)"`
+	// Use *string + omitempty in the struct so Huma/OpenAPI does not require "thinking" on every
+	// content block type. MarshalJSON for type=thinking always emits a JSON "thinking" key
+	// (including empty string) for upstream API compatibility.
+	Thinking  *string `json:"thinking,omitempty" doc:"思考内容(type=thinking 时必填; 见 MarshalJSON 序列化行为)"`
+	Signature string  `json:"signature,omitempty" doc:"思考签名(type=thinking)"`
 
 	// RedactedThinkingBlock 字段
 	Data string `json:"data,omitempty" doc:"编辑后的思考数据(type=redacted_thinking)"`
@@ -256,6 +258,28 @@ type AnthropicContentBlock struct {
 
 // anthropicContentBlockWire aliases AnthropicContentBlock for default JSON marshaling without MarshalJSON recursion.
 type anthropicContentBlockWire AnthropicContentBlock
+
+// anthropicThinkingContentBlockWire is the on-wire JSON shape for thinking blocks.
+// thinking uses json:"thinking" without omitempty so the key is always present (including "").
+type anthropicThinkingContentBlockWire struct {
+	Type         string        `json:"type"`
+	Thinking     string        `json:"thinking"`
+	Signature    string        `json:"signature,omitempty"`
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
+}
+
+func newAnthropicThinkingContentBlockWire(b *AnthropicContentBlock) anthropicThinkingContentBlockWire {
+	th := ""
+	if b.Thinking != nil {
+		th = *b.Thinking
+	}
+	return anthropicThinkingContentBlockWire{
+		Type:         b.Type,
+		Thinking:     th,
+		Signature:    b.Signature,
+		CacheControl: b.CacheControl,
+	}
+}
 
 // anthropicToolUseContentBlockWire is the on-wire JSON shape for tool_use / server_tool_use blocks.
 // Input uses json:"input" without omitempty so no-argument tool calls serialize as "input":{}.
@@ -301,6 +325,8 @@ func (b *AnthropicContentBlock) MarshalJSON() ([]byte, error) {
 	switch enum.AnthropicContentBlockType(b.Type) {
 	case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
 		return sonic.Marshal(newAnthropicToolUseContentBlockWire(b))
+	case enum.AnthropicContentBlockTypeThinking:
+		return sonic.Marshal(newAnthropicThinkingContentBlockWire(b))
 	default:
 		return sonic.Marshal((*anthropicContentBlockWire)(b))
 	}
