@@ -43,7 +43,11 @@ var (
 	Oauth2GithubClientSecret string
 
 	// Oauth2StateString string Github OAuth2 State String
-	//	update 2024-06-22 08:59:11
+	//
+	// Deprecated: 静态 state 已废弃（CSRF 风险）；请使用 infrastructure/oauth2 的
+	// GenerateOAuth2State + Platform.GetAuthURLWithState 生成一次性 state。
+	// 仅为向后兼容环境变量配置而保留变量，业务代码不再消费。
+	//	update 2026-04-24 14:00:00
 	Oauth2StateString string
 
 	// Oauth2GithubRedirectURL string Github OAuth2 Redirect URL

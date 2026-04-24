@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+
+	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/service"
 )
 
 // messageFixture represents a message entry in the fixture JSON
@@ -122,7 +123,7 @@ func TestBuildOrderedMessages(t *testing.T) {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
 			messages := toDBMessages(t, tc.Messages)
-			items := service.BuildOrderedMessages(tc.MessageIDs, messages)
+			items := sessionquery.BuildOrderedMessages(tc.MessageIDs, messages)
 
 			if len(items) != tc.ExpectedCount {
 				t.Fatalf("BuildOrderedMessages() returned %d items, want %d", len(items), tc.ExpectedCount)
@@ -146,8 +147,9 @@ func TestBuildOrderedMessages(t *testing.T) {
 				}
 			}
 			if tc.ExpectedCreatedAt != "" && len(items) > 0 {
-				if items[0].CreatedAt != tc.ExpectedCreatedAt {
-					t.Errorf("CreatedAt = %q, want %q", items[0].CreatedAt, tc.ExpectedCreatedAt)
+				got := items[0].CreatedAt.Format(time.DateTime)
+				if got != tc.ExpectedCreatedAt {
+					t.Errorf("CreatedAt = %q, want %q", got, tc.ExpectedCreatedAt)
 				}
 			}
 		})
@@ -155,7 +157,7 @@ func TestBuildOrderedMessages(t *testing.T) {
 }
 
 func TestBuildOrderedMessages_NilInputs(t *testing.T) {
-	items := service.BuildOrderedMessages(nil, nil)
+	items := sessionquery.BuildOrderedMessages(nil, nil)
 	if len(items) != 0 {
 		t.Errorf("BuildOrderedMessages(nil, nil) returned %d items, want 0", len(items))
 	}
@@ -175,7 +177,7 @@ func TestBuildOrderedTools(t *testing.T) {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
 			tools := toDBTools(t, tc.Tools)
-			items := service.BuildOrderedTools(tc.ToolIDs, tools)
+			items := sessionquery.BuildOrderedTools(tc.ToolIDs, tools)
 
 			if len(items) != tc.ExpectedToolCount {
 				t.Fatalf("BuildOrderedTools() returned %d items, want %d", len(items), tc.ExpectedToolCount)
@@ -192,8 +194,9 @@ func TestBuildOrderedTools(t *testing.T) {
 
 			// verify detailed fields for populates_fields case
 			if tc.ExpectedToolCreateAt != "" && len(items) > 0 {
-				if items[0].CreatedAt != tc.ExpectedToolCreateAt {
-					t.Errorf("CreatedAt = %q, want %q", items[0].CreatedAt, tc.ExpectedToolCreateAt)
+				got := items[0].CreatedAt.Format(time.DateTime)
+				if got != tc.ExpectedToolCreateAt {
+					t.Errorf("CreatedAt = %q, want %q", got, tc.ExpectedToolCreateAt)
 				}
 			}
 		})
@@ -201,7 +204,7 @@ func TestBuildOrderedTools(t *testing.T) {
 }
 
 func TestBuildOrderedTools_NilInputs(t *testing.T) {
-	items := service.BuildOrderedTools(nil, nil)
+	items := sessionquery.BuildOrderedTools(nil, nil)
 	if len(items) != 0 {
 		t.Errorf("BuildOrderedTools(nil, nil) returned %d items, want 0", len(items))
 	}

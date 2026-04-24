@@ -7,15 +7,16 @@ package pool
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/agent"
+	"github.com/samber/lo"
+	"go.uber.org/zap"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/agent"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/samber/lo"
-	"go.uber.org/zap"
 )
 
 // SubmitSummarizeTask 提交 Session 总结任务到协程池

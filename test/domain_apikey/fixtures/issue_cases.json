@@ -1,0 +1,42 @@
+[
+    {
+        "name": "issue_api_key_happy_path",
+        "description": "配额允许时，签发返回聚合根",
+        "userID": 101,
+        "keyName": "my-key",
+        "secret": "sk-secret-xxx",
+        "quotaMax": 5,
+        "existing": 2,
+        "expectErr": ""
+    },
+    {
+        "name": "issue_api_key_quota_exceeded",
+        "description": "已达配额上限时签发失败，返回 quota_exceeded",
+        "userID": 101,
+        "keyName": "my-key",
+        "secret": "sk-secret-xxx",
+        "quotaMax": 5,
+        "existing": 5,
+        "expectErr": "quota_exceeded"
+    },
+    {
+        "name": "issue_api_key_empty_name",
+        "description": "空名称签发失败，返回 validation",
+        "userID": 101,
+        "keyName": "",
+        "secret": "sk-secret-xxx",
+        "quotaMax": 5,
+        "existing": 0,
+        "expectErr": "validation"
+    },
+    {
+        "name": "issue_api_key_empty_secret",
+        "description": "空密钥值签发失败，返回 validation",
+        "userID": 101,
+        "keyName": "my-key",
+        "secret": "",
+        "quotaMax": 5,
+        "existing": 0,
+        "expectErr": "validation"
+    }
+]
