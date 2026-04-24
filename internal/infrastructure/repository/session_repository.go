@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/samber/lo"
+
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -176,6 +178,141 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete session")
 	}
 	return nil
+}
+
+// ==================== CQRS 读模型实现 ====================
+
+// sessionReadRepository SessionReadRepository 的 GORM 实现
+type sessionReadRepository struct {
+	sessionDAO *dao.SessionDAO
+	messageDAO *dao.MessageDAO
+	toolDAO    *dao.ToolDAO
+}
+
+// NewSessionReadRepository 构造只读仓储
+//
+//	@return session.SessionReadRepository
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+func NewSessionReadRepository() session.SessionReadRepository {
+	return &sessionReadRepository{
+		sessionDAO: dao.GetSessionDAO(),
+		messageDAO: dao.GetMessageDAO(),
+		toolDAO:    dao.GetToolDAO(),
+	}
+}
+
+// sessionListReadFields Session 列表投影字段
+var sessionListReadFields = []string{"id", "created_at", "updated_at", "summary", "message_ids", "tool_ids"}
+
+// sessionDetailReadFields Session 详情投影字段
+var sessionDetailReadFields = []string{"id", "api_key_name", "created_at", "updated_at", "message_ids", "tool_ids", "metadata"}
+
+// ListSessions 分页查询 Session 列表投影
+func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	db := database.GetDBInstance(ctx)
+	records, pageInfo, err := r.sessionDAO.Paginate(
+		db,
+		&dbmodel.Session{APIKeyName: owner},
+		sessionListReadFields,
+		&dao.CommonParam{
+			PageParam: dao.PageParam{Page: page, PageSize: pageSize},
+			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: "id"},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate session read")
+	}
+	out := make([]*session.SessionSummaryProjection, 0, len(records))
+	for _, s := range records {
+		out = append(out, &session.SessionSummaryProjection{
+			ID:         s.ID,
+			CreatedAt:  s.CreatedAt,
+			UpdatedAt:  s.UpdatedAt,
+			Summary:    s.Summary,
+			MessageIDs: s.MessageIDs,
+			ToolIDs:    s.ToolIDs,
+		})
+	}
+	return out, pageInfo, nil
+}
+
+// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
+func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint, owner string) (*session.SessionDetailProjection, error) {
+	db := database.GetDBInstance(ctx)
+
+	sessionRecord, err := r.sessionDAO.Get(db, &dbmodel.Session{ID: id}, sessionDetailReadFields)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get session detail")
+	}
+
+	if sessionRecord.APIKeyName != owner {
+		return nil, ierr.New(ierr.ErrNoPermission, "no permission to access session")
+	}
+
+	uniqMsgIDs := lo.Uniq(sessionRecord.MessageIDs)
+	uniqToolIDs := lo.Uniq(sessionRecord.ToolIDs)
+
+	messages, err := r.messageDAO.BatchGetByField(db, "id", uniqMsgIDs, []string{"id", "model", "message", "created_at"})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages")
+	}
+
+	tools, err := r.toolDAO.BatchGetByField(db, "id", uniqToolIDs, []string{"id", "tool", "created_at"})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools")
+	}
+
+	detail := &session.SessionDetailProjection{
+		ID:         sessionRecord.ID,
+		APIKeyName: sessionRecord.APIKeyName,
+		CreatedAt:  sessionRecord.CreatedAt,
+		UpdatedAt:  sessionRecord.UpdatedAt,
+		Metadata:   sessionRecord.Metadata,
+		MessageIDs: sessionRecord.MessageIDs,
+		ToolIDs:    sessionRecord.ToolIDs,
+		Messages:   BuildOrderedMessageProjections(sessionRecord.MessageIDs, messages),
+		Tools:      BuildOrderedToolProjections(sessionRecord.ToolIDs, tools),
+	}
+	return detail, nil
+}
+
+func BuildOrderedMessageProjections(ids []uint, records []*dbmodel.Message) []*session.MessageDetailProjection {
+	msgMap := lo.SliceToMap(records, func(m *dbmodel.Message) (uint, *dbmodel.Message) { return m.ID, m })
+	items := make([]*session.MessageDetailProjection, 0, len(ids))
+	for _, id := range ids {
+		m, ok := msgMap[id]
+		if !ok {
+			continue
+		}
+		items = append(items, &session.MessageDetailProjection{
+			ID:        m.ID,
+			Model:     m.Model,
+			Message:   m.Message,
+			CreatedAt: m.CreatedAt,
+		})
+	}
+	return items
+}
+
+func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session.ToolDetailProjection {
+	toolMap := lo.SliceToMap(records, func(t *dbmodel.Tool) (uint, *dbmodel.Tool) { return t.ID, t })
+	items := make([]*session.ToolDetailProjection, 0, len(ids))
+	for _, id := range ids {
+		t, ok := toolMap[id]
+		if !ok {
+			continue
+		}
+		items = append(items, &session.ToolDetailProjection{
+			ID:        t.ID,
+			Tool:      t.Tool,
+			CreatedAt: t.CreatedAt,
+		})
+	}
+	return items
 }
 
 // toSessionAggregate 将 GORM 模型映射为 Session 聚合根

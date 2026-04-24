@@ -35,8 +35,9 @@ type openAIHandler struct {
 //	@update 2026-04-22 21:00:00
 func NewOpenAIHandler() OpenAIHandler {
 	endpointRepo := repository.NewEndpointRepository()
+	endpointReadRepo := repository.NewEndpointReadRepository()
 	resolver := service.NewEndpointResolver(endpointRepo)
-	modelsQuery := usecase.NewListOpenAIModels()
+	modelsQuery := usecase.NewListOpenAIModels(endpointReadRepo)
 
 	return &openAIHandler{
 		uc: usecase.NewOpenAIUseCase(

@@ -7,9 +7,9 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 )
 
 // messageFixture represents a message entry in the fixture JSON
@@ -109,7 +109,7 @@ func toDBTools(t *testing.T, fixtures []*toolFixture) []*dbmodel.Tool {
 	return tools
 }
 
-func TestBuildOrderedMessages(t *testing.T) {
+func TestBuildOrderedMessageProjections(t *testing.T) {
 	allCases := loadCases(t)
 
 	messageCases := []string{
@@ -123,10 +123,10 @@ func TestBuildOrderedMessages(t *testing.T) {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
 			messages := toDBMessages(t, tc.Messages)
-			items := sessionquery.BuildOrderedMessages(tc.MessageIDs, messages)
+			items := repository.BuildOrderedMessageProjections(tc.MessageIDs, messages)
 
 			if len(items) != tc.ExpectedCount {
-				t.Fatalf("BuildOrderedMessages() returned %d items, want %d", len(items), tc.ExpectedCount)
+				t.Fatalf("BuildOrderedMessageProjections() returned %d items, want %d", len(items), tc.ExpectedCount)
 			}
 
 			for i, item := range items {
@@ -156,14 +156,14 @@ func TestBuildOrderedMessages(t *testing.T) {
 	}
 }
 
-func TestBuildOrderedMessages_NilInputs(t *testing.T) {
-	items := sessionquery.BuildOrderedMessages(nil, nil)
+func TestBuildOrderedMessageProjections_NilInputs(t *testing.T) {
+	items := repository.BuildOrderedMessageProjections(nil, nil)
 	if len(items) != 0 {
-		t.Errorf("BuildOrderedMessages(nil, nil) returned %d items, want 0", len(items))
+		t.Errorf("BuildOrderedMessageProjections(nil, nil) returned %d items, want 0", len(items))
 	}
 }
 
-func TestBuildOrderedTools(t *testing.T) {
+func TestBuildOrderedToolProjections(t *testing.T) {
 	allCases := loadCases(t)
 
 	toolCases := []string{
@@ -177,10 +177,10 @@ func TestBuildOrderedTools(t *testing.T) {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
 			tools := toDBTools(t, tc.Tools)
-			items := sessionquery.BuildOrderedTools(tc.ToolIDs, tools)
+			items := repository.BuildOrderedToolProjections(tc.ToolIDs, tools)
 
 			if len(items) != tc.ExpectedToolCount {
-				t.Fatalf("BuildOrderedTools() returned %d items, want %d", len(items), tc.ExpectedToolCount)
+				t.Fatalf("BuildOrderedToolProjections() returned %d items, want %d", len(items), tc.ExpectedToolCount)
 			}
 
 			for i, item := range items {
@@ -203,9 +203,9 @@ func TestBuildOrderedTools(t *testing.T) {
 	}
 }
 
-func TestBuildOrderedTools_NilInputs(t *testing.T) {
-	items := sessionquery.BuildOrderedTools(nil, nil)
+func TestBuildOrderedToolProjections_NilInputs(t *testing.T) {
+	items := repository.BuildOrderedToolProjections(nil, nil)
 	if len(items) != 0 {
-		t.Errorf("BuildOrderedTools(nil, nil) returned %d items, want 0", len(items))
+		t.Errorf("BuildOrderedToolProjections(nil, nil) returned %d items, want 0", len(items))
 	}
 }

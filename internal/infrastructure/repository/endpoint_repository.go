@@ -65,3 +65,50 @@ func toAggregate(m *dbmodel.ModelEndpoint) *aggregate.Endpoint {
 		vo.UpstreamCreds{BaseURL: m.BaseURL, APIKey: m.APIKey, Model: m.Model},
 	)
 }
+
+// ==================== CQRS 读模型实现 ====================
+
+// endpointReadRepository EndpointReadRepository 的 GORM 实现
+type endpointReadRepository struct {
+	dao *dao.ModelEndpointDAO
+}
+
+// NewEndpointReadRepository 构造只读仓储
+//
+//	@return llmproxy.EndpointReadRepository
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+func NewEndpointReadRepository() llmproxy.EndpointReadRepository {
+	return &endpointReadRepository{dao: dao.GetModelEndpointDAO()}
+}
+
+// ListAliasesByProvider 按 Provider 查询所有别名
+func (r *endpointReadRepository) ListAliasesByProvider(ctx context.Context, provider enum.ProviderType) ([]*llmproxy.EndpointAliasProjection, error) {
+	db := database.GetDBInstance(ctx)
+	endpoints, err := r.dao.BatchGet(db, &dbmodel.ModelEndpoint{Provider: provider}, []string{"alias"})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list aliases by provider")
+	}
+	out := make([]*llmproxy.EndpointAliasProjection, 0, len(endpoints))
+	for _, ep := range endpoints {
+		out = append(out, &llmproxy.EndpointAliasProjection{Alias: ep.Alias})
+	}
+	return out, nil
+}
+
+// FindCredentialByAliasAndProvider 按 alias + provider 查询端点凭证
+func (r *endpointReadRepository) FindCredentialByAliasAndProvider(ctx context.Context, alias string, provider enum.ProviderType) (*llmproxy.EndpointCredentialProjection, error) {
+	db := database.GetDBInstance(ctx)
+	ep, err := r.dao.Get(db, &dbmodel.ModelEndpoint{Alias: alias, Provider: provider}, []string{"model", "api_key", "base_url"})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find credential by alias+provider")
+	}
+	return &llmproxy.EndpointCredentialProjection{
+		Model:   ep.Model,
+		APIKey:  ep.APIKey,
+		BaseURL: ep.BaseURL,
+	}, nil
+}
