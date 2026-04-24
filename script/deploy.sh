@@ -26,6 +26,7 @@ echo -e "\033[1;32mPulling the latest Docker image...\033[0m"
 docker pull "ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}"
 
 echo -e "\033[1;34mStarting up services with docker-compose...\033[0m"
+export IMAGE_TAG
 docker compose -f docker/docker-compose-single.yml up -d
 
 echo -e "\033[1;31mPruning unused Docker images...\033[0m"
