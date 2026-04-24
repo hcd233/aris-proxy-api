@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
@@ -119,7 +120,7 @@ func (p *googlePlatform) ExchangeToken(ctx context.Context, code string) (*oauth
 	return token, nil
 }
 
-func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (UserInfo, error) {
+func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (vo.OAuthUserInfo, error) {
 	logger := logger.WithCtx(ctx)
 
 	// 使用HTTP客户端直接调用Google OAuth2 UserInfo API
@@ -131,7 +132,7 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
 		logger.Error("[GoogleOauth2] Failed to call userinfo API", zap.Error(err))
-		return nil, err
+		return vo.OAuthUserInfo{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -142,7 +143,7 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&userInfoResp); err != nil {
 		logger.Error("[GoogleOauth2] Failed to decode userinfo response", zap.Error(err))
-		return nil, err
+		return vo.OAuthUserInfo{}, err
 	}
 
 	logger.Info("[GoogleOauth2] Successfully decoded user info",
@@ -150,12 +151,10 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		zap.String("userName", userInfoResp.Name),
 		zap.String("userEmail", userInfoResp.Email))
 
-	userInfo := &GoogleUserInfo{
-		ID:       userInfoResp.ID,
-		Name:     userInfoResp.Name,
-		Email:    userInfoResp.Email,
-		PhotoURL: userInfoResp.Picture,
-	}
-
-	return userInfo, nil
+	return vo.OAuthUserInfo{
+		ID:     userInfoResp.ID,
+		Name:   userInfoResp.Name,
+		Email:  userInfoResp.Email,
+		Avatar: userInfoResp.Picture,
+	}, nil
 }

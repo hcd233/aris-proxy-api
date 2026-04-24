@@ -55,6 +55,25 @@ const (
 	LogFieldValueMaxLength = 512
 )
 
+// ==================== 模型调用状态码 ====================
+
+const (
+	// CallStatusSuccess HTTP 成功状态码（非流式成功路径硬编码）
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	CallStatusSuccess = 200
+
+	// CallStatusConnectionError 连接层错误状态码
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	CallStatusConnectionError = -1
+
+	// CallStatusUnknownError 未知错误状态码
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	CallStatusUnknownError = 0
+)
+
 // ==================== 日志轮转 ====================
 
 const (

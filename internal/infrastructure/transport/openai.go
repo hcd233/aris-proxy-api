@@ -164,7 +164,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
+		zap.String("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
@@ -261,7 +261,7 @@ func (p *openAIProxy) sendResponseRequest(ctx context.Context, ep UpstreamEndpoi
 
 	log.Info("[OpenAIProxy] Send response api upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.Any("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
+		zap.String("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {

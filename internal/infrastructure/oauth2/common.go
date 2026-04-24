@@ -10,19 +10,13 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
 	"golang.org/x/oauth2"
 )
 
-// UserInfo 用户信息
-type UserInfo interface {
-	GetID() string
-	GetName() string
-	GetEmail() string
-	GetAvatar() string
-}
-
 // Platform OAuth2 提供商接口
 //
+// 实现 domain/oauth2/service.Platform 接口。
 // 安全约束：所有实现必须通过 GetAuthURLWithState 携带一次性 state，
 // 静态 state 形态（早期的 GetAuthURL()）已废除，避免 CSRF。
 //
@@ -34,7 +28,7 @@ type Platform interface {
 	// ExchangeToken 通过授权码获取 Access Token
 	ExchangeToken(ctx context.Context, code string) (*oauth2.Token, error)
 	// GetUserInfo 获取用户信息
-	GetUserInfo(ctx context.Context, token *oauth2.Token) (UserInfo, error)
+	GetUserInfo(ctx context.Context, token *oauth2.Token) (vo.OAuthUserInfo, error)
 }
 
 // StateManager OAuth2 state管理器，防止CSRF攻击

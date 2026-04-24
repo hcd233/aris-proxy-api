@@ -17,7 +17,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
+	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
 )
 
 type initiateCase struct {
@@ -65,8 +66,8 @@ func (p *stubPlatform) ExchangeToken(_ context.Context, _ string) (*xoauth2.Toke
 	return nil, errors.New("not used in initiate tests")
 }
 
-func (p *stubPlatform) GetUserInfo(_ context.Context, _ *xoauth2.Token) (infraoauth2.UserInfo, error) {
-	return nil, errors.New("not used in initiate tests")
+func (p *stubPlatform) GetUserInfo(_ context.Context, _ *xoauth2.Token) (vo.OAuthUserInfo, error) {
+	return vo.OAuthUserInfo{}, errors.New("not used in initiate tests")
 }
 
 func TestInitiateLogin(t *testing.T) {
@@ -74,7 +75,7 @@ func TestInitiateLogin(t *testing.T) {
 
 	githubStub := newStubPlatform(constant.OAuthProviderGithub)
 	googleStub := newStubPlatform(constant.OAuthProviderGoogle)
-	platforms := map[string]infraoauth2.Platform{
+	platforms := map[string]service.Platform{
 		constant.OAuthProviderGithub: githubStub,
 		constant.OAuthProviderGoogle: googleStub,
 	}
