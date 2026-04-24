@@ -222,7 +222,8 @@ type AnthropicContentBlock struct {
 	Citations *CitationsConfig `json:"citations,omitempty" doc:"引用配置(type=text/document/search_result)"`
 
 	// ThinkingBlock 字段
-	Thinking  string `json:"thinking,omitempty" doc:"思考内容(type=thinking)"`
+	// thinking 字段在 type=thinking 时为必填，不能使用 omitempty，否则空字符串会被省略导致上游 API 报错
+	Thinking  string `json:"thinking" doc:"思考内容(type=thinking)"`
 	Signature string `json:"signature,omitempty" doc:"思考签名(type=thinking)"`
 
 	// RedactedThinkingBlock 字段
