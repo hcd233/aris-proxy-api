@@ -124,7 +124,7 @@ var startServerCmd = &cobra.Command{
 
 // gracefulShutdown 按序执行优雅关闭流程
 //
-// 关闭顺序：HTTP 服务 → 协程池 → 定时任务 → 数据库 → Redis
+// 关闭顺序：HTTP 服务 → 日志同步 → 协程池 → 定时任务 → 数据库 → Redis
 //
 //	@param app *fiber.App
 //	@author centonhuang
@@ -138,27 +138,33 @@ func gracefulShutdown(app *fiber.App) {
 		defer close(done)
 
 		// Step 1: 停止接受新 HTTP 请求，等待现有请求完成
-		logger.Logger().Info("[Server] Step 1/5: Shutting down HTTP server...")
+		logger.Logger().Info("[Server] Step 1/6: Shutting down HTTP server...")
 		if err := app.ShutdownWithTimeout(constant.FiberShutdownTimeout); err != nil {
 			logger.Logger().Error("[Server] HTTP server shutdown error", zap.Error(err))
 		}
 
-		// Step 2: 停止协程池（等待所有排队的消息存储任务完成）
-		logger.Logger().Info("[Server] Step 2/5: Stopping pool manager...")
+		// Step 2: 同步日志（flush CLS 等外部日志缓冲）
+		logger.Logger().Info("[Server] Step 2/6: Syncing logger...")
+		if err := logger.Logger().Sync(); err != nil {
+			logger.Logger().Error("[Server] Logger sync error", zap.Error(err))
+		}
+
+		// Step 3: 停止协程池（等待所有排队的消息存储任务完成）
+		logger.Logger().Info("[Server] Step 3/6: Stopping pool manager...")
 		pool.StopPoolManager()
 
-		// Step 3: 停止定时任务
-		logger.Logger().Info("[Server] Step 3/5: Stopping cron jobs...")
+		// Step 4: 停止定时任务
+		logger.Logger().Info("[Server] Step 4/6: Stopping cron jobs...")
 		cron.StopCronJobs()
 
-		// Step 4: 关闭数据库连接池
-		logger.Logger().Info("[Server] Step 4/5: Closing database connection...")
+		// Step 5: 关闭数据库连接池
+		logger.Logger().Info("[Server] Step 5/6: Closing database connection...")
 		if err := database.CloseDatabase(); err != nil {
 			logger.Logger().Error("[Server] Database close error", zap.Error(err))
 		}
 
-		// Step 5: 关闭 Redis 连接
-		logger.Logger().Info("[Server] Step 5/5: Closing Redis connection...")
+		// Step 6: 关闭 Redis 连接
+		logger.Logger().Info("[Server] Step 6/6: Closing Redis connection...")
 		if err := cache.CloseCache(); err != nil {
 			logger.Logger().Error("[Server] Redis close error", zap.Error(err))
 		}

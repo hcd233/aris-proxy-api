@@ -11,6 +11,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/samber/lo"
 )
 
 // AnthropicProtocolConverter 将 OpenAI 协议转换为 Anthropic 协议
@@ -306,7 +307,7 @@ func convertOpenAIAssistantMessageToAnthropic(msg *dto.OpenAIChatCompletionMessa
 	if msg.ReasoningContent != "" {
 		blocks = append(blocks, &dto.AnthropicContentBlock{
 			Type:     enum.AnthropicContentBlockTypeThinking,
-			Thinking: msg.ReasoningContent,
+			Thinking: lo.ToPtr(msg.ReasoningContent),
 		})
 	}
 
@@ -445,7 +446,7 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 			textParts = append(textParts, block.Text)
 
 		case enum.AnthropicContentBlockTypeThinking:
-			thinkingParts = append(thinkingParts, block.Thinking)
+			thinkingParts = append(thinkingParts, lo.FromPtr(block.Thinking))
 
 		case enum.AnthropicContentBlockTypeToolUse:
 			args, err := sonic.MarshalString(block.Input)
@@ -920,7 +921,7 @@ func convertResponseReasoningToAnthropic(item *dto.ResponseInputItem) *dto.Anthr
 		Content: &dto.AnthropicMessageContent{
 			Blocks: []*dto.AnthropicContentBlock{{
 				Type:     enum.AnthropicContentBlockTypeThinking,
-				Thinking: thinking,
+				Thinking: lo.ToPtr(thinking),
 			}},
 		},
 	}

@@ -68,7 +68,7 @@ func NewAnthropicProxy() AnthropicProxy {
 func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, "/v1/messages", body)
+	resp, err := p.sendRequest(ctx, ep, "/messages", body)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEn
 func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, "/v1/messages", body)
+	resp, err := p.sendRequest(ctx, ep, "/messages", body)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep Upst
 func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, "/v1/messages/count_tokens", body)
+	resp, err := p.sendRequest(ctx, ep, "/messages/count_tokens", body)
 	if err != nil {
 		return nil, err
 	}

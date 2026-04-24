@@ -174,7 +174,7 @@ type OpenAICreateResponseReq struct {
 	ParallelToolCalls    *bool             `json:"parallel_tool_calls,omitempty" doc:"是否并行工具调用"`
 	PreviousResponseID   *string           `json:"previous_response_id,omitempty" doc:"前置响应 ID"`
 	PromptCacheKey       *string           `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`
-	PromptCacheRetention *string           `json:"prompt_cache_retention,omitempty" doc:"提示缓存保留策略: in-memory/24h"`
+	PromptCacheRetention *string           `json:"prompt_cache_retention,omitempty" doc:"提示缓存保留策略: in_memory/24h"`
 	SafetyIdentifier     *string           `json:"safety_identifier,omitempty" doc:"安全标识符"`
 	ClientMetadata       map[string]string `json:"client_metadata,omitempty" doc:"客户端元数据(由 Codex Desktop 等客户端填充，如 x-codex-installation-id)"`
 	ServiceTier          *string           `json:"service_tier,omitempty" doc:"服务层级: auto/default/flex/scale/priority"`
