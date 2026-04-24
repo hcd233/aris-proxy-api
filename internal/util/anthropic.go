@@ -177,7 +177,8 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 			}
 		case enum.AnthropicContentBlockTypeThinking:
 			if len(bs.thinkingParts) > 0 {
-				block.Thinking = strings.Join(bs.thinkingParts, "")
+				s := strings.Join(bs.thinkingParts, "")
+				block.Thinking = &s
 			}
 		case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
 			if len(bs.inputParts) > 0 {

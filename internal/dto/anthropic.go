@@ -222,8 +222,11 @@ type AnthropicContentBlock struct {
 	Citations *CitationsConfig `json:"citations,omitempty" doc:"引用配置(type=text/document/search_result)"`
 
 	// ThinkingBlock 字段
-	Thinking  string `json:"thinking,omitempty" doc:"思考内容(type=thinking)"`
-	Signature string `json:"signature,omitempty" doc:"思考签名(type=thinking)"`
+	// Use *string + omitempty in the struct so Huma/OpenAPI does not require "thinking" on every
+	// content block type. MarshalJSON for type=thinking always emits a JSON "thinking" key
+	// (including empty string) for upstream API compatibility.
+	Thinking  *string `json:"thinking,omitempty" doc:"思考内容(type=thinking 时必填; 见 MarshalJSON 序列化行为)"`
+	Signature string  `json:"signature,omitempty" doc:"思考签名(type=thinking)"`
 
 	// RedactedThinkingBlock 字段
 	Data string `json:"data,omitempty" doc:"编辑后的思考数据(type=redacted_thinking)"`
@@ -255,6 +258,28 @@ type AnthropicContentBlock struct {
 
 // anthropicContentBlockWire aliases AnthropicContentBlock for default JSON marshaling without MarshalJSON recursion.
 type anthropicContentBlockWire AnthropicContentBlock
+
+// anthropicThinkingContentBlockWire is the on-wire JSON shape for thinking blocks.
+// thinking uses json:"thinking" without omitempty so the key is always present (including "").
+type anthropicThinkingContentBlockWire struct {
+	Type         string        `json:"type"`
+	Thinking     string        `json:"thinking"`
+	Signature    string        `json:"signature,omitempty"`
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
+}
+
+func newAnthropicThinkingContentBlockWire(b *AnthropicContentBlock) anthropicThinkingContentBlockWire {
+	th := ""
+	if b.Thinking != nil {
+		th = *b.Thinking
+	}
+	return anthropicThinkingContentBlockWire{
+		Type:         b.Type,
+		Thinking:     th,
+		Signature:    b.Signature,
+		CacheControl: b.CacheControl,
+	}
+}
 
 // anthropicToolUseContentBlockWire is the on-wire JSON shape for tool_use / server_tool_use blocks.
 // Input uses json:"input" without omitempty so no-argument tool calls serialize as "input":{}.
@@ -300,6 +325,8 @@ func (b *AnthropicContentBlock) MarshalJSON() ([]byte, error) {
 	switch enum.AnthropicContentBlockType(b.Type) {
 	case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
 		return sonic.Marshal(newAnthropicToolUseContentBlockWire(b))
+	case enum.AnthropicContentBlockTypeThinking:
+		return sonic.Marshal(newAnthropicThinkingContentBlockWire(b))
 	default:
 		return sonic.Marshal((*anthropicContentBlockWire)(b))
 	}
@@ -400,7 +427,7 @@ type AnthropicCreateMessageRequest struct {
 // AnthropicMessage Anthropic Message 响应
 //
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
+//	@update 2026-04-25 10:00:00
 type AnthropicMessage struct {
 	ID           string                   `json:"id"`
 	Type         string                   `json:"type"`
@@ -409,7 +436,18 @@ type AnthropicMessage struct {
 	Model        string                   `json:"model"`
 	StopReason   *string                  `json:"stop_reason"`
 	StopSequence *string                  `json:"stop_sequence"`
+	StopDetails  *AnthropicRefusalStopDetails `json:"stop_details,omitempty"`
 	Usage        *AnthropicUsage          `json:"usage"`
+}
+
+// AnthropicRefusalStopDetails Anthropic 拒绝停止详细信息
+//
+//	@author centonhuang
+//	@update 2026-04-25 10:00:00
+type AnthropicRefusalStopDetails struct {
+	Type        string  `json:"type"`
+	Category    *string `json:"category"`
+	Explanation *string `json:"explanation"`
 }
 
 // AnthropicUsage Anthropic Token 用量统计
@@ -551,10 +589,11 @@ type AnthropicSSEContentBlockDelta struct {
 // AnthropicSSEMessageDeltaPayload message_delta 事件的 delta 部分
 //
 //	@author centonhuang
-//	@update 2026-03-29 10:00:00
+//	@update 2026-04-25 10:00:00
 type AnthropicSSEMessageDeltaPayload struct {
-	StopReason   *string `json:"stop_reason"`
-	StopSequence *string `json:"stop_sequence"`
+	StopReason   *string                    `json:"stop_reason"`
+	StopSequence *string                    `json:"stop_sequence"`
+	StopDetails  *AnthropicRefusalStopDetails `json:"stop_details,omitempty"`
 }
 
 // AnthropicSSEMessageDelta message_delta 事件的 payload

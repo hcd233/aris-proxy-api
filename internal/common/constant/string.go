@@ -358,4 +358,46 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-10 10:00:00
 	RoutePathWellKnownSecurity = "/.well-known/security.txt"
+
+	// ==================== CLS 日志级别 ====================
+
+	// CLSLevelDebug CLS 调试级别
+	//	@author centonhuang
+	//	@update 2026-04-25 10:00:00
+	CLSLevelDebug = "DEBUG"
+
+	// CLSLevelInfo CLS 信息级别
+	//	@author centonhuang
+	//	@update 2026-04-25 10:00:00
+	CLSLevelInfo = "INFO"
+
+	// CLSLevelWarn CLS 警告级别
+	//	@author centonhuang
+	//	@update 2026-04-25 10:00:00
+	CLSLevelWarn = "WARN"
+
+	// CLSLevelError CLS 错误级别
+	//	@author centonhuang
+	//	@update 2026-04-25 10:00:00
+	CLSLevelError = "ERROR"
+
+	// CLSFieldMessage CLS 消息字段
+	//	@update 2026-04-25 01:52:16
+	CLSFieldMessage = "message"
+
+	// CLSFieldLevel CLS 级别字段
+	//	@update 2026-04-25 01:52:16
+	CLSFieldLevel = "level"
+
+	// CLSFieldTimestamp CLS 时间戳字段
+	//	@update 2026-04-25 01:52:16
+	CLSFieldTimestamp = "timestamp"
+
+	// CLSFieldCaller CLS 调用者字段
+	//	@update 2026-04-25 01:52:16
+	CLSFieldCaller = "caller"
+
+	// CLSFieldStack CLS 堆栈字段
+	//	@update 2026-04-25 01:52:16
+	CLSFieldStack = "stack"
 )

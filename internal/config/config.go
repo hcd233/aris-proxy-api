@@ -170,6 +170,26 @@ var (
 	// TrustedProxies []string 可信代理IP列表
 	//	@update 2026-04-04 10:00:00
 	TrustedProxies []string
+
+	// CLSEndpoint string 腾讯云 CLS Endpoint
+	//	@update 2026-04-25 10:00:00
+	CLSEndpoint string
+
+	// CLSSecretID string 腾讯云 CLS Secret ID
+	//	@update 2026-04-25 10:00:00
+	CLSSecretID string
+
+	// CLSSecretKey string 腾讯云 CLS Secret Key
+	//	@update 2026-04-25 10:00:00
+	CLSSecretKey string
+
+	// CLSTopicID string 腾讯云 CLS 日志主题 ID
+	//	@update 2026-04-25 10:00:00
+	CLSTopicID string
+
+	// CLSLevel string 腾讯云 CLS 日志级别
+	//	@update 2026-04-25 10:00:00
+	CLSLevel string
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -275,6 +295,14 @@ func initEnvironment() {
 	JwtRefreshTokenExpired = config.GetDuration("jwt.refresh.token.expired")
 	JwtRefreshTokenSecret = config.GetString("jwt.refresh.token.secret")
 
+	SQLBatchSize = config.GetInt("sql.batch.size")
+
+	CLSEndpoint = config.GetString("cls.endpoint")
+	CLSSecretID = config.GetString("cls.secret.id")
+	CLSSecretKey = config.GetString("cls.secret.key")
+	CLSTopicID = config.GetString("cls.topic.id")
+	CLSLevel = config.GetString("cls.level")
+
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{
 			Workers:   config.GetInt("pool.store.workers"),
@@ -285,8 +313,6 @@ func initEnvironment() {
 			QueueSize: config.GetInt("pool.agent.queue_size"),
 		},
 	}
-
-	SQLBatchSize = config.GetInt("sql.batch.size")
 
 	if raw := config.GetString("trusted.proxies"); raw != "" {
 		parts := strings.Split(raw, ",")
