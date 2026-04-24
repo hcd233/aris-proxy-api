@@ -7,7 +7,7 @@ networks:
 services:
 
   aris-proxy-api-db-migrate:
-    image: ghcr.io/hcd233/aris-proxy-api:master # aris-proxy-api:latest
+    image: ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}
     container_name: aris-proxy-api-db-migrate
     restart: no
     networks:
@@ -17,7 +17,7 @@ services:
     command: ["/app/aris-proxy-api", "database", "migrate"]
 
   aris-proxy-api:
-    image: ghcr.io/hcd233/aris-proxy-api:master # aris-proxy-api:latest
+    image: ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}
     container_name: aris-proxy-api
     restart: always
     networks:

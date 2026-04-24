@@ -1,0 +1,12 @@
+[
+    {
+        "name": "native_path_message_stop_frame",
+        "description": "forwardNative path must emit SSE frame with event=message_stop and data={\"type\":\"message_stop\"} (regression of commit 184dcf9)",
+        "expected_frame": "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+    },
+    {
+        "name": "via_openai_path_message_stop_frame",
+        "description": "forwardViaOpenAI path must emit the same canonical message_stop frame as forwardNative to stay consistent with Anthropic SSE spec",
+        "expected_frame": "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+    }
+]

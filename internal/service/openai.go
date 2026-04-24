@@ -143,56 +143,64 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
 	if stream {
-		return util.WrapStreamResponse(func(w *bufio.Writer) {
-			startTime := time.Now()
-			var firstTokenTime time.Time
-			var streamDone time.Time
-			var firstTokenLatencyMs int64
-			var streamDurationMs int64
-
-			completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
-				if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
-					firstTokenTime = time.Now()
-					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
-				}
-				chunk.Model = req.Body.Model
-				chunkData, marshalErr := sonic.Marshal(chunk)
-				if marshalErr != nil {
-					log.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
-					return marshalErr
-				}
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
-				return w.Flush()
-			})
-			streamDone = time.Now()
-			if !firstTokenTime.IsZero() {
-				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
-			}
-			if err == nil {
-				_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
-				_ = w.Flush()
-			}
-
-			s.storeFromCompletion(ctx, log, req, completion, err, ep.Model)
-			var usage *dto.OpenAICompletionUsage
-			if completion != nil {
-				usage = completion.Usage
-			}
-			task := &dto.ModelCallAuditTask{
-				Ctx:                 util.CopyContextValues(ctx),
-				ModelID:             endpoint.ID,
-				Model:               req.Body.Model,
-				UpstreamProvider:    endpoint.Provider,
-				APIProvider:         enum.ProviderOpenAI,
-				FirstTokenLatencyMs: firstTokenLatencyMs,
-				StreamDurationMs:    streamDurationMs,
-			}
-			task.SetTokensFromOpenAIUsage(usage)
-			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-		}), nil
+		return s.forwardNativeStream(ctx, log, req, endpoint, ep, body), nil
 	}
+	return s.forwardNativeNonStream(ctx, log, req, endpoint, ep, body), nil
+}
 
+// forwardNativeStream OpenAI 原生协议流式转发
+func (s *openAIService) forwardNativeStream(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+	return util.WrapStreamResponse(func(w *bufio.Writer) {
+		startTime := time.Now()
+		var firstTokenTime time.Time
+		var firstTokenLatencyMs int64
+		var streamDurationMs int64
+
+		completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
+			if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
+				firstTokenTime = time.Now()
+				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+			}
+			chunk.Model = req.Body.Model
+			chunkData, marshalErr := sonic.Marshal(chunk)
+			if marshalErr != nil {
+				log.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
+				return marshalErr
+			}
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
+			return w.Flush()
+		})
+		if !firstTokenTime.IsZero() {
+			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
+		}
+		if err == nil {
+			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_ = w.Flush()
+		}
+
+		s.storeFromCompletion(ctx, log, req, completion, err, ep.Model)
+
+		var usage *dto.OpenAICompletionUsage
+		if completion != nil {
+			usage = completion.Usage
+		}
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               req.Body.Model,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         enum.ProviderOpenAI,
+			FirstTokenLatencyMs: firstTokenLatencyMs,
+			StreamDurationMs:    streamDurationMs,
+		}
+		task.SetTokensFromOpenAIUsage(usage)
+		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+	})
+}
+
+// forwardNativeNonStream OpenAI 原生协议非流式转发
+func (s *openAIService) forwardNativeNonStream(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		completion, err := s.openAIProxy.ForwardChatCompletion(ctx, ep, body)
@@ -215,6 +223,7 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 		writer.WriteJSON(completion)
 
 		s.storeFromCompletion(ctx, log, req, completion, nil, ep.Model)
+
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             endpoint.ID,
@@ -226,7 +235,7 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 		}
 		task.SetTokensFromOpenAIUsage(completion.Usage)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-	}), nil
+	})
 }
 
 // forwardViaAnthropic 通过 Anthropic 协议上游转发 OpenAI 请求
@@ -242,61 +251,69 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 	body := lo.Must1(sonic.Marshal(anthropicReq))
 
 	if stream {
-		return util.WrapStreamResponse(func(w *bufio.Writer) {
-			startTime := time.Now()
-			var firstTokenTime time.Time
-			var streamDone time.Time
-			var firstTokenLatencyMs int64
-			var streamDurationMs int64
-
-			chunkID := converter.GenerateOpenAIChunkID()
-			anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
-				chunks, err := conv.ToOpenAISSEResponse(event, req.Body.Model, chunkID)
-				if err != nil {
-					return err
-				}
-				for _, chunk := range chunks {
-					if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
-						firstTokenTime = time.Now()
-						firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
-					}
-					chunkData, marshalErr := sonic.Marshal(chunk)
-					if marshalErr != nil {
-						log.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
-						return marshalErr
-					}
-					_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
-					if err := w.Flush(); err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-			streamDone = time.Now()
-			if !firstTokenTime.IsZero() {
-				streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
-			}
-			if err == nil {
-				_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
-				_ = w.Flush()
-			}
-
-			s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, err, ep.Model)
-			task := &dto.ModelCallAuditTask{
-				Ctx:                 util.CopyContextValues(ctx),
-				ModelID:             endpoint.ID,
-				Model:               req.Body.Model,
-				UpstreamProvider:    endpoint.Provider,
-				APIProvider:         enum.ProviderOpenAI,
-				FirstTokenLatencyMs: firstTokenLatencyMs,
-				StreamDurationMs:    streamDurationMs,
-			}
-			task.SetTokensFromAnthropicUsage(anthropicMsg)
-			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-		}), nil
+		return s.forwardViaAnthropicStream(ctx, log, req, endpoint, ep, body, &conv), nil
 	}
+	return s.forwardViaAnthropicNonStream(ctx, log, req, endpoint, ep, body, &conv), nil
+}
 
+// forwardViaAnthropicStream 通过 Anthropic 上游转发并以 OpenAI SSE 协议返回
+func (s *openAIService) forwardViaAnthropicStream(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+	return util.WrapStreamResponse(func(w *bufio.Writer) {
+		startTime := time.Now()
+		var firstTokenTime time.Time
+		var firstTokenLatencyMs int64
+		var streamDurationMs int64
+
+		chunkID := converter.GenerateOpenAIChunkID()
+		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
+			chunks, convErr := conv.ToOpenAISSEResponse(event, req.Body.Model, chunkID)
+			if convErr != nil {
+				return convErr
+			}
+			for _, chunk := range chunks {
+				if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
+					firstTokenTime = time.Now()
+					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+				}
+				chunkData, marshalErr := sonic.Marshal(chunk)
+				if marshalErr != nil {
+					log.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
+					return marshalErr
+				}
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
+				if flushErr := w.Flush(); flushErr != nil {
+					return flushErr
+				}
+			}
+			return nil
+		})
+		if !firstTokenTime.IsZero() {
+			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
+		}
+		if err == nil {
+			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_ = w.Flush()
+		}
+
+		s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, err, ep.Model)
+
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               req.Body.Model,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         enum.ProviderOpenAI,
+			FirstTokenLatencyMs: firstTokenLatencyMs,
+			StreamDurationMs:    streamDurationMs,
+		}
+		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+	})
+}
+
+// forwardViaAnthropicNonStream 通过 Anthropic 上游转发并以 OpenAI JSON 协议返回
+func (s *openAIService) forwardViaAnthropicNonStream(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
@@ -325,6 +342,7 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 		writer.WriteJSON(completion)
 
 		s.storeFromCompletion(ctx, log, req, completion, nil, ep.Model)
+
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             endpoint.ID,
@@ -336,8 +354,80 @@ func (s *openAIService) forwardViaAnthropic(ctx context.Context, log *zap.Logger
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-	}), nil
+	})
 }
+
+// ==================== Store Messages ====================
+
+// storeFromCompletion 从原生 OpenAI 响应抽取并存储会话
+func (s *openAIService) storeFromCompletion(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
+	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
+		return
+	}
+	s.storeOpenAIMessages(ctx, log, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+}
+
+// storeFromAnthropicMsg 将 Anthropic 响应先转为 OpenAI 再存储（保持 /chat/completions 路径的存储格式一致）
+func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
+		return
+	}
+	conv := converter.AnthropicProtocolConverter{}
+	completion, err := conv.ToOpenAIResponse(msg)
+	if err != nil {
+		log.Error("[OpenAIService] Failed to convert for storage", zap.Error(err))
+		return
+	}
+	if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
+		return
+	}
+	s.storeOpenAIMessages(ctx, log, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+}
+
+// storeOpenAIMessages 把 /chat/completions 形式的会话投递到消息存储协程池
+func (s *openAIService) storeOpenAIMessages(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
+	var unifiedMessages []*dto.UnifiedMessage
+	for _, msg := range req.Body.Messages {
+		um, err := dto.FromOpenAIMessage(msg)
+		if err != nil {
+			log.Error("[OpenAIService] Failed to convert openai message", zap.Error(err))
+			return
+		}
+		unifiedMessages = append(unifiedMessages, um)
+	}
+
+	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
+	if err != nil {
+		log.Error("[OpenAIService] Failed to convert ai response message", zap.Error(err))
+		return
+	}
+	unifiedMessages = append(unifiedMessages, aiMsg)
+
+	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *dto.UnifiedTool {
+		return dto.FromOpenAITool(&tool)
+	})
+
+	var inputTokens, outputTokens int
+	if usage != nil {
+		inputTokens = usage.PromptTokens
+		outputTokens = usage.CompletionTokens
+	}
+
+	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+		Ctx:          util.CopyContextValues(ctx),
+		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
+		Model:        upstreamModel,
+		Messages:     unifiedMessages,
+		Tools:        unifiedTools,
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+		Metadata:     req.Body.Metadata,
+	}); err != nil {
+		log.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
+	}
+}
+
+// ==================== Response API ====================
 
 // CreateResponse 创建 Response API 响应
 //
@@ -366,14 +456,14 @@ func (s *openAIService) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	return s.forwardResponseNative(ctx, log, req, endpoint, ep, stream)
 }
 
-// forwardResponseNative 原生 OpenAI 协议转发
+// forwardResponseNative 原生 OpenAI 协议转发 Response API
 func (s *openAIService) forwardResponseNative(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, stream bool) (*huma.StreamResponse, error) {
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
 	if stream {
-		return s.forwardResponseStream(ctx, log, req, endpoint, ep, body)
+		return s.forwardResponseStream(ctx, log, req, endpoint, ep, body), nil
 	}
-	return s.forwardResponseNonStream(ctx, log, req, endpoint, ep, body)
+	return s.forwardResponseNonStream(ctx, log, req, endpoint, ep, body), nil
 }
 
 // forwardResponseViaAnthropic 通过 Anthropic 协议上游转发 Response API 请求
@@ -388,113 +478,13 @@ func (s *openAIService) forwardResponseViaAnthropic(ctx context.Context, log *za
 	body := lo.Must1(sonic.Marshal(anthropicReq))
 
 	if stream {
-		return s.forwardResponseAnthropicStream(ctx, log, req, endpoint, ep, body, &conv)
+		return s.forwardResponseAnthropicStream(ctx, log, req, endpoint, ep, body, &conv), nil
 	}
-	return s.forwardResponseAnthropicNonStream(ctx, log, req, endpoint, ep, body, &conv)
+	return s.forwardResponseAnthropicNonStream(ctx, log, req, endpoint, ep, body, &conv), nil
 }
 
-// forwardResponseAnthropicStream Anthropic 上游流式转发
-func (s *openAIService) forwardResponseAnthropicStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) (*huma.StreamResponse, error) {
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
-		startTime := time.Now()
-		var firstTokenTime time.Time
-		var firstTokenLatencyMs int64
-		var streamDurationMs int64
-
-		chunkID := converter.GenerateOpenAIChunkID()
-		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
-			chunks, err := conv.ToOpenAISSEResponse(event, req.Body.Model, chunkID)
-			if err != nil {
-				return err
-			}
-			for _, chunk := range chunks {
-				if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
-					firstTokenTime = time.Now()
-					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
-				}
-				chunkData, marshalErr := sonic.Marshal(chunk)
-				if marshalErr != nil {
-					log.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
-					return marshalErr
-				}
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
-				if err := w.Flush(); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		streamDone := time.Now()
-		if !firstTokenTime.IsZero() {
-			streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
-		}
-		if err == nil {
-			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
-			_ = w.Flush()
-		}
-
-		s.storeFromAnthropicMsgForResponse(ctx, log, req, anthropicMsg, err, ep.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             endpoint.ID,
-			Model:               req.Body.Model,
-			UpstreamProvider:    endpoint.Provider,
-			APIProvider:         enum.ProviderOpenAI,
-			FirstTokenLatencyMs: firstTokenLatencyMs,
-			StreamDurationMs:    streamDurationMs,
-		}
-		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-	}), nil
-}
-
-// forwardResponseAnthropicNonStream Anthropic 上游非流式转发
-func (s *openAIService) forwardResponseAnthropicNonStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) (*huma.StreamResponse, error) {
-	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
-		startTime := time.Now()
-		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
-		totalMs := time.Since(startTime).Milliseconds()
-		if err != nil {
-			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
-			task := &dto.ModelCallAuditTask{
-				Ctx:                 util.CopyContextValues(ctx),
-				ModelID:             endpoint.ID,
-				Model:               req.Body.Model,
-				UpstreamProvider:    endpoint.Provider,
-				APIProvider:         enum.ProviderOpenAI,
-				FirstTokenLatencyMs: totalMs,
-			}
-			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-			return
-		}
-		completion, err := conv.ToOpenAIResponse(anthropicMsg)
-		if err != nil {
-			log.Error("[OpenAIService] Failed to convert Anthropic response", zap.Error(err))
-			writer.WriteError(fiber.StatusInternalServerError, openAIInternalErrorBody)
-			return
-		}
-		completion.Model = req.Body.Model
-		writer.WriteJSON(completion)
-
-		s.storeFromAnthropicMsgForResponse(ctx, log, req, anthropicMsg, nil, ep.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             endpoint.ID,
-			Model:               req.Body.Model,
-			UpstreamProvider:    endpoint.Provider,
-			APIProvider:         enum.ProviderOpenAI,
-			FirstTokenLatencyMs: totalMs,
-			UpstreamStatusCode:  fiber.StatusOK,
-		}
-		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-	}), nil
-}
-
-// forwardResponseStream Response API 流式转发
-func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) (*huma.StreamResponse, error) {
+// forwardResponseStream 原生 OpenAI 协议流式转发
+func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -503,19 +493,16 @@ func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logg
 		var finalResponse *dto.OpenAICreateResponseRsp
 
 		proxyErr := s.openAIProxy.ForwardCreateResponseStream(ctx, ep, body, func(event string, data []byte) error {
-			// Only count time-to-first-token on events that actually carry
-			// generated tokens (any `*.delta` event). Upstream sends
-			// response.created / response.in_progress / *.added / *.done
-			// immediately, so using the first SSE event would inflate the
-			// latency baseline vs. /chat/completions.
+			// 只在真正携带生成 token 的事件上计算 time-to-first-token（*.delta），
+			// 避免 response.created / response.in_progress / *.added / *.done
+			// 等事件污染基线，与 /chat/completions 的度量口径保持一致。
 			if firstTokenTime.IsZero() && util.IsResponseAPIDeltaEvent(event) {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
-			// Intercept all three terminal events (completed / failed /
-			// incomplete) — each carries a Response object with usage,
-			// which the audit path needs. The store path will decide per
-			// status whether to persist the conversation.
+			// 拦截终态事件（completed / failed / incomplete）——每一个都携带
+			// Response 对象（含 usage），审计路径需要它；存储路径会按 status 决定
+			// 是否持久化会话。
 			if finalResponse == nil && util.IsResponseAPITerminalEvent(event) {
 				var ev dto.ResponseStreamTerminalEvent
 				if err := sonic.Unmarshal(data, &ev); err != nil {
@@ -530,9 +517,8 @@ func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logg
 			return w.Flush()
 		})
 
-		streamDone := time.Now()
 		if !firstTokenTime.IsZero() {
-			streamDurationMs = streamDone.Sub(firstTokenTime).Milliseconds()
+			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if proxyErr != nil {
 			log.Error("[OpenAIService] Response API stream error", zap.Error(proxyErr))
@@ -551,17 +537,16 @@ func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logg
 		}
 		task.SetTokensFromResponseUsage(finalResponse)
 		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(proxyErr)
-		// When the upstream reports an in-band failure (response.failed /
-		// response.incomplete) over a healthy HTTP stream, ExtractUpstream*
-		// returns 200/"" — surface the reason from the Response object so
-		// audit dashboards can tell success from in-band failure.
+		// 上游 HTTP 200 但 Response 对象 status=failed/incomplete 时，
+		// util.ExtractUpstreamStatusAndError 只能看到 HTTP 层（返回 200）；
+		// 这里从 Response 对象补充 in-band 失败/未完成的原因。
 		task.SetErrorFromResponseStatus(finalResponse)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-	}), nil
+	})
 }
 
-// forwardResponseNonStream Response API 非流式转发
-func (s *openAIService) forwardResponseNonStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) (*huma.StreamResponse, error) {
+// forwardResponseNonStream 原生 OpenAI 协议非流式转发
+func (s *openAIService) forwardResponseNonStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		respBody, err := s.openAIProxy.ForwardCreateResponse(ctx, ep, body)
@@ -608,90 +593,203 @@ func (s *openAIService) forwardResponseNonStream(ctx context.Context, log *zap.L
 			task.SetErrorFromResponseStatus(&rsp)
 		}
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-	}), nil
+	})
 }
 
-// ==================== Store Messages ====================
+// forwardResponseAnthropicStream Anthropic 上游流式转发，以 OpenAI chat chunk 形式回写
+func (s *openAIService) forwardResponseAnthropicStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+	return util.WrapStreamResponse(func(w *bufio.Writer) {
+		startTime := time.Now()
+		var firstTokenTime time.Time
+		var firstTokenLatencyMs int64
+		var streamDurationMs int64
 
-func (s *openAIService) storeFromCompletion(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
-	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
-		return
-	}
-	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+		chunkID := converter.GenerateOpenAIChunkID()
+		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessageStream(ctx, ep, body, func(event dto.AnthropicSSEEvent) error {
+			chunks, convErr := conv.ToOpenAISSEResponse(event, req.Body.Model, chunkID)
+			if convErr != nil {
+				return convErr
+			}
+			for _, chunk := range chunks {
+				if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
+					firstTokenTime = time.Now()
+					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+				}
+				chunkData, marshalErr := sonic.Marshal(chunk)
+				if marshalErr != nil {
+					log.Error("[OpenAIService] Failed to marshal chunk", zap.Error(marshalErr))
+					return marshalErr
+				}
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
+				if flushErr := w.Flush(); flushErr != nil {
+					return flushErr
+				}
+			}
+			return nil
+		})
+		if !firstTokenTime.IsZero() {
+			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
+		}
+		if err == nil {
+			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_ = w.Flush()
+		}
+
+		s.storeFromAnthropicMsgForResponse(ctx, log, req, anthropicMsg, err, ep.Model)
+
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               req.Body.Model,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         enum.ProviderOpenAI,
+			FirstTokenLatencyMs: firstTokenLatencyMs,
+			StreamDurationMs:    streamDurationMs,
+		}
+		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+	})
 }
 
-func (s *openAIService) storeFromAnthropicMsg(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
-	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
-		return
-	}
-	conv := converter.AnthropicProtocolConverter{}
-	completion, err := conv.ToOpenAIResponse(msg)
-	if err != nil {
-		logger.Error("[OpenAIService] Failed to convert for storage", zap.Error(err))
-		return
-	}
-	if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
-		return
-	}
-	s.storeOpenAIMessages(ctx, logger, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+// forwardResponseAnthropicNonStream Anthropic 上游非流式转发，以 OpenAI chat JSON 形式回写
+func (s *openAIService) forwardResponseAnthropicNonStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, endpoint *dbmodel.ModelEndpoint, ep proxy.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+		startTime := time.Now()
+		anthropicMsg, err := s.anthropicProxy.ForwardCreateMessage(ctx, ep, body)
+		totalMs := time.Since(startTime).Milliseconds()
+		if err != nil {
+			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
+			task := &dto.ModelCallAuditTask{
+				Ctx:                 util.CopyContextValues(ctx),
+				ModelID:             endpoint.ID,
+				Model:               req.Body.Model,
+				UpstreamProvider:    endpoint.Provider,
+				APIProvider:         enum.ProviderOpenAI,
+				FirstTokenLatencyMs: totalMs,
+			}
+			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			return
+		}
+		completion, err := conv.ToOpenAIResponse(anthropicMsg)
+		if err != nil {
+			log.Error("[OpenAIService] Failed to convert Anthropic response", zap.Error(err))
+			writer.WriteError(fiber.StatusInternalServerError, openAIInternalErrorBody)
+			return
+		}
+		completion.Model = req.Body.Model
+		writer.WriteJSON(completion)
+
+		s.storeFromAnthropicMsgForResponse(ctx, log, req, anthropicMsg, nil, ep.Model)
+
+		task := &dto.ModelCallAuditTask{
+			Ctx:                 util.CopyContextValues(ctx),
+			ModelID:             endpoint.ID,
+			Model:               req.Body.Model,
+			UpstreamProvider:    endpoint.Provider,
+			APIProvider:         enum.ProviderOpenAI,
+			FirstTokenLatencyMs: totalMs,
+			UpstreamStatusCode:  fiber.StatusOK,
+		}
+		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+	})
 }
 
-// storeFromAnthropicMsgForResponse 将 Anthropic Message 响应转换为 UnifiedMessage 并投递存储任务（用于 Response API 路径）
-func (s *openAIService) storeFromAnthropicMsgForResponse(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
-	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
-		return
-	}
+// ==================== Response API Store Helpers ====================
 
-	var unifiedMessages []*dto.UnifiedMessage
+// buildResponseRequestUnifiedMessages 将 Response API 请求中的 instructions + input
+// 转换为 UnifiedMessage 列表，作为存储时的前置会话上下文。
+//
+// 返回 (messages, ok)：
+//
+//   - ok=false 表示 input.Items 转换失败，调用方应放弃落盘（错误日志已由本函数打印）。
+//
+//   - ok=true 时 messages 可能为空（表示既无 instructions 也无 input）。
+//
+//     @param log *zap.Logger
+//     @param req *dto.OpenAICreateResponseRequest
+//     @return []*dto.UnifiedMessage
+//     @return bool
+//     @author centonhuang
+//     @update 2026-04-20 11:00:00
+func buildResponseRequestUnifiedMessages(log *zap.Logger, req *dto.OpenAICreateResponseRequest) ([]*dto.UnifiedMessage, bool) {
+	var messages []*dto.UnifiedMessage
 
-	// instructions → system 消息
 	if req.Body.Instructions != nil && *req.Body.Instructions != "" {
-		unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
+		messages = append(messages, &dto.UnifiedMessage{
 			Role:    enum.RoleSystem,
 			Content: &dto.UnifiedContent{Text: *req.Body.Instructions},
 		})
 	}
 
-	// input 处理
 	if req.Body.Input != nil {
 		if len(req.Body.Input.Items) > 0 {
 			inputMsgs, err := dto.FromResponseAPIInputItems(req.Body.Input.Items)
 			if err != nil {
 				log.Error("[OpenAIService] Failed to convert response input items", zap.Error(err))
-				return
+				return nil, false
 			}
-			unifiedMessages = append(unifiedMessages, inputMsgs...)
+			messages = append(messages, inputMsgs...)
 		} else if req.Body.Input.Text != "" {
-			unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
+			messages = append(messages, &dto.UnifiedMessage{
 				Role:    enum.RoleUser,
 				Content: &dto.UnifiedContent{Text: req.Body.Input.Text},
 			})
 		}
 	}
 
-	// 将 Anthropic 消息内容转换为 UnifiedMessage
-	for _, block := range msg.Content {
+	return messages, true
+}
+
+// buildResponseUnifiedTools 将 Response API 请求的 tools 转换为 UnifiedTool
+func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*dto.UnifiedTool {
+	result := make([]*dto.UnifiedTool, 0, len(tools))
+	for _, tool := range tools {
+		if ut := dto.FromResponseAPITool(tool); ut != nil {
+			result = append(result, ut)
+		}
+	}
+	return result
+}
+
+// anthropicResponseContentToUnified 将 Anthropic Message.Content 中的块转换为 UnifiedMessage。
+//
+// 失败策略：任何单个 tool_use 块 marshal 失败即视为整条响应不可信，返回 false 让调用方
+// 放弃落盘（而不是把残缺消息写入存储）。
+//
+//	@param log *zap.Logger
+//	@param blocks []*dto.AnthropicContentBlock
+//	@return []*dto.UnifiedMessage
+//	@return bool
+//	@author centonhuang
+//	@update 2026-04-20 11:00:00
+func anthropicResponseContentToUnified(log *zap.Logger, blocks []*dto.AnthropicContentBlock) ([]*dto.UnifiedMessage, bool) {
+	var messages []*dto.UnifiedMessage
+	for _, block := range blocks {
 		if block == nil {
 			continue
 		}
 		switch block.Type {
 		case enum.AnthropicContentBlockTypeText:
-			unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
+			messages = append(messages, &dto.UnifiedMessage{
 				Role:    enum.RoleAssistant,
 				Content: &dto.UnifiedContent{Text: block.Text},
 			})
 		case enum.AnthropicContentBlockTypeThinking:
-			unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
+			messages = append(messages, &dto.UnifiedMessage{
 				Role:             enum.RoleAssistant,
 				ReasoningContent: block.Thinking,
 			})
 		case enum.AnthropicContentBlockTypeToolUse:
 			args, err := sonic.MarshalString(block.Input)
 			if err != nil {
-				log.Error("[OpenAIService] Failed to marshal tool_use input", zap.Error(err))
-				continue
+				log.Error("[OpenAIService] Failed to marshal tool_use input, abort storage to avoid partial conversation",
+					zap.String("toolID", block.ID), zap.String("toolName", block.Name), zap.Error(err))
+				return nil, false
 			}
-			unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
+			messages = append(messages, &dto.UnifiedMessage{
 				Role: enum.RoleAssistant,
 				ToolCalls: []*dto.UnifiedToolCall{{
 					ID:   block.ID,
@@ -701,13 +799,25 @@ func (s *openAIService) storeFromAnthropicMsgForResponse(ctx context.Context, lo
 			})
 		}
 	}
+	return messages, true
+}
 
-	var unifiedTools []*dto.UnifiedTool
-	for _, tool := range req.Body.Tools {
-		if ut := dto.FromResponseAPITool(tool); ut != nil {
-			unifiedTools = append(unifiedTools, ut)
-		}
+// storeFromAnthropicMsgForResponse 将 Anthropic Message 响应转换为 UnifiedMessage 并投递存储任务（Response API 路径）
+func (s *openAIService) storeFromAnthropicMsgForResponse(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
+		return
 	}
+
+	unifiedMessages, ok := buildResponseRequestUnifiedMessages(log, req)
+	if !ok {
+		return
+	}
+
+	outputMsgs, ok := anthropicResponseContentToUnified(log, msg.Content)
+	if !ok {
+		return
+	}
+	unifiedMessages = append(unifiedMessages, outputMsgs...)
 
 	var inputTokens, outputTokens int
 	if msg.Usage != nil {
@@ -715,18 +825,7 @@ func (s *openAIService) storeFromAnthropicMsgForResponse(ctx context.Context, lo
 		outputTokens = msg.Usage.OutputTokens
 	}
 
-	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
-		Ctx:          util.CopyContextValues(ctx),
-		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
-		Model:        upstreamModel,
-		Messages:     unifiedMessages,
-		Tools:        unifiedTools,
-		InputTokens:  inputTokens,
-		OutputTokens: outputTokens,
-		Metadata:     req.Body.Metadata,
-	}); err != nil {
-		log.Error("[OpenAIService] Failed to submit response message store task", zap.Error(err))
-	}
+	submitResponseMessageStoreTask(ctx, log, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
 }
 
 // storeFromResponseRsp 将 Response API 请求+响应转换为 UnifiedMessage 并投递存储任务
@@ -755,29 +854,9 @@ func (s *openAIService) storeFromResponseRsp(ctx context.Context, log *zap.Logge
 		return
 	}
 
-	var unifiedMessages []*dto.UnifiedMessage
-
-	if req.Body.Instructions != nil && *req.Body.Instructions != "" {
-		unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
-			Role:    enum.RoleSystem,
-			Content: &dto.UnifiedContent{Text: *req.Body.Instructions},
-		})
-	}
-
-	if req.Body.Input != nil {
-		if len(req.Body.Input.Items) > 0 {
-			inputMsgs, err := dto.FromResponseAPIInputItems(req.Body.Input.Items)
-			if err != nil {
-				log.Error("[OpenAIService] Failed to convert response input items", zap.Error(err))
-				return
-			}
-			unifiedMessages = append(unifiedMessages, inputMsgs...)
-		} else if req.Body.Input.Text != "" {
-			unifiedMessages = append(unifiedMessages, &dto.UnifiedMessage{
-				Role:    enum.RoleUser,
-				Content: &dto.UnifiedContent{Text: req.Body.Input.Text},
-			})
-		}
+	unifiedMessages, ok := buildResponseRequestUnifiedMessages(log, req)
+	if !ok {
+		return
 	}
 
 	outputMsgs, err := dto.FromResponseAPIOutputItems(rsp.Output)
@@ -790,71 +869,28 @@ func (s *openAIService) storeFromResponseRsp(ctx context.Context, log *zap.Logge
 	}
 	unifiedMessages = append(unifiedMessages, outputMsgs...)
 
-	var unifiedTools []*dto.UnifiedTool
-	for _, tool := range req.Body.Tools {
-		if ut := dto.FromResponseAPITool(tool); ut != nil {
-			unifiedTools = append(unifiedTools, ut)
-		}
-	}
-
 	var inputTokens, outputTokens int
 	if rsp.Usage != nil {
 		inputTokens = rsp.Usage.InputTokens
 		outputTokens = rsp.Usage.OutputTokens
 	}
 
+	submitResponseMessageStoreTask(ctx, log, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
+}
+
+// submitResponseMessageStoreTask 将 Response API 路径下的会话投递到消息存储协程池，
+// 统一填充 tools / metadata / API key name，避免在两个 store 函数里重复这段 boilerplate。
+func submitResponseMessageStoreTask(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, upstreamModel string, messages []*dto.UnifiedMessage, inputTokens, outputTokens int) {
 	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
 		Model:        upstreamModel,
-		Messages:     unifiedMessages,
-		Tools:        unifiedTools,
+		Messages:     messages,
+		Tools:        buildResponseUnifiedTools(req.Body.Tools),
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
 		Metadata:     req.Body.Metadata,
 	}); err != nil {
 		log.Error("[OpenAIService] Failed to submit response message store task", zap.Error(err))
-	}
-}
-
-func (s *openAIService) storeOpenAIMessages(ctx context.Context, logger *zap.Logger, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
-	var unifiedMessages []*dto.UnifiedMessage
-	for _, msg := range req.Body.Messages {
-		um, err := dto.FromOpenAIMessage(msg)
-		if err != nil {
-			logger.Error("[OpenAIService] Failed to convert openai message", zap.Error(err))
-			return
-		}
-		unifiedMessages = append(unifiedMessages, um)
-	}
-
-	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
-	if err != nil {
-		logger.Error("[OpenAIService] Failed to convert ai response message", zap.Error(err))
-		return
-	}
-	unifiedMessages = append(unifiedMessages, aiMsg)
-
-	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *dto.UnifiedTool {
-		return dto.FromOpenAITool(&tool)
-	})
-
-	var inputTokens, outputTokens int
-	if usage != nil {
-		inputTokens = usage.PromptTokens
-		outputTokens = usage.CompletionTokens
-	}
-
-	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
-		Ctx:          util.CopyContextValues(ctx),
-		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
-		Model:        upstreamModel,
-		Messages:     unifiedMessages,
-		Tools:        unifiedTools,
-		InputTokens:  inputTokens,
-		OutputTokens: outputTokens,
-		Metadata:     req.Body.Metadata,
-	}); err != nil {
-		logger.Error("[OpenAIService] Failed to submit message store task", zap.Error(err))
 	}
 }
