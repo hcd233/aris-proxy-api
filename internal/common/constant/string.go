@@ -128,11 +128,6 @@ const (
 
 	// ==================== OAuth2 ====================
 
-	// OAuthStateHexString OAuth2 state hex 编码前缀说明（随机字节数 = 32）
-	// 对应 make([]byte, 32) 生成 256-bit 随机数
-	//	@author centonhuang
-	//	@update 2026-04-09 15:00:00
-
 	// ==================== 用户默认值 ====================
 
 	// DefaultUserNamePrefix 新 OAuth2 用户名不合法时的默认前缀
@@ -187,6 +182,57 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-10 12:00:00
 	DBFieldUpdatedAt = "updated_at"
+
+	// AggregateTypeEndpoint llmproxy.Endpoint 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 16:30:00
+	AggregateTypeEndpoint = "llmproxy.endpoint"
+
+	// AggregateTypeAPIKey apikey.ProxyAPIKey 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeAPIKey = "apikey.proxy_api_key"
+
+	// AggregateTypeUser identity.User 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeUser = "identity.user"
+
+	// AggregateTypeOAuthIdentity oauth2.OAuthIdentity 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeOAuthIdentity = "oauth2.identity"
+
+	// AggregateTypeModelCallAudit modelcall.ModelCallAudit 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeModelCallAudit = "modelcall.audit"
+
+	// AggregateTypeMessage conversation.Message 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 19:30:00
+	AggregateTypeMessage = "conversation.message"
+
+	// AggregateTypeTool conversation.Tool 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 19:30:00
+	AggregateTypeTool = "conversation.tool"
+
+	// AggregateTypeSession session.Session 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 19:30:00
+	AggregateTypeSession = "session.session"
+
+	// ==================== OAuth Provider ====================
+
+	// OAuthProviderGithub GitHub 平台标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	OAuthProviderGithub = "github"
+	// OAuthProviderGoogle Google 平台标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	OAuthProviderGoogle = "google"
 
 	// MIMETypeOctetStream default binary Content-Type when extension is unknown
 	//	@author centonhuang

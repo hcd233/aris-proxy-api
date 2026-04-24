@@ -1,32 +1,56 @@
+// Package handler OAuth2处理器
 package handler
 
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"go.uber.org/zap"
+
+	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/service"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
+	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // Oauth2Handler OAuth2处理器接口
 //
-//	author centonhuang
-//	update 2025-01-05 21:00:00
+//	@author centonhuang
+//	@update 2025-01-05 21:00:00
 type Oauth2Handler interface {
 	HandleLogin(ctx context.Context, req *dto.LoginReq) (*dto.HTTPResponse[*dto.LoginResp], error)
 	HandleCallback(ctx context.Context, req *dto.CallbackReq) (*dto.HTTPResponse[*dto.CallbackRsp], error)
 }
 
-type oauth2Handler struct{}
+type oauth2Handler struct {
+	initiate command.InitiateLoginHandler
+	callback command.HandleCallbackHandler
+}
 
 // NewOauth2Handler 创建OAuth2处理器
 //
-//	return Oauth2Handler
-//	author centonhuang
-//	update 2025-01-05 21:00:00
+//	@return Oauth2Handler
+//	@author centonhuang
+//	@update 2026-04-22 20:30:00
 func NewOauth2Handler() Oauth2Handler {
-	return &oauth2Handler{}
+	platforms := map[string]infraoauth2.Platform{
+		constant.OAuthProviderGithub: infraoauth2.NewGithubPlatform(),
+		constant.OAuthProviderGoogle: infraoauth2.NewGooglePlatform(),
+	}
+
+	userRepo := repository.NewUserRepository()
+	accessSigner := jwt.GetAccessTokenSigner()
+	refreshSigner := jwt.GetRefreshTokenSigner()
+	dirCreator := repository.NewAudioDirCreator()
+
+	return &oauth2Handler{
+		initiate: command.NewInitiateLoginHandler(platforms),
+		callback: command.NewHandleCallbackHandler(platforms, userRepo, accessSigner, refreshSigner, dirCreator),
+	}
 }
 
 // HandleLogin OAuth2登录
@@ -37,9 +61,18 @@ func NewOauth2Handler() Oauth2Handler {
 //	@return *dto.HTTPResponse[*dto.LoginResp]
 //	@return error
 //	@author centonhuang
-//	@update 2025-11-11 04:57:58
+//	@update 2026-04-22 20:30:00
 func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dto.HTTPResponse[*dto.LoginResp], error) {
-	return util.WrapHTTPResponse(h.getService(req.Platform).Login(ctx, req))
+	rsp := &dto.LoginResp{}
+	result, err := h.initiate.Handle(ctx, command.InitiateLoginCommand{Platform: req.Platform})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[OAuth2Handler] Initiate login failed",
+			zap.String("platform", req.Platform), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+	rsp.RedirectURL = result.RedirectURL
+	return util.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleCallback OAuth2回调
@@ -50,25 +83,19 @@ func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dt
 //	@return *dto.HTTPResponse[*dto.CallbackRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2025-11-11 04:58:11
+//	@update 2026-04-22 20:30:00
 func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq) (*dto.HTTPResponse[*dto.CallbackRsp], error) {
-	return util.WrapHTTPResponse(h.getService(req.Body.Platform).Callback(ctx, req))
-}
-
-// getService 根据platform获取对应的service
-//
-//	receiver h *oauth2Handler
-//	param platform string
-//	return service.Oauth2Service
-//	author centonhuang
-//	update 2025-01-05 21:00:00
-func (h *oauth2Handler) getService(platform string) service.Oauth2Service {
-	switch platform {
-	case enum.Oauth2PlatformGithub:
-		return service.NewGithubOauth2Service()
-	case enum.Oauth2PlatformGoogle:
-		return service.NewGoogleOauth2Service()
-	default:
-		return service.NewGithubOauth2Service() // 默认返回 github
+	rsp := &dto.CallbackRsp{}
+	result, err := h.callback.Handle(ctx, command.HandleCallbackCommand{
+		Platform: req.Body.Platform,
+		Code:     req.Body.Code,
+		State:    req.Body.State,
+	})
+	if err != nil {
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return util.WrapHTTPResponse(rsp, nil)
 	}
+	rsp.AccessToken = result.TokenPair.AccessToken
+	rsp.RefreshToken = result.TokenPair.RefreshToken
+	return util.WrapHTTPResponse(rsp, nil)
 }

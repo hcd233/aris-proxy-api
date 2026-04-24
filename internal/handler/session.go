@@ -3,9 +3,16 @@ package handler
 
 import (
 	"context"
+	"time"
 
+	"github.com/samber/lo"
+	"go.uber.org/zap"
+
+	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/service"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -19,17 +26,19 @@ type SessionHandler interface {
 }
 
 type sessionHandler struct {
-	svc service.SessionService
+	list sessionquery.ListSessionsHandler
+	get  sessionquery.GetSessionHandler
 }
 
 // NewSessionHandler 创建Session处理器
 //
 //	@return SessionHandler
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-04-23 11:00:00
 func NewSessionHandler() SessionHandler {
 	return &sessionHandler{
-		svc: service.NewSessionService(),
+		list: sessionquery.NewListSessionsHandler(),
+		get:  sessionquery.NewGetSessionHandler(),
 	}
 }
 
@@ -41,9 +50,33 @@ func NewSessionHandler() SessionHandler {
 //	@return *dto.HTTPResponse[*dto.ListSessionsRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-04-23 11:00:00
 func (h *sessionHandler) HandleListSessions(ctx context.Context, req *dto.ListSessionsReq) (*dto.HTTPResponse[*dto.ListSessionsRsp], error) {
-	return util.WrapHTTPResponse(h.svc.ListSessions(ctx, req))
+	rsp := &dto.ListSessionsRsp{}
+	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyUserName)
+
+	views, pageInfo, err := h.list.Handle(ctx, sessionquery.ListSessionsQuery{
+		OwnerAPIKeyName: apiKeyName,
+		Page:            req.Page,
+		PageSize:        req.PageSize,
+	})
+	if err != nil {
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Sessions = lo.Map(views, func(v *sessionquery.SessionSummaryView, _ int) *dto.SessionSummary {
+		return &dto.SessionSummary{
+			ID:         v.ID,
+			CreatedAt:  v.CreatedAt.Format(time.DateTime),
+			UpdatedAt:  v.UpdatedAt.Format(time.DateTime),
+			Summary:    v.Summary,
+			MessageIDs: v.MessageIDs,
+			ToolIDs:    v.ToolIDs,
+		}
+	})
+	rsp.PageInfo = pageInfo
+	return util.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleGetSession 获取Session详情
@@ -54,7 +87,51 @@ func (h *sessionHandler) HandleListSessions(ctx context.Context, req *dto.ListSe
 //	@return *dto.HTTPResponse[*dto.GetSessionRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-04-23 11:00:00
 func (h *sessionHandler) HandleGetSession(ctx context.Context, req *dto.GetSessionReq) (*dto.HTTPResponse[*dto.GetSessionRsp], error) {
-	return util.WrapHTTPResponse(h.svc.GetSession(ctx, req))
+	rsp := &dto.GetSessionRsp{}
+	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyUserName)
+
+	view, err := h.get.Handle(ctx, sessionquery.GetSessionQuery{
+		SessionID:       req.SessionID,
+		OwnerAPIKeyName: apiKeyName,
+	})
+	if err != nil {
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+
+	messageItems := lo.Map(view.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
+		return &dto.MessageItem{
+			ID:        m.ID,
+			Model:     m.Model,
+			Message:   m.Message,
+			CreatedAt: m.CreatedAt.Format(time.DateTime),
+		}
+	})
+	toolItems := lo.Map(view.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
+		return &dto.ToolItem{
+			ID:        t.ID,
+			Tool:      t.Tool,
+			CreatedAt: t.CreatedAt.Format(time.DateTime),
+		}
+	})
+
+	rsp.Session = &dto.SessionDetail{
+		ID:         view.ID,
+		APIKeyName: view.APIKeyName,
+		CreatedAt:  view.CreatedAt.Format(time.DateTime),
+		UpdatedAt:  view.UpdatedAt.Format(time.DateTime),
+		Metadata:   view.Metadata,
+		Messages:   messageItems,
+		Tools:      toolItems,
+	}
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Get session detail",
+		zap.Uint("sessionID", req.SessionID),
+		zap.String("apiKeyName", apiKeyName),
+		zap.Int("messageCount", len(messageItems)),
+		zap.Int("toolCount", len(toolItems)))
+
+	return util.WrapHTTPResponse(rsp, nil)
 }

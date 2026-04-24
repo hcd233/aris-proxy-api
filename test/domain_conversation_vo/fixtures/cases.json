@@ -1,0 +1,23 @@
+[
+    {
+        "name": "unified_content_string_roundtrip",
+        "description": "UnifiedContent 纯文本形态应能双向序列化为字符串",
+        "json": "\"hello world\"",
+        "expectText": "hello world",
+        "expectParts": 0
+    },
+    {
+        "name": "unified_content_array_roundtrip",
+        "description": "UnifiedContent 数组形态应能保留 Parts 并序列化为数组",
+        "json": "[{\"type\":\"text\",\"text\":\"hi\"}]",
+        "expectText": "",
+        "expectParts": 1
+    },
+    {
+        "name": "unified_content_empty_string",
+        "description": "空字符串应被识别为 Text 形态",
+        "json": "\"\"",
+        "expectText": "",
+        "expectParts": 0
+    }
+]

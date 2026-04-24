@@ -4,82 +4,36 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
-// ==================== Unified Content Types ====================
-
-// UnifiedContent 统一消息内容（替代 any），纯文本时仅使用 Text，多部分内容时使用 Parts
+// ==================== Re-exports from domain/conversation/vo ====================
 //
-//	@author centonhuang
-//	@update 2026-03-18 10:00:00
-type UnifiedContent struct {
-	Text  string                `json:"-"`
-	Parts []*UnifiedContentPart `json:"-"`
-}
+// 以下类型已迁移到 internal/domain/conversation/vo 作为领域值对象，
+// 此处保留类型别名以避免破坏现有调用方 import；新代码应直接使用 vo 包。
 
-// UnmarshalJSON 自定义反序列化：兼容旧数据（string / array / object）
-func (c *UnifiedContent) UnmarshalJSON(data []byte) error {
-	// 1. 尝试作为字符串
-	var s string
-	if err := sonic.Unmarshal(data, &s); err == nil {
-		c.Text = s
-		return nil
-	}
-	// 2. 尝试作为 Parts 数组
-	return sonic.Unmarshal(data, &c.Parts)
-}
-
-// MarshalJSON 自定义序列化：Parts 优先，否则输出字符串
-func (c UnifiedContent) MarshalJSON() ([]byte, error) {
-	if len(c.Parts) > 0 {
-		return sonic.Marshal(c.Parts)
-	}
-	return sonic.Marshal(c.Text)
-}
-
-// UnifiedContentPart 统一内容部分
+// UnifiedContent 重新导出至 domain/conversation/vo.UnifiedContent
 //
-//	@author centonhuang
-//	@update 2026-03-18 10:00:00
-type UnifiedContentPart struct {
-	Type        string `json:"type"`                   // text/image_url/input_audio/file/refusal
-	Text        string `json:"text,omitempty"`         // type=text 或 type=refusal
-	ImageURL    string `json:"image_url,omitempty"`    // type=image_url: URL 或 base64
-	ImageDetail string `json:"image_detail,omitempty"` // type=image_url: 细节级别
-	AudioData   string `json:"audio_data,omitempty"`   // type=input_audio
-	AudioFormat string `json:"audio_format,omitempty"` // type=input_audio
-	FileData    string `json:"file_data,omitempty"`    // type=file
-	FileID      string `json:"file_id,omitempty"`      // type=file
-	Filename    string `json:"filename,omitempty"`     // type=file
-}
+// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedContent
+type UnifiedContent = vo.UnifiedContent
 
-// ==================== Unified Message ====================
-
-// UnifiedMessage 统一消息格式，用于跨 Provider 的消息存储
+// UnifiedContentPart 重新导出至 domain/conversation/vo.UnifiedContentPart
 //
-//	@author centonhuang
-//	@update 2026-03-18 10:00:00
-type UnifiedMessage struct {
-	Role             enum.Role          `json:"role" doc:"消息角色"`
-	Content          *UnifiedContent    `json:"content,omitempty" doc:"消息内容"`
-	ReasoningContent string             `json:"reasoning_content,omitempty" doc:"推理/思考内容"`
-	Name             string             `json:"name,omitempty" doc:"参与者名称"`
-	ToolCalls        []*UnifiedToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
-	ToolCallID       string             `json:"tool_call_id,omitempty" doc:"工具调用ID(工具结果消息)"`
-	Refusal          string             `json:"refusal,omitempty" doc:"拒绝消息"`
-}
+// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedContentPart
+type UnifiedContentPart = vo.UnifiedContentPart
 
-// UnifiedToolCall 统一工具调用
+// UnifiedMessage 重新导出至 domain/conversation/vo.UnifiedMessage
 //
-//	@author centonhuang
-//	@update 2026-03-18 10:00:00
-type UnifiedToolCall struct {
-	ID        string `json:"id,omitempty" doc:"工具调用ID"`
-	Name      string `json:"name" doc:"工具/函数名称"`
-	Arguments string `json:"arguments" doc:"工具参数(JSON字符串)"`
-}
+// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedMessage
+type UnifiedMessage = vo.UnifiedMessage
+
+// UnifiedToolCall 重新导出至 domain/conversation/vo.UnifiedToolCall
+//
+// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedToolCall
+type UnifiedToolCall = vo.UnifiedToolCall
 
 // ==================== Conversion: OpenAI -> Unified ====================
 
@@ -89,7 +43,7 @@ type UnifiedToolCall struct {
 //	@return *UnifiedMessage
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//	@update 2026-04-22 14:10:00
 func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*UnifiedMessage, error) {
 	um := &UnifiedMessage{
 		Role:             msg.Role,
@@ -193,7 +147,7 @@ func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*UnifiedConte
 //	@return *UnifiedMessage
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//	@update 2026-04-22 14:10:00
 func FromAnthropicMessage(msg *AnthropicMessageParam) (*UnifiedMessage, error) {
 	um := &UnifiedMessage{
 		Role: msg.Role,
@@ -227,7 +181,7 @@ func FromAnthropicMessage(msg *AnthropicMessageParam) (*UnifiedMessage, error) {
 //	@return *UnifiedMessage
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//	@update 2026-04-22 14:10:00
 func FromAnthropicResponse(msg *AnthropicMessage) (*UnifiedMessage, error) {
 	um := &UnifiedMessage{
 		Role: msg.Role,
@@ -249,7 +203,7 @@ func FromAnthropicResponse(msg *AnthropicMessage) (*UnifiedMessage, error) {
 //	@param blocks []*AnthropicContentBlock
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-18 10:00:00
+//	@update 2026-04-22 14:10:00
 func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock) error {
 	var (
 		textParts         []string
