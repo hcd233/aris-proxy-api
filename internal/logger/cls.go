@@ -97,15 +97,16 @@ func (c *clsCore) Enabled(level zapcore.Level) bool {
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
 func (c *clsCore) With(fields []zapcore.Field) zapcore.Core {
-	c.fields = append(c.fields, fields...)
-	c.fields = lo.UniqBy(c.fields, func(field zapcore.Field) string {
-		return field.Key
-	})
+	merged := lo.Values(lo.Assign(lo.SliceToMap(c.fields, func(field zapcore.Field) (string, zapcore.Field) {
+		return field.Key, field
+	}), lo.SliceToMap(fields, func(field zapcore.Field) (string, zapcore.Field) {
+		return field.Key, field
+	})))
 	return &clsCore{
 		producer: c.producer,
 		topicID:  c.topicID,
 		level:    c.level,
-		fields:   c.fields,
+		fields:   merged,
 	}
 }
 
