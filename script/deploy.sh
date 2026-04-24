@@ -11,34 +11,19 @@
 #	@update 2026-04-24 15:00:00
 set -euo pipefail
 
-VERSION="master"
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --version|-v)
-            VERSION="$2"
-            shift 2
-            ;;
-        *)
-            echo "Unknown option: $1"
-            exit 1
-            ;;
-    esac
-done
-
-echo -e "\033[1;36mDeploying production environment (version: ${VERSION})...\033[0m"
-
-# 切到仓库根目录，确保 docker/ 等相对路径可用
 cd "$(dirname "$0")/.."
 
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+IMAGE_TAG=$(echo "${BRANCH_NAME}" | tr '/' '-')
+
+echo -e "\033[1;36mDeploying production environment (branch: ${BRANCH_NAME}, image: ${IMAGE_TAG})...\033[0m"
+
 echo -e "\033[1;36mPulling the latest code from GitHub...\033[0m"
-# 若本地有未提交改动，git checkout / pull 会失败并终止整个脚本，避免带脏状态部署
 git fetch --prune origin
-git checkout "${VERSION}"
-git pull --ff-only origin "${VERSION}"
+git pull --ff-only origin "${BRANCH_NAME}"
 
 echo -e "\033[1;32mPulling the latest Docker image...\033[0m"
-docker pull "ghcr.io/hcd233/aris-proxy-api:${VERSION}"
+docker pull "ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}"
 
 echo -e "\033[1;34mStarting up services with docker-compose...\033[0m"
 docker compose -f docker/docker-compose-single.yml up -d
