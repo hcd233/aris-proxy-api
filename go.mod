@@ -14,6 +14,7 @@ require (
 	github.com/samber/lo v1.39.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.19.0
+	github.com/tencentcloud/tencentcloud-cls-sdk-go v1.0.14
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.60
 	go.uber.org/zap v1.27.0
 	golang.org/x/oauth2 v0.30.0
@@ -33,6 +34,7 @@ require (
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20250923004556-9e5a51aed1e8 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
@@ -48,6 +50,7 @@ require (
 	github.com/mozillazg/go-httpheader v0.4.0 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -55,7 +58,9 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 )
 
 require (

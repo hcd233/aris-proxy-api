@@ -87,4 +87,9 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-09 15:00:00
 	LogErrMaxAgeDays = 30
+
+	// CLSProducerCloseTimeoutMs CLS Producer 优雅关闭超时时间（毫秒）
+	//	@author centonhuang
+	//	@update 2026-04-25 10:00:00
+	CLSProducerCloseTimeoutMs = 10000
 )

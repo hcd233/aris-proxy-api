@@ -182,7 +182,7 @@ func init() {
 		ConsoleSeparator: "  ", // 控制台分隔符
 	}
 
-	core := zapcore.NewTee(
+	cores := []zapcore.Core{
 		// 控制台输出 - 始终使用彩色Console编码器
 		zapcore.NewCore(
 			zapcore.NewConsoleEncoder(consoleEncoderConfig),
@@ -207,7 +207,13 @@ func init() {
 			zapcore.NewMultiWriteSyncer(panicFileWriter),
 			zapLevelMapping[logLevelPanic],
 		),
-	)
+	}
+
+	if clsCore := newCLSCore(); clsCore != nil {
+		cores = append(cores, clsCore)
+	}
+
+	core := zapcore.NewTee(cores...)
 
 	defaultLogger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zapLevelMapping[logLevelPanic]))
 }
