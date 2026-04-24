@@ -5,20 +5,22 @@
 # 严格模式：任一命令失败立即退出，避免带旧代码或脏状态部署。
 #
 #	@author centonhuang
-#	@update 2026-04-20 11:00:00
+#	@update 2026-04-24 15:00:00
 set -euo pipefail
-
-echo -e "\033[1;36mDeploying development environment...\033[0m"
 
 cd "$(dirname "$0")/.."
 
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+IMAGE_TAG=$(echo "${BRANCH_NAME}" | tr '/' '-')
+
+echo -e "\033[1;36mDeploying development environment (branch: ${BRANCH_NAME}, image: ${IMAGE_TAG})...\033[0m"
+
 echo -e "\033[1;36mPulling the latest code from GitHub...\033[0m"
 git fetch --prune origin
-git checkout master
-git pull --ff-only origin master
+git pull --ff-only origin "${BRANCH_NAME}"
 
 echo -e "\033[1;32mPulling the latest Docker image...\033[0m"
-docker pull ghcr.io/hcd233/aris-proxy-api:master
+docker pull "ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}"
 
 echo -e "\033[1;34mStarting up services with docker-compose...\033[0m"
 docker compose -f docker/docker-compose-dev-single.yml up -d
