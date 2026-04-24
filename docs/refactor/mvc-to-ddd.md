@@ -283,7 +283,7 @@ Fiber 中间件 → Huma 路由 → APIKeyMiddleware (ctx 注入 apiKeyName)
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
          ┌──────────────────────────┴──────────────────────────┐
-         ▼                                                      ▼
+         ▼                                                     ▼
 ┌─ Transport 层 ───────────────┐    ┌─ Converter 层 ────────────────┐
 │ infrastructure/transport/    │    │ application/llmproxy/         │
 │   /openai.go                 │    │   converter/anthropic.go      │
