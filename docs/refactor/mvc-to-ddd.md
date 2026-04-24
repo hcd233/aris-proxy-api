@@ -49,9 +49,267 @@ Handler → Service → DAO / Proxy / Converter
 └─────────────────────────────────────────────────────┘
 ```
 
----
+### 1.3 请求数据流全景
 
-## 2. 领域模型拆解
+以 `POST /api/v1/apikey/`（创建 API Key）为例，跟踪一个请求穿越各层时数据的形态变化。其他 CRUD 接口遵循相同的分层模式，LLM 代理接口的区别见 [1.4 节](#14-llm-代理流对比)。
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 请求进入                                                                    │
+│ POST /api/v1/apikey/                                                        │
+│ Authorization: Bearer <jwt>       Body: {"name": "my-key"}                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. Fiber 全局中间件                                                         │
+│    Recover → fgprof → CORS → Compress → TraceMiddleware → LogMiddleware     │
+│                                                                             │
+│    TraceMiddleware 注入 X-Trace-Id 到 ctx，后续所有日志自动携带             │
+│    ctx 中此时有: {CtxKeyTraceID: "550e8400-..."}                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. Huma 路由匹配 → 路由组中间件                                             │
+│    router/apikey.go → initAPIKeyRouter()                                    │
+│                                                                             │
+│    apikeyGroup.UseMiddleware(middleware.JwtMiddleware())                    │
+│      → 解码 JWT，注入到 ctx:                                                │
+│        {CtxKeyUserID: 42, CtxKeyUserName: "alice", CtxKeyPermission: "user"}│
+│                                                                             │
+│    apikeyGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware()) │
+│      → Redis Lua 令牌桶，超限返回 429                                       │
+│                                                                             │
+│    单路由中间件:                                                            │
+│    middleware.LimitUserPermissionMiddleware("createAPIKey", PermissionUser) │
+│      → 校验 ctx 中 permission >= user，不满足返回 403                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. Handler 层 (入口 + 出口适配)                                             │
+│    handler/apikey.go → HandleCreateAPIKey(ctx, req)                         │
+│                                                                             │
+│    入参:                                                                    │
+│      ctx  → context.Context (含 TraceID, UserID, UserName, Permission)      │
+│      req  → *dto.CreateAPIKeyReq  (Huma 自动将 JSON Body 反序列化到此结构)  │
+│              req.Body.Name = "my-key"                                       │
+│                                                                             │
+│    Handler 的职责:                                                          │
+│      a. 从 ctx 提取调用者身份:                                              │
+│           userID := util.CtxValueUint(ctx, CtxKeyUserID)  // → 42           │
+│                                                                             │
+│      b. 构造应用层命令 (原始类型 → 有类型的 Command):                       │
+│           cmd := command.IssueAPIKeyCommand{UserID: 42, Name: "my-key"}     │
+│                                                                             │
+│      c. 委托给应用层:                                                       │
+│           result, err := h.issue.Handle(ctx, cmd)                           │
+│                                                                             │
+│      d. 将应用层结果映射为 HTTP DTO:                                        │
+│           rsp.Key = &dto.APIKeyDetail{                                      │
+│               ID: result.KeyID, Name: result.Name,                          │
+│               Key: result.Secret, CreatedAt: result.CreatedAt}              │
+│                                                                             │
+│      e. 返回统一响应:                                                       │
+│           return util.WrapHTTPResponse(rsp, nil)                            │
+│                                                                             │
+│    Handler 不包含:                                                          │
+│      ✗ 业务规则 (配额校验 → 聚合根)                                         │
+│      ✗ 数据库操作 (CRUD → 仓储)                                             │
+│      ✗ 密钥生成算法 (crypto/rand → 领域服务)                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. Application 层 (用例编排)                                                │
+│    application/apikey/command/issue_api_key.go → IssueAPIKeyHandler.Handle  │
+│                                                                             │
+│    入参:                                                                    │
+│      cmd := IssueAPIKeyCommand{UserID: 42, Name: "my-key"}                  │
+│                                                                             │
+│    编排流程 (Command Handler 是流程导演，不演具体角色):                     │
+│                                                                             │
+│    ┌─ Step 4a: 跨域校验 (通过适配器接口)                                    │
+│    │   userExistsCh.Exists(ctx, 42)  →  true                                │
+│    │   若 false → 返回 ierr.ErrDataNotExists                                │
+│    │                                                                        │
+│    ├─ Step 4b: 统计现有数量 (通过仓储)                                      │
+│    │   repo.CountByUser(ctx, 42)  →  3 (int64)                              │
+│    │                                                                        │
+│    ├─ Step 4c: 生成密钥 (通过领域服务)                                      │
+│    │   generator.Generate()  →  APIKeySecret{value: "sk-aris-AbC12..."}     │
+│    │                                                                        │
+│    ├─ Step 4d: 创建聚合根 (工厂方法校验不变量)                              │
+│    │   aggregate.IssueProxyAPIKey(                                          │
+│    │       42,                              // userID                       │
+│    │       APIKeyName("my-key"),            // name → 值对象包装            │
+│    │       secret,                          // APIKeySecret 值对象          │
+│    │       DefaultAPIKeyQuota(),            // {Max: 10}                    │
+│    │       3,                               // existing count               │
+│    │   )                                                                    │
+│    │   → 聚合内部: 3 < 10 → 允许创建                                        │
+│    │   → 返回 *ProxyAPIKey{userID:42, name:"my-key", secret:{...}, ...}     │
+│    │                                                                        │
+│    └─ Step 4e: 持久化 (通过仓储)                                            │
+│        repo.Save(ctx, key)                                                  │
+│        → 仓储将聚合映射为 dbmodel.ProxyAPIKey → dao.Create() → PostgreSQL   │
+│        → 回填 key.SetID(record.ID) → key.AggregateID() = 15                 │
+│                                                                             │
+│    返回:                                                                    │
+│      *IssueAPIKeyResult{KeyID:15, Name:"my-key", Secret:"sk-aris-AbC12...", │
+│                          CreatedAt: time.Time}                              │
+│                                                                             │
+│    Command Handler 的所有依赖都是接口:                                      │
+│      - apikey.APIKeyRepository    (领域层定义, 基础设施层实现)              │
+│      - service.APIKeyGenerator    (领域服务接口)                            │
+│      - UserExistenceChecker       (跨域适配器接口)                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. 数据在各层间的类型映射                                                   │
+│                                                                             │
+│   HTTP Body (JSON bytes)                                                    │
+│     │  Huma 反序列化                                                        │
+│     ▼                                                                       │
+│   dto.CreateAPIKeyReq  (DTO 层)                                             │
+│     │  Handler 提取字段                                                     │
+│     ▼                                                                       │
+│   command.IssueAPIKeyCommand{UserID: uint, Name: string}  (应用层命令)      │
+│     │  Command Handler 调用值对象构造函数                                   │
+│     ▼                                                                       │
+│   vo.APIKeyName("my-key"), vo.APIKeySecret{...}  (领域层值对象)             │
+│     │  聚合工厂校验 + 组装                                                  │
+│     ▼                                                                       │
+│   *aggregate.ProxyAPIKey  (领域层聚合根)                                    │
+│     │  Repository.toAPIKeyAggregate() 映射                                  │
+│     ▼                                                                       │
+│   *dbmodel.ProxyAPIKey  (基础设施层 GORM 模型)                              │
+│     │  DAO.Create()                                                         │
+│     ▼                                                                       │
+│   PostgreSQL 行                                                             │
+│                                                                             │
+│   返回路径 (逆过程):                                                        │
+│   PostgreSQL 行 → dbmodel → aggregate → IssueAPIKeyResult →                 │
+│   dto.APIKeyDetail → dto.HTTPResponse (JSON) → 客户端                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**关键要点：**
+
+| 层 | 数据类型 | 转换方向 | 谁做转换 |
+|----|---------|---------|---------|
+| Handler | `dto.XxxReq` → `Command/Query` | 原始类型 → 有类型命令 | Handler |
+| Application | `Command/Query` → `VO` + `Aggregate` | 命令字段 → 值对象包装 | Command Handler |
+| Domain | `Aggregate` 内部 | 不变量校验 + 行为执行 | 聚合根自身 |
+| Infrastructure (写) | `Aggregate` ↔ `dbmodel` | 聚合字段 → GORM 字段 | Repository 私有函数 |
+| Infrastructure (读) | `dbmodel` → `View` | DAO 结果 → 只读投影 | Query Handler |
+| Handler (返回) | `View/Result` → `dto.XxxRsp` | 应用层视图 → HTTP DTO | Handler |
+
+### 1.4 LLM 代理流对比
+
+LLM 代理接口（`/api/openai/v1/chat/completions` 等）的流程更为复杂，因为涉及协议转换和流式传输：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LLM 代理请求流 (以 OpenAI ChatCompletion 为例)                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Fiber 中间件 → Huma 路由 → APIKeyMiddleware (ctx 注入 apiKeyName)
+                                    │
+                                    ▼
+┌─ Handler ───────────────────────────────────────────────────────────────────┐
+│ handler/openai.go → HandleChatCompletion(ctx, req)                          │
+│                                                                             │
+│   入参: ctx (含 apiKeyName), req (*dto.OpenAIChatCompletionRequest)         │
+│         req.Body.Model = "my-gpt-4"                                         │
+│         req.Body.Messages = [...]                                           │
+│                                                                             │
+│   一行委托:                                                                 │
+│     return h.useCase.CreateChatCompletion(ctx, req)                         │
+│                                                                             │
+│   注意: LLM 代理的 Handler 比 CRUD Handler 更薄——连 Command 都不构造，      │
+│   直接将整个请求体交给 UseCase。因为流式响应需要直接操作 bufio.Writer。     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─ Application UseCase ───────────────────────────────────────────────────────┐
+│ application/llmproxy/usecase/openai.go → CreateChatCompletion               │
+│                                                                             │
+│   Step 1: 端点解析 (通过领域服务)                                           │
+│     ep, err := resolver.Resolve(ctx,                                        │
+│         vo.EndpointAlias("my-gpt-4"),   // 值对象包装                       │
+│         enum.ProviderOpenAI,            // 主 Provider                      │
+│         enum.ProviderAnthropic)         // 回退 Provider                    │
+│     → 查询 endpoint 表: alias="my-gpt-4" + provider="openai" → 命中         │
+│     → 返回 *aggregate.Endpoint{alias:"my-gpt-4", provider:openai,           │
+│                                creds:{model:"gpt-4o", key:"...", url:"..."}}│
+│                                                                             │
+│   Step 2: 映射为 transport 层结构                                           │
+│     upstream := transport.UpstreamEndpoint{                                 │
+│         Model: "gpt-4o", APIKey: "...", BaseURL: "https://api.openai.com"}  │
+│                                                                             │
+│   Step 3: 请求兼容性处理                                                    │
+│     req.Body.max_tokens → max_completion_tokens (OpenAI 特定端点要求)       │
+│                                                                             │
+│   Step 4: 分流处理                                                          │
+│     if ep.Provider() == ProviderAnthropic:                                  │
+│         → forwardChatViaAnthropic  (跨协议: Converter 转换 + AnthropicProxy)│
+│     else:                                                                   │
+│         → forwardChatNative       (同协议: ReplaceModelInBody + OpenAIProxy)│
+│                                                                             │
+│   Step 5: 流式场景 — 构造 *huma.StreamResponse                              │
+│     return util.WrapStreamResponse(func(w *bufio.Writer) {                  │
+│         // 5a. 调用 Transport 层发送 HTTP 请求到上游                        │
+│         openAIProxy.ForwardChatCompletionStream(ctx, upstream, body,        │
+│             func(chunk *ChatCompletionChunk) error {                        │
+│                 // 5b. 回调中替换 model 名 (上游真实名 → 客户端别名)        │
+│                 chunk.Model = "my-gpt-4"                                    │
+│                 // 5c. 写入 SSE 到客户端                                    │
+│                 fmt.Fprintf(w, "data: %s\n\n", sonic.Marshal(chunk))        │
+│                 return w.Flush()                                            │
+│             })                                                              │
+│         // 5d. 流结束后写 [DONE]                                            │
+│         fmt.Fprintf(w, "data: [DONE]\n\n")                                  │
+│         // 5e. 异步提交审计 + 消息存储任务 (通过 Pool)                      │
+│         pool.GetPoolManager().SubmitModelCallAuditTask(...)                 │
+│         pool.GetPoolManager().SubmitMessageStoreTask(...)                   │
+│     })                                                                      │
+│                                                                             │
+│   对比旧架构: 以上全部逻辑原来在 service/openai.go 的一个 200+ 行方法中，   │
+│   现在 UseCase 仍然是编排者，但端点解析 → 领域服务，Transport → 基础设施层，│
+│   Converter → 应用层协议转换，职责边界清晰。                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+         ┌──────────────────────────┴──────────────────────────┐
+         ▼                                                      ▼
+┌─ Transport 层 ───────────────┐    ┌─ Converter 层 ────────────────┐
+│ infrastructure/transport/    │    │ application/llmproxy/         │
+│   /openai.go                 │    │   converter/anthropic.go      │
+│                              │    │                               │
+│ 构建 HTTP 请求               │    │ OpenAI Request ↔ Anthropic    │
+│ 发送到上游 URL               │    │    Request                    │
+│ 读取 SSE 字节流              │    │ Anthropic SSE Event           │
+│ 解析为 ChatCompletionChunk   │    │    → OpenAI ChatCompletion    │
+│ 通过回调交给 UseCase         │    │    Chunk (流式)               │
+│                              │    │ Anthropic Message             │
+│ 纯传输，不含协议转换         │    │    → OpenAI ChatCompletion    │
+│                              │    │    (非流式)                   │
+│                              │    │                               │
+│                              │    │ 纯 DTO 转换，无状态、无副作用 │
+└──────────────────────────────┘    └───────────────────────────────┘
+```
+
+**CRUD 接口 vs LLM 代理接口的流程差异：**
+
+| 对比维度 | CRUD 接口 (apikey/session/user) | LLM 代理接口 |
+|---------|-----------------------------------|-------------|
+| Handler 厚度 | 提取 ctx → 构造 Command/Query → 映射 View → 写响应 | 提取 ctx → 一行委托给 UseCase |
+| Application 模式 | Command Handler / Query Handler | UseCase (多对象协作 + 流式回调) |
+| 响应方式 | `util.WrapHTTPResponse(rsp, nil)` → JSON | `*huma.StreamResponse` → SSE / 直写 BodyWriter |
+| 读路径 | Query Handler 直接走 DAO | Query Handler 直接走 DAO (ListModels/CountTokens 一致) |
+| 是否有异步任务 | 无 | 有 (消息存储 + 审计记录投递到协程池) |
 
 重构将原有的单一 `service/` 包拆分为 **7 个限界上下文**：
 
