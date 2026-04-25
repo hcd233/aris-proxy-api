@@ -68,7 +68,11 @@ func (s *stubRepository) FindByAliasAndProvider(_ context.Context, alias vo.Endp
 	s.callsByProvider[provider]++
 	switch s.behaviorByProvider[provider] {
 	case "hit":
-		return aggregate.NewEndpoint(1, alias, provider, vo.NewUpstreamCreds("", "", "")), nil
+		ep, err := aggregate.NewEndpoint(1, alias, provider, vo.NewUpstreamCreds("https://api.example.com", "sk-test", "gpt-4"))
+	if err != nil {
+		return nil, err
+	}
+	return ep, nil
 	case "miss":
 		return nil, nil
 	case "db_error":
