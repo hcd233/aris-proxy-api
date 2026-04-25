@@ -43,10 +43,16 @@ type Session struct {
 //	@return *Session
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-23 10:45:00
+//	@update 2026-04-26 10:00:00
 func CreateSession(owner vo.APIKeyOwner, messageIDs, toolIDs []uint, metadata map[string]string, now time.Time) (*Session, error) {
 	if owner.IsEmpty() {
 		return nil, ierr.New(ierr.ErrValidation, "session api key owner is empty")
+	}
+	if hasDuplicateIDs(messageIDs) {
+		return nil, ierr.New(ierr.ErrValidation, "session message IDs contain duplicates")
+	}
+	if hasDuplicateIDs(toolIDs) {
+		return nil, ierr.New(ierr.ErrValidation, "session tool IDs contain duplicates")
 	}
 	return &Session{
 		owner:      owner,
@@ -56,6 +62,21 @@ func CreateSession(owner vo.APIKeyOwner, messageIDs, toolIDs []uint, metadata ma
 		createdAt:  now,
 		updatedAt:  now,
 	}, nil
+}
+
+// hasDuplicateIDs 检查 ID 切片是否存在重复值
+//
+//	@param ids []uint
+//	@return bool
+func hasDuplicateIDs(ids []uint) bool {
+	seen := make(map[uint]struct{}, len(ids))
+	for _, id := range ids {
+		if _, exists := seen[id]; exists {
+			return true
+		}
+		seen[id] = struct{}{}
+	}
+	return false
 }
 
 // RestoreSession 从仓储重建聚合

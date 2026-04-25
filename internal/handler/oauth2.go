@@ -7,13 +7,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
+	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
+	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -27,6 +25,21 @@ type Oauth2Handler interface {
 	HandleCallback(ctx context.Context, req *dto.CallbackReq) (*dto.HTTPResponse[*dto.CallbackRsp], error)
 }
 
+// Oauth2Platforms OAuth2 平台映射（github/google 等）
+type Oauth2Platforms map[string]oauth2service.Platform
+
+// Oauth2Dependencies OAuth2Handler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type Oauth2Dependencies struct {
+	Platforms     Oauth2Platforms
+	UserRepo      identity.UserRepository
+	AccessSigner  identityservice.TokenSigner
+	RefreshSigner identityservice.TokenSigner
+	DirCreator    command.ObjectStorageDirCreator // 可选；nil 时跳过存储目录创建
+}
+
 type oauth2Handler struct {
 	initiate command.InitiateLoginHandler
 	callback command.HandleCallbackHandler
@@ -34,23 +47,20 @@ type oauth2Handler struct {
 
 // NewOauth2Handler 创建OAuth2处理器
 //
+//	@param deps Oauth2Dependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
 //	@return Oauth2Handler
 //	@author centonhuang
-//	@update 2026-04-22 20:30:00
-func NewOauth2Handler() Oauth2Handler {
-	platforms := map[string]service.Platform{
-		constant.OAuthProviderGithub: oauth2.NewGithubPlatform(),
-		constant.OAuthProviderGoogle: oauth2.NewGooglePlatform(),
-	}
-
-	userRepo := repository.NewUserRepository()
-	accessSigner := jwt.GetAccessTokenSigner()
-	refreshSigner := jwt.GetRefreshTokenSigner()
-	dirCreator := repository.NewAudioDirCreator()
-
+//	@update 2026-04-26 10:00:00
+func NewOauth2Handler(deps Oauth2Dependencies) Oauth2Handler {
 	return &oauth2Handler{
-		initiate: command.NewInitiateLoginHandler(platforms),
-		callback: command.NewHandleCallbackHandler(platforms, userRepo, accessSigner, refreshSigner, dirCreator),
+		initiate: command.NewInitiateLoginHandler(deps.Platforms),
+		callback: command.NewHandleCallbackHandler(
+			deps.Platforms,
+			deps.UserRepo,
+			deps.AccessSigner,
+			deps.RefreshSigner,
+			deps.DirCreator,
+		),
 	}
 }
 
