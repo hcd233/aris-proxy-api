@@ -42,7 +42,7 @@ type User struct {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvider, bindID string) (*User, error) {
+func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvider, bindID string, now time.Time) (*User, error) {
 	if name.IsEmpty() {
 		return nil, ierr.New(ierr.ErrValidation, "user name is empty")
 	}
@@ -51,8 +51,8 @@ func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvid
 		email:      email,
 		avatar:     avatar,
 		permission: commonenum.PermissionPending,
-		lastLogin:  time.Now().UTC(),
-		createdAt:  time.Now().UTC(),
+		lastLogin:  now,
+		createdAt:  now,
 	}
 	switch authProvider {
 	case constant.OAuthProviderGithub:
@@ -120,8 +120,8 @@ func (u *User) UpdateProfile(name vo.UserName, email vo.Email, avatar vo.Avatar)
 //	@receiver u *User
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func (u *User) RecordLogin() {
-	u.lastLogin = time.Now().UTC()
+func (u *User) RecordLogin(now time.Time) {
+	u.lastLogin = now
 }
 
 // ChangePermission 变更权限

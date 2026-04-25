@@ -43,7 +43,7 @@ type ModelCallAudit struct {
 //	@author centonhuang
 //	@update 2026-04-24 20:00:00
 func RecordCall(input RecordCallInput) *ModelCallAudit {
-	return newAudit(input)
+	return newAudit(input, time.Now().UTC())
 }
 
 // RecordCallInput 构造审计聚合的输入参数
@@ -64,7 +64,7 @@ type RecordCallInput struct {
 }
 
 // newAudit 构造聚合但不生成事件（由调用方选择 Complete/Fail 事件）
-func newAudit(input RecordCallInput) *ModelCallAudit {
+func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 	return &ModelCallAudit{
 		apiKeyID:         input.APIKeyID,
 		modelID:          input.ModelID,
@@ -76,7 +76,7 @@ func newAudit(input RecordCallInput) *ModelCallAudit {
 		status:           input.Status,
 		userAgent:        input.UserAgent,
 		traceID:          input.TraceID,
-		createdAt:        time.Now().UTC(),
+		createdAt:        now,
 	}
 }
 

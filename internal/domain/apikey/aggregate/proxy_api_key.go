@@ -39,7 +39,7 @@ type ProxyAPIKey struct {
 //	@return error 配额不足时返回 ierr.ErrQuotaExceeded；名称/密钥为空时返回 ierr.ErrValidation
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func IssueProxyAPIKey(userID uint, name vo.APIKeyName, secret vo.APIKeySecret, quota vo.APIKeyQuota, existing int64) (*ProxyAPIKey, error) {
+func IssueProxyAPIKey(userID uint, name vo.APIKeyName, secret vo.APIKeySecret, quota vo.APIKeyQuota, existing int64, now time.Time) (*ProxyAPIKey, error) {
 	if name.IsEmpty() {
 		return nil, ierr.New(ierr.ErrValidation, "api key name is empty")
 	}
@@ -54,7 +54,7 @@ func IssueProxyAPIKey(userID uint, name vo.APIKeyName, secret vo.APIKeySecret, q
 		userID:    userID,
 		name:      name,
 		secret:    secret,
-		createdAt: time.Now().UTC(),
+		createdAt: now,
 	}, nil
 }
 

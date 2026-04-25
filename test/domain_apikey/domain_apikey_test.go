@@ -50,6 +50,7 @@ func TestIssueProxyAPIKey(t *testing.T) {
 				vo.NewAPIKeySecret(tc.Secret),
 				vo.NewAPIKeyQuota(tc.QuotaMax),
 				tc.Existing,
+				time.Now(),
 			)
 
 			switch tc.ExpectErr {
