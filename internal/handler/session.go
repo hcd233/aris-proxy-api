@@ -3,7 +3,6 @@ package handler
 
 import (
 	"context"
-	"time"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -70,8 +69,8 @@ func (h *sessionHandler) HandleListSessions(ctx context.Context, req *dto.ListSe
 	rsp.Sessions = lo.Map(views, func(v *sessionquery.SessionSummaryView, _ int) *dto.SessionSummary {
 		return &dto.SessionSummary{
 			ID:         v.ID,
-			CreatedAt:  v.CreatedAt.Format(time.DateTime),
-			UpdatedAt:  v.UpdatedAt.Format(time.DateTime),
+			CreatedAt:  v.CreatedAt,
+			UpdatedAt:  v.UpdatedAt,
 			Summary:    v.Summary,
 			MessageIDs: v.MessageIDs,
 			ToolIDs:    v.ToolIDs,
@@ -108,22 +107,22 @@ func (h *sessionHandler) HandleGetSession(ctx context.Context, req *dto.GetSessi
 			ID:        m.ID,
 			Model:     m.Model,
 			Message:   m.Message,
-			CreatedAt: m.CreatedAt.Format(time.DateTime),
+			CreatedAt: m.CreatedAt,
 		}
 	})
 	toolItems := lo.Map(view.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
 		return &dto.ToolItem{
 			ID:        t.ID,
 			Tool:      t.Tool,
-			CreatedAt: t.CreatedAt.Format(time.DateTime),
+			CreatedAt: t.CreatedAt,
 		}
 	})
 
 	rsp.Session = &dto.SessionDetail{
 		ID:         view.ID,
 		APIKeyName: view.APIKeyName,
-		CreatedAt:  view.CreatedAt.Format(time.DateTime),
-		UpdatedAt:  view.UpdatedAt.Format(time.DateTime),
+		CreatedAt:  view.CreatedAt,
+		UpdatedAt:  view.UpdatedAt,
 		Metadata:   view.Metadata,
 		Messages:   messageItems,
 		Tools:      toolItems,

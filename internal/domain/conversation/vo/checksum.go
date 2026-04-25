@@ -81,6 +81,8 @@ func ComputeMessageChecksum(msg *UnifiedMessage, toolSchemas ToolSchemaMap) stri
 //     @author centonhuang
 //     @update 2026-04-23 11:00:00
 func normalizeArgumentsWithSchema(args string, schema *commonvo.JSONSchemaProperty) string {
+	// 此处使用 map[string]any 是故意的：JSON 反序列化到未知结构的参数
+	// 没有静态类型可表达，属于 JSON Schema 表示的必要豁免。
 	var obj map[string]any
 	if err := sonic.UnmarshalString(args, &obj); err != nil {
 		return args

@@ -1,4 +1,9 @@
 // Package vo 领域公共值对象
+//
+// 注意：本包中的 JSONSchemaProperty 使用了 sonic.NoCopyRawMessage（等价于
+// json.RawMessage）。这是 JSON Schema 表示固有需要的——字段如 default、const、
+// enum、additionalProperties 可以是任意 JSON 值，没有类型安全的替代方案。
+// 本包属于"禁止 json.RawMessage"规则的故意豁免。
 package vo
 
 import (

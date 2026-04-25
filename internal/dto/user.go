@@ -1,6 +1,8 @@
 // Package dto 用户DTO
 package dto
 
+import "time"
+
 // User 用户实体
 //
 //	author centonhuang
@@ -14,12 +16,12 @@ type User struct {
 // DetailedUser 显示用户实体
 //
 //	@author centonhuang
-//	@update 2025-11-07 02:43:56
+//	@update 2026-04-25 15:00:00
 type DetailedUser struct {
-	ID         uint   `json:"id" doc:"Unique identifier for the user"`
-	CreatedAt  string `json:"createdAt,omitempty" doc:"Timestamp when the user account was created"`
-	LastLogin  string `json:"lastLogin,omitempty" doc:"Timestamp of the user's last login"`
-	Permission string `json:"permission,omitempty" doc:"Permission level of the user"`
+	ID         uint      `json:"id" doc:"Unique identifier for the user"`
+	CreatedAt  time.Time `json:"createdAt,omitempty" doc:"Timestamp when the user account was created"`
+	LastLogin  time.Time `json:"lastLogin,omitempty" doc:"Timestamp of the user's last login"`
+	Permission string    `json:"permission,omitempty" doc:"Permission level of the user"`
 	User
 }
 
