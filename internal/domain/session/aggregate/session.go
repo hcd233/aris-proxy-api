@@ -122,14 +122,28 @@ func (*Session) AggregateType() string { return constant.AggregateTypeSession }
 // Owner 返回所属 API Key 名称
 func (s *Session) Owner() vo.APIKeyOwner { return s.owner }
 
-// MessageIDs 返回消息 ID 列表（按原始对话顺序）
-func (s *Session) MessageIDs() []uint { return s.messageIDs }
+// MessageIDs 返回消息 ID 列表的防御性副本
+func (s *Session) MessageIDs() []uint {
+	out := make([]uint, len(s.messageIDs))
+	copy(out, s.messageIDs)
+	return out
+}
 
-// ToolIDs 返回工具 ID 列表
-func (s *Session) ToolIDs() []uint { return s.toolIDs }
+// ToolIDs 返回工具 ID 列表的防御性副本
+func (s *Session) ToolIDs() []uint {
+	out := make([]uint, len(s.toolIDs))
+	copy(out, s.toolIDs)
+	return out
+}
 
-// Metadata 返回请求元数据
-func (s *Session) Metadata() map[string]string { return s.metadata }
+// Metadata 返回请求元数据的防御性副本
+func (s *Session) Metadata() map[string]string {
+	out := make(map[string]string, len(s.metadata))
+	for k, v := range s.metadata {
+		out[k] = v
+	}
+	return out
+}
 
 // Summary 返回总结值对象
 func (s *Session) Summary() vo.SessionSummary { return s.summary }
