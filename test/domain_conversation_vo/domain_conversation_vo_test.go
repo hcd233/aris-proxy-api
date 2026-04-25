@@ -10,12 +10,17 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
 
+// unifiedContentCase 统一测试用例结构，覆盖 JSON 往返、Parts 序列化优先级、Tool Checksum 等场景
 type unifiedContentCase struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	JSON        string `json:"json"`
-	ExpectText  string `json:"expectText"`
-	ExpectParts int    `json:"expectParts"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	JSON        string               `json:"json"`
+	ExpectText  string               `json:"expectText"`
+	ExpectParts int                  `json:"expectParts"`
+	Text        string               `json:"text"`
+	Parts       []*vo.UnifiedContentPart `json:"parts"`
+	ToolName    string               `json:"tool_name"`
+	ToolDesc    string               `json:"tool_description"`
 }
 
 func loadUnifiedContentCases(t *testing.T) []unifiedContentCase {
@@ -36,6 +41,9 @@ func loadUnifiedContentCases(t *testing.T) []unifiedContentCase {
 func TestUnifiedContent_JSONRoundtrip(t *testing.T) {
 	cases := loadUnifiedContentCases(t)
 	for _, tc := range cases {
+		if tc.JSON == "" {
+			continue
+		}
 		t.Run(tc.Name, func(t *testing.T) {
 			var content vo.UnifiedContent
 			if err := sonic.UnmarshalString(tc.JSON, &content); err != nil {
@@ -69,13 +77,24 @@ func TestUnifiedContent_JSONRoundtrip(t *testing.T) {
 }
 
 // TestUnifiedContent_MarshalParts_Priority Parts 非空时应输出数组而非字符串
+//
+// 用例数据来自 fixtures/cases.json 中的 marshal_parts_priority
 func TestUnifiedContent_MarshalParts_Priority(t *testing.T) {
+	allCases := loadUnifiedContentCases(t)
+	var tc *unifiedContentCase
+	for i := range allCases {
+		if allCases[i].Name == "marshal_parts_priority" {
+			tc = &allCases[i]
+			break
+		}
+	}
+	if tc == nil {
+		t.Fatal("test case 'marshal_parts_priority' not found in fixtures")
+	}
+
 	content := vo.UnifiedContent{
-		Text: "fallback-text-should-be-ignored",
-		Parts: []*vo.UnifiedContentPart{
-			{Type: "text", Text: "part-1"},
-			{Type: "text", Text: "part-2"},
-		},
+		Text:  tc.Text,
+		Parts: tc.Parts,
 	}
 	encoded, err := sonic.MarshalString(&content)
 	if err != nil {
@@ -87,10 +106,24 @@ func TestUnifiedContent_MarshalParts_Priority(t *testing.T) {
 }
 
 // TestComputeToolChecksum_StableOutput 同一 tool 多次计算应得到完全相同的 checksum
+//
+// 用例数据来自 fixtures/cases.json 中的 compute_tool_checksum_stable
 func TestComputeToolChecksum_StableOutput(t *testing.T) {
+	allCases := loadUnifiedContentCases(t)
+	var tc *unifiedContentCase
+	for i := range allCases {
+		if allCases[i].Name == "compute_tool_checksum_stable" {
+			tc = &allCases[i]
+			break
+		}
+	}
+	if tc == nil {
+		t.Fatal("test case 'compute_tool_checksum_stable' not found in fixtures")
+	}
+
 	tool := &vo.UnifiedTool{
-		Name:        "search",
-		Description: "search the web",
+		Name:        tc.ToolName,
+		Description: tc.ToolDesc,
 	}
 
 	first := vo.ComputeToolChecksum(tool)
