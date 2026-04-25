@@ -3,6 +3,7 @@ package aggregate
 
 import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -33,16 +34,26 @@ type Endpoint struct {
 //	@param provider enum.ProviderType 上游协议类型（openai/anthropic）
 //	@param creds vo.UpstreamCreds 上游接入凭证
 //	@return *Endpoint
+//	@return error alias 为空、provider 无效或 creds 不完整时返回 ierr.ErrBadRequest
 //	@author centonhuang
-//	@update 2026-04-22 16:30:00
-func NewEndpoint(id uint, alias vo.EndpointAlias, provider enum.ProviderType, creds vo.UpstreamCreds) *Endpoint {
+//	@update 2026-04-24 20:00:00
+func NewEndpoint(id uint, alias vo.EndpointAlias, provider enum.ProviderType, creds vo.UpstreamCreds) (*Endpoint, error) {
+	if alias.IsEmpty() {
+		return nil, ierr.New(ierr.ErrBadRequest, "endpoint alias cannot be empty")
+	}
+	if !creds.IsValid() {
+		return nil, ierr.New(ierr.ErrBadRequest, "endpoint upstream creds are incomplete")
+	}
+	if provider != enum.ProviderOpenAI && provider != enum.ProviderAnthropic {
+		return nil, ierr.New(ierr.ErrBadRequest, "endpoint provider must be openai or anthropic")
+	}
 	ep := &Endpoint{
 		alias:    alias,
 		provider: provider,
 		creds:    creds,
 	}
 	ep.SetID(id)
-	return ep
+	return ep, nil
 }
 
 // AggregateType 实现 aggregate.Root 接口

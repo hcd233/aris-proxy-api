@@ -1,3 +1,8 @@
+// Package converter 提供 OpenAI/Anthropic 协议间的 DTO 转换。
+//
+// 注意：本包在操作 LLM tool/function 调用参数 schema 时使用了 map[string]any，
+// 因为 schema 结构是动态的（由用户/模型定义），无法用静态类型表示。这是一个有意的
+// 例外，已记录在案。
 package converter
 
 import (
