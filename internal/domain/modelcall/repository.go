@@ -1,4 +1,7 @@
 // Package modelcall ModelCall 域根（仓储接口）
+//
+// TODO: 此域尚未被 use case 层接入。LLM 代理当前通过 pool.SubmitModelCallAuditTask() 直接写入审计记录。
+// 计划在后续迭代中将审计写入迁移至 aggregate + repository 模式，届时本包将被激活。
 package modelcall
 
 import (

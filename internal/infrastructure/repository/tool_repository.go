@@ -6,7 +6,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -117,10 +116,7 @@ func (r *toolRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggregat
 	}
 	out := make([]*aggregate.Tool, 0, len(records))
 	for _, t := range records {
-		out = append(out, aggregate.RestoreTool(t.ID, toolContentFromDTO(t.Tool), t.CheckSum))
+		out = append(out, aggregate.RestoreTool(t.ID, t.Tool, t.CheckSum))
 	}
 	return out, nil
 }
-
-// toolContentFromDTO 将 dto.UnifiedTool 映射为 domain vo（类型别名透传）
-func toolContentFromDTO(t *vo.UnifiedTool) *vo.UnifiedTool { return t }

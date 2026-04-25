@@ -6,7 +6,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -125,18 +124,7 @@ func (r *messageRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggre
 	}
 	out := make([]*aggregate.Message, 0, len(records))
 	for _, m := range records {
-		out = append(out, aggregate.RestoreMessage(m.ID, messageContentFromDTO(m.Message), m.Model, m.CheckSum))
+		out = append(out, aggregate.RestoreMessage(m.ID, m.Message, m.Model, m.CheckSum))
 	}
 	return out, nil
 }
-
-// messageContentFromDTO 将 dto.UnifiedMessage 映射为 domain vo
-//
-// 因 dto.UnifiedMessage 已是 vo.UnifiedMessage 的类型别名（Step 2 成果），
-// 此处仅做类型断言包装以明确意图。
-//
-//	@param m *dto.UnifiedMessage
-//	@return *vo.UnifiedMessage
-//	@author centonhuang
-//	@update 2026-04-22 19:30:00
-func messageContentFromDTO(m *vo.UnifiedMessage) *vo.UnifiedMessage { return m }

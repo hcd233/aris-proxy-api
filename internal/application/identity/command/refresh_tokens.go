@@ -89,24 +89,3 @@ func (h *refreshTokensHandler) Handle(ctx context.Context, cmd RefreshTokensComm
 
 	return &vo.TokenPair{AccessToken: access, RefreshToken: refresh}, nil
 }
-
-// IssueTokensFor 直接为已知用户 ID 签发一对 token（用于 OAuth2 回调等场景）
-//
-//	@param access service.TokenSigner
-//	@param refresh service.TokenSigner
-//	@param userID uint
-//	@return *vo.TokenPair
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-22 17:00:00
-func IssueTokensFor(access, refresh service.TokenSigner, userID uint) (*vo.TokenPair, error) {
-	accessToken, err := access.EncodeToken(userID)
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrJWTEncode, err, "encode access token")
-	}
-	refreshToken, err := refresh.EncodeToken(userID)
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrJWTEncode, err, "encode refresh token")
-	}
-	return &vo.TokenPair{AccessToken: accessToken, RefreshToken: refreshToken}, nil
-}

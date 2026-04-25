@@ -4,25 +4,23 @@ package query
 import (
 	"context"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 )
 
-// UserExistenceChecker 用户存在性校验器（实现 application/apikey/command.UserExistenceChecker 接口）
-//
-//	@author centonhuang
-//	@update 2026-04-22 20:00:00
-type UserExistenceChecker struct {
+// userExistenceChecker 实现 application/apikey/command.UserExistenceChecker 接口
+type userExistenceChecker struct {
 	repo identity.UserRepository
 }
 
 // NewUserExistenceChecker 构造存在性校验器
 //
 //	@param repo identity.UserRepository
-//	@return *UserExistenceChecker
+//	@return command.UserExistenceChecker
 //	@author centonhuang
 //	@update 2026-04-22 20:00:00
-func NewUserExistenceChecker(repo identity.UserRepository) *UserExistenceChecker {
-	return &UserExistenceChecker{repo: repo}
+func NewUserExistenceChecker(repo identity.UserRepository) command.UserExistenceChecker {
+	return &userExistenceChecker{repo: repo}
 }
 
 // Exists 判断指定用户是否存在
@@ -34,7 +32,7 @@ func NewUserExistenceChecker(repo identity.UserRepository) *UserExistenceChecker
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 20:00:00
-func (c *UserExistenceChecker) Exists(ctx context.Context, userID uint) (bool, error) {
+func (c *userExistenceChecker) Exists(ctx context.Context, userID uint) (bool, error) {
 	user, err := c.repo.FindByID(ctx, userID)
 	if err != nil {
 		return false, err
