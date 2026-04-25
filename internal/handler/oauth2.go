@@ -93,6 +93,8 @@ func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq
 		State:    req.Body.State,
 	})
 	if err != nil {
+		logger.WithCtx(ctx).Error("[OAuth2Handler] Callback failed",
+			zap.String("platform", req.Body.Platform), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/domain/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -60,7 +61,7 @@ func loadToolSchemas(t *testing.T) util.ToolSchemaMap {
 	if err != nil {
 		t.Fatalf("failed to read fixtures/tool_schemas.json: %v", err)
 	}
-	var schemas map[string]*dto.JSONSchemaProperty
+	var schemas map[string]*vo.JSONSchemaProperty
 	if err := sonic.Unmarshal(data, &schemas); err != nil {
 		t.Fatalf("failed to unmarshal fixtures/tool_schemas.json: %v", err)
 	}

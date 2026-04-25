@@ -62,6 +62,7 @@ func (h *sessionHandler) HandleListSessions(ctx context.Context, req *dto.ListSe
 		PageSize:        req.PageSize,
 	})
 	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] List sessions failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}
@@ -98,6 +99,8 @@ func (h *sessionHandler) HandleGetSession(ctx context.Context, req *dto.GetSessi
 		OwnerAPIKeyName: apiKeyName,
 	})
 	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Get session failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}

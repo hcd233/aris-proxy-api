@@ -4,20 +4,50 @@
         "description": "New OAuth2 user should be registered and receive tokens",
         "platform": "github",
         "code": "auth-code-123",
-        "expected_is_new": true
+        "state": "",
+        "stub_user_info": {
+            "gh_bind": "github-user-456",
+            "name": "newuser",
+            "email": "newuser@example.com",
+            "avatar": "https://example.com/avatar.png"
+        },
+        "stub_existing_user": null,
+        "expected_is_new": true,
+        "expect_error_kind": ""
     },
     {
         "name": "callback_existing_user",
         "description": "Existing OAuth2 user should get token pair without registration",
         "platform": "github",
-        "code": "auth-code-456",
-        "expected_is_new": false
+        "code": "auth-code-789",
+        "state": "",
+        "stub_user_info": {
+            "gh_bind": "github-user-existing",
+            "name": "existinguser",
+            "email": "existing@example.com",
+            "avatar": ""
+        },
+        "stub_existing_user": {
+            "id": "42",
+            "gh_bind": "github-user-existing",
+            "name": "existinguser",
+            "email": "existing@example.com",
+            "avatar": "",
+            "last_login": "2026-01-15T10:00:00Z",
+            "created_at": "2025-06-01T00:00:00Z"
+        },
+        "expected_is_new": false,
+        "expect_error_kind": ""
     },
     {
         "name": "callback_invalid_platform",
         "description": "Invalid platform should return error",
         "platform": "invalid",
         "code": "some-code",
+        "state": "",
+        "stub_user_info": null,
+        "stub_existing_user": null,
+        "expected_is_new": false,
         "expect_error_kind": "bad_request"
     },
     {
@@ -25,7 +55,21 @@
         "description": "Invalid state should return unauthorized error",
         "platform": "github",
         "code": "some-code",
-        "state": "invalid-state",
+        "state": "invalid-state-xyz",
+        "stub_user_info": null,
+        "stub_existing_user": null,
+        "expected_is_new": false,
         "expect_error_kind": "unauthorized"
+    },
+    {
+        "name": "callback_exchange_failure",
+        "description": "Token exchange failure should return internal error",
+        "platform": "github",
+        "code": "exchange-fail-code",
+        "state": "",
+        "stub_user_info": null,
+        "stub_existing_user": null,
+        "expected_is_new": false,
+        "expect_error_kind": "internal"
     }
 ]
