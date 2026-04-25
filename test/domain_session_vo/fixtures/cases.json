@@ -1,0 +1,74 @@
+[
+    {
+        "name": "session_summary_valid",
+        "description": "NewSessionSummary with valid text and no error",
+        "text": "用户询问 API 用法",
+        "error": "",
+        "expect_failed": false,
+        "expect_empty": false
+    },
+    {
+        "name": "session_summary_failed",
+        "description": "NewSessionSummary with error state",
+        "text": "",
+        "error": "summarization timeout",
+        "expect_failed": true,
+        "expect_empty": true
+    },
+    {
+        "name": "session_summary_empty_text",
+        "description": "NewSessionSummary with empty text should be empty",
+        "text": "",
+        "error": "",
+        "expect_failed": false,
+        "expect_empty": true
+    },
+    {
+        "name": "session_summary_whitespace",
+        "description": "NewSessionSummary with whitespace text should be empty",
+        "text": "   ",
+        "error": "",
+        "expect_failed": false,
+        "expect_empty": true
+    },
+    {
+        "name": "session_score_valid",
+        "description": "NewSessionScore should compute total as mean",
+        "coherence": 8.0,
+        "depth": 7.0,
+        "value": 9.0,
+        "expected_total": 8.0,
+        "version": "v1",
+        "expect_empty": false
+    },
+    {
+        "name": "session_score_zero",
+        "description": "NewSessionScore with zeros should be valid",
+        "coherence": 0.0,
+        "depth": 0.0,
+        "value": 0.0,
+        "expected_total": 0.0,
+        "version": "v1",
+        "expect_empty": false
+    },
+    {
+        "name": "session_score_failed",
+        "description": "NewFailedSessionScore should set error but still mark At",
+        "error": "scoring failed: LLM unavailable",
+        "expect_failed": true,
+        "expect_empty": false
+    },
+    {
+        "name": "restore_session_score",
+        "description": "RestoreSessionScore should preserve all fields including total",
+        "coherence": 9.5,
+        "depth": 8.5,
+        "value": 7.5,
+        "expected_total": 8.5,
+        "total": 8.5,
+        "version": "v2",
+        "error": "",
+        "expect_failed": false,
+        "expect_empty": false
+    }
+]
