@@ -104,25 +104,25 @@ func (p *githubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	// 获取用户基本信息
 	resp, err := client.Get(constant.GithubUserURL)
 	if err != nil {
-		return vo.OAuthUserInfo{}, err
+		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	var userInfo GithubUserInfo
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return vo.OAuthUserInfo{}, err
+		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
 
 	// 获取用户邮箱信息
 	emailResp, err := client.Get(constant.GithubUserEmailURL)
 	if err != nil {
-		return vo.OAuthUserInfo{}, err
+		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
 	defer func() { _ = emailResp.Body.Close() }()
 
 	var emails []GithubEmail
 	if err := sonic.ConfigDefault.NewDecoder(emailResp.Body).Decode(&emails); err != nil {
-		return vo.OAuthUserInfo{}, err
+		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
 
 	// 选择主邮箱
@@ -133,10 +133,10 @@ func (p *githubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		}
 	}
 
-	return vo.OAuthUserInfo{
-		ID:     userInfo.GetID(),
-		Name:   userInfo.GetName(),
-		Email:  userInfo.GetEmail(),
-		Avatar: userInfo.GetAvatar(),
-	}, nil
+	return vo.NewOAuthUserInfo(
+		userInfo.GetID(),
+		userInfo.GetName(),
+		userInfo.GetEmail(),
+		userInfo.GetAvatar(),
+	), nil
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -25,6 +25,14 @@ type UserHandler interface {
 	HandleUpdateUser(ctx context.Context, req *dto.UpdateUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
+// UserDependencies UserHandler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type UserDependencies struct {
+	UserRepo identity.UserRepository
+}
+
 type userHandler struct {
 	getCurrentUser query.GetCurrentUserHandler
 	updateProfile  command.UpdateProfileHandler
@@ -32,14 +40,14 @@ type userHandler struct {
 
 // NewUserHandler 创建用户处理器
 //
+//	@param deps UserDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
 //	@return UserHandler
 //	@author centonhuang
-//	@update 2026-04-22 20:00:00
-func NewUserHandler() UserHandler {
-	userRepo := repository.NewUserRepository()
+//	@update 2026-04-26 10:00:00
+func NewUserHandler(deps UserDependencies) UserHandler {
 	return &userHandler{
-		getCurrentUser: query.NewGetCurrentUserHandler(userRepo),
-		updateProfile:  command.NewUpdateProfileHandler(userRepo),
+		getCurrentUser: query.NewGetCurrentUserHandler(deps.UserRepo),
+		updateProfile:  command.NewUpdateProfileHandler(deps.UserRepo),
 	}
 }
 
@@ -106,7 +114,7 @@ func (h *userHandler) HandleUpdateUser(ctx context.Context, req *dto.UpdateUserR
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Update user failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrDBUpdate.BizError())
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}
 	return util.WrapHTTPResponse(rsp, nil)

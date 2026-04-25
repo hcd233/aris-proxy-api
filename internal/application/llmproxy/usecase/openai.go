@@ -337,6 +337,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, log *z
 		if err != nil {
 			log.Error("[OpenAIUseCase] Failed to convert Anthropic response", zap.Error(err))
 			writer.WriteError(fiber.StatusInternalServerError, openAIInternalErrorBody)
+			auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 		completion.Model = req.Body.Model
@@ -552,6 +553,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, lo
 		if err != nil {
 			log.Error("[OpenAIUseCase] Failed to convert Anthropic response", zap.Error(err))
 			writer.WriteError(fiber.StatusInternalServerError, openAIInternalErrorBody)
+			auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 		completion.Model = req.Body.Model
@@ -602,14 +604,9 @@ func (u *openAIUseCase) storeOpenAIChatFromAnthropicMsg(ctx context.Context, log
 
 // storeOpenAIChatMessages ChatCompletion 存储基元：req.Messages + assistantMsg → UnifiedMessage 列表
 func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
-	unifiedMessages := make([]*dto.UnifiedMessage, 0, len(req.Body.Messages)+1)
-	for _, msg := range req.Body.Messages {
-		um, err := dto.FromOpenAIMessage(msg)
-		if err != nil {
-			log.Error("[OpenAIUseCase] Failed to convert openai message", zap.Error(err))
-			return
-		}
-		unifiedMessages = append(unifiedMessages, um)
+	unifiedMessages, unifiedTools, err := u.convertRequestMessages(log, req)
+	if err != nil {
+		return
 	}
 
 	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
@@ -618,10 +615,6 @@ func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, log *zap.Lo
 		return
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
-
-	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *dto.UnifiedTool {
-		return dto.FromOpenAITool(&tool)
-	})
 
 	var inputTokens, outputTokens int
 	if usage != nil {
@@ -643,6 +636,32 @@ func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, log *zap.Lo
 	}
 }
 
+// convertRequestMessages 将 OpenAI 请求消息和工具转换为统一格式
+//
+//	@receiver u *openAIUseCase
+//	@param log *zap.Logger
+//	@param req *dto.OpenAIChatCompletionRequest
+//	@return []*dto.UnifiedMessage
+//	@return []*dto.UnifiedTool
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func (u *openAIUseCase) convertRequestMessages(log *zap.Logger, req *dto.OpenAIChatCompletionRequest) ([]*dto.UnifiedMessage, []*dto.UnifiedTool, error) {
+	unifiedMessages := make([]*dto.UnifiedMessage, 0, len(req.Body.Messages))
+	for _, msg := range req.Body.Messages {
+		um, err := dto.FromOpenAIMessage(msg)
+		if err != nil {
+			log.Error("[OpenAIUseCase] Failed to convert openai message", zap.Error(err))
+			return nil, nil, err
+		}
+		unifiedMessages = append(unifiedMessages, um)
+	}
+	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *dto.UnifiedTool {
+		return dto.FromOpenAITool(&tool)
+	})
+	return unifiedMessages, unifiedTools, nil
+}
+
 // ==================== Store Helpers: Response API 路径 ====================
 
 // storeResponseFromRsp Response API 原生响应 → 消息存储
@@ -658,21 +677,14 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, log *zap.Logge
 	default:
 		return
 	}
-	if len(rsp.Output) == 0 {
-		return
-	}
 
 	unifiedMessages, ok := buildResponseRequestUnifiedMessages(log, req)
 	if !ok {
 		return
 	}
 
-	outputMsgs, err := dto.FromResponseAPIOutputItems(rsp.Output)
-	if err != nil {
-		log.Error("[OpenAIUseCase] Failed to convert response output items", zap.Error(err))
-		return
-	}
-	if len(outputMsgs) == 0 {
+	outputMsgs, ok := convertResponseOutput(log, rsp)
+	if !ok {
 		return
 	}
 	unifiedMessages = append(unifiedMessages, outputMsgs...)
@@ -684,6 +696,26 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, log *zap.Logge
 	}
 
 	submitResponseMessageStoreTask(ctx, log, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
+}
+
+// convertResponseOutput 将 Response API 响应输出项转换为统一消息格式
+//
+//	@param log *zap.Logger
+//	@param rsp *dto.OpenAICreateResponseRsp
+//	@return []*dto.UnifiedMessage 转换后的统一消息列表
+//	@return bool 是否转换成功
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func convertResponseOutput(log *zap.Logger, rsp *dto.OpenAICreateResponseRsp) ([]*dto.UnifiedMessage, bool) {
+	outputMsgs, err := dto.FromResponseAPIOutputItems(rsp.Output)
+	if err != nil {
+		log.Error("[OpenAIUseCase] Failed to convert response output items", zap.Error(err))
+		return nil, false
+	}
+	if len(outputMsgs) == 0 {
+		return nil, false
+	}
+	return outputMsgs, true
 }
 
 // storeResponseFromAnthropicMsg Response API Anthropic 变体 → 消息存储

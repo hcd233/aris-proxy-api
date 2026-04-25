@@ -73,8 +73,8 @@ var _ usecase.CountTokens = (*mockAnthropicCountTokens)(nil)
 
 // buildAnthropicTestEndpoint 创建测试用 Anthropic Endpoint 聚合
 func buildAnthropicTestEndpoint(provider enum.ProviderType) *aggregate.Endpoint {
-	creds := vo.NewUpstreamCreds("sk-ant-test-api-key", "https://api.anthropic.com", "claude-sonnet-4-20250514")
-	ep, _ := aggregate.NewEndpoint(2, "claude-alias", provider, creds)
+	creds, _ := vo.NewUpstreamCreds("sk-ant-test-api-key", "https://api.anthropic.com", "claude-sonnet-4-20250514")
+	ep, _ := aggregate.CreateEndpoint(2, "claude-alias", provider, creds)
 	return ep
 }
 

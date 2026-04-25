@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/samber/lo"
-
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -72,6 +71,7 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 	updates := map[string]any{
 		"message_ids": s.MessageIDs(),
 		"tool_ids":    s.ToolIDs(),
+		"metadata":    s.Metadata(),
 	}
 	if summary := s.Summary(); !summary.IsEmpty() || summary.Failed() {
 		updates["summary"] = summary.Text()

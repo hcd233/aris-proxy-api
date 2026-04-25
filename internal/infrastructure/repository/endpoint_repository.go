@@ -58,11 +58,15 @@ func (r *endpointRepository) FindByAliasAndProvider(ctx context.Context, alias v
 
 // toAggregate 将 GORM 模型映射为 Endpoint 聚合根
 func toAggregate(m *dbmodel.ModelEndpoint) (*aggregate.Endpoint, error) {
-	return aggregate.NewEndpoint(
+	creds, err := vo.NewUpstreamCreds(m.BaseURL, m.APIKey, m.Model)
+	if err != nil {
+		return nil, err
+	}
+	return aggregate.CreateEndpoint(
 		m.ID,
 		vo.EndpointAlias(m.Alias),
 		m.Provider,
-		vo.NewUpstreamCreds(m.BaseURL, m.APIKey, m.Model),
+		creds,
 	)
 }
 

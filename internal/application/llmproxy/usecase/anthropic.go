@@ -311,6 +311,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log
 		if err != nil {
 			log.Error("[AnthropicUseCase] Failed to convert OpenAI response", zap.Error(err))
 			writer.WriteError(fiber.StatusInternalServerError, anthropicInternalErrorBody)
+			auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
 		anthropicMsg.Model = exposedModel
@@ -342,32 +343,9 @@ func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, log *zap.L
 }
 
 func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
-	unifiedMessages := make([]*dto.UnifiedMessage, 0, len(req.Body.Messages)+1)
-	for _, msg := range req.Body.Messages {
-		um, err := dto.FromAnthropicMessage(msg)
-		if err != nil {
-			log.Error("[AnthropicUseCase] Failed to convert anthropic message", zap.Error(err))
-			return
-		}
-		unifiedMessages = append(unifiedMessages, um)
-	}
-
-	aiMsg, err := dto.FromAnthropicResponse(assistantMsg)
+	unifiedMessages, unifiedTools, inputTokens, outputTokens, err := u.convertAnthropicRequestMessages(log, req, assistantMsg)
 	if err != nil {
-		log.Error("[AnthropicUseCase] Failed to convert anthropic response", zap.Error(err))
 		return
-	}
-	unifiedMessages = append(unifiedMessages, aiMsg)
-
-	unifiedTools := make([]*dto.UnifiedTool, 0, len(req.Body.Tools))
-	for _, tool := range req.Body.Tools {
-		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
-	}
-
-	var inputTokens, outputTokens int
-	if assistantMsg.Usage != nil {
-		inputTokens = assistantMsg.Usage.InputTokens
-		outputTokens = assistantMsg.Usage.OutputTokens
 	}
 
 	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
@@ -382,4 +360,49 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, log *zap.
 	}); err != nil {
 		log.Error("[AnthropicUseCase] Failed to submit message store task", zap.Error(err))
 	}
+}
+
+// convertAnthropicRequestMessages 将 Anthropic 请求消息和响应转换为统一格式
+//
+//	@receiver u *anthropicUseCase
+//	@param log *zap.Logger
+//	@param req *dto.AnthropicCreateMessageRequest
+//	@param assistantMsg *dto.AnthropicMessage
+//	@return []*dto.UnifiedMessage 统一消息列表
+//	@return []*dto.UnifiedTool 统一工具列表
+//	@return int 输入 token 数
+//	@return int 输出 token 数
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func (u *anthropicUseCase) convertAnthropicRequestMessages(log *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage) ([]*dto.UnifiedMessage, []*dto.UnifiedTool, int, int, error) {
+	unifiedMessages := make([]*dto.UnifiedMessage, 0, len(req.Body.Messages)+1)
+	for _, msg := range req.Body.Messages {
+		um, err := dto.FromAnthropicMessage(msg)
+		if err != nil {
+			log.Error("[AnthropicUseCase] Failed to convert anthropic message", zap.Error(err))
+			return nil, nil, 0, 0, err
+		}
+		unifiedMessages = append(unifiedMessages, um)
+	}
+
+	aiMsg, err := dto.FromAnthropicResponse(assistantMsg)
+	if err != nil {
+		log.Error("[AnthropicUseCase] Failed to convert anthropic response", zap.Error(err))
+		return nil, nil, 0, 0, err
+	}
+	unifiedMessages = append(unifiedMessages, aiMsg)
+
+	unifiedTools := make([]*dto.UnifiedTool, 0, len(req.Body.Tools))
+	for _, tool := range req.Body.Tools {
+		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
+	}
+
+	var inputTokens, outputTokens int
+	if assistantMsg.Usage != nil {
+		inputTokens = assistantMsg.Usage.InputTokens
+		outputTokens = assistantMsg.Usage.OutputTokens
+	}
+
+	return unifiedMessages, unifiedTools, inputTokens, outputTokens, nil
 }

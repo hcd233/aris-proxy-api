@@ -10,8 +10,8 @@ import (
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -25,6 +25,14 @@ type SessionHandler interface {
 	HandleGetSession(ctx context.Context, req *dto.GetSessionReq) (*dto.HTTPResponse[*dto.GetSessionRsp], error)
 }
 
+// SessionDependencies SessionHandler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type SessionDependencies struct {
+	SessionReadRepo session.SessionReadRepository
+}
+
 type sessionHandler struct {
 	list sessionquery.ListSessionsHandler
 	get  sessionquery.GetSessionHandler
@@ -32,14 +40,14 @@ type sessionHandler struct {
 
 // NewSessionHandler 创建Session处理器
 //
+//	@param deps SessionDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
 //	@return SessionHandler
 //	@author centonhuang
-//	@update 2026-04-24 20:00:00
-func NewSessionHandler() SessionHandler {
-	sessionReadRepo := repository.NewSessionReadRepository()
+//	@update 2026-04-26 10:00:00
+func NewSessionHandler(deps SessionDependencies) SessionHandler {
 	return &sessionHandler{
-		list: sessionquery.NewListSessionsHandler(sessionReadRepo),
-		get:  sessionquery.NewGetSessionHandler(sessionReadRepo),
+		list: sessionquery.NewListSessionsHandler(deps.SessionReadRepo),
+		get:  sessionquery.NewGetSessionHandler(deps.SessionReadRepo),
 	}
 }
 

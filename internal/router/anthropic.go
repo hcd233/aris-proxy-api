@@ -6,6 +6,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
@@ -15,7 +17,12 @@ import (
 //	@author centonhuang
 //	@update 2026-03-17 10:00:00
 func initAnthropicRouter(anthropicGroup huma.API) {
-	anthropicHandler := handler.NewAnthropicHandler()
+	anthropicHandler := handler.NewAnthropicHandler(handler.AnthropicDependencies{
+		EndpointRepo:     repository.NewEndpointRepository(),
+		EndpointReadRepo: repository.NewEndpointReadRepository(),
+		OpenAIProxy:      transport.NewOpenAIProxy(),
+		AnthropicProxy:   transport.NewAnthropicProxy(),
+	})
 
 	anthropicGroup.UseMiddleware(middleware.APIKeyMiddleware())
 

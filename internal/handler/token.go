@@ -3,14 +3,15 @@ package handler
 
 import (
 	"context"
+	"strings"
 
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
+	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -23,22 +24,32 @@ type TokenHandler interface {
 	HandleRefreshToken(ctx context.Context, req *dto.RefreshTokenReq) (*dto.HTTPResponse[*dto.RefreshTokenRsp], error)
 }
 
+// TokenDependencies TokenHandler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type TokenDependencies struct {
+	UserRepo      identity.UserRepository
+	AccessSigner  identityservice.TokenSigner
+	RefreshSigner identityservice.TokenSigner
+}
+
 type tokenHandler struct {
 	refresh command.RefreshTokensHandler
 }
 
 // NewTokenHandler 创建令牌处理器
 //
-//	return TokenHandler
-//	author centonhuang
-//	update 2026-04-22 20:00:00
-func NewTokenHandler() TokenHandler {
-	userRepo := repository.NewUserRepository()
+//	@param deps TokenDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
+//	@return TokenHandler
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+func NewTokenHandler(deps TokenDependencies) TokenHandler {
 	return &tokenHandler{
 		refresh: command.NewRefreshTokensHandler(
-			userRepo,
-			jwt.GetAccessTokenSigner(),
-			jwt.GetRefreshTokenSigner(),
+			deps.UserRepo,
+			deps.AccessSigner,
+			deps.RefreshSigner,
 		),
 	}
 }
@@ -55,18 +66,23 @@ func NewTokenHandler() TokenHandler {
 func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshTokenReq) (*dto.HTTPResponse[*dto.RefreshTokenRsp], error) {
 	rsp := &dto.RefreshTokenRsp{}
 
+	if strings.TrimSpace(req.Body.RefreshToken) == "" {
+		rsp.Error = ierr.ErrValidation.BizError()
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+
 	pair, err := h.refresh.Handle(ctx, command.RefreshTokensCommand{
 		RefreshToken: req.Body.RefreshToken,
 	})
 	if err != nil {
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		logger.WithCtx(ctx).Warn("[TokenHandler] Refresh token failed",
 			zap.String("refreshToken", util.MaskSecret(req.Body.RefreshToken)),
 			zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.AccessToken = pair.AccessToken
-	rsp.RefreshToken = pair.RefreshToken
+	rsp.AccessToken = pair.AccessToken()
+	rsp.RefreshToken = pair.RefreshToken()
 	return util.WrapHTTPResponse(rsp, nil)
 }

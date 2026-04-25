@@ -108,7 +108,7 @@ func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.AccessToken = result.TokenPair.AccessToken
-	rsp.RefreshToken = result.TokenPair.RefreshToken
+	rsp.AccessToken = result.TokenPair.AccessToken()
+	rsp.RefreshToken = result.TokenPair.RefreshToken()
 	return util.WrapHTTPResponse(rsp, nil)
 }

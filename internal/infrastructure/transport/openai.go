@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"go.uber.org/zap"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -16,7 +18,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
-	"go.uber.org/zap"
 )
 
 // OpenAIProxy OpenAI 协议上游代理

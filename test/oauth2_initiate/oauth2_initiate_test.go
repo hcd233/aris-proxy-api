@@ -67,7 +67,7 @@ func (p *stubPlatform) ExchangeToken(_ context.Context, _ string) (*xoauth2.Toke
 }
 
 func (p *stubPlatform) GetUserInfo(_ context.Context, _ *xoauth2.Token) (vo.OAuthUserInfo, error) {
-	return vo.OAuthUserInfo{}, errors.New("not used in initiate tests")
+	return vo.NewOAuthUserInfo("", "", "", ""), errors.New("not used in initiate tests")
 }
 
 func TestInitiateLogin(t *testing.T) {
