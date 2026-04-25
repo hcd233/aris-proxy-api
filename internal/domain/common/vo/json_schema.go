@@ -1,9 +1,13 @@
-// Package vo 领域公共值对象
+// Package vo 提供领域通用的值对象。
 //
-// 注意：本包中的 JSONSchemaProperty 使用了 sonic.NoCopyRawMessage（等价于
+// 注意1：本包中的 JSONSchemaProperty 使用了 sonic.NoCopyRawMessage（等价于
 // json.RawMessage）。这是 JSON Schema 表示固有需要的——字段如 default、const、
 // enum、additionalProperties 可以是任意 JSON 值，没有类型安全的替代方案。
 // 本包属于"禁止 json.RawMessage"规则的故意豁免。
+//
+// 注意2：由于 Huma v2 OpenAPI 规范生成需要，部分 VO 实现了 huma.SchemaProvider
+// 接口，引入了对 huma v2 的依赖。这是一个有意的权衡——保持 Schema 定义与类型定义
+// 在一起，避免在 application/infrastructure 层维护重复的 OpenAPI 注解。
 package vo
 
 import (
