@@ -27,10 +27,9 @@ type RefreshTokensHandler interface {
 }
 
 type refreshTokensHandler struct {
-	repo     identity.UserRepository
-	access   service.TokenSigner
-	refresh  service.TokenSigner
-	logLabel string
+	repo    identity.UserRepository
+	access  service.TokenSigner
+	refresh service.TokenSigner
 }
 
 // NewRefreshTokensHandler 构造刷新处理器
@@ -42,7 +41,7 @@ type refreshTokensHandler struct {
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
 func NewRefreshTokensHandler(repo identity.UserRepository, access, refresh service.TokenSigner) RefreshTokensHandler {
-	return &refreshTokensHandler{repo: repo, access: access, refresh: refresh, logLabel: "[IdentityCommand]"}
+	return &refreshTokensHandler{repo: repo, access: access, refresh: refresh}
 }
 
 // Handle 执行刷新：解析 refresh token → 校验用户存在 → 重新签发一对新 token
@@ -59,33 +58,33 @@ func (h *refreshTokensHandler) Handle(ctx context.Context, cmd RefreshTokensComm
 
 	userID, err := h.refresh.DecodeToken(cmd.RefreshToken)
 	if err != nil {
-		log.Error(h.logLabel+" Decode refresh token failed",
+		log.Error("[IdentityCommand] Decode refresh token failed",
 			zap.String("refreshToken", util.MaskSecret(cmd.RefreshToken)), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrJWTDecode, err, "decode refresh token")
 	}
 
 	user, err := h.repo.FindByID(ctx, userID)
 	if err != nil {
-		log.Error(h.logLabel+" FindByID failed", zap.Error(err), zap.Uint("userID", userID))
+		log.Error("[IdentityCommand] FindByID failed", zap.Error(err), zap.Uint("userID", userID))
 		return nil, err
 	}
 	if user == nil {
-		log.Warn(h.logLabel+" User not found during refresh", zap.Uint("userID", userID))
+		log.Warn("[IdentityCommand] User not found during refresh", zap.Uint("userID", userID))
 		return nil, ierr.New(ierr.ErrDataNotExists, "user not found")
 	}
 
 	access, err := h.access.EncodeToken(userID)
 	if err != nil {
-		log.Error(h.logLabel+" Encode access token failed", zap.Error(err))
+		log.Error("[IdentityCommand] Encode access token failed", zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrJWTEncode, err, "encode access token")
 	}
 	refresh, err := h.refresh.EncodeToken(userID)
 	if err != nil {
-		log.Error(h.logLabel+" Encode refresh token failed", zap.Error(err))
+		log.Error("[IdentityCommand] Encode refresh token failed", zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrJWTEncode, err, "encode refresh token")
 	}
 
-	log.Info(h.logLabel+" Refresh token success", zap.Uint("userID", userID))
+	log.Info("[IdentityCommand] Refresh token success", zap.Uint("userID", userID))
 
 	return &vo.TokenPair{AccessToken: access, RefreshToken: refresh}, nil
 }
