@@ -27,25 +27,25 @@ type Endpoint struct {
 	creds    vo.UpstreamCreds
 }
 
-// NewEndpoint 构造 Endpoint 聚合根
+// CreateEndpoint 构造 Endpoint 聚合根
 //
 //	@param id uint 聚合唯一 ID（DB 主键）
 //	@param alias vo.EndpointAlias 对外暴露的模型别名
 //	@param provider enum.ProviderType 上游协议类型（openai/anthropic）
 //	@param creds vo.UpstreamCreds 上游接入凭证
 //	@return *Endpoint
-//	@return error alias 为空、provider 无效或 creds 不完整时返回 ierr.ErrBadRequest
+//	@return error alias 为空、provider 无效或 creds 不完整时返回 ierr.ErrValidation
 //	@author centonhuang
-//	@update 2026-04-24 20:00:00
-func NewEndpoint(id uint, alias vo.EndpointAlias, provider enum.ProviderType, creds vo.UpstreamCreds) (*Endpoint, error) {
+//	@update 2026-04-26 10:00:00
+func CreateEndpoint(id uint, alias vo.EndpointAlias, provider enum.ProviderType, creds vo.UpstreamCreds) (*Endpoint, error) {
 	if alias.IsEmpty() {
-		return nil, ierr.New(ierr.ErrBadRequest, "endpoint alias cannot be empty")
+		return nil, ierr.New(ierr.ErrValidation, "endpoint alias cannot be empty")
 	}
 	if !creds.IsValid() {
-		return nil, ierr.New(ierr.ErrBadRequest, "endpoint upstream creds are incomplete")
+		return nil, ierr.New(ierr.ErrValidation, "endpoint upstream creds are incomplete")
 	}
 	if provider != enum.ProviderOpenAI && provider != enum.ProviderAnthropic {
-		return nil, ierr.New(ierr.ErrBadRequest, "endpoint provider must be openai or anthropic")
+		return nil, ierr.New(ierr.ErrValidation, "endpoint provider must be openai or anthropic")
 	}
 	ep := &Endpoint{
 		alias:    alias,

@@ -2,8 +2,11 @@
 package vo
 
 import (
+	"fmt"
 	"strings"
 	"time"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
 // SessionSummary 会话摘要值对象
@@ -16,8 +19,8 @@ import (
 //	@author centonhuang
 //	@update 2026-04-24 14:00:00
 type SessionSummary struct {
-	text  string
-	error string
+	text   string
+	errMsg string
 }
 
 // NewSessionSummary 构造摘要值对象
@@ -28,7 +31,7 @@ type SessionSummary struct {
 //	@author centonhuang
 //	@update 2026-04-24 14:00:00
 func NewSessionSummary(text, errMsg string) SessionSummary {
-	return SessionSummary{text: text, error: errMsg}
+	return SessionSummary{text: text, errMsg: errMsg}
 }
 
 // Text 返回摘要文本
@@ -45,7 +48,7 @@ func (s SessionSummary) Text() string { return s.text }
 //	@return string
 //	@author centonhuang
 //	@update 2026-04-24 14:00:00
-func (s SessionSummary) Error() string { return s.error }
+func (s SessionSummary) Error() string { return s.errMsg }
 
 // IsEmpty 判断是否为空
 //
@@ -61,7 +64,7 @@ func (s SessionSummary) IsEmpty() bool { return strings.TrimSpace(s.text) == "" 
 //	@return bool
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func (s SessionSummary) Failed() bool { return s.error != "" }
+func (s SessionSummary) Failed() bool { return s.errMsg != "" }
 
 // SessionScore 会话评分值对象
 //
@@ -77,7 +80,7 @@ type SessionScore struct {
 	total     float64
 	version   string
 	at        *time.Time
-	error     string
+	errMsg    string
 }
 
 // Coherence 返回连贯性分
@@ -99,7 +102,7 @@ func (s SessionScore) Version() string { return s.version }
 func (s SessionScore) At() *time.Time { return s.at }
 
 // Error 返回失败原因（成功时为空字符串）
-func (s SessionScore) Error() string { return s.error }
+func (s SessionScore) Error() string { return s.errMsg }
 
 // IsEmpty 判断是否未评分
 //
@@ -107,7 +110,7 @@ func (s SessionScore) Error() string { return s.error }
 //	@return bool
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func (s SessionScore) IsEmpty() bool { return s.at == nil && s.error == "" }
+func (s SessionScore) IsEmpty() bool { return s.at == nil && s.errMsg == "" }
 
 // Failed 判断评分是否失败
 //
@@ -115,19 +118,29 @@ func (s SessionScore) IsEmpty() bool { return s.at == nil && s.error == "" }
 //	@return bool
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func (s SessionScore) Failed() bool { return s.error != "" }
+func (s SessionScore) Failed() bool { return s.errMsg != "" }
 
 // NewSessionScore 构造评分值对象（均值自动计算）
 //
-//	@param coherence float64
-//	@param depth float64
-//	@param value float64
+//	@param coherence float64 连贯性评分（1-10）
+//	@param depth float64 深度评分（1-10）
+//	@param value float64 价值评分（1-10）
 //	@param version string
 //	@param at time.Time
 //	@return SessionScore
+//	@return error 任一维度不在 1-10 范围内时返回 ierr.ErrValidation
 //	@author centonhuang
-//	@update 2026-04-22 19:30:00
-func NewSessionScore(coherence, depth, value float64, version string, at time.Time) SessionScore {
+//	@update 2026-04-26 10:00:00
+func NewSessionScore(coherence, depth, value float64, version string, at time.Time) (SessionScore, error) {
+	if coherence < 1 || coherence > 10 {
+		return SessionScore{}, ierr.New(ierr.ErrValidation, fmt.Sprintf("coherence score %.1f out of range [1,10]", coherence))
+	}
+	if depth < 1 || depth > 10 {
+		return SessionScore{}, ierr.New(ierr.ErrValidation, fmt.Sprintf("depth score %.1f out of range [1,10]", depth))
+	}
+	if value < 1 || value > 10 {
+		return SessionScore{}, ierr.New(ierr.ErrValidation, fmt.Sprintf("value score %.1f out of range [1,10]", value))
+	}
 	return SessionScore{
 		coherence: coherence,
 		depth:     depth,
@@ -135,7 +148,7 @@ func NewSessionScore(coherence, depth, value float64, version string, at time.Ti
 		total:     (coherence + depth + value) / 3.0,
 		version:   version,
 		at:        &at,
-	}
+	}, nil
 }
 
 // NewFailedSessionScore 构造失败的评分值对象
@@ -147,8 +160,8 @@ func NewSessionScore(coherence, depth, value float64, version string, at time.Ti
 //	@update 2026-04-22 19:30:00
 func NewFailedSessionScore(reason string, at time.Time) SessionScore {
 	return SessionScore{
-		error: reason,
-		at:    &at,
+		errMsg: reason,
+		at:     &at,
 	}
 }
 
@@ -172,6 +185,6 @@ func RestoreSessionScore(coherence, depth, value, total float64, version string,
 		total:     total,
 		version:   version,
 		at:        at,
-		error:     errMsg,
+		errMsg:    errMsg,
 	}
 }

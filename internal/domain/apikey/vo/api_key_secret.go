@@ -1,6 +1,9 @@
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/common/util"
+import (
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/util"
+)
 
 // APIKeySecret API Key 密钥值（对客户端隐藏的敏感数据）
 //
@@ -20,10 +23,14 @@ type APIKeySecret struct {
 //
 //	@param raw string
 //	@return APIKeySecret
+//	@return error raw 为空时返回 ierr.ErrValidation
 //	@author centonhuang
-//	@update 2026-04-22 17:00:00
-func NewAPIKeySecret(raw string) APIKeySecret {
-	return APIKeySecret{value: raw}
+//	@update 2026-04-26 10:00:00
+func NewAPIKeySecret(raw string) (APIKeySecret, error) {
+	if raw == "" {
+		return APIKeySecret{}, ierr.New(ierr.ErrValidation, "API key secret cannot be empty")
+	}
+	return APIKeySecret{value: raw}, nil
 }
 
 // Raw 返回原始密钥值（仅创建时返回给客户端；后续不可获取）

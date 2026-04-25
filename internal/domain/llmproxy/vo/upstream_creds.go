@@ -1,6 +1,9 @@
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/common/util"
+import (
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/util"
+)
 
 // UpstreamCreds 上游接入凭证值对象
 //
@@ -21,10 +24,14 @@ type UpstreamCreds struct {
 //	@param apiKey string 上游 API 密钥
 //	@param model string 上游真实模型名
 //	@return UpstreamCreds
+//	@return error 任一字段为空时返回 ierr.ErrValidation
 //	@author centonhuang
-//	@update 2026-04-25 10:00:00
-func NewUpstreamCreds(baseURL, apiKey, model string) UpstreamCreds {
-	return UpstreamCreds{baseURL: baseURL, apiKey: apiKey, model: model}
+//	@update 2026-04-26 10:00:00
+func NewUpstreamCreds(baseURL, apiKey, model string) (UpstreamCreds, error) {
+	if baseURL == "" || apiKey == "" || model == "" {
+		return UpstreamCreds{}, ierr.New(ierr.ErrValidation, "upstream creds must have non-empty baseURL, apiKey, and model")
+	}
+	return UpstreamCreds{baseURL: baseURL, apiKey: apiKey, model: model}, nil
 }
 
 // BaseURL 返回上游基础 URL

@@ -132,7 +132,7 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
 		logger.Error("[GoogleOauth2] Failed to call userinfo API", zap.Error(err))
-		return vo.OAuthUserInfo{}, err
+		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -143,7 +143,7 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&userInfoResp); err != nil {
 		logger.Error("[GoogleOauth2] Failed to decode userinfo response", zap.Error(err))
-		return vo.OAuthUserInfo{}, err
+		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
 
 	logger.Info("[GoogleOauth2] Successfully decoded user info",
@@ -151,10 +151,10 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		zap.String("userName", userInfoResp.Name),
 		zap.String("userEmail", userInfoResp.Email))
 
-	return vo.OAuthUserInfo{
-		ID:     userInfoResp.ID,
-		Name:   userInfoResp.Name,
-		Email:  userInfoResp.Email,
-		Avatar: userInfoResp.Picture,
-	}, nil
+	return vo.NewOAuthUserInfo(
+		userInfoResp.ID,
+		userInfoResp.Name,
+		userInfoResp.Email,
+		userInfoResp.Picture,
+	), nil
 }

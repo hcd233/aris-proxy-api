@@ -9,6 +9,9 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/lo"
+	"go.uber.org/zap"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -16,8 +19,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
-	"github.com/samber/lo"
-	"go.uber.org/zap"
 )
 
 // AnthropicProxy Anthropic 协议上游代理
@@ -212,6 +213,7 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 func ReplaceModelInBody(body []byte, modelName string) []byte {
 	var bodyMap map[string]any
 	if err := sonic.Unmarshal(body, &bodyMap); err != nil {
+		logger.Logger().Warn("[AnthropicProxy] ReplaceModelInBody unmarshal error", zap.Error(err))
 		return body
 	}
 	bodyMap["model"] = modelName
@@ -228,6 +230,7 @@ func ReplaceModelInBody(body []byte, modelName string) []byte {
 func ReplaceModelInSSEData(data []byte, modelName string) []byte {
 	var dataMap map[string]any
 	if err := sonic.Unmarshal(data, &dataMap); err != nil {
+		logger.Logger().Warn("[AnthropicProxy] ReplaceModelInSSEData unmarshal error", zap.Error(err))
 		return data
 	}
 	if msgRaw, ok := dataMap["message"]; ok {

@@ -77,8 +77,8 @@ var _ usecase.ListOpenAIModels = (*mockListModels)(nil)
 
 // buildTestEndpoint 创建测试用 Endpoint 聚合
 func buildTestEndpoint(provider enum.ProviderType) *aggregate.Endpoint {
-	creds := vo.NewUpstreamCreds("test-api-key", "https://api.test.com", "test-model")
-	ep, _ := aggregate.NewEndpoint(1, "test-alias", provider, creds)
+	creds, _ := vo.NewUpstreamCreds("test-api-key", "https://api.test.com", "test-model")
+	ep, _ := aggregate.CreateEndpoint(1, "test-alias", provider, creds)
 	return ep
 }
 

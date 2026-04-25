@@ -67,7 +67,7 @@ func (r *toolRepository) BatchSaveDedup(ctx context.Context, tools []*aggregate.
 		existingMap[t.CheckSum] = t.ID
 	}
 
-	newRecords := make([]*dbmodel.Tool, 0)
+	newRecords := make([]*dbmodel.Tool, 0, len(tools))
 	for _, t := range tools {
 		if _, ok := existingMap[t.Checksum()]; ok {
 			continue

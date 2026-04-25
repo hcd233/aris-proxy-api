@@ -86,5 +86,6 @@ func (h *refreshTokensHandler) Handle(ctx context.Context, cmd RefreshTokensComm
 
 	log.Info("[IdentityCommand] Refresh token success", zap.Uint("userID", userID))
 
-	return &vo.TokenPair{AccessToken: access, RefreshToken: refresh}, nil
+	pair := vo.NewTokenPair(access, refresh)
+	return &pair, nil
 }

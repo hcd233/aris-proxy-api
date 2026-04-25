@@ -20,6 +20,7 @@ import (
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	identityvo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
+	oauth2vo "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
 	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -179,43 +180,118 @@ func NewHandleCallbackHandler(
 func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCommand) (*HandleCallbackResult, error) {
 	log := logger.WithCtx(ctx)
 
-	if !infraoauth2.VerifyOAuth2State(cmd.State) {
+	platform, err := h.validateStateAndPlatform(cmd.State, cmd.Platform)
+	if err != nil {
+		return nil, err
+	}
+
+	userInfo, err := h.exchangeAndFetchUser(ctx, platform, cmd.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	userID, isNewUser, err := h.resolveUser(ctx, cmd.Platform, userInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, refreshToken, err := h.signTokenPair(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info("[OAuth2Command] Callback success",
+		zap.String("platform", cmd.Platform),
+		zap.Uint("userID", userID),
+		zap.Bool("isNewUser", isNewUser))
+
+	tp := identityvo.NewTokenPair(accessToken, refreshToken)
+	return &HandleCallbackResult{
+		TokenPair: &tp,
+		UserID:    userID,
+		IsNewUser: isNewUser,
+	}, nil
+}
+
+// validateStateAndPlatform 验证 OAuth state 并获取平台策略实例
+//
+//	@receiver h *handleCallbackHandler
+//	@param state string
+//	@param platform string
+//	@return oauth2service.Platform
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func (h *handleCallbackHandler) validateStateAndPlatform(state, platform string) (oauth2service.Platform, error) {
+	log := logger.WithCtx(context.Background())
+
+	if !infraoauth2.VerifyOAuth2State(state) {
 		log.Error("[OAuth2Command] Invalid or expired state",
-			zap.String("platform", cmd.Platform),
-			zap.String("state", cmd.State))
+			zap.String("platform", platform),
+			zap.String("state", state))
 		return nil, ierr.New(ierr.ErrUnauthorized, "invalid oauth state")
 	}
 
-	platform, ok := h.platforms[cmd.Platform]
+	p, ok := h.platforms[platform]
 	if !ok {
-		log.Error("[OAuth2Command] Invalid platform", zap.String("platform", cmd.Platform))
+		log.Error("[OAuth2Command] Invalid platform", zap.String("platform", platform))
 		return nil, ierr.New(ierr.ErrBadRequest, "invalid oauth platform")
 	}
 
-	log.Info("[OAuth2Command] Exchanging token", zap.String("platform", cmd.Platform))
-	token, err := platform.ExchangeToken(ctx, cmd.Code)
+	return p, nil
+}
+
+// exchangeAndFetchUser 交换授权码获取 token 并拉取用户信息
+//
+//	@receiver h *handleCallbackHandler
+//	@param ctx context.Context
+//	@param platform oauth2service.Platform
+//	@param code string
+//	@return oauth2vo.OAuthUserInfo
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func (h *handleCallbackHandler) exchangeAndFetchUser(ctx context.Context, platform oauth2service.Platform, code string) (oauth2vo.OAuthUserInfo, error) {
+	log := logger.WithCtx(ctx)
+
+	log.Info("[OAuth2Command] Exchanging token")
+	token, err := platform.ExchangeToken(ctx, code)
 	if err != nil {
-		log.Error("[OAuth2Command] Failed to exchange token",
-			zap.String("platform", cmd.Platform), zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrOAuth2Exchange, err, "exchange oauth token")
+		log.Error("[OAuth2Command] Failed to exchange token", zap.Error(err))
+		return oauth2vo.OAuthUserInfo{}, ierr.Wrap(ierr.ErrOAuth2Exchange, err, "exchange oauth token")
 	}
-	h.logTokenReceived(ctx, cmd.Platform, token)
+	h.logTokenReceived(ctx, token)
 
 	userInfo, err := platform.GetUserInfo(ctx, token)
 	if err != nil {
-		log.Error("[OAuth2Command] Failed to get user info",
-			zap.String("platform", cmd.Platform), zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrOAuth2UserInfo, err, "get oauth user info")
+		log.Error("[OAuth2Command] Failed to get user info", zap.Error(err))
+		return oauth2vo.OAuthUserInfo{}, ierr.Wrap(ierr.ErrOAuth2UserInfo, err, "get oauth user info")
 	}
 
-	thirdPartyID := userInfo.ID
-	userName, email, avatar := userInfo.Name, userInfo.Email, userInfo.Avatar
+	return userInfo, nil
+}
 
-	existing, err := h.findByBindID(ctx, cmd.Platform, thirdPartyID)
+// resolveUser 查找或注册用户
+//
+//	@receiver h *handleCallbackHandler
+//	@param ctx context.Context
+//	@param platformName string
+//	@param userInfo oauth2vo.OAuthUserInfo
+//	@return uint userID
+//	@return bool isNewUser
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName string, userInfo oauth2vo.OAuthUserInfo) (uint, bool, error) {
+	log := logger.WithCtx(ctx)
+	thirdPartyID := userInfo.ID()
+	userName, email, avatar := userInfo.Name(), userInfo.Email(), userInfo.Avatar()
+
+	existing, err := h.findByBindID(ctx, platformName, thirdPartyID)
 	if err != nil {
 		log.Error("[OAuth2Command] Failed to find user by third party bind id",
-			zap.String("platform", cmd.Platform), zap.String("thirdPartyID", thirdPartyID), zap.Error(err))
-		return nil, err
+			zap.String("platform", platformName), zap.String("thirdPartyID", thirdPartyID), zap.Error(err))
+		return 0, false, err
 	}
 
 	var (
@@ -226,8 +302,8 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 		// 已存在用户：只更新 last_login（与原 service.userDAO.Update(db, user, {last_login}) 行为一致）
 		if err := h.userRepo.TouchLastLogin(ctx, existing.AggregateID()); err != nil {
 			log.Error("[OAuth2Command] Failed to update user login time",
-				zap.String("platform", cmd.Platform), zap.Error(err))
-			return nil, err
+				zap.String("platform", platformName), zap.Error(err))
+			return 0, false, err
 		}
 		userID = existing.AggregateID()
 	} else {
@@ -240,19 +316,19 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 			identityvo.UserName(userName),
 			identityvo.Email(email),
 			identityvo.Avatar(avatar),
-			cmd.Platform,
+			platformName,
 			thirdPartyID,
 			time.Now(),
 		)
 		if regErr != nil {
 			log.Error("[OAuth2Command] Register user aggregate failed",
-				zap.String("platform", cmd.Platform), zap.String("userName", userName), zap.Error(regErr))
-			return nil, regErr
+				zap.String("platform", platformName), zap.String("userName", userName), zap.Error(regErr))
+			return 0, false, regErr
 		}
 		if err := h.userRepo.Save(ctx, user); err != nil {
 			log.Error("[OAuth2Command] Failed to save new user",
-				zap.String("platform", cmd.Platform), zap.String("userName", userName), zap.Error(err))
-			return nil, err
+				zap.String("platform", platformName), zap.String("userName", userName), zap.Error(err))
+			return 0, false, err
 		}
 		userID = user.AggregateID()
 		isNewUser = true
@@ -261,37 +337,41 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 		if h.objStorageDirC != nil {
 			if dirErr := h.objStorageDirC.CreateDir(ctx, userID); dirErr != nil {
 				log.Error("[OAuth2Command] Failed to create audio dir",
-					zap.String("platform", cmd.Platform), zap.Error(dirErr))
-				return nil, dirErr
+					zap.String("platform", platformName), zap.Error(dirErr))
+				return 0, false, dirErr
 			}
-			log.Info("[OAuth2Command] Audio dir created", zap.String("platform", cmd.Platform))
+			log.Info("[OAuth2Command] Audio dir created", zap.String("platform", platformName))
 		}
 	}
 
-	// 签发 token 对
+	return userID, isNewUser, nil
+}
+
+// signTokenPair 签发 JWT token 对
+//
+//	@receiver h *handleCallbackHandler
+//	@param ctx context.Context
+//	@param userID uint
+//	@return string accessToken
+//	@return string refreshToken
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func (h *handleCallbackHandler) signTokenPair(ctx context.Context, userID uint) (string, string, error) {
+	log := logger.WithCtx(ctx)
+
 	accessToken, err := h.accessSigner.EncodeToken(userID)
 	if err != nil {
-		log.Error("[OAuth2Command] Failed to encode access token",
-			zap.String("platform", cmd.Platform), zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrJWTEncode, err, "encode access token")
+		log.Error("[OAuth2Command] Failed to encode access token", zap.Error(err))
+		return "", "", ierr.Wrap(ierr.ErrJWTEncode, err, "encode access token")
 	}
 	refreshToken, err := h.refreshSigner.EncodeToken(userID)
 	if err != nil {
-		log.Error("[OAuth2Command] Failed to encode refresh token",
-			zap.String("platform", cmd.Platform), zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrJWTEncode, err, "encode refresh token")
+		log.Error("[OAuth2Command] Failed to encode refresh token", zap.Error(err))
+		return "", "", ierr.Wrap(ierr.ErrJWTEncode, err, "encode refresh token")
 	}
 
-	log.Info("[OAuth2Command] Callback success",
-		zap.String("platform", cmd.Platform),
-		zap.Uint("userID", userID),
-		zap.Bool("isNewUser", isNewUser))
-
-	return &HandleCallbackResult{
-		TokenPair: &identityvo.TokenPair{AccessToken: accessToken, RefreshToken: refreshToken},
-		UserID:    userID,
-		IsNewUser: isNewUser,
-	}, nil
+	return accessToken, refreshToken, nil
 }
 
 // findByBindID 按平台查找已绑定的用户（跨平台的分发逻辑）
@@ -319,13 +399,11 @@ func (h *handleCallbackHandler) findByBindID(ctx context.Context, platform, bind
 //
 //	@receiver h *handleCallbackHandler
 //	@param ctx context.Context
-//	@param platform string
 //	@param token *xoauth2.Token
 //	@author centonhuang
-//	@update 2026-04-22 20:30:00
-func (h *handleCallbackHandler) logTokenReceived(ctx context.Context, platform string, token *xoauth2.Token) {
+//	@update 2026-04-26 12:00:00
+func (h *handleCallbackHandler) logTokenReceived(ctx context.Context, token *xoauth2.Token) {
 	logger.WithCtx(ctx).Info("[OAuth2Command] Token exchange successful",
-		zap.String("platform", platform),
 		zap.String("tokenType", token.TokenType),
 		zap.Bool("valid", token.Valid()))
 }

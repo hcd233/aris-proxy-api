@@ -84,7 +84,7 @@ func (r *apiKeyRepository) FindByID(ctx context.Context, id uint) (*aggregate.Pr
 		}
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get api key by id")
 	}
-	return toAPIKeyAggregate(record), nil
+	return toAPIKeyAggregate(record)
 }
 
 // ListByUser 查询用户持有的 Key 列表
@@ -102,7 +102,7 @@ func (r *apiKeyRepository) ListByUser(ctx context.Context, userID uint) ([]*aggr
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list api keys by user")
 	}
-	return toAPIKeyAggregateList(records), nil
+	return toAPIKeyAggregateList(records)
 }
 
 // ListAll 查询所有 Key（admin 视图）
@@ -119,7 +119,7 @@ func (r *apiKeyRepository) ListAll(ctx context.Context) ([]*aggregate.ProxyAPIKe
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list all api keys")
 	}
-	return toAPIKeyAggregateList(records), nil
+	return toAPIKeyAggregateList(records)
 }
 
 // CountByUser 统计用户持有的 Key 总数（含 UserID==0 的历史 key）
@@ -157,21 +157,29 @@ func (r *apiKeyRepository) Delete(ctx context.Context, id uint) error {
 }
 
 // toAPIKeyAggregate 将 GORM 模型映射为聚合根
-func toAPIKeyAggregate(m *dbmodel.ProxyAPIKey) *aggregate.ProxyAPIKey {
+func toAPIKeyAggregate(m *dbmodel.ProxyAPIKey) (*aggregate.ProxyAPIKey, error) {
+	secret, err := vo.NewAPIKeySecret(m.Key)
+	if err != nil {
+		return nil, err
+	}
 	return aggregate.RestoreProxyAPIKey(
 		m.ID,
 		m.UserID,
 		vo.APIKeyName(m.Name),
-		vo.NewAPIKeySecret(m.Key),
+		secret,
 		m.CreatedAt,
-	)
+	), nil
 }
 
 // toAPIKeyAggregateList 批量映射
-func toAPIKeyAggregateList(records []*dbmodel.ProxyAPIKey) []*aggregate.ProxyAPIKey {
+func toAPIKeyAggregateList(records []*dbmodel.ProxyAPIKey) ([]*aggregate.ProxyAPIKey, error) {
 	out := make([]*aggregate.ProxyAPIKey, 0, len(records))
 	for _, r := range records {
-		out = append(out, toAPIKeyAggregate(r))
+		agg, err := toAPIKeyAggregate(r)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, agg)
 	}
-	return out
-}
+		return out, nil
+	}

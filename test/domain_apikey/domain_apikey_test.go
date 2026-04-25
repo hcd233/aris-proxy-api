@@ -44,11 +44,32 @@ func TestIssueProxyAPIKey(t *testing.T) {
 	cases := loadIssueCases(t)
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			secret, err := vo.NewAPIKeySecret(tc.Secret)
+			if err != nil {
+				if tc.ExpectErr == "validation" {
+					if !errors.Is(err, ierr.ErrValidation) {
+						t.Errorf("expected ErrValidation from NewAPIKeySecret, got: %v", err)
+					}
+					return
+				}
+				t.Fatalf("unexpected NewAPIKeySecret error: %v", err)
+			}
+			quota, err := vo.NewAPIKeyQuota(tc.QuotaMax)
+			if err != nil {
+				if tc.ExpectErr == "validation" {
+					if !errors.Is(err, ierr.ErrValidation) {
+						t.Errorf("expected ErrValidation from NewAPIKeyQuota, got: %v", err)
+					}
+					return
+				}
+				t.Fatalf("unexpected NewAPIKeyQuota error: %v", err)
+			}
+
 			key, err := aggregate.IssueProxyAPIKey(
 				tc.UserID,
 				vo.APIKeyName(tc.KeyName),
-				vo.NewAPIKeySecret(tc.Secret),
-				vo.NewAPIKeyQuota(tc.QuotaMax),
+				secret,
+				quota,
 				tc.Existing,
 				time.Now(),
 			)
@@ -94,9 +115,21 @@ func TestIssueProxyAPIKey(t *testing.T) {
 // TestProxyAPIKey_IsOwnedBy 验证所有权判定：严格匹配 UserID；
 // UserID==0 的 legacy key 不再被视为任何普通用户所有，必须走 admin 分支。
 func TestProxyAPIKey_IsOwnedBy(t *testing.T) {
-	own := aggregate.RestoreProxyAPIKey(1, 101, "a", vo.NewAPIKeySecret("x"), nowTime(t))
-	legacy := aggregate.RestoreProxyAPIKey(2, 0, "b", vo.NewAPIKeySecret("y"), nowTime(t))
-	other := aggregate.RestoreProxyAPIKey(3, 999, "c", vo.NewAPIKeySecret("z"), nowTime(t))
+	secX, err := vo.NewAPIKeySecret("x")
+	if err != nil {
+		t.Fatalf("failed to create secret x: %v", err)
+	}
+	secY, err := vo.NewAPIKeySecret("y")
+	if err != nil {
+		t.Fatalf("failed to create secret y: %v", err)
+	}
+	secZ, err := vo.NewAPIKeySecret("z")
+	if err != nil {
+		t.Fatalf("failed to create secret z: %v", err)
+	}
+	own := aggregate.RestoreProxyAPIKey(1, 101, "a", secX, nowTime(t))
+	legacy := aggregate.RestoreProxyAPIKey(2, 0, "b", secY, nowTime(t))
+	other := aggregate.RestoreProxyAPIKey(3, 999, "c", secZ, nowTime(t))
 
 	if !own.IsOwnedBy(101) {
 		t.Error("own key should be owned by user 101")
@@ -114,7 +147,10 @@ func TestProxyAPIKey_IsOwnedBy(t *testing.T) {
 
 // TestAPIKeySecret_Masked 验证脱敏输出稳定
 func TestAPIKeySecret_Masked(t *testing.T) {
-	s := vo.NewAPIKeySecret("sk-abcdefghijklmnop")
+	s, err := vo.NewAPIKeySecret("sk-abcdefghijklmnop")
+	if err != nil {
+		t.Fatalf("failed to create secret: %v", err)
+	}
 	if s.Raw() != "sk-abcdefghijklmnop" {
 		t.Errorf("Raw = %q, want original", s.Raw())
 	}

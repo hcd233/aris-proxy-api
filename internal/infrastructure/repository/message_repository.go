@@ -73,7 +73,7 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 		existingMap[m.CheckSum] = m.ID
 	}
 
-	newRecords := make([]*dbmodel.Message, 0)
+	newRecords := make([]*dbmodel.Message, 0, len(messages))
 	for _, m := range messages {
 		if _, ok := existingMap[m.Checksum()]; ok {
 			continue

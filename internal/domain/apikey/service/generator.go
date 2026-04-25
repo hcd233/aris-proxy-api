@@ -60,5 +60,5 @@ func (g *apiKeyGenerator) Generate() (vo.APIKeySecret, error) {
 			}
 		}
 	}
-	return vo.NewAPIKeySecret(constant.APIKeyPrefix + string(result)), nil
+	return vo.NewAPIKeySecret(constant.APIKeyPrefix + string(result))
 }

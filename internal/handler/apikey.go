@@ -11,9 +11,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -28,6 +29,16 @@ type APIKeyHandler interface {
 	HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteAPIKeyReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
+// APIKeyDependencies APIKeyHandler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type APIKeyDependencies struct {
+	APIKeyRepo apikey.APIKeyRepository
+	UserRepo   identity.UserRepository
+	Generator  apikeyservice.APIKeyGenerator
+}
+
 type apiKeyHandler struct {
 	issue  command.IssueAPIKeyHandler
 	revoke command.RevokeAPIKeyHandler
@@ -36,19 +47,17 @@ type apiKeyHandler struct {
 
 // NewAPIKeyHandler 创建 API Key 处理器
 //
+//	@param deps APIKeyDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
 //	@return APIKeyHandler
 //	@author centonhuang
-//	@update 2026-04-22 20:00:00
-func NewAPIKeyHandler() APIKeyHandler {
-	apiKeyRepo := repository.NewAPIKeyRepository()
-	userRepo := repository.NewUserRepository()
-	generator := apikeyservice.NewAPIKeyGenerator()
-	userExistsCh := command.NewUserExistenceChecker(userRepo)
+//	@update 2026-04-26 10:00:00
+func NewAPIKeyHandler(deps APIKeyDependencies) APIKeyHandler {
+	userExistsCh := command.NewUserExistenceChecker(deps.UserRepo)
 
 	return &apiKeyHandler{
-		issue:  command.NewIssueAPIKeyHandler(apiKeyRepo, generator, userExistsCh),
-		revoke: command.NewRevokeAPIKeyHandler(apiKeyRepo),
-		list:   query.NewListAPIKeysHandler(apiKeyRepo),
+		issue:  command.NewIssueAPIKeyHandler(deps.APIKeyRepo, deps.Generator, userExistsCh),
+		revoke: command.NewRevokeAPIKeyHandler(deps.APIKeyRepo),
+		list:   query.NewListAPIKeysHandler(deps.APIKeyRepo),
 	}
 }
 

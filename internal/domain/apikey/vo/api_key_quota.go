@@ -2,6 +2,7 @@ package vo
 
 import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
 // APIKeyQuota API Key 配额值对象
@@ -9,7 +10,7 @@ import (
 // 表示每个用户可持有的最大 API Key 数量。配额超出由聚合根自身校验。
 //
 //	@author centonhuang
-//	@update 2026-04-25 15:00:00
+//	@update 2026-04-26 10:00:00
 type APIKeyQuota struct {
 	max int
 }
@@ -18,19 +19,24 @@ type APIKeyQuota struct {
 //
 //	@param max int
 //	@return APIKeyQuota
+//	@return error max <= 0 时返回 ierr.ErrValidation
 //	@author centonhuang
-//	@update 2026-04-25 15:00:00
-func NewAPIKeyQuota(max int) APIKeyQuota {
-	return APIKeyQuota{max: max}
+//	@update 2026-04-26 10:00:00
+func NewAPIKeyQuota(max int) (APIKeyQuota, error) {
+	if max <= 0 {
+		return APIKeyQuota{}, ierr.New(ierr.ErrValidation, "API key quota must be greater than 0")
+	}
+	return APIKeyQuota{max: max}, nil
 }
 
 // DefaultAPIKeyQuota 返回默认配额（来自 constant.APIKeyMaxCount）
 //
 //	@return APIKeyQuota
 //	@author centonhuang
-//	@update 2026-04-25 15:00:00
+//	@update 2026-04-26 10:00:00
 func DefaultAPIKeyQuota() APIKeyQuota {
-	return APIKeyQuota{max: constant.APIKeyMaxCount}
+	q, _ := NewAPIKeyQuota(constant.APIKeyMaxCount)
+	return q
 }
 
 // MaxCount 返回配额上限

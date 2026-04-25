@@ -7,9 +7,9 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -24,27 +24,37 @@ type OpenAIHandler interface {
 	HandleCreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error)
 }
 
+// OpenAIDependencies OpenAIHandler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type OpenAIDependencies struct {
+	EndpointRepo     llmproxy.EndpointRepository
+	EndpointReadRepo llmproxy.EndpointReadRepository
+	OpenAIProxy      transport.OpenAIProxy
+	AnthropicProxy   transport.AnthropicProxy
+}
+
 type openAIHandler struct {
 	uc usecase.OpenAIUseCase
 }
 
 // NewOpenAIHandler 创建OpenAI兼容接口处理器
 //
+//	@param deps OpenAIDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
 //	@return OpenAIHandler
 //	@author centonhuang
-//	@update 2026-04-22 21:00:00
-func NewOpenAIHandler() OpenAIHandler {
-	endpointRepo := repository.NewEndpointRepository()
-	endpointReadRepo := repository.NewEndpointReadRepository()
-	resolver := service.NewEndpointResolver(endpointRepo)
-	modelsQuery := usecase.NewListOpenAIModels(endpointReadRepo)
+//	@update 2026-04-26 10:00:00
+func NewOpenAIHandler(deps OpenAIDependencies) OpenAIHandler {
+	resolver := service.NewEndpointResolver(deps.EndpointRepo)
+	modelsQuery := usecase.NewListOpenAIModels(deps.EndpointReadRepo)
 
 	return &openAIHandler{
 		uc: usecase.NewOpenAIUseCase(
 			resolver,
 			modelsQuery,
-			transport.NewOpenAIProxy(),
-			transport.NewAnthropicProxy(),
+			deps.OpenAIProxy,
+			deps.AnthropicProxy,
 		),
 	}
 }
