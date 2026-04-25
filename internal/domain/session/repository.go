@@ -95,5 +95,5 @@ type SessionReadRepository interface {
 	// ListSessions 分页查询 Session 列表投影
 	ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
-	GetSessionDetail(ctx context.Context, id uint, owner string) (*SessionDetailProjection, error)
+	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
 }

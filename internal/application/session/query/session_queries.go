@@ -170,7 +170,7 @@ func NewGetSessionHandler(readRepo session.SessionReadRepository) GetSessionHand
 func (h *getSessionHandler) Handle(ctx context.Context, q GetSessionQuery) (*SessionDetailView, error) {
 	log := logger.WithCtx(ctx)
 
-	detail, err := h.readRepo.GetSessionDetail(ctx, q.SessionID, q.OwnerAPIKeyName)
+	detail, err := h.readRepo.GetSessionDetail(ctx, q.SessionID)
 	if err != nil {
 		log.Error("[SessionQuery] Failed to get session detail", zap.Error(err),
 			zap.Uint("sessionID", q.SessionID))
@@ -179,6 +179,14 @@ func (h *getSessionHandler) Handle(ctx context.Context, q GetSessionQuery) (*Ses
 	if detail == nil {
 		log.Warn("[SessionQuery] Session not found", zap.Uint("sessionID", q.SessionID))
 		return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
+	}
+
+	if detail.APIKeyName != q.OwnerAPIKeyName {
+		log.Warn("[SessionQuery] No permission to access session",
+			zap.Uint("sessionID", q.SessionID),
+			zap.String("owner", detail.APIKeyName),
+			zap.String("requester", q.OwnerAPIKeyName))
+		return nil, ierr.New(ierr.ErrNoPermission, "no permission to access session")
 	}
 
 	messages := make([]*MessageView, 0, len(detail.Messages))

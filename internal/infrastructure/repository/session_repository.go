@@ -238,7 +238,7 @@ func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, 
 }
 
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
-func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint, owner string) (*session.SessionDetailProjection, error) {
+func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (*session.SessionDetailProjection, error) {
 	db := database.GetDBInstance(ctx)
 
 	sessionRecord, err := r.sessionDAO.Get(db, &dbmodel.Session{ID: id}, sessionDetailReadFields)
@@ -247,10 +247,6 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint, o
 			return nil, nil
 		}
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get session detail")
-	}
-
-	if sessionRecord.APIKeyName != owner {
-		return nil, ierr.New(ierr.ErrNoPermission, "no permission to access session")
 	}
 
 	uniqMsgIDs := lo.Uniq(sessionRecord.MessageIDs)
