@@ -1,14 +1,13 @@
-// Package query identity 域只读查询
-package query
+// Package command APIKey 域命令处理器
+package command
 
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 )
 
-// userExistenceChecker 实现 application/apikey/command.UserExistenceChecker 接口
+// userExistenceChecker UserExistenceChecker 的实现，通过 identity.UserRepository 查询用户存在性
 type userExistenceChecker struct {
 	repo identity.UserRepository
 }
@@ -16,22 +15,22 @@ type userExistenceChecker struct {
 // NewUserExistenceChecker 构造存在性校验器
 //
 //	@param repo identity.UserRepository
-//	@return command.UserExistenceChecker
+//	@return UserExistenceChecker
 //	@author centonhuang
-//	@update 2026-04-22 20:00:00
-func NewUserExistenceChecker(repo identity.UserRepository) command.UserExistenceChecker {
+//	@update 2026-04-25 10:00:00
+func NewUserExistenceChecker(repo identity.UserRepository) UserExistenceChecker {
 	return &userExistenceChecker{repo: repo}
 }
 
 // Exists 判断指定用户是否存在
 //
-//	@receiver c *UserExistenceChecker
+//	@receiver c *userExistenceChecker
 //	@param ctx context.Context
 //	@param userID uint
 //	@return bool
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-22 20:00:00
+//	@update 2026-04-25 10:00:00
 func (c *userExistenceChecker) Exists(ctx context.Context, userID uint) (bool, error) {
 	user, err := c.repo.FindByID(ctx, userID)
 	if err != nil {
