@@ -39,11 +39,12 @@ type ModelCallAudit struct {
 // （差异仅在于入参 RecordCallInput.Status 本身），因此在职能上合并为 RecordCall。
 //
 //	@param input RecordCallInput
+//	@param now time.Time 记录创建时间（由调用方注入，保证可测试性）
 //	@return *ModelCallAudit
 //	@author centonhuang
 //	@update 2026-04-24 20:00:00
-func RecordCall(input RecordCallInput) *ModelCallAudit {
-	return newAudit(input, time.Now().UTC())
+func RecordCall(input RecordCallInput, now time.Time) *ModelCallAudit {
+	return newAudit(input, now)
 }
 
 // RecordCallInput 构造审计聚合的输入参数

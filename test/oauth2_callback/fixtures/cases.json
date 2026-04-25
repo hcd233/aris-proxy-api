@@ -1,0 +1,31 @@
+[
+    {
+        "name": "callback_new_user",
+        "description": "New OAuth2 user should be registered and receive tokens",
+        "platform": "github",
+        "code": "auth-code-123",
+        "expected_is_new": true
+    },
+    {
+        "name": "callback_existing_user",
+        "description": "Existing OAuth2 user should get token pair without registration",
+        "platform": "github",
+        "code": "auth-code-456",
+        "expected_is_new": false
+    },
+    {
+        "name": "callback_invalid_platform",
+        "description": "Invalid platform should return error",
+        "platform": "invalid",
+        "code": "some-code",
+        "expect_error_kind": "bad_request"
+    },
+    {
+        "name": "callback_invalid_state",
+        "description": "Invalid state should return unauthorized error",
+        "platform": "github",
+        "code": "some-code",
+        "state": "invalid-state",
+        "expect_error_kind": "unauthorized"
+    }
+]
