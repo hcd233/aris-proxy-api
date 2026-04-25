@@ -831,8 +831,8 @@ func submitResponseMessageStoreTask(ctx context.Context, log *zap.Logger, req *d
 func toTransportEndpoint(ep *aggregate.Endpoint) transport.UpstreamEndpoint {
 	creds := ep.Creds()
 	return transport.UpstreamEndpoint{
-		Model:   creds.Model,
-		APIKey:  creds.APIKey,
-		BaseURL: creds.BaseURL,
+		Model:   creds.Model(),
+		APIKey:  creds.APIKey(),
+		BaseURL: creds.BaseURL(),
 	}
 }

@@ -62,7 +62,7 @@ func toAggregate(m *dbmodel.ModelEndpoint) *aggregate.Endpoint {
 		m.ID,
 		vo.EndpointAlias(m.Alias),
 		m.Provider,
-		vo.UpstreamCreds{BaseURL: m.BaseURL, APIKey: m.APIKey, Model: m.Model},
+		vo.NewUpstreamCreds(m.BaseURL, m.APIKey, m.Model),
 	)
 }
 

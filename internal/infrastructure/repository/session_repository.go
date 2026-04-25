@@ -280,6 +280,9 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint, o
 	return detail, nil
 }
 
+// BuildOrderedMessageProjections 按 ids 顺序投影消息列表，跳过缺失 ID。
+//
+// 导出供测试断言内部排序逻辑（通过 GetSessionDetail 间接覆盖）。
 func BuildOrderedMessageProjections(ids []uint, records []*dbmodel.Message) []*session.MessageDetailProjection {
 	msgMap := lo.SliceToMap(records, func(m *dbmodel.Message) (uint, *dbmodel.Message) { return m.ID, m })
 	items := make([]*session.MessageDetailProjection, 0, len(ids))
@@ -298,6 +301,9 @@ func BuildOrderedMessageProjections(ids []uint, records []*dbmodel.Message) []*s
 	return items
 }
 
+// BuildOrderedToolProjections 按 ids 顺序投影工具列表，跳过缺失 ID。
+//
+// 导出供测试断言内部排序逻辑（通过 GetSessionDetail 间接覆盖）。
 func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session.ToolDetailProjection {
 	toolMap := lo.SliceToMap(records, func(t *dbmodel.Tool) (uint, *dbmodel.Tool) { return t.ID, t })
 	items := make([]*session.ToolDetailProjection, 0, len(ids))
