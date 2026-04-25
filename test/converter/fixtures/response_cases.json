@@ -335,5 +335,41 @@
             ],
             "tool_choice": {"type": "auto"}
         }
+    },
+    {
+        "name": "response_no_reasoning",
+        "description": "No reasoning config results in Thinking being nil",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Hello"}
+                    ]
+                }
+            ]
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 0,
+            "messages": [
+                {"role": "user", "content": "Hello"}
+            ]
+        }
+    },
+    {
+        "name": "response_empty_input",
+        "description": "Empty input should not crash",
+        "openai_response_request": {
+            "model": "gpt-4o",
+            "input": []
+        },
+        "anthropic_request": {
+            "model": "claude-3-5-sonnet",
+            "max_tokens": 0,
+            "messages": []
+        }
     }
 ]
