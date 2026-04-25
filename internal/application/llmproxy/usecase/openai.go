@@ -226,7 +226,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, log *zap.Log
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
-			u.auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 		completion.Model = req.Body.Model
@@ -330,7 +330,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, log *z
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
-			u.auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 		completion, err := conv.ToOpenAIResponse(anthropicMsg)
@@ -429,7 +429,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
-			u.auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 
@@ -545,7 +545,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, lo
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
-			u.auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 		completion, err := conv.ToOpenAIResponse(anthropicMsg)
@@ -571,22 +571,6 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, lo
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 	})
-}
-
-// ==================== Audit helpers ====================
-
-// auditFailure 提交失败态审计任务（非流式错误分支共享）
-func (u *openAIUseCase) auditFailure(ctx context.Context, ep *aggregate.Endpoint, exposedModel string, apiProvider enum.ProviderType, totalMs int64, err error) {
-	task := &dto.ModelCallAuditTask{
-		Ctx:                 util.CopyContextValues(ctx),
-		ModelID:             ep.AggregateID(),
-		Model:               exposedModel,
-		UpstreamProvider:    ep.Provider(),
-		APIProvider:         apiProvider,
-		FirstTokenLatencyMs: totalMs,
-	}
-	task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-	_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
 }
 
 // ==================== Store Helpers: ChatCompletion 路径 ====================

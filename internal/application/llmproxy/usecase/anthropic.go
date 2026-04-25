@@ -174,7 +174,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *z
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
-			u.auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
+			auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
 		anthropicMsg.Model = exposedModel
@@ -304,7 +304,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
-			u.auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
+			auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
@@ -333,19 +333,6 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log
 }
 
 // ==================== Anthropic audit/store helpers ====================
-
-func (u *anthropicUseCase) auditFailure(ctx context.Context, ep *aggregate.Endpoint, exposedModel string, apiProvider enum.ProviderType, totalMs int64, err error) {
-	task := &dto.ModelCallAuditTask{
-		Ctx:                 util.CopyContextValues(ctx),
-		ModelID:             ep.AggregateID(),
-		Model:               exposedModel,
-		UpstreamProvider:    ep.Provider(),
-		APIProvider:         apiProvider,
-		FirstTokenLatencyMs: totalMs,
-	}
-	task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-	_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
-}
 
 func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
