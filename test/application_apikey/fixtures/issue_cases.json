@@ -1,0 +1,62 @@
+[
+  {
+    "name": "issue_success",
+    "description": "成功签发 API Key",
+    "userID": 1,
+    "nameInput": "my-key",
+    "secretValue": "sk-aris-test123",
+    "quotaMax": 10,
+    "existing": 3,
+    "userExists": true,
+    "expectErr": "",
+    "expectKeyID": 1
+  },
+  {
+    "name": "issue_quota_exceeded",
+    "description": "配额超限",
+    "userID": 1,
+    "nameInput": "my-key",
+    "secretValue": "sk-aris-test123",
+    "quotaMax": 5,
+    "existing": 5,
+    "userExists": true,
+    "expectErr": "quota_exceeded",
+    "expectKeyID": 0
+  },
+  {
+    "name": "issue_user_not_exists",
+    "description": "用户不存在",
+    "userID": 999,
+    "nameInput": "my-key",
+    "secretValue": "sk-aris-test123",
+    "quotaMax": 10,
+    "existing": 0,
+    "userExists": false,
+    "expectErr": "not_exists",
+    "expectKeyID": 0
+  },
+  {
+    "name": "issue_empty_name",
+    "description": "名称为空",
+    "userID": 1,
+    "nameInput": "",
+    "secretValue": "sk-aris-test123",
+    "quotaMax": 10,
+    "existing": 0,
+    "userExists": true,
+    "expectErr": "validation",
+    "expectKeyID": 0
+  },
+  {
+    "name": "issue_empty_secret",
+    "description": "密钥为空",
+    "userID": 1,
+    "nameInput": "my-key",
+    "secretValue": "",
+    "quotaMax": 10,
+    "existing": 0,
+    "userExists": true,
+    "expectErr": "validation",
+    "expectKeyID": 0
+  }
+]

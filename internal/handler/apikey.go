@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -64,11 +65,19 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 	rsp := &dto.CreateAPIKeyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
+	// DTO 级别输入校验
+	if strings.TrimSpace(req.Body.Name) == "" {
+		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: empty api key name")
+		rsp.Error = ierr.ErrValidation.BizError()
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+
 	result, err := h.issue.Handle(ctx, command.IssueAPIKeyCommand{
 		UserID: userID,
 		Name:   req.Body.Name,
 	})
 	if err != nil {
+		logger.WithCtx(ctx).Error("[APIKeyHandler] Create api key failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}
@@ -132,12 +141,20 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	permission := util.CtxValuePermission(ctx)
 
+	// DTO 级别输入校验
+	if req.ID == 0 {
+		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: invalid api key id")
+		rsp.Error = ierr.ErrValidation.BizError()
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+
 	err := h.revoke.Handle(ctx, command.RevokeAPIKeyCommand{
 		KeyID:               req.ID,
 		RequesterID:         userID,
 		RequesterPermission: permission,
 	})
 	if err != nil {
+		logger.WithCtx(ctx).Error("[APIKeyHandler] Delete api key failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}

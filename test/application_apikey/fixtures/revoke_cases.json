@@ -1,0 +1,52 @@
+[
+  {
+    "name": "revoke_success_by_owner",
+    "description": "所有者成功吊销",
+    "keyID": 1,
+    "keyUserID": 101,
+    "requesterID": 101,
+    "requesterPermission": "user",
+    "keyFound": true,
+    "expectErr": ""
+  },
+  {
+    "name": "revoke_success_by_admin",
+    "description": "Admin 吊销任意 Key",
+    "keyID": 1,
+    "keyUserID": 999,
+    "requesterID": 1,
+    "requesterPermission": "admin",
+    "keyFound": true,
+    "expectErr": ""
+  },
+  {
+    "name": "revoke_not_found",
+    "description": "Key 不存在",
+    "keyID": 999,
+    "keyUserID": 0,
+    "requesterID": 101,
+    "requesterPermission": "user",
+    "keyFound": false,
+    "expectErr": "not_exists"
+  },
+  {
+    "name": "revoke_no_permission",
+    "description": "非所有者且非 admin 无权吊销",
+    "keyID": 1,
+    "keyUserID": 999,
+    "requesterID": 101,
+    "requesterPermission": "user",
+    "keyFound": true,
+    "expectErr": "no_permission"
+  },
+  {
+    "name": "revoke_legacy_key_by_normal_user",
+    "description": "Legacy Key (UserID=0) 禁止普通用户吊销",
+    "keyID": 1,
+    "keyUserID": 0,
+    "requesterID": 101,
+    "requesterPermission": "user",
+    "keyFound": true,
+    "expectErr": "no_permission"
+  }
+]

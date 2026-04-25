@@ -58,6 +58,7 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 
 	view, err := h.getCurrentUser.Handle(ctx, query.GetCurrentUserQuery{UserID: userID})
 	if err != nil {
+		logger.WithCtx(ctx).Error("[UserHandler] Get current user failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)
 	}

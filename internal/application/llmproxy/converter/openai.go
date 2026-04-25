@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
@@ -439,7 +440,7 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 		// 对于无参数工具，OpenAI 要求省略 parameters 字段
 		// Anthropic 的 input_schema 可能是 {"type": "object"} 或带有 additionalProperties: false
 		// 这种情况下应该将 parameters 设为 nil
-		var params *dto.JSONSchemaProperty
+		var params *vo.JSONSchemaProperty
 		if tool.InputSchema != nil && !isEmptyObjectSchema(tool.InputSchema) {
 			params = normalizeOpenAISchema(tool.InputSchema)
 		}
@@ -459,7 +460,7 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 
 // isEmptyObjectSchema 检查 schema 是否表示空对象（无参数）
 // OpenAI 对于无参数工具要求省略 parameters 字段，而不是传 {"type": "object"}
-func isEmptyObjectSchema(schema *dto.JSONSchemaProperty) bool {
+func isEmptyObjectSchema(schema *vo.JSONSchemaProperty) bool {
 	if schema == nil {
 		return true
 	}
@@ -473,7 +474,7 @@ func isEmptyObjectSchema(schema *dto.JSONSchemaProperty) bool {
 // normalizeOpenAISchema 规范化 JSON Schema，确保符合 OpenAI 要求
 // - 清除 $schema（不应出现在 parameters 内部）
 // 注意：返回的是浅拷贝，不会修改入参
-func normalizeOpenAISchema(schema *dto.JSONSchemaProperty) *dto.JSONSchemaProperty {
+func normalizeOpenAISchema(schema *vo.JSONSchemaProperty) *vo.JSONSchemaProperty {
 	if schema == nil {
 		return nil
 	}
