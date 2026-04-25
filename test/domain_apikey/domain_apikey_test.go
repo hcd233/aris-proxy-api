@@ -48,7 +48,7 @@ func TestIssueProxyAPIKey(t *testing.T) {
 				tc.UserID,
 				vo.APIKeyName(tc.KeyName),
 				vo.NewAPIKeySecret(tc.Secret),
-				vo.APIKeyQuota{Max: tc.QuotaMax},
+				vo.NewAPIKeyQuota(tc.QuotaMax),
 				tc.Existing,
 			)
 

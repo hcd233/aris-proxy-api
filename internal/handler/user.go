@@ -3,7 +3,6 @@ package handler
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -65,8 +64,8 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 
 	rsp.User = &dto.DetailedUser{
 		ID:         view.ID,
-		CreatedAt:  view.CreatedAt.Format(time.DateTime),
-		LastLogin:  view.LastLogin.Format(time.DateTime),
+		CreatedAt:  view.CreatedAt,
+		LastLogin:  view.LastLogin,
 		Permission: string(view.Permission),
 		User: dto.User{
 			Name:   view.Name,
