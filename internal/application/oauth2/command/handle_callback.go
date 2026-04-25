@@ -242,6 +242,7 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 			identityvo.Avatar(avatar),
 			cmd.Platform,
 			thirdPartyID,
+			time.Now(),
 		)
 		if regErr != nil {
 			log.Error("[OAuth2Command] Register user aggregate failed",

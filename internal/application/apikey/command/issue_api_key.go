@@ -116,6 +116,7 @@ func (h *issueAPIKeyHandler) Handle(ctx context.Context, cmd IssueAPIKeyCommand)
 		secret,
 		vo.DefaultAPIKeyQuota(),
 		existing,
+		time.Now(),
 	)
 	if err != nil {
 		log.Warn("[APIKeyCommand] Issue aggregate failed", zap.Error(err),

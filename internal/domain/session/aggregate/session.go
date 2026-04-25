@@ -44,11 +44,10 @@ type Session struct {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func CreateSession(owner vo.APIKeyOwner, messageIDs, toolIDs []uint, metadata map[string]string) (*Session, error) {
+func CreateSession(owner vo.APIKeyOwner, messageIDs, toolIDs []uint, metadata map[string]string, now time.Time) (*Session, error) {
 	if owner.IsEmpty() {
 		return nil, ierr.New(ierr.ErrValidation, "session api key owner is empty")
 	}
-	now := time.Now().UTC()
 	return &Session{
 		owner:      owner,
 		messageIDs: messageIDs,
@@ -98,9 +97,9 @@ func RestoreSession(id uint, owner vo.APIKeyOwner, messageIDs, toolIDs []uint,
 //	@param summary vo.SessionSummary
 //	@author centonhuang
 //	@update 2026-04-24 20:00:00
-func (s *Session) UpdateSummary(summary vo.SessionSummary) {
+func (s *Session) UpdateSummary(summary vo.SessionSummary, now time.Time) {
 	s.summary = summary
-	s.updatedAt = time.Now().UTC()
+	s.updatedAt = now
 }
 
 // UpdateScore 更新会话评分
@@ -109,11 +108,12 @@ func (s *Session) UpdateSummary(summary vo.SessionSummary) {
 //
 //	@receiver s *Session
 //	@param score vo.SessionScore
+//	@param now time.Time
 //	@author centonhuang
 //	@update 2026-04-24 20:00:00
-func (s *Session) UpdateScore(score vo.SessionScore) {
+func (s *Session) UpdateScore(score vo.SessionScore, now time.Time) {
 	s.score = score
-	s.updatedAt = time.Now().UTC()
+	s.updatedAt = now
 }
 
 // AggregateType 实现 aggregate.Root 接口
