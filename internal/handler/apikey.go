@@ -8,7 +8,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
-	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
@@ -43,7 +42,7 @@ func NewAPIKeyHandler() APIKeyHandler {
 	apiKeyRepo := repository.NewAPIKeyRepository()
 	userRepo := repository.NewUserRepository()
 	generator := apikeyservice.NewAPIKeyGenerator()
-	userExistsCh := identityquery.NewUserExistenceChecker(userRepo)
+	userExistsCh := command.NewUserExistenceChecker(userRepo)
 
 	return &apiKeyHandler{
 		issue:  command.NewIssueAPIKeyHandler(apiKeyRepo, generator, userExistsCh),
