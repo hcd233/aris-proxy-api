@@ -225,9 +225,6 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 		return util.SendAnthropicInternalError(), nil
 	}
 	openAIReq.Model = ep.Model
-	for _, msg := range openAIReq.Messages {
-		msg.ReasoningContent = ""
-	}
 	body := lo.Must1(sonic.Marshal(openAIReq))
 
 	if stream {

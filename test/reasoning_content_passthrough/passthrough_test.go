@@ -10,24 +10,24 @@ import (
 )
 
 type testCase struct {
-	Name                  string `json:"name"`
-	Description           string `json:"description"`
-	Messages              []testMessage `json:"messages"`
-	ShouldHaveReasoning   bool   `json:"shouldHaveReasoning"`
+	Name                string        `json:"name"`
+	Description         string        `json:"description"`
+	Messages            []testMessage `json:"messages"`
+	ShouldHaveReasoning bool          `json:"shouldHaveReasoning"`
 }
 
 type testMessage struct {
-	Role             string        `json:"role"`
-	Content          any           `json:"content,omitempty"`
-	ReasoningContent string        `json:"reasoning_content,omitempty"`
-	ToolCalls        []any         `json:"tool_calls,omitempty"`
+	Role             string `json:"role"`
+	Content          any    `json:"content,omitempty"`
+	ReasoningContent string `json:"reasoning_content,omitempty"`
+	ToolCalls        []any  `json:"tool_calls,omitempty"`
 }
 
 func loadCases(t *testing.T) []testCase {
 	t.Helper()
 	return []testCase{
 		{
-			Name: "assistant_has_reasoning_content",
+			Name:        "assistant_has_reasoning_content",
 			Description: "Assistant message with reasoning_content and tool_calls",
 			Messages: []testMessage{
 				{Role: "system", Content: "You are helpful"},
@@ -39,10 +39,10 @@ func loadCases(t *testing.T) []testCase {
 					ToolCalls:        []any{map[string]any{"id": "call_123", "type": "function"}},
 				},
 			},
-			ShouldHaveReasoning: false,
+			ShouldHaveReasoning: true,
 		},
 		{
-			Name: "assistant_no_reasoning",
+			Name:        "assistant_no_reasoning",
 			Description: "Assistant message without reasoning_content",
 			Messages: []testMessage{
 				{Role: "user", Content: "Hello"},
@@ -53,7 +53,7 @@ func loadCases(t *testing.T) []testCase {
 	}
 }
 
-func TestReasoningContentStrippedFromSerializedBody(t *testing.T) {
+func TestReasoningContentPreservedInSerializedBody(t *testing.T) {
 	for _, tc := range loadCases(t) {
 		t.Run(tc.Name, func(t *testing.T) {
 			reqBody := buildReqBody(t, tc.Messages)
@@ -61,30 +61,20 @@ func TestReasoningContentStrippedFromSerializedBody(t *testing.T) {
 			if err != nil {
 				t.Fatalf("sonic.Marshal error: %v", err)
 			}
-			beforeStr := string(marshaled)
-			beforeHasRC := strings.Contains(beforeStr, "reasoning_content")
+			bodyStr := string(marshaled)
+			hasRC := strings.Contains(bodyStr, "reasoning_content")
 
-			for _, msg := range reqBody.Messages {
-				msg.ReasoningContent = ""
+			if tc.ShouldHaveReasoning && !hasRC {
+				t.Errorf("expected reasoning_content in serialized body, got none\nBody: %s", bodyStr)
 			}
-			marshaledAfter, err := sonic.Marshal(reqBody)
-			if err != nil {
-				t.Fatalf("sonic.Marshal after strip error: %v", err)
-			}
-			afterStr := string(marshaledAfter)
-			afterHasRC := strings.Contains(afterStr, "reasoning_content")
-
-			if tc.ShouldHaveReasoning && !beforeHasRC {
-				t.Errorf("expected reasoning_content before strip, got none")
-			}
-			if afterHasRC {
-				t.Errorf("reasoning_content still present after strip\nBefore: %s\nAfter: %s", beforeStr, afterStr)
+			if !tc.ShouldHaveReasoning && hasRC {
+				t.Errorf("unexpected reasoning_content in serialized body\nBody: %s", bodyStr)
 			}
 		})
 	}
 }
 
-func TestReasoningContentStrippedInForwardNative(t *testing.T) {
+func TestReasoningContentWithToolCallsPreserved(t *testing.T) {
 	reqBody := &dto.OpenAIChatCompletionReq{
 		Model: "test-model",
 		Messages: []*dto.OpenAIChatCompletionMessageParam{
@@ -107,19 +97,13 @@ func TestReasoningContentStrippedInForwardNative(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal error: %v", err)
 	}
-	if !strings.Contains(string(marshaled), "reasoning_content") {
-		t.Fatalf("expected reasoning_content in original body")
-	}
+	bodyStr := string(marshaled)
 
-	for _, msg := range reqBody.Messages {
-		msg.ReasoningContent = ""
+	if !strings.Contains(bodyStr, "reasoning_content") {
+		t.Fatalf("reasoning_content should be preserved in serialized body: %s", bodyStr)
 	}
-	marshaledAfter, err := sonic.Marshal(reqBody)
-	if err != nil {
-		t.Fatalf("marshal after strip error: %v", err)
-	}
-	if strings.Contains(string(marshaledAfter), "reasoning_content") {
-		t.Errorf("reasoning_content NOT stripped\nBefore: %s\nAfter: %s", string(marshaled), string(marshaledAfter))
+	if !strings.Contains(bodyStr, "tool_calls") {
+		t.Fatalf("tool_calls should be preserved in serialized body: %s", bodyStr)
 	}
 }
 
