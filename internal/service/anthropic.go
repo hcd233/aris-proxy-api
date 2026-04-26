@@ -155,6 +155,8 @@ func (s *anthropicService) forwardNativeStream(ctx context.Context, log *zap.Log
 		}
 		if err == nil {
 			_ = util.WriteAnthropicMessageStop(w)
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, err, ep.Model)
@@ -223,6 +225,9 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 		return util.SendAnthropicInternalError(), nil
 	}
 	openAIReq.Model = ep.Model
+	for _, msg := range openAIReq.Messages {
+		msg.ReasoningContent = ""
+	}
 	body := lo.Must1(sonic.Marshal(openAIReq))
 
 	if stream {

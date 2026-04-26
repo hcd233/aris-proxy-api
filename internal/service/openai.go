@@ -140,6 +140,9 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
 	}
 
+	for _, msg := range req.Body.Messages {
+		msg.ReasoningContent = ""
+	}
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
 	if stream {
@@ -176,6 +179,8 @@ func (s *openAIService) forwardNativeStream(ctx context.Context, log *zap.Logger
 		if err == nil {
 			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
 			_ = w.Flush()
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		s.storeFromCompletion(ctx, log, req, completion, err, ep.Model)
@@ -293,6 +298,8 @@ func (s *openAIService) forwardViaAnthropicStream(ctx context.Context, log *zap.
 		if err == nil {
 			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
 			_ = w.Flush()
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		s.storeFromAnthropicMsg(ctx, log, req, anthropicMsg, err, ep.Model)
@@ -522,6 +529,7 @@ func (s *openAIService) forwardResponseStream(ctx context.Context, log *zap.Logg
 		}
 		if proxyErr != nil {
 			log.Error("[OpenAIService] Response API stream error", zap.Error(proxyErr))
+			util.WriteUpstreamSSEError(log, w, proxyErr)
 		}
 
 		s.storeFromResponseRsp(ctx, log, req, finalResponse, proxyErr, ep.Model)
@@ -633,6 +641,8 @@ func (s *openAIService) forwardResponseAnthropicStream(ctx context.Context, log 
 		if err == nil {
 			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
 			_ = w.Flush()
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		s.storeFromAnthropicMsgForResponse(ctx, log, req, anthropicMsg, err, ep.Model)
