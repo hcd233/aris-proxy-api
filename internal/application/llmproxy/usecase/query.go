@@ -149,7 +149,7 @@ func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensR
 		return &dto.AnthropicTokensCount{}, nil
 	}
 
-	upstream := transport.UpstreamEndpoint{Model: creds.Model, APIKey: creds.APIKey, BaseURL: creds.BaseURL}
+	upstream := transport.NewUpstreamEndpointFromCredential(creds)
 	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
 
 	rsp, err := q.proxy.ForwardCountTokens(ctx, upstream, body)

@@ -69,7 +69,7 @@ func NewAnthropicProxy() AnthropicProxy {
 func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, "/messages", body)
+	resp, err := p.sendRequest(ctx, ep, constant.UpstreamPathAnthropicMessages, body)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEn
 func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, "/messages", body)
+	resp, err := p.sendRequest(ctx, ep, constant.UpstreamPathAnthropicMessages, body)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep Upst
 func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, "/messages/count_tokens", body)
+	resp, err := p.sendRequest(ctx, ep, constant.UpstreamPathAnthropicCountTokens, body)
 	if err != nil {
 		return nil, err
 	}
@@ -175,9 +175,9 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 		log.Error("[AnthropicProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create request")
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", ep.APIKey)
-	req.Header.Set("anthropic-version", constant.AnthropicAPIVersion)
+	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+	req.Header.Set(constant.HTTPHeaderAPIKey, ep.APIKey)
+	req.Header.Set(constant.HTTPHeaderAnthropicVersion, constant.AnthropicAPIVersion)
 
 	log.Info("[AnthropicProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),

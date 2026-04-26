@@ -43,7 +43,7 @@ import (
 
 // openAIInternalErrorBody OpenAI 内部错误响应 body（预序列化，避免重复 marshal）
 var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
-	Error: &dto.OpenAIError{Message: "Internal server error", Type: "server_error", Code: "internal_error"},
+	Error: &dto.OpenAIError{Message: constant.OpenAIInternalErrorMessage, Type: constant.OpenAIInternalErrorType, Code: constant.OpenAIInternalErrorCode},
 }))
 
 // OpenAIUseCase OpenAI 兼容接口的全部 UseCase（ChatCompletion + Response API + ListModels）

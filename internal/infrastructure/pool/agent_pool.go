@@ -1,23 +1,39 @@
 // Package pool 协程池管理器
 //
 //	author centonhuang
-//	update 2026-04-05 10:00:00
+//	update 2026-04-26 14:00:00
 package pool
 
 import (
 	"time"
 
-	"github.com/samber/lo"
-	"go.uber.org/zap"
-
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/agent"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"go.uber.org/zap"
 )
+
+// sessionRepo 懒初始化的 Session 仓储实例（仅在 agent pool 协程中使用）
+//
+//	@author centonhuang
+//	@update 2026-04-26 14:00:00
+var sessionRepo session.SessionRepository
+
+// getSessionRepo 返回 Session 仓储单例（懒初始化）
+//
+//	@return session.SessionRepository
+//	@author centonhuang
+//	@update 2026-04-26 14:00:00
+func getSessionRepo() session.SessionRepository {
+	if sessionRepo == nil {
+		sessionRepo = repository.NewSessionRepository()
+	}
+	return sessionRepo
+}
 
 // SubmitSummarizeTask 提交 Session 总结任务到协程池
 //
@@ -25,10 +41,9 @@ import (
 //	@param task *dto.SummarizeTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-04-26 14:00:00
 func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 	log := logger.WithCtx(task.Ctx)
-	db := database.GetDBInstance(task.Ctx)
 
 	summarizer := agent.GetSummarizer()
 
@@ -36,11 +51,10 @@ func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 		summary, err := summarizer.SummarizeWithRetry(task.Ctx, task.Content, constant.SummarizeMaxRetries)
 		if err != nil {
 			log.Error("[AgentPool] Failed to generate summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
-			// 记录失败原因
-			sessionDAO := dao.GetSessionDAO()
-			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
-				"summarize_error": err.Error(),
-			})
+			failedSummary := vo.NewSessionSummary("", err.Error())
+			if updateErr := getSessionRepo().UpdateSummary(task.Ctx, task.SessionID, failedSummary); updateErr != nil {
+				log.Error("[AgentPool] Failed to update summarize_error", zap.Uint("sessionID", task.SessionID), zap.Error(updateErr))
+			}
 			return
 		}
 
@@ -49,11 +63,8 @@ func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 			return
 		}
 
-		sessionDAO := dao.GetSessionDAO()
-		err = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
-			"summary": summary,
-		})
-		if err != nil {
+		successSummary := vo.NewSessionSummary(summary, "")
+		if err := getSessionRepo().UpdateSummary(task.Ctx, task.SessionID, successSummary); err != nil {
 			log.Error("[AgentPool] Failed to update session summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			return
 		}
@@ -68,10 +79,9 @@ func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 //	@param task *dto.ScoreTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-04-26 14:00:00
 func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 	log := logger.WithCtx(task.Ctx)
-	db := database.GetDBInstance(task.Ctx)
 
 	scorer := agent.GetScorer()
 
@@ -79,11 +89,10 @@ func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 		result, err := scorer.ScoreWithRetry(task.Ctx, task.Content, constant.ScoreMaxRetries)
 		if err != nil {
 			log.Error("[AgentPool] Failed to generate score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
-			// 记录失败原因
-			sessionDAO := dao.GetSessionDAO()
-			_ = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
-				"score_error": err.Error(),
-			})
+			failedScore := vo.NewFailedSessionScore(err.Error(), time.Now())
+			if updateErr := getSessionRepo().UpdateScore(task.Ctx, task.SessionID, failedScore); updateErr != nil {
+				log.Error("[AgentPool] Failed to update score_error", zap.Uint("sessionID", task.SessionID), zap.Error(updateErr))
+			}
 			return
 		}
 
@@ -92,16 +101,13 @@ func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 			return
 		}
 
-		sessionDAO := dao.GetSessionDAO()
-		err = sessionDAO.Update(db, &dbmodel.Session{ID: task.SessionID}, map[string]any{
-			"coherence_score": result.Coherence,
-			"depth_score":     result.Depth,
-			"value_score":     result.Value,
-			"total_score":     result.Total(),
-			"score_version":   constant.ScoreVersion,
-			"scored_at":       lo.ToPtr(time.Now()),
-		})
-		if err != nil {
+		score, scoreErr := vo.NewSessionScore(float64(result.Coherence), float64(result.Depth), float64(result.Value), constant.ScoreVersion, time.Now())
+		if scoreErr != nil {
+			log.Error("[AgentPool] Invalid score values", zap.Uint("sessionID", task.SessionID), zap.Error(scoreErr))
+			return
+		}
+
+		if err := getSessionRepo().UpdateScore(task.Ctx, task.SessionID, score); err != nil {
 			log.Error("[AgentPool] Failed to update session score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			return
 		}

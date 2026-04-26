@@ -2,7 +2,6 @@
 package vo
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -133,13 +132,13 @@ func (s SessionScore) Failed() bool { return s.errMsg != "" }
 //	@update 2026-04-26 10:00:00
 func NewSessionScore(coherence, depth, value float64, version string, at time.Time) (SessionScore, error) {
 	if coherence < 1 || coherence > 10 {
-		return SessionScore{}, ierr.New(ierr.ErrValidation, fmt.Sprintf("coherence score %.1f out of range [1,10]", coherence))
+		return SessionScore{}, ierr.Newf(ierr.ErrValidation, "coherence score %.1f out of range [1,10]", coherence)
 	}
 	if depth < 1 || depth > 10 {
-		return SessionScore{}, ierr.New(ierr.ErrValidation, fmt.Sprintf("depth score %.1f out of range [1,10]", depth))
+		return SessionScore{}, ierr.Newf(ierr.ErrValidation, "depth score %.1f out of range [1,10]", depth)
 	}
 	if value < 1 || value > 10 {
-		return SessionScore{}, ierr.New(ierr.ErrValidation, fmt.Sprintf("value score %.1f out of range [1,10]", value))
+		return SessionScore{}, ierr.Newf(ierr.ErrValidation, "value score %.1f out of range [1,10]", value)
 	}
 	return SessionScore{
 		coherence: coherence,

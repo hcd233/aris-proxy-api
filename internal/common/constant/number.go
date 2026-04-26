@@ -17,6 +17,11 @@ const (
 	//	@update 2026-04-09 15:00:00
 	OAuthStateBytes = 32
 
+	// MaskSecretMinLength 掩码显示最低长度（短于此长度的密钥整体掩码）
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	MaskSecretMinLength = 8
+
 	// APIKeyRandomLength API Key 随机字符串长度
 	//	@author centonhuang
 	//	@update 2026-04-09 15:00:00

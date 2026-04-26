@@ -5,14 +5,15 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
+	conversationvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
+	sessionvo "github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 )
 
 // SessionRepository Session 聚合仓储接口
 //
 //	@author centonhuang
-//	@update 2026-04-22 19:30:00
+//	@update 2026-04-26 14:00:00
 type SessionRepository interface {
 	// Save 持久化聚合（首次 Save 后回填 ID）
 	Save(ctx context.Context, session *aggregate.Session) error
@@ -22,6 +23,10 @@ type SessionRepository interface {
 	Paginate(ctx context.Context, owner string, param PageParam) ([]*aggregate.Session, *model.PageInfo, error)
 	// Delete 软删除（标记 deleted_at）
 	Delete(ctx context.Context, id uint) error
+	// UpdateSummary 更新会话摘要（由 SummarizeAgent 调用）
+	UpdateSummary(ctx context.Context, id uint, summary sessionvo.SessionSummary) error
+	// UpdateScore 更新会话评分（由 ScoreAgent 调用）
+	UpdateScore(ctx context.Context, id uint, score sessionvo.SessionScore) error
 }
 
 // PageParam 分页查询参数
@@ -55,7 +60,7 @@ type SessionSummaryProjection struct {
 type MessageDetailProjection struct {
 	ID        uint
 	Model     string
-	Message   *vo.UnifiedMessage
+	Message   *conversationvo.UnifiedMessage
 	CreatedAt time.Time
 }
 
@@ -65,7 +70,7 @@ type MessageDetailProjection struct {
 //	@update 2026-04-24 20:00:00
 type ToolDetailProjection struct {
 	ID        uint
-	Tool      *vo.UnifiedTool
+	Tool      *conversationvo.UnifiedTool
 	CreatedAt time.Time
 }
 
