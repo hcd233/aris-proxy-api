@@ -245,6 +245,59 @@ func IsResponseAPIDeltaEvent(event string) bool {
 	return strings.HasSuffix(event, enum.ResponseStreamEventDeltaSuffix)
 }
 
+// EnsureAssistantMessageReasoningContent 在序列化后的 JSON body 中，为缺少
+// reasoning_content 的 assistant message 补上空字符串。
+//
+// 部分上游 provider（如 Moonshot AI）在 thinking 模式下要求 assistant tool call
+// message 必须携带 reasoning_content 字段，即使值为空字符串；而 Go struct 的
+// omitempty 会将空字符串完全省略，导致上游返回 400。
+//
+//	@param body []byte 序列化后的 OpenAIChatCompletionReq JSON
+//	@return []byte 处理后的 JSON
+//	@author centonhuang
+//	@update 2026-04-26 23:30:00
+func EnsureAssistantMessageReasoningContent(body []byte) []byte {
+	var root map[string]any
+	if err := sonic.Unmarshal(body, &root); err != nil {
+		return body
+	}
+	msgsRaw, ok := root["messages"].([]any)
+	if !ok {
+		return body
+	}
+	modified := false
+	for i, msgRaw := range msgsRaw {
+		msg, ok := msgRaw.(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := msg["role"].(string)
+		if role != enum.RoleAssistant {
+			continue
+		}
+		// 已有 reasoning_content 则跳过
+		if _, hasRC := msg["reasoning_content"]; hasRC {
+			continue
+		}
+		// 没有 tool_calls 也跳过（上游只要求 tool call message 有该字段）
+		if tcs, hasTC := msg["tool_calls"].([]any); !hasTC || len(tcs) == 0 {
+			continue
+		}
+		msg["reasoning_content"] = ""
+		msgsRaw[i] = msg
+		modified = true
+	}
+	if !modified {
+		return body
+	}
+	root["messages"] = msgsRaw
+	result, err := sonic.Marshal(root)
+	if err != nil {
+		return body
+	}
+	return result
+}
+
 // SendOpenAIUpstreamError 发送上游错误响应
 //
 //	@param statusCode int

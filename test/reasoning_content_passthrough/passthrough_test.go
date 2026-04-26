@@ -7,13 +7,14 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type testCase struct {
 	Name                string        `json:"name"`
 	Description         string        `json:"description"`
 	Messages            []testMessage `json:"messages"`
-	ShouldHaveReasoning bool          `json:"shouldHaveReasoning"`
+	ExpectedReasoning   string        `json:"expectedReasoning"`
 }
 
 type testMessage struct {
@@ -39,7 +40,7 @@ func loadCases(t *testing.T) []testCase {
 					ToolCalls:        []any{map[string]any{"id": "call_123", "type": "function"}},
 				},
 			},
-			ShouldHaveReasoning: true,
+			ExpectedReasoning: "This is my reasoning for the answer with 158 chars...",
 		},
 		{
 			Name:        "assistant_no_reasoning",
@@ -48,7 +49,7 @@ func loadCases(t *testing.T) []testCase {
 				{Role: "user", Content: "Hello"},
 				{Role: "assistant", Content: "Hi there!"},
 			},
-			ShouldHaveReasoning: false,
+			ExpectedReasoning: "",
 		},
 	}
 }
@@ -62,13 +63,17 @@ func TestReasoningContentPreservedInSerializedBody(t *testing.T) {
 				t.Fatalf("sonic.Marshal error: %v", err)
 			}
 			bodyStr := string(marshaled)
-			hasRC := strings.Contains(bodyStr, "reasoning_content")
 
-			if tc.ShouldHaveReasoning && !hasRC {
-				t.Errorf("expected reasoning_content in serialized body, got none\nBody: %s", bodyStr)
-			}
-			if !tc.ShouldHaveReasoning && hasRC {
-				t.Errorf("unexpected reasoning_content in serialized body\nBody: %s", bodyStr)
+			if tc.ExpectedReasoning != "" {
+				expected := `"reasoning_content":"` + tc.ExpectedReasoning + `"`
+				if !strings.Contains(bodyStr, expected) {
+					t.Errorf("expected %s in serialized body\nBody: %s", expected, bodyStr)
+				}
+			} else {
+				// When ExpectedReasoning is empty, omitempty omits the field entirely
+				if strings.Contains(bodyStr, "reasoning_content") {
+					t.Errorf("unexpected reasoning_content in serialized body (should be omitted by omitempty)\nBody: %s", bodyStr)
+				}
 			}
 		})
 	}
@@ -104,6 +109,55 @@ func TestReasoningContentWithToolCallsPreserved(t *testing.T) {
 	}
 	if !strings.Contains(bodyStr, "tool_calls") {
 		t.Fatalf("tool_calls should be preserved in serialized body: %s", bodyStr)
+	}
+}
+
+func TestEnsureAssistantMessageReasoningContent(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "assistant_with_tool_calls_no_reasoning",
+			input: `{"messages":[{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function"}]}]}`,
+			expected: `reasoning_content`,
+		},
+		{
+			name: "assistant_with_tool_calls_has_reasoning",
+			input: `{"messages":[{"role":"assistant","content":"","reasoning_content":"think","tool_calls":[{"id":"call_1"}]}]}`,
+			expected: `"reasoning_content":"think"`,
+		},
+		{
+			name: "assistant_without_tool_calls",
+			input: `{"messages":[{"role":"assistant","content":"hi"}]}`,
+			expected: ``,
+		},
+		{
+			name: "user_message_ignored",
+			input: `{"messages":[{"role":"user","content":"hi"}]}`,
+			expected: ``,
+		},
+		{
+			name: "mixed_messages",
+			input: `{"messages":[{"role":"user","content":"hi"},{"role":"assistant","tool_calls":[{"id":"c1"}]},{"role":"assistant","content":"ok"}]}`,
+			expected: `reasoning_content`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := util.EnsureAssistantMessageReasoningContent([]byte(tc.input))
+			gotStr := string(got)
+			if tc.expected != "" && !strings.Contains(gotStr, tc.expected) {
+				t.Errorf("expected %q in output, got %s", tc.expected, gotStr)
+			}
+			// Verify valid JSON
+			var v any
+			if err := sonic.Unmarshal(got, &v); err != nil {
+				t.Fatalf("output is not valid JSON: %v\nOutput: %s", err, gotStr)
+			}
+		})
 	}
 }
 
