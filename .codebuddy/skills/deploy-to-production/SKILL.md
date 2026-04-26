@@ -1,89 +1,89 @@
 ---
 name: deploy-to-production
-description: Build and deploy aris-proxy-api to production. Use this skill whenever the user wants to deploy, ship, release, or push to production. Covers the full pipeline: git commit + push → wait for GitHub Actions docker build → SSH to server and run deploy script.
-compatibility: Requires gh CLI authenticated, SSH key for production server, and docker compose on the server.
+description: 构建并部署 aris-proxy-api 到生产环境。当用户想要部署、发布、发布到生产环境时使用此技能。覆盖完整流程：git commit + push → 等待 GitHub Actions Docker 构建 → SSH 到服务器执行部署脚本。
+compatibility: 需要已认证的 gh CLI、生产服务器的 SSH 密钥，以及服务器上已安装 docker compose。
 ---
 
-# deploy
+# 部署
 
-Deploy the aris-proxy-api project to the production server at `api.lvlvko.top`.
+将 aris-proxy-api 项目部署到 `api.lvlvko.top` 的生产服务器。
 
-## Workflow
+## 工作流程
 
-This skill covers the full pipeline — commit and push, wait for CI build, then deploy on server.
+本技能覆盖完整流程 — 提交并推送、等待 CI 构建、然后在服务器上部署。
 
-### Step 1: Commit and push
+### 第 1 步：提交并推送
 
-If there are uncommitted changes, stage and commit them first. Ask the user for a commit message if one is not provided. Use conventional commit format: `type(scope): description`.
+如果有未提交的更改，先暂存并提交。如果未提供提交信息，请向用户询问。使用约定式提交格式：`type(scope): description`。
 
 ```bash
 git add -A
-git commit -m "<message>"
-git push origin <current-branch>
+git commit -m "<信息>"
+git push origin <当前分支>
 ```
 
-After pushing, note the current branch name — it will be needed for the image tag.
+推送后，记下当前分支名称 — 稍后用于镜像标签。
 
-### Step 2: Wait for Docker build
+### 第 2 步：等待 Docker 构建
 
-The GitHub Actions workflow `docker-publish.yml` triggers on push to `master` or version tags (`v*.*.*`). If the push is to a non-master branch, the workflow may not trigger automatically — adjust the tag approach accordingly.
+GitHub Actions 工作流 `docker-publish.yml` 在推送到 `master` 或版本标签（`v*.*.*`）时触发。如果推送到非 master 分支，工作流可能不会自动触发 — 相应调整标签策略。
 
-Find and watch the workflow run:
+查找并监控工作流运行：
 
 ```bash
-# List recent runs for the docker-publish workflow
+# 列出 docker-publish 工作流的最近运行记录
 gh run list --workflow docker-publish.yml --repo hcd233/aris-proxy-api --limit 5
 
-# Watch the latest run (replace <run-id> with the actual ID)
+# 监控最新运行（将 <run-id> 替换为实际 ID）
 gh run watch <run-id> --repo hcd233/aris-proxy-api
 ```
 
-Poll until the build completes. The build usually takes under 3 minutes. If `gh run watch` exits with a non-zero status, the build failed — report this to the user.
+轮询直到构建完成。构建通常需要不到 3 分钟。如果 `gh run watch` 以非零状态退出，说明构建失败 — 请向用户报告。
 
-### Step 3: Deploy on server
+### 第 3 步：在服务器上部署
 
-Once the Docker image is built and pushed to GHCR, resolve the production server IP from the domain and SSH into it:
+Docker 镜像构建并推送到 GHCR 后，从域名解析生产服务器 IP 并通过 SSH 连接：
 
 ```bash
-# Resolve the server IP from the production domain
+# 从生产域名解析服务器 IP
 PROD_IP=$(dig +short api.lvlvko.top | head -1)
 
-# SSH into the server and run the deploy script
+# SSH 到服务器并执行部署脚本
 ssh ubuntu@${PROD_IP} 'cd code/aris-proxy-api/ && bash script/deploy.sh'
 ```
 
-The deploy script:
-1. `git fetch` + `git pull --ff-only` — pulls latest code for docker-compose config
-2. `docker pull ghcr.io/hcd233/aris-proxy-api:<branch>` — pulls the new image
-3. `docker compose up -d` — restarts the service with the new image
-4. `docker image prune -a -f` — cleans up old images
-5. `docker logs -f aris-proxy-api --details` — tails logs to verify the service started correctly
+部署脚本执行以下操作：
+1. `git fetch` + `git pull --ff-only` — 拉取最新代码（用于 docker-compose 配置）
+2. `docker pull ghcr.io/hcd233/aris-proxy-api:<分支名>` — 拉取新镜像
+3. `docker compose up -d` — 使用新镜像重启服务
+4. `docker image prune -a -f` — 清理旧镜像
+5. `docker logs -f aris-proxy-api --details` — 持续输出日志，验证服务是否正常启动
 
-**Important**: The last step (`docker logs -f`) will follow logs indefinitely. After a few seconds of healthy-looking logs, the deployment is successful. Press Ctrl+C to stop tailing.
+**重要**：最后一步（`docker logs -f`）会持续跟踪日志。看到几行健康日志后，部署即成功。按 Ctrl+C 停止跟踪。
 
-### Step 4: Report
+### 第 4 步：报告
 
-After deployment, summarize:
-- Branch and commit deployed
-- Build status and duration
-- Any warnings or errors from the logs
+部署完成后，总结以下信息：
+- 部署的分支和提交
+- 构建状态和耗时
+- 日志中的任何警告或错误
 
-## Server details
+## 服务器详情
 
-| Item | Value |
+| 项目 | 值 |
 |------|-------|
-| Domain | `api.lvlvko.top` |
-| Resolve | `dig +short api.lvlvko.top` |
-| User | `ubuntu` |
-| Project path | `code/aris-proxy-api/` |
-| Deploy script | `script/deploy.sh` |
-| Docker image | `ghcr.io/hcd233/aris-proxy-api` |
-| Service name | `aris-proxy-api` |
+| 域名 | `api.lvlvko.top` |
+| 解析命令 | `dig +short api.lvlvko.top` |
+| 用户 | `ubuntu` |
+| 项目路径 | `code/aris-proxy-api/` |
+| 部署脚本 | `script/deploy.sh` |
+| Docker 镜像 | `ghcr.io/hcd233/aris-proxy-api` |
+| 服务名称 | `aris-proxy-api` |
 
-## Troubleshooting
+## 故障排查
 
-- **Build not triggering**: The workflow only triggers on `master` and `v*.*.*` tags. For other branches, push to master or create a version tag.
-- **Build failed**: Use `gh run view <run-id> --log --repo hcd233/aris-proxy-api` to inspect logs.
-- **SSH fails**: Check that the SSH key is loaded (`ssh-add -l`).
-- **docker pull fails**: Verify the image tag matches the branch name (with `/` replaced by `-`).
-- **Container crashes**: After deployment, check logs via `ssh ubuntu@$(dig +short api.lvlvko.top | head -1) 'docker logs aris-proxy-api --tail 50'`.
+- **构建未触发**：工作流仅在推送 `master` 和 `v*.*.*` 标签时触发。对于其他分支，请推送到 master 或创建版本标签。
+- **构建失败**：使用 `gh run view <run-id> --log --repo hcd233/aris-proxy-api` 查看日志。
+- **SSH 失败**：检查 SSH 密钥是否已加载（`ssh-add -l`）。
+- **docker pull 失败**：确认镜像标签与分支名称匹配（`/` 替换为 `-`）。
+- **容器崩溃**：部署后，通过 `ssh ubuntu@$(dig +short api.lvlvko.top | head -1) 'docker logs aris-proxy-api --tail 50'` 检查日志。
