@@ -140,9 +140,6 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
 	}
 
-	for _, msg := range req.Body.Messages {
-		msg.ReasoningContent = ""
-	}
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 
 	if stream {
