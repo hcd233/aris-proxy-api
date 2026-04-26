@@ -522,7 +522,7 @@ type OpenAIChatCompletionAudio struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionMessageToolCall struct {
-	Index    int                                          `json:"index,omitempty" doc:"工具调用索引(流式delta中使用)"`
+	Index    int                                          `json:"index" doc:"工具调用索引(流式delta中使用)"`
 	ID       string                                       `json:"id,omitempty" doc:"工具调用ID"`
 	Type     enum.ToolType                                `json:"type,omitempty" doc:"工具类型: function/custom"`
 	Function *OpenAIChatCompletionMessageFunctionToolCall `json:"function,omitempty" doc:"函数工具调用"`
