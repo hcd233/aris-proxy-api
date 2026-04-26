@@ -64,20 +64,25 @@ func (sm *StateManager) GenerateState() (string, error) {
 }
 
 // VerifyState 验证state是否有效（一次性使用）
-func (sm *StateManager) VerifyState(state string) bool {
+//
+// 返回 error 以区分「state 无效/过期」和「存储故障」。
+// 当前内存实现不产生存储故障，但保留 error 返回值以符合 domain 接口契约。
+func (sm *StateManager) VerifyState(state string) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
 	createdAt, exists := sm.states[state]
 	if !exists {
-		return false
+		return ierr.New(ierr.ErrUnauthorized, "oauth state not found")
 	}
 
-	// 删除已使用的state（一次性）
 	delete(sm.states, state)
 
-	// 检查是否过期
-	return time.Now().UTC().Sub(createdAt) <= sm.ttl
+	if time.Now().UTC().Sub(createdAt) > sm.ttl {
+		return ierr.New(ierr.ErrUnauthorized, "oauth state expired")
+	}
+
+	return nil
 }
 
 // cleanup 定期清理过期state
@@ -106,6 +111,6 @@ func GenerateOAuth2State() (string, error) {
 }
 
 // VerifyOAuth2State 验证OAuth2 state
-func VerifyOAuth2State(state string) bool {
+func VerifyOAuth2State(state string) error {
 	return globalStateManager.VerifyState(state)
 }

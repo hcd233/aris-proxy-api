@@ -153,15 +153,15 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
 
-	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + "/chat/completions"
+	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + constant.UpstreamPathOpenAIChatCompletions
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
 	if err != nil {
 		log.Error("[OpenAIProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create request")
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+ep.APIKey)
+	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
@@ -250,15 +250,15 @@ func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep Upstre
 func (p *openAIProxy) sendResponseRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
 
-	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + "/responses"
+	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + constant.UpstreamPathOpenAIResponses
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
 	if err != nil {
 		log.Error("[OpenAIProxy] New response api request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create response api request")
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+ep.APIKey)
+	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
 
 	log.Info("[OpenAIProxy] Send response api upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),

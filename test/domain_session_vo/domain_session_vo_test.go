@@ -120,7 +120,10 @@ func TestNewSessionScore_Total(t *testing.T) {
 	tc := findCase(t, cases, "session_score_valid")
 
 	now := time.Now().UTC()
-	s := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, now)
+	s, err := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, now)
+	if err != nil {
+		t.Fatalf("NewSessionScore() error: %v", err)
+	}
 
 	if s.Coherence() != tc.Coherence {
 		t.Errorf("Coherence() = %f, want %f", s.Coherence(), tc.Coherence)
@@ -152,19 +155,14 @@ func TestNewSessionScore_Total(t *testing.T) {
 	}
 }
 
-// TestNewSessionScore_Zero 全零 score 应正确计算 total 为 0
+// TestNewSessionScore_Zero 全零 score 应返回验证错误（范围 [1,10]）
 func TestNewSessionScore_Zero(t *testing.T) {
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_score_zero")
 
-	s := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, time.Now().UTC())
-
-	if s.Total() != 0 {
-		t.Errorf("Total() = %f, want 0", s.Total())
-	}
-	// NewSessionScore 始终设置 at，因此 IsEmpty() 为 false — 已评分为零分与未评分不同
-	if s.IsEmpty() {
-		t.Error("IsEmpty() = true, want false — scored session should not be empty")
+	_, err := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, time.Now().UTC())
+	if err == nil {
+		t.Error("NewSessionScore() with zero values should return validation error, got nil")
 	}
 }
 

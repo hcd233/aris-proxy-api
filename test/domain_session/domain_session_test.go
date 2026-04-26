@@ -211,7 +211,10 @@ func TestUpdateScore_Valid(t *testing.T) {
 		t.Fatalf("CreateSession() error: %v", err)
 	}
 
-	score := vo.NewSessionScore(tc.ScoreCoherence, tc.ScoreDepth, tc.ScoreValue, tc.ScoreVersion, time.Now().UTC())
+	score, scoreErr := vo.NewSessionScore(tc.ScoreCoherence, tc.ScoreDepth, tc.ScoreValue, tc.ScoreVersion, time.Now().UTC())
+	if scoreErr != nil {
+		t.Fatalf("NewSessionScore() error: %v", scoreErr)
+	}
 	s.UpdateScore(score, time.Now().UTC())
 
 	if s.Score().Coherence() != tc.ScoreCoherence {

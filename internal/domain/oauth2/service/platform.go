@@ -34,10 +34,11 @@ type Platform interface {
 // StateManager OAuth2 State 管理器接口（防 CSRF）
 //
 //	@author centonhuang
-//	@update 2026-04-22 17:00:00
+//	@update 2026-04-26 14:00:00
 type StateManager interface {
 	// GenerateState 生成一个一次性 state
 	GenerateState() (string, error)
 	// VerifyState 校验 state 有效性并标记为已使用（一次性）
-	VerifyState(state string) bool
+	// 返回 error 以区分「state 无效」和「存储故障」
+	VerifyState(state string) error
 }

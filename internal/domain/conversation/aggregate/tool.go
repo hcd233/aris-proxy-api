@@ -53,8 +53,14 @@ func RestoreTool(id uint, content *vo.UnifiedTool, checksum string) *Tool {
 // AggregateType 实现 aggregate.Root 接口
 func (*Tool) AggregateType() string { return constant.AggregateTypeTool }
 
-// Content 返回工具内容
-func (t *Tool) Content() *vo.UnifiedTool { return t.content }
+// Content 返回工具内容的防御性副本
+func (t *Tool) Content() *vo.UnifiedTool {
+	if t.content == nil {
+		return nil
+	}
+	cp := *t.content
+	return &cp
+}
 
 // Checksum 返回校验和
 func (t *Tool) Checksum() string { return t.checksum }

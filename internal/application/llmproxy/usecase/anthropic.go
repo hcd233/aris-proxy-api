@@ -28,8 +28,8 @@ import (
 
 // anthropicInternalErrorBody Anthropic 内部错误响应 body（预序列化）
 var anthropicInternalErrorBody = lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
-	Type:  "error",
-	Error: &dto.AnthropicError{Type: "api_error", Message: "Internal server error"},
+	Type:  constant.AnthropicInternalErrorBodyType,
+	Error: &dto.AnthropicError{Type: constant.AnthropicInternalErrorType, Message: constant.AnthropicInternalErrorMessage},
 }))
 
 // AnthropicUseCase Anthropic 兼容接口的全部 UseCase

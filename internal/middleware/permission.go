@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -22,8 +21,8 @@ import (
 //	@update 2025-11-02 04:16:51
 func LimitUserPermissionMiddleware(serviceName string, requiredPermission enum.Permission) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
-		permission, ok := ctx.Context().Value(constant.CtxKeyPermission).(enum.Permission)
-		if !ok {
+		permission := util.CtxValuePermission(ctx.Context())
+		if permission == "" {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrNoPermission.BizError()))
 			return
 		}

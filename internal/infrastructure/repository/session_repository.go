@@ -180,6 +180,55 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+// UpdateSummary 更新会话摘要
+//
+//	@receiver r *sessionRepository
+//	@param ctx context.Context
+//	@param id uint
+//	@param summary vo.SessionSummary
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 14:00:00
+func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary vo.SessionSummary) error {
+	db := database.GetDBInstance(ctx)
+	updates := map[string]any{
+		"summary":         summary.Text(),
+		"summarize_error": summary.Error(),
+	}
+	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session summary")
+	}
+	return nil
+}
+
+// UpdateScore 更新会话评分
+//
+//	@receiver r *sessionRepository
+//	@param ctx context.Context
+//	@param id uint
+//	@param score vo.SessionScore
+//	@return error
+//	@author centonhuang
+//	@update 2026-04-26 14:00:00
+func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score vo.SessionScore) error {
+	db := database.GetDBInstance(ctx)
+	updates := map[string]any{
+		"coherence_score": score.Coherence(),
+		"depth_score":     score.Depth(),
+		"value_score":     score.Value(),
+		"total_score":     score.Total(),
+		"score_version":   score.Version(),
+		"score_error":     score.Error(),
+	}
+	if at := score.At(); at != nil {
+		updates["scored_at"] = *at
+	}
+	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session score")
+	}
+	return nil
+}
+
 // ==================== CQRS 读模型实现 ====================
 
 // sessionReadRepository SessionReadRepository 的 GORM 实现

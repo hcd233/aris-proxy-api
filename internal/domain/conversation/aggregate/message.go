@@ -76,8 +76,14 @@ func RestoreMessage(id uint, content *vo.UnifiedMessage, upstreamModel, checksum
 // AggregateType 实现 aggregate.Root 接口
 func (*Message) AggregateType() string { return constant.AggregateTypeMessage }
 
-// Content 返回消息内容
-func (m *Message) Content() *vo.UnifiedMessage { return m.content }
+// Content 返回消息内容的防御性副本
+func (m *Message) Content() *vo.UnifiedMessage {
+	if m.content == nil {
+		return nil
+	}
+	cp := *m.content
+	return &cp
+}
 
 // Model 返回上游 model 名
 func (m *Message) Model() string { return m.model }

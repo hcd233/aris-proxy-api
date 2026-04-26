@@ -93,7 +93,11 @@ func (m *mockAPIKeyGenerator) Generate() (vo.APIKeySecret, error) {
 	if m.generateFunc != nil {
 		return m.generateFunc()
 	}
-	return vo.NewAPIKeySecret("sk-aris-default"), nil
+	secret, err := vo.NewAPIKeySecret("sk-aris-default")
+	if err != nil {
+		return vo.APIKeySecret{}, err
+	}
+	return secret, nil
 }
 
 // mockUserExistenceChecker mock UserExistenceChecker

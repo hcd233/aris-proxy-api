@@ -23,7 +23,7 @@ import (
 //	@author centonhuang
 //	@update 2026-04-23 10:55:00
 func MaskSecret(key string) string {
-	if len(key) <= 8 {
+	if len(key) <= constant.MaskSecretMinLength {
 		return constant.MaskSecretPlaceholder
 	}
 	return fmt.Sprintf("%s***%s", key[:4], key[len(key)-4:])
