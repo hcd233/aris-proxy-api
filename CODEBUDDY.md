@@ -684,6 +684,118 @@ make test
 
 ---
 
+## LLM 代理 Bug 排障与修复流程
+
+当用户报告线上错误、提供 traceID 或报错日志时，按以下端到端流程排障。
+
+### Step 1: CLS 日志排查
+
+```bash
+# 1. 查找日志主题
+mcp__cls-mcp-server__GetTopicInfoByName(Region="ap-guangzhou", searchText="aris-proxy-api")
+
+# 2. 确定时间范围
+mcp__cls-mcp-server__ConvertTimestampToTimeString()  # 不传 timestamp 获取当前时间
+mcp__cls-mcp-server__ConvertTimeStringToTimestamp()  # 转为毫秒时间戳
+
+# 3. 按 traceID 搜索全链路日志
+mcp__cls-mcp-server__SearchLog(From, To, Query="traceID:\"<traceId>\"", Sort="asc", Limit=100)
+```
+
+从日志中提取关键信息：traceID、请求体（request 字段）、错误模块、上游 URL/Provider/Model、HTTP 状态码。
+
+### Step 2: 问题复现
+
+从 CLS 日志中提取原始请求体（request 字段），保存为临时文件，调用生产 API 复现：
+
+```bash
+# 提取请求体
+jq '.[0].LogJson | fromjson | .request' trace_log.json > /tmp/reproduce_req.json
+
+# 流式复现
+curl -sS --no-buffer --max-time 60 "https://api.lvlvko.top/api/openai/v1/chat/completions" \
+  -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data-binary @/tmp/reproduce_req.json > /tmp/reproduce_output.sse
+
+# 分析流式输出中的异常字段
+python3 - <<'PY'
+import json
+for line in open('/tmp/reproduce_output.sse'):
+    if not line.startswith('data: ') or 'DONE' in line: continue
+    chunk = json.loads(line[6:])
+    for c in chunk.get('choices',[]):
+        for tc in (c.get('delta') or {}).get('tool_calls') or []:
+            if not isinstance(tc.get('id'), str):
+                print('BAD ID:', tc)
+PY
+```
+
+### Step 3: Bug 定位与修复
+
+1. **阅读日志调用栈**：日志中 `caller` 字段直接指向出错文件行号
+2. **关联代码**：根据 `[ModuleName]` 前缀定位是 Service/Proxy/Converter 哪层的问题
+3. **分析常见模式**：
+
+| 现象 | 常见根因 | 排查方向 |
+|------|---------|---------|
+| 客户端报字段类型错误 | DTO `omitempty` 丢失零值后字段缺失 | 考虑 `*int` 等指针类型替代 `int + omitempty` |
+| 上游 400 拒绝请求 | 网关清洗了上游必需字段 | 检查 Service 层是否有非必要字段清洗逻辑 |
+| 客户端断流 | 非流式兼容字段混入流式输出 | 检查 DTO struct tag 对不同协议场景的兼容性 |
+| 流式分片丢失 `index`/`id` | `omitempty` 将零值字段剪除 | 使用指针类型，流式归一化补字段 |
+
+4. **修复 DTO 关联改动**：修改 DTO struct tag 后，需要同步修改所有引用该字段的代码路径：Service 层、Converter 层、Proxy 层、Stream 归一化工具函数
+
+### Step 4: 补充测试与验证
+
+```bash
+# 回归测试 — 新增回归用例覆盖触发 Bug 的场景
+go test -count=1 ./test/<主题目录>/
+
+# 规范扫描
+make lint-conv
+
+# 全量测试
+go test -count=1 ./...
+```
+
+### Step 5: 构建与部署
+
+```bash
+# 提交并推送
+git add <files>
+git commit -m "fix(scope): <description>"
+git push origin master
+
+# 等待 Docker 构建
+gh run watch $(gh run list --workflow docker-publish.yml --limit 1 --json databaseId -q '.[0].databaseId')
+
+# 部署到生产
+PROD_IP=$(dig +short api.lvlvko.top | head -1)
+ssh ubuntu@${PROD_IP} 'cd code/aris-proxy-api/ && bash script/deploy.sh'
+```
+
+### Step 6: 生产回归验证
+
+部署后用 CLS 原始请求体再次调用生产 API，验证修复效果：
+
+```bash
+curl -sS --no-buffer --max-time 60 "$BASE/api/openai/v1/chat/completions" \
+  -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data-binary @/tmp/reproduce_req.json > /tmp/verify_output.sse
+```
+
+关键验证项：
+- 原始 422/400/5xx 错误不再出现
+- 流式 `tool_calls` 的 `id` 类型全部为 string、`index` 不存在时也能正确合并
+- SSE 正常以 `data: [DONE]` 结束
+- 业务字段（如 `reasoning_content`）正确透传
+
+若验证发现新问题，回到 Step 2 继续排查，直至所有问题修复。
+
+---
+
 ## Git 工作流
 
 ### Pre-commit Hook
