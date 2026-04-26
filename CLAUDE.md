@@ -28,6 +28,7 @@
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 如果可用，使用 superpowers 流程：和用户头脑风暴、锁定范围、评审测试用例、制定小步计划、逐步修复。
 - 每次改动后，先补或更新回归/单测，再跑聚焦测试、`make lint-conv`、`go test -count=1 ./...`。
+- 端到端用例也要沉淀到代码仓库，通常放 `test/<topic>/` 并按现有 fixture 规范维护，测试通过后再提交并推送。
 - 测试和 lint 都通过后，若用户要求完整流程或部署，再提交并推送；本仓库 pre-commit 会执行 `gofmt -w`、`go mod tidy`、`go vet ./...`、`go test -count=1 ./...`、`script/lint-conventions.sh`。
 - 正式发布使用 `deploy-to-production`：推送到 `master`，等待 `docker-publish.yml` 镜像构建完成，再在生产机执行部署脚本。
 - 部署后使用 `call-api` 跑端到端用例，验证需求是否满足。
