@@ -226,6 +226,7 @@ func (s *anthropicService) forwardViaOpenAI(ctx context.Context, log *zap.Logger
 	}
 	openAIReq.Model = ep.Model
 	body := lo.Must1(sonic.Marshal(openAIReq))
+	body = util.EnsureAssistantMessageReasoningContent(body)
 
 	if stream {
 		return s.forwardViaOpenAIStream(ctx, log, req, endpoint, ep, exposedModel, body, &conv), nil
