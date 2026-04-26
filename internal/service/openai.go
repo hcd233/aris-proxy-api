@@ -158,12 +158,14 @@ func (s *openAIService) forwardNativeStream(ctx context.Context, log *zap.Logger
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs int64
 		var streamDurationMs int64
+		toolCallIDs := make(map[int]string)
 
 		completion, err := s.openAIProxy.ForwardChatCompletionStream(ctx, ep, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
+			util.NormalizeOpenAIStreamToolCalls(chunk, toolCallIDs)
 			chunk.Model = req.Body.Model
 			chunkData, marshalErr := sonic.Marshal(chunk)
 			if marshalErr != nil {

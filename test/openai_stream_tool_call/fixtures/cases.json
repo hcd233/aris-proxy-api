@@ -1,0 +1,48 @@
+[
+  {
+    "name": "index_zero_and_followup_id",
+    "description": "streaming tool call chunks keep index 0 and reuse the first chunk id on following deltas",
+    "chunks": [
+      {
+        "id": "chunk_1",
+        "choices": [
+          {
+            "delta": {
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "call_123",
+                  "type": "function",
+                  "function": {"arguments": "", "name": "read"}
+                }
+              ]
+            },
+            "index": 0
+          }
+        ],
+        "created": 1777182698,
+        "model": "deepseek-v4-flash",
+        "object": "chat.completion.chunk"
+      },
+      {
+        "id": "chunk_1",
+        "choices": [
+          {
+            "delta": {
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "function": {"arguments": "{", "name": ""}
+                }
+              ]
+            },
+            "index": 0
+          }
+        ],
+        "created": 1777182698,
+        "model": "deepseek-v4-flash",
+        "object": "chat.completion.chunk"
+      }
+    ]
+  }
+]
