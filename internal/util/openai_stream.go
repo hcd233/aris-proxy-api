@@ -20,11 +20,14 @@ func NormalizeOpenAIStreamToolCalls(chunk *dto.OpenAIChatCompletionChunk, toolCa
 			if toolCall == nil {
 				continue
 			}
+			if toolCall.Index == nil {
+				toolCall.Index = &choice.Index
+			}
 			if toolCall.ID != "" {
-				toolCallIDs[toolCall.Index] = toolCall.ID
+				toolCallIDs[*toolCall.Index] = toolCall.ID
 				continue
 			}
-			toolCall.ID = toolCallIDs[toolCall.Index]
+			toolCall.ID = toolCallIDs[*toolCall.Index]
 		}
 	}
 }

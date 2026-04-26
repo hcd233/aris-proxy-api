@@ -204,19 +204,23 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 
 		// 工具调用增量
 		for _, tc := range choice.Delta.ToolCalls {
+			toolCallIndex := choice.Index
+			if tc.Index != nil {
+				toolCallIndex = *tc.Index
+			}
 			if tc.Function != nil && tc.ID != "" {
-				if _, started := tracker.startedToolBlocks[tc.Index]; !started {
-					events = append(events, newContentBlockStartEvent(tc.Index, &dto.AnthropicContentBlock{
+				if _, started := tracker.startedToolBlocks[toolCallIndex]; !started {
+					events = append(events, newContentBlockStartEvent(toolCallIndex, &dto.AnthropicContentBlock{
 						Type:  enum.AnthropicContentBlockTypeToolUse,
 						ID:    tc.ID,
 						Name:  tc.Function.Name,
 						Input: map[string]any{},
 					}))
-					tracker.startedToolBlocks[tc.Index] = struct{}{}
+					tracker.startedToolBlocks[toolCallIndex] = struct{}{}
 				}
 			}
 			if tc.Function != nil && tc.Function.Arguments != "" {
-				events = append(events, newInputJSONDeltaEvent(tc.Index, tc.Function.Arguments))
+				events = append(events, newInputJSONDeltaEvent(toolCallIndex, tc.Function.Arguments))
 			}
 		}
 
