@@ -141,6 +141,7 @@ func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req 
 	}
 
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
+	body = util.EnsureAssistantMessageReasoningContent(body)
 
 	if stream {
 		return s.forwardNativeStream(ctx, log, req, endpoint, ep, body), nil
