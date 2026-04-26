@@ -1,4 +1,4 @@
-# CODEBUDDY.md
+# AGENTS.md
 
 ## 项目形态
 
