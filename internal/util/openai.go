@@ -103,7 +103,10 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 			// name/arguments fragments and merge them into one complete tool_call
 			// per index.
 			for _, tc := range choice.Delta.ToolCalls {
-				tcIdx := tc.Index
+				tcIdx := choice.Index
+				if tc.Index != nil {
+					tcIdx = *tc.Index
+				}
 				tcs, ok := cs.toolCallMap[tcIdx]
 				if !ok {
 					tcs = &toolCallState{}

@@ -44,5 +44,24 @@
         "object": "chat.completion.chunk"
       }
     ]
+  },
+  {
+    "name": "assistant_message_without_index",
+    "description": "assistant message tool calls must not require streaming-only index",
+    "messages": [
+      {
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "id": "call_00_HDvFq4DpNUKcu29ASvTVuOGU",
+            "type": "function",
+            "function": {
+              "name": "read",
+              "arguments": "{\"filePath\":\"/Users/centonhuang/Desktop/code/aris-proxy-api\"}"
+            }
+          }
+        ]
+      }
+    ]
   }
 ]

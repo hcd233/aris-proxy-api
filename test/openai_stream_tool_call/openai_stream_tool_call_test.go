@@ -10,9 +10,10 @@ import (
 )
 
 type testCase struct {
-	Name        string                           `json:"name"`
-	Description string                           `json:"description"`
-	Chunks      []*dto.OpenAIChatCompletionChunk `json:"chunks"`
+	Name        string                                  `json:"name"`
+	Description string                                  `json:"description"`
+	Chunks      []*dto.OpenAIChatCompletionChunk        `json:"chunks"`
+	Messages    []*dto.OpenAIChatCompletionMessageParam `json:"messages"`
 }
 
 func loadCases(t *testing.T) []testCase {
@@ -72,6 +73,22 @@ func TestNormalizeOpenAIStreamToolCalls_IndexZeroAndFollowupID(t *testing.T) {
 	}
 	if !contains(followupPayload, "\"id\":\"call_123\"") {
 		t.Errorf("followup payload = %s, want repeated tool call id", followupPayload)
+	}
+}
+
+func TestOpenAIToolCallIndex_OmitInAssistantMessage(t *testing.T) {
+	cases := loadCases(t)
+	tc := findCase(t, cases, "assistant_message_without_index")
+	if len(tc.Messages) != 1 || len(tc.Messages[0].ToolCalls) != 1 {
+		t.Fatalf("fixture should contain one assistant tool call message")
+	}
+
+	payload, err := sonic.MarshalString(tc.Messages[0])
+	if err != nil {
+		t.Fatalf("failed to marshal message: %v", err)
+	}
+	if contains(payload, "\"index\"") {
+		t.Errorf("payload = %s, want index omitted for non-stream assistant message", payload)
 	}
 }
 
