@@ -3,6 +3,7 @@ package util
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -71,6 +72,30 @@ func WriteAnthropicMessageStop(w *bufio.Writer) error {
 		return err
 	}
 	return w.Flush()
+}
+
+// WriteUpstreamSSEError 在 SSE 流中写入上游错误。
+// 当上游在流式请求开始后（HTTP 200 已发送）返回错误时，本函数将上游错误体
+// 以 SSE data 帧的形式写入客户端，避免客户端收到空的截断流。
+//
+//	@param log *zap.Logger
+//	@param w *bufio.Writer
+//	@param err error
+//	@author centonhuang
+//	@update 2026-04-26 12:00:00
+func WriteUpstreamSSEError(log *zap.Logger, w *bufio.Writer, err error) {
+	var upstreamErr *model.UpstreamError
+	if errors.As(err, &upstreamErr) {
+		if upstreamErr.Body != "" {
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", upstreamErr.Body)
+		} else {
+			_, _ = fmt.Fprintf(w, "data: {\"error\":{\"message\":\"upstream returned status %d\",\"type\":\"server_error\",\"code\":\"upstream_error\"}}\n\n", upstreamErr.StatusCode)
+		}
+	} else {
+		log.Error("[WriteUpstreamSSEError] Non-upstream error in SSE stream", zap.Error(err))
+		_, _ = fmt.Fprintf(w, "data: {\"error\":{\"message\":\"internal server error\",\"type\":\"server_error\",\"code\":\"internal_error\"}}\n\n")
+	}
+	_ = w.Flush()
 }
 
 // SendOpenAIModelNotFoundError 发送OpenAI模型不存在错误
