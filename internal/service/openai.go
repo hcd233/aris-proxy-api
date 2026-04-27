@@ -136,9 +136,9 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 // forwardNative 原生 OpenAI 协议转发
 func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, stream bool) (*huma.StreamResponse, error) {
 	ep := toUpstream(endpoint)
-	if req.Body.MaxTokens != nil {
-		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
-	}
+	// if req.Body.MaxTokens != nil {
+	// 	req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
+	// }
 
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 	body = util.EnsureAssistantMessageReasoningContent(body)
