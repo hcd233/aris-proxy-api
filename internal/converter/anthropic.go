@@ -798,13 +798,6 @@ func resolveResponseAPIRole(role string) string {
 }
 
 // convertResponseContentPartsToAnthropicBlocks 将 Response API content parts 转换为 Anthropic content blocks
-func responseStringFromPtr(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
 func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputContent) ([]*dto.AnthropicContentBlock, error) {
 	var blocks []*dto.AnthropicContentBlock
 	for _, p := range parts {
@@ -813,7 +806,7 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 		}
 		switch p.Type {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
-			text := responseStringFromPtr(p.Text)
+			text := lo.FromPtr(p.Text)
 			if p.Text != nil {
 				blocks = append(blocks, &dto.AnthropicContentBlock{
 					Type: enum.AnthropicContentBlockTypeText,
@@ -821,7 +814,7 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 				})
 			}
 		case enum.ResponseContentTypeInputImage:
-			imageURL := responseStringFromPtr(p.ImageURL)
+			imageURL := lo.FromPtr(p.ImageURL)
 			block := &dto.AnthropicContentBlock{
 				Type: enum.AnthropicContentBlockTypeImage,
 			}
@@ -891,7 +884,7 @@ func convertResponseFunctionCallOutputToAnthropic(item *dto.ResponseInputItem) *
 			var parts []string
 			for _, p := range item.Output.FunctionOutput.Parts {
 				if p != nil && (p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText) && p.Text != nil {
-					parts = append(parts, *p.Text)
+					parts = append(parts, lo.FromPtr(p.Text))
 				}
 			}
 			text = strings.Join(parts, "\n")
