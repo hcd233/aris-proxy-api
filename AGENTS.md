@@ -52,11 +52,11 @@
 - **目录**：`test/e2e/<topic>/<topic>_test.go` + `test/e2e/<topic>/fixtures/requests/<case>.json`。一个 topic 下允许多个 case 文件，复用同一 `<topic>_test.go`。
 - **Skip 机制（硬性要求）**：测试入口必须读取 `BASE_URL` 和 `API_KEY` 两个环境变量；任一为空直接 `t.Skip("BASE_URL and API_KEY are required for e2e test")`。这样默认 `make test` / `go test ./...` 不会打生产；CI 和 pre-commit 都默认走 skip 路径。
 - **触发方式**：手工触发生产回归时用 `BASE_URL=https://api.lvlvko.top API_KEY=$ANTHROPIC_AUTH_TOKEN go test -v -count=1 ./test/e2e/<topic>/`；**禁止**把线上密钥写进代码、`.env` 或 CI 配置。
-- **HTTP 客户端**：用标准库 `net/http.DefaultClient`，统一封装 helper（参考 `openai_chat_completion_test.go` 中的 `postChatCompletions`）。
+- **HTTP 客户端**：用标准库 `net/http`，但**禁止使用 `http.DefaultClient`**（默认无超时，流式响应可能永远挂住）。必须显式构造带 `Timeout` 的 `*http.Client`（e2e 常用 60~90s 总超时），参考 `openai_chat_completion_test.go` 的 `newE2EClient`。
 - **断言原则**：
   - 非流式接口：断言 HTTP 200 + 响应 JSON 关键字段（`id`、`model`、`choices`、`usage` 等）存在。
-  - 流式接口：断言 HTTP 200 + `Content-Type: text/event-stream` + 存在 `X-Trace-Id` 响应头 + 读到至少一条 `data: ` SSE 行即可返回；**不要**等跑完整段生成，避免 CI/人工验证耗时过长。
-  - 不要对模型输出的**语义**做强断言（易 flaky），只断言通路正常。
+  - 流式接口：断言 HTTP 200 + `Content-Type: text/event-stream` + 存在 `X-Trace-Id` 响应头 + **必须**读到至少一条**携带实质内容**的 delta（`choices[].delta.content` 或 `choices[].delta.reasoning_content` 非空），才算证明链路健康；**只读到空壳 role chunk 就退出不算通过**（极端情况下上游可能先发 role 再 500）。读到实质 delta 立即 break，配合流读 deadline（常用 60s）避免走满整段生成。
+  - 不要对模型输出的**语义**做强断言（易 flaky），只断言通路和首个实质 token 的结构。
 - **回归用例命名**：bugfix 用例文件名和测试函数名要能直接描述 bug 场景，例如 `kimi_thinking_missing_reasoning_stream.json` + `TestChatCompletion_KimiThinking_MissingReasoningContent_Stream`，并在测试注释里记录原始 trace / 错误片段，方便后人回溯。
 - **失败处理**：E2E 失败时从响应头拿 `X-Trace-Id`，回到 `cls-log-bugfix` 流程排障，不要盲目重跑。
 

@@ -1,7 +1,7 @@
 {
   "model": "kimi-k2.6",
   "stream": true,
-  "max_tokens": 256,
+  "max_tokens": 1024,
   "messages": [
     {
       "role": "system",
