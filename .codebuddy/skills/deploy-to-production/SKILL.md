@@ -48,8 +48,8 @@ Docker 镜像构建并推送到 GHCR 后，从域名解析生产服务器 IP 并
 # 从生产域名解析服务器 IP
 PROD_IP=$(dig +short api.lvlvko.top | head -1)
 
-# SSH 到服务器并执行部署脚本
-ssh ubuntu@${PROD_IP} 'cd code/aris-proxy-api/ && bash script/deploy.sh'
+# SSH 到服务器并执行部署脚本（设置 1 分钟超时，覆盖连接和执行全过程）
+timeout 60 ssh -o ConnectTimeout=10 ubuntu@${PROD_IP} 'cd code/aris-proxy-api/ && bash script/deploy.sh'
 ```
 
 部署脚本执行以下操作：
