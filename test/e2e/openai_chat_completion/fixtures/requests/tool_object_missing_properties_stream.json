@@ -1,0 +1,20 @@
+{
+  "model": "gpt-5.5",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Say hello"}
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "chrome-devtools_list_pages",
+        "description": "List all open pages in the browser",
+        "parameters": {"type": "object"}
+      }
+    }
+  ],
+  "stream": true,
+  "stream_options": {"include_usage": true},
+  "max_tokens": 10
+}

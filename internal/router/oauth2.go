@@ -6,25 +6,10 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
-	infrarepository "github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
-func initOauth2Router(oauth2Group huma.API) {
-	oauth2Deps := handler.Oauth2Dependencies{
-		Platforms: handler.Oauth2Platforms{
-			constant.OAuthProviderGithub: oauth2.NewGithubPlatform(),
-			constant.OAuthProviderGoogle: oauth2.NewGooglePlatform(),
-		},
-		UserRepo:      infrarepository.NewUserRepository(),
-		AccessSigner:  jwt.GetAccessTokenSigner(),
-		RefreshSigner: jwt.GetRefreshTokenSigner(),
-		DirCreator:    infrarepository.NewAudioDirCreator(),
-	}
-	oauth2Handler := handler.NewOauth2Handler(oauth2Deps)
-
+func initOauth2Router(oauth2Group huma.API, oauth2Handler handler.Oauth2Handler) {
 	huma.Register(oauth2Group, huma.Operation{
 		OperationID: "oauth2Login",
 		Method:      http.MethodGet,
