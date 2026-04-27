@@ -1,9 +1,0 @@
-{
-  "model": "gpt-5.5",
-  "stream": false,
-  "max_tokens": 1,
-  "messages": [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "请用中文写一段 200 字的自我介绍，尽可能详细。"}
-  ]
-}

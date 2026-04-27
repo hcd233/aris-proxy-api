@@ -134,18 +134,11 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 }
 
 // forwardNative 原生 OpenAI 协议转发
-//
-// 注意：此前实现会将 req.Body.MaxTokens 无条件改写为 MaxCompletionTokens，这会导致
-// 两类问题：
-//  1. 第三方 OpenAI 协议聚合网关（如 api.chatanywhere.tech）只认识 max_tokens，
-//     对 max_completion_tokens 直接忽略，相当于把用户设置的生成上限抹掉，从而触发
-//     上游模型跑飞/超长（如 503 "模型无返回结果"）；
-//  2. 即便上游是官方 OpenAI，max_tokens 对 GPT-4 / GPT-3.5 系列仍被官方接受，
-//     把字段 silent 改名会违背透传语义。
-//
-// 因此这里保持用户请求的原样透传，由调用方自行选择 max_tokens 或 max_completion_tokens。
 func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, stream bool) (*huma.StreamResponse, error) {
 	ep := toUpstream(endpoint)
+	if req.Body.MaxTokens != nil {
+		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
+	}
 
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
 	body = util.EnsureAssistantMessageReasoningContent(body)
