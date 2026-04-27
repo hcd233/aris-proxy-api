@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
@@ -10,8 +11,14 @@ import (
 
 var humaAPI huma.API
 
-func init() {
-	humaAPI = humafiber.New(GetFiberApp(), huma.Config{
+// NewHumaAPI 创建 Huma API 实例
+//
+//	@param app *fiber.App
+//	@return huma.API
+//	@author centonhuang
+//	@update 2026-04-28 10:00:00
+func NewHumaAPI(app *fiber.App) huma.API {
+	return humafiber.New(app, huma.Config{
 		OpenAPI: &huma.OpenAPI{
 			OpenAPI: "3.1.0",
 			Info: &huma.Info{
@@ -51,6 +58,15 @@ func init() {
 		Formats:       huma.DefaultFormats,
 		DefaultFormat: "application/json",
 	})
+}
+
+// SetHumaAPI 设置 Huma API 实例
+//
+//	@param api huma.API
+//	@author centonhuang
+//	@update 2026-04-28 10:00:00
+func SetHumaAPI(api huma.API) {
+	humaAPI = api
 }
 
 // GetHumaAPI 获取 Huma API 实例

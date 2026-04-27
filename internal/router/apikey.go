@@ -7,19 +7,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
-func initAPIKeyRouter(apikeyGroup huma.API) {
-	apiKeyHandler := handler.NewAPIKeyHandler(handler.APIKeyDependencies{
-		APIKeyRepo: repository.NewAPIKeyRepository(),
-		UserRepo:   repository.NewUserRepository(),
-		Generator:  apikeyservice.NewAPIKeyGenerator(),
-	})
-
+func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler) {
 	apikeyGroup.UseMiddleware(middleware.JwtMiddleware())
 	// 限流: 防止快速创建 Key 或枚举 ID
 	apikeyGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(

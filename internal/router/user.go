@@ -6,15 +6,10 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	infrarepository "github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
-func initUserRouter(userGroup huma.API) {
-	userHandler := handler.NewUserHandler(handler.UserDependencies{
-		UserRepo: infrarepository.NewUserRepository(),
-	})
-
+func initUserRouter(userGroup huma.API, userHandler handler.UserHandler) {
 	userGroup.UseMiddleware(middleware.JwtMiddleware())
 
 	huma.Register(userGroup, huma.Operation{

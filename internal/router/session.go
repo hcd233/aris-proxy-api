@@ -5,15 +5,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	infrarepository "github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
-func initSessionRouter(sessionGroup huma.API) {
-	sessionHandler := handler.NewSessionHandler(handler.SessionDependencies{
-		SessionReadRepo: infrarepository.NewSessionReadRepository(),
-	})
-
+func initSessionRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler) {
 	sessionGroup.UseMiddleware(middleware.APIKeyMiddleware())
 
 	huma.Register(sessionGroup, huma.Operation{
