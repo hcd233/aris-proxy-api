@@ -6,6 +6,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/samber/lo"
 )
 
 // PingTask 健康检查任务
@@ -97,12 +98,8 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	}
 	t.InputTokens = msg.Usage.InputTokens
 	t.OutputTokens = msg.Usage.OutputTokens
-	if msg.Usage.CacheCreationInputTokens != nil {
-		t.CacheCreationInputTokens = *msg.Usage.CacheCreationInputTokens
-	}
-	if msg.Usage.CacheReadInputTokens != nil {
-		t.CacheReadInputTokens = *msg.Usage.CacheReadInputTokens
-	}
+	t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
+	t.CacheReadInputTokens = lo.FromPtr(msg.Usage.CacheReadInputTokens)
 }
 
 // SetTokensFromResponseUsage 从 Response API 响应设置 token 计数
