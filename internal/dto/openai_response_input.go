@@ -24,42 +24,42 @@ type ResponseInputContent struct {
 	Type string `json:"type" doc:"内容类型"`
 
 	// input_text/output_text/reasoning_text/summary_text 共用
-	Text string `json:"text,omitempty" doc:"文本内容"`
+	Text *string `json:"text,omitempty" doc:"文本内容"`
 
 	// input_image/input_file 共用
-	Detail string `json:"detail,omitempty" doc:"精度: low/high/auto/original"`
+	Detail *string `json:"detail,omitempty" doc:"精度: low/high/auto/original"`
 
 	// input_image 专用
-	ImageURL string `json:"image_url,omitempty" doc:"图像 URL 或 Data URL"`
+	ImageURL *string `json:"image_url,omitempty" doc:"图像 URL 或 Data URL"`
 
 	// input_file 专用
-	FileData string `json:"file_data,omitempty" doc:"文件内容(base64)"`
-	FileURL  string `json:"file_url,omitempty" doc:"文件 URL"`
-	Filename string `json:"filename,omitempty" doc:"文件名"`
+	FileData *string `json:"file_data,omitempty" doc:"文件内容(base64)"`
+	FileURL  *string `json:"file_url,omitempty" doc:"文件 URL"`
+	Filename *string `json:"filename,omitempty" doc:"文件名"`
 
 	// input_image/input_file 共用
-	FileID string `json:"file_id,omitempty" doc:"文件 ID"`
+	FileID *string `json:"file_id,omitempty" doc:"文件 ID"`
 
 	// output_text 专用
 	Annotations []*ResponseOutputTextAnnotation `json:"annotations,omitempty" doc:"引用标注列表"`
 	Logprobs    []*ResponseOutputTextLogprob    `json:"logprobs,omitempty" doc:"token 对数概率"`
 
 	// refusal 专用
-	Refusal string `json:"refusal,omitempty" doc:"拒答原因"`
+	Refusal *string `json:"refusal,omitempty" doc:"拒答原因"`
 }
 
 // ResponseOutputTextAnnotation 输出文本引用（file_citation/url_citation/
 // container_file_citation/file_path 四类）
 type ResponseOutputTextAnnotation struct {
-	Type        string `json:"type" doc:"标注类型"`
-	FileID      string `json:"file_id,omitempty" doc:"文件 ID"`
-	Filename    string `json:"filename,omitempty" doc:"文件名"`
-	Index       int    `json:"index,omitempty" doc:"索引位置"`
-	EndIndex    int    `json:"end_index,omitempty" doc:"结束字符索引"`
-	StartIndex  int    `json:"start_index,omitempty" doc:"起始字符索引"`
-	Title       string `json:"title,omitempty" doc:"网页标题"`
-	URL         string `json:"url,omitempty" doc:"网页 URL"`
-	ContainerID string `json:"container_id,omitempty" doc:"容器 ID"`
+	Type        string  `json:"type" doc:"标注类型"`
+	FileID      *string `json:"file_id,omitempty" doc:"文件 ID"`
+	Filename    *string `json:"filename,omitempty" doc:"文件名"`
+	Index       *int    `json:"index,omitempty" doc:"索引位置"`
+	EndIndex    *int    `json:"end_index,omitempty" doc:"结束字符索引"`
+	StartIndex  *int    `json:"start_index,omitempty" doc:"起始字符索引"`
+	Title       *string `json:"title,omitempty" doc:"网页标题"`
+	URL         *string `json:"url,omitempty" doc:"网页 URL"`
+	ContainerID *string `json:"container_id,omitempty" doc:"容器 ID"`
 }
 
 // ResponseOutputTextLogprob 输出文本 token 对数概率
@@ -123,11 +123,11 @@ type ResponseComputerAction struct {
 	Type string `json:"type" doc:"动作类型"`
 
 	// click 专用: left/right/wheel/back/forward
-	Button string `json:"button,omitempty" doc:"鼠标按键"`
+	Button *string `json:"button,omitempty" doc:"鼠标按键"`
 
 	// click/double_click/move/scroll 共用
-	X int `json:"x,omitempty" doc:"X 坐标"`
-	Y int `json:"y,omitempty" doc:"Y 坐标"`
+	X *int `json:"x,omitempty" doc:"X 坐标"`
+	Y *int `json:"y,omitempty" doc:"Y 坐标"`
 
 	// click/double_click/drag/move/scroll/keypress 共用
 	Keys []string `json:"keys,omitempty" doc:"按键列表"`
@@ -136,11 +136,11 @@ type ResponseComputerAction struct {
 	Path []*ResponseComputerActionPathPoint `json:"path,omitempty" doc:"拖拽路径"`
 
 	// scroll 专用
-	ScrollX int `json:"scroll_x,omitempty" doc:"水平滚动距离"`
-	ScrollY int `json:"scroll_y,omitempty" doc:"垂直滚动距离"`
+	ScrollX *int `json:"scroll_x,omitempty" doc:"水平滚动距离"`
+	ScrollY *int `json:"scroll_y,omitempty" doc:"垂直滚动距离"`
 
 	// ComputerAction 的 "type" 分支专用
-	Text string `json:"text,omitempty" doc:"输入文本"`
+	Text *string `json:"text,omitempty" doc:"输入文本"`
 }
 
 // ResponseComputerActionPathPoint Drag 动作路径点
@@ -519,14 +519,14 @@ type ResponseInputItemAction struct {
 	Type string `json:"type" doc:"动作类型"`
 
 	// ComputerAction
-	Button  string                             `json:"button,omitempty"`
-	X       int                                `json:"x,omitempty"`
-	Y       int                                `json:"y,omitempty"`
+	Button  *string                            `json:"button,omitempty"`
+	X       *int                               `json:"x,omitempty"`
+	Y       *int                               `json:"y,omitempty"`
 	Keys    []string                           `json:"keys,omitempty"`
 	Path    []*ResponseComputerActionPathPoint `json:"path,omitempty"`
-	ScrollX int                                `json:"scroll_x,omitempty"`
-	ScrollY int                                `json:"scroll_y,omitempty"`
-	Text    string                             `json:"text,omitempty"`
+	ScrollX *int                               `json:"scroll_x,omitempty"`
+	ScrollY *int                               `json:"scroll_y,omitempty"`
+	Text    *string                            `json:"text,omitempty"`
 
 	// WebSearchAction
 	Query   string                           `json:"query,omitempty"`
