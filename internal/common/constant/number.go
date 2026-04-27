@@ -17,6 +17,11 @@ const (
 	//	@update 2026-04-09 15:00:00
 	OAuthStateBytes = 32
 
+	// MaskSecretMinLength 掩码显示最低长度（短于此长度的密钥整体掩码）
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	MaskSecretMinLength = 8
+
 	// APIKeyRandomLength API Key 随机字符串长度
 	//	@author centonhuang
 	//	@update 2026-04-09 15:00:00
@@ -53,6 +58,25 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-09 15:00:00
 	LogFieldValueMaxLength = 512
+)
+
+// ==================== 模型调用状态码 ====================
+
+const (
+	// CallStatusSuccess HTTP 成功状态码（非流式成功路径硬编码）
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	CallStatusSuccess = 200
+
+	// CallStatusConnectionError 连接层错误状态码
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	CallStatusConnectionError = -1
+
+	// CallStatusUnknownError 未知错误状态码
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	CallStatusUnknownError = 0
 )
 
 // ==================== 日志轮转 ====================

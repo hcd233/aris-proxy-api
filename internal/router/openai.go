@@ -6,6 +6,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
@@ -15,7 +17,12 @@ import (
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
 func initOpenAIRouter(openaiGroup huma.API) {
-	openaiHandler := handler.NewOpenAIHandler()
+	openaiHandler := handler.NewOpenAIHandler(handler.OpenAIDependencies{
+		EndpointRepo:     repository.NewEndpointRepository(),
+		EndpointReadRepo: repository.NewEndpointReadRepository(),
+		OpenAIProxy:      transport.NewOpenAIProxy(),
+		AnthropicProxy:   transport.NewAnthropicProxy(),
+	})
 
 	openaiGroup.UseMiddleware(middleware.APIKeyMiddleware())
 

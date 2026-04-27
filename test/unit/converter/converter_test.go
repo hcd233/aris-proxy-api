@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/converter"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
@@ -674,6 +674,18 @@ func TestRoundtrip_OpenAIResponse_ToAnthropic_BackToOpenAI(t *testing.T) {
 }
 
 // ==================== SSE Conversion Tests ====================
+//
+// 豁免说明：以下 SSE 转换测试（TestOpenAIProtocolConverter_ToAnthropicSSEResponse、
+// TestAnthropicProtocolConverter_ToOpenAISSEResponse_TextDelta、
+// TestAnthropicProtocolConverter_ToOpenAISSEResponse_MessageDelta）的输入数据无法
+// 放到 JSON fixture 中，原因如下：
+//
+//   - AnthropicSSEEvent.Data 的类型为 sonic.NoCopyRawMessage（等价于 []byte），
+//     其值为动态构造的 SSE 负载序列化结果，在 fixture JSON 中无法直接表示。
+//   - 测试需要 converter.NewSSEContentBlockTracker() 作为有状态依赖参与断言，
+//     该值无法通过 fixture 反序列化获得。
+//
+// 数据保留内联构造，以保持测试可读性。
 
 func TestOpenAIProtocolConverter_ToAnthropicSSEResponse(t *testing.T) {
 	conv := converter.OpenAIProtocolConverter{}
@@ -781,6 +793,7 @@ func TestOpenAIProtocolConverter_FromAnthropicRequest_ToolNoParameters(t *testin
 }
 
 func TestAnthropicProtocolConverter_ToOpenAISSEResponse_MessageDelta(t *testing.T) {
+	// 豁免说明：AnthropicSSEEvent.Data 为 sonic.NoCopyRawMessage，无法通过 JSON fixture 表示
 	conv := converter.AnthropicProtocolConverter{}
 
 	deltaPayload := &dto.AnthropicSSEMessageDelta{
@@ -1025,25 +1038,11 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_FunctionCall(t *testi
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_NoReasoning(t *testing.T) {
 	// 测试没有 reasoning 配置时 Thinking 为 nil
-	conv := converter.AnthropicProtocolConverter{}
-	req := &dto.OpenAICreateResponseReq{
-		Model: "gpt-4o",
-		Input: &dto.ResponseInput{
-			Items: []*dto.ResponseInputItem{
-				{
-					Type: enum.ResponseInputItemTypeMessage,
-					Role: enum.RoleUser,
-					Content: &dto.ResponseInputMessageContent{
-						Parts: []*dto.ResponseInputContent{
-							{Type: enum.ResponseContentTypeInputText, Text: lo.ToPtr("Hello")},
-						},
-					},
-				},
-			},
-		},
-	}
+	allCases := loadResponseCases(t)
+	tc := findResponseCase(t, allCases, "response_no_reasoning")
 
-	result, err := conv.FromResponseAPIRequest(req)
+	conv := converter.AnthropicProtocolConverter{}
+	result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
 	if err != nil {
 		t.Fatalf("FromResponseAPIRequest() error: %v", err)
 	}

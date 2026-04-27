@@ -1,10 +1,18 @@
+// Package handler 令牌处理器
 package handler
 
 import (
 	"context"
+	"strings"
 
+	"go.uber.org/zap"
+
+	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
+	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/service"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -16,18 +24,33 @@ type TokenHandler interface {
 	HandleRefreshToken(ctx context.Context, req *dto.RefreshTokenReq) (*dto.HTTPResponse[*dto.RefreshTokenRsp], error)
 }
 
+// TokenDependencies TokenHandler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type TokenDependencies struct {
+	UserRepo      identity.UserRepository
+	AccessSigner  identityservice.TokenSigner
+	RefreshSigner identityservice.TokenSigner
+}
+
 type tokenHandler struct {
-	svc service.TokenService
+	refresh command.RefreshTokensHandler
 }
 
 // NewTokenHandler 创建令牌处理器
 //
-//	return TokenHandler
-//	author centonhuang
-//	update 2025-01-05 21:00:00
-func NewTokenHandler() TokenHandler {
+//	@param deps TokenDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
+//	@return TokenHandler
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+func NewTokenHandler(deps TokenDependencies) TokenHandler {
 	return &tokenHandler{
-		svc: service.NewTokenService(),
+		refresh: command.NewRefreshTokensHandler(
+			deps.UserRepo,
+			deps.AccessSigner,
+			deps.RefreshSigner,
+		),
 	}
 }
 
@@ -39,7 +62,27 @@ func NewTokenHandler() TokenHandler {
 //	@return *dto.HTTPResponse[*dto.RefreshTokenRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2025-11-11 04:58:25
+//	@update 2026-04-22 20:00:00
 func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshTokenReq) (*dto.HTTPResponse[*dto.RefreshTokenRsp], error) {
-	return util.WrapHTTPResponse(h.svc.RefreshToken(ctx, req))
+	rsp := &dto.RefreshTokenRsp{}
+
+	if strings.TrimSpace(req.Body.RefreshToken) == "" {
+		rsp.Error = ierr.ErrValidation.BizError()
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+
+	pair, err := h.refresh.Handle(ctx, command.RefreshTokensCommand{
+		RefreshToken: req.Body.RefreshToken,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[TokenHandler] Refresh token failed",
+			zap.String("refreshToken", util.MaskSecret(req.Body.RefreshToken)),
+			zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return util.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.AccessToken = pair.AccessToken()
+	rsp.RefreshToken = pair.RefreshToken()
+	return util.WrapHTTPResponse(rsp, nil)
 }

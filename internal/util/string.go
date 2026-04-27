@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 )
 
 // ToDataURL 将文件转换为 data URL
@@ -20,17 +21,16 @@ func ToDataURL(contentType string, bytes []byte) string {
 	return fmt.Sprintf(constant.DataURLTemplate, contentType, base64Data)
 }
 
-// MaskSecret 掩码敏感信息，保留前4和后4个字符
+// MaskSecret 掩码敏感信息，保留前 4 和后 4 个字符
+//
+// Deprecated: 请使用 internal/common/util.MaskSecret（domain 层亦可调用）。
 //
 //	@param key
 //	@return string
 //	@author centonhuang
-//	@update 2026-03-06 15:32:06
+//	@update 2026-04-23 10:55:00
 func MaskSecret(key string) string {
-	if len(key) <= 8 {
-		return constant.MaskSecretPlaceholder
-	}
-	return fmt.Sprintf("%s***%s", key[:4], key[len(key)-4:])
+	return commonutil.MaskSecret(key)
 }
 
 // TruncateFieldValue 截断过长的字符串值，保留前 maxLen 字符并附加截断信息

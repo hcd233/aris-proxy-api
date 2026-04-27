@@ -9,6 +9,9 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/samber/lo"
+	"go.uber.org/zap"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -17,11 +20,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/jwt"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
-	"github.com/samber/lo"
-	"go.uber.org/zap"
 )
 
 // jwtUserCache Redis 中缓存用户信息所用的结构体（仅包含 JWT 中间件需要的字段）
@@ -67,6 +68,7 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 
 		var name string
 		var permission enum.Permission
+		cacheHit := false
 
 		// 优先读缓存
 		cacheKey := jwtUserCacheKey(userID)
@@ -75,11 +77,12 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 			if unmarshalErr := sonic.Unmarshal(raw, &cached); unmarshalErr == nil {
 				name = cached.Name
 				permission = cached.Permission
+				cacheHit = true
 			}
 		}
 
 		// 缓存未命中，查数据库
-		if name == "" {
+		if !cacheHit {
 			user, dbErr := userDAO.Get(db, &model.User{ID: userID}, []string{"id", "name", "permission"})
 			if dbErr != nil {
 				lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))

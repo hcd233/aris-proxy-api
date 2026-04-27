@@ -1,0 +1,61 @@
+// Package llmproxy llmproxy 域根（仓储接口 + 聚合引用）
+package llmproxy
+
+import (
+	"context"
+
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
+)
+
+// EndpointRepository 模型端点仓储接口
+//
+// 实现由 infrastructure/repository 层提供，聚合根的加载与持久化通过本接口完成。
+// 领域层只依赖该接口，不依赖 GORM 或 DAO。
+//
+//	@author centonhuang
+//	@update 2026-04-22 16:30:00
+type EndpointRepository interface {
+	// FindByAliasAndProvider 按别名和上游协议查询单个端点
+	//
+	//	@param ctx context.Context
+	//	@param alias vo.EndpointAlias
+	//	@param provider enum.ProviderType
+	//	@return *aggregate.Endpoint 未找到返回 nil
+	//	@return error
+	FindByAliasAndProvider(ctx context.Context, alias vo.EndpointAlias, provider enum.ProviderType) (*aggregate.Endpoint, error)
+}
+
+// ==================== CQRS 读模型 ====================
+
+// EndpointAliasProjection 模型别名只读投影
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type EndpointAliasProjection struct {
+	Alias string
+}
+
+// EndpointCredentialProjection 端点凭证只读投影（用于 token 计数等无需聚合重建的场景）
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type EndpointCredentialProjection struct {
+	Model   string
+	APIKey  string
+	BaseURL string
+}
+
+// EndpointReadRepository 模型端点只读查询仓储（CQRS 读模型）
+//
+// 与 EndpointRepository 分离，避免写仓储受读模型查询字段需求污染。
+//
+//	@author centonhuang
+//	@update 2026-04-24 20:00:00
+type EndpointReadRepository interface {
+	// ListAliasesByProvider 按 Provider 查询所有别名
+	ListAliasesByProvider(ctx context.Context, provider enum.ProviderType) ([]*EndpointAliasProjection, error)
+	// FindCredentialByAliasAndProvider 按 alias + provider 查询端点凭证
+	FindCredentialByAliasAndProvider(ctx context.Context, alias string, provider enum.ProviderType) (*EndpointCredentialProjection, error)
+}

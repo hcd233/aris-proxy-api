@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/service"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 )
 
 // messageFixture represents a message entry in the fixture JSON
@@ -108,7 +109,7 @@ func toDBTools(t *testing.T, fixtures []*toolFixture) []*dbmodel.Tool {
 	return tools
 }
 
-func TestBuildOrderedMessages(t *testing.T) {
+func TestBuildOrderedMessageProjections(t *testing.T) {
 	allCases := loadCases(t)
 
 	messageCases := []string{
@@ -122,10 +123,10 @@ func TestBuildOrderedMessages(t *testing.T) {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
 			messages := toDBMessages(t, tc.Messages)
-			items := service.BuildOrderedMessages(tc.MessageIDs, messages)
+			items := repository.BuildOrderedMessageProjections(tc.MessageIDs, messages)
 
 			if len(items) != tc.ExpectedCount {
-				t.Fatalf("BuildOrderedMessages() returned %d items, want %d", len(items), tc.ExpectedCount)
+				t.Fatalf("BuildOrderedMessageProjections() returned %d items, want %d", len(items), tc.ExpectedCount)
 			}
 
 			for i, item := range items {
@@ -146,22 +147,23 @@ func TestBuildOrderedMessages(t *testing.T) {
 				}
 			}
 			if tc.ExpectedCreatedAt != "" && len(items) > 0 {
-				if items[0].CreatedAt != tc.ExpectedCreatedAt {
-					t.Errorf("CreatedAt = %q, want %q", items[0].CreatedAt, tc.ExpectedCreatedAt)
+				got := items[0].CreatedAt.Format(time.DateTime)
+				if got != tc.ExpectedCreatedAt {
+					t.Errorf("CreatedAt = %q, want %q", got, tc.ExpectedCreatedAt)
 				}
 			}
 		})
 	}
 }
 
-func TestBuildOrderedMessages_NilInputs(t *testing.T) {
-	items := service.BuildOrderedMessages(nil, nil)
+func TestBuildOrderedMessageProjections_NilInputs(t *testing.T) {
+	items := repository.BuildOrderedMessageProjections(nil, nil)
 	if len(items) != 0 {
-		t.Errorf("BuildOrderedMessages(nil, nil) returned %d items, want 0", len(items))
+		t.Errorf("BuildOrderedMessageProjections(nil, nil) returned %d items, want 0", len(items))
 	}
 }
 
-func TestBuildOrderedTools(t *testing.T) {
+func TestBuildOrderedToolProjections(t *testing.T) {
 	allCases := loadCases(t)
 
 	toolCases := []string{
@@ -175,10 +177,10 @@ func TestBuildOrderedTools(t *testing.T) {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
 			tools := toDBTools(t, tc.Tools)
-			items := service.BuildOrderedTools(tc.ToolIDs, tools)
+			items := repository.BuildOrderedToolProjections(tc.ToolIDs, tools)
 
 			if len(items) != tc.ExpectedToolCount {
-				t.Fatalf("BuildOrderedTools() returned %d items, want %d", len(items), tc.ExpectedToolCount)
+				t.Fatalf("BuildOrderedToolProjections() returned %d items, want %d", len(items), tc.ExpectedToolCount)
 			}
 
 			for i, item := range items {
@@ -192,17 +194,18 @@ func TestBuildOrderedTools(t *testing.T) {
 
 			// verify detailed fields for populates_fields case
 			if tc.ExpectedToolCreateAt != "" && len(items) > 0 {
-				if items[0].CreatedAt != tc.ExpectedToolCreateAt {
-					t.Errorf("CreatedAt = %q, want %q", items[0].CreatedAt, tc.ExpectedToolCreateAt)
+				got := items[0].CreatedAt.Format(time.DateTime)
+				if got != tc.ExpectedToolCreateAt {
+					t.Errorf("CreatedAt = %q, want %q", got, tc.ExpectedToolCreateAt)
 				}
 			}
 		})
 	}
 }
 
-func TestBuildOrderedTools_NilInputs(t *testing.T) {
-	items := service.BuildOrderedTools(nil, nil)
+func TestBuildOrderedToolProjections_NilInputs(t *testing.T) {
+	items := repository.BuildOrderedToolProjections(nil, nil)
 	if len(items) != 0 {
-		t.Errorf("BuildOrderedTools(nil, nil) returned %d items, want 0", len(items))
+		t.Errorf("BuildOrderedToolProjections(nil, nil) returned %d items, want 0", len(items))
 	}
 }
