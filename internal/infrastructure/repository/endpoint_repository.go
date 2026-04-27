@@ -18,7 +18,7 @@ import (
 )
 
 // endpointFields Endpoint 查询的统一字段清单；与原 service.endpointFields 一致
-var endpointFields = []string{"id", "model", "api_key", "base_url", "provider"}
+var endpointFields = []string{"id", "alias", "model", "api_key", "base_url", "provider"}
 
 // endpointRepository EndpointRepository 的 GORM 实现
 type endpointRepository struct {
