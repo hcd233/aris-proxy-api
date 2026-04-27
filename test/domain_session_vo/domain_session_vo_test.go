@@ -2,6 +2,7 @@
 package domain_session_vo
 
 import (
+	"errors"
 	"math"
 	"os"
 	"testing"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 )
 
@@ -120,7 +122,10 @@ func TestNewSessionScore_Total(t *testing.T) {
 	tc := findCase(t, cases, "session_score_valid")
 
 	now := time.Now().UTC()
-	s := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, now)
+	s, err := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, now)
+	if err != nil {
+		t.Fatalf("NewSessionScore() error: %v", err)
+	}
 
 	if s.Coherence() != tc.Coherence {
 		t.Errorf("Coherence() = %f, want %f", s.Coherence(), tc.Coherence)
@@ -152,19 +157,17 @@ func TestNewSessionScore_Total(t *testing.T) {
 	}
 }
 
-// TestNewSessionScore_Zero 全零 score 应正确计算 total 为 0
+// TestNewSessionScore_Zero 全零 score 现在属于非法输入，应返回校验错误
 func TestNewSessionScore_Zero(t *testing.T) {
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_score_zero")
 
-	s := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, time.Now().UTC())
-
-	if s.Total() != 0 {
-		t.Errorf("Total() = %f, want 0", s.Total())
+	_, err := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, time.Now().UTC())
+	if err == nil {
+		t.Fatal("NewSessionScore() expected validation error, got nil")
 	}
-	// NewSessionScore 始终设置 at，因此 IsEmpty() 为 false — 已评分为零分与未评分不同
-	if s.IsEmpty() {
-		t.Error("IsEmpty() = true, want false — scored session should not be empty")
+	if !errors.Is(err, ierr.ErrValidation) {
+		t.Errorf("expected ErrValidation, got: %v", err)
 	}
 }
 

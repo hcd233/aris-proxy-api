@@ -153,6 +153,8 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
 
+	body = util.EnsureAssistantMessageReasoningContent(body)
+
 	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + "/chat/completions"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))

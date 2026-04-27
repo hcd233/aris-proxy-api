@@ -44,6 +44,18 @@ func loadIssueCases(t *testing.T) []issueCase {
 	return cases
 }
 
+func mustAPIKeySecret(raw string) vo.APIKeySecret {
+	secret, err := vo.NewAPIKeySecret(raw)
+	if err != nil {
+		panic(err)
+	}
+	return secret
+}
+
+func restoreProxyAPIKeyForTest(id, userID uint, name, secret string, createdAt time.Time) *aggregate.ProxyAPIKey {
+	return aggregate.RestoreProxyAPIKey(id, userID, vo.APIKeyName(name), mustAPIKeySecret(secret), createdAt)
+}
+
 // mockAPIKeyRepository mock APIKeyRepository
 type mockAPIKeyRepository struct {
 	saveFunc    func(ctx context.Context, key *aggregate.ProxyAPIKey) error
@@ -93,7 +105,7 @@ func (m *mockAPIKeyGenerator) Generate() (vo.APIKeySecret, error) {
 	if m.generateFunc != nil {
 		return m.generateFunc()
 	}
-	return vo.NewAPIKeySecret("sk-aris-default"), nil
+	return mustAPIKeySecret("sk-aris-default"), nil
 }
 
 // mockUserExistenceChecker mock UserExistenceChecker
@@ -117,7 +129,7 @@ func TestIssueAPIKeyHandler_HappyPath(t *testing.T) {
 	}
 	generator := &mockAPIKeyGenerator{
 		generateFunc: func() (vo.APIKeySecret, error) {
-			return vo.NewAPIKeySecret("sk-aris-test123"), nil
+			return mustAPIKeySecret("sk-aris-test123"), nil
 		},
 	}
 	userExistsCh := &mockUserExistenceChecker{
@@ -221,7 +233,7 @@ func TestIssueAPIKeyHandler_Validation(t *testing.T) {
 			repo := &mockAPIKeyRepository{}
 			generator := &mockAPIKeyGenerator{
 				generateFunc: func() (vo.APIKeySecret, error) {
-					return vo.NewAPIKeySecret(tc.secretValue), nil
+					return mustAPIKeySecret(tc.secretValue), nil
 				},
 			}
 			userExistsCh := &mockUserExistenceChecker{}
@@ -248,7 +260,7 @@ func TestIssueAPIKeyHandler_EmptySecretFromGenerator(t *testing.T) {
 	repo := &mockAPIKeyRepository{}
 	generator := &mockAPIKeyGenerator{
 		generateFunc: func() (vo.APIKeySecret, error) {
-			return vo.NewAPIKeySecret(""), nil // generator 返回空密钥
+			return vo.APIKeySecret{}, nil // generator 返回空密钥
 		},
 	}
 	userExistsCh := &mockUserExistenceChecker{}
@@ -277,7 +289,7 @@ func TestIssueAPIKeyHandler_NilUserChecker(t *testing.T) {
 	}
 	generator := &mockAPIKeyGenerator{
 		generateFunc: func() (vo.APIKeySecret, error) {
-			return vo.NewAPIKeySecret("sk-aris-test"), nil
+			return mustAPIKeySecret("sk-aris-test"), nil
 		},
 	}
 
@@ -370,7 +382,7 @@ func TestIssueAPIKeyHandler_SaveSetsID(t *testing.T) {
 	}
 	generator := &mockAPIKeyGenerator{
 		generateFunc: func() (vo.APIKeySecret, error) {
-			return vo.NewAPIKeySecret("sk-aris-test"), nil
+			return mustAPIKeySecret("sk-aris-test"), nil
 		},
 	}
 	userExistsCh := &mockUserExistenceChecker{}
@@ -397,14 +409,14 @@ func nowTime() time.Time {
 
 // revokeCase 定义吊销测试用例
 type revokeCase struct {
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	KeyID              uint   `json:"keyID"`
-	KeyUserID          uint   `json:"keyUserID"`
-	RequesterID        uint   `json:"requesterID"`
+	Name                string `json:"name"`
+	Description         string `json:"description"`
+	KeyID               uint   `json:"keyID"`
+	KeyUserID           uint   `json:"keyUserID"`
+	RequesterID         uint   `json:"requesterID"`
 	RequesterPermission string `json:"requesterPermission"`
-	KeyFound           bool   `json:"keyFound"`
-	ExpectErr          string `json:"expectErr"`
+	KeyFound            bool   `json:"keyFound"`
+	ExpectErr           string `json:"expectErr"`
 }
 
 func loadRevokeCases(t *testing.T) []revokeCase {
@@ -462,7 +474,7 @@ func (m *mockRevokeAPIKeyRepository) Delete(ctx context.Context, id uint) error 
 func TestRevokeAPIKeyHandler_OwnerSuccess(t *testing.T) {
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return aggregate.RestoreProxyAPIKey(1, 101, "my-key", vo.NewAPIKeySecret("sk-aris-test"), nowTime()), nil
+			return restoreProxyAPIKeyForTest(1, 101, "my-key", "sk-aris-test", nowTime()), nil
 		},
 	}
 
@@ -486,7 +498,7 @@ func TestRevokeAPIKeyHandler_OwnerSuccess(t *testing.T) {
 func TestRevokeAPIKeyHandler_AdminSuccess(t *testing.T) {
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return aggregate.RestoreProxyAPIKey(1, 999, "other-key", vo.NewAPIKeySecret("sk-aris-other"), nowTime()), nil
+			return restoreProxyAPIKeyForTest(1, 999, "other-key", "sk-aris-other", nowTime()), nil
 		},
 	}
 
@@ -531,7 +543,7 @@ func TestRevokeAPIKeyHandler_NotFound(t *testing.T) {
 func TestRevokeAPIKeyHandler_NoPermission(t *testing.T) {
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return aggregate.RestoreProxyAPIKey(1, 999, "other-key", vo.NewAPIKeySecret("sk-aris-other"), nowTime()), nil
+			return restoreProxyAPIKeyForTest(1, 999, "other-key", "sk-aris-other", nowTime()), nil
 		},
 	}
 
@@ -555,7 +567,7 @@ func TestRevokeAPIKeyHandler_NoPermission(t *testing.T) {
 func TestRevokeAPIKeyHandler_LegacyKeyNoPermission(t *testing.T) {
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return aggregate.RestoreProxyAPIKey(1, 0, "legacy-key", vo.NewAPIKeySecret("sk-aris-legacy"), nowTime()), nil
+			return restoreProxyAPIKeyForTest(1, 0, "legacy-key", "sk-aris-legacy", nowTime()), nil
 		},
 	}
 
@@ -605,7 +617,7 @@ func TestRevokeAPIKeyHandler_DeleteError(t *testing.T) {
 	deleteErr := errors.New("delete failed")
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return aggregate.RestoreProxyAPIKey(1, 101, "my-key", vo.NewAPIKeySecret("sk-aris-test"), nowTime()), nil
+			return restoreProxyAPIKeyForTest(1, 101, "my-key", "sk-aris-test", nowTime()), nil
 		},
 		deleteFunc: func(ctx context.Context, id uint) error {
 			return deleteErr
