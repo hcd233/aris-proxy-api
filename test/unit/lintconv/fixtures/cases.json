@@ -1,0 +1,230 @@
+[
+  {
+    "name": "logger missing module prefix",
+    "files": [
+      {
+        "path": "internal/application/demo/demo.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"missing prefix\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.prefix", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "deprecated constant error selector",
+    "files": [
+      {
+        "path": "internal/application/demo/error.go",
+        "content": "package demo\n\nfunc Run() string {\n\treturn constant.ErrInvalidRequest\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "error.deprecated_constant", "severity": "error"}
+    ]
+  },
+  {
+    "name": "forwarding constant in enum package",
+    "files": [
+      {
+        "path": "internal/common/enum/demo.go",
+        "content": "package enum\n\nconst DemoStatus = upstream.StatusReady\n"
+      }
+    ],
+    "want": [
+      {"rule": "constant.forwarding", "severity": "error"}
+    ]
+  },
+  {
+    "name": "zap string sensitive field without mask",
+    "files": [
+      {
+        "path": "internal/application/demo/log_secret.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nfunc Run(apiKey string) zap.Field {\n\treturn zap.String(\"apiKey\", apiKey)\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.sensitive", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "internal test file is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/demo_test.go",
+        "content": "package demo\n\nimport \"testing\"\n\nfunc TestDemo(t *testing.T) {}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.internal_file", "severity": "error"}
+    ]
+  },
+  {
+    "name": "test root file is rejected",
+    "files": [
+      {
+        "path": "test/demo_test.go",
+        "content": "package test\n\nimport \"testing\"\n\nfunc TestDemo(t *testing.T) {}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.root_file", "severity": "error"}
+    ]
+  },
+  {
+    "name": "testify import is rejected",
+    "files": [
+      {
+        "path": "test/unit/demo/demo_test.go",
+        "content": "package demo\n\nimport \"github.com/stretchr/testify/require\"\n\nfunc TestDemo() {\n\trequire.True(nil, true)\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.testify", "severity": "error"}
+    ]
+  },
+  {
+    "name": "time sleep in test is rejected",
+    "files": [
+      {
+        "path": "test/unit/demo/sleep_test.go",
+        "content": "package demo\n\nimport \"time\"\n\nfunc TestDemo() {\n\ttime.Sleep(time.Second)\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.sleep", "severity": "error"}
+    ]
+  },
+  {
+    "name": "handler direct dao call is rejected",
+    "files": [
+      {
+        "path": "internal/handler/demo.go",
+        "content": "package handler\n\nfunc Run() {\n\tdao.Find()\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.handler_db", "severity": "error"}
+    ]
+  },
+  {
+    "name": "interface layer root context is rejected",
+    "files": [
+      {
+        "path": "internal/handler/context.go",
+        "content": "package handler\n\nimport \"context\"\n\nfunc Run() {\n\t_ = context.Background()\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.root_context", "severity": "error"}
+    ]
+  },
+  {
+    "name": "domain infrastructure import is rejected",
+    "files": [
+      {
+        "path": "internal/domain/demo/domain.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/database\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.domain_dependency", "severity": "error"}
+    ]
+  },
+  {
+    "name": "application deprecated import is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/app.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/service\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.deprecated_application_import", "severity": "error"}
+    ]
+  },
+  {
+    "name": "passthrough wrapper warns",
+    "files": [
+      {
+        "path": "internal/application/demo/wrapper.go",
+        "content": "package demo\n\ntype Service struct{}\n\nfunc (s Service) Run() string {\n\treturn s.Other()\n}\n\nfunc (s Service) Other() string {\n\treturn \"ok\"\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.passthrough", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "commented out code warns",
+    "files": [
+      {
+        "path": "internal/application/demo/comment.go",
+        "content": "package demo\n\nfunc Run() {\n\t// if enabled {\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "style.commented_code", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "implementation detail variable name warns",
+    "files": [
+      {
+        "path": "internal/application/demo/name.go",
+        "content": "package demo\n\nfunc Run() {\n\tuserList := []string{}\n\t_ = userList\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "style.implementation_name", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "magic number is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/number.go",
+        "content": "package demo\n\nfunc Run() int {\n\treturn 128\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.number", "severity": "error"}
+    ]
+  },
+  {
+    "name": "magic duration is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/duration.go",
+        "content": "package demo\n\nimport \"time\"\n\nfunc Run() time.Duration {\n\treturn 5 * time.Second\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.duration", "severity": "error"}
+    ]
+  },
+  {
+    "name": "magic string is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/string.go",
+        "content": "package demo\n\nfunc Run() string {\n\treturn \"hello\"\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "anonymous struct is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/struct.go",
+        "content": "package demo\n\nfunc Run() {\n\tvalue := struct {\n\t\tName string\n\t}{}\n\t_ = value\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "anonymous_struct", "severity": "error"}
+    ]
+  }
+]
