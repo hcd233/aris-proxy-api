@@ -7,8 +7,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 )
 
-var fiberApp *fiber.App
-
 // NewFiberApp 创建 Fiber 应用实例
 //
 //	@return *fiber.App
@@ -26,22 +24,4 @@ func NewFiberApp() *fiber.App {
 		TrustedProxies:          config.TrustedProxies,
 		ProxyHeader:             fiber.HeaderXForwardedFor,
 	})
-}
-
-// SetFiberApp 设置 Fiber 应用实例
-//
-//	@param app *fiber.App
-//	@author centonhuang
-//	@update 2026-04-28 10:00:00
-func SetFiberApp(app *fiber.App) {
-	fiberApp = app
-}
-
-// GetFiberApp 获取 Fiber 应用实例
-//
-//	@return *fiber.App
-//	@author centonhuang
-//	@update 2025-11-02 02:35:59
-func GetFiberApp() *fiber.App {
-	return fiberApp
 }

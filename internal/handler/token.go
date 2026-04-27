@@ -9,8 +9,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -29,9 +27,7 @@ type TokenHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type TokenDependencies struct {
-	UserRepo      identity.UserRepository
-	AccessSigner  identityservice.TokenSigner
-	RefreshSigner identityservice.TokenSigner
+	Refresh command.RefreshTokensHandler
 }
 
 type tokenHandler struct {
@@ -46,11 +42,7 @@ type tokenHandler struct {
 //	@update 2026-04-26 10:00:00
 func NewTokenHandler(deps TokenDependencies) TokenHandler {
 	return &tokenHandler{
-		refresh: command.NewRefreshTokensHandler(
-			deps.UserRepo,
-			deps.AccessSigner,
-			deps.RefreshSigner,
-		),
+		refresh: deps.Refresh,
 	}
 }
 

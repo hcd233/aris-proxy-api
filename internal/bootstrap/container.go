@@ -4,7 +4,13 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/api"
+	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
+	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
+	identitycommand "github.com/hcd233/aris-proxy-api/internal/application/identity/command"
+	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	applicationoauth2 "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -12,6 +18,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	llmproxyservice "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
@@ -26,7 +33,7 @@ import (
 //	@author centonhuang
 //	@update 2026-04-28 10:00:00
 type Server struct {
-	Container *dig.Container
+	container *dig.Container
 	App       *fiber.App
 	HumaAPI   huma.API
 }
@@ -45,9 +52,7 @@ func BuildServer() (*Server, error) {
 
 	var server *Server
 	if err := container.Invoke(func(app *fiber.App, humaAPI huma.API) {
-		api.SetFiberApp(app)
-		api.SetHumaAPI(humaAPI)
-		server = &Server{Container: container, App: app, HumaAPI: humaAPI}
+		server = &Server{container: container, App: app, HumaAPI: humaAPI}
 	}); err != nil {
 		return nil, err
 	}
@@ -55,44 +60,170 @@ func BuildServer() (*Server, error) {
 }
 
 func provide(container *dig.Container) error {
-	providers := []any{
-		api.NewFiberApp,
-		api.NewHumaAPI,
-		newUserRepository,
-		newAPIKeyRepository,
-		newSessionReadRepository,
-		newEndpointRepository,
-		newEndpointReadRepository,
-		newAudioDirCreator,
-		transport.NewOpenAIProxy,
-		transport.NewAnthropicProxy,
-		apikeyservice.NewAPIKeyGenerator,
-		newOauth2Platforms,
-		newTokenDependencies,
-		newOauth2Dependencies,
-		newUserDependencies,
-		newAPIKeyDependencies,
-		newSessionDependencies,
-		newOpenAIDependencies,
-		newAnthropicDependencies,
-		handler.NewPingHandler,
-		handler.NewTokenHandler,
-		handler.NewOauth2Handler,
-		handler.NewUserHandler,
-		handler.NewAPIKeyHandler,
-		handler.NewSessionHandler,
-		handler.NewOpenAIHandler,
-		handler.NewAnthropicHandler,
+	if err := provideHTTP(container); err != nil {
+		return err
 	}
-	for _, provider := range providers {
-		if err := container.Provide(provider); err != nil {
-			return err
-		}
+	if err := provideInfrastructure(container); err != nil {
+		return err
+	}
+	if err := provideApplication(container); err != nil {
+		return err
+	}
+	if err := provideHandlers(container); err != nil {
+		return err
 	}
 	if err := container.Provide(newAccessTokenSigner, dig.Name("accessSigner")); err != nil {
 		return err
 	}
 	if err := container.Provide(newRefreshTokenSigner, dig.Name("refreshSigner")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func provideHTTP(container *dig.Container) error {
+	if err := container.Provide(api.NewFiberApp); err != nil {
+		return err
+	}
+	if err := container.Provide(api.NewHumaAPI); err != nil {
+		return err
+	}
+	return nil
+}
+
+func provideInfrastructure(container *dig.Container) error {
+	if err := container.Provide(newUserRepository); err != nil {
+		return err
+	}
+	if err := container.Provide(newAPIKeyRepository); err != nil {
+		return err
+	}
+	if err := container.Provide(newSessionReadRepository); err != nil {
+		return err
+	}
+	if err := container.Provide(newEndpointRepository); err != nil {
+		return err
+	}
+	if err := container.Provide(newEndpointReadRepository); err != nil {
+		return err
+	}
+	if err := container.Provide(newAudioDirCreator); err != nil {
+		return err
+	}
+	if err := container.Provide(transport.NewOpenAIProxy); err != nil {
+		return err
+	}
+	if err := container.Provide(transport.NewAnthropicProxy); err != nil {
+		return err
+	}
+	if err := container.Provide(apikeyservice.NewAPIKeyGenerator); err != nil {
+		return err
+	}
+	if err := container.Provide(newOauth2Platforms); err != nil {
+		return err
+	}
+	return nil
+}
+
+func provideApplication(container *dig.Container) error {
+	if err := container.Provide(newEndpointResolver); err != nil {
+		return err
+	}
+	if err := container.Provide(apikeycommand.NewUserExistenceChecker); err != nil {
+		return err
+	}
+	if err := container.Provide(apikeycommand.NewIssueAPIKeyHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(apikeycommand.NewRevokeAPIKeyHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(apikeyquery.NewListAPIKeysHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newRefreshTokensHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(identitycommand.NewUpdateProfileHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(identityquery.NewGetCurrentUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newInitiateLoginHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newHandleCallbackHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(sessionquery.NewListSessionsHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(sessionquery.NewGetSessionHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
+		return err
+	}
+	if err := container.Provide(usecase.NewListAnthropicModels); err != nil {
+		return err
+	}
+	if err := container.Provide(usecase.NewCountTokens); err != nil {
+		return err
+	}
+	if err := container.Provide(usecase.NewOpenAIUseCase); err != nil {
+		return err
+	}
+	if err := container.Provide(usecase.NewAnthropicUseCase); err != nil {
+		return err
+	}
+	return nil
+}
+
+func provideHandlers(container *dig.Container) error {
+	if err := container.Provide(newTokenDependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(newOauth2Dependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(newUserDependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(newAPIKeyDependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(newSessionDependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(newOpenAIDependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(newAnthropicDependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewPingHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewTokenHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewOauth2Handler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewAPIKeyHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewSessionHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewOpenAIHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewAnthropicHandler); err != nil {
 		return err
 	}
 	return nil
@@ -140,7 +271,11 @@ func newOauth2Platforms() handler.Oauth2Platforms {
 	}
 }
 
-type tokenDependencyParams struct {
+func newEndpointResolver(repo llmproxy.EndpointRepository) llmproxyservice.EndpointResolver {
+	return llmproxyservice.NewEndpointResolver(repo)
+}
+
+type refreshTokensParams struct {
 	dig.In
 
 	UserRepo      identity.UserRepository
@@ -148,15 +283,11 @@ type tokenDependencyParams struct {
 	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
 }
 
-func newTokenDependencies(params tokenDependencyParams) handler.TokenDependencies {
-	return handler.TokenDependencies{
-		UserRepo:      params.UserRepo,
-		AccessSigner:  params.AccessSigner,
-		RefreshSigner: params.RefreshSigner,
-	}
+func newRefreshTokensHandler(params refreshTokensParams) identitycommand.RefreshTokensHandler {
+	return identitycommand.NewRefreshTokensHandler(params.UserRepo, params.AccessSigner, params.RefreshSigner)
 }
 
-type oauth2DependencyParams struct {
+type handleCallbackParams struct {
 	dig.In
 
 	Platforms     handler.Oauth2Platforms
@@ -166,46 +297,54 @@ type oauth2DependencyParams struct {
 	DirCreator    applicationoauth2.ObjectStorageDirCreator
 }
 
-func newOauth2Dependencies(params oauth2DependencyParams) handler.Oauth2Dependencies {
+func newHandleCallbackHandler(params handleCallbackParams) applicationoauth2.HandleCallbackHandler {
+	return applicationoauth2.NewHandleCallbackHandler(
+		params.Platforms,
+		params.UserRepo,
+		params.AccessSigner,
+		params.RefreshSigner,
+		params.DirCreator,
+	)
+}
+
+func newInitiateLoginHandler(platforms handler.Oauth2Platforms) applicationoauth2.InitiateLoginHandler {
+	return applicationoauth2.NewInitiateLoginHandler(platforms)
+}
+
+func newTokenDependencies(refresh identitycommand.RefreshTokensHandler) handler.TokenDependencies {
+	return handler.TokenDependencies{Refresh: refresh}
+}
+
+func newOauth2Dependencies(initiate applicationoauth2.InitiateLoginHandler, callback applicationoauth2.HandleCallbackHandler) handler.Oauth2Dependencies {
 	return handler.Oauth2Dependencies{
-		Platforms:     params.Platforms,
-		UserRepo:      params.UserRepo,
-		AccessSigner:  params.AccessSigner,
-		RefreshSigner: params.RefreshSigner,
-		DirCreator:    params.DirCreator,
+		Initiate: initiate,
+		Callback: callback,
 	}
 }
 
-func newUserDependencies(userRepo identity.UserRepository) handler.UserDependencies {
-	return handler.UserDependencies{UserRepo: userRepo}
+func newUserDependencies(getCurrentUser identityquery.GetCurrentUserHandler, updateProfile identitycommand.UpdateProfileHandler) handler.UserDependencies {
+	return handler.UserDependencies{
+		GetCurrentUser: getCurrentUser,
+		UpdateProfile:  updateProfile,
+	}
 }
 
-func newAPIKeyDependencies(apiKeyRepo apikey.APIKeyRepository, userRepo identity.UserRepository, generator apikeyservice.APIKeyGenerator) handler.APIKeyDependencies {
+func newAPIKeyDependencies(issue apikeycommand.IssueAPIKeyHandler, revoke apikeycommand.RevokeAPIKeyHandler, list apikeyquery.ListAPIKeysHandler) handler.APIKeyDependencies {
 	return handler.APIKeyDependencies{
-		APIKeyRepo: apiKeyRepo,
-		UserRepo:   userRepo,
-		Generator:  generator,
+		Issue:  issue,
+		Revoke: revoke,
+		List:   list,
 	}
 }
 
-func newSessionDependencies(sessionReadRepo session.SessionReadRepository) handler.SessionDependencies {
-	return handler.SessionDependencies{SessionReadRepo: sessionReadRepo}
+func newSessionDependencies(list sessionquery.ListSessionsHandler, get sessionquery.GetSessionHandler) handler.SessionDependencies {
+	return handler.SessionDependencies{List: list, Get: get}
 }
 
-func newOpenAIDependencies(endpointRepo llmproxy.EndpointRepository, endpointReadRepo llmproxy.EndpointReadRepository, openAIProxy transport.OpenAIProxy, anthropicProxy transport.AnthropicProxy) handler.OpenAIDependencies {
-	return handler.OpenAIDependencies{
-		EndpointRepo:     endpointRepo,
-		EndpointReadRepo: endpointReadRepo,
-		OpenAIProxy:      openAIProxy,
-		AnthropicProxy:   anthropicProxy,
-	}
+func newOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependencies {
+	return handler.OpenAIDependencies{UseCase: useCase}
 }
 
-func newAnthropicDependencies(endpointRepo llmproxy.EndpointRepository, endpointReadRepo llmproxy.EndpointReadRepository, openAIProxy transport.OpenAIProxy, anthropicProxy transport.AnthropicProxy) handler.AnthropicDependencies {
-	return handler.AnthropicDependencies{
-		EndpointRepo:     endpointRepo,
-		EndpointReadRepo: endpointReadRepo,
-		OpenAIProxy:      openAIProxy,
-		AnthropicProxy:   anthropicProxy,
-	}
+func newAnthropicDependencies(useCase usecase.AnthropicUseCase) handler.AnthropicDependencies {
+	return handler.AnthropicDependencies{UseCase: useCase}
 }
