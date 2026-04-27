@@ -8,11 +8,10 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/hcd233/aris-proxy-api/internal/api"
+	"github.com/hcd233/aris-proxy-api/internal/bootstrap"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -22,7 +21,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/router"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
@@ -64,7 +62,12 @@ var startServerCmd = &cobra.Command{
 		pool.InitPoolManager()
 		cron.InitCronJobs()
 
-		app := api.GetFiberApp()
+		server, err := bootstrap.BuildServer()
+		if err != nil {
+			logger.Logger().Error("[Server] Build server failed", zap.Error(err))
+			os.Exit(1)
+		}
+		app := server.App
 
 		app.Use(
 			middleware.RecoverMiddleware(),
@@ -93,10 +96,10 @@ var startServerCmd = &cobra.Command{
 			}),
 		)
 
-		if config.Env != enum.EnvProduction {
-			router.RegisterDocsRouter()
+		if err := bootstrap.RegisterRoutes(server); err != nil {
+			logger.Logger().Error("[Server] Register routes failed", zap.Error(err))
+			os.Exit(1)
 		}
-		router.RegisterAPIRouter()
 
 		// 启动 HTTP 服务（在 goroutine 中运行，主 goroutine 用于信号监听）
 		listenAddr := fmt.Sprintf("%s:%s", host, port)
