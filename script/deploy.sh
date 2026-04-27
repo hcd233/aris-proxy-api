@@ -33,4 +33,4 @@ echo -e "\033[1;31mPruning unused Docker images...\033[0m"
 docker image prune -a -f
 
 echo -e "\033[1;33mDisplaying Docker logs for aris-proxy-api...\033[0m"
-docker logs -f aris-proxy-api --details
+docker logs -f aris-proxy-api --details --tail 25

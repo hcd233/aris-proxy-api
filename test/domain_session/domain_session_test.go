@@ -16,24 +16,24 @@ import (
 
 // sessionCase 会话测试用例结构
 type sessionCase struct {
-	Name                  string            `json:"name"`
-	Description           string            `json:"description"`
-	Owner                 string            `json:"owner"`
-	MessageIDs            []uint            `json:"messageIDs"`
-	ToolIDs               []uint            `json:"toolIDs"`
-	Metadata              map[string]string `json:"metadata"`
-	ID                    uint              `json:"id"`
-	SummaryText           string            `json:"summary_text"`
-	SummaryError          string            `json:"summary_error"`
-	ScoreCoherence        float64           `json:"score_coherence"`
-	ScoreDepth            float64           `json:"score_depth"`
-	ScoreValue            float64           `json:"score_value"`
-	ScoreTotal            float64           `json:"score_total"`
-	ScoreVersion          string            `json:"score_version"`
-	ScoreError            string            `json:"score_error"`
-	CheckOwner            string            `json:"check_owner"`
-	ExpectOwned           bool              `json:"expect_owned"`
-	ExpectErrorKind       string            `json:"expectErrorKind"`
+	Name            string            `json:"name"`
+	Description     string            `json:"description"`
+	Owner           string            `json:"owner"`
+	MessageIDs      []uint            `json:"messageIDs"`
+	ToolIDs         []uint            `json:"toolIDs"`
+	Metadata        map[string]string `json:"metadata"`
+	ID              uint              `json:"id"`
+	SummaryText     string            `json:"summary_text"`
+	SummaryError    string            `json:"summary_error"`
+	ScoreCoherence  float64           `json:"score_coherence"`
+	ScoreDepth      float64           `json:"score_depth"`
+	ScoreValue      float64           `json:"score_value"`
+	ScoreTotal      float64           `json:"score_total"`
+	ScoreVersion    string            `json:"score_version"`
+	ScoreError      string            `json:"score_error"`
+	CheckOwner      string            `json:"check_owner"`
+	ExpectOwned     bool              `json:"expect_owned"`
+	ExpectErrorKind string            `json:"expectErrorKind"`
 }
 
 func loadCases(t *testing.T) []sessionCase {
@@ -211,7 +211,10 @@ func TestUpdateScore_Valid(t *testing.T) {
 		t.Fatalf("CreateSession() error: %v", err)
 	}
 
-	score := vo.NewSessionScore(tc.ScoreCoherence, tc.ScoreDepth, tc.ScoreValue, tc.ScoreVersion, time.Now().UTC())
+	score, err := vo.NewSessionScore(tc.ScoreCoherence, tc.ScoreDepth, tc.ScoreValue, tc.ScoreVersion, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("NewSessionScore() error: %v", err)
+	}
 	s.UpdateScore(score, time.Now().UTC())
 
 	if s.Score().Coherence() != tc.ScoreCoherence {

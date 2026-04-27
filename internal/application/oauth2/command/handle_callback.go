@@ -180,7 +180,7 @@ func NewHandleCallbackHandler(
 func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCommand) (*HandleCallbackResult, error) {
 	log := logger.WithCtx(ctx)
 
-	platform, err := h.validateStateAndPlatform(cmd.State, cmd.Platform)
+	platform, err := h.validateStateAndPlatform(ctx, cmd.State, cmd.Platform)
 	if err != nil {
 		return nil, err
 	}
@@ -222,8 +222,8 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (h *handleCallbackHandler) validateStateAndPlatform(state, platform string) (oauth2service.Platform, error) {
-	log := logger.WithCtx(context.Background())
+func (h *handleCallbackHandler) validateStateAndPlatform(ctx context.Context, state, platform string) (oauth2service.Platform, error) {
+	log := logger.WithCtx(ctx)
 
 	if !infraoauth2.VerifyOAuth2State(state) {
 		log.Error("[OAuth2Command] Invalid or expired state",

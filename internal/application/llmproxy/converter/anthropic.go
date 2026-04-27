@@ -510,7 +510,7 @@ func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkI
 		delta.ReasoningContent = payload.Delta.Thinking
 	case enum.AnthropicDeltaTypeInputJSONDelta:
 		delta.ToolCalls = []*dto.OpenAIChatCompletionMessageToolCall{{
-			Index: payload.Index,
+			Index: lo.ToPtr(payload.Index),
 			Type:  enum.ToolTypeFunction,
 			Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
 				Arguments: payload.Delta.PartialJSON,
@@ -581,7 +581,7 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 				Index: 0,
 				Delta: &dto.OpenAIChatCompletionChunkDelta{
 					ToolCalls: []*dto.OpenAIChatCompletionMessageToolCall{{
-						Index: payload.Index,
+						Index: lo.ToPtr(payload.Index),
 						ID:    payload.ContentBlock.ID,
 						Type:  enum.ToolTypeFunction,
 						Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{

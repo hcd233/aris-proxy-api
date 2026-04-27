@@ -28,23 +28,23 @@ import (
 
 // callbackCase 回调测试用例
 type callbackCase struct {
-	Name                string              `json:"name"`
-	Description         string              `json:"description"`
-	Platform            string              `json:"platform"`
-	Code                string              `json:"code"`
-	State               string              `json:"state"`
-	StubUserInfo        *stubUserInfo       `json:"stub_user_info"`
-	StubExistingUser    *existingStubUser   `json:"stub_existing_user"`
-	ExpectedIsNew       bool                `json:"expected_is_new"`
-	ExpectErrorKind     string              `json:"expect_error_kind"`
+	Name             string            `json:"name"`
+	Description      string            `json:"description"`
+	Platform         string            `json:"platform"`
+	Code             string            `json:"code"`
+	State            string            `json:"state"`
+	StubUserInfo     *stubUserInfo     `json:"stub_user_info"`
+	StubExistingUser *existingStubUser `json:"stub_existing_user"`
+	ExpectedIsNew    bool              `json:"expected_is_new"`
+	ExpectErrorKind  string            `json:"expect_error_kind"`
 }
 
 // stubUserInfo fixture 中模拟的用户信息
 type stubUserInfo struct {
-	GhBind   string `json:"gh_bind"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Avatar   string `json:"avatar"`
+	GhBind string `json:"gh_bind"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Avatar string `json:"avatar"`
 }
 
 // existingStubUser 从 fixture stub_existing_user 反序列化的已存在用户信息
@@ -111,12 +111,7 @@ func newStubPlatform(name string, userInfo *stubUserInfo) *stubPlatform {
 			if userInfo == nil {
 				return vo.OAuthUserInfo{}, nil
 			}
-			return vo.OAuthUserInfo{
-				ID:     userInfo.GhBind,
-				Name:   userInfo.Name,
-				Email:  userInfo.Email,
-				Avatar: userInfo.Avatar,
-			}, nil
+			return vo.NewOAuthUserInfo(userInfo.GhBind, userInfo.Name, userInfo.Email, userInfo.Avatar), nil
 		},
 	}
 }
@@ -271,11 +266,11 @@ func TestHandleCallback_NewUser(t *testing.T) {
 	if result.TokenPair == nil {
 		t.Fatal("TokenPair should not be nil")
 	}
-	if result.TokenPair.AccessToken != "access-token-stub" {
-		t.Errorf("AccessToken = %q, want %q", result.TokenPair.AccessToken, "access-token-stub")
+	if result.TokenPair.AccessToken() != "access-token-stub" {
+		t.Errorf("AccessToken = %q, want %q", result.TokenPair.AccessToken(), "access-token-stub")
 	}
-	if result.TokenPair.RefreshToken != "refresh-token-stub" {
-		t.Errorf("RefreshToken = %q, want %q", result.TokenPair.RefreshToken, "refresh-token-stub")
+	if result.TokenPair.RefreshToken() != "refresh-token-stub" {
+		t.Errorf("RefreshToken = %q, want %q", result.TokenPair.RefreshToken(), "refresh-token-stub")
 	}
 	if result.UserID == 0 {
 		t.Error("UserID should not be 0")

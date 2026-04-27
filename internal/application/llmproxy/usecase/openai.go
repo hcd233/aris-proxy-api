@@ -174,12 +174,14 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Lo
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
+		toolCallIDs := make(map[int]string)
 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != "" {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
+			util.NormalizeOpenAIStreamToolCalls(chunk, toolCallIDs)
 			chunk.Model = req.Body.Model
 			chunkData, marshalErr := sonic.Marshal(chunk)
 			if marshalErr != nil {
@@ -195,6 +197,8 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Lo
 		if err == nil {
 			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
 			_ = w.Flush()
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		u.storeOpenAIChatFromCompletion(ctx, log, req, completion, err, upstream.Model)
@@ -303,6 +307,8 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 		if err == nil {
 			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
 			_ = w.Flush()
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		u.storeOpenAIChatFromAnthropicMsg(ctx, log, req, anthropicMsg, err, upstream.Model)
@@ -402,6 +408,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, log *za
 		}
 		if proxyErr != nil {
 			log.Error("[OpenAIUseCase] Response API stream error", zap.Error(proxyErr))
+			util.WriteUpstreamSSEError(log, w, proxyErr)
 		}
 
 		u.storeResponseFromRsp(ctx, log, req, finalResponse, proxyErr, upstream.Model)
@@ -519,6 +526,8 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, l
 		if err == nil {
 			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
 			_ = w.Flush()
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		u.storeResponseFromAnthropicMsg(ctx, log, req, anthropicMsg, err, upstream.Model)
