@@ -1,6 +1,7 @@
 package reasoning_content_passthrough
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -11,10 +12,10 @@ import (
 )
 
 type testCase struct {
-	Name                string        `json:"name"`
-	Description         string        `json:"description"`
-	Messages            []testMessage `json:"messages"`
-	ExpectedReasoning   string        `json:"expectedReasoning"`
+	Name              string        `json:"name"`
+	Description       string        `json:"description"`
+	Messages          []testMessage `json:"messages"`
+	ExpectedReasoning string        `json:"expectedReasoning"`
 }
 
 type testMessage struct {
@@ -24,8 +25,7 @@ type testMessage struct {
 	ToolCalls        []any  `json:"tool_calls,omitempty"`
 }
 
-func loadCases(t *testing.T) []testCase {
-	t.Helper()
+func loadCases(_ *testing.T) []testCase {
 	return []testCase{
 		{
 			Name:        "assistant_has_reasoning_content",
@@ -112,50 +112,69 @@ func TestReasoningContentWithToolCallsPreserved(t *testing.T) {
 	}
 }
 
-func TestEnsureAssistantMessageReasoningContent(t *testing.T) {
-	cases := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name: "assistant_with_tool_calls_no_reasoning",
-			input: `{"messages":[{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function"}]}]}`,
-			expected: `reasoning_content`,
-		},
-		{
-			name: "assistant_with_tool_calls_has_reasoning",
-			input: `{"messages":[{"role":"assistant","content":"","reasoning_content":"think","tool_calls":[{"id":"call_1"}]}]}`,
-			expected: `"reasoning_content":"think"`,
-		},
-		{
-			name: "assistant_without_tool_calls",
-			input: `{"messages":[{"role":"assistant","content":"hi"}]}`,
-			expected: ``,
-		},
-		{
-			name: "user_message_ignored",
-			input: `{"messages":[{"role":"user","content":"hi"}]}`,
-			expected: ``,
-		},
-		{
-			name: "mixed_messages",
-			input: `{"messages":[{"role":"user","content":"hi"},{"role":"assistant","tool_calls":[{"id":"c1"}]},{"role":"assistant","content":"ok"}]}`,
-			expected: `reasoning_content`,
-		},
-	}
+// ensureCase 对应 fixtures/ensure_cases.json 中的一条用例。
+type ensureCase struct {
+	Name                         string `json:"name"`
+	Description                  string `json:"description"`
+	Input                        string `json:"input"`
+	ExpectedRoleAt               int    `json:"expectedRoleAt"`
+	ExpectReasoningContentFilled bool   `json:"expectReasoningContentFilled"`
+	ExpectedReasoningContent     string `json:"expectedReasoningContent"`
+}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := util.EnsureAssistantMessageReasoningContent([]byte(tc.input))
-			gotStr := string(got)
-			if tc.expected != "" && !strings.Contains(gotStr, tc.expected) {
-				t.Errorf("expected %q in output, got %s", tc.expected, gotStr)
+func loadEnsureCases(t *testing.T) []ensureCase {
+	t.Helper()
+	data, err := os.ReadFile("./fixtures/ensure_cases.json")
+	if err != nil {
+		t.Fatalf("failed to read fixture: %v", err)
+	}
+	var cases []ensureCase
+	if err := sonic.Unmarshal(data, &cases); err != nil {
+		t.Fatalf("failed to unmarshal fixture: %v", err)
+	}
+	return cases
+}
+
+// TestEnsureAssistantMessageReasoningContent 覆盖 util.EnsureAssistantMessageReasoningContent
+// 的所有分支，并回归 Moonshot/opencode 的 400 bug：缺失或空串 reasoning_content 均需补位为 " "。
+func TestEnsureAssistantMessageReasoningContent(t *testing.T) {
+	for _, tc := range loadEnsureCases(t) {
+		t.Run(tc.Name, func(t *testing.T) {
+			got := util.EnsureAssistantMessageReasoningContent([]byte(tc.Input))
+
+			var parsed map[string]any
+			if err := sonic.Unmarshal(got, &parsed); err != nil {
+				t.Fatalf("output is not valid JSON: %v\nOutput: %s", err, string(got))
 			}
-			// Verify valid JSON
-			var v any
-			if err := sonic.Unmarshal(got, &v); err != nil {
-				t.Fatalf("output is not valid JSON: %v\nOutput: %s", err, gotStr)
+
+			msgs, ok := parsed["messages"].([]any)
+			if !ok {
+				t.Fatalf("messages field missing or not array in output: %s", string(got))
+			}
+			if tc.ExpectedRoleAt >= len(msgs) {
+				t.Fatalf("expectedRoleAt %d out of range (len=%d)", tc.ExpectedRoleAt, len(msgs))
+			}
+			msg, ok := msgs[tc.ExpectedRoleAt].(map[string]any)
+			if !ok {
+				t.Fatalf("messages[%d] is not an object", tc.ExpectedRoleAt)
+			}
+
+			rc, hasRC := msg["reasoning_content"]
+			if tc.ExpectReasoningContentFilled {
+				if !hasRC {
+					t.Fatalf("expected reasoning_content present at messages[%d], body=%s", tc.ExpectedRoleAt, string(got))
+				}
+				rcStr, isStr := rc.(string)
+				if !isStr {
+					t.Fatalf("reasoning_content should be string, got %T (body=%s)", rc, string(got))
+				}
+				if rcStr != tc.ExpectedReasoningContent {
+					t.Fatalf("reasoning_content = %q, want %q", rcStr, tc.ExpectedReasoningContent)
+				}
+			} else {
+				if hasRC {
+					t.Fatalf("unexpected reasoning_content at messages[%d], body=%s", tc.ExpectedRoleAt, string(got))
+				}
 			}
 		})
 	}

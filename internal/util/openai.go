@@ -245,17 +245,25 @@ func IsResponseAPIDeltaEvent(event string) bool {
 	return strings.HasSuffix(event, enum.ResponseStreamEventDeltaSuffix)
 }
 
+// reasoningContentPlaceholder 用于给缺失 reasoning_content 的 assistant tool call
+// message 补位。Moonshot AI 的思考模式会把空字符串 "" 判为 missing 直接返回 400
+// （参考 LiteLLM issue #21672），因此使用单空格作为最小合法占位，既满足上游
+// 校验又对模型行为影响最小；与 LiteLLM PR #23580 的修复方式保持一致。
+const reasoningContentPlaceholder = " "
+
 // EnsureAssistantMessageReasoningContent 在序列化后的 JSON body 中，为缺少
-// reasoning_content 的 assistant message 补上空字符串。
+// reasoning_content 的 assistant tool call message 补上占位符 " "。
 //
-// 部分上游 provider（如 Moonshot AI）在 thinking 模式下要求 assistant tool call
-// message 必须携带 reasoning_content 字段，即使值为空字符串；而 Go struct 的
-// omitempty 会将空字符串完全省略，导致上游返回 400。
+// 部分上游 provider（如 Moonshot AI）在 thinking 模式下要求带 tool_calls 的
+// assistant message 必须携带**非空的** reasoning_content 字段；Go struct 的
+// omitempty 会把空字符串省略，而上游又会把 "" 判为 missing，两种情况都会导致
+// 400: "thinking is enabled but reasoning_content is missing in assistant tool
+// call message"。因此这里统一补一个空格占位。
 //
 //	@param body []byte 序列化后的 OpenAIChatCompletionReq JSON
 //	@return []byte 处理后的 JSON
 //	@author centonhuang
-//	@update 2026-04-26 23:30:00
+//	@update 2026-04-27 16:40:00
 func EnsureAssistantMessageReasoningContent(body []byte) []byte {
 	var root map[string]any
 	if err := sonic.Unmarshal(body, &root); err != nil {
@@ -275,15 +283,17 @@ func EnsureAssistantMessageReasoningContent(body []byte) []byte {
 		if role != enum.RoleAssistant {
 			continue
 		}
-		// 已有 reasoning_content 则跳过
-		if _, hasRC := msg["reasoning_content"]; hasRC {
-			continue
-		}
-		// 没有 tool_calls 也跳过（上游只要求 tool call message 有该字段）
+		// 没有 tool_calls 直接跳过（上游只要求 tool call message 有该字段）
 		if tcs, hasTC := msg["tool_calls"].([]any); !hasTC || len(tcs) == 0 {
 			continue
 		}
-		msg["reasoning_content"] = ""
+		// 已有非空 reasoning_content 则跳过；空串 / null 同样需要补位
+		if rc, hasRC := msg["reasoning_content"]; hasRC {
+			if s, isStr := rc.(string); isStr && s != "" {
+				continue
+			}
+		}
+		msg["reasoning_content"] = reasoningContentPlaceholder
 		msgsRaw[i] = msg
 		modified = true
 	}
