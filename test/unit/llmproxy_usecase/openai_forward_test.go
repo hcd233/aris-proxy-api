@@ -17,38 +17,54 @@ import (
 )
 
 // mockOpenAIProxy 模拟 OpenAI 代理
-type mockOpenAIProxy struct{}
+type mockOpenAIProxy struct {
+	chatUnaryCalled      bool
+	chatStreamCalled     bool
+	responseUnaryCalled  bool
+	responseStreamCalled bool
+}
 
 func (p *mockOpenAIProxy) ForwardChatCompletion(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) (*dto.OpenAIChatCompletion, error) {
+	p.chatUnaryCalled = true
 	return &dto.OpenAIChatCompletion{ID: "test"}, nil
 }
 
 func (p *mockOpenAIProxy) ForwardChatCompletionStream(_ context.Context, _ transport.UpstreamEndpoint, _ []byte, _ func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+	p.chatStreamCalled = true
 	return &dto.OpenAIChatCompletion{ID: "test"}, nil
 }
 
 func (p *mockOpenAIProxy) ForwardCreateResponse(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) ([]byte, error) {
+	p.responseUnaryCalled = true
 	return []byte(`{"status":"completed"}`), nil
 }
 
 func (p *mockOpenAIProxy) ForwardCreateResponseStream(_ context.Context, _ transport.UpstreamEndpoint, _ []byte, _ func(string, []byte) error) error {
+	p.responseStreamCalled = true
 	return nil
 }
 
 var _ transport.OpenAIProxy = (*mockOpenAIProxy)(nil)
 
 // mockOpenAIAnthropicProxy 模拟 Anthropic 代理
-type mockOpenAIAnthropicProxy struct{}
+type mockOpenAIAnthropicProxy struct {
+	messageUnaryCalled  bool
+	messageStreamCalled bool
+	countTokensCalled   bool
+}
 
 func (p *mockOpenAIAnthropicProxy) ForwardCreateMessage(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
+	p.messageUnaryCalled = true
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
 func (p *mockOpenAIAnthropicProxy) ForwardCreateMessageStream(_ context.Context, _ transport.UpstreamEndpoint, _ []byte, _ func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+	p.messageStreamCalled = true
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
 func (p *mockOpenAIAnthropicProxy) ForwardCountTokens(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) (*dto.AnthropicTokensCount, error) {
+	p.countTokensCalled = true
 	return &dto.AnthropicTokensCount{InputTokens: 10}, nil
 }
 

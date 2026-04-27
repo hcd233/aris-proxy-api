@@ -17,7 +17,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
@@ -81,7 +80,9 @@ func (u *anthropicUseCase) ListModels(ctx context.Context) (*dto.AnthropicListMo
 	return u.modelsQuery.Handle(ctx)
 }
 
-// CountTokens 调用上游 count_tokens（错误时返回空结果，与旧行为一致）
+// CountTokens 调用上游 count_tokens（错误时返回空结果，与旧行为一致）。
+// 该路径当前由 query 侧封装读取仓储和 Anthropic 上游调用；usecase 入口保留委托，
+// 避免为不支持 OpenAI fallback 的 token count 引入不准确估算。
 func (u *anthropicUseCase) CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
 	return u.countTokensQuery.Handle(ctx, req)
 }
@@ -96,33 +97,22 @@ func (u *anthropicUseCase) CountTokens(ctx context.Context, req *dto.AnthropicCo
 //	@author centonhuang
 //	@update 2026-04-22 20:45:00
 func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
-	log := logger.WithCtx(ctx)
-
-	ep, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), enum.ProviderAnthropic, enum.ProviderOpenAI)
-	if err != nil {
-		log.Error("[AnthropicUseCase] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
-		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
+	state := &anthropicMessagePipelineState{
+		Req:          req,
+		Log:          logger.WithCtx(ctx),
+		Stream:       req.Body.Stream != nil && *req.Body.Stream,
+		ExposedModel: req.Body.Model,
 	}
-
-	stream := req.Body.Stream != nil && *req.Body.Stream
-	exposedModel := req.Body.Model
-	upstream := toTransportEndpoint(ep)
-
-	if ep.Provider() == enum.ProviderOpenAI {
-		return u.forwardMessageViaOpenAI(ctx, log, req, ep, upstream, exposedModel, stream), nil
+	if err := u.buildAnthropicMessagePipeline().Execute(ctx, state); err != nil {
+		return nil, err
 	}
-	return u.forwardMessageNative(ctx, log, req, ep, upstream, exposedModel, stream), nil
+	return state.HTTPResponse, nil
 }
 
 // ==================== Anthropic Native ====================
 
-// forwardMessageNative Anthropic 原生协议转发
-func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
-	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
-	if stream {
-		return u.forwardMessageNativeStream(ctx, log, req, ep, upstream, exposedModel, body)
-	}
-	return u.forwardMessageNativeUnary(ctx, log, req, ep, upstream, exposedModel, body)
+func prepareMessageNativeBody(req *dto.AnthropicCreateMessageRequest, upstream transport.UpstreamEndpoint) []byte {
+	return transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
 }
 
 // forwardMessageNativeStream Anthropic 原生流式
@@ -200,22 +190,16 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *z
 
 // ==================== Anthropic via OpenAI ====================
 
-// forwardMessageViaOpenAI Anthropic 请求通过 OpenAI 上游转发
-func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+func (u *anthropicUseCase) prepareMessageViaOpenAI(log *zap.Logger, req *dto.AnthropicCreateMessageRequest, upstream transport.UpstreamEndpoint) (*huma.StreamResponse, []byte) {
 	conv := converter.OpenAIProtocolConverter{}
 	openAIReq, err := conv.FromAnthropicRequest(req.Body)
 	if err != nil {
 		log.Error("[AnthropicUseCase] Failed to convert request to OpenAI format", zap.Error(err))
-		return util.SendAnthropicInternalError()
+		return util.SendAnthropicInternalError(), nil
 	}
 	openAIReq.Model = upstream.Model
 	body := lo.Must1(sonic.Marshal(openAIReq))
-	body = util.EnsureAssistantMessageReasoningContent(body)
-
-	if stream {
-		return u.forwardMessageViaOpenAIStream(ctx, log, req, ep, upstream, exposedModel, body, &conv)
-	}
-	return u.forwardMessageViaOpenAIUnary(ctx, log, req, ep, upstream, exposedModel, body, &conv)
+	return nil, util.EnsureAssistantMessageReasoningContent(body)
 }
 
 // forwardMessageViaOpenAIStream OpenAI 上游流式 → Anthropic SSE

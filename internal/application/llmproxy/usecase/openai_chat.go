@@ -25,25 +25,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-// forwardChatNative OpenAI 原生协议转发（provider=openai）
-//
-// 注意：此前实现会将 req.Body.MaxTokens 无条件改写为 MaxCompletionTokens，这会导致
-//  两类问题：
-//   1. 第三方 OpenAI 协议聚合网关（如 api.chatanywhere.tech）只认识 max_tokens，
-//      对 max_completion_tokens 直接忽略，相当于把用户设置的生成上限抹掉，从而触发
-//      上游模型跑飞/超长（如 503 "模型无返回结果"）；
-//   2. 即便上游是官方 OpenAI，max_tokens 对 GPT-4 / GPT-3.5 系列仍被官方接受，
-//      把字段 silent 改名会违背透传语义。
-//
-// 因此这里保持用户请求的原样透传，由调用方自行选择 max_tokens 或 max_completion_tokens。
-func (u *openAIUseCase) forwardChatNative(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func prepareChatNativeBody(req *dto.OpenAIChatCompletionRequest, upstream transport.UpstreamEndpoint) []byte {
 	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
-	body = util.EnsureAssistantMessageReasoningContent(body)
-
-	if stream {
-		return u.forwardChatNativeStream(ctx, log, req, ep, upstream, body)
-	}
-	return u.forwardChatNativeUnary(ctx, log, req, ep, upstream, body)
+	return util.EnsureAssistantMessageReasoningContent(body)
 }
 
 // forwardChatNativeStream OpenAI 原生流式：SSE chunks → 客户端
@@ -130,21 +114,15 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, log *zap.Log
 	})
 }
 
-// forwardChatViaAnthropic OpenAI 请求通过 Anthropic 上游转发
-func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func (u *openAIUseCase) prepareChatViaAnthropic(log *zap.Logger, req *dto.OpenAIChatCompletionRequest, upstream transport.UpstreamEndpoint) (*huma.StreamResponse, []byte) {
 	conv := converter.AnthropicProtocolConverter{}
 	anthropicReq, err := conv.FromOpenAIRequest(req.Body)
 	if err != nil {
 		log.Error("[OpenAIUseCase] Failed to convert request to Anthropic format", zap.Error(err))
-		return util.SendOpenAIInternalError()
+		return util.SendOpenAIInternalError(), nil
 	}
 	anthropicReq.Model = upstream.Model
-	body := lo.Must1(sonic.Marshal(anthropicReq))
-
-	if stream {
-		return u.forwardChatViaAnthropicStream(ctx, log, req, ep, upstream, body, &conv)
-	}
-	return u.forwardChatViaAnthropicUnary(ctx, log, req, ep, upstream, body, &conv)
+	return nil, lo.Must1(sonic.Marshal(anthropicReq))
 }
 
 // forwardChatViaAnthropicStream Anthropic 上游流式 → OpenAI SSE

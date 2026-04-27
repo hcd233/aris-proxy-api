@@ -13,17 +13,13 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/samber/lo"
-	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // openAIInternalErrorBody OpenAI 内部错误响应 body（预序列化，避免重复 marshal）
@@ -93,21 +89,15 @@ func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRs
 //	@author centonhuang
 //	@update 2026-04-22 20:45:00
 func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
-	log := logger.WithCtx(ctx)
-
-	ep, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), enum.ProviderOpenAI, enum.ProviderAnthropic)
-	if err != nil {
-		log.Error("[OpenAIUseCase] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
-		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+	state := &openAIChatPipelineState{
+		Req:    req,
+		Log:    logger.WithCtx(ctx),
+		Stream: req.Body.Stream != nil && *req.Body.Stream,
 	}
-
-	stream := req.Body.Stream != nil && *req.Body.Stream
-	upstream := toTransportEndpoint(ep)
-
-	if ep.Provider() == enum.ProviderAnthropic {
-		return u.forwardChatViaAnthropic(ctx, log, req, ep, upstream, stream), nil
+	if err := u.buildOpenAIChatPipeline().Execute(ctx, state); err != nil {
+		return nil, err
 	}
-	return u.forwardChatNative(ctx, log, req, ep, upstream, stream), nil
+	return state.HTTPResponse, nil
 }
 
 // CreateResponse 处理 /v1/responses (Response API)
@@ -120,21 +110,15 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 //	@author centonhuang
 //	@update 2026-04-22 20:45:00
 func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
-	log := logger.WithCtx(ctx)
-
-	ep, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), enum.ProviderOpenAI, enum.ProviderAnthropic)
-	if err != nil {
-		log.Error("[OpenAIUseCase] Response API model not found", zap.String("model", req.Body.Model), zap.Error(err))
-		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+	state := &openAIResponsePipelineState{
+		Req:    req,
+		Log:    logger.WithCtx(ctx),
+		Stream: req.Body.Stream != nil && *req.Body.Stream,
 	}
-
-	stream := req.Body.Stream != nil && *req.Body.Stream
-	upstream := toTransportEndpoint(ep)
-
-	if ep.Provider() == enum.ProviderAnthropic {
-		return u.forwardResponseViaAnthropic(ctx, log, req, ep, upstream, stream), nil
+	if err := u.buildOpenAIResponsePipeline().Execute(ctx, state); err != nil {
+		return nil, err
 	}
-	return u.forwardResponseNative(ctx, log, req, ep, upstream, stream), nil
+	return state.HTTPResponse, nil
 }
 
 // toTransportEndpoint Endpoint 聚合 → transport.UpstreamEndpoint
