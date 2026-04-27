@@ -183,3 +183,53 @@ func TestCountTokens_ModelNotFound(t *testing.T) {
 		t.Error("ForwardCountTokens should not be called when model not found")
 	}
 }
+
+func TestAnthropicUseCaseCountTokens_DelegatesToQuery(t *testing.T) {
+	query := &mockAnthropicCountTokensUseCase{result: &dto.AnthropicTokensCount{InputTokens: 12}}
+	uc := usecase.NewAnthropicUseCase(&mockResolver{}, &mockAnthropicListModelsForUseCase{}, query, &mockOpenAIProxyForCountTokens{}, &mockAnthropicProxy{})
+
+	rsp, err := uc.CountTokens(context.Background(), &dto.AnthropicCountTokensRequest{Body: &dto.AnthropicCountTokensReq{Model: "claude-alias"}})
+	if err != nil {
+		t.Fatalf("CountTokens() error: %v", err)
+	}
+	if rsp.InputTokens != 12 {
+		t.Fatalf("InputTokens = %d, want 12", rsp.InputTokens)
+	}
+	if !query.called {
+		t.Fatal("expected CountTokens query to be called")
+	}
+}
+
+type mockAnthropicCountTokensUseCase struct {
+	called bool
+	result *dto.AnthropicTokensCount
+}
+
+func (m *mockAnthropicCountTokensUseCase) Handle(_ context.Context, _ *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
+	m.called = true
+	return m.result, nil
+}
+
+type mockAnthropicListModelsForUseCase struct{}
+
+func (m *mockAnthropicListModelsForUseCase) Handle(_ context.Context) (*dto.AnthropicListModelsRsp, error) {
+	return &dto.AnthropicListModelsRsp{}, nil
+}
+
+type mockOpenAIProxyForCountTokens struct{}
+
+func (p *mockOpenAIProxyForCountTokens) ForwardChatCompletion(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) (*dto.OpenAIChatCompletion, error) {
+	return nil, nil
+}
+
+func (p *mockOpenAIProxyForCountTokens) ForwardChatCompletionStream(_ context.Context, _ transport.UpstreamEndpoint, _ []byte, _ func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+	return nil, nil
+}
+
+func (p *mockOpenAIProxyForCountTokens) ForwardCreateResponse(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (p *mockOpenAIProxyForCountTokens) ForwardCreateResponseStream(_ context.Context, _ transport.UpstreamEndpoint, _ []byte, _ func(string, []byte) error) error {
+	return nil
+}

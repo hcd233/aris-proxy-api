@@ -25,13 +25,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-// forwardResponseNative OpenAI 原生 Response API 转发
-func (u *openAIUseCase) forwardResponseNative(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, stream bool) *huma.StreamResponse {
-	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
-	if stream {
-		return u.forwardResponseNativeStream(ctx, log, req, ep, upstream, body)
-	}
-	return u.forwardResponseNativeUnary(ctx, log, req, ep, upstream, body)
+func prepareResponseNativeBody(req *dto.OpenAICreateResponseRequest, upstream transport.UpstreamEndpoint) []byte {
+	return transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
 }
 
 // forwardResponseNativeStream Response API 原生流式
@@ -129,21 +124,15 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap
 	})
 }
 
-// forwardResponseViaAnthropic Response API 通过 Anthropic 上游转发
-func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func (u *openAIUseCase) prepareResponseViaAnthropic(log *zap.Logger, req *dto.OpenAICreateResponseRequest, upstream transport.UpstreamEndpoint) (*huma.StreamResponse, []byte) {
 	conv := converter.AnthropicProtocolConverter{}
 	anthropicReq, err := conv.FromResponseAPIRequest(req.Body)
 	if err != nil {
 		log.Error("[OpenAIUseCase] Failed to convert request to Anthropic format", zap.Error(err))
-		return util.SendOpenAIInternalError()
+		return util.SendOpenAIInternalError(), nil
 	}
 	anthropicReq.Model = upstream.Model
-	body := lo.Must1(sonic.Marshal(anthropicReq))
-
-	if stream {
-		return u.forwardResponseViaAnthropicStream(ctx, log, req, ep, upstream, body, &conv)
-	}
-	return u.forwardResponseViaAnthropicUnary(ctx, log, req, ep, upstream, body, &conv)
+	return nil, lo.Must1(sonic.Marshal(anthropicReq))
 }
 
 // forwardResponseViaAnthropicStream Anthropic 上游流式 → OpenAI chat chunk（Response API 跨协议变体）
