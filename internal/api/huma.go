@@ -9,8 +9,6 @@ import (
 	"github.com/samber/lo"
 )
 
-var humaAPI huma.API
-
 // NewHumaAPI 创建 Huma API 实例
 //
 //	@param app *fiber.App
@@ -58,22 +56,4 @@ func NewHumaAPI(app *fiber.App) huma.API {
 		Formats:       huma.DefaultFormats,
 		DefaultFormat: "application/json",
 	})
-}
-
-// SetHumaAPI 设置 Huma API 实例
-//
-//	@param api huma.API
-//	@author centonhuang
-//	@update 2026-04-28 10:00:00
-func SetHumaAPI(api huma.API) {
-	humaAPI = api
-}
-
-// GetHumaAPI 获取 Huma API 实例
-//
-//	@return *huma.API
-//	@author centonhuang
-//	@update 2025-11-02 02:35:59
-func GetHumaAPI() huma.API {
-	return humaAPI
 }

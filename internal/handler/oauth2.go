@@ -8,8 +8,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -33,11 +31,8 @@ type Oauth2Platforms map[string]oauth2service.Platform
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type Oauth2Dependencies struct {
-	Platforms     Oauth2Platforms
-	UserRepo      identity.UserRepository
-	AccessSigner  identityservice.TokenSigner
-	RefreshSigner identityservice.TokenSigner
-	DirCreator    command.ObjectStorageDirCreator // 可选；nil 时跳过存储目录创建
+	Initiate command.InitiateLoginHandler
+	Callback command.HandleCallbackHandler
 }
 
 type oauth2Handler struct {
@@ -53,14 +48,8 @@ type oauth2Handler struct {
 //	@update 2026-04-26 10:00:00
 func NewOauth2Handler(deps Oauth2Dependencies) Oauth2Handler {
 	return &oauth2Handler{
-		initiate: command.NewInitiateLoginHandler(deps.Platforms),
-		callback: command.NewHandleCallbackHandler(
-			deps.Platforms,
-			deps.UserRepo,
-			deps.AccessSigner,
-			deps.RefreshSigner,
-			deps.DirCreator,
-		),
+		initiate: deps.Initiate,
+		callback: deps.Callback,
 	}
 }
 

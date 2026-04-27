@@ -28,7 +28,7 @@ type routeParams struct {
 //	@author centonhuang
 //	@update 2026-04-28 10:00:00
 func RegisterRoutes(server *Server) error {
-	return server.Container.Invoke(func(params routeParams) {
+	return server.container.Invoke(func(params routeParams) {
 		if config.Env != enum.EnvProduction {
 			router.RegisterDocsRouter(server.App)
 		}
