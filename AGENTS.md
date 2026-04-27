@@ -97,3 +97,4 @@
 
 - `AGENTS.md`，`CLAUDE.md` 和 `CODEBUDDY.md` 是本仓库长文规范的源头；当用户新增或修改持久规范时，保持它们同步。
 - 若文档与可执行源冲突，优先信任 `Makefile`、脚本、workflow、hook。
+- 编写文档必须使用中文

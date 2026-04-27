@@ -1,0 +1,44 @@
+{
+    "list_openai_models": {
+        "name": "list_openai_models_success",
+        "description": "Should return list of OpenAI models from read repository",
+        "provider": "openai",
+        "mock_projections": [
+            {"alias": "gpt-4o"},
+            {"alias": "gpt-4o-mini"}
+        ],
+        "expected_model_count": 2,
+        "expected_error": null
+    },
+    "list_anthropic_models": {
+        "name": "list_anthropic_models_success",
+        "description": "Should return list of Anthropic models from read repository",
+        "provider": "anthropic",
+        "mock_projections": [
+            {"alias": "claude-sonnet-4-20250514"},
+            {"alias": "claude-3-5-sonnet-20241022"}
+        ],
+        "expected_model_count": 2,
+        "expected_error": null
+    },
+    "list_models_empty": {
+        "name": "list_models_empty",
+        "description": "Should return empty list when no models configured",
+        "provider": "openai",
+        "mock_projections": [],
+        "expected_model_count": 0,
+        "expected_error": null
+    },
+    "count_tokens_success": {
+        "name": "count_tokens_success",
+        "description": "Should call upstream and return token count",
+        "model": "claude-sonnet-4-20250514",
+        "provider": "anthropic",
+        "mock_creds": {
+            "model": "claude-3-5-sonnet-20241022",
+            "api_key": "sk-ant-test",
+            "base_url": "https://api.anthropic.com"
+        },
+        "expected_tokens": 150
+    }
+}

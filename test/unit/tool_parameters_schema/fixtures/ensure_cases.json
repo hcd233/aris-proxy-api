@@ -1,0 +1,62 @@
+[
+  {
+    "name": "object_params_no_properties",
+    "description": "type=object 但缺失 properties 字段，应补上 {} —— 这是本次 bug 的直接触发场景",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"ls\",\"parameters\":{\"type\":\"object\"}}}]}",
+    "expectModified": true,
+    "expectedPropertiesPresent": true,
+    "expectedPropertiesEmpty": true
+  },
+  {
+    "name": "object_params_with_properties",
+    "description": "type=object 且已有 properties，不应修改",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"ls\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}}}}}]}",
+    "expectModified": false
+  },
+  {
+    "name": "object_params_with_empty_properties",
+    "description": "type=object 且 properties 为 {}，不应该再修改（已存在）",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"ls\",\"parameters\":{\"type\":\"object\",\"properties\":{}}}}]}",
+    "expectModified": false
+  },
+  {
+    "name": "string_params_no_properties",
+    "description": "type=string 无 properties —— 非 object 不需要 intervente",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"echo\",\"parameters\":{\"type\":\"string\"}}}]}",
+    "expectModified": false
+  },
+  {
+    "name": "no_parameters_field",
+    "description": "function 无 parameters 字段 —— 跳过",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"noop\"}}]}",
+    "expectModified": false
+  },
+  {
+    "name": "no_tools_field",
+    "description": "请求无 tools 字段 —— 跳过",
+    "input": "{\"model\":\"test\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}",
+    "expectModified": false
+  },
+  {
+    "name": "multi_type_array_with_object",
+    "description": "type 为 [\"string\",\"object\"] 且缺失 properties —— 应补位",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"list_pages\",\"parameters\":{\"type\":[\"string\",\"object\"]}}}]}",
+    "expectModified": true,
+    "expectedPropertiesPresent": true,
+    "expectedPropertiesEmpty": true
+  },
+  {
+    "name": "multiple_tools_mixed",
+    "description": "多个工具，仅 object 缺失 properties 的被修改",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"ok\",\"parameters\":{\"type\":\"object\",\"properties\":{\"x\":{\"type\":\"number\"}}}}},{\"type\":\"function\",\"function\":{\"name\":\"bad\",\"parameters\":{\"type\":\"object\"}}}]}",
+    "expectModified": true,
+    "expectedPropertiesPresent": true,
+    "expectedPropertiesEmpty": false
+  },
+  {
+    "name": "custom_tool_no_function",
+    "description": "custom 类型工具无 function 字段 —— 跳过",
+    "input": "{\"model\":\"test\",\"tools\":[{\"type\":\"custom\",\"custom\":{\"name\":\"my_custom\"}}]}",
+    "expectModified": false
+  }
+]
