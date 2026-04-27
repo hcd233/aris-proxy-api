@@ -7,10 +7,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -29,10 +26,7 @@ type OpenAIHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type OpenAIDependencies struct {
-	EndpointRepo     llmproxy.EndpointRepository
-	EndpointReadRepo llmproxy.EndpointReadRepository
-	OpenAIProxy      transport.OpenAIProxy
-	AnthropicProxy   transport.AnthropicProxy
+	UseCase usecase.OpenAIUseCase
 }
 
 type openAIHandler struct {
@@ -46,16 +40,8 @@ type openAIHandler struct {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func NewOpenAIHandler(deps OpenAIDependencies) OpenAIHandler {
-	resolver := service.NewEndpointResolver(deps.EndpointRepo)
-	modelsQuery := usecase.NewListOpenAIModels(deps.EndpointReadRepo)
-
 	return &openAIHandler{
-		uc: usecase.NewOpenAIUseCase(
-			resolver,
-			modelsQuery,
-			deps.OpenAIProxy,
-			deps.AnthropicProxy,
-		),
+		uc: deps.UseCase,
 	}
 }
 

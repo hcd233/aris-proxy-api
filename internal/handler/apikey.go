@@ -11,9 +11,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
-	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -34,9 +31,9 @@ type APIKeyHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type APIKeyDependencies struct {
-	APIKeyRepo apikey.APIKeyRepository
-	UserRepo   identity.UserRepository
-	Generator  apikeyservice.APIKeyGenerator
+	Issue  command.IssueAPIKeyHandler
+	Revoke command.RevokeAPIKeyHandler
+	List   query.ListAPIKeysHandler
 }
 
 type apiKeyHandler struct {
@@ -52,12 +49,10 @@ type apiKeyHandler struct {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func NewAPIKeyHandler(deps APIKeyDependencies) APIKeyHandler {
-	userExistsCh := command.NewUserExistenceChecker(deps.UserRepo)
-
 	return &apiKeyHandler{
-		issue:  command.NewIssueAPIKeyHandler(deps.APIKeyRepo, deps.Generator, userExistsCh),
-		revoke: command.NewRevokeAPIKeyHandler(deps.APIKeyRepo),
-		list:   query.NewListAPIKeysHandler(deps.APIKeyRepo),
+		issue:  deps.Issue,
+		revoke: deps.Revoke,
+		list:   deps.List,
 	}
 }
 

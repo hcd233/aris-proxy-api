@@ -7,10 +7,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -29,10 +26,7 @@ type AnthropicHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type AnthropicDependencies struct {
-	EndpointRepo     llmproxy.EndpointRepository
-	EndpointReadRepo llmproxy.EndpointReadRepository
-	OpenAIProxy      transport.OpenAIProxy
-	AnthropicProxy   transport.AnthropicProxy
+	UseCase usecase.AnthropicUseCase
 }
 
 type anthropicHandler struct {
@@ -46,16 +40,8 @@ type anthropicHandler struct {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func NewAnthropicHandler(deps AnthropicDependencies) AnthropicHandler {
-	resolver := service.NewEndpointResolver(deps.EndpointRepo)
-
 	return &anthropicHandler{
-		uc: usecase.NewAnthropicUseCase(
-			resolver,
-			usecase.NewListAnthropicModels(deps.EndpointReadRepo),
-			usecase.NewCountTokens(deps.EndpointReadRepo, deps.AnthropicProxy),
-			deps.OpenAIProxy,
-			deps.AnthropicProxy,
-		),
+		uc: deps.UseCase,
 	}
 }
 
