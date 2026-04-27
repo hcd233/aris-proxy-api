@@ -114,6 +114,92 @@ const (
 	//	@update 2026-04-09 15:00:00
 	AnthropicAPIVersion = "2023-06-01"
 
+	// ==================== HTTP Header / Auth ====================
+
+	// HTTPHeaderContentType Content-Type 头
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	HTTPHeaderContentType = "Content-Type"
+
+	// HTTPHeaderAuthorization Authorization 头
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	HTTPHeaderAuthorization = "Authorization"
+
+	// HTTPHeaderAPIKey Anthropic x-api-key 头
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	HTTPHeaderAPIKey = "x-api-key"
+
+	// HTTPHeaderAnthropicVersion Anthropic 版本头
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	HTTPHeaderAnthropicVersion = "anthropic-version"
+
+	// HTTPAuthBearerPrefix Bearer 认证前缀（含空格）
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	HTTPAuthBearerPrefix = "Bearer "
+
+	// HTTPContentTypeJSON JSON Content-Type 值
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	HTTPContentTypeJSON = "application/json"
+
+	// ==================== 上游 API 路径 ====================
+
+	// UpstreamPathOpenAIChatCompletions OpenAI chat/completions 上游路径
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	UpstreamPathOpenAIChatCompletions = "/chat/completions"
+
+	// UpstreamPathOpenAIResponses OpenAI responses 上游路径
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	UpstreamPathOpenAIResponses = "/responses"
+
+	// UpstreamPathAnthropicMessages Anthropic messages 上游路径
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	UpstreamPathAnthropicMessages = "/messages"
+
+	// UpstreamPathAnthropicCountTokens Anthropic count_tokens 上游路径
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	UpstreamPathAnthropicCountTokens = "/messages/count_tokens"
+
+	// ==================== LLM 内部错误响应 ====================
+
+	// OpenAIInternalErrorMessage OpenAI 内部错误消息
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	OpenAIInternalErrorMessage = "Internal server error"
+
+	// OpenAIInternalErrorType OpenAI 内部错误类型
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	OpenAIInternalErrorType = "server_error"
+
+	// OpenAIInternalErrorCode OpenAI 内部错误码
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	OpenAIInternalErrorCode = "internal_error"
+
+	// AnthropicInternalErrorMessage Anthropic 内部错误消息
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	AnthropicInternalErrorMessage = "Internal server error"
+
+	// AnthropicInternalErrorType Anthropic 内部错误类型
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	AnthropicInternalErrorType = "api_error"
+
+	// AnthropicInternalErrorBodyType Anthropic 错误响应顶层类型
+	//	@author centonhuang
+	//	@update 2026-04-26 14:00:00
+	AnthropicInternalErrorBodyType = "error"
+
 	// ==================== 第三方 API URL ====================
 
 	// GithubUserURL GitHub 用户信息 API 地址
@@ -127,11 +213,6 @@ const (
 	GithubUserEmailURL = "https://api.github.com/user/emails"
 
 	// ==================== OAuth2 ====================
-
-	// OAuthStateHexString OAuth2 state hex 编码前缀说明（随机字节数 = 32）
-	// 对应 make([]byte, 32) 生成 256-bit 随机数
-	//	@author centonhuang
-	//	@update 2026-04-09 15:00:00
 
 	// ==================== 用户默认值 ====================
 
@@ -187,6 +268,57 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-10 12:00:00
 	DBFieldUpdatedAt = "updated_at"
+
+	// AggregateTypeEndpoint llmproxy.Endpoint 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 16:30:00
+	AggregateTypeEndpoint = "llmproxy.endpoint"
+
+	// AggregateTypeAPIKey apikey.ProxyAPIKey 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeAPIKey = "apikey.proxy_api_key"
+
+	// AggregateTypeUser identity.User 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeUser = "identity.user"
+
+	// AggregateTypeOAuthIdentity oauth2.OAuthIdentity 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeOAuthIdentity = "oauth2.identity"
+
+	// AggregateTypeModelCallAudit modelcall.ModelCallAudit 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	AggregateTypeModelCallAudit = "modelcall.audit"
+
+	// AggregateTypeMessage conversation.Message 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 19:30:00
+	AggregateTypeMessage = "conversation.message"
+
+	// AggregateTypeTool conversation.Tool 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 19:30:00
+	AggregateTypeTool = "conversation.tool"
+
+	// AggregateTypeSession session.Session 聚合根类型标识
+	//	@author centonhuang
+	//	@update 2026-04-22 19:30:00
+	AggregateTypeSession = "session.session"
+
+	// ==================== OAuth Provider ====================
+
+	// OAuthProviderGithub GitHub 平台标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	OAuthProviderGithub = "github"
+	// OAuthProviderGoogle Google 平台标识
+	//	@author centonhuang
+	//	@update 2026-04-22 17:00:00
+	OAuthProviderGoogle = "google"
 
 	// MIMETypeOctetStream default binary Content-Type when extension is unknown
 	//	@author centonhuang

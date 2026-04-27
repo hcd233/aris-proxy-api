@@ -1,0 +1,23 @@
+[
+    {
+        "name": "github_initiate_uses_generated_state",
+        "description": "发起 GitHub 登录时，应使用 GenerateOAuth2State 生成的一次性 state 调用 GetAuthURLWithState，且 state 必须出现在返回 URL 中",
+        "platform": "github",
+        "expectErrKind": "",
+        "expectURLContainsState": true
+    },
+    {
+        "name": "google_initiate_uses_generated_state",
+        "description": "发起 Google 登录时，应使用 GenerateOAuth2State 生成的一次性 state 调用 GetAuthURLWithState",
+        "platform": "google",
+        "expectErrKind": "",
+        "expectURLContainsState": true
+    },
+    {
+        "name": "invalid_platform",
+        "description": "未注册的平台名应返回 ErrBadRequest",
+        "platform": "twitter",
+        "expectErrKind": "bad_request",
+        "expectURLContainsState": false
+    }
+]

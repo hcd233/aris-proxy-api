@@ -1,11 +1,16 @@
+// Package handler OpenAI兼容接口处理器
 package handler
 
 import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/service"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -19,32 +24,52 @@ type OpenAIHandler interface {
 	HandleCreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error)
 }
 
+// OpenAIDependencies OpenAIHandler 依赖项（用于依赖注入）
+//
+//	@author centonhuang
+//	@update 2026-04-26 10:00:00
+type OpenAIDependencies struct {
+	EndpointRepo     llmproxy.EndpointRepository
+	EndpointReadRepo llmproxy.EndpointReadRepository
+	OpenAIProxy      transport.OpenAIProxy
+	AnthropicProxy   transport.AnthropicProxy
+}
+
 type openAIHandler struct {
-	svc service.OpenAIService
+	uc usecase.OpenAIUseCase
 }
 
 // NewOpenAIHandler 创建OpenAI兼容接口处理器
 //
+//	@param deps OpenAIDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
 //	@return OpenAIHandler
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-func NewOpenAIHandler() OpenAIHandler {
+//	@update 2026-04-26 10:00:00
+func NewOpenAIHandler(deps OpenAIDependencies) OpenAIHandler {
+	resolver := service.NewEndpointResolver(deps.EndpointRepo)
+	modelsQuery := usecase.NewListOpenAIModels(deps.EndpointReadRepo)
+
 	return &openAIHandler{
-		svc: service.NewOpenAIService(),
+		uc: usecase.NewOpenAIUseCase(
+			resolver,
+			modelsQuery,
+			deps.OpenAIProxy,
+			deps.AnthropicProxy,
+		),
 	}
 }
 
 // HandleListModels 获取模型列表
 //
 //	@receiver h *openAIHandler
-//	@param _ context.Context
-//	@param _ *dto.EmptyReq
-//	@return *dto.ListModelsResponse
+//	@param ctx context.Context
+//	@param req *dto.EmptyReq
+//	@return *dto.HTTPResponse[*dto.OpenAIListModelsRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
-func (h *openAIHandler) HandleListModels(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.OpenAIListModelsRsp], error) {
-	return util.WrapHTTPResponse(h.svc.ListModels(ctx, req))
+//	@update 2026-04-22 21:00:00
+func (h *openAIHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.OpenAIListModelsRsp], error) {
+	return util.WrapHTTPResponse(h.uc.ListModels(ctx))
 }
 
 // HandleChatCompletion 处理聊天补全请求
@@ -55,9 +80,9 @@ func (h *openAIHandler) HandleListModels(ctx context.Context, req *dto.EmptyReq)
 //	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-06 10:00:00
+//	@update 2026-04-22 21:00:00
 func (h *openAIHandler) HandleChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
-	return h.svc.CreateChatCompletion(ctx, req)
+	return h.uc.CreateChatCompletion(ctx, req)
 }
 
 // HandleCreateResponse 处理 Response API 请求
@@ -68,7 +93,7 @@ func (h *openAIHandler) HandleChatCompletion(ctx context.Context, req *dto.OpenA
 //	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-17 10:00:00
+//	@update 2026-04-22 21:00:00
 func (h *openAIHandler) HandleCreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
-	return h.svc.CreateResponse(ctx, req)
+	return h.uc.CreateResponse(ctx, req)
 }

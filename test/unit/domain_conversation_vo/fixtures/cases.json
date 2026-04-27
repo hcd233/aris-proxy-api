@@ -1,0 +1,38 @@
+[
+    {
+        "name": "unified_content_string_roundtrip",
+        "description": "UnifiedContent 纯文本形态应能双向序列化为字符串",
+        "json": "\"hello world\"",
+        "expectText": "hello world",
+        "expectParts": 0
+    },
+    {
+        "name": "unified_content_array_roundtrip",
+        "description": "UnifiedContent 数组形态应能保留 Parts 并序列化为数组",
+        "json": "[{\"type\":\"text\",\"text\":\"hi\"}]",
+        "expectText": "",
+        "expectParts": 1
+    },
+    {
+        "name": "unified_content_empty_string",
+        "description": "空字符串应被识别为 Text 形态",
+        "json": "\"\"",
+        "expectText": "",
+        "expectParts": 0
+    },
+    {
+        "name": "marshal_parts_priority",
+        "description": "Parts 非空时应输出数组而非字符串",
+        "text": "fallback-text-should-be-ignored",
+        "parts": [
+            {"type": "text", "text": "part-1"},
+            {"type": "text", "text": "part-2"}
+        ]
+    },
+    {
+        "name": "compute_tool_checksum_stable",
+        "description": "同一 tool 多次计算应得到完全相同的 checksum",
+        "tool_name": "search",
+        "tool_description": "search the web"
+    }
+]

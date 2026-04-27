@@ -1,0 +1,74 @@
+[
+    {
+        "name": "create_session_valid_owner",
+        "description": "CreateSession with non-empty APIKeyOwner should succeed",
+        "owner": "test-api-key",
+        "messageIDs": [1, 2, 3],
+        "toolIDs": [10, 20],
+        "metadata": {"source": "web"}
+    },
+    {
+        "name": "create_session_empty_owner",
+        "description": "CreateSession with empty APIKeyOwner should return error",
+        "owner": "",
+        "messageIDs": [],
+        "toolIDs": [],
+        "metadata": null,
+        "expectErrorKind": "validation"
+    },
+    {
+        "name": "restore_session_full",
+        "description": "RestoreSession should reconstruct Session from persisted state",
+        "id": 42,
+        "owner": "restored-key",
+        "messageIDs": [5, 6],
+        "toolIDs": [50],
+        "metadata": {"env": "test"},
+        "summary_text": "session summary text",
+        "summary_error": "",
+        "score_coherence": 8.0,
+        "score_depth": 7.5,
+        "score_value": 9.0,
+        "score_total": 8.166666666666666,
+        "score_version": "v1",
+        "score_error": ""
+    },
+    {
+        "name": "update_summary_valid",
+        "description": "UpdateSummary should set the summary and update updatedAt",
+        "owner": "test-key",
+        "summary_text": "new summary",
+        "summary_error": ""
+    },
+    {
+        "name": "update_summary_failed",
+        "description": "UpdateSummary with error state should be reflected in Failed()",
+        "owner": "test-key",
+        "summary_text": "",
+        "summary_error": "summarization failed due to timeout"
+    },
+    {
+        "name": "update_score_valid",
+        "description": "UpdateScore should set the score values",
+        "owner": "test-key",
+        "score_coherence": 9.0,
+        "score_depth": 8.0,
+        "score_value": 7.0,
+        "score_version": "v2",
+        "score_error": ""
+    },
+    {
+        "name": "is_owned_by_matching",
+        "description": "IsOwnedBy with matching owner should return true",
+        "owner": "my-key",
+        "check_owner": "my-key",
+        "expect_owned": true
+    },
+    {
+        "name": "is_owned_by_non_matching",
+        "description": "IsOwnedBy with non-matching owner should return false",
+        "owner": "my-key",
+        "check_owner": "other-key",
+        "expect_owned": false
+    }
+]

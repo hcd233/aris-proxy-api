@@ -1,29 +1,11 @@
 [
     {
-        "name": "format_time_normal_datetime",
-        "description": "normal datetime formatting",
-        "input_time": "2026-03-19T10:30:45Z",
-        "expected_time_str": "2026-03-19 10:30:45"
-    },
-    {
-        "name": "format_time_zero",
-        "description": "zero time formatting",
-        "input_time": "0001-01-01T00:00:00Z",
-        "expected_time_str": "0001-01-01 00:00:00"
-    },
-    {
-        "name": "format_time_midnight",
-        "description": "midnight formatting",
-        "input_time": "2026-01-01T00:00:00Z",
-        "expected_time_str": "2026-01-01 00:00:00"
-    },
-    {
         "name": "session_summary_roundtrip",
         "description": "SessionSummary JSON marshal/unmarshal roundtrip",
         "session_summary": {
             "id": 1,
-            "createdAt": "2026-03-19 10:00:00",
-            "updatedAt": "2026-03-19 11:00:00",
+            "createdAt": "2026-03-19T10:00:00Z",
+            "updatedAt": "2026-03-19T11:00:00Z",
             "messageIds": [10, 20, 30],
             "toolIds": [100, 200]
         }
@@ -34,8 +16,8 @@
         "session_detail": {
             "id": 42,
             "apiKeyName": "test-key",
-            "createdAt": "2026-03-19 10:00:00",
-            "updatedAt": "2026-03-19 11:00:00",
+            "createdAt": "2026-03-19T10:00:00Z",
+            "updatedAt": "2026-03-19T11:00:00Z",
             "messageIds": [1, 2],
             "toolIds": [3],
             "messages": [
@@ -46,7 +28,7 @@
                         "role": "user",
                         "content": "hello"
                     },
-                    "createdAt": "2026-03-19 10:00:00"
+                    "createdAt": "2026-03-19T10:00:00Z"
                 }
             ],
             "tools": [
@@ -58,7 +40,7 @@
                         "description": "Execute bash",
                         "parameters": null
                     },
-                    "createdAt": "2026-03-19 10:00:00"
+                    "createdAt": "2026-03-19T10:00:00Z"
                 }
             ]
         }

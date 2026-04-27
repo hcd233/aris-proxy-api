@@ -1,0 +1,62 @@
+[
+    {
+        "name": "primary_hit",
+        "description": "primary provider 命中，直接返回，不查 fallback",
+        "primaryBehavior": "hit",
+        "fallbackBehavior": "unused",
+        "alias": "gpt-4",
+        "expectResolved": true,
+        "expectProvider": "openai",
+        "expectErrKind": ""
+    },
+    {
+        "name": "primary_miss_fallback_hit",
+        "description": "primary miss（nil, nil），fallback 命中，返回 fallback 的端点",
+        "primaryBehavior": "miss",
+        "fallbackBehavior": "hit",
+        "alias": "gpt-4",
+        "expectResolved": true,
+        "expectProvider": "anthropic",
+        "expectErrKind": ""
+    },
+    {
+        "name": "primary_miss_fallback_miss",
+        "description": "primary / fallback 都 miss，返回 ErrDataNotExists",
+        "primaryBehavior": "miss",
+        "fallbackBehavior": "miss",
+        "alias": "gpt-4",
+        "expectResolved": false,
+        "expectProvider": "",
+        "expectErrKind": "not_exists"
+    },
+    {
+        "name": "primary_db_error",
+        "description": "primary DB 错误必须直接上抛（不可降级到 fallback 伪装成 not_exists）",
+        "primaryBehavior": "db_error",
+        "fallbackBehavior": "unused",
+        "alias": "gpt-4",
+        "expectResolved": false,
+        "expectProvider": "",
+        "expectErrKind": "db_query"
+    },
+    {
+        "name": "fallback_db_error",
+        "description": "primary miss 后 fallback DB 错误也必须上抛",
+        "primaryBehavior": "miss",
+        "fallbackBehavior": "db_error",
+        "alias": "gpt-4",
+        "expectResolved": false,
+        "expectProvider": "",
+        "expectErrKind": "db_query"
+    },
+    {
+        "name": "empty_alias",
+        "description": "空别名应返回 ErrValidation，且不查询仓储",
+        "primaryBehavior": "unused",
+        "fallbackBehavior": "unused",
+        "alias": "",
+        "expectResolved": false,
+        "expectProvider": "",
+        "expectErrKind": "validation"
+    }
+]

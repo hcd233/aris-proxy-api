@@ -187,23 +187,52 @@ if [[ -n "$matches" ]]; then
     echo "$matches" | head -10
 fi
 
-# 7.2 Service 层不应直接返回 Go error 给 Handler
-matches=$(grep -rn 'return .*, err$' internal/service/ --include='*.go' \
-    | grep -v 'nil$' \
-    | grep -v '// ' \
-    2>/dev/null || true)
-if [[ -n "$matches" ]]; then
-    warn "Service 层通常应 return rsp, nil（业务错误走 rsp.Error），请确认是否正确:"
-    echo "$matches" | head -10
-fi
+# 7.2 Application Command/Query 层通常返回 Go error；Handler 层负责翻译为 BizError
+#     （原 service 层 rsp.Error 语义已迁至 handler 层 mapXxxErr 辅助函数）
+#     此规则不再强制，仅做提示
 
 # 7.3 接口逻辑层禁止使用 context.Background()/context.TODO()
 matches=$(grep -rn -E 'context\.(Background|TODO)\(\)' \
-    internal/handler/ internal/service/ internal/middleware/ internal/router/ internal/proxy/ internal/converter/ internal/dto/ \
+    internal/handler/ internal/middleware/ internal/router/ internal/dto/ internal/application/ \
     --include='*.go' 2>/dev/null || true)
 if [[ -n "$matches" ]]; then
     error "接口逻辑层禁止使用 context.Background()/context.TODO()，应从上层传递 context:"
     echo "$matches" | head -20
+fi
+
+# 7.5 Domain 层禁止依赖 Infrastructure 层（DDD 依赖倒置）
+matches=$(grep -rn -E '"github\.com/hcd233/aris-proxy-api/internal/infrastructure/' \
+    internal/domain/ --include='*.go' 2>/dev/null || true)
+if [[ -n "$matches" ]]; then
+    error "Domain 层禁止依赖 Infrastructure 层（DDD 依赖倒置原则）:"
+    echo "$matches" | head -10
+fi
+
+# 7.6 Domain 层禁止依赖 DTO（DTO 是协议适配层，不属于领域）
+matches=$(grep -rn -E '"github\.com/hcd233/aris-proxy-api/internal/dto"' \
+    internal/domain/ --include='*.go' 2>/dev/null || true)
+if [[ -n "$matches" ]]; then
+    error "Domain 层禁止依赖 DTO（DTO 是协议适配层，领域应独立）:"
+    echo "$matches" | head -10
+fi
+
+# 7.6.1 Domain 层禁止依赖 internal/util（util 属于基础设施感知工具）
+#       domain 如需通用工具，应放到或引用 internal/common/util
+matches=$(grep -rn -E '"github\.com/hcd233/aris-proxy-api/internal/util"' \
+    internal/domain/ --include='*.go' 2>/dev/null || true)
+if [[ -n "$matches" ]]; then
+    error "Domain 层禁止依赖 internal/util，请改用 internal/common/util:"
+    echo "$matches" | head -10
+fi
+
+# 7.7 Application 层禁止引用已废弃的 internal/{service,converter,proxy,agent,jwt,oauth2}
+#     这些包在 Step 6 清理阶段已被迁移或删除
+deprecated_pkgs='internal/service|internal/converter|internal/proxy|internal/agent/|internal/jwt/|internal/oauth2/'
+matches=$(grep -rnE "\"github\\.com/hcd233/aris-proxy-api/($deprecated_pkgs)\"" \
+    internal/application/ --include='*.go' 2>/dev/null || true)
+if [[ -n "$matches" ]]; then
+    error "Application 层禁止引用已废弃包，请使用 domain/llmproxy 或 infrastructure/{agent,jwt,oauth2}:"
+    echo "$matches" | head -10
 fi
 
 # 7.4 禁止透传封装函数（exported 方法仅 1:1 委托调用自身 receiver 的另一个方法）
@@ -318,6 +347,7 @@ magic_number_matches=$(echo "$magic_number_matches" \
     | grep -v '^\s*const ' \
     | grep -v '\sconst\s' \
     | grep -v 'logger\.' \
+    | grep -v 'log\.\(Error\|Warn\|Info\|Debug\|Fatal\|Panic\)' \
     | grep -v '\.go:[0-9]*:\s*//' \
     | grep -v '^$' \
     || true)
