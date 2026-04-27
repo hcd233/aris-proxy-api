@@ -97,8 +97,12 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	}
 	t.InputTokens = msg.Usage.InputTokens
 	t.OutputTokens = msg.Usage.OutputTokens
-	t.CacheCreationInputTokens = msg.Usage.CacheCreationInputTokens
-	t.CacheReadInputTokens = msg.Usage.CacheReadInputTokens
+	if msg.Usage.CacheCreationInputTokens != nil {
+		t.CacheCreationInputTokens = *msg.Usage.CacheCreationInputTokens
+	}
+	if msg.Usage.CacheReadInputTokens != nil {
+		t.CacheReadInputTokens = *msg.Usage.CacheReadInputTokens
+	}
 }
 
 // SetTokensFromResponseUsage 从 Response API 响应设置 token 计数

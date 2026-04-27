@@ -1035,7 +1035,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_NoReasoning(t *testin
 					Role: enum.RoleUser,
 					Content: &dto.ResponseInputMessageContent{
 						Parts: []*dto.ResponseInputContent{
-							{Type: enum.ResponseContentTypeInputText, Text: "Hello"},
+							{Type: enum.ResponseContentTypeInputText, Text: lo.ToPtr("Hello")},
 						},
 					},
 				},

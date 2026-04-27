@@ -104,6 +104,13 @@ func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*UnifiedMessage, 
 }
 
 // fromResponseAPIItem 转换单个 Response API item，无法映射时返回 (nil, nil)
+func stringFromPtr(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
 func fromResponseAPIItem(item *ResponseInputItem) (*UnifiedMessage, error) {
 	switch item.Type {
 	case "", enum.ResponseInputItemTypeMessage:
@@ -145,34 +152,36 @@ func fromResponseAPIMessage(item *ResponseInputItem) (*UnifiedMessage, error) {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
 			parts = append(parts, &UnifiedContentPart{
 				Type: enum.ContentPartTypeText,
-				Text: p.Text,
+				Text: stringFromPtr(p.Text),
 			})
 		case enum.ResponseContentTypeRefusal:
 			// refusal 映射到 UnifiedMessage.Refusal（与 /chat/completions 行为保持一致）
+			text := stringFromPtr(p.Refusal)
 			if refusal == "" {
-				refusal = p.Refusal
+				refusal = text
 			} else {
-				refusal = refusal + "\n" + p.Refusal
+				refusal = refusal + "\n" + text
 			}
 		case enum.ResponseContentTypeInputImage:
 			parts = append(parts, &UnifiedContentPart{
 				Type:        enum.ContentPartTypeImageURL,
-				ImageURL:    p.ImageURL,
-				ImageDetail: p.Detail,
+				ImageURL:    stringFromPtr(p.ImageURL),
+				ImageDetail: stringFromPtr(p.Detail),
 			})
 		case enum.ResponseContentTypeInputFile:
 			parts = append(parts, &UnifiedContentPart{
 				Type:     enum.ContentPartTypeFile,
-				FileData: p.FileData,
-				FileID:   p.FileID,
-				Filename: p.Filename,
+				FileData: stringFromPtr(p.FileData),
+				FileID:   stringFromPtr(p.FileID),
+				Filename: stringFromPtr(p.Filename),
 			})
 		case enum.ResponseContentTypeSummaryText, enum.ResponseContentTypeReasoningText:
 			// Reasoning 相关块挂到 ReasoningContent，避免污染 Content
+			text := stringFromPtr(p.Text)
 			if um.ReasoningContent == "" {
-				um.ReasoningContent = p.Text
+				um.ReasoningContent = text
 			} else {
-				um.ReasoningContent = um.ReasoningContent + "\n" + p.Text
+				um.ReasoningContent = um.ReasoningContent + "\n" + text
 			}
 		default:
 			return nil, ierr.Newf(ierr.ErrDTOConvert, "unsupported response content type: %q at part[%d]", p.Type, i)
@@ -220,7 +229,7 @@ func fromResponseAPIFunctionCallOutput(item *ResponseInputItem) *UnifiedMessage 
 					continue
 				}
 				if p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText {
-					parts = append(parts, &UnifiedContentPart{Type: enum.ContentPartTypeText, Text: p.Text})
+					parts = append(parts, &UnifiedContentPart{Type: enum.ContentPartTypeText, Text: stringFromPtr(p.Text)})
 				}
 			}
 			if len(parts) > 0 {
