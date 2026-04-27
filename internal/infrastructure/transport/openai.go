@@ -154,6 +154,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 	log := logger.WithCtx(ctx)
 
 	body = util.EnsureAssistantMessageReasoningContent(body)
+	body = util.EnsureToolParametersSchema(body)
 
 	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + constant.UpstreamPathOpenAIChatCompletions
 

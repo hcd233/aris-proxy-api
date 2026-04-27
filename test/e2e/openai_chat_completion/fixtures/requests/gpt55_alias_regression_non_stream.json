@@ -1,0 +1,9 @@
+{
+  "model": "gpt-5.5",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Hello"}
+  ],
+  "stream": false,
+  "max_tokens": 10
+}

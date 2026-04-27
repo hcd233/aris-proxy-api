@@ -42,12 +42,12 @@
 
 ## 任务清单
 
-- [ ] 更新 bootstrap 单测，覆盖 `Server` 容器封装、核心路由存在、bootstrap 禁止新增 `any` provider 列表。
-- [ ] 移除 `api.SetFiberApp`、`api.SetHumaAPI` 和可变全局 app/api 用法。
-- [ ] 拆分 bootstrap provider 注册函数，逐个注册 provider，避免 `[]any`。
-- [ ] 在 bootstrap 中注册 application command/query/usecase 和 domain service provider。
-- [ ] 修改 handler 构造函数，让 handler 接收 application 接口。
-- [ ] 收窄 `Server` 的容器字段为未导出，并调整 `RegisterRoutes`。
-- [ ] 运行 `go test -v -count=1 ./test/unit/bootstrap/`。
-- [ ] 运行 `make lint-conv`。
-- [ ] 运行 `go test -count=1 ./...`。
+- [x] 更新 bootstrap 单测，覆盖 `Server` 容器封装、核心路由存在、bootstrap 禁止新增 `any` provider 列表。
+- [x] 移除 `api.SetFiberApp`、`api.SetHumaAPI` 和可变全局 app/api 用法。
+- [x] 拆分 bootstrap provider 注册函数，逐个注册 provider，避免 `[]any`。
+- [x] 在 bootstrap 中注册 application command/query/usecase 和 domain service provider。
+- [x] 修改 handler 构造函数，让 handler 接收 application 接口。
+- [x] 收窄 `Server` 的容器字段为未导出，并调整 `RegisterRoutes`。
+- [x] 运行 `go test -v -count=1 ./test/unit/bootstrap/`。
+- [x] 运行 `make lint-conv`。
+- [x] 运行 `go test -count=1 ./...`。
