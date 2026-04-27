@@ -161,6 +161,7 @@ func (u *openAIUseCase) forwardChatNative(ctx context.Context, log *zap.Logger, 
 		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
 	}
 	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
+	body = util.EnsureAssistantMessageReasoningContent(body)
 
 	if stream {
 		return u.forwardChatNativeStream(ctx, log, req, ep, upstream, body)

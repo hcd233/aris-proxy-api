@@ -1,0 +1,38 @@
+{
+  "model": "kimi-k2.6",
+  "stream": true,
+  "max_tokens": 1024,
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant."
+    },
+    {
+      "role": "user",
+      "content": "帮我执行 ls 命令"
+    },
+    {
+      "role": "assistant",
+      "content": "好的，我来执行。",
+      "tool_calls": [
+        {
+          "id": "bash:0",
+          "type": "function",
+          "function": {
+            "name": "bash",
+            "arguments": "{\"command\":\"ls\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "bash:0",
+      "content": "README.md\nmain.go\n"
+    },
+    {
+      "role": "user",
+      "content": "很好，给我总结下结果"
+    }
+  ]
+}

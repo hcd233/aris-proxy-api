@@ -594,10 +594,10 @@ type OpenAICompletionUsage struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAICompletionTokensDetails struct {
-	AcceptedPredictionTokens int `json:"accepted_prediction_tokens,omitempty" doc:"接受的预测token数"`
-	AudioTokens              int `json:"audio_tokens,omitempty" doc:"音频token数"`
-	ReasoningTokens          int `json:"reasoning_tokens,omitempty" doc:"推理token数"`
-	RejectedPredictionTokens int `json:"rejected_prediction_tokens,omitempty" doc:"拒绝的预测token数"`
+	AcceptedPredictionTokens *int `json:"accepted_prediction_tokens,omitempty" doc:"接受的预测token数"`
+	AudioTokens              *int `json:"audio_tokens,omitempty" doc:"音频token数"`
+	ReasoningTokens          *int `json:"reasoning_tokens,omitempty" doc:"推理token数"`
+	RejectedPredictionTokens *int `json:"rejected_prediction_tokens,omitempty" doc:"拒绝的预测token数"`
 }
 
 // OpenAIPromptTokensDetails 提示Token详细信息
@@ -605,8 +605,8 @@ type OpenAICompletionTokensDetails struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIPromptTokensDetails struct {
-	AudioTokens  int `json:"audio_tokens,omitempty" doc:"音频token数"`
-	CachedTokens int `json:"cached_tokens,omitempty" doc:"缓存token数"`
+	AudioTokens  *int `json:"audio_tokens,omitempty" doc:"音频token数"`
+	CachedTokens *int `json:"cached_tokens,omitempty" doc:"缓存token数"`
 }
 
 // ==================== Request/Response Wrapper DTOs ====================
