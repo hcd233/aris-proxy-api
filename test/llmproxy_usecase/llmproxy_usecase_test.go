@@ -15,10 +15,10 @@ import (
 
 // mockReadRepo 实现 llmproxy.EndpointReadRepository 接口
 type mockReadRepo struct {
-	listAliasesResult    []*llmproxy.EndpointAliasProjection
-	listAliasesErr       error
-	findCredsResult      *llmproxy.EndpointCredentialProjection
-	findCredsErr         error
+	listAliasesResult []*llmproxy.EndpointAliasProjection
+	listAliasesErr    error
+	findCredsResult   *llmproxy.EndpointCredentialProjection
+	findCredsErr      error
 }
 
 func newMockReadRepo(aliases []string) *mockReadRepo {
@@ -42,8 +42,8 @@ func (r *mockReadRepo) FindCredentialByAliasAndProvider(_ context.Context, _ str
 // mockAnthropicProxy 模拟 AnthropicProxy
 type mockAnthropicProxy struct {
 	forwardCountTokensCalled bool
-	forwardCountTokensResult  *dto.AnthropicTokensCount
-	forwardCountTokensErr     error
+	forwardCountTokensResult *dto.AnthropicTokensCount
+	forwardCountTokensErr    error
 }
 
 func (p *mockAnthropicProxy) ForwardCountTokens(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) (*dto.AnthropicTokensCount, error) {

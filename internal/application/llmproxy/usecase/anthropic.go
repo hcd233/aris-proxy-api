@@ -147,6 +147,8 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 		}
 		if err == nil {
 			_ = util.WriteAnthropicMessageStop(w)
+		} else {
+			util.WriteUpstreamSSEError(log, w, err)
 		}
 
 		u.storeAnthropicFromMsg(ctx, log, req, anthropicMsg, err, upstream.Model)
@@ -208,6 +210,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, log *zap
 	}
 	openAIReq.Model = upstream.Model
 	body := lo.Must1(sonic.Marshal(openAIReq))
+	body = util.EnsureAssistantMessageReasoningContent(body)
 
 	if stream {
 		return u.forwardMessageViaOpenAIStream(ctx, log, req, ep, upstream, exposedModel, body, &conv)
