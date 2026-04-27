@@ -7,9 +7,18 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytedance/sonic"
 )
+
+// e2eHTTPTimeout 是单条 e2e 请求从发出到整段流读完的总超时。
+// kimi thinking 模式下首个实质 token 通常 5~15s，保守给 90s。
+const e2eHTTPTimeout = 90 * time.Second
+
+// e2eStreamReadDeadline 是流式用例从收到响应头后允许继续读 body 的最长时间；
+// 我们只想读到首个有实质内容的 delta 就退出，所以这里比总超时短一些。
+const e2eStreamReadDeadline = 60 * time.Second
 
 // loadFixture 读取 fixtures/requests/<name>.json 原始字节。
 func loadFixture(t *testing.T, name string) []byte {
@@ -34,6 +43,12 @@ func mustE2EEnv(t *testing.T) (string, string) {
 	return strings.TrimRight(baseURL, "/"), apiKey
 }
 
+// newE2EClient 返回一个带总超时的 http.Client；禁止在 e2e 中使用
+// http.DefaultClient（默认无超时，流式响应可能永远不返回）。
+func newE2EClient() *http.Client {
+	return &http.Client{Timeout: e2eHTTPTimeout}
+}
+
 // postChatCompletions 统一封装一次 POST /api/openai/v1/chat/completions 调用。
 // 调用方负责 close body 并对 resp 做断言。
 func postChatCompletions(t *testing.T, baseURL, apiKey string, body []byte) *http.Response {
@@ -45,7 +60,7 @@ func postChatCompletions(t *testing.T, baseURL, apiKey string, body []byte) *htt
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := newE2EClient().Do(req)
 	if err != nil {
 		t.Fatalf("failed to send request: %v", err)
 	}
@@ -100,8 +115,10 @@ func TestChatCompletion_ToolCall_NonStream(t *testing.T) {
 // （见 util.EnsureAssistantMessageReasoningContent），否则 Moonshot 会把缺失或空串
 // 都判为 missing 并返回 400。
 //
-// 断言策略：只要上游没回 400，我们的代理就完成了兼容层工作；流式响应能读到至少一条
-// `data:` SSE 行即视为转发链路正常。模型输出本身的语义不在本用例覆盖范围内。
+// 断言策略：HTTP 200 + text/event-stream + X-Trace-Id 响应头之外，还要等到上游至少
+// 吐出一条**含实质内容**的 delta（content 或 reasoning_content 非空），才算证明
+// 上游接受了我们的 reasoning_content 占位并真的开始推理；只看到空壳 role chunk
+// 不能证明链路健康（极端情况下 Moonshot 可能先发 role 再 500）。
 func TestChatCompletion_KimiThinking_MissingReasoningContent_Stream(t *testing.T) {
 	baseURL, apiKey := mustE2EEnv(t)
 
@@ -115,29 +132,71 @@ func TestChatCompletion_KimiThinking_MissingReasoningContent_Stream(t *testing.T
 	if ct := resp.Header.Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
 		t.Fatalf("unexpected Content-Type = %q, want text/event-stream", ct)
 	}
-	if traceID := resp.Header.Get("X-Trace-Id"); traceID == "" {
+	traceID := resp.Header.Get("X-Trace-Id")
+	if traceID == "" {
 		t.Errorf("missing X-Trace-Id header in stream response")
 	}
 
-	// 只要读到至少一条 SSE data 行（或 [DONE]），就证明上游没有返回 400 且代理把流
-	// 接住转发给了客户端。为避免走满整段生成而拖慢 CI，读到第一条 data 行即返回。
+	deadline := time.Now().Add(e2eStreamReadDeadline)
 	reader := bufio.NewReader(resp.Body)
-	sawData := false
+	var (
+		dataLines    int
+		gotSubstance bool
+		firstDelta   string
+	)
 	for {
-		line, err := reader.ReadString('\n')
+		if time.Now().After(deadline) {
+			t.Fatalf("stream read deadline exceeded after %s without substantive delta (traceID=%s, data_lines=%d)", e2eStreamReadDeadline, traceID, dataLines)
+		}
+		line, readErr := reader.ReadString('\n')
 		trimmed := strings.TrimRight(line, "\r\n")
 		if strings.HasPrefix(trimmed, "data: ") {
-			sawData = true
-			break
-		}
-		if err != nil {
-			if err == io.EOF {
+			dataLines++
+			payload := strings.TrimPrefix(trimmed, "data: ")
+			if payload == "[DONE]" {
 				break
 			}
-			t.Fatalf("failed to read SSE stream: %v", err)
+			if hasSubstantiveDelta(payload) {
+				gotSubstance = true
+				if firstDelta == "" {
+					firstDelta = payload
+				}
+				break
+			}
+		}
+		if readErr != nil {
+			if readErr == io.EOF {
+				break
+			}
+			t.Fatalf("failed to read SSE stream (traceID=%s): %v", traceID, readErr)
 		}
 	}
-	if !sawData {
-		t.Fatalf("did not receive any SSE data line; reasoning_content compatibility regression?")
+
+	if !gotSubstance {
+		t.Fatalf("stream ended without any substantive delta (traceID=%s, data_lines=%d); reasoning_content compatibility regression?", traceID, dataLines)
 	}
+	t.Logf("stream ok (traceID=%s, data_lines_before_substance=%d): %s", traceID, dataLines, firstDelta)
+}
+
+// hasSubstantiveDelta 检查一条 SSE chunk payload 是否携带了实质内容
+// （content 非空 或 reasoning_content 非空），用于判定流式链路是否真的在产 token。
+// 只有 role 字段的空壳 chunk 返回 false。
+func hasSubstantiveDelta(payload string) bool {
+	var chunk struct {
+		Choices []struct {
+			Delta struct {
+				Content          string `json:"content"`
+				ReasoningContent string `json:"reasoning_content"`
+			} `json:"delta"`
+		} `json:"choices"`
+	}
+	if err := sonic.UnmarshalString(payload, &chunk); err != nil {
+		return false
+	}
+	for _, c := range chunk.Choices {
+		if c.Delta.Content != "" || c.Delta.ReasoningContent != "" {
+			return true
+		}
+	}
+	return false
 }
