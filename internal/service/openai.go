@@ -136,8 +136,11 @@ func (s *openAIService) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 // forwardNative 原生 OpenAI 协议转发
 func (s *openAIService) forwardNative(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, endpoint *dbmodel.ModelEndpoint, stream bool) (*huma.StreamResponse, error) {
 	ep := toUpstream(endpoint)
+	// 兼容性处理：同时保留 max_tokens 和 max_completion_tokens
+	// 部分 OpenAI 兼容 provider（如 chatanywhere）不支持 max_completion_tokens，
+	// 仅支持已废弃但广泛兼容的 max_tokens。同时发送两个字段确保两种 provider 都能识别。
 	if req.Body.MaxTokens != nil {
-		req.Body.MaxCompletionTokens, req.Body.MaxTokens = lo.ToPtr(*req.Body.MaxTokens), nil
+		req.Body.MaxCompletionTokens = lo.ToPtr(*req.Body.MaxTokens)
 	}
 
 	body := proxy.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), ep.Model)
