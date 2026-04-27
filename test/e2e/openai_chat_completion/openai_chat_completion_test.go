@@ -228,6 +228,120 @@ func TestChatCompletion_GPT55_AliasRegression_NonStream(t *testing.T) {
 	}
 }
 
+// TestChatCompletion_ToolObjectMissingProperties_NonStream 是针对上游 400
+// "Invalid schema for function 'xxx': object schema missing properties"
+// 错误的线上回归用例。
+//
+// 场景：客户端（如 opencode）发送的 tools 中，function.parameters 为
+// {"type":"object"} 缺少 properties 字段。部分上游严格执行 JSON Schema 规范，
+// 要求 object 类型必须包含 properties，否则返回 400 拒绝请求。
+// 原始 traceId: 2a996b4c-305e-4852-a890-a2c37583295c
+//
+// 修复：代理层在转发前调用 util.EnsureToolParametersSchema 为缺失 properties
+// 的 object 类型 schema 补上 "properties": {}。
+//
+// 断言策略：HTTP 200 + 响应 JSON 关键字段存在。
+func TestChatCompletion_ToolObjectMissingProperties_NonStream(t *testing.T) {
+	baseURL, apiKey := mustE2EEnv(t)
+
+	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "tool_object_missing_properties_non_stream"))
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("unexpected status = %d (regression: object schema missing properties should be fixed; body: %s)", resp.StatusCode, string(body))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+	if !sonic.ValidString(string(respBody)) {
+		t.Fatalf("response is not valid JSON: %s", string(respBody))
+	}
+
+	var obj map[string]any
+	if err := sonic.Unmarshal(respBody, &obj); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if obj["id"] == nil || strings.TrimSpace(obj["id"].(string)) == "" {
+		t.Errorf("missing or empty id")
+	}
+	if obj["model"] == nil || strings.TrimSpace(obj["model"].(string)) == "" {
+		t.Errorf("missing or empty model")
+	}
+	if obj["choices"] == nil {
+		t.Errorf("missing choices")
+	}
+	if obj["usage"] == nil {
+		t.Errorf("missing usage")
+	}
+}
+
+// TestChatCompletion_ToolObjectMissingProperties_Stream 是针对上游 400
+// "Invalid schema for function 'xxx': object schema missing properties"
+// 错误的流式回归用例，场景同上但是 stream=true。
+//
+// 断言策略：HTTP 200 + text/event-stream + X-Trace-Id 响应头 + 读到实质内容 delta。
+func TestChatCompletion_ToolObjectMissingProperties_Stream(t *testing.T) {
+	baseURL, apiKey := mustE2EEnv(t)
+
+	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "tool_object_missing_properties_stream"))
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("unexpected status = %d (regression: object schema missing properties should be fixed; body: %s)", resp.StatusCode, string(body))
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
+		t.Fatalf("unexpected Content-Type = %q, want text/event-stream", ct)
+	}
+	traceID := resp.Header.Get("X-Trace-Id")
+	if traceID == "" {
+		t.Errorf("missing X-Trace-Id header in stream response")
+	}
+
+	deadline := time.Now().Add(e2eStreamReadDeadline)
+	reader := bufio.NewReader(resp.Body)
+	var (
+		dataLines    int
+		gotSubstance bool
+		firstDelta   string
+	)
+	for {
+		if time.Now().After(deadline) {
+			t.Fatalf("stream read deadline exceeded after %s without substantive delta (traceID=%s, data_lines=%d)", e2eStreamReadDeadline, traceID, dataLines)
+		}
+		line, readErr := reader.ReadString('\n')
+		trimmed := strings.TrimRight(line, "\r\n")
+		if strings.HasPrefix(trimmed, "data: ") {
+			dataLines++
+			payload := strings.TrimPrefix(trimmed, "data: ")
+			if payload == "[DONE]" {
+				break
+			}
+			if hasSubstantiveDelta(payload) {
+				gotSubstance = true
+				if firstDelta == "" {
+					firstDelta = payload
+				}
+				break
+			}
+		}
+		if readErr != nil {
+			if readErr == io.EOF {
+				break
+			}
+			t.Fatalf("failed to read SSE stream (traceID=%s): %v", traceID, readErr)
+		}
+	}
+
+	if !gotSubstance {
+		t.Fatalf("stream ended without any substantive delta (traceID=%s, data_lines=%d); object schema missing properties regression?", traceID, dataLines)
+	}
+	t.Logf("stream ok (traceID=%s, data_lines_before_substance=%d): %s", traceID, dataLines, firstDelta)
+}
+
 // hasSubstantiveDelta 检查一条 SSE chunk payload 是否携带了实质内容
 // （content 非空 或 reasoning_content 非空），用于判定流式链路是否真的在产 token。
 // 只有 role 字段的空壳 chunk 返回 false。
