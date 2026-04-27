@@ -28,11 +28,11 @@
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 如果可用，使用 superpowers 流程：和用户头脑风暴、锁定范围、评审测试用例、制定小步计划、逐步修复。
 - 每次改动后，先补或更新回归/单测，再跑聚焦测试、`make lint-conv`、`go test -count=1 ./...`。
-- 端到端用例也要沉淀到代码仓库，通常放 `test/e2e/<topic>/` 并按现有 fixture 规范维护，测试通过后再提交并推送。
+- 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 都通过后，若用户要求完整流程或部署，再提交并推送；本仓库 pre-commit 会执行 `gofmt -w`、`go mod tidy`、`go vet ./...`、`go test -count=1 ./...`、`script/lint-conventions.sh`。
 - 正式发布使用 `deploy-to-production`：推送到 `master`，等待 `docker-publish.yml` 镜像构建完成，再在生产机执行部署脚本。
-- 部署后使用 `call-api` 跑端到端用例，验证需求是否满足。
-- 如果 E2E 失败，取 `X-Trace-Id`，回到 CLS 排障步骤；重复 1~6 直到需求或 bugfix 完成。
+- 部署后**先跑** `test/e2e/<topic>/` 的 Go 用例（`BASE_URL=https://api.lvlvko.top API_KEY=$ANTHROPIC_AUTH_TOKEN go test -v -count=1 ./test/e2e/<topic>/`），而不是只 `curl` 一下；如需交互式补充验证再用 `call-api` skill。
+- 如果 E2E 失败，取响应头 `X-Trace-Id`，回到 CLS 排障步骤；重复 1~6 直到需求或 bugfix 完成。
 
 ## 测试规则
 
@@ -44,6 +44,21 @@
 - 只用标准库 `testing`；禁止 testify / gomock。
 - 禁止用 `time.Sleep` 做同步。
 - bugfix 必须带回归测试，覆盖触发场景。
+
+## E2E 工程骨架（test/e2e/\<topic\>/）
+
+每一个生产 bugfix / 新需求都要沉淀一条 E2E 用例，按下面的骨架产出：
+
+- **目录**：`test/e2e/<topic>/<topic>_test.go` + `test/e2e/<topic>/fixtures/requests/<case>.json`。一个 topic 下允许多个 case 文件，复用同一 `<topic>_test.go`。
+- **Skip 机制（硬性要求）**：测试入口必须读取 `BASE_URL` 和 `API_KEY` 两个环境变量；任一为空直接 `t.Skip("BASE_URL and API_KEY are required for e2e test")`。这样默认 `make test` / `go test ./...` 不会打生产；CI 和 pre-commit 都默认走 skip 路径。
+- **触发方式**：手工触发生产回归时用 `BASE_URL=https://api.lvlvko.top API_KEY=$ANTHROPIC_AUTH_TOKEN go test -v -count=1 ./test/e2e/<topic>/`；**禁止**把线上密钥写进代码、`.env` 或 CI 配置。
+- **HTTP 客户端**：用标准库 `net/http.DefaultClient`，统一封装 helper（参考 `openai_chat_completion_test.go` 中的 `postChatCompletions`）。
+- **断言原则**：
+  - 非流式接口：断言 HTTP 200 + 响应 JSON 关键字段（`id`、`model`、`choices`、`usage` 等）存在。
+  - 流式接口：断言 HTTP 200 + `Content-Type: text/event-stream` + 存在 `X-Trace-Id` 响应头 + 读到至少一条 `data: ` SSE 行即可返回；**不要**等跑完整段生成，避免 CI/人工验证耗时过长。
+  - 不要对模型输出的**语义**做强断言（易 flaky），只断言通路正常。
+- **回归用例命名**：bugfix 用例文件名和测试函数名要能直接描述 bug 场景，例如 `kimi_thinking_missing_reasoning_stream.json` + `TestChatCompletion_KimiThinking_MissingReasoningContent_Stream`，并在测试注释里记录原始 trace / 错误片段，方便后人回溯。
+- **失败处理**：E2E 失败时从响应头拿 `X-Trace-Id`，回到 `cls-log-bugfix` 流程排障，不要盲目重跑。
 
 ## 代码约束
 
