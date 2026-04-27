@@ -308,6 +308,87 @@ func EnsureAssistantMessageReasoningContent(body []byte) []byte {
 	return result
 }
 
+// EnsureToolParametersSchema 在序列化后的 JSON body 中，为缺少 properties 的
+// object 类型 function parameters 补上 "properties": {}。
+//
+// 部分上游 provider（如 cnapi.kksj.org）严格执行 JSON Schema 规范，要求 type
+// 为 object 的 parameters 必须包含 properties 字段；否则返回 400:
+// "Invalid schema for function 'xxx': object schema missing properties."
+// 客户端（如 opencode）可能生成不带 properties 的 object schema，这里统一补位。
+//
+//	@param body []byte 序列化后的 OpenAIChatCompletionReq JSON
+//	@return []byte 处理后的 JSON
+//	@author centonhuang
+//	@update 2026-04-28 01:30:00
+func EnsureToolParametersSchema(body []byte) []byte {
+	var root map[string]any
+	if err := sonic.Unmarshal(body, &root); err != nil {
+		return body
+	}
+	toolsRaw, ok := root["tools"].([]any)
+	if !ok {
+		return body
+	}
+	modified := false
+	for i, toolRaw := range toolsRaw {
+		tool, ok := toolRaw.(map[string]any)
+		if !ok {
+			continue
+		}
+		function, hasFn := tool["function"].(map[string]any)
+		if !hasFn {
+			continue
+		}
+		params, hasParams := function["parameters"].(map[string]any)
+		if !hasParams {
+			continue
+		}
+		if _, hasProps := params["properties"]; hasProps {
+			continue
+		}
+		typeVal := params["type"]
+		if !isObjectType(typeVal) {
+			continue
+		}
+		params["properties"] = map[string]any{}
+		function["parameters"] = params
+		tool["function"] = function
+		toolsRaw[i] = tool
+		modified = true
+	}
+	if !modified {
+		return body
+	}
+	root["tools"] = toolsRaw
+	result, err := sonic.Marshal(root)
+	if err != nil {
+		return body
+	}
+	return result
+}
+
+// isObjectType 判断 JSON Schema type 值是否包含 "object"
+//
+// 兼容 string（"object"）和 []string（["string", "object"]）两种形态
+//
+//	@param typeVal any
+//	@return bool
+//	@author centonhuang
+//	@update 2026-04-28 01:30:00
+func isObjectType(typeVal any) bool {
+	switch v := typeVal.(type) {
+	case string:
+		return v == enum.JSONSchemaObjectType
+	case []any:
+		for _, item := range v {
+			if s, ok := item.(string); ok && s == enum.JSONSchemaObjectType {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // SendOpenAIUpstreamError 发送上游错误响应
 //
 //	@param statusCode int
