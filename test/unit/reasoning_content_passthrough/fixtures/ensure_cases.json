@@ -1,0 +1,48 @@
+[
+  {
+    "name": "assistant_with_tool_calls_no_reasoning",
+    "description": "带 tool_calls 的 assistant 消息缺失 reasoning_content，必须补一个空格占位（Moonshot 把空串判为 missing，参考 LiteLLM #21672）",
+    "input": "{\"messages\":[{\"role\":\"assistant\",\"content\":\"\",\"tool_calls\":[{\"id\":\"call_1\",\"type\":\"function\"}]}]}",
+    "expectedRoleAt": 0,
+    "expectReasoningContentFilled": true,
+    "expectedReasoningContent": " "
+  },
+  {
+    "name": "assistant_with_tool_calls_empty_string_reasoning",
+    "description": "reasoning_content 显式为空字符串，也需要补位为 \" \"",
+    "input": "{\"messages\":[{\"role\":\"assistant\",\"reasoning_content\":\"\",\"tool_calls\":[{\"id\":\"call_1\"}]}]}",
+    "expectedRoleAt": 0,
+    "expectReasoningContentFilled": true,
+    "expectedReasoningContent": " "
+  },
+  {
+    "name": "assistant_with_tool_calls_has_reasoning",
+    "description": "已存在非空 reasoning_content，保持原值不变",
+    "input": "{\"messages\":[{\"role\":\"assistant\",\"content\":\"\",\"reasoning_content\":\"think\",\"tool_calls\":[{\"id\":\"call_1\"}]}]}",
+    "expectedRoleAt": 0,
+    "expectReasoningContentFilled": true,
+    "expectedReasoningContent": "think"
+  },
+  {
+    "name": "assistant_without_tool_calls",
+    "description": "无 tool_calls 的 assistant 消息不应被修改",
+    "input": "{\"messages\":[{\"role\":\"assistant\",\"content\":\"hi\"}]}",
+    "expectedRoleAt": 0,
+    "expectReasoningContentFilled": false
+  },
+  {
+    "name": "user_message_ignored",
+    "description": "user 消息不应被修改",
+    "input": "{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}",
+    "expectedRoleAt": 0,
+    "expectReasoningContentFilled": false
+  },
+  {
+    "name": "opencode_real_request",
+    "description": "回归用例：opencode 客户端在多轮工具调用中完全丢弃 reasoning_content，触发 Moonshot 返回 400 thinking is enabled but reasoning_content is missing in assistant tool call message at index 2",
+    "input": "{\"messages\":[{\"role\":\"system\",\"content\":\"sys\"},{\"role\":\"user\",\"content\":\"hi\"},{\"tool_calls\":[{\"type\":\"function\",\"function\":{\"arguments\":\"{\\\"command\\\":\\\"ls\\\"}\",\"name\":\"bash\"},\"id\":\"bash:0\"}],\"role\":\"assistant\",\"content\":\"我来帮你进行代码审查。\"},{\"content\":\"done\",\"role\":\"tool\",\"tool_call_id\":\"bash:0\"}]}",
+    "expectedRoleAt": 2,
+    "expectReasoningContentFilled": true,
+    "expectedReasoningContent": " "
+  }
+]

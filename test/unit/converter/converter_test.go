@@ -1054,11 +1054,15 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_NoReasoning(t *testin
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_EmptyInput(t *testing.T) {
 	// 测试空 input 时不崩溃
-	allCases := loadResponseCases(t)
-	tc := findResponseCase(t, allCases, "response_empty_input")
-
 	conv := converter.AnthropicProtocolConverter{}
-	result, err := conv.FromResponseAPIRequest(tc.OpenAIResponseReq)
+	req := &dto.OpenAICreateResponseReq{
+		Model: "gpt-4o",
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{},
+		},
+	}
+
+	result, err := conv.FromResponseAPIRequest(req)
 	if err != nil {
 		t.Fatalf("FromResponseAPIRequest() error: %v", err)
 	}

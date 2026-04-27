@@ -811,18 +811,20 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 		}
 		switch p.Type {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
-			if p.Text != "" {
+			text := lo.FromPtr(p.Text)
+			if p.Text != nil {
 				blocks = append(blocks, &dto.AnthropicContentBlock{
 					Type: enum.AnthropicContentBlockTypeText,
-					Text: p.Text,
+					Text: text,
 				})
 			}
 		case enum.ResponseContentTypeInputImage:
+			imageURL := lo.FromPtr(p.ImageURL)
 			block := &dto.AnthropicContentBlock{
 				Type: enum.AnthropicContentBlockTypeImage,
 			}
-			if strings.HasPrefix(p.ImageURL, "data:") {
-				parts := strings.SplitN(p.ImageURL, ";base64,", 2)
+			if strings.HasPrefix(imageURL, "data:") {
+				parts := strings.SplitN(imageURL, ";base64,", 2)
 				if len(parts) == 2 {
 					mediaType := strings.TrimPrefix(parts[0], "data:")
 					block.Source = &dto.AnthropicContentSource{
@@ -834,7 +836,7 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 			} else {
 				block.Source = &dto.AnthropicContentSource{
 					Type: "url",
-					URL:  p.ImageURL,
+					URL:  imageURL,
 				}
 			}
 			blocks = append(blocks, block)
@@ -886,8 +888,8 @@ func convertResponseFunctionCallOutputToAnthropic(item *dto.ResponseInputItem) *
 		} else if len(item.Output.FunctionOutput.Parts) > 0 {
 			var parts []string
 			for _, p := range item.Output.FunctionOutput.Parts {
-				if p != nil && (p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText) {
-					parts = append(parts, p.Text)
+				if p != nil && (p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText) && p.Text != nil {
+					parts = append(parts, lo.FromPtr(p.Text))
 				}
 			}
 			text = strings.Join(parts, "\n")
