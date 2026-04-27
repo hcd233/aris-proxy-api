@@ -10,7 +10,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -30,7 +29,8 @@ type UserHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type UserDependencies struct {
-	UserRepo identity.UserRepository
+	GetCurrentUser query.GetCurrentUserHandler
+	UpdateProfile  command.UpdateProfileHandler
 }
 
 type userHandler struct {
@@ -46,8 +46,8 @@ type userHandler struct {
 //	@update 2026-04-26 10:00:00
 func NewUserHandler(deps UserDependencies) UserHandler {
 	return &userHandler{
-		getCurrentUser: query.NewGetCurrentUserHandler(deps.UserRepo),
-		updateProfile:  command.NewUpdateProfileHandler(deps.UserRepo),
+		getCurrentUser: deps.GetCurrentUser,
+		updateProfile:  deps.UpdateProfile,
 	}
 }
 

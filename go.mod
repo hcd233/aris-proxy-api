@@ -16,6 +16,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/tencentcloud/tencentcloud-cls-sdk-go v1.0.14
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.60
+	go.uber.org/dig v1.19.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/oauth2 v0.30.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

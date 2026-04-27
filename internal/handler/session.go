@@ -10,7 +10,6 @@ import (
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -30,7 +29,8 @@ type SessionHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type SessionDependencies struct {
-	SessionReadRepo session.SessionReadRepository
+	List sessionquery.ListSessionsHandler
+	Get  sessionquery.GetSessionHandler
 }
 
 type sessionHandler struct {
@@ -46,8 +46,8 @@ type sessionHandler struct {
 //	@update 2026-04-26 10:00:00
 func NewSessionHandler(deps SessionDependencies) SessionHandler {
 	return &sessionHandler{
-		list: sessionquery.NewListSessionsHandler(deps.SessionReadRepo),
-		get:  sessionquery.NewGetSessionHandler(deps.SessionReadRepo),
+		list: deps.List,
+		get:  deps.Get,
 	}
 }
 

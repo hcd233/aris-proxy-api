@@ -7,19 +7,13 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 )
 
-var fiberApp *fiber.App
-
-// GetFiberApp 获取 Fiber 应用实例
+// NewFiberApp 创建 Fiber 应用实例
 //
 //	@return *fiber.App
 //	@author centonhuang
-//	@update 2025-11-02 02:35:59
-func GetFiberApp() *fiber.App {
-	return fiberApp
-}
-
-func init() {
-	fiberApp = fiber.New(fiber.Config{
+//	@update 2026-04-28 10:00:00
+func NewFiberApp() *fiber.App {
+	return fiber.New(fiber.Config{
 		Prefork:                 false,
 		ReadTimeout:             config.ReadTimeout,
 		WriteTimeout:            config.WriteTimeout,

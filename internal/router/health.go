@@ -12,9 +12,7 @@ import (
 //	@param healthGroup
 //	@author centonhuang
 //	@update 2025-11-07 14:59:06
-func initHealthRouter(healthGroup huma.API) {
-	pingHandler := handler.NewPingHandler()
-
+func initHealthRouter(healthGroup huma.API, pingHandler handler.PingHandler) {
 	huma.Register(healthGroup, huma.Operation{
 		OperationID: "healthCheck",
 		Method:      http.MethodGet,
