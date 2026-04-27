@@ -64,7 +64,7 @@ test:
 
 ## test-cover: 带覆盖率的测试
 test-cover:
-	go test -count=1 -coverprofile=coverage.out ./test/...
+	go test -count=1 -coverprofile=coverage.out ./test/unit/... ./test/e2e/...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 

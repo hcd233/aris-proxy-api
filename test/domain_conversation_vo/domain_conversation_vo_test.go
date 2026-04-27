@@ -12,15 +12,15 @@ import (
 
 // unifiedContentCase 统一测试用例结构，覆盖 JSON 往返、Parts 序列化优先级、Tool Checksum 等场景
 type unifiedContentCase struct {
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	JSON        string               `json:"json"`
-	ExpectText  string               `json:"expectText"`
-	ExpectParts int                  `json:"expectParts"`
-	Text        string               `json:"text"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"description"`
+	JSON        string                   `json:"json"`
+	ExpectText  string                   `json:"expectText"`
+	ExpectParts int                      `json:"expectParts"`
+	Text        string                   `json:"text"`
 	Parts       []*vo.UnifiedContentPart `json:"parts"`
-	ToolName    string               `json:"tool_name"`
-	ToolDesc    string               `json:"tool_description"`
+	ToolName    string                   `json:"tool_name"`
+	ToolDesc    string                   `json:"tool_description"`
 }
 
 func loadUnifiedContentCases(t *testing.T) []unifiedContentCase {

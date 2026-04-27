@@ -181,5 +181,5 @@ func toAPIKeyAggregateList(records []*dbmodel.ProxyAPIKey) ([]*aggregate.ProxyAP
 		}
 		out = append(out, agg)
 	}
-		return out, nil
-	}
+	return out, nil
+}

@@ -2,6 +2,7 @@
 package domain_session_vo
 
 import (
+	"errors"
 	"math"
 	"os"
 	"testing"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 )
 
@@ -155,14 +157,17 @@ func TestNewSessionScore_Total(t *testing.T) {
 	}
 }
 
-// TestNewSessionScore_Zero 全零 score 应返回验证错误（范围 [1,10]）
+// TestNewSessionScore_Zero 全零 score 现在属于非法输入，应返回校验错误
 func TestNewSessionScore_Zero(t *testing.T) {
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_score_zero")
 
 	_, err := vo.NewSessionScore(tc.Coherence, tc.Depth, tc.Value, tc.Version, time.Now().UTC())
 	if err == nil {
-		t.Error("NewSessionScore() with zero values should return validation error, got nil")
+		t.Fatal("NewSessionScore() expected validation error, got nil")
+	}
+	if !errors.Is(err, ierr.ErrValidation) {
+		t.Errorf("expected ErrValidation, got: %v", err)
 	}
 }
 

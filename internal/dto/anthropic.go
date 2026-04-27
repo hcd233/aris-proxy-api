@@ -429,15 +429,15 @@ type AnthropicCreateMessageRequest struct {
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
 type AnthropicMessage struct {
-	ID           string                   `json:"id"`
-	Type         string                   `json:"type"`
-	Role         string                   `json:"role"`
-	Content      []*AnthropicContentBlock `json:"content"`
-	Model        string                   `json:"model"`
-	StopReason   *string                  `json:"stop_reason"`
-	StopSequence *string                  `json:"stop_sequence"`
+	ID           string                       `json:"id"`
+	Type         string                       `json:"type"`
+	Role         string                       `json:"role"`
+	Content      []*AnthropicContentBlock     `json:"content"`
+	Model        string                       `json:"model"`
+	StopReason   *string                      `json:"stop_reason"`
+	StopSequence *string                      `json:"stop_sequence"`
 	StopDetails  *AnthropicRefusalStopDetails `json:"stop_details,omitempty"`
-	Usage        *AnthropicUsage          `json:"usage"`
+	Usage        *AnthropicUsage              `json:"usage"`
 }
 
 // AnthropicRefusalStopDetails Anthropic 拒绝停止详细信息
@@ -591,8 +591,8 @@ type AnthropicSSEContentBlockDelta struct {
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
 type AnthropicSSEMessageDeltaPayload struct {
-	StopReason   *string                    `json:"stop_reason"`
-	StopSequence *string                    `json:"stop_sequence"`
+	StopReason   *string                      `json:"stop_reason"`
+	StopSequence *string                      `json:"stop_sequence"`
 	StopDetails  *AnthropicRefusalStopDetails `json:"stop_details,omitempty"`
 }
 
