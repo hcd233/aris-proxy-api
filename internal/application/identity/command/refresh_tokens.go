@@ -6,11 +6,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // RefreshTokensCommand 刷新 token 对命令
@@ -59,7 +59,7 @@ func (h *refreshTokensHandler) Handle(ctx context.Context, cmd RefreshTokensComm
 	userID, err := h.refresh.DecodeToken(cmd.RefreshToken)
 	if err != nil {
 		log.Error("[IdentityCommand] Decode refresh token failed",
-			zap.String("refreshToken", util.MaskSecret(cmd.RefreshToken)), zap.Error(err))
+			zap.String("refreshToken", commonutil.MaskSecret(cmd.RefreshToken)), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrJWTDecode, err, "decode refresh token")
 	}
 

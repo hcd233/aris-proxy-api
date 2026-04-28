@@ -36,7 +36,7 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler)
 		Summary:     "Create chat completion",
 		Description: "Creates a model response for the given chat conversation.",
 		Tags:        []string{"OpenAI"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", string(constant.CtxKeyAPIKeyID), constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
 		Security: []map[string][]string{
 			{"apiKeyAuth": {}},
 		},
@@ -49,7 +49,7 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler)
 		Summary:     "Create response",
 		Description: "Creates a model response for the given input.",
 		Tags:        []string{"OpenAI"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", string(constant.CtxKeyAPIKeyID), constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
 		Security: []map[string][]string{
 			{"apiKeyAuth": {}},
 		},

@@ -42,14 +42,6 @@ var (
 	//	update 2024-06-22 08:59:17
 	Oauth2GithubClientSecret string
 
-	// Oauth2StateString string Github OAuth2 State String
-	//
-	// Deprecated: 静态 state 已废弃（CSRF 风险）；请使用 infrastructure/oauth2 的
-	// GenerateOAuth2State + Platform.GetAuthURLWithState 生成一次性 state。
-	// 仅为向后兼容环境变量配置而保留变量，业务代码不再消费。
-	//	update 2026-04-24 14:00:00
-	Oauth2StateString string
-
 	// Oauth2GithubRedirectURL string Github OAuth2 Redirect URL
 	//	update 2024-06-22 08:59:07
 	Oauth2GithubRedirectURL string
@@ -254,7 +246,6 @@ func initEnvironment() {
 
 	Oauth2GithubClientID = config.GetString("oauth2.github.client.id")
 	Oauth2GithubClientSecret = config.GetString("oauth2.github.client.secret")
-	Oauth2StateString = config.GetString("oauth2.state.string")
 	Oauth2GithubRedirectURL = config.GetString("oauth2.github.redirect.url")
 
 	Oauth2GoogleClientID = config.GetString("oauth2.google.client.id")

@@ -10,31 +10,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
-// ==================== Re-exports from domain/conversation/vo ====================
-//
-// 以下类型已迁移到 internal/domain/conversation/vo 作为领域值对象，
-// 此处保留类型别名以避免破坏现有调用方 import；新代码应直接使用 vo 包。
-
-// UnifiedContent 重新导出至 domain/conversation/vo.UnifiedContent
-//
-// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedContent
-type UnifiedContent = vo.UnifiedContent
-
-// UnifiedContentPart 重新导出至 domain/conversation/vo.UnifiedContentPart
-//
-// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedContentPart
-type UnifiedContentPart = vo.UnifiedContentPart
-
-// UnifiedMessage 重新导出至 domain/conversation/vo.UnifiedMessage
-//
-// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedMessage
-type UnifiedMessage = vo.UnifiedMessage
-
-// UnifiedToolCall 重新导出至 domain/conversation/vo.UnifiedToolCall
-//
-// Deprecated: 请使用 internal/domain/conversation/vo.UnifiedToolCall
-type UnifiedToolCall = vo.UnifiedToolCall
-
 // ==================== Conversion: OpenAI -> Unified ====================
 
 // FromOpenAIMessage 从 OpenAI ChatCompletionMessageParam 转换为 UnifiedMessage
@@ -44,8 +19,8 @@ type UnifiedToolCall = vo.UnifiedToolCall
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 14:10:00
-func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*UnifiedMessage, error) {
-	um := &UnifiedMessage{
+func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*vo.UnifiedMessage, error) {
+	um := &vo.UnifiedMessage{
 		Role:             msg.Role,
 		ReasoningContent: msg.ReasoningContent,
 		Name:             msg.Name,
@@ -64,9 +39,9 @@ func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*UnifiedMessage, 
 
 	// 转换 OpenAI ToolCalls -> UnifiedToolCall
 	if len(msg.ToolCalls) > 0 {
-		um.ToolCalls = make([]*UnifiedToolCall, 0, len(msg.ToolCalls))
+		um.ToolCalls = make([]*vo.UnifiedToolCall, 0, len(msg.ToolCalls))
 		for _, tc := range msg.ToolCalls {
-			utc := &UnifiedToolCall{
+			utc := &vo.UnifiedToolCall{
 				ID: tc.ID,
 			}
 			if tc.Function != nil {
@@ -84,9 +59,9 @@ func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*UnifiedMessage, 
 }
 
 // convertOpenAIContent 将 OpenAI MessageContent 转换为 UnifiedContent
-func convertOpenAIContent(mc *OpenAIMessageContent) (*UnifiedContent, error) {
+func convertOpenAIContent(mc *OpenAIMessageContent) (*vo.UnifiedContent, error) {
 	if len(mc.Parts) > 0 {
-		parts := make([]*UnifiedContentPart, 0, len(mc.Parts))
+		parts := make([]*vo.UnifiedContentPart, 0, len(mc.Parts))
 		for i, p := range mc.Parts {
 			part, err := convertOpenAIContentPart(p)
 			if err != nil {
@@ -94,23 +69,23 @@ func convertOpenAIContent(mc *OpenAIMessageContent) (*UnifiedContent, error) {
 			}
 			parts = append(parts, part)
 		}
-		return &UnifiedContent{Parts: parts}, nil
+		return &vo.UnifiedContent{Parts: parts}, nil
 	}
-	return &UnifiedContent{Text: mc.Text}, nil
+	return &vo.UnifiedContent{Text: mc.Text}, nil
 }
 
 // convertOpenAIContentPart 将 OpenAI ChatCompletionContentPart 转换为 UnifiedContentPart
-func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*UnifiedContentPart, error) {
+func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*vo.UnifiedContentPart, error) {
 	switch p.Type {
 	case enum.ContentPartTypeText:
-		return &UnifiedContentPart{Type: enum.ContentPartTypeText, Text: p.Text}, nil
+		return &vo.UnifiedContentPart{Type: enum.ContentPartTypeText, Text: p.Text}, nil
 	case enum.ContentPartTypeRefusal:
-		return &UnifiedContentPart{Type: enum.ContentPartTypeRefusal, Text: p.Refusal}, nil
+		return &vo.UnifiedContentPart{Type: enum.ContentPartTypeRefusal, Text: p.Refusal}, nil
 	case enum.ContentPartTypeImageURL:
 		if p.ImageURL == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "image_url part missing image_url field")
 		}
-		return &UnifiedContentPart{
+		return &vo.UnifiedContentPart{
 			Type:        enum.ContentPartTypeImageURL,
 			ImageURL:    p.ImageURL.URL,
 			ImageDetail: string(p.ImageURL.Detail),
@@ -119,7 +94,7 @@ func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*UnifiedConte
 		if p.InputAudio == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "input_audio part missing input_audio field")
 		}
-		return &UnifiedContentPart{
+		return &vo.UnifiedContentPart{
 			Type:        enum.ContentPartTypeInputAudio,
 			AudioData:   p.InputAudio.Data,
 			AudioFormat: string(p.InputAudio.Format),
@@ -128,7 +103,7 @@ func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*UnifiedConte
 		if p.File == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "file part missing file field")
 		}
-		return &UnifiedContentPart{
+		return &vo.UnifiedContentPart{
 			Type:     enum.ContentPartTypeFile,
 			FileData: p.File.FileData,
 			FileID:   p.File.FileID,
@@ -148,8 +123,8 @@ func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*UnifiedConte
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 14:10:00
-func FromAnthropicMessage(msg *AnthropicMessageParam) (*UnifiedMessage, error) {
-	um := &UnifiedMessage{
+func FromAnthropicMessage(msg *AnthropicMessageParam) (*vo.UnifiedMessage, error) {
+	um := &vo.UnifiedMessage{
 		Role: msg.Role,
 	}
 
@@ -160,7 +135,7 @@ func FromAnthropicMessage(msg *AnthropicMessageParam) (*UnifiedMessage, error) {
 	// Content 是 *AnthropicMessageContent，可能是纯字符串或 ContentBlock 数组
 	if msg.Content.Text != "" && len(msg.Content.Blocks) == 0 {
 		// 纯字符串内容
-		um.Content = &UnifiedContent{Text: msg.Content.Text}
+		um.Content = &vo.UnifiedContent{Text: msg.Content.Text}
 		return um, nil
 	}
 
@@ -182,8 +157,8 @@ func FromAnthropicMessage(msg *AnthropicMessageParam) (*UnifiedMessage, error) {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 14:10:00
-func FromAnthropicResponse(msg *AnthropicMessage) (*UnifiedMessage, error) {
-	um := &UnifiedMessage{
+func FromAnthropicResponse(msg *AnthropicMessage) (*vo.UnifiedMessage, error) {
+	um := &vo.UnifiedMessage{
 		Role: msg.Role,
 	}
 
@@ -204,13 +179,13 @@ func FromAnthropicResponse(msg *AnthropicMessage) (*UnifiedMessage, error) {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 14:10:00
-func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock) error {
+func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlock) error {
 	var (
 		textParts         []string
 		thinkingParts     []string
-		toolCalls         []*UnifiedToolCall
+		toolCalls         []*vo.UnifiedToolCall
 		toolResultID      string
-		toolResultContent *UnifiedContent
+		toolResultContent *vo.UnifiedContent
 	)
 
 	for i, block := range blocks {
@@ -232,7 +207,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 			if err != nil {
 				return ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
 			}
-			toolCalls = append(toolCalls, &UnifiedToolCall{
+			toolCalls = append(toolCalls, &vo.UnifiedToolCall{
 				ID:        block.ID,
 				Name:      block.Name,
 				Arguments: args,
@@ -243,7 +218,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 			if block.Content != nil {
 				// tool_result 的 content 可以是字符串或 ContentBlock 数组
 				if block.Content.Text != "" && len(block.Content.Blocks) == 0 {
-					toolResultContent = &UnifiedContent{Text: block.Content.Text}
+					toolResultContent = &vo.UnifiedContent{Text: block.Content.Text}
 				} else if len(block.Content.Blocks) > 0 {
 					// 嵌套的 content blocks，提取文本
 					var nestedTexts []string
@@ -254,7 +229,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 						// 其他类型（image 等）也可以在这里扩展
 					}
 					if len(nestedTexts) > 0 {
-						toolResultContent = &UnifiedContent{Text: strings.Join(nestedTexts, "\n")}
+						toolResultContent = &vo.UnifiedContent{Text: strings.Join(nestedTexts, "\n")}
 					}
 				}
 			}
@@ -285,7 +260,7 @@ func extractAnthropicBlocks(um *UnifiedMessage, blocks []*AnthropicContentBlock)
 	} else {
 		// 非 tool_result 消息：合并文本
 		if len(textParts) > 0 {
-			um.Content = &UnifiedContent{Text: strings.Join(textParts, "\n")}
+			um.Content = &vo.UnifiedContent{Text: strings.Join(textParts, "\n")}
 		}
 	}
 

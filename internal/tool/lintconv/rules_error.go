@@ -3,6 +3,9 @@ package lintconv
 import (
 	"go/ast"
 	"strings"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 func (c *checker) checkErrorHandling() {
@@ -13,7 +16,7 @@ func (c *checker) checkErrorHandling() {
 }
 
 func (c *checker) checkDeprecatedConstantErrors(file SourceFile) {
-	if !isUnder(file.Path, "internal") || file.Path == "internal/common/constant/error.go" {
+	if !isUnder(file.Path, constant.ConvCheckPathInternal) || file.Path == constant.ConvCheckPathErrorGo {
 		return
 	}
 	inspectFile(file, func(node ast.Node) {
@@ -22,20 +25,20 @@ func (c *checker) checkDeprecatedConstantErrors(file SourceFile) {
 			return
 		}
 		ident, ok := selector.X.(*ast.Ident)
-		if !ok || ident.Name != "constant" || !strings.HasPrefix(selector.Sel.Name, "Err") {
+		if !ok || ident.Name != constant.ConvCheckIdentConstant || !strings.HasPrefix(selector.Sel.Name, constant.ConvCheckPrefixErr) || strings.HasPrefix(selector.Sel.Name, constant.ConvCheckErrorPrefix) {
 			return
 		}
-		c.report(file, selector, SeverityError, "error.deprecated_constant", "禁止使用 constant.ErrXxx，使用 ierr.ErrXxx.BizError()")
+		c.report(file, selector, enum.SeverityError, constant.RuleErrorDeprecatedConstant, constant.ConvCheckMsgDeprecatedConstErr)
 	})
 }
 
 func (c *checker) checkForwardingConstants(file SourceFile) {
-	if !isConstantOrEnumPath(file.Path) || strings.HasSuffix(file.Path, "_test.go") {
+	if !isConstantOrEnumPath(file.Path) || strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
 		return
 	}
 	for _, decl := range file.File.Decls {
 		gen, ok := decl.(*ast.GenDecl)
-		if !ok || gen.Tok.String() != "const" {
+		if !ok || gen.Tok.String() != constant.ConvCheckTokConst {
 			continue
 		}
 		for _, spec := range gen.Specs {
@@ -49,7 +52,7 @@ func (c *checker) checkForwardingConstants(file SourceFile) {
 					continue
 				}
 				if _, ok := selector.X.(*ast.Ident); ok {
-					c.report(file, valueSpec, SeverityError, "constant.forwarding", "禁止在 constant/enum 中定义 const X = pkg.Y 转发常量，直接使用原始常量")
+					c.report(file, valueSpec, enum.SeverityError, constant.RuleConstantForwarding, constant.ConvCheckMsgForwardingConst)
 				}
 			}
 		}
@@ -57,5 +60,5 @@ func (c *checker) checkForwardingConstants(file SourceFile) {
 }
 
 func isConstantOrEnumPath(path string) bool {
-	return isUnder(path, "internal/common/constant") || isUnder(path, "internal/common/enum") || isUnder(path, "internal/enum")
+	return isUnder(path, constant.ConvCheckPathConstant) || isUnder(path, constant.ConvCheckPathCommonEnum) || isUnder(path, constant.ConvCheckPathEnum)
 }

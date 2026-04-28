@@ -394,5 +394,91 @@
     "notWant": [
       {"rule": "magic.string", "severity": "error"}
     ]
+  },
+  {
+    "name": "log message lowercase after module prefix",
+    "files": [
+      {
+        "path": "internal/application/demo/log_lower.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo] failed\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.format", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "log message no space after module prefix",
+    "files": [
+      {
+        "path": "internal/application/demo/log_nospace.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo]Failed\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.format", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "log message contains Chinese",
+    "files": [
+      {
+        "path": "internal/application/demo/log_cn.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo] 测试中文\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "proper log format not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/log_ok.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo] PascalCaseMessage\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "logging.format", "severity": "warning"},
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "WithCtx chained call log format is checked",
+    "files": [
+      {
+        "path": "internal/application/demo/log_chain.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) WithCtx(ctx interface{}) *demoLogger { return nil }\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.WithCtx(nil).Info(\"[Demo] lowerStart\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.format", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "WithCtx chained proper log format not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/log_chain_ok.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) WithCtx(ctx interface{}) *demoLogger { return nil }\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.WithCtx(nil).Info(\"[Demo] PascalCaseMessage\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "logging.format", "severity": "warning"},
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "WithCtx chained log contains Chinese flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/log_chain_cn.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) WithCtx(ctx interface{}) *demoLogger { return nil }\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.WithCtx(nil).Info(\"[Demo] 中文\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
   }
 ]

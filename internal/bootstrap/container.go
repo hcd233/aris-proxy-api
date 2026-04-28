@@ -19,6 +19,7 @@ import (
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	llmproxyservice "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
+	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
@@ -264,8 +265,8 @@ func newRefreshTokenSigner() identityservice.TokenSigner {
 	return jwt.GetRefreshTokenSigner()
 }
 
-func newOauth2Platforms() handler.Oauth2Platforms {
-	return handler.Oauth2Platforms{
+func newOauth2Platforms() map[string]oauth2service.Platform {
+	return map[string]oauth2service.Platform{
 		constant.OAuthProviderGithub: oauth2.NewGithubPlatform(),
 		constant.OAuthProviderGoogle: oauth2.NewGooglePlatform(),
 	}
@@ -290,7 +291,7 @@ func newRefreshTokensHandler(params refreshTokensParams) identitycommand.Refresh
 type handleCallbackParams struct {
 	dig.In
 
-	Platforms     handler.Oauth2Platforms
+	Platforms     map[string]oauth2service.Platform
 	UserRepo      identity.UserRepository
 	AccessSigner  identityservice.TokenSigner `name:"accessSigner"`
 	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
@@ -307,7 +308,7 @@ func newHandleCallbackHandler(params handleCallbackParams) applicationoauth2.Han
 	)
 }
 
-func newInitiateLoginHandler(platforms handler.Oauth2Platforms) applicationoauth2.InitiateLoginHandler {
+func newInitiateLoginHandler(platforms map[string]oauth2service.Platform) applicationoauth2.InitiateLoginHandler {
 	return applicationoauth2.NewInitiateLoginHandler(platforms)
 }
 

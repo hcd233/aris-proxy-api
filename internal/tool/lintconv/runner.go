@@ -3,6 +3,9 @@ package lintconv
 import (
 	"go/ast"
 	"strings"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 type checker struct {
@@ -22,7 +25,7 @@ func Run(args []string) Result {
 	return Result{Diagnostics: c.diagnostics}
 }
 
-func (c *checker) report(file SourceFile, node ast.Node, severity Severity, rule string, message string) {
+func (c *checker) report(file SourceFile, node ast.Node, severity enum.Severity, rule string, message string) {
 	c.diagnostics = append(c.diagnostics, Diagnostic{Rule: rule, Severity: severity, Path: file.Path, Line: file.line(node.Pos()), Message: message})
 }
 
@@ -58,6 +61,6 @@ func selectorMethodName(expr ast.Expr) (string, bool) {
 
 func isUnder(path string, prefix string) bool {
 	path = slashPath(path)
-	prefix = strings.TrimSuffix(slashPath(prefix), "/") + "/"
+	prefix = strings.TrimSuffix(slashPath(prefix), constant.ConvCheckSeparatorSlash) + constant.ConvCheckSeparatorSlash
 	return strings.HasPrefix(path, prefix)
 }

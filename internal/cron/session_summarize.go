@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
@@ -168,11 +169,11 @@ func (c *SessionSummarizeCron) getSessionContent(ctx context.Context, session *d
 
 // formatMessage 将UnifiedMessage格式化为字符串，包含所有字段
 //
-//	@param msg *dto.UnifiedMessage
+//	@param msg *vo.UnifiedMessage
 //	@return string
 //	@author centonhuang
 //	@update 2026-03-26 10:00:00
-func formatMessage(msg *dto.UnifiedMessage) string {
+func formatMessage(msg *vo.UnifiedMessage) string {
 	if msg == nil {
 		return ""
 	}

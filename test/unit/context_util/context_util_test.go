@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -26,24 +27,6 @@ type extractMetadataCase struct {
 	Function    string                 `json:"function"`
 	Metadata    *dto.AnthropicMetadata `json:"metadata"`
 	ExpectedMap map[string]string      `json:"expectedMap"`
-}
-
-type rawCase struct {
-	Name     string `json:"name"`
-	Function string `json:"function"`
-}
-
-func loadRawCases(t *testing.T) []rawCase {
-	t.Helper()
-	data, err := os.ReadFile("./fixtures/cases.json")
-	if err != nil {
-		t.Fatalf("failed to read fixtures/cases.json: %v", err)
-	}
-	var cases []rawCase
-	if err := sonic.Unmarshal(data, &cases); err != nil {
-		t.Fatalf("failed to unmarshal fixtures/cases.json: %v", err)
-	}
-	return cases
 }
 
 func loadCtxValueStringCases(t *testing.T) []ctxValueStringCase {
@@ -111,8 +94,8 @@ func TestCtxValueString(t *testing.T) {
 
 	t.Run("existing string value", func(t *testing.T) {
 		tc := findCtxCase(t, allCases, "ctx_value_string_exists")
-		ctx := context.WithValue(context.Background(), tc.Key, "Mozilla/5.0")
-		got := util.CtxValueString(ctx, tc.Key)
+		ctx := context.WithValue(context.Background(), enum.CtxKey(tc.Key), "Mozilla/5.0")
+		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
 		if got != tc.Expected {
 			t.Errorf("CtxValueString() = %q, want %q", got, tc.Expected)
 		}
@@ -121,7 +104,7 @@ func TestCtxValueString(t *testing.T) {
 	t.Run("missing key", func(t *testing.T) {
 		tc := findCtxCase(t, allCases, "ctx_value_string_missing_key")
 		ctx := context.Background()
-		got := util.CtxValueString(ctx, tc.Key)
+		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
 		if got != tc.Expected {
 			t.Errorf("CtxValueString() = %q, want %q", got, tc.Expected)
 		}
@@ -129,8 +112,8 @@ func TestCtxValueString(t *testing.T) {
 
 	t.Run("non-string value", func(t *testing.T) {
 		tc := findCtxCase(t, allCases, "ctx_value_string_non_string_value")
-		ctx := context.WithValue(context.Background(), tc.Key, 12345)
-		got := util.CtxValueString(ctx, tc.Key)
+		ctx := context.WithValue(context.Background(), enum.CtxKey(tc.Key), 12345)
+		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
 		if got != tc.Expected {
 			t.Errorf("CtxValueString() = %q, want %q", got, tc.Expected)
 		}
@@ -138,8 +121,8 @@ func TestCtxValueString(t *testing.T) {
 
 	t.Run("empty string value", func(t *testing.T) {
 		tc := findCtxCase(t, allCases, "ctx_value_string_empty_value")
-		ctx := context.WithValue(context.Background(), tc.Key, "")
-		got := util.CtxValueString(ctx, tc.Key)
+		ctx := context.WithValue(context.Background(), enum.CtxKey(tc.Key), "")
+		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
 		if got != tc.Expected {
 			t.Errorf("CtxValueString() = %q, want %q", got, tc.Expected)
 		}

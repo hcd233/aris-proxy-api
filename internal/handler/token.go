@@ -9,6 +9,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -68,7 +69,7 @@ func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshT
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Warn("[TokenHandler] Refresh token failed",
-			zap.String("refreshToken", util.MaskSecret(req.Body.RefreshToken)),
+			zap.String("refreshToken", commonutil.MaskSecret(req.Body.RefreshToken)),
 			zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return util.WrapHTTPResponse(rsp, nil)

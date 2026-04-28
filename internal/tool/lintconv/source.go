@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 type SourceFile struct {
@@ -18,21 +21,21 @@ type SourceFile struct {
 
 func loadSourceFiles(args []string) ([]SourceFile, []Diagnostic) {
 	if len(args) == 0 {
-		args = []string{"."}
+		args = []string{constant.ConvCheckCurrentDir}
 	}
 	var files []SourceFile
 	var diagnostics []Diagnostic
 	for _, arg := range args {
 		paths, err := expandGoFiles(arg)
 		if err != nil {
-			diagnostics = append(diagnostics, Diagnostic{Rule: "source.load", Severity: SeverityError, Path: slashPath(arg), Line: 1, Message: err.Error()})
+			diagnostics = append(diagnostics, Diagnostic{Rule: constant.ConvCheckRuleSourceLoad, Severity: enum.SeverityError, Path: slashPath(arg), Line: 1, Message: err.Error()})
 			continue
 		}
 		for _, path := range paths {
 			set := token.NewFileSet()
 			file, err := parser.ParseFile(set, path.abs, nil, parser.ParseComments)
 			if err != nil {
-				diagnostics = append(diagnostics, Diagnostic{Rule: "source.parse", Severity: SeverityError, Path: path.rel, Line: 1, Message: err.Error()})
+				diagnostics = append(diagnostics, Diagnostic{Rule: constant.ConvCheckRuleSourceParse, Severity: enum.SeverityError, Path: path.rel, Line: 1, Message: err.Error()})
 				continue
 			}
 			files = append(files, SourceFile{Path: path.rel, File: file, Set: set})
@@ -47,16 +50,16 @@ type goFilePath struct {
 }
 
 func expandGoFiles(arg string) ([]goFilePath, error) {
-	clean := filepath.Clean(strings.TrimSuffix(arg, "/..."))
-	if clean == "..." {
-		clean = "."
+	clean := filepath.Clean(strings.TrimSuffix(arg, constant.ConvCheckRecursiveSuffix))
+	if clean == constant.ConvCheckRecursiveOnly {
+		clean = constant.ConvCheckCurrentDir
 	}
 	info, err := os.Stat(clean)
 	if err != nil {
 		return nil, err
 	}
 	if !info.IsDir() {
-		if strings.HasSuffix(clean, ".go") {
+		if strings.HasSuffix(clean, constant.ConvCheckGoExt) {
 			return []goFilePath{{abs: clean, rel: slashPath(clean)}}, nil
 		}
 		return nil, nil
@@ -72,12 +75,12 @@ func expandGoFiles(arg string) ([]goFilePath, error) {
 		}
 		if entry.IsDir() {
 			name := entry.Name()
-			if name == ".git" || name == ".worktrees" || name == "vendor" {
+			if name == constant.ConvCheckSkipGitDir || name == constant.ConvCheckSkipWorktrees || name == constant.ConvCheckSkipVendor {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if strings.HasSuffix(entry.Name(), ".go") {
+		if strings.HasSuffix(entry.Name(), constant.ConvCheckGoExt) {
 			rel, err := filepath.Rel(rootAbs, path)
 			if err != nil {
 				return err

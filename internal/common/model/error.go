@@ -1,6 +1,10 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+)
 
 // Error 错误
 //
@@ -26,7 +30,7 @@ func NewError(code int, message string) *Error {
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("code: %d, message: %s", e.Code, e.Message)
+	return fmt.Sprintf(constant.ErrorModelTemplate, e.Code, e.Message)
 }
 
 // UpstreamError 上游返回非 200 状态码的错误
@@ -39,7 +43,7 @@ type UpstreamError struct {
 }
 
 func (e *UpstreamError) Error() string {
-	return fmt.Sprintf("upstream returned status %d", e.StatusCode)
+	return fmt.Sprintf(constant.UpstreamErrorTemplate, e.StatusCode)
 }
 
 // UpstreamConnectionError 上游连接错误（网络层错误，无法获取 HTTP 状态码）
@@ -52,7 +56,7 @@ type UpstreamConnectionError struct {
 
 func (e *UpstreamConnectionError) Error() string {
 	if e.Cause != nil {
-		return fmt.Sprintf("upstream connection error: %v", e.Cause)
+		return fmt.Sprintf(constant.UpstreamConnectionErrorTemplate, e.Cause)
 	}
-	return "upstream connection error"
+	return constant.UpstreamConnectionErrorMsg
 }

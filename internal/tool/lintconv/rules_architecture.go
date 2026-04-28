@@ -4,6 +4,9 @@ import (
 	"go/ast"
 	"strconv"
 	"strings"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 func (c *checker) checkArchitecture() {
@@ -20,17 +23,17 @@ func (c *checker) checkArchitectureImports(file SourceFile) {
 		if err != nil {
 			continue
 		}
-		if isUnder(file.Path, "internal/domain") && strings.HasPrefix(path, "github.com/hcd233/aris-proxy-api/internal/infrastructure/") {
-			c.report(file, imp, SeverityError, "architecture.domain_dependency", "Domain 层禁止依赖 Infrastructure 层")
+		if isUnder(file.Path, constant.ConvCheckPathDomain) && strings.HasPrefix(path, constant.ConvCheckImportInfra) {
+			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainInfra)
 		}
-		if isUnder(file.Path, "internal/domain") && path == "github.com/hcd233/aris-proxy-api/internal/dto" {
-			c.report(file, imp, SeverityError, "architecture.domain_dependency", "Domain 层禁止依赖 DTO")
+		if isUnder(file.Path, constant.ConvCheckPathDomain) && path == constant.ConvCheckImportDTO {
+			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainDTO)
 		}
-		if isUnder(file.Path, "internal/domain") && path == "github.com/hcd233/aris-proxy-api/internal/util" {
-			c.report(file, imp, SeverityError, "architecture.domain_dependency", "Domain 层禁止依赖 internal/util，请改用 internal/common/util")
+		if isUnder(file.Path, constant.ConvCheckPathDomain) && path == constant.ConvCheckImportUtil {
+			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainUtil)
 		}
-		if isUnder(file.Path, "internal/application") && isDeprecatedApplicationImport(path) {
-			c.report(file, imp, SeverityError, "architecture.deprecated_application_import", "Application 层禁止引用已废弃 internal/service/converter/proxy/agent/jwt/oauth2 包")
+		if isUnder(file.Path, constant.ConvCheckPathApp) && isDeprecatedApplicationImport(path) {
+			c.report(file, imp, enum.SeverityError, constant.RuleDeprecatedApplicationImport, constant.ConvCheckMsgDeprecatedAppImport)
 		}
 	}
 }
@@ -45,22 +48,22 @@ func (c *checker) checkArchitectureCalls(file SourceFile) {
 		if !ok {
 			return
 		}
-		if isUnder(file.Path, "internal/handler") && isHandlerDBCall(receiver, method) {
-			c.report(file, call, SeverityError, "architecture.handler_db", "Handler 层禁止直接操作 DAO/DB，业务逻辑应放在 Service 层")
+		if isUnder(file.Path, constant.ConvCheckPathHandler) && isHandlerDBCall(receiver, method) {
+			c.report(file, call, enum.SeverityError, constant.RuleHandlerDB, constant.ConvCheckMsgHandlerDB)
 		}
-		if isInterfaceLayerPath(file.Path) && receiver == "context" && (method == "Background" || method == "TODO") {
-			c.report(file, call, SeverityError, "architecture.root_context", "接口逻辑层禁止使用 context.Background()/context.TODO()，应从上层传递 context")
+		if isInterfaceLayerPath(file.Path) && receiver == constant.ConvCheckRecvContext && (method == constant.ConvCheckMethodBackground || method == constant.ConvCheckMethodTODO) {
+			c.report(file, call, enum.SeverityError, constant.RuleRootContext, constant.ConvCheckMsgRootContext)
 		}
 	})
 }
 
 func (c *checker) checkPassthroughWrappers(file SourceFile) {
-	if !isUnder(file.Path, "internal") || isUnder(file.Path, "internal/handler") {
+	if !isUnder(file.Path, constant.ConvCheckPathInternal) || isUnder(file.Path, constant.ConvCheckPathHandler) {
 		return
 	}
 	for _, decl := range file.File.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Recv == nil || fn.Body == nil || fn.Name.Name == "init" || len(fn.Body.List) != 1 {
+		if !ok || fn.Recv == nil || fn.Body == nil || fn.Name.Name == constant.ConvCheckFuncInit || len(fn.Body.List) != 1 {
 			continue
 		}
 		ret, ok := fn.Body.List[0].(*ast.ReturnStmt)
@@ -74,19 +77,19 @@ func (c *checker) checkPassthroughWrappers(file SourceFile) {
 		receiverName := receiverIdentName(fn)
 		callReceiver, callMethod, ok := selectorName(call.Fun)
 		if ok && receiverName != "" && callReceiver == receiverName && callMethod != "" {
-			c.report(file, fn, SeverityWarning, "architecture.passthrough", "发现透传封装函数，应将逻辑内联或合并方法")
+			c.report(file, fn, enum.SeverityWarning, constant.RulePassthrough, constant.ConvCheckMsgPassthrough)
 		}
 	}
 }
 
 func isDeprecatedApplicationImport(path string) bool {
 	deprecated := []string{
-		"github.com/hcd233/aris-proxy-api/internal/service",
-		"github.com/hcd233/aris-proxy-api/internal/converter",
-		"github.com/hcd233/aris-proxy-api/internal/proxy",
-		"github.com/hcd233/aris-proxy-api/internal/agent/",
-		"github.com/hcd233/aris-proxy-api/internal/jwt/",
-		"github.com/hcd233/aris-proxy-api/internal/oauth2/",
+		constant.ConvCheckDeprecatedImportService,
+		constant.ConvCheckDeprecatedImportConverter,
+		constant.ConvCheckDeprecatedImportProxy,
+		constant.ConvCheckDeprecatedImportAgent,
+		constant.ConvCheckDeprecatedImportJWT,
+		constant.ConvCheckDeprecatedImportOAuth2,
 	}
 	for _, item := range deprecated {
 		if strings.HasSuffix(item, "/") {
@@ -103,11 +106,11 @@ func isDeprecatedApplicationImport(path string) bool {
 }
 
 func isHandlerDBCall(receiver string, method string) bool {
-	if receiver == "dao" || receiver == "database" {
+	if receiver == constant.ConvCheckRecvDAO || receiver == constant.ConvCheckRecvDB {
 		return true
 	}
 	switch method {
-	case "Where", "Find", "Create", "Save":
+	case constant.ConvCheckMethodWhere, constant.ConvCheckMethodFind, constant.ConvCheckMethodCreate, constant.ConvCheckMethodSave:
 		return true
 	default:
 		return false
@@ -115,7 +118,7 @@ func isHandlerDBCall(receiver string, method string) bool {
 }
 
 func isInterfaceLayerPath(path string) bool {
-	return isUnder(path, "internal/handler") || isUnder(path, "internal/middleware") || isUnder(path, "internal/router") || isUnder(path, "internal/dto") || isUnder(path, "internal/application")
+	return isUnder(path, constant.ConvCheckPathHandler) || isUnder(path, constant.ConvCheckPathMiddleware) || isUnder(path, constant.ConvCheckPathRouter) || isUnder(path, constant.ConvCheckPathDTO) || isUnder(path, constant.ConvCheckPathApp)
 }
 
 func receiverIdentName(fn *ast.FuncDecl) string {

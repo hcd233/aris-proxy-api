@@ -5,6 +5,9 @@ import (
 	"go/token"
 	"strconv"
 	"strings"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 func (c *checker) checkMagicValues() {
@@ -28,32 +31,25 @@ func (c *checker) checkMagicLiterals(file SourceFile) {
 	})
 }
 
-const (
-	RuleMagicNumber     = "magic.number"
-	RuleMagicString     = "magic.string"
-	RuleMagicDuration   = "magic.duration"
-	RuleAnonymousStruct = "anonymous_struct"
-)
-
 func (c *checker) checkMagicBasicLit(file SourceFile, lit *ast.BasicLit) {
 	if isConstLiteral(file, lit) || isImportLiteral(file, lit) || isLoggerMessageLiteral(file, lit) || isStructTagLiteral(file, lit) {
 		return
 	}
 	if lit.Kind == token.INT {
 		value, err := strconv.Atoi(lit.Value)
-		if err == nil && value >= 30 {
-			c.report(file, lit, SeverityError, RuleMagicNumber, "magic number literal, should be extracted as a named constant")
+		if err == nil && value >= constant.ConvCheckMagicNumberThreshold {
+			c.report(file, lit, enum.SeverityError, constant.RuleMagicNumber, constant.ConvCheckMsgMagicNumber)
 		}
 		return
 	}
-	if lit.Kind != token.STRING || !isUnder(file.Path, "internal") || strings.HasPrefix(lit.Value, "`") {
+	if lit.Kind != token.STRING || !isUnder(file.Path, constant.ConvCheckPathInternal) || strings.HasPrefix(lit.Value, constant.ConvCheckBacktickPrefix) {
 		return
 	}
 	value, err := strconv.Unquote(lit.Value)
-	if err != nil || value == "" || len(value) < 2 || strings.HasPrefix(value, "[") || !isMagicStringContext(file, lit, value) {
+	if err != nil || value == constant.ConvCheckEmptyString || len(value) < 2 || strings.HasPrefix(value, constant.ConvCheckPrefixBracket) || !isMagicStringContext(file, lit) {
 		return
 	}
-	c.report(file, lit, SeverityError, RuleMagicString, "magic string literal, should be extracted as a named constant")
+	c.report(file, lit, enum.SeverityError, constant.RuleMagicString, constant.ConvCheckMsgMagicString)
 }
 
 func (c *checker) checkMagicDuration(file SourceFile, expr *ast.BinaryExpr) {
@@ -64,13 +60,13 @@ func (c *checker) checkMagicDuration(file SourceFile, expr *ast.BinaryExpr) {
 		return
 	}
 	receiver, _, ok := selectorName(expr.Y)
-	if ok && receiver == "time" {
-		c.report(file, expr, SeverityError, RuleMagicDuration, "magic duration multiplier, should be extracted as a named constant")
+	if ok && receiver == constant.ConvCheckRecvTime {
+		c.report(file, expr, enum.SeverityError, constant.RuleMagicDuration, constant.ConvCheckMsgMagicDuration)
 	}
 }
 
 func (c *checker) checkAnonymousStructs(file SourceFile) {
-	if !(isUnder(file.Path, "internal") || isUnder(file.Path, "cmd")) || strings.HasSuffix(file.Path, "_test.go") {
+	if !(isUnder(file.Path, constant.ConvCheckPathInternal) || isUnder(file.Path, constant.ConvCheckPathCMD)) || strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
 		return
 	}
 	ast.Inspect(file.File, func(node ast.Node) bool {
@@ -81,27 +77,24 @@ func (c *checker) checkAnonymousStructs(file SourceFile) {
 			if current.Fields == nil || len(current.Fields.List) == 0 {
 				return true
 			}
-			c.report(file, current, SeverityError, RuleAnonymousStruct, "anonymous struct is prohibited, extract as a named type in the package")
+			c.report(file, current, enum.SeverityError, constant.RuleAnonymousStruct, constant.ConvCheckMsgAnonymousStruct)
 		}
 		return true
 	})
 }
 
 func isMagicScanPath(path string) bool {
-	return isUnder(path, "internal") || isUnder(path, "cmd")
+	return isUnder(path, constant.ConvCheckPathInternal) || isUnder(path, constant.ConvCheckPathCMD)
 }
 
 func isMagicExcludedPath(path string) bool {
 	excluded := []string{
-		"internal/common/constant",
-		"internal/common/enum",
-		"internal/common/ierr",
-		"internal/common/model",
-		"internal/tool/lintconv",
-		"internal/enum",
-		"internal/config",
-		"internal/router",
-		"cmd/lintconv",
+		constant.ConvCheckPathConstant,
+		constant.ConvCheckPathCommonEnum,
+		constant.ConvCheckPathIerr,
+		constant.ConvCheckPathEnum,
+		constant.ConvCheckPathConfig,
+		constant.ConvCheckPathRouter,
 	}
 	for _, prefix := range excluded {
 		if isUnder(path, prefix) {
@@ -194,7 +187,7 @@ func parentOf(file SourceFile, target ast.Node) ast.Node {
 	return parent
 }
 
-func isMagicStringContext(file SourceFile, lit *ast.BasicLit, value string) bool {
+func isMagicStringContext(file SourceFile, lit *ast.BasicLit) bool {
 	if isIgnoredMagicStringLiteral(file, lit) {
 		return false
 	}
@@ -209,9 +202,9 @@ func isMagicStringContext(file SourceFile, lit *ast.BasicLit, value string) bool
 	case *ast.BinaryExpr:
 		return current.Op == token.EQL || current.Op == token.NEQ
 	case *ast.CompositeLit:
-		return true // strings.HasPrefix(value, "/")
+		return true
 	case *ast.KeyValueExpr:
-		return true //strings.HasPrefix(value, "/")
+		return true
 	case *ast.CallExpr:
 		return true
 	default:
@@ -232,19 +225,19 @@ func isIgnoredMagicStringLiteral(file SourceFile, lit *ast.BasicLit) bool {
 func isIgnoredMagicStringCall(call *ast.CallExpr) bool {
 	receiver, method, ok := selectorName(call.Fun)
 	if ok {
-		if receiver == "ierr" && (method == "Wrap" || method == "Wrapf") {
+		if receiver == constant.ConvCheckRecvIerr && (method == constant.ConvCheckIerrWrap || method == constant.ConvCheckIerrWrapf) {
 			return true
 		}
-		if receiver == "ierr" && (method == "New" || method == "Newf") {
+		if receiver == constant.ConvCheckRecvIerr && (method == constant.ConvCheckIerrNew || method == constant.ConvCheckIerrNewf) {
 			return true
 		}
-		if (receiver == "logger" || receiver == "log") && isLoggerMethod(method) {
+		if (receiver == constant.ConvCheckRecvLogger || receiver == constant.ConvCheckRecvLog) && isLoggerMethod(method) {
 			return true
 		}
-		if receiver == "zap" {
+		if receiver == constant.ConvCheckRecvZap {
 			return true
 		}
-		if receiver == "reflect" && method == "TypeFor" {
+		if receiver == constant.ConvCheckRecvReflect && method == constant.ConvCheckMethodTypeFor {
 			return true
 		}
 	}
@@ -254,7 +247,7 @@ func isIgnoredMagicStringCall(call *ast.CallExpr) bool {
 
 func isHumaSchemaNameArg(call *ast.CallExpr, lit *ast.BasicLit) bool {
 	method, ok := selectorMethodName(call.Fun)
-	if !ok || method != "Schema" || len(call.Args) < 3 {
+	if !ok || method != constant.ConvCheckMethodSchema || len(call.Args) < 3 {
 		return false
 	}
 	return call.Args[2] == lit

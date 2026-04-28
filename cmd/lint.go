@@ -21,7 +21,7 @@ var convLintCmd = &cobra.Command{
 	Long:  `Run the built-in AST-based convention checker to detect errors, logging issues, architecture violations, style problems, magic values, and test anti-patterns.`,
 	Run: func(_ *cobra.Command, args []string) {
 		result := lintconv.Run(args)
-		result.Log(logger.Logger())
+		result.Log()
 		if result.ErrorCount() > 0 {
 			os.Exit(1)
 		}

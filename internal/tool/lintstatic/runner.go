@@ -69,9 +69,9 @@ func (r Result) Log(logger *zap.Logger) {
 			continue
 		}
 		if strings.Contains(line, ":") {
-			logger.Warn("[LintStatic] static check issue", zap.String("detail", line))
+			logger.Warn("[LintStatic] Static check issue", zap.String("detail", line))
 		} else {
-			logger.Info("[LintStatic] static check info", zap.String("detail", line))
+			logger.Info("[LintStatic] Static check info", zap.String("detail", line))
 		}
 	}
 }

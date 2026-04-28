@@ -3,7 +3,7 @@
 //	update 2026-03-18 10:00:00
 package model
 
-import "github.com/hcd233/aris-proxy-api/internal/dto"
+import "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 
 // Tool 工具数据库模型
 //
@@ -11,7 +11,7 @@ import "github.com/hcd233/aris-proxy-api/internal/dto"
 //	@update 2026-03-18 10:00:00
 type Tool struct {
 	BaseModel
-	ID       uint             `json:"id" gorm:"column:id;primary_key;auto_increment;comment:工具ID"`
-	Tool     *dto.UnifiedTool `json:"tool" gorm:"column:tool;not null;comment:工具;serializer:json"`
-	CheckSum string           `json:"check_sum" gorm:"column:check_sum;not null;default:'';comment:校验和"`
+	ID       uint            `json:"id" gorm:"column:id;primary_key;auto_increment;comment:工具ID"`
+	Tool     *vo.UnifiedTool `json:"tool" gorm:"column:tool;not null;comment:工具;serializer:json"`
+	CheckSum string          `json:"check_sum" gorm:"column:check_sum;not null;default:'';comment:校验和"`
 }
