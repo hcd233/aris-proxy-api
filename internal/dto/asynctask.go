@@ -56,7 +56,7 @@ type ScoreTask struct {
 // ModelCallAuditTask 模型调用审计任务
 //
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-04-29 10:00:00
 type ModelCallAuditTask struct {
 	Ctx                      context.Context
 	ModelID                  uint
@@ -78,13 +78,14 @@ type ModelCallAuditTask struct {
 //	@receiver t *ModelCallAuditTask
 //	@param usage *OpenAICompletionUsage
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-04-29 10:00:00
 func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsage) {
 	if usage == nil {
 		return
 	}
 	t.InputTokens = usage.PromptTokens
 	t.OutputTokens = usage.CompletionTokens
+	t.CacheReadInputTokens = lo.FromPtr(usage.PromptCacheHitTokens)
 }
 
 // SetTokensFromAnthropicUsage 从 Anthropic Message Usage 设置 token 计数
@@ -92,7 +93,7 @@ func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsa
 //	@receiver t *ModelCallAuditTask
 //	@param msg *AnthropicMessage
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-04-29 10:00:00
 func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) {
 	if msg == nil || msg.Usage == nil {
 		return
@@ -101,6 +102,9 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	t.OutputTokens = msg.Usage.OutputTokens
 	t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
 	t.CacheReadInputTokens = lo.FromPtr(msg.Usage.CacheReadInputTokens)
+	if msg.Usage.PromptCacheHitTokens != nil {
+		t.CacheReadInputTokens = lo.FromPtr(msg.Usage.PromptCacheHitTokens)
+	}
 }
 
 // SetTokensFromResponseUsage 从 Response API 响应设置 token 计数
@@ -108,7 +112,7 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 //	@receiver t *ModelCallAuditTask
 //	@param rsp *OpenAICreateResponseRsp
 //	@author centonhuang
-//	@update 2026-04-18 15:00:00
+//	@update 2026-04-29 15:00:00
 func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateResponseRsp) {
 	if rsp == nil || rsp.Usage == nil {
 		return
@@ -117,6 +121,9 @@ func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateRespons
 	t.OutputTokens = rsp.Usage.OutputTokens
 	if rsp.Usage.InputTokensDetails != nil {
 		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
+	}
+	if rsp.Usage.PromptCacheHitTokens != nil {
+		t.CacheReadInputTokens = lo.FromPtr(rsp.Usage.PromptCacheHitTokens)
 	}
 }
 
