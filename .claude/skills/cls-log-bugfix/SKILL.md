@@ -1,18 +1,11 @@
 ---
 name: cls-log-bugfix
-description: >-
-  Debug and fix bugs using CLS (Tencent Cloud Log Service) logs for the aris-proxy-api project (region: 广州/ap-guangzhou). 
-  MUST use this skill whenever the user reports an error, bug, or unexpected behavior, especially when they mention 
-  CLS logs, log entries, error messages from production, traceId, or ask you to investigate a bug "from the logs". 
-  This skill guides a focused workflow: extract error keywords → search CLS logs → trace request via traceId → 
-  correlate with code → design test cases → fix bug → verify with tests. Even if the user just says "this error happened" 
-  without mentioning CLS, check whether this skill applies — any production bug in this project should use CLS logs 
-  as the starting point for investigation.
+description: Use when debugging aris-proxy-api bugs, production errors, unexpected behavior, CLS logs, traceId/X-Trace-Id, E2E failures, or user-provided error messages.
 ---
 
 # CLS 日志排障流程 (cls-log-bugfix)
 
-当你收到用户报告的错误信息时，按照以下四步流程进行排障。
+用于线上/准线上 bug、用户报错、E2E 失败和日志排查；普通需求开发不要默认进入本流程。CLS 地域固定为 `ap-guangzhou`。按照“查日志 → 追 trace → 关联代码 → 补回归 → 修复验证”的闭环执行。
 
 ## 前置准备
 
