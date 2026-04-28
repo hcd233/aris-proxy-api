@@ -43,6 +43,7 @@ func HeaderPassthroughMiddleware() func(ctx huma.Context, next func(huma.Context
 			}
 		})
 		ctx = huma.WithValue(ctx, constant.CtxKeyPassthroughHeaders, passthroughHeaders)
+		ctx = huma.WithValue(ctx, constant.CtxKeyPassthroughResponseHeaders, make(map[string]string, 4))
 		next(ctx)
 	}
 }

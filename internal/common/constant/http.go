@@ -30,6 +30,8 @@ const (
 	HTTPHeaderUserAgent           = "User-Agent"
 	HTTPHeaderLastModified        = "Last-Modified"
 	HTTPHeaderETag                = "ETag"
+	HTTPHeaderCookie              = "Cookie"
+	HTTPHeaderSetCookie           = "Set-Cookie"
 	HTTPHeaderTraceID             = "X-Trace-Id"
 	HTTPHeaderXRateLimitLimit     = "X-RateLimit-Limit"
 	HTTPHeaderXRateLimitRemaining = "X-RateLimit-Remaining"

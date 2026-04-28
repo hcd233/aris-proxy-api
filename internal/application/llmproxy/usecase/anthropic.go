@@ -171,7 +171,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 
 // forwardMessageNativeUnary Anthropic 原生非流式
 func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
-	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
@@ -302,7 +302,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 
 // forwardMessageViaOpenAIUnary OpenAI 上游非流式 → Anthropic JSON
 func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
-	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()

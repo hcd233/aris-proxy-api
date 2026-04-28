@@ -90,7 +90,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, log *za
 
 // forwardResponseNativeUnary Response API 原生非流式（直写 raw bytes）
 func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, body []byte) *huma.StreamResponse {
-	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		respBody, err := u.openAIProxy.ForwardCreateResponse(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
@@ -101,6 +101,11 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap
 		}
 
 		replaced := transport.ReplaceModelInBody(respBody, req.Body.Model)
+		if headers := util.GetPassthroughResponseHeaders(ctx); headers != nil {
+			for k, v := range headers {
+				writer.HumaCtx.SetHeader(k, v)
+			}
+		}
 		writer.HumaCtx.SetStatus(fiber.StatusOK)
 		writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 		_, _ = writer.HumaCtx.BodyWriter().Write(replaced)
@@ -206,7 +211,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, l
 
 // forwardResponseViaAnthropicUnary Anthropic 上游非流式 → OpenAI chat JSON（Response API 跨协议变体）
 func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
-	return util.WrapJSONResponse(func(writer util.JSONResponseWriter) {
+	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
