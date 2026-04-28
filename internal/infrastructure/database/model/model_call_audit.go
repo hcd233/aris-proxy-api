@@ -3,7 +3,7 @@ package model
 // ModelCallAudit 模型调用审计数据库模型
 //
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-04-29 10:00:00
 type ModelCallAudit struct {
 	BaseModel
 	APIKeyID                 uint   `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_api_key_id_created_at,priority:1"`
