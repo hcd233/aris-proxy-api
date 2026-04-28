@@ -15,8 +15,7 @@ import (
 //	@author centonhuang
 //	@update 2026-03-17 10:00:00
 func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.AnthropicHandler) {
-	anthropicGroup.UseMiddleware(middleware.APIKeyMiddleware())
-	anthropicGroup.UseMiddleware(middleware.HeaderPassthroughMiddleware())
+	anthropicGroup.UseMiddleware(middleware.APIKeyMiddleware(), middleware.HeaderPassthroughMiddleware())
 
 	huma.Register(anthropicGroup, huma.Operation{
 		OperationID: "anthropicListModels",
