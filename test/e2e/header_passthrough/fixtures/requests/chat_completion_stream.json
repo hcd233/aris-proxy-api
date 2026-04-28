@@ -1,0 +1,10 @@
+{
+  "model": "gpt-4o-mini",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Hello"}
+  ],
+  "stream": true,
+  "max_tokens": 10,
+  "stream_options": {"include_usage": true}
+}

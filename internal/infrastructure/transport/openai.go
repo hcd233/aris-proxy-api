@@ -164,6 +164,14 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 		log.Error("[OpenAIProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create request")
 	}
+
+	// 透传客户端请求头
+	if headers := util.GetPassthroughHeaders(ctx); headers != nil {
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+	}
+
 	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
 
@@ -261,6 +269,14 @@ func (p *openAIProxy) sendResponseRequest(ctx context.Context, ep UpstreamEndpoi
 		log.Error("[OpenAIProxy] New response api request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create response api request")
 	}
+
+	// 透传客户端请求头
+	if headers := util.GetPassthroughHeaders(ctx); headers != nil {
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+	}
+
 	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
 

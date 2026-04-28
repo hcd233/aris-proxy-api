@@ -16,6 +16,7 @@ import (
 //	@update 2026-03-06 10:00:00
 func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler) {
 	openaiGroup.UseMiddleware(middleware.APIKeyMiddleware())
+	openaiGroup.UseMiddleware(middleware.HeaderPassthroughMiddleware())
 
 	huma.Register(openaiGroup, huma.Operation{
 		OperationID: "listModels",
