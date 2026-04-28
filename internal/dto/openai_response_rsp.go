@@ -37,11 +37,13 @@ type OpenAICreateResponseRsp struct {
 
 // ResponseUsage Response API 用量
 type ResponseUsage struct {
-	InputTokens         int                         `json:"input_tokens" doc:"输入 token 数"`
-	InputTokensDetails  *ResponseInputTokensDetail  `json:"input_tokens_details,omitempty" doc:"输入 token 明细"`
-	OutputTokens        int                         `json:"output_tokens" doc:"输出 token 数"`
-	OutputTokensDetails *ResponseOutputTokensDetail `json:"output_tokens_details,omitempty" doc:"输出 token 明细"`
-	TotalTokens         int                         `json:"total_tokens" doc:"总 token 数"`
+	InputTokens           int                         `json:"input_tokens" doc:"输入 token 数"`
+	InputTokensDetails    *ResponseInputTokensDetail  `json:"input_tokens_details,omitempty" doc:"输入 token 明细"`
+	OutputTokens          int                         `json:"output_tokens" doc:"输出 token 数"`
+	OutputTokensDetails   *ResponseOutputTokensDetail `json:"output_tokens_details,omitempty" doc:"输出 token 明细"`
+	TotalTokens           int                         `json:"total_tokens" doc:"总 token 数"`
+	PromptCacheHitTokens  *int                        `json:"prompt_cache_hit_tokens,omitempty" doc:"缓存命中的token数"`
+	PromptCacheMissTokens *int                        `json:"prompt_cache_miss_tokens,omitempty" doc:"缓存未命中的token数"`
 }
 
 // ResponseInputTokensDetail Response API 输入 token 明细
