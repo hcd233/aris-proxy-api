@@ -55,6 +55,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, user.Name)
 		ctx = huma.WithValue(ctx, constant.CtxKeyAPIKeyID, apiKey.ID)
 		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header(constant.HTTPHeaderUserAgent))
+
 		next(ctx)
 	}
 }

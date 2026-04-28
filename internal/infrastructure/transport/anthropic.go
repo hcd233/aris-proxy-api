@@ -176,6 +176,14 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 		log.Error("[AnthropicProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create request")
 	}
+
+	// 透传客户端请求头
+	if headers := util.GetPassthroughHeaders(ctx); headers != nil {
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+	}
+
 	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 	req.Header.Set(constant.HTTPHeaderAPIKey, ep.APIKey)
 	req.Header.Set(constant.HTTPHeaderAnthropicVersion, constant.AnthropicAPIVersion)

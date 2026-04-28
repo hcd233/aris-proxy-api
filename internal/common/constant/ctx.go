@@ -31,4 +31,8 @@ const (
 	// CtxKeyAPIKeyID API Key ID（用于日志追踪）
 	//	@update 2026-04-08 10:00:00
 	CtxKeyAPIKeyID enum.CtxKey = "apiKeyID"
+
+	// CtxKeyPassthroughHeaders 透传到上游的请求头
+	//	@update 2026-04-28 10:00:00
+	CtxKeyPassthroughHeaders enum.CtxKey = "passthroughHeaders"
 )
