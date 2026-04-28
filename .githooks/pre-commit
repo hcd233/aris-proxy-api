@@ -74,7 +74,7 @@ printf "$PASS go test\n"
 # --------------------------------------------------------------------------
 printf "$INFO Running lint-conv...\n"
 
-if ! bash script/lint-conventions.sh 2>&1; then
+if ! $GO_BIN run main.go lint conv ./... 2>&1; then
     fail "lint-conv failed. Please fix the convention violations above before committing."
 fi
 printf "$PASS lint-conv\n"

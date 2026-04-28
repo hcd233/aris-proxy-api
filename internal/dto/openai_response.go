@@ -23,9 +23,8 @@ import (
 // Response API reasoning summary/generate_summary 常量
 // ResponseReasoningConfig reasoning 配置对象
 type ResponseReasoningConfig struct {
-	Effort          string `json:"effort,omitempty" doc:"推理强度: none/minimal/low/medium/high/xhigh"`
-	GenerateSummary string `json:"generate_summary,omitempty" doc:"[Deprecated] 摘要策略: auto/concise/detailed"`
-	Summary         string `json:"summary,omitempty" doc:"摘要策略: auto/concise/detailed"`
+	Effort  string `json:"effort,omitempty" doc:"推理强度: none/minimal/low/medium/high/xhigh"`
+	Summary string `json:"summary,omitempty" doc:"摘要策略: auto/concise/detailed"`
 }
 
 // ==================== text 字段 ====================

@@ -109,4 +109,10 @@ const (
 	UserNameBlacklistAdministrator = "administrator"
 	UserNameBlacklistSuperuser     = "superuser"
 	UserNameBlacklistMe            = "me"
+
+	// Error message templates
+	ErrorModelTemplate              = "code: %d, message: %s"
+	UpstreamErrorTemplate           = "upstream returned status %d"
+	UpstreamConnectionErrorTemplate = "upstream connection error: %v"
+	UpstreamConnectionErrorMsg      = "upstream connection error"
 )

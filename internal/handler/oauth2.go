@@ -8,7 +8,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -22,9 +21,6 @@ type Oauth2Handler interface {
 	HandleLogin(ctx context.Context, req *dto.LoginReq) (*dto.HTTPResponse[*dto.LoginResp], error)
 	HandleCallback(ctx context.Context, req *dto.CallbackReq) (*dto.HTTPResponse[*dto.CallbackRsp], error)
 }
-
-// Oauth2Platforms OAuth2 平台映射（github/google 等）
-type Oauth2Platforms map[string]oauth2service.Platform
 
 // Oauth2Dependencies OAuth2Handler 依赖项（用于依赖注入）
 //

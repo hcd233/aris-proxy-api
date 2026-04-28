@@ -257,9 +257,6 @@ type AnthropicContentBlock struct {
 	CacheControl *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
 }
 
-// anthropicContentBlockWire aliases AnthropicContentBlock for default JSON marshaling without MarshalJSON recursion.
-type anthropicContentBlockWire AnthropicContentBlock
-
 // anthropicThinkingContentBlockWire is the on-wire JSON shape for thinking blocks.
 // thinking uses json:"thinking" without omitempty so the key is always present (including "").
 type anthropicThinkingContentBlockWire struct {
@@ -329,6 +326,7 @@ func (b *AnthropicContentBlock) MarshalJSON() ([]byte, error) {
 	case enum.AnthropicContentBlockTypeThinking:
 		return sonic.Marshal(newAnthropicThinkingContentBlockWire(b))
 	default:
+		type anthropicContentBlockWire AnthropicContentBlock
 		return sonic.Marshal((*anthropicContentBlockWire)(b))
 	}
 }

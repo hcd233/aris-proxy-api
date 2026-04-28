@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
 )
@@ -39,8 +40,8 @@ import (
 //	@param items []*ResponseInputItem
 //	@return []*UnifiedMessage
 //	@return error
-func FromResponseAPIInputItems(items []*ResponseInputItem) ([]*UnifiedMessage, error) {
-	var msgs []*UnifiedMessage
+func FromResponseAPIInputItems(items []*ResponseInputItem) ([]*vo.UnifiedMessage, error) {
+	var msgs []*vo.UnifiedMessage
 	for i, item := range items {
 		if item == nil {
 			continue
@@ -61,8 +62,8 @@ func FromResponseAPIInputItems(items []*ResponseInputItem) ([]*UnifiedMessage, e
 //	@param items []*ResponseInputItem
 //	@return []*UnifiedMessage
 //	@return error
-func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*UnifiedMessage, error) {
-	var msgs []*UnifiedMessage
+func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*vo.UnifiedMessage, error) {
+	var msgs []*vo.UnifiedMessage
 	var pendingReasoning strings.Builder
 	for i, item := range items {
 		if item == nil {
@@ -96,7 +97,7 @@ func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*UnifiedMessage, 
 
 	// 推理内容未挂接到任何 assistant（例如响应只有 reasoning 项）：单独落一条
 	if pendingReasoning.Len() > 0 {
-		msgs = append(msgs, &UnifiedMessage{
+		msgs = append(msgs, &vo.UnifiedMessage{
 			Role:             enum.RoleAssistant,
 			ReasoningContent: pendingReasoning.String(),
 		})
@@ -105,7 +106,7 @@ func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*UnifiedMessage, 
 }
 
 // fromResponseAPIItem 转换单个 Response API item，无法映射时返回 (nil, nil)
-func fromResponseAPIItem(item *ResponseInputItem) (*UnifiedMessage, error) {
+func fromResponseAPIItem(item *ResponseInputItem) (*vo.UnifiedMessage, error) {
 	switch item.Type {
 	case "", enum.ResponseInputItemTypeMessage:
 		return fromResponseAPIMessage(item)
@@ -123,20 +124,20 @@ func fromResponseAPIItem(item *ResponseInputItem) (*UnifiedMessage, error) {
 }
 
 // fromResponseAPIMessage 转换 message 类型 item（EasyInputMessage / Message / OutputMessage 共用）
-func fromResponseAPIMessage(item *ResponseInputItem) (*UnifiedMessage, error) {
+func fromResponseAPIMessage(item *ResponseInputItem) (*vo.UnifiedMessage, error) {
 	role := resolveRole(item.Role)
-	um := &UnifiedMessage{Role: role}
+	um := &vo.UnifiedMessage{Role: role}
 	if item.Content == nil {
 		return um, nil
 	}
 
 	// content 是字符串形态
 	if len(item.Content.Parts) == 0 {
-		um.Content = &UnifiedContent{Text: item.Content.Text}
+		um.Content = &vo.UnifiedContent{Text: item.Content.Text}
 		return um, nil
 	}
 
-	parts := make([]*UnifiedContentPart, 0, len(item.Content.Parts))
+	parts := make([]*vo.UnifiedContentPart, 0, len(item.Content.Parts))
 	var refusal string
 	for i, p := range item.Content.Parts {
 		if p == nil {
@@ -144,7 +145,7 @@ func fromResponseAPIMessage(item *ResponseInputItem) (*UnifiedMessage, error) {
 		}
 		switch p.Type {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
-			parts = append(parts, &UnifiedContentPart{
+			parts = append(parts, &vo.UnifiedContentPart{
 				Type: enum.ContentPartTypeText,
 				Text: lo.FromPtr(p.Text),
 			})
@@ -157,13 +158,13 @@ func fromResponseAPIMessage(item *ResponseInputItem) (*UnifiedMessage, error) {
 				refusal = refusal + "\n" + text
 			}
 		case enum.ResponseContentTypeInputImage:
-			parts = append(parts, &UnifiedContentPart{
+			parts = append(parts, &vo.UnifiedContentPart{
 				Type:        enum.ContentPartTypeImageURL,
 				ImageURL:    lo.FromPtr(p.ImageURL),
 				ImageDetail: lo.FromPtr(p.Detail),
 			})
 		case enum.ResponseContentTypeInputFile:
-			parts = append(parts, &UnifiedContentPart{
+			parts = append(parts, &vo.UnifiedContentPart{
 				Type:     enum.ContentPartTypeFile,
 				FileData: lo.FromPtr(p.FileData),
 				FileID:   lo.FromPtr(p.FileID),
@@ -182,21 +183,20 @@ func fromResponseAPIMessage(item *ResponseInputItem) (*UnifiedMessage, error) {
 		}
 	}
 	if len(parts) > 0 {
-		um.Content = &UnifiedContent{Parts: parts}
+		um.Content = &vo.UnifiedContent{Parts: parts}
 	}
-	um.Refusal = refusal
+
 	return um, nil
 }
 
-// fromResponseAPIFunctionCall 将 function_call / custom_tool_call 转为 assistant tool_calls
-func fromResponseAPIFunctionCall(item *ResponseInputItem) *UnifiedMessage {
+func fromResponseAPIFunctionCall(item *ResponseInputItem) *vo.UnifiedMessage {
 	args := item.Arguments
 	if args == "" {
 		args = item.Input
 	}
-	return &UnifiedMessage{
+	return &vo.UnifiedMessage{
 		Role: enum.RoleAssistant,
-		ToolCalls: []*UnifiedToolCall{{
+		ToolCalls: []*vo.UnifiedToolCall{{
 			ID:        item.CallID,
 			Name:      item.Name,
 			Arguments: args,
@@ -205,8 +205,8 @@ func fromResponseAPIFunctionCall(item *ResponseInputItem) *UnifiedMessage {
 }
 
 // fromResponseAPIFunctionCallOutput 将 function_call_output / custom_tool_call_output 转为 tool 角色消息
-func fromResponseAPIFunctionCallOutput(item *ResponseInputItem) *UnifiedMessage {
-	um := &UnifiedMessage{
+func fromResponseAPIFunctionCallOutput(item *ResponseInputItem) *vo.UnifiedMessage {
+	um := &vo.UnifiedMessage{
 		Role:       enum.RoleTool,
 		ToolCallID: item.CallID,
 	}
@@ -217,30 +217,30 @@ func fromResponseAPIFunctionCallOutput(item *ResponseInputItem) *UnifiedMessage 
 	switch {
 	case out.FunctionOutput != nil:
 		if len(out.FunctionOutput.Parts) > 0 {
-			parts := make([]*UnifiedContentPart, 0, len(out.FunctionOutput.Parts))
+			parts := make([]*vo.UnifiedContentPart, 0, len(out.FunctionOutput.Parts))
 			for _, p := range out.FunctionOutput.Parts {
 				if p == nil {
 					continue
 				}
 				if p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText {
-					parts = append(parts, &UnifiedContentPart{Type: enum.ContentPartTypeText, Text: lo.FromPtr(p.Text)})
+					parts = append(parts, &vo.UnifiedContentPart{Type: enum.ContentPartTypeText, Text: lo.FromPtr(p.Text)})
 				}
 			}
 			if len(parts) > 0 {
-				um.Content = &UnifiedContent{Parts: parts}
+				um.Content = &vo.UnifiedContent{Parts: parts}
 				return um
 			}
 		}
-		um.Content = &UnifiedContent{Text: out.FunctionOutput.Text}
+		um.Content = &vo.UnifiedContent{Text: out.FunctionOutput.Text}
 	case out.Text != "":
-		um.Content = &UnifiedContent{Text: out.Text}
+		um.Content = &vo.UnifiedContent{Text: out.Text}
 	}
 	return um
 }
 
 // fromResponseAPIReasoning 将 reasoning item 转为独立 assistant 消息
-func fromResponseAPIReasoning(item *ResponseInputItem) *UnifiedMessage {
-	return &UnifiedMessage{
+func fromResponseAPIReasoning(item *ResponseInputItem) *vo.UnifiedMessage {
+	return &vo.UnifiedMessage{
 		Role:             enum.RoleAssistant,
 		ReasoningContent: collectReasoningText(item),
 	}
@@ -289,19 +289,19 @@ func resolveRole(role string) enum.Role {
 //
 //	@param tool *ResponseTool
 //	@return *UnifiedTool
-func FromResponseAPITool(tool *ResponseTool) *UnifiedTool {
+func FromResponseAPITool(tool *ResponseTool) *vo.UnifiedTool {
 	if tool == nil {
 		return nil
 	}
 	switch {
 	case tool.Function != nil:
-		return &UnifiedTool{
+		return &vo.UnifiedTool{
 			Name:        tool.Function.Name,
 			Description: tool.Function.Description,
-			Parameters:  tool.Function.Parameters,
+			Parameters:  &tool.Function.Parameters.JSONSchemaProperty,
 		}
 	case tool.Custom != nil:
-		return &UnifiedTool{
+		return &vo.UnifiedTool{
 			Name:        tool.Custom.Name,
 			Description: tool.Custom.Description,
 		}

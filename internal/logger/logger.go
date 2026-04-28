@@ -39,22 +39,22 @@ func WithCtx(ctx context.Context) *zap.Logger {
 	logger := defaultLogger
 	if traceID := ctx.Value(constant.CtxKeyTraceID); traceID != nil {
 		if s, ok := traceID.(string); ok {
-			logger = logger.With(zap.String(constant.CtxKeyTraceID, s))
+			logger = logger.With(zap.String(string(constant.CtxKeyTraceID), s))
 		}
 	}
 	if userID := ctx.Value(constant.CtxKeyUserID); userID != nil {
 		if u, ok := userID.(uint); ok {
-			logger = logger.With(zap.Uint(constant.CtxKeyUserID, u))
+			logger = logger.With(zap.Uint(string(constant.CtxKeyUserID), u))
 		}
 	}
 	if userName := ctx.Value(constant.CtxKeyUserName); userName != nil {
 		if s, ok := userName.(string); ok {
-			logger = logger.With(zap.String(constant.CtxKeyUserName, s))
+			logger = logger.With(zap.String(string(constant.CtxKeyUserName), s))
 		}
 	}
 	if apiKeyID := ctx.Value(constant.CtxKeyAPIKeyID); apiKeyID != nil {
 		if id, ok := apiKeyID.(uint); ok {
-			logger = logger.With(zap.Uint(constant.CtxKeyAPIKeyID, id))
+			logger = logger.With(zap.Uint(string(constant.CtxKeyAPIKeyID), id))
 		}
 	}
 	return logger
@@ -70,22 +70,22 @@ func WithFCtx(c *fiber.Ctx) *zap.Logger {
 	logger := defaultLogger
 	if traceID := c.Locals(constant.CtxKeyTraceID); traceID != nil {
 		if s, ok := traceID.(string); ok {
-			logger = logger.With(zap.String(constant.CtxKeyTraceID, s))
+			logger = logger.With(zap.String(string(constant.CtxKeyTraceID), s))
 		}
 	}
 	if userID := c.Locals(constant.CtxKeyUserID); userID != nil {
 		if u, ok := userID.(uint); ok {
-			logger = logger.With(zap.Uint(constant.CtxKeyUserID, u))
+			logger = logger.With(zap.Uint(string(constant.CtxKeyUserID), u))
 		}
 	}
 	if userName := c.Locals(constant.CtxKeyUserName); userName != nil {
 		if s, ok := userName.(string); ok {
-			logger = logger.With(zap.String(constant.CtxKeyUserName, s))
+			logger = logger.With(zap.String(string(constant.CtxKeyUserName), s))
 		}
 	}
 	if apiKeyID := c.Locals(constant.CtxKeyAPIKeyID); apiKeyID != nil {
 		if id, ok := apiKeyID.(uint); ok {
-			logger = logger.With(zap.Uint(constant.CtxKeyAPIKeyID, id))
+			logger = logger.With(zap.Uint(string(constant.CtxKeyAPIKeyID), id))
 		}
 	}
 	return logger

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/tool/lintconv"
 )
 
@@ -38,12 +39,12 @@ func TestRunReportsExpectedDiagnostics(t *testing.T) {
 
 			result := lintconv.Run([]string{root})
 			for _, want := range tc.Want {
-				if !hasDiagnostic(result.Diagnostics, want.Rule, lintconv.Severity(want.Severity)) {
+				if !hasDiagnostic(result.Diagnostics, want.Rule, enum.Severity(want.Severity)) {
 					t.Fatalf("missing diagnostic rule=%s severity=%s in %#v", want.Rule, want.Severity, result.Diagnostics)
 				}
 			}
 			for _, nw := range tc.NotWant {
-				if hasDiagnostic(result.Diagnostics, nw.Rule, lintconv.Severity(nw.Severity)) {
+				if hasDiagnostic(result.Diagnostics, nw.Rule, enum.Severity(nw.Severity)) {
 					t.Fatalf("unexpected diagnostic rule=%s severity=%s in %#v", nw.Rule, nw.Severity, result.Diagnostics)
 				}
 			}
@@ -53,9 +54,9 @@ func TestRunReportsExpectedDiagnostics(t *testing.T) {
 
 func TestResultCountsBySeverity(t *testing.T) {
 	result := lintconv.Result{Diagnostics: []lintconv.Diagnostic{
-		{Rule: "a", Severity: lintconv.SeverityError},
-		{Rule: "b", Severity: lintconv.SeverityWarning},
-		{Rule: "c", Severity: lintconv.SeverityWarning},
+		{Rule: "a", Severity: enum.SeverityError},
+		{Rule: "b", Severity: enum.SeverityWarning},
+		{Rule: "c", Severity: enum.SeverityWarning},
 	}}
 	if result.ErrorCount() != 1 {
 		t.Fatalf("ErrorCount() = %d, want 1", result.ErrorCount())
@@ -97,7 +98,7 @@ func writeFixtureFile(t *testing.T, root string, file fixtureFile) {
 	}
 }
 
-func hasDiagnostic(diagnostics []lintconv.Diagnostic, rule string, severity lintconv.Severity) bool {
+func hasDiagnostic(diagnostics []lintconv.Diagnostic, rule string, severity enum.Severity) bool {
 	for _, diagnostic := range diagnostics {
 		if diagnostic.Rule == rule && diagnostic.Severity == severity {
 			return true

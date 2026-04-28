@@ -13,6 +13,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
@@ -83,13 +84,14 @@ func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, log *zap.Lo
 //	@receiver u *openAIUseCase
 //	@param log *zap.Logger
 //	@param req *dto.OpenAIChatCompletionRequest
-//	@return []*dto.UnifiedMessage
-//	@return []*dto.UnifiedTool
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-26 12:00:00
-func (u *openAIUseCase) convertRequestMessages(log *zap.Logger, req *dto.OpenAIChatCompletionRequest) ([]*dto.UnifiedMessage, []*dto.UnifiedTool, error) {
-	unifiedMessages := make([]*dto.UnifiedMessage, 0, len(req.Body.Messages))
+//
+// @return vo.UnifiedMessage list
+// @return vo.UnifiedTool list
+// @return error
+// @author centonhuang
+// @update 2026-04-26 12:00:00
+func (u *openAIUseCase) convertRequestMessages(log *zap.Logger, req *dto.OpenAIChatCompletionRequest) ([]*vo.UnifiedMessage, []*vo.UnifiedTool, error) {
+	unifiedMessages := make([]*vo.UnifiedMessage, 0, len(req.Body.Messages))
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromOpenAIMessage(msg)
 		if err != nil {
@@ -98,7 +100,7 @@ func (u *openAIUseCase) convertRequestMessages(log *zap.Logger, req *dto.OpenAIC
 		}
 		unifiedMessages = append(unifiedMessages, um)
 	}
-	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *dto.UnifiedTool {
+	unifiedTools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *vo.UnifiedTool {
 		return dto.FromOpenAITool(&tool)
 	})
 	return unifiedMessages, unifiedTools, nil
@@ -144,11 +146,11 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, log *zap.Logge
 //
 //	@param log *zap.Logger
 //	@param rsp *dto.OpenAICreateResponseRsp
-//	@return []*dto.UnifiedMessage 转换后的统一消息列表
+//	@return []*vo.UnifiedMessage 转换后的统一消息列表
 //	@return bool 是否转换成功
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func convertResponseOutput(log *zap.Logger, rsp *dto.OpenAICreateResponseRsp) ([]*dto.UnifiedMessage, bool) {
+func convertResponseOutput(log *zap.Logger, rsp *dto.OpenAICreateResponseRsp) ([]*vo.UnifiedMessage, bool) {
 	outputMsgs, err := dto.FromResponseAPIOutputItems(rsp.Output)
 	if err != nil {
 		log.Error("[OpenAIUseCase] Failed to convert response output items", zap.Error(err))
@@ -189,13 +191,13 @@ func (u *openAIUseCase) storeResponseFromAnthropicMsg(ctx context.Context, log *
 // buildResponseRequestUnifiedMessages Response API 请求 → UnifiedMessage 前置列表
 //
 // 返回 (messages, ok)：ok=false 表示 input.Items 转换失败；ok=true 时 messages 可能为空。
-func buildResponseRequestUnifiedMessages(log *zap.Logger, req *dto.OpenAICreateResponseRequest) ([]*dto.UnifiedMessage, bool) {
-	var messages []*dto.UnifiedMessage
+func buildResponseRequestUnifiedMessages(log *zap.Logger, req *dto.OpenAICreateResponseRequest) ([]*vo.UnifiedMessage, bool) {
+	var messages []*vo.UnifiedMessage
 
 	if req.Body.Instructions != nil && *req.Body.Instructions != "" {
-		messages = append(messages, &dto.UnifiedMessage{
+		messages = append(messages, &vo.UnifiedMessage{
 			Role:    enum.RoleSystem,
-			Content: &dto.UnifiedContent{Text: *req.Body.Instructions},
+			Content: &vo.UnifiedContent{Text: *req.Body.Instructions},
 		})
 	}
 
@@ -208,9 +210,9 @@ func buildResponseRequestUnifiedMessages(log *zap.Logger, req *dto.OpenAICreateR
 			}
 			messages = append(messages, inputMsgs...)
 		} else if req.Body.Input.Text != "" {
-			messages = append(messages, &dto.UnifiedMessage{
+			messages = append(messages, &vo.UnifiedMessage{
 				Role:    enum.RoleUser,
-				Content: &dto.UnifiedContent{Text: req.Body.Input.Text},
+				Content: &vo.UnifiedContent{Text: req.Body.Input.Text},
 			})
 		}
 	}
@@ -219,8 +221,8 @@ func buildResponseRequestUnifiedMessages(log *zap.Logger, req *dto.OpenAICreateR
 }
 
 // buildResponseUnifiedTools Response API 请求 tools → UnifiedTool
-func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*dto.UnifiedTool {
-	result := make([]*dto.UnifiedTool, 0, len(tools))
+func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*vo.UnifiedTool {
+	result := make([]*vo.UnifiedTool, 0, len(tools))
 	for _, tool := range tools {
 		if ut := dto.FromResponseAPITool(tool); ut != nil {
 			result = append(result, ut)
@@ -232,20 +234,20 @@ func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*dto.UnifiedTool {
 // anthropicResponseContentToUnified Anthropic content blocks → UnifiedMessage 列表
 //
 // 任何 tool_use 块 marshal 失败 → 放弃整条响应落盘（避免残缺消息写入）。
-func anthropicResponseContentToUnified(log *zap.Logger, blocks []*dto.AnthropicContentBlock) ([]*dto.UnifiedMessage, bool) {
-	var messages []*dto.UnifiedMessage
+func anthropicResponseContentToUnified(log *zap.Logger, blocks []*dto.AnthropicContentBlock) ([]*vo.UnifiedMessage, bool) {
+	var messages []*vo.UnifiedMessage
 	for _, block := range blocks {
 		if block == nil {
 			continue
 		}
 		switch block.Type {
 		case enum.AnthropicContentBlockTypeText:
-			messages = append(messages, &dto.UnifiedMessage{
+			messages = append(messages, &vo.UnifiedMessage{
 				Role:    enum.RoleAssistant,
-				Content: &dto.UnifiedContent{Text: block.Text},
+				Content: &vo.UnifiedContent{Text: block.Text},
 			})
 		case enum.AnthropicContentBlockTypeThinking:
-			messages = append(messages, &dto.UnifiedMessage{
+			messages = append(messages, &vo.UnifiedMessage{
 				Role:             enum.RoleAssistant,
 				ReasoningContent: lo.FromPtr(block.Thinking),
 			})
@@ -256,13 +258,13 @@ func anthropicResponseContentToUnified(log *zap.Logger, blocks []*dto.AnthropicC
 					zap.String("toolID", block.ID), zap.String("toolName", block.Name), zap.Error(err))
 				return nil, false
 			}
-			messages = append(messages, &dto.UnifiedMessage{
+			messages = append(messages, &vo.UnifiedMessage{
 				Role: enum.RoleAssistant,
-				ToolCalls: []*dto.UnifiedToolCall{{
+				ToolCalls: []*vo.UnifiedToolCall{{
 					ID:   block.ID,
 					Name: block.Name,
 				}},
-				Content: &dto.UnifiedContent{Text: args},
+				Content: &vo.UnifiedContent{Text: args},
 			})
 		}
 	}
@@ -270,7 +272,7 @@ func anthropicResponseContentToUnified(log *zap.Logger, blocks []*dto.AnthropicC
 }
 
 // submitResponseMessageStoreTask Response API 路径统一的消息存储投递
-func submitResponseMessageStoreTask(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, upstreamModel string, messages []*dto.UnifiedMessage, inputTokens, outputTokens int) {
+func submitResponseMessageStoreTask(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, upstreamModel string, messages []*vo.UnifiedMessage, inputTokens, outputTokens int) {
 	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),

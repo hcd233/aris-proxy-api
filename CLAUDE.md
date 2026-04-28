@@ -18,7 +18,7 @@
 - 完整本地栈：创建 `postgresql-data`、`redis-data`、`minio-data` 卷后执行 `docker compose -f docker/docker-compose-full.yml up -d`
 - 构建：`make build`
 - 调试构建：`make build-dev` 或 `make build-debug`
-- 自定义规范扫描：`make lint-conv`
+- 代码规范扫描：`make lint`
 - 全量测试：`make test` 或 `go test -count=1 ./...`
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
 
@@ -27,7 +27,7 @@
 - 如果是普通需求开发，先和用户确认边界与预期行为，不要直接进入 `cls-log-bugfix`。
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 如果可用，使用 superpowers 流程：和用户头脑风暴、锁定范围、评审测试用例、制定小步计划、逐步修复。
-- 每次改动后，先补或更新回归/单测，再跑聚焦测试、`make lint-conv`、`go test -count=1 ./...`。
+- 每次改动后，先补或更新回归/单测，再跑聚焦测试、`make lint`、`go test -count=1 ./...`。
 - 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 都通过后，若用户要求完整流程或部署，再提交并推送；本仓库 pre-commit 会执行 `gofmt -w`、`go mod tidy`、`go vet ./...`、`go test -count=1 ./...`、`script/lint-conventions.sh`。
 - 正式发布使用 `deploy-to-production`：推送到 `master`，等待 `docker-publish.yml` 镜像构建完成，再在生产机执行部署脚本。

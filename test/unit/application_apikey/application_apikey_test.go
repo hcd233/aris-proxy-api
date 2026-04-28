@@ -4,11 +4,8 @@ package application_apikey
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
-
-	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -16,33 +13,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
 )
-
-// issueCase 定义签发测试用例
-type issueCase struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	UserID      uint   `json:"userID"`
-	NameInput   string `json:"nameInput"`
-	SecretValue string `json:"secretValue"`
-	QuotaMax    int    `json:"quotaMax"`
-	Existing    int64  `json:"existing"`
-	UserExists  bool   `json:"userExists"`
-	ExpectErr   string `json:"expectErr"`
-	ExpectKeyID uint   `json:"expectKeyID"`
-}
-
-func loadIssueCases(t *testing.T) []issueCase {
-	t.Helper()
-	data, err := os.ReadFile("./fixtures/issue_cases.json")
-	if err != nil {
-		t.Fatalf("failed to read fixtures: %v", err)
-	}
-	var cases []issueCase
-	if err := sonic.Unmarshal(data, &cases); err != nil {
-		t.Fatalf("failed to unmarshal fixtures: %v", err)
-	}
-	return cases
-}
 
 func mustAPIKeySecret(raw string) vo.APIKeySecret {
 	secret, err := vo.NewAPIKeySecret(raw)
@@ -405,31 +375,6 @@ func TestIssueAPIKeyHandler_SaveSetsID(t *testing.T) {
 // nowTime 返回测试用稳定时间
 func nowTime() time.Time {
 	return time.Unix(1700000000, 0).UTC()
-}
-
-// revokeCase 定义吊销测试用例
-type revokeCase struct {
-	Name                string `json:"name"`
-	Description         string `json:"description"`
-	KeyID               uint   `json:"keyID"`
-	KeyUserID           uint   `json:"keyUserID"`
-	RequesterID         uint   `json:"requesterID"`
-	RequesterPermission string `json:"requesterPermission"`
-	KeyFound            bool   `json:"keyFound"`
-	ExpectErr           string `json:"expectErr"`
-}
-
-func loadRevokeCases(t *testing.T) []revokeCase {
-	t.Helper()
-	data, err := os.ReadFile("./fixtures/revoke_cases.json")
-	if err != nil {
-		t.Fatalf("failed to read fixtures: %v", err)
-	}
-	var cases []revokeCase
-	if err := sonic.Unmarshal(data, &cases); err != nil {
-		t.Fatalf("failed to unmarshal fixtures: %v", err)
-	}
-	return cases
 }
 
 // mockRevokeAPIKeyRepository mock Repository for revoke tests

@@ -423,7 +423,9 @@ type ResponseMcpListToolsEntry struct {
 
 // ResponseToolSearchCallArguments ToolSearchCall.arguments 为任意 JSON
 // 结构化为 JSONSchemaProperty 以兼容 schema 声明
-type ResponseToolSearchCallArguments = JSONSchemaProperty
+type ResponseToolSearchCallArguments struct {
+	JSONSchemaProperty
+}
 
 // ==================== Unified Input Item ====================
 

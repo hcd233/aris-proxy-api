@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -168,7 +169,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
+		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)))
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
@@ -265,7 +266,7 @@ func (p *openAIProxy) sendResponseRequest(ctx context.Context, ep UpstreamEndpoi
 
 	log.Info("[OpenAIProxy] Send response api upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", util.MaskSecret(ep.APIKey)))
+		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)))
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {

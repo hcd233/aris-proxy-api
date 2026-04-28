@@ -83,7 +83,7 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 		},
 	}
 
-	logger.WithCtx(ctx).Info("[UserHandler] get cur user info",
+	logger.WithCtx(ctx).Info("[UserHandler] Get cur user info",
 		zap.String("email", view.Email),
 		zap.String("avatar", view.Avatar),
 		zap.Time("createdAt", view.CreatedAt),

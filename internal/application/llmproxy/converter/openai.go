@@ -445,8 +445,13 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 		// Anthropic 的 input_schema 可能是 {"type": "object"} 或带有 additionalProperties: false
 		// 这种情况下应该将 parameters 设为 nil
 		var params *vo.JSONSchemaProperty
-		if tool.InputSchema != nil && !isEmptyObjectSchema(tool.InputSchema) {
-			params = normalizeOpenAISchema(tool.InputSchema)
+		if tool.InputSchema != nil && !isEmptyObjectSchema(&tool.InputSchema.JSONSchemaProperty) {
+			params = normalizeOpenAISchema(&tool.InputSchema.JSONSchemaProperty)
+		}
+
+		var parameters *dto.JSONSchemaProperty
+		if params != nil {
+			parameters = &dto.JSONSchemaProperty{JSONSchemaProperty: *params}
 		}
 
 		openAITools = append(openAITools, dto.OpenAIChatCompletionTool{
@@ -454,7 +459,7 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 			Function: &dto.OpenAIFunctionDefinition{
 				Name:        tool.Name,
 				Description: tool.Description,
-				Parameters:  params,
+				Parameters:  parameters,
 				Strict:      tool.Strict,
 			},
 		})
