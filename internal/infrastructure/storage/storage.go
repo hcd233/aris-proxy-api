@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 )
@@ -33,5 +34,5 @@ func GetPlatform() enum.ObjectStoragePlatform {
 		return enum.ObjectStoragePlatformMinio
 	}
 
-	panic("no object storage configured")
+	panic(constant.ObjectStorageNotConfiguredMessage)
 }

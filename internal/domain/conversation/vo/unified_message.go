@@ -5,6 +5,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -60,8 +61,8 @@ func (c UnifiedContent) MarshalJSON() ([]byte, error) {
 //	@update 2026-04-22 14:10:00
 func (UnifiedContent) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{OneOf: []*huma.Schema{
-		{Type: "string"},
-		{Type: "array", Items: &huma.Schema{Type: "object"}},
+		{Type: constant.JSONSchemaTypeString},
+		{Type: constant.JSONSchemaTypeArray, Items: &huma.Schema{Type: constant.JSONSchemaTypeObject}},
 	}}
 }
 

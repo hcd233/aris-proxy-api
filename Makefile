@@ -74,7 +74,7 @@ lint:
 
 ## lint-conv: 扫描项目自定义编码规范（golangci-lint 无法覆盖的检查）
 lint-conv:
-	@bash script/lint-conventions.sh
+	@go run $(MAIN) lint conv ./...
 
 ## lint-all: 运行全部 lint（golangci-lint + 自定义规范扫描，带分段输出）
 lint-all:

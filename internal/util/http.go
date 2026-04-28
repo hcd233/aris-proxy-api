@@ -55,11 +55,11 @@ func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			fiberCtx := humafiber.Unwrap(humaCtx)
-			fiberCtx.Set("Content-Type", "text/event-stream")
-			fiberCtx.Set("Cache-Control", "no-cache")
-			fiberCtx.Set("Connection", "keep-alive")
-			fiberCtx.Set("Transfer-Encoding", "chunked")
-			fiberCtx.Set("X-Accel-Buffering", "no")
+			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fiberCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fiberCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fiberCtx.Status(fiber.StatusOK).Response().SetBodyStreamWriter(fasthttp.StreamWriter(handler))
 		},
 	}
@@ -81,7 +81,7 @@ type JSONResponseWriter struct {
 //	@update 2026-04-05 10:00:00
 func (rw JSONResponseWriter) WriteJSON(v any) {
 	rw.HumaCtx.SetStatus(fiber.StatusOK)
-	rw.HumaCtx.SetHeader("Content-Type", "application/json")
+	rw.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 	_, _ = rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v)))
 }
 
@@ -94,7 +94,7 @@ func (rw JSONResponseWriter) WriteJSON(v any) {
 //	@update 2026-04-05 10:00:00
 func (rw JSONResponseWriter) WriteError(statusCode int, body []byte) {
 	rw.HumaCtx.SetStatus(statusCode)
-	rw.HumaCtx.SetHeader("Content-Type", "application/json")
+	rw.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 	_, _ = rw.HumaCtx.BodyWriter().Write(body)
 }
 
@@ -124,7 +124,7 @@ func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error
 	var upstreamErr *model.UpstreamError
 	if errors.As(err, &upstreamErr) {
 		writer.HumaCtx.SetStatus(upstreamErr.StatusCode)
-		writer.HumaCtx.SetHeader("Content-Type", "application/json")
+		writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body))
 		return
 	}
@@ -153,7 +153,7 @@ func ExtractUpstreamStatusAndError(err error) (statusCode int, errorMessage stri
 	if errors.As(err, &ue) {
 		msg := ue.Error()
 		if ue.Body != "" {
-			msg += fmt.Sprintf(": %s", ue.Body)
+			msg += fmt.Sprintf(constant.ColonMessageTemplate, ue.Body)
 		}
 		return ue.StatusCode, msg
 	}

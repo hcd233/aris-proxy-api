@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
@@ -12,10 +13,10 @@ import (
 )
 
 // toolRepoFieldsChecksum 去重查询的最小字段集
-var toolRepoFieldsChecksum = []string{"id", "check_sum"}
+var toolRepoFieldsChecksum = constant.ToolRepoFieldsChecksum
 
 // toolRepoFieldsFull 详情查询的完整字段集
-var toolRepoFieldsFull = []string{"id", "tool", "check_sum", "created_at"}
+var toolRepoFieldsFull = constant.ToolRepoFieldsFull
 
 // toolRepository ToolRepository 的 GORM 实现
 //
@@ -57,7 +58,7 @@ func (r *toolRepository) BatchSaveDedup(ctx context.Context, tools []*aggregate.
 		checksums[i] = t.Checksum()
 	}
 
-	existing, err := r.dao.BatchGetByField(db, "check_sum", checksums, toolRepoFieldsChecksum)
+	existing, err := r.dao.BatchGetByField(db, constant.WhereFieldCheckSum, checksums, toolRepoFieldsChecksum)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by checksum")
 	}
@@ -110,7 +111,7 @@ func (r *toolRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggregat
 		return []*aggregate.Tool{}, nil
 	}
 	db := database.GetDBInstance(ctx)
-	records, err := r.dao.BatchGetByField(db, "id", ids, toolRepoFieldsFull)
+	records, err := r.dao.BatchGetByField(db, constant.WhereFieldID, ids, toolRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by id")
 	}

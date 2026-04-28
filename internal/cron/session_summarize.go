@@ -41,7 +41,7 @@ type SessionSummarizeCron struct {
 func NewSessionSummarizeCron() Cron {
 	return &SessionSummarizeCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter("SessionSummarizeCron", logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionSummarize, logger.Logger())),
 		),
 		sessionDAO: dao.GetSessionDAO(),
 		messageDAO: dao.GetMessageDAO(),
@@ -68,7 +68,7 @@ func (c *SessionSummarizeCron) Stop() {
 //	@update 2026-04-03 10:00:00
 func (c *SessionSummarizeCron) Start() error {
 	// 每天凌晨2:00执行，在去重任务完成后执行
-	entryID, err := c.cron.AddFunc("0 2 * * *", c.summarize)
+	entryID, err := c.cron.AddFunc(constant.CronSpecSessionSummarize, c.summarize)
 	if err != nil {
 		logger.Logger().Error("[SessionSummarizeCron] Add func error", zap.Error(err))
 		return err
@@ -92,7 +92,7 @@ func (c *SessionSummarizeCron) summarize() {
 	db := database.GetDBInstance(ctx)
 	poolManager := pool.GetPoolManager()
 
-	sessions, err := c.sessionDAO.BatchGetByField(db, "summary", []string{""}, []string{"id", "message_ids"})
+	sessions, err := c.sessionDAO.BatchGetByField(db, constant.WhereFieldSummary, []string{""}, constant.SessionRepoFieldsSummarize)
 	if err != nil {
 		log.Error("[SessionSummarizeCron] Failed to get unsummarized sessions", zap.Error(err))
 		return
@@ -144,7 +144,7 @@ func (c *SessionSummarizeCron) getSessionContent(ctx context.Context, session *d
 		return "", nil
 	}
 
-	messages, err := c.messageDAO.BatchGetByField(database.GetDBInstance(ctx), "id", session.MessageIDs, []string{"id", "message"})
+	messages, err := c.messageDAO.BatchGetByField(database.GetDBInstance(ctx), constant.WhereFieldID, session.MessageIDs, constant.MessageRepoFieldsContent)
 	if err != nil {
 		return "", err
 	}
@@ -163,7 +163,7 @@ func (c *SessionSummarizeCron) getSessionContent(ctx context.Context, session *d
 		}
 	}
 
-	return strings.Join(contentParts, "\n"), nil
+	return strings.Join(contentParts, constant.NewlineString), nil
 }
 
 // formatMessage 将UnifiedMessage格式化为字符串，包含所有字段
@@ -180,55 +180,55 @@ func formatMessage(msg *dto.UnifiedMessage) string {
 	var parts []string
 
 	// Role
-	parts = append(parts, fmt.Sprintf("Role: %s", msg.Role))
+	parts = append(parts, fmt.Sprintf(constant.MessageFormatRole, msg.Role))
 
 	// Name
 	if msg.Name != "" {
-		parts = append(parts, fmt.Sprintf("Name: %s", msg.Name))
+		parts = append(parts, fmt.Sprintf(constant.MessageFormatName, msg.Name))
 	}
 
 	// Content
 	if msg.Content != nil {
 		if msg.Content.Text != "" {
-			parts = append(parts, fmt.Sprintf("Content: %s", msg.Content.Text))
+			parts = append(parts, fmt.Sprintf(constant.MessageFormatContent, msg.Content.Text))
 		}
 		for _, p := range msg.Content.Parts {
 			switch p.Type {
 			case enum.ContentPartTypeText:
 				if p.Text != "" {
-					parts = append(parts, fmt.Sprintf("Content[text]: %s", p.Text))
+					parts = append(parts, fmt.Sprintf(constant.MessageFormatContentText, p.Text))
 				}
 			case enum.ContentPartTypeImageURL:
-				parts = append(parts, fmt.Sprintf("Content[image]: %s", p.ImageURL))
+				parts = append(parts, fmt.Sprintf(constant.MessageFormatContentImage, p.ImageURL))
 			case enum.ContentPartTypeInputAudio:
-				parts = append(parts, fmt.Sprintf("Content[audio]: %s", p.AudioFormat))
+				parts = append(parts, fmt.Sprintf(constant.MessageFormatContentAudio, p.AudioFormat))
 			case enum.ContentPartTypeFile:
-				parts = append(parts, fmt.Sprintf("Content[file]: %s", p.Filename))
+				parts = append(parts, fmt.Sprintf(constant.MessageFormatContentFile, p.Filename))
 			case enum.ContentPartTypeRefusal:
-				parts = append(parts, fmt.Sprintf("Content[refusal]: %s", p.Text))
+				parts = append(parts, fmt.Sprintf(constant.MessageFormatContentRefusal, p.Text))
 			}
 		}
 	}
 
 	// ReasoningContent
 	if msg.ReasoningContent != "" {
-		parts = append(parts, fmt.Sprintf("Reasoning: %s", msg.ReasoningContent))
+		parts = append(parts, fmt.Sprintf(constant.MessageFormatReasoning, msg.ReasoningContent))
 	}
 
 	// ToolCalls
 	for _, tc := range msg.ToolCalls {
-		parts = append(parts, fmt.Sprintf("ToolCall: %s(%s)", tc.Name, tc.Arguments))
+		parts = append(parts, fmt.Sprintf(constant.MessageFormatToolCall, tc.Name, tc.Arguments))
 	}
 
 	// ToolCallID
 	if msg.ToolCallID != "" {
-		parts = append(parts, fmt.Sprintf("ToolCallID: %s", msg.ToolCallID))
+		parts = append(parts, fmt.Sprintf(constant.MessageFormatToolCallID, msg.ToolCallID))
 	}
 
 	// Refusal
 	if msg.Refusal != "" {
-		parts = append(parts, fmt.Sprintf("Refusal: %s", msg.Refusal))
+		parts = append(parts, fmt.Sprintf(constant.MessageFormatRefusal, msg.Refusal))
 	}
 
-	return strings.Join(parts, " | ")
+	return strings.Join(parts, constant.MessageContentSeparator)
 }

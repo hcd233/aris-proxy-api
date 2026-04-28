@@ -72,10 +72,10 @@ func provide(container *dig.Container) error {
 	if err := provideHandlers(container); err != nil {
 		return err
 	}
-	if err := container.Provide(newAccessTokenSigner, dig.Name("accessSigner")); err != nil {
+	if err := container.Provide(newAccessTokenSigner, dig.Name(constant.DigNameAccessSigner)); err != nil {
 		return err
 	}
-	if err := container.Provide(newRefreshTokenSigner, dig.Name("refreshSigner")); err != nil {
+	if err := container.Provide(newRefreshTokenSigner, dig.Name(constant.DigNameRefreshSigner)); err != nil {
 		return err
 	}
 	return nil

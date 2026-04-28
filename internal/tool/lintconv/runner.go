@@ -48,6 +48,14 @@ func selectorName(expr ast.Expr) (string, string, bool) {
 	return ident.Name, selector.Sel.Name, true
 }
 
+func selectorMethodName(expr ast.Expr) (string, bool) {
+	selector, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return "", false
+	}
+	return selector.Sel.Name, true
+}
+
 func isUnder(path string, prefix string) bool {
 	path = slashPath(path)
 	prefix = strings.TrimSuffix(slashPath(prefix), "/") + "/"

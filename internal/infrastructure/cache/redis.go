@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -15,8 +16,6 @@ import (
 )
 
 var rdb *redis.Client
-
-const redisDB = 0
 
 // GetRedisClient 获取Redis客户端
 //
@@ -45,12 +44,12 @@ func CloseCache() error {
 //	update 2024-12-09 15:56:36
 func InitCache() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", config.RedisHost, config.RedisPort),
+		Addr:     fmt.Sprintf(constant.HostPortTemplate, config.RedisHost, config.RedisPort),
 		Password: config.RedisPassword,
-		DB:       redisDB,
+		DB:       constant.RedisDB,
 	})
 
 	_ = lo.Must1(rdb.Ping(context.Background()).Result())
 
-	logger.Logger().Info("[Cache] Connected to Redis database", zap.String("host", config.RedisHost), zap.String("port", config.RedisPort), zap.Int("db", redisDB))
+	logger.Logger().Info("[Cache] Connected to Redis database", zap.String("host", config.RedisHost), zap.String("port", config.RedisPort), zap.Int("db", constant.RedisDB))
 }

@@ -27,8 +27,8 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 	userDAO := dao.GetUserDAO()
 
 	return func(ctx huma.Context, next func(huma.Context)) {
-		tokenString := ctx.Header("Authorization")
-		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), "Bearer "))
+		tokenString := ctx.Header(constant.HTTPHeaderAuthorization)
+		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 
 		if tokenString == "" {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
@@ -36,7 +36,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		}
 
 		db := database.GetDBInstance(ctx.Context())
-		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, []string{"id", "user_id"})
+		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, constant.ProxyAPIKeyRepoFieldsAuth)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
@@ -44,7 +44,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		}
 
 		// 通过 UserID 查询用户名
-		user, err := userDAO.Get(db, &dbmodel.User{ID: apiKey.UserID}, []string{"id", "name"})
+		user, err := userDAO.Get(db, &dbmodel.User{ID: apiKey.UserID}, constant.UserRepoFieldsBasic)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] Failed to get user", zap.Error(err))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
@@ -54,7 +54,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, user.ID)
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, user.Name)
 		ctx = huma.WithValue(ctx, constant.CtxKeyAPIKeyID, apiKey.ID)
-		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header("User-Agent"))
+		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header(constant.HTTPHeaderUserAgent))
 		next(ctx)
 	}
 }

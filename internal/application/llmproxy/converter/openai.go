@@ -83,7 +83,7 @@ func (*OpenAIProtocolConverter) FromAnthropicRequest(req *dto.AnthropicCreateMes
 func (*OpenAIProtocolConverter) ToAnthropicResponse(completion *dto.OpenAIChatCompletion) (*dto.AnthropicMessage, error) {
 	msg := &dto.AnthropicMessage{
 		ID:    completion.ID,
-		Type:  "message",
+		Type:  constant.AnthropicMessageType,
 		Role:  enum.RoleAssistant,
 		Model: completion.Model,
 	}
@@ -160,7 +160,7 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 		startMsg := &dto.AnthropicSSEMessageStart{
 			Message: &dto.AnthropicMessage{
 				ID:      chunk.ID,
-				Type:    "message",
+				Type:    constant.AnthropicMessageType,
 				Role:    enum.RoleAssistant,
 				Model:   model,
 				Content: []*dto.AnthropicContentBlock{},
@@ -512,15 +512,15 @@ func convertAnthropicToolChoiceToOpenAI(tc *dto.AnthropicToolChoice) *dto.OpenAI
 func convertOpenAIFinishReasonToAnthropic(reason enum.FinishReason) *string {
 	switch reason {
 	case enum.FinishReasonStop:
-		return lo.ToPtr("end_turn")
+		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
 	case enum.FinishReasonLength:
-		return lo.ToPtr("max_tokens")
+		return lo.ToPtr(string(enum.AnthropicStopReasonMaxTokens))
 	case enum.FinishReasonToolCalls:
-		return lo.ToPtr("tool_use")
+		return lo.ToPtr(string(enum.AnthropicStopReasonToolUse))
 	case enum.FinishReasonContentFilter:
-		return lo.ToPtr("end_turn")
+		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
 	default:
-		return lo.ToPtr("end_turn")
+		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
 	}
 }
 

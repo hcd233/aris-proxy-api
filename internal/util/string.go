@@ -46,9 +46,9 @@ func TruncateFieldValue(val string, maxLen int) string {
 	}
 	var sb strings.Builder
 	sb.WriteString(val[:maxLen])
-	sb.WriteString("...(truncated, total ")
-	fmt.Fprintf(&sb, "%d", len(val))
-	sb.WriteString(" chars)")
+	sb.WriteString(constant.TruncateSuffixPrefix)
+	fmt.Fprintf(&sb, constant.FormatDecimal, len(val))
+	sb.WriteString(constant.TruncateSuffixPostfix)
 	return sb.String()
 }
 

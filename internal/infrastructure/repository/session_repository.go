@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -17,15 +18,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
-
-// sessionListFields Session 列表查询字段集（对齐原 service.ListSessions）
-var sessionListFields = []string{"id", "created_at", "updated_at", "summary", "message_ids", "tool_ids"}
-
-// sessionDetailFields Session 详情查询字段集（对齐原 service.GetSession）
-var sessionDetailFields = []string{"id", "api_key_name", "created_at", "updated_at",
-	"message_ids", "tool_ids", "metadata", "summary", "summarize_error",
-	"coherence_score", "depth_score", "value_score", "total_score",
-	"score_version", "scored_at", "score_error"}
 
 // sessionRepository SessionRepository 的 GORM 实现
 type sessionRepository struct {
@@ -69,23 +61,23 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 	}
 
 	updates := map[string]any{
-		"message_ids": s.MessageIDs(),
-		"tool_ids":    s.ToolIDs(),
-		"metadata":    s.Metadata(),
+		constant.FieldMessageIDs: s.MessageIDs(),
+		constant.FieldToolIDs:    s.ToolIDs(),
+		constant.FieldMetadata:   s.Metadata(),
 	}
 	if summary := s.Summary(); !summary.IsEmpty() || summary.Failed() {
-		updates["summary"] = summary.Text()
-		updates["summarize_error"] = summary.Error()
+		updates[constant.FieldSummary] = summary.Text()
+		updates[constant.FieldSummarizeError] = summary.Error()
 	}
 	if score := s.Score(); !score.IsEmpty() {
-		updates["coherence_score"] = score.Coherence()
-		updates["depth_score"] = score.Depth()
-		updates["value_score"] = score.Value()
-		updates["total_score"] = score.Total()
-		updates["score_version"] = score.Version()
-		updates["score_error"] = score.Error()
+		updates[constant.FieldCoherenceScore] = score.Coherence()
+		updates[constant.FieldDepthScore] = score.Depth()
+		updates[constant.FieldValueScore] = score.Value()
+		updates[constant.FieldTotalScore] = score.Total()
+		updates[constant.FieldScoreVersion] = score.Version()
+		updates[constant.FieldScoreError] = score.Error()
 		if at := score.At(); at != nil {
-			updates["scored_at"] = *at
+			updates[constant.FieldScoredAt] = *at
 		}
 	}
 	if err := r.dao.Update(db, &dbmodel.Session{ID: s.AggregateID()}, updates); err != nil {
@@ -122,7 +114,7 @@ func applyScore(record *dbmodel.Session, score vo.SessionScore) {
 //	@update 2026-04-22 19:30:00
 func (r *sessionRepository) FindByID(ctx context.Context, id uint) (*aggregate.Session, error) {
 	db := database.GetDBInstance(ctx)
-	record, err := r.dao.Get(db, &dbmodel.Session{ID: id}, sessionDetailFields)
+	record, err := r.dao.Get(db, &dbmodel.Session{ID: id}, constant.SessionRepoFieldsDetail)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -148,10 +140,10 @@ func (r *sessionRepository) Paginate(ctx context.Context, owner string, param se
 	records, pageInfo, err := r.dao.Paginate(
 		db,
 		&dbmodel.Session{APIKeyName: owner},
-		sessionListFields,
+		constant.SessionRepoFieldsList,
 		&dao.CommonParam{
 			PageParam: dao.PageParam{Page: param.Page, PageSize: param.PageSize},
-			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: "id"},
+			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
 		},
 	)
 	if err != nil {
@@ -192,8 +184,8 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary vo.SessionSummary) error {
 	db := database.GetDBInstance(ctx)
 	updates := map[string]any{
-		"summary":         summary.Text(),
-		"summarize_error": summary.Error(),
+		constant.FieldSummary:        summary.Text(),
+		constant.FieldSummarizeError: summary.Error(),
 	}
 	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session summary")
@@ -213,15 +205,15 @@ func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary 
 func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score vo.SessionScore) error {
 	db := database.GetDBInstance(ctx)
 	updates := map[string]any{
-		"coherence_score": score.Coherence(),
-		"depth_score":     score.Depth(),
-		"value_score":     score.Value(),
-		"total_score":     score.Total(),
-		"score_version":   score.Version(),
-		"score_error":     score.Error(),
+		constant.FieldCoherenceScore: score.Coherence(),
+		constant.FieldDepthScore:     score.Depth(),
+		constant.FieldValueScore:     score.Value(),
+		constant.FieldTotalScore:     score.Total(),
+		constant.FieldScoreVersion:   score.Version(),
+		constant.FieldScoreError:     score.Error(),
 	}
 	if at := score.At(); at != nil {
-		updates["scored_at"] = *at
+		updates[constant.FieldScoredAt] = *at
 	}
 	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session score")
@@ -251,22 +243,16 @@ func NewSessionReadRepository() session.SessionReadRepository {
 	}
 }
 
-// sessionListReadFields Session 列表投影字段
-var sessionListReadFields = []string{"id", "created_at", "updated_at", "summary", "message_ids", "tool_ids"}
-
-// sessionDetailReadFields Session 详情投影字段
-var sessionDetailReadFields = []string{"id", "api_key_name", "created_at", "updated_at", "message_ids", "tool_ids", "metadata"}
-
 // ListSessions 分页查询 Session 列表投影
 func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := database.GetDBInstance(ctx)
 	records, pageInfo, err := r.sessionDAO.Paginate(
 		db,
 		&dbmodel.Session{APIKeyName: owner},
-		sessionListReadFields,
+		constant.SessionRepoFieldsReadList,
 		&dao.CommonParam{
 			PageParam: dao.PageParam{Page: page, PageSize: pageSize},
-			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: "id"},
+			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
 		},
 	)
 	if err != nil {
@@ -290,7 +276,7 @@ func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, 
 func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (*session.SessionDetailProjection, error) {
 	db := database.GetDBInstance(ctx)
 
-	sessionRecord, err := r.sessionDAO.Get(db, &dbmodel.Session{ID: id}, sessionDetailReadFields)
+	sessionRecord, err := r.sessionDAO.Get(db, &dbmodel.Session{ID: id}, constant.SessionRepoFieldsReadDetail)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -301,12 +287,12 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (
 	uniqMsgIDs := lo.Uniq(sessionRecord.MessageIDs)
 	uniqToolIDs := lo.Uniq(sessionRecord.ToolIDs)
 
-	messages, err := r.messageDAO.BatchGetByField(db, "id", uniqMsgIDs, []string{"id", "model", "message", "created_at"})
+	messages, err := r.messageDAO.BatchGetByField(db, constant.WhereFieldID, uniqMsgIDs, constant.MessageRepoFieldsDetail)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages")
 	}
 
-	tools, err := r.toolDAO.BatchGetByField(db, "id", uniqToolIDs, []string{"id", "tool", "created_at"})
+	tools, err := r.toolDAO.BatchGetByField(db, constant.WhereFieldID, uniqToolIDs, constant.ToolRepoFieldsDetail)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools")
 	}

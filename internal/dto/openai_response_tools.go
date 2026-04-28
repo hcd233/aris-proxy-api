@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -80,17 +81,17 @@ func (v ResponseFileSearchFilterValue) MarshalJSON() ([]byte, error) {
 	case v.Numbers != nil:
 		return sonic.Marshal(v.Numbers)
 	}
-	return []byte("null"), nil
+	return []byte(constant.NullJSONLiteral), nil
 }
 
 // Schema 接受 string/number/boolean/数组
 func (ResponseFileSearchFilterValue) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "number"},
-			{Type: "boolean"},
-			{Type: "array", Items: &huma.Schema{OneOf: []*huma.Schema{{Type: "string"}, {Type: "number"}}}},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeNumber},
+			{Type: constant.JSONSchemaTypeBoolean},
+			{Type: constant.JSONSchemaTypeArray, Items: &huma.Schema{OneOf: []*huma.Schema{{Type: constant.JSONSchemaTypeString}, {Type: constant.JSONSchemaTypeNumber}}}},
 		},
 	}
 }
@@ -154,7 +155,7 @@ func (ResponseMcpAllowedTools) Schema(reg huma.Registry) *huma.Schema {
 	filterSchema := reg.Schema(reflect.TypeFor[ResponseMcpToolFilter](), true, "ResponseMcpToolFilter")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "array", Items: &huma.Schema{Type: "string"}},
+			{Type: constant.JSONSchemaTypeArray, Items: &huma.Schema{Type: constant.JSONSchemaTypeString}},
 			filterSchema,
 		},
 	}
@@ -196,7 +197,7 @@ func (ResponseMcpRequireApproval) Schema(reg huma.Registry) *huma.Schema {
 	filterSchema := reg.Schema(reflect.TypeFor[ResponseMcpToolApprovalFilter](), true, "ResponseMcpToolApprovalFilter")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string", Enum: []any{"always", "never"}},
+			{Type: constant.JSONSchemaTypeString, Enum: []any{constant.MCPApprovalAlways, constant.MCPApprovalNever}},
 			filterSchema,
 		},
 	}
@@ -240,7 +241,7 @@ func (ResponseCodeInterpreterContainer) Schema(reg huma.Registry) *huma.Schema {
 	autoSchema := reg.Schema(reflect.TypeFor[ResponseCodeInterpreterContainerAuto](), true, "ResponseCodeInterpreterContainerAuto")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
+			{Type: constant.JSONSchemaTypeString},
 			autoSchema,
 		},
 	}
@@ -533,7 +534,7 @@ func (t ResponseTool) MarshalJSON() ([]byte, error) {
 	case t.ApplyPatch != nil:
 		return sonic.Marshal(t.ApplyPatch)
 	}
-	return []byte("null"), nil
+	return []byte(constant.NullJSONLiteral), nil
 }
 
 // Schema 声明为 14 种 tool 的 oneOf
@@ -594,7 +595,7 @@ func (ResponseToolChoiceParam) Schema(reg huma.Registry) *huma.Schema {
 	objSchema := reg.Schema(reflect.TypeFor[ResponseToolChoiceObject](), true, "ResponseToolChoiceObject")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string", Enum: []any{"none", "auto", "required"}},
+			{Type: constant.JSONSchemaTypeString, Enum: []any{enum.ToolChoiceNone, enum.ToolChoiceAuto, enum.ToolChoiceRequired}},
 			objSchema,
 		},
 	}

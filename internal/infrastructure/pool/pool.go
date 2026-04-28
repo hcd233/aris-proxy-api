@@ -6,6 +6,7 @@ package pool
 
 import (
 	"github.com/alitto/pond/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -74,7 +75,7 @@ func (pm *PoolManager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmo
 	}
 
 	messageDAO := dao.GetMessageDAO()
-	existingMessages, err := messageDAO.BatchGetByField(tx, "check_sum", checksums, []string{"id", "check_sum"})
+	existingMessages, err := messageDAO.BatchGetByField(tx, constant.WhereFieldCheckSum, checksums, constant.MessageRepoFieldsChecksum)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (pm *PoolManager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.To
 	}
 
 	toolDAO := dao.GetToolDAO()
-	existingTools, err := toolDAO.BatchGetByField(tx, "check_sum", checksums, []string{"id", "check_sum"})
+	existingTools, err := toolDAO.BatchGetByField(tx, constant.WhereFieldCheckSum, checksums, constant.ToolRepoFieldsChecksum)
 	if err != nil {
 		return nil, err
 	}

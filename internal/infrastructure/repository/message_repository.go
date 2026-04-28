@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
@@ -12,10 +13,10 @@ import (
 )
 
 // messageRepoFieldsChecksum 去重查询的最小字段集
-var messageRepoFieldsChecksum = []string{"id", "check_sum"}
+var messageRepoFieldsChecksum = constant.MessageRepoFieldsChecksum
 
 // messageRepoFieldsFull 详情查询的完整字段集（与原 SessionService 一致）
-var messageRepoFieldsFull = []string{"id", "model", "message", "check_sum", "created_at"}
+var messageRepoFieldsFull = constant.MessageRepoFieldsFull
 
 // messageRepository MessageRepository 的 GORM 实现
 //
@@ -63,7 +64,7 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 		checksums[i] = m.Checksum()
 	}
 
-	existing, err := r.dao.BatchGetByField(db, "check_sum", checksums, messageRepoFieldsChecksum)
+	existing, err := r.dao.BatchGetByField(db, constant.WhereFieldCheckSum, checksums, messageRepoFieldsChecksum)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by checksum")
 	}
@@ -118,7 +119,7 @@ func (r *messageRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggre
 		return []*aggregate.Message{}, nil
 	}
 	db := database.GetDBInstance(ctx)
-	records, err := r.dao.BatchGetByField(db, "id", ids, messageRepoFieldsFull)
+	records, err := r.dao.BatchGetByField(db, constant.WhereFieldID, ids, messageRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by id")
 	}

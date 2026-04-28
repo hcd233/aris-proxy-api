@@ -12,6 +12,7 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -47,16 +48,16 @@ func (q *listOpenAIModels) Handle(ctx context.Context) (*dto.OpenAIListModelsRsp
 	projections, err := q.readRepo.ListAliasesByProvider(ctx, enum.ProviderOpenAI)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[OpenAIQuery] Failed to query model endpoints", zap.Error(err))
-		return &dto.OpenAIListModelsRsp{Object: "list", Data: []*dto.OpenAIModel{}}, nil
+		return &dto.OpenAIListModelsRsp{Object: constant.OpenAIListObject, Data: []*dto.OpenAIModel{}}, nil
 	}
 	return &dto.OpenAIListModelsRsp{
-		Object: "list",
+		Object: constant.OpenAIListObject,
 		Data: lo.Map(projections, func(p *llmproxy.EndpointAliasProjection, _ int) *dto.OpenAIModel {
 			return &dto.OpenAIModel{
 				ID:      p.Alias,
 				Created: time.Now().Unix(),
-				Object:  "model",
-				OwnedBy: "openai",
+				Object:  constant.OpenAIModelObject,
+				OwnedBy: constant.OpenAIModelOwnedBy,
 			}
 		}),
 	}, nil
@@ -98,7 +99,7 @@ func (q *listAnthropicModels) Handle(ctx context.Context) (*dto.AnthropicListMod
 			ID:          p.Alias,
 			CreatedAt:   time.Now().UTC().Format(time.RFC3339),
 			DisplayName: p.Alias,
-			Type:        "model",
+			Type:        constant.AnthropicModelType,
 		}
 	})
 

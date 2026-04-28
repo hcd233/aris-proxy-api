@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 // ==================== Response API Request DTOs ====================
@@ -83,7 +84,7 @@ func (p ResponsePromptVariable) MarshalJSON() ([]byte, error) {
 	if p.StringValue != nil {
 		return sonic.Marshal(*p.StringValue)
 	}
-	return []byte("null"), nil
+	return []byte(constant.NullJSONLiteral), nil
 }
 
 // Schema 字符串或内容块对象
@@ -91,7 +92,7 @@ func (ResponsePromptVariable) Schema(reg huma.Registry) *huma.Schema {
 	contentSchema := reg.Schema(reflect.TypeFor[ResponseInputContent](), true, "ResponseInputContent")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
+			{Type: constant.JSONSchemaTypeString},
 			contentSchema,
 		},
 	}
@@ -141,7 +142,7 @@ func (ResponseConversationParam) Schema(reg huma.Registry) *huma.Schema {
 	valueSchema := reg.Schema(reflect.TypeFor[ResponseConversationValue](), true, "ResponseConversationValue")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
+			{Type: constant.JSONSchemaTypeString},
 			valueSchema,
 		},
 	}
