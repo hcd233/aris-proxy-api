@@ -31,6 +31,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 
 		if tokenString == "" {
+			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key is empty")
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
 		}
