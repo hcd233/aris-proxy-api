@@ -423,7 +423,7 @@ Expected: PASS
 
 - [ ] **Step 1: Run lint**
 
-Run: `make lint-conv` (or equivalent)
+Run: `make lint` (or equivalent)
 Expected: no errors
 
 - [ ] **Step 2: Run full test suite**

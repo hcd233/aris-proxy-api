@@ -70,4 +70,4 @@
 
 1. `go vet ./internal/common/constant/...` — 无编译/声明冲突
 2. `go test -count=1 ./...` — 全量测试通过
-3. `make lint-conv` — 自定义规范通过
+3. `make lint` — 自定义规范通过

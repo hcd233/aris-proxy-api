@@ -13,7 +13,7 @@ description: Use when the user asks to deploy, release, publish, ship, or verify
 
 ### 第 0 步：本地门禁
 
-部署前必须确认相关改动已通过聚焦测试和 `make lint-conv`；涉及新需求或 bugfix 时，仓库内必须已有对应 E2E。不要用 `curl` 替代 E2E，不要绕过 hook。pre-commit 会执行 `gofmt -w`、`go mod tidy`、`go vet ./...`、`go test -count=1 ./...`、`script/lint-conventions.sh`。
+部署前必须确认相关改动已通过聚焦测试和 `make lint-conv`；涉及新需求或 bugfix 时，仓库内必须已有对应 E2E。不要用 `curl` 替代 E2E，不要绕过 hook。pre-commit 会执行 `gofmt -w`、`go mod tidy`、`go vet ./...`、`go test -count=1 ./...`、`make lint`。
 
 ### 第 1 步：提交并推送
 

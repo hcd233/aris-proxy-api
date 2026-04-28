@@ -1189,7 +1189,7 @@ Expected: PASS 或 `[no test files]`，不能有编译错误。
 
 - [ ] **Step 3: 运行自定义规范扫描**
 
-Run: `make lint-conv`
+Run: `make lint`
 
 Expected: PASS。
 

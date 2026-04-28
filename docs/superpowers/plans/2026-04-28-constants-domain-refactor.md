@@ -680,7 +680,7 @@ Expected: 全部 PASS.
 - [ ] **Step: 运行自定义 lint**
 
 ```bash
-make lint-conv || bash script/lint-conventions.sh
+make lint
 ```
 
 Expected: 无错误.

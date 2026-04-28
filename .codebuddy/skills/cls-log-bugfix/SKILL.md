@@ -225,7 +225,7 @@ Bug 修复必须附带回归测试，确保：
 ### 4.2 运行规范扫描
 
 ```bash
-make lint-conv
+make lint
 ```
 
 修复所有 ERROR，评估所有 WARN。

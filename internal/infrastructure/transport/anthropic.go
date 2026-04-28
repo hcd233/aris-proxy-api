@@ -165,42 +165,6 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndp
 	return rsp, nil
 }
 
-// passthroughResponseExcludedHeaders 不从上游透传到客户端的响应头
-var anthropicResponseExcludedHeaders = map[string]struct{}{
-	constant.HTTPHeaderContentType:       {},
-	constant.HTTPHeaderContentLength:     {},
-	constant.HTTPHeaderTransferEncoding:  {},
-	constant.HTTPHeaderConnection:        {},
-	constant.HTTPHeaderUpgrade:           {},
-	constant.HTTPHeaderTrailer:           {},
-	constant.HTTPHeaderProxyAuthenticate: {},
-	constant.HTTPHeaderTraceID:           {},
-}
-
-// captureAnthropicPassthroughHeaders 从上游响应中提取需要透传的响应头
-func captureAnthropicPassthroughHeaders(header http.Header) map[string]string {
-	headers := make(map[string]string, 4)
-	for k := range header {
-		canonical := http.CanonicalHeaderKey(k)
-		if _, excluded := anthropicResponseExcludedHeaders[canonical]; !excluded {
-			headers[canonical] = header.Get(k)
-		}
-	}
-	return headers
-}
-
-// storeAnthropicPassthroughHeaders 将响应头存入 context 的 map 中
-func storeAnthropicPassthroughHeaders(ctx context.Context, header http.Header) {
-	if m := util.GetPassthroughResponseHeaders(ctx); m != nil {
-		for k := range header {
-			canonical := http.CanonicalHeaderKey(k)
-			if _, excluded := anthropicResponseExcludedHeaders[canonical]; !excluded {
-				m[canonical] = header.Get(k)
-			}
-		}
-	}
-}
-
 // sendRequest 构建并发送 Anthropic 协议的上游请求
 func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, path string, body []byte) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
@@ -244,12 +208,12 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 		)
 		return nil, &model.UpstreamError{
 			StatusCode: resp.StatusCode,
-			Headers:    captureAnthropicPassthroughHeaders(resp.Header),
+			Headers:    capturePassthroughResponseHeaders(resp.Header),
 			Body:       string(errorBody),
 		}
 	}
 
-	storeAnthropicPassthroughHeaders(ctx, resp.Header)
+	storePassthroughResponseHeaders(ctx, resp.Header)
 
 	return resp, nil
 }
