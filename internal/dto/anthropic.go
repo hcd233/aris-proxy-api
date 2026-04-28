@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -132,8 +133,8 @@ func (c AnthropicMessageContent) Schema(r huma.Registry) *huma.Schema {
 	contentBlockSchema := r.Schema(reflect.TypeFor[AnthropicContentBlock](), true, "AnthropicContentBlock")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "array", Items: contentBlockSchema},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeArray, Items: contentBlockSchema},
 		},
 	}
 }
@@ -170,8 +171,8 @@ func (c AnthropicToolResultContent) Schema(r huma.Registry) *huma.Schema {
 	contentBlockSchema := r.Schema(reflect.TypeFor[AnthropicContentBlock](), true, "AnthropicContentBlock")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "array", Items: contentBlockSchema},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeArray, Items: contentBlockSchema},
 		},
 	}
 }
@@ -256,9 +257,6 @@ type AnthropicContentBlock struct {
 	CacheControl *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
 }
 
-// anthropicContentBlockWire aliases AnthropicContentBlock for default JSON marshaling without MarshalJSON recursion.
-type anthropicContentBlockWire AnthropicContentBlock
-
 // anthropicThinkingContentBlockWire is the on-wire JSON shape for thinking blocks.
 // thinking uses json:"thinking" without omitempty so the key is always present (including "").
 type anthropicThinkingContentBlockWire struct {
@@ -320,7 +318,7 @@ func newAnthropicToolUseContentBlockWire(b *AnthropicContentBlock) anthropicTool
 //	@update 2026-04-19 10:00:00
 func (b *AnthropicContentBlock) MarshalJSON() ([]byte, error) {
 	if b == nil {
-		return []byte("null"), nil
+		return []byte(constant.NullJSONLiteral), nil
 	}
 	switch enum.AnthropicContentBlockType(b.Type) {
 	case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
@@ -328,6 +326,7 @@ func (b *AnthropicContentBlock) MarshalJSON() ([]byte, error) {
 	case enum.AnthropicContentBlockTypeThinking:
 		return sonic.Marshal(newAnthropicThinkingContentBlockWire(b))
 	default:
+		type anthropicContentBlockWire AnthropicContentBlock
 		return sonic.Marshal((*anthropicContentBlockWire)(b))
 	}
 }

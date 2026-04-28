@@ -40,10 +40,15 @@
 ## 4. 开发工作流
 
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
+- 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 修改前先定位相关 handler/service/proxy/converter/DAO/DTO，不做大范围重写。
 - 新需求和 bugfix 都应先补或更新测试；bugfix 必须有能复现问题的回归用例。
 - 每次改动后依次跑：聚焦测试 → `make lint-conv` → 必要时 `go test -count=1 ./...`。
+- 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 通过后，只有用户明确要求提交、推送或部署时才执行 git 提交/发布流程。
+- 正式发布使用 `deploy-to-production`：推送到 `master`，等待 `docker-publish.yml` 镜像构建完成，再在生产机执行部署脚本。
+- 部署后**先跑** `test/e2e/<topic>/` 的 Go 用例，而不是只 `curl` 一下；如需交互式补充验证再用 `call-api` skill。
+- 如果 E2E 失败，取响应头 `X-Trace-Id`，回到 CLS 排障步骤；重复直到需求或 bugfix 完成。
 
 ## 5. 测试契约
 

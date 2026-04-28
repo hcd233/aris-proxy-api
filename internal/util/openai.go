@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
@@ -245,12 +246,6 @@ func IsResponseAPIDeltaEvent(event string) bool {
 	return strings.HasSuffix(event, enum.ResponseStreamEventDeltaSuffix)
 }
 
-// reasoningContentPlaceholder 用于给缺失 reasoning_content 的 assistant tool call
-// message 补位。Moonshot AI 的思考模式会把空字符串 "" 判为 missing 直接返回 400
-// （参考 LiteLLM issue #21672），因此使用单空格作为最小合法占位，既满足上游
-// 校验又对模型行为影响最小；与 LiteLLM PR #23580 的修复方式保持一致。
-const reasoningContentPlaceholder = " "
-
 // EnsureAssistantMessageReasoningContent 在序列化后的 JSON body 中，为缺少
 // reasoning_content 的 assistant tool call message 补上占位符 " "。
 //
@@ -293,7 +288,7 @@ func EnsureAssistantMessageReasoningContent(body []byte) []byte {
 				continue
 			}
 		}
-		msg["reasoning_content"] = reasoningContentPlaceholder
+		msg["reasoning_content"] = constant.ReasoningContentPlaceholder
 		msgsRaw[i] = msg
 		modified = true
 	}
@@ -403,18 +398,18 @@ func SendOpenAIUpstreamError(statusCode int, body string) (rsp *huma.StreamRespo
 	if err := sonic.UnmarshalString(body, &errResp); err == nil && errResp.Error != nil && errResp.Error.Message != "" {
 		errMsg = errResp.Error.Message
 	} else {
-		errMsg = fmt.Sprintf("Upstream returned status %d", statusCode)
+		errMsg = fmt.Sprintf(constant.UpstreamStatusMessageTemplate, statusCode)
 	}
 
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
-			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
 				Error: &dto.OpenAIError{
 					Message: errMsg,
-					Type:    "upstream_error",
-					Code:    "upstream_error",
+					Type:    constant.UpstreamErrorType,
+					Code:    constant.UpstreamErrorType,
 				},
 			})))
 		},

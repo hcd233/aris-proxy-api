@@ -93,7 +93,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 			zap.String("latency", latency.String()),
 		}
 
-		if strings.Contains(string(c.Request().Header.ContentType()), "application/json") {
+		if strings.Contains(string(c.Request().Header.ContentType()), constant.HTTPContentTypeJSON) {
 			request := make(map[string]any)
 			if reqBody := c.Body(); reqBody != nil {
 				if jsonErr := sonic.Unmarshal(reqBody, &request); jsonErr != nil {
@@ -109,7 +109,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 		// FIXME: get response body will break sse
 		// reference: https://github.com/gofiber/fiber/issues/429
 		// reference: https://github.com/samber/slog-fiber/issues/68
-		if strings.Contains(string(c.Response().Header.ContentType()), "application/json") { // response header content-type is not text/event-stream
+		if strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeJSON) { // response header content-type is not text/event-stream
 			response := make(map[string]any)
 			if respBody := c.Response().Body(); respBody != nil {
 				if jsonErr := sonic.Unmarshal(respBody, &response); jsonErr != nil {

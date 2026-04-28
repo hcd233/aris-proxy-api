@@ -81,7 +81,7 @@ func (*AnthropicProtocolConverter) FromOpenAIRequest(req *dto.OpenAIChatCompleti
 func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (*dto.OpenAIChatCompletion, error) {
 	completion := &dto.OpenAIChatCompletion{
 		ID:      msg.ID,
-		Object:  "chat.completion",
+		Object:  constant.OpenAICompletionObject,
 		Created: time.Now().Unix(),
 		Model:   msg.Model,
 	}
@@ -280,12 +280,12 @@ func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL
 	}
 
 	// 检查是否是 data URI
-	if strings.HasPrefix(img.URL, "data:") {
-		parts := strings.SplitN(img.URL, ";base64,", 2)
+	if strings.HasPrefix(img.URL, constant.DataURLPrefix) {
+		parts := strings.SplitN(img.URL, constant.DataURLBase64Separator, 2)
 		if len(parts) == 2 {
-			mediaType := strings.TrimPrefix(parts[0], "data:")
+			mediaType := strings.TrimPrefix(parts[0], constant.DataURLPrefix)
 			block.Source = &dto.AnthropicContentSource{
-				Type:      "base64",
+				Type:      constant.Base64SourceType,
 				MediaType: mediaType,
 				Data:      parts[1],
 			}
@@ -295,7 +295,7 @@ func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL
 
 	// URL 形式
 	block.Source = &dto.AnthropicContentSource{
-		Type: "url",
+		Type: constant.URLSourceType,
 		URL:  img.URL,
 	}
 	return block
@@ -405,17 +405,17 @@ func convertOpenAIToolsToAnthropic(tools []dto.OpenAIChatCompletionTool) []*dto.
 func convertOpenAIToolChoiceToAnthropic(tc *dto.OpenAIChatCompletionToolChoiceParam) *dto.AnthropicToolChoice {
 	if tc.Named != nil && tc.Named.Function != nil {
 		return &dto.AnthropicToolChoice{
-			Type: "tool",
+			Type: enum.AnthropicToolChoiceTypeTool,
 			Name: tc.Named.Function.Name,
 		}
 	}
 	switch tc.Mode {
 	case enum.ToolChoiceAuto:
-		return &dto.AnthropicToolChoice{Type: "auto"}
+		return &dto.AnthropicToolChoice{Type: enum.AnthropicToolChoiceTypeAuto}
 	case enum.ToolChoiceRequired:
-		return &dto.AnthropicToolChoice{Type: "any"}
+		return &dto.AnthropicToolChoice{Type: enum.AnthropicToolChoiceTypeAny}
 	case enum.ToolChoiceNone:
-		return &dto.AnthropicToolChoice{Type: "none"}
+		return &dto.AnthropicToolChoice{Type: enum.AnthropicToolChoiceTypeNone}
 	}
 	return nil
 }
@@ -496,7 +496,7 @@ func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkI
 
 	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      chunkID,
-		Object:  "chat.completion.chunk",
+		Object:  constant.OpenAICompletionChunkObject,
 		Created: time.Now().Unix(),
 		Model:   model,
 	}
@@ -536,7 +536,7 @@ func convertMessageDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID str
 
 	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      chunkID,
-		Object:  "chat.completion.chunk",
+		Object:  constant.OpenAICompletionChunkObject,
 		Created: time.Now().Unix(),
 		Model:   model,
 	}
@@ -574,7 +574,7 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 	if payload.ContentBlock.Type == enum.AnthropicContentBlockTypeToolUse {
 		chunk := &dto.OpenAIChatCompletionChunk{
 			ID:      chunkID,
-			Object:  "chat.completion.chunk",
+			Object:  constant.OpenAICompletionChunkObject,
 			Created: time.Now().Unix(),
 			Model:   model,
 			Choices: []*dto.OpenAIChatCompletionChunkChoice{{
@@ -599,7 +599,7 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 		payload.ContentBlock.Type == enum.AnthropicContentBlockTypeThinking {
 		chunk := &dto.OpenAIChatCompletionChunk{
 			ID:      chunkID,
-			Object:  "chat.completion.chunk",
+			Object:  constant.OpenAICompletionChunkObject,
 			Created: time.Now().Unix(),
 			Model:   model,
 			Choices: []*dto.OpenAIChatCompletionChunkChoice{{
@@ -823,19 +823,19 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 			block := &dto.AnthropicContentBlock{
 				Type: enum.AnthropicContentBlockTypeImage,
 			}
-			if strings.HasPrefix(imageURL, "data:") {
-				parts := strings.SplitN(imageURL, ";base64,", 2)
+			if strings.HasPrefix(imageURL, constant.DataURLPrefix) {
+				parts := strings.SplitN(imageURL, constant.DataURLBase64Separator, 2)
 				if len(parts) == 2 {
-					mediaType := strings.TrimPrefix(parts[0], "data:")
+					mediaType := strings.TrimPrefix(parts[0], constant.DataURLPrefix)
 					block.Source = &dto.AnthropicContentSource{
-						Type:      "base64",
+						Type:      constant.Base64SourceType,
 						MediaType: mediaType,
 						Data:      parts[1],
 					}
 				}
 			} else {
 				block.Source = &dto.AnthropicContentSource{
-					Type: "url",
+					Type: constant.URLSourceType,
 					URL:  imageURL,
 				}
 			}
@@ -966,15 +966,15 @@ func convertResponseToolChoiceToAnthropic(tc *dto.ResponseToolChoiceParam) *dto.
 	}
 	switch tc.Mode {
 	case enum.ResponseToolChoiceOptionNone:
-		return &dto.AnthropicToolChoice{Type: "none"}
+		return &dto.AnthropicToolChoice{Type: enum.AnthropicToolChoiceTypeNone}
 	case enum.ResponseToolChoiceOptionAuto:
-		return &dto.AnthropicToolChoice{Type: "auto"}
+		return &dto.AnthropicToolChoice{Type: enum.AnthropicToolChoiceTypeAuto}
 	case enum.ResponseToolChoiceOptionRequired:
-		return &dto.AnthropicToolChoice{Type: "any"}
+		return &dto.AnthropicToolChoice{Type: enum.AnthropicToolChoiceTypeAny}
 	}
 	if tc.Object != nil && tc.Object.Type == string(enum.ResponseToolChoiceTypeFunction) {
 		return &dto.AnthropicToolChoice{
-			Type: "tool",
+			Type: enum.AnthropicToolChoiceTypeTool,
 			Name: tc.Object.Name,
 		}
 	}
@@ -989,7 +989,7 @@ func parseJSONToMap(jsonStr string) map[string]any {
 	var result map[string]any
 	if err := sonic.UnmarshalString(jsonStr, &result); err != nil {
 		// 解析失败时保留原始 JSON 字符串，交由上游尝试解释
-		return map[string]any{"raw": jsonStr}
+		return map[string]any{constant.FallbackJSONRawKey: jsonStr}
 	}
 	return result
 }

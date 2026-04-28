@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
 
 // SessionSummary Session列表项摘要
@@ -40,10 +41,10 @@ type SessionDetail struct {
 //	@author centonhuang
 //	@update 2026-04-25 15:00:00
 type MessageItem struct {
-	ID        uint            `json:"id" doc:"消息ID"`
-	Model     string          `json:"model" doc:"模型名称"`
-	Message   *UnifiedMessage `json:"message" doc:"消息内容"`
-	CreatedAt time.Time       `json:"createdAt" doc:"创建时间"`
+	ID        uint               `json:"id" doc:"消息ID"`
+	Model     string             `json:"model" doc:"模型名称"`
+	Message   *vo.UnifiedMessage `json:"message" doc:"消息内容"`
+	CreatedAt time.Time          `json:"createdAt" doc:"创建时间"`
 }
 
 // ToolItem 工具列表项
@@ -51,9 +52,9 @@ type MessageItem struct {
 //	@author centonhuang
 //	@update 2026-04-25 15:00:00
 type ToolItem struct {
-	ID        uint         `json:"id" doc:"工具ID"`
-	Tool      *UnifiedTool `json:"tool" doc:"工具内容"`
-	CreatedAt time.Time    `json:"createdAt" doc:"创建时间"`
+	ID        uint            `json:"id" doc:"工具ID"`
+	Tool      *vo.UnifiedTool `json:"tool" doc:"工具内容"`
+	CreatedAt time.Time       `json:"createdAt" doc:"创建时间"`
 }
 
 // ListSessionsReq 分页获取Session列表请求

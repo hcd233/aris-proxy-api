@@ -4,6 +4,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
@@ -18,42 +19,42 @@ import (
 func NewHumaAPI(app *fiber.App) huma.API {
 	return humafiber.New(app, huma.Config{
 		OpenAPI: &huma.OpenAPI{
-			OpenAPI: "3.1.0",
+			OpenAPI: constant.OpenAPIVersion,
 			Info: &huma.Info{
-				Title:       "Aris API Tmpl",
-				Description: "Aris API Tmpl is a RESTful API Template.",
-				Version:     "1.0",
+				Title:       constant.APITitle,
+				Description: constant.APIDescription,
+				Version:     constant.APIVersion,
 				Contact: &huma.Contact{
-					Name:  "hcd233",
-					Email: "lvlvko233@qq.com",
-					URL:   "https://github.com/hcd233",
+					Name:  constant.ContactName,
+					Email: constant.ContactEmail,
+					URL:   constant.ContactURL,
 				},
 				License: &huma.License{
-					Name: "Apache 2.0",
-					URL:  "https://www.apache.org/licenses/LICENSE-2.0.html",
+					Name: constant.LicenseName,
+					URL:  constant.LicenseURL,
 				},
 			},
 			Components: &huma.Components{
-				Schemas: huma.NewMapRegistry("#/components/schemas/", huma.DefaultSchemaNamer),
+				Schemas: huma.NewMapRegistry(constant.OpenAPISchemasPrefix, huma.DefaultSchemaNamer),
 				SecuritySchemes: map[string]*huma.SecurityScheme{
-					"jwtAuth": {
-						Type:        "apiKey",
-						Name:        "Authorization",
-						In:          "header",
-						Description: "JWT Authentication，Please pass the JWT token in the Authorization header.",
+					constant.SecuritySchemeJWT: {
+						Type:        constant.SecurityTypeAPIKey,
+						Name:        constant.HeaderAuthorization,
+						In:          constant.SecurityInHeader,
+						Description: constant.JWTDescription,
 					},
-					"apiKeyAuth": {
-						Type:        "http",
-						Scheme:      "bearer",
-						Description: "API Key Authentication, Please pass the API Key as Bearer token in the Authorization header.",
+					constant.SecuritySchemeAPIKey: {
+						Type:        constant.SecurityTypeHTTP,
+						Scheme:      constant.SecuritySchemeBearer,
+						Description: constant.APIKeyDescription,
 					},
 				},
 			},
 		},
-		OpenAPIPath:   lo.If(config.Env != enum.EnvProduction, "/openapi").Else(""),
+		OpenAPIPath:   lo.If(config.Env != enum.EnvProduction, constant.OpenAPIDocsPath).Else(""),
 		DocsPath:      "",
-		SchemasPath:   lo.If(config.Env != enum.EnvProduction, "/schemas").Else(""),
+		SchemasPath:   lo.If(config.Env != enum.EnvProduction, constant.OpenAPISchemasPath).Else(""),
 		Formats:       huma.DefaultFormats,
-		DefaultFormat: "application/json",
+		DefaultFormat: constant.DefaultFormatJSON,
 	})
 }

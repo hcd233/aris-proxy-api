@@ -40,7 +40,7 @@ type SessionScoreCron struct {
 func NewSessionScoreCron() Cron {
 	return &SessionScoreCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter("SessionScoreCron", logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionScore, logger.Logger())),
 		),
 		sessionDAO: dao.GetSessionDAO(),
 		messageDAO: dao.GetMessageDAO(),
@@ -67,7 +67,7 @@ func (c *SessionScoreCron) Stop() {
 //	@update 2026-04-03 10:00:00
 func (c *SessionScoreCron) Start() error {
 	// 每天凌晨3:00执行，在摘要任务完成后执行
-	entryID, err := c.cron.AddFunc("0 3 * * *", c.score)
+	entryID, err := c.cron.AddFunc(constant.CronSpecSessionScore, c.score)
 	if err != nil {
 		logger.Logger().Error("[SessionScoreCron] Add func error", zap.Error(err))
 		return err
@@ -92,7 +92,7 @@ func (c *SessionScoreCron) score() {
 	poolManager := pool.GetPoolManager()
 
 	// 获取未评分且未删除的session（score_version为空字符串）
-	sessions, err := c.sessionDAO.BatchGetByField(db, "score_version", []string{""}, []string{"id", "message_ids"})
+	sessions, err := c.sessionDAO.BatchGetByField(db, constant.WhereFieldScoreVersion, []string{""}, constant.SessionRepoFieldsScore)
 	if err != nil {
 		log.Error("[SessionScoreCron] Failed to get unscored sessions", zap.Error(err))
 		return
@@ -144,7 +144,7 @@ func (c *SessionScoreCron) getSessionContent(ctx context.Context, db *gorm.DB, s
 		return "", nil
 	}
 
-	messages, err := c.messageDAO.BatchGetByField(db, "id", session.MessageIDs, []string{"id", "message"})
+	messages, err := c.messageDAO.BatchGetByField(db, constant.WhereFieldID, session.MessageIDs, constant.MessageRepoFieldsContent)
 	if err != nil {
 		return "", err
 	}
@@ -163,5 +163,5 @@ func (c *SessionScoreCron) getSessionContent(ctx context.Context, db *gorm.DB, s
 		}
 	}
 
-	return strings.Join(contentParts, "\n"), nil
+	return strings.Join(contentParts, constant.NewlineString), nil
 }

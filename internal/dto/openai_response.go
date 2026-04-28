@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 // ==================== Response API Request DTOs ====================
@@ -22,9 +23,8 @@ import (
 // Response API reasoning summary/generate_summary 常量
 // ResponseReasoningConfig reasoning 配置对象
 type ResponseReasoningConfig struct {
-	Effort          string `json:"effort,omitempty" doc:"推理强度: none/minimal/low/medium/high/xhigh"`
-	GenerateSummary string `json:"generate_summary,omitempty" doc:"[Deprecated] 摘要策略: auto/concise/detailed"`
-	Summary         string `json:"summary,omitempty" doc:"摘要策略: auto/concise/detailed"`
+	Effort  string `json:"effort,omitempty" doc:"推理强度: none/minimal/low/medium/high/xhigh"`
+	Summary string `json:"summary,omitempty" doc:"摘要策略: auto/concise/detailed"`
 }
 
 // ==================== text 字段 ====================
@@ -83,7 +83,7 @@ func (p ResponsePromptVariable) MarshalJSON() ([]byte, error) {
 	if p.StringValue != nil {
 		return sonic.Marshal(*p.StringValue)
 	}
-	return []byte("null"), nil
+	return []byte(constant.NullJSONLiteral), nil
 }
 
 // Schema 字符串或内容块对象
@@ -91,7 +91,7 @@ func (ResponsePromptVariable) Schema(reg huma.Registry) *huma.Schema {
 	contentSchema := reg.Schema(reflect.TypeFor[ResponseInputContent](), true, "ResponseInputContent")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
+			{Type: constant.JSONSchemaTypeString},
 			contentSchema,
 		},
 	}
@@ -141,7 +141,7 @@ func (ResponseConversationParam) Schema(reg huma.Registry) *huma.Schema {
 	valueSchema := reg.Schema(reflect.TypeFor[ResponseConversationValue](), true, "ResponseConversationValue")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
+			{Type: constant.JSONSchemaTypeString},
 			valueSchema,
 		},
 	}

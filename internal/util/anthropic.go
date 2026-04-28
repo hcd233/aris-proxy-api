@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -23,12 +24,12 @@ func SendAnthropicModelNotFoundError(model string) (rsp *huma.StreamResponse) {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusNotFound)
-			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
-				Type: "error",
+				Type: constant.AnthropicInternalErrorBodyType,
 				Error: &dto.AnthropicError{
-					Type:    "not_found_error",
-					Message: fmt.Sprintf("model: %s", model),
+					Type:    constant.AnthropicNotFoundErrorType,
+					Message: fmt.Sprintf(constant.AnthropicModelNotFoundMessageTemplate, model),
 				},
 			})))
 		},
@@ -44,12 +45,12 @@ func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusInternalServerError)
-			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
-				Type: "error",
+				Type: constant.AnthropicInternalErrorBodyType,
 				Error: &dto.AnthropicError{
-					Type:    "api_error",
-					Message: "Internal server error",
+					Type:    constant.AnthropicInternalErrorType,
+					Message: constant.AnthropicInternalErrorMessage,
 				},
 			})))
 		},
@@ -87,7 +88,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 		block         *dto.AnthropicContentBlock
 		textParts     []string
 		thinkingParts []string
-		inputParts    []string // for input_json_delta
+		inputParts    []string // input_json_delta
 	}
 	blocks := make(map[int]*blockState)
 	blockOrder := make([]int, 0)
@@ -211,17 +212,17 @@ func SendAnthropicUpstreamError(statusCode int, body string) (rsp *huma.StreamRe
 	if err := sonic.UnmarshalString(body, &errResp); err == nil && errResp.Error != nil && errResp.Error.Message != "" {
 		errMsg = errResp.Error.Message
 	} else {
-		errMsg = fmt.Sprintf("Upstream returned status %d", statusCode)
+		errMsg = fmt.Sprintf(constant.UpstreamStatusMessageTemplate, statusCode)
 	}
 
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
-			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
-				Type: "error",
+				Type: constant.AnthropicInternalErrorBodyType,
 				Error: &dto.AnthropicError{
-					Type:    "upstream_error",
+					Type:    constant.UpstreamErrorType,
 					Message: errMsg,
 				},
 			})))

@@ -83,7 +83,7 @@ func (*OpenAIProtocolConverter) FromAnthropicRequest(req *dto.AnthropicCreateMes
 func (*OpenAIProtocolConverter) ToAnthropicResponse(completion *dto.OpenAIChatCompletion) (*dto.AnthropicMessage, error) {
 	msg := &dto.AnthropicMessage{
 		ID:    completion.ID,
-		Type:  "message",
+		Type:  constant.AnthropicMessageType,
 		Role:  enum.RoleAssistant,
 		Model: completion.Model,
 	}
@@ -160,7 +160,7 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 		startMsg := &dto.AnthropicSSEMessageStart{
 			Message: &dto.AnthropicMessage{
 				ID:      chunk.ID,
-				Type:    "message",
+				Type:    constant.AnthropicMessageType,
 				Role:    enum.RoleAssistant,
 				Model:   model,
 				Content: []*dto.AnthropicContentBlock{},
@@ -445,8 +445,13 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 		// Anthropic 的 input_schema 可能是 {"type": "object"} 或带有 additionalProperties: false
 		// 这种情况下应该将 parameters 设为 nil
 		var params *vo.JSONSchemaProperty
-		if tool.InputSchema != nil && !isEmptyObjectSchema(tool.InputSchema) {
-			params = normalizeOpenAISchema(tool.InputSchema)
+		if tool.InputSchema != nil && !isEmptyObjectSchema(&tool.InputSchema.JSONSchemaProperty) {
+			params = normalizeOpenAISchema(&tool.InputSchema.JSONSchemaProperty)
+		}
+
+		var parameters *dto.JSONSchemaProperty
+		if params != nil {
+			parameters = &dto.JSONSchemaProperty{JSONSchemaProperty: *params}
 		}
 
 		openAITools = append(openAITools, dto.OpenAIChatCompletionTool{
@@ -454,7 +459,7 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 			Function: &dto.OpenAIFunctionDefinition{
 				Name:        tool.Name,
 				Description: tool.Description,
-				Parameters:  params,
+				Parameters:  parameters,
 				Strict:      tool.Strict,
 			},
 		})
@@ -512,15 +517,15 @@ func convertAnthropicToolChoiceToOpenAI(tc *dto.AnthropicToolChoice) *dto.OpenAI
 func convertOpenAIFinishReasonToAnthropic(reason enum.FinishReason) *string {
 	switch reason {
 	case enum.FinishReasonStop:
-		return lo.ToPtr("end_turn")
+		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
 	case enum.FinishReasonLength:
-		return lo.ToPtr("max_tokens")
+		return lo.ToPtr(string(enum.AnthropicStopReasonMaxTokens))
 	case enum.FinishReasonToolCalls:
-		return lo.ToPtr("tool_use")
+		return lo.ToPtr(string(enum.AnthropicStopReasonToolUse))
 	case enum.FinishReasonContentFilter:
-		return lo.ToPtr("end_turn")
+		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
 	default:
-		return lo.ToPtr("end_turn")
+		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
 	}
 }
 

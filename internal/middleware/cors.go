@@ -14,9 +14,9 @@ import (
 func CORSMiddleware() fiber.Handler {
 	return cors.New(cors.Config{
 		AllowOrigins:     constant.CORSAllowOrigins,
-		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Requested-With,X-Trace-Id",
-		ExposeHeaders:    "Content-Length",
+		AllowMethods:     constant.CORSAllowMethods,
+		AllowHeaders:     constant.CORSAllowHeaders,
+		ExposeHeaders:    constant.CORSExposeHeaders,
 		AllowCredentials: true,
 		MaxAge:           int(constant.CORSPreflightMaxAge.Seconds()),
 	})

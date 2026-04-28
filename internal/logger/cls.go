@@ -191,29 +191,29 @@ func valueToString(v interface{}) string {
 	case string:
 		return val
 	case int:
-		return strconv.FormatInt(int64(val), 10)
+		return strconv.FormatInt(int64(val), constant.DecimalBase)
 	case int8:
-		return strconv.FormatInt(int64(val), 10)
+		return strconv.FormatInt(int64(val), constant.DecimalBase)
 	case int16:
-		return strconv.FormatInt(int64(val), 10)
+		return strconv.FormatInt(int64(val), constant.DecimalBase)
 	case int32:
-		return strconv.FormatInt(int64(val), 10)
+		return strconv.FormatInt(int64(val), constant.DecimalBase)
 	case int64:
-		return strconv.FormatInt(val, 10)
+		return strconv.FormatInt(val, constant.DecimalBase)
 	case uint:
-		return strconv.FormatUint(uint64(val), 10)
+		return strconv.FormatUint(uint64(val), constant.DecimalBase)
 	case uint8:
-		return strconv.FormatUint(uint64(val), 10)
+		return strconv.FormatUint(uint64(val), constant.DecimalBase)
 	case uint16:
-		return strconv.FormatUint(uint64(val), 10)
+		return strconv.FormatUint(uint64(val), constant.DecimalBase)
 	case uint32:
-		return strconv.FormatUint(uint64(val), 10)
+		return strconv.FormatUint(uint64(val), constant.DecimalBase)
 	case uint64:
-		return strconv.FormatUint(val, 10)
+		return strconv.FormatUint(val, constant.DecimalBase)
 	case float32:
-		return fmt.Sprintf("%g", val)
+		return fmt.Sprintf(constant.FormatFloatCompact, val)
 	case float64:
-		return fmt.Sprintf("%g", val)
+		return fmt.Sprintf(constant.FormatFloatCompact, val)
 	case bool:
 		return strconv.FormatBool(val)
 	case []byte:

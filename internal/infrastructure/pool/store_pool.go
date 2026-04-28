@@ -6,6 +6,7 @@ package pool
 
 import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
@@ -30,14 +31,14 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 	db := database.GetDBInstance(task.Ctx)
 
 	return pm.storePool.Go(func() {
-		toolSchemas := util.ToolSchemaMap{}
+		toolSchemas := vo.ToolSchemaMap{}
 		for _, t := range task.Tools {
 			if t.Parameters != nil {
 				toolSchemas[t.Name] = t.Parameters
 			}
 		}
 
-		messages := lo.Map(task.Messages, func(m *dto.UnifiedMessage, _ int) *dbmodel.Message {
+		messages := lo.Map(task.Messages, func(m *vo.UnifiedMessage, _ int) *dbmodel.Message {
 			model := ""
 			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
 				model = task.Model
@@ -45,14 +46,14 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 			return &dbmodel.Message{
 				Model:    model,
 				Message:  m,
-				CheckSum: util.ComputeMessageChecksum(m, toolSchemas),
+				CheckSum: vo.ComputeMessageChecksum(m, toolSchemas),
 			}
 		})
 
-		tools := lo.Map(task.Tools, func(t *dto.UnifiedTool, _ int) *dbmodel.Tool {
+		tools := lo.Map(task.Tools, func(t *vo.UnifiedTool, _ int) *dbmodel.Tool {
 			return &dbmodel.Tool{
 				Tool:     t,
-				CheckSum: util.ComputeToolChecksum(t),
+				CheckSum: vo.ComputeToolChecksum(t),
 			}
 		})
 

@@ -15,23 +15,23 @@ import (
 //	@update 2026-03-29 10:00:00
 func CopyContextValues(src context.Context) (dst context.Context) {
 	dst = context.Background()
-	dst = context.WithValue(dst, constant.CtxKeyTraceID, src.Value(constant.CtxKeyTraceID))       //nolint:staticcheck // SA1029 项目统一使用 string 类型 context key
-	dst = context.WithValue(dst, constant.CtxKeyUserID, src.Value(constant.CtxKeyUserID))         //nolint:staticcheck // SA1029
-	dst = context.WithValue(dst, constant.CtxKeyUserName, src.Value(constant.CtxKeyUserName))     //nolint:staticcheck // SA1029
-	dst = context.WithValue(dst, constant.CtxKeyPermission, src.Value(constant.CtxKeyPermission)) //nolint:staticcheck // SA1029
-	dst = context.WithValue(dst, constant.CtxKeyAPIKeyID, src.Value(constant.CtxKeyAPIKeyID))     //nolint:staticcheck // SA1029
-	dst = context.WithValue(dst, constant.CtxKeyClient, src.Value(constant.CtxKeyClient))         //nolint:staticcheck // SA1029
+	dst = context.WithValue(dst, constant.CtxKeyTraceID, src.Value(constant.CtxKeyTraceID))
+	dst = context.WithValue(dst, constant.CtxKeyUserID, src.Value(constant.CtxKeyUserID))
+	dst = context.WithValue(dst, constant.CtxKeyUserName, src.Value(constant.CtxKeyUserName))
+	dst = context.WithValue(dst, constant.CtxKeyPermission, src.Value(constant.CtxKeyPermission))
+	dst = context.WithValue(dst, constant.CtxKeyAPIKeyID, src.Value(constant.CtxKeyAPIKeyID))
+	dst = context.WithValue(dst, constant.CtxKeyClient, src.Value(constant.CtxKeyClient))
 	return dst
 }
 
 // CtxValueString 安全获取上下文中的字符串值
 //
 //	param ctx context.Context
-//	param key string
+//	param key constant.CtxKey
 //	return string
 //	@author centonhuang
 //	@update 2026-03-29 10:00:00
-func CtxValueString(ctx context.Context, key string) string {
+func CtxValueString(ctx context.Context, key enum.CtxKey) string {
 	if v := ctx.Value(key); v != nil {
 		if s, ok := v.(string); ok {
 			return s
@@ -43,11 +43,11 @@ func CtxValueString(ctx context.Context, key string) string {
 // CtxValueUint 安全获取上下文中的uint值
 //
 //	param ctx context.Context
-//	param key string
+//	param key constant.CtxKey
 //	return uint
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
-func CtxValueUint(ctx context.Context, key string) uint {
+func CtxValueUint(ctx context.Context, key enum.CtxKey) uint {
 	if v := ctx.Value(key); v != nil {
 		switch n := v.(type) {
 		case uint:

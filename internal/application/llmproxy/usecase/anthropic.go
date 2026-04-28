@@ -15,6 +15,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	convvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -138,8 +139,8 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
 			modifiedData := transport.ReplaceModelInSSEData(event.Data, exposedModel)
-			_, _ = fmt.Fprintf(w, "event: %s\n", event.Event)
-			_, _ = fmt.Fprintf(w, "data: %s\n\n", modifiedData)
+			_, _ = fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event)
+			_, _ = fmt.Fprintf(w, constant.SSEDataLineTemplate, modifiedData)
 			return w.Flush()
 		})
 		if !firstTokenTime.IsZero() {
@@ -238,8 +239,8 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 					firstTokenTime = time.Now()
 					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 				}
-				_, _ = fmt.Fprintf(w, "event: %s\n", event.Event)
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", string(event.Data))
+				_, _ = fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event)
+				_, _ = fmt.Fprintf(w, constant.SSEDataLineTemplate, string(event.Data))
 				if flushErr := w.Flush(); flushErr != nil {
 					return flushErr
 				}
@@ -371,15 +372,15 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, log *zap.
 //	@param log *zap.Logger
 //	@param req *dto.AnthropicCreateMessageRequest
 //	@param assistantMsg *dto.AnthropicMessage
-//	@return []*dto.UnifiedMessage 统一消息列表
-//	@return []*dto.UnifiedTool 统一工具列表
+//	@return []*convvo.UnifiedMessage 统一消息列表
+//	@return []*convvo.UnifiedTool 统一工具列表
 //	@return int 输入 token 数
 //	@return int 输出 token 数
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (u *anthropicUseCase) convertAnthropicRequestMessages(log *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage) ([]*dto.UnifiedMessage, []*dto.UnifiedTool, int, int, error) {
-	unifiedMessages := make([]*dto.UnifiedMessage, 0, len(req.Body.Messages)+1)
+func (u *anthropicUseCase) convertAnthropicRequestMessages(log *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage) ([]*convvo.UnifiedMessage, []*convvo.UnifiedTool, int, int, error) {
+	unifiedMessages := make([]*convvo.UnifiedMessage, 0, len(req.Body.Messages)+1)
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromAnthropicMessage(msg)
 		if err != nil {
@@ -396,7 +397,7 @@ func (u *anthropicUseCase) convertAnthropicRequestMessages(log *zap.Logger, req 
 	}
 	unifiedMessages = append(unifiedMessages, aiMsg)
 
-	unifiedTools := make([]*dto.UnifiedTool, 0, len(req.Body.Tools))
+	unifiedTools := make([]*convvo.UnifiedTool, 0, len(req.Body.Tools))
 	for _, tool := range req.Body.Tools {
 		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
 	}
