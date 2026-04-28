@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -45,8 +46,8 @@ func (c OpenAIMessageContent) Schema(r huma.Registry) *huma.Schema {
 	contentPartSchema := r.Schema(reflect.TypeFor[OpenAIChatCompletionContentPart](), true, "OpenAIChatCompletionContentPart")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "array", Items: contentPartSchema},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeArray, Items: contentPartSchema},
 		},
 	}
 }
@@ -95,8 +96,8 @@ func (s OpenAIStopSequence) MarshalJSON() ([]byte, error) {
 func (s OpenAIStopSequence) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "array", Items: &huma.Schema{Type: "string"}},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeArray, Items: &huma.Schema{Type: constant.JSONSchemaTypeString}},
 		},
 	}
 }
@@ -134,7 +135,7 @@ func (tc OpenAIChatCompletionToolChoiceParam) Schema(r huma.Registry) *huma.Sche
 	toolChoiceSchema := r.Schema(reflect.TypeFor[OpenAIChatCompletionToolChoice](), true, "OpenAIChatCompletionToolChoice")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string", Enum: []any{"none", "auto", "required"}},
+			{Type: constant.JSONSchemaTypeString, Enum: []any{enum.ToolChoiceNone, enum.ToolChoiceAuto, enum.ToolChoiceRequired}},
 			toolChoiceSchema,
 		},
 	}
@@ -172,7 +173,7 @@ func (v *OpenAIVoiceParam) UnmarshalJSON(data []byte) error {
 // MarshalJSON 自定义序列化：CustomID 优先输出对象，否则输出字符串
 func (v OpenAIVoiceParam) MarshalJSON() ([]byte, error) {
 	if v.CustomID != "" {
-		return sonic.Marshal(map[string]string{"id": v.CustomID})
+		return sonic.Marshal(map[string]string{constant.FieldNameID: v.CustomID})
 	}
 	return sonic.Marshal(v.Name)
 }
@@ -181,13 +182,13 @@ func (v OpenAIVoiceParam) MarshalJSON() ([]byte, error) {
 func (v OpenAIVoiceParam) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
+			{Type: constant.JSONSchemaTypeString},
 			{
-				Type: "object",
+				Type: constant.JSONSchemaTypeObject,
 				Properties: map[string]*huma.Schema{
-					"id": {Type: "string"},
+					constant.FieldNameID: {Type: constant.JSONSchemaTypeString},
 				},
-				Required: []string{"id"},
+				Required: []string{constant.FieldNameID},
 			},
 		},
 	}

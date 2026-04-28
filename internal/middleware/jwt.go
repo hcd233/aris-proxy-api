@@ -54,8 +54,8 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		log := logger.WithCtx(ctx.Context())
 		db := database.GetDBInstance(ctx.Context())
 
-		tokenString := ctx.Header("Authorization")
-		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), "Bearer "))
+		tokenString := ctx.Header(constant.HTTPHeaderAuthorization)
+		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 		if tokenString == "" {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
@@ -83,7 +83,7 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 
 		// 缓存未命中，查数据库
 		if !cacheHit {
-			user, dbErr := userDAO.Get(db, &model.User{ID: userID}, []string{"id", "name", "permission"})
+			user, dbErr := userDAO.Get(db, &model.User{ID: userID}, constant.UserRepoFieldsAuth)
 			if dbErr != nil {
 				lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
 				return

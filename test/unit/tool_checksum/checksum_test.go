@@ -5,16 +5,15 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	convvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
 
 // toolChecksumCase represents a tool checksum test case loaded from fixtures
 type toolChecksumCase struct {
-	Name        string             `json:"name"`
-	Description string             `json:"description"`
-	Tools       []*dto.UnifiedTool `json:"tools"`
-	ExpectEqual bool               `json:"expect_equal"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	Tools       []*convvo.UnifiedTool `json:"tools"`
+	ExpectEqual bool                  `json:"expect_equal"`
 }
 
 // loadToolCases loads test cases from fixtures/cases.json
@@ -66,8 +65,8 @@ func TestComputeToolChecksum_PairComparison(t *testing.T) {
 		}
 
 		t.Run(caseName, func(t *testing.T) {
-			checksum1 := util.ComputeToolChecksum(tc.Tools[0])
-			checksum2 := util.ComputeToolChecksum(tc.Tools[1])
+			checksum1 := convvo.ComputeToolChecksum(tc.Tools[0])
+			checksum2 := convvo.ComputeToolChecksum(tc.Tools[1])
 
 			t.Logf("description: %s", tc.Description)
 			t.Logf("tool1: name=%s, checksum=%s", tc.Tools[0].Name, checksum1)
@@ -97,7 +96,7 @@ func TestComputeToolChecksum_SingleToolCases(t *testing.T) {
 		tc := findCase(t, allCases, caseName)
 
 		t.Run(caseName, func(t *testing.T) {
-			checksum := util.ComputeToolChecksum(tc.Tools[0])
+			checksum := convvo.ComputeToolChecksum(tc.Tools[0])
 			t.Logf("tool: name=%s, checksum=%s", tc.Tools[0].Name, checksum)
 
 			if checksum == "" {
@@ -113,7 +112,7 @@ func TestComputeToolChecksum_Deterministic(t *testing.T) {
 
 	checksums := make(map[string]bool)
 	for i := range 100 {
-		checksum := util.ComputeToolChecksum(tc.Tools[0])
+		checksum := convvo.ComputeToolChecksum(tc.Tools[0])
 		checksums[checksum] = true
 		if i == 0 {
 			t.Logf("first checksum: %s", checksum)
@@ -133,8 +132,8 @@ func TestComputeToolChecksum_NilVsEmptyProperties(t *testing.T) {
 	nilCase := findCase(t, allCases, "nil_vs_empty_properties_nil")
 	emptyCase := findCase(t, allCases, "nil_vs_empty_properties_empty")
 
-	checksum1 := util.ComputeToolChecksum(nilCase.Tools[0])
-	checksum2 := util.ComputeToolChecksum(emptyCase.Tools[0])
+	checksum1 := convvo.ComputeToolChecksum(nilCase.Tools[0])
+	checksum2 := convvo.ComputeToolChecksum(emptyCase.Tools[0])
 
 	t.Logf("nil params checksum: %s", checksum1)
 	t.Logf("empty schema checksum: %s", checksum2)

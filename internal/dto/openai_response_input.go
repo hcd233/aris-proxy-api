@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 // ==================== Response API Input Item Types ====================
@@ -108,8 +109,8 @@ func (c ResponseInputMessageContent) Schema(r huma.Registry) *huma.Schema {
 	contentSchema := r.Schema(reflect.TypeFor[ResponseInputContent](), true, "ResponseInputContent")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "array", Items: contentSchema},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeArray, Items: contentSchema},
 		},
 	}
 }
@@ -331,16 +332,16 @@ func (a ResponseFileSearchResultAttribute) MarshalJSON() ([]byte, error) {
 	if a.BoolValue != nil {
 		return sonic.Marshal(*a.BoolValue)
 	}
-	return []byte("null"), nil
+	return []byte(constant.NullJSONLiteral), nil
 }
 
 // Schema 接受 string/number/boolean
 func (ResponseFileSearchResultAttribute) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "number"},
-			{Type: "boolean"},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeNumber},
+			{Type: constant.JSONSchemaTypeBoolean},
 		},
 	}
 }
@@ -377,8 +378,8 @@ func (ResponseFunctionCallOutputContent) Schema(r huma.Registry) *huma.Schema {
 	itemSchema := r.Schema(reflect.TypeFor[ResponseInputContent](), true, "ResponseInputContent")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "array", Items: itemSchema},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeArray, Items: itemSchema},
 		},
 	}
 }
@@ -422,7 +423,9 @@ type ResponseMcpListToolsEntry struct {
 
 // ResponseToolSearchCallArguments ToolSearchCall.arguments 为任意 JSON
 // 结构化为 JSONSchemaProperty 以兼容 schema 声明
-type ResponseToolSearchCallArguments = JSONSchemaProperty
+type ResponseToolSearchCallArguments struct {
+	JSONSchemaProperty
+}
 
 // ==================== Unified Input Item ====================
 
@@ -603,9 +606,9 @@ func (o ResponseInputItemOutput) MarshalJSON() ([]byte, error) {
 func (ResponseInputItemOutput) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "object", AdditionalProperties: true},
-			{Type: "array", Items: &huma.Schema{Type: "object", AdditionalProperties: true}},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeObject, AdditionalProperties: true},
+			{Type: constant.JSONSchemaTypeArray, Items: &huma.Schema{Type: constant.JSONSchemaTypeObject, AdditionalProperties: true}},
 		},
 	}
 }
@@ -641,8 +644,8 @@ func (ResponseInput) Schema(reg huma.Registry) *huma.Schema {
 	itemSchema := reg.Schema(reflect.TypeFor[ResponseInputItem](), true, "ResponseInputItem")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: "string"},
-			{Type: "array", Items: itemSchema},
+			{Type: constant.JSONSchemaTypeString},
+			{Type: constant.JSONSchemaTypeArray, Items: itemSchema},
 		},
 	}
 }

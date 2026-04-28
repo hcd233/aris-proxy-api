@@ -35,7 +35,7 @@ type SoftDeletePurgeCron struct {
 func NewSoftDeletePurgeCron() Cron {
 	return &SoftDeletePurgeCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter("SoftDeletePurgeCron", logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSoftDeletePurge, logger.Logger())),
 		),
 		messageDAO: dao.GetMessageDAO(),
 		sessionDAO: dao.GetSessionDAO(),
@@ -63,7 +63,7 @@ func (c *SoftDeletePurgeCron) Stop() {
 //	@update 2026-04-03 10:00:00
 func (c *SoftDeletePurgeCron) Start() error {
 	// 每周日凌晨4:00执行，确保所有任务完成后再清理
-	entryID, err := c.cron.AddFunc("0 4 * * 0", c.purge)
+	entryID, err := c.cron.AddFunc(constant.CronSpecSoftDeletePurge, c.purge)
 	if err != nil {
 		logger.Logger().Error("[SoftDeletePurgeCron] Add func error", zap.Error(err))
 		return err

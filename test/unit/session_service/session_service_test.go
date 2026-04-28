@@ -7,24 +7,24 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	convvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 )
 
 // messageFixture represents a message entry in the fixture JSON
 type messageFixture struct {
-	ID        uint                `json:"id"`
-	Model     string              `json:"model"`
-	Message   *dto.UnifiedMessage `json:"message"`
-	CreatedAt string              `json:"created_at"`
+	ID        uint                   `json:"id"`
+	Model     string                 `json:"model"`
+	Message   *convvo.UnifiedMessage `json:"message"`
+	CreatedAt string                 `json:"created_at"`
 }
 
 // toolFixture represents a tool entry in the fixture JSON
 type toolFixture struct {
-	ID        uint             `json:"id"`
-	Tool      *dto.UnifiedTool `json:"tool"`
-	CreatedAt string           `json:"created_at"`
+	ID        uint                `json:"id"`
+	Tool      *convvo.UnifiedTool `json:"tool"`
+	CreatedAt string              `json:"created_at"`
 }
 
 // sessionServiceCase represents a test case loaded from fixtures/cases.json

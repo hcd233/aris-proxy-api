@@ -31,11 +31,11 @@ func WrapErrorSSE(ctx context.Context, err *model.Error) (rsp *huma.StreamRespon
 	return &huma.StreamResponse{
 		Body: func(hCtx huma.Context) {
 			fCtx := humafiber.Unwrap(hCtx)
-			fCtx.Set("Content-Type", "text/event-stream")
-			fCtx.Set("Cache-Control", "no-cache")
-			fCtx.Set("Connection", "keep-alive")
-			fCtx.Set("Transfer-Encoding", "chunked")
-			fCtx.Set("X-Accel-Buffering", "no")
+			fCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
 			fCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 				writeSSEErrorResponse(ctx, w, err)
@@ -51,7 +51,7 @@ func writeSSEErrorResponse(ctx context.Context, w *bufio.Writer, err *model.Erro
 		Status:   enum.SSEStatusError,
 		Data:     &dto.CommonRsp{Error: err},
 	}
-	_, _ = fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(rsp)))
+	_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(rsp)))
 	if err := w.Flush(); err != nil {
 		logger.Error("[WriteErrorResponse] Flush error", zap.Error(err))
 	}
@@ -87,13 +87,13 @@ func WriteUpstreamSSEError(log *zap.Logger, w *bufio.Writer, err error) {
 	var upstreamErr *model.UpstreamError
 	if errors.As(err, &upstreamErr) {
 		if upstreamErr.Body != "" {
-			_, _ = fmt.Fprintf(w, "data: %s\n\n", upstreamErr.Body)
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body)
 		} else {
-			_, _ = fmt.Fprintf(w, "data: {\"error\":{\"message\":\"upstream returned status %d\",\"type\":\"server_error\",\"code\":\"upstream_error\"}}\n\n", upstreamErr.StatusCode)
+			_, _ = fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode)
 		}
 	} else {
 		log.Error("[WriteUpstreamSSEError] Non-upstream error in SSE stream", zap.Error(err))
-		_, _ = fmt.Fprintf(w, "data: {\"error\":{\"message\":\"internal server error\",\"type\":\"server_error\",\"code\":\"internal_error\"}}\n\n")
+		_, _ = fmt.Fprint(w, constant.SSEOpenAIInternalErrorFrame)
 	}
 	_ = w.Flush()
 }
@@ -107,11 +107,11 @@ func SendOpenAIModelNotFoundError(modelName string) (rsp *huma.StreamResponse) {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusNotFound)
-			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{
-				Message: fmt.Sprintf("The model `%s` does not exist", modelName),
-				Type:    "invalid_request_error",
-				Code:    "model_not_found",
+				Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
+				Type:    constant.OpenAIInvalidRequestErrorType,
+				Code:    constant.OpenAIModelNotFoundCode,
 			})))
 		},
 	}
@@ -126,11 +126,11 @@ func SendOpenAIInternalError() (rsp *huma.StreamResponse) {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusInternalServerError)
-			humaCtx.SetHeader("Content-Type", "application/json")
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{
-				Message: "Internal error",
-				Type:    "server_error",
-				Code:    "internal_error",
+				Message: constant.OpenAIInternalErrorShortMessage,
+				Type:    constant.OpenAIInternalErrorType,
+				Code:    constant.OpenAIInternalErrorCode,
 			})))
 		},
 	}

@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -67,14 +68,14 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Lo
 				log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 				return marshalErr
 			}
-			_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData)
 			return w.Flush()
 		})
 		if !firstTokenTime.IsZero() {
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal)
 			_ = w.Flush()
 		} else {
 			util.WriteUpstreamSSEError(log, w, err)
@@ -171,7 +172,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 					log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 					return marshalErr
 				}
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
+				_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData)
 				if flushErr := w.Flush(); flushErr != nil {
 					return flushErr
 				}
@@ -182,7 +183,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal)
 			_ = w.Flush()
 		} else {
 			util.WriteUpstreamSSEError(log, w, err)

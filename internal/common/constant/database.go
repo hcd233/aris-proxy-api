@@ -1,12 +1,24 @@
 package constant
 
+import "time"
+
 const (
-	// PostgresMaxIdleConns PostgreSQL connection pool max idle connections
-	PostgresMaxIdleConns = 10
+	RedisDB = 0
 
-	// PostgresMaxOpenConns PostgreSQL connection pool max open connections
-	PostgresMaxOpenConns = 100
+	PostgresMaxIdleConns    = 10
+	PostgresMaxOpenConns    = 100
+	PostgresConnMaxLifetime = 5 * time.Hour
 
-	// CosListObjectsMaxKeys COS ListBucket max keys per request
-	CosListObjectsMaxKeys = 1000
+	DBConditionDeletedAtZero    = "deleted_at = 0"
+	DBConditionDeletedAtNotZero = "deleted_at != 0"
+	DBConditionInTemplate       = "%s IN ?"
+
+	AggregateTypeEndpoint       = "llmproxy.endpoint"
+	AggregateTypeAPIKey         = "apikey.proxy_api_key"
+	AggregateTypeUser           = "identity.user"
+	AggregateTypeOAuthIdentity  = "oauth2.identity"
+	AggregateTypeModelCallAudit = "modelcall.audit"
+	AggregateTypeMessage        = "conversation.message"
+	AggregateTypeTool           = "conversation.tool"
+	AggregateTypeSession        = "session.session"
 )

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
-var githubUserScopes = []string{"user:email", "repo", "read:org"}
+var githubUserScopes = []string{constant.GithubScopeUserEmail, constant.GithubScopeRepo, constant.GithubScopeReadOrg}
 
 // GithubUserInfo Github用户信息结构体
 type GithubUserInfo struct {

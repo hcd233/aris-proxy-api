@@ -194,7 +194,7 @@ func (dao *MinioObjDAO) PresignObject(ctx context.Context, userID uint, objectNa
 
 	// 设置响应头
 	reqParams := make(url.Values)
-	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(objectName)))
+	reqParams.Set(constant.HTTPContentDispositionParam, fmt.Sprintf(constant.HTTPAttachmentFilenameTemplate, filepath.Base(objectName)))
 
 	// 根据文件扩展名获取 content type
 	contentType := constant.MIMETypeOctetStream
@@ -203,7 +203,7 @@ func (dao *MinioObjDAO) PresignObject(ctx context.Context, userID uint, objectNa
 			contentType = mimeType
 		}
 	}
-	reqParams.Set("response-content-type", contentType)
+	reqParams.Set(constant.HTTPContentTypeParam, contentType)
 
 	presignedURL, err = dao.client.PresignedGetObject(ctx, dao.BucketName, objectName, constant.PresignObjectExpire, reqParams)
 	return

@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -63,14 +64,14 @@ func parseBodies(t *testing.T, tc conversionCase) (*dto.OpenAICreateResponseReq,
 // instructions/input/output into a single list of UnifiedMessage exactly the
 // way openAIService.storeFromResponseRsp does in production code, giving the
 // tests an end-to-end view of the store path.
-func buildConversation(t *testing.T, req *dto.OpenAICreateResponseReq, rsp *dto.OpenAICreateResponseRsp) []*dto.UnifiedMessage {
+func buildConversation(t *testing.T, req *dto.OpenAICreateResponseReq, rsp *dto.OpenAICreateResponseRsp) []*vo.UnifiedMessage {
 	t.Helper()
-	var msgs []*dto.UnifiedMessage
+	var msgs []*vo.UnifiedMessage
 
 	if req.Instructions != nil && *req.Instructions != "" {
-		msgs = append(msgs, &dto.UnifiedMessage{
+		msgs = append(msgs, &vo.UnifiedMessage{
 			Role:    enum.RoleSystem,
-			Content: &dto.UnifiedContent{Text: *req.Instructions},
+			Content: &vo.UnifiedContent{Text: *req.Instructions},
 		})
 	}
 
@@ -82,9 +83,9 @@ func buildConversation(t *testing.T, req *dto.OpenAICreateResponseReq, rsp *dto.
 			}
 			msgs = append(msgs, inputMsgs...)
 		} else if req.Input.Text != "" {
-			msgs = append(msgs, &dto.UnifiedMessage{
+			msgs = append(msgs, &vo.UnifiedMessage{
 				Role:    enum.RoleUser,
-				Content: &dto.UnifiedContent{Text: req.Input.Text},
+				Content: &vo.UnifiedContent{Text: req.Input.Text},
 			})
 		}
 	}

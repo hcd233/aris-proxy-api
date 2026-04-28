@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
 )
@@ -25,11 +26,11 @@ type MessageStoreTask struct {
 	Ctx          context.Context
 	APIKeyName   string
 	Model        string
-	Messages     []*UnifiedMessage // 统一消息格式列表
-	Tools        []*UnifiedTool    // 统一工具格式列表
-	InputTokens  int               // 上游返回的输入token数
-	OutputTokens int               // 上游返回的输出token数
-	Metadata     map[string]string // 请求元数据
+	Messages     []*vo.UnifiedMessage // 统一消息格式列表
+	Tools        []*vo.UnifiedTool    // 统一工具格式列表
+	InputTokens  int                  // 上游返回的输入token数
+	OutputTokens int                  // 上游返回的输出token数
+	Metadata     map[string]string    // 请求元数据
 }
 
 // SummarizeTask Session总结任务

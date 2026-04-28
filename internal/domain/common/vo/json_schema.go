@@ -13,6 +13,7 @@ package vo
 import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 // JSONSchemaTypeValue JSON Schema `type` 字段联合类型（string 或 string[]）
@@ -152,7 +153,7 @@ type JSONSchemaProperty struct {
 //	@author centonhuang
 //	@update 2026-04-22 14:00:00
 func (JSONSchemaProperty) Schema(_ huma.Registry) *huma.Schema {
-	return &huma.Schema{Type: "object"}
+	return &huma.Schema{Type: constant.JSONSchemaTypeObject}
 }
 
 // HasType 判断 JSON Schema 的 type 是否包含给定类型

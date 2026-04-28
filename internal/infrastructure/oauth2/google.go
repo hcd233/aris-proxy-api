@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -13,11 +14,11 @@ import (
 )
 
 var googleUserScopes = []string{
-	"openid",
-	"profile",
-	"email",
-	"https://www.googleapis.com/auth/userinfo.profile",
-	"https://www.googleapis.com/auth/userinfo.email",
+	constant.GoogleScopeOpenID,
+	constant.GoogleScopeProfile,
+	constant.GoogleScopeEmail,
+	constant.GoogleScopeUserInfoProfile,
+	constant.GoogleScopeUserInfoEmail,
 }
 
 // GoogleUserInfo Google用户信息结构体
@@ -129,7 +130,7 @@ func (p *googlePlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	logger.Info("[GoogleOauth2] Calling Google UserInfo API")
 
 	// 调用Google UserInfo API
-	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	resp, err := client.Get(constant.GoogleUserInfoURL)
 	if err != nil {
 		logger.Error("[GoogleOauth2] Failed to call userinfo API", zap.Error(err))
 		return vo.NewOAuthUserInfo("", "", "", ""), err

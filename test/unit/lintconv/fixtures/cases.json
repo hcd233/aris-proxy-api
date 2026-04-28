@@ -1,0 +1,484 @@
+[
+  {
+    "name": "logger missing module prefix",
+    "files": [
+      {
+        "path": "internal/application/demo/demo.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"missing prefix\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.prefix", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "deprecated constant error selector",
+    "files": [
+      {
+        "path": "internal/application/demo/error.go",
+        "content": "package demo\n\nfunc Run() string {\n\treturn constant.ErrInvalidRequest\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "error.deprecated_constant", "severity": "error"}
+    ]
+  },
+  {
+    "name": "forwarding constant in enum package",
+    "files": [
+      {
+        "path": "internal/common/enum/demo.go",
+        "content": "package enum\n\nconst DemoStatus = upstream.StatusReady\n"
+      }
+    ],
+    "want": [
+      {"rule": "constant.forwarding", "severity": "error"}
+    ]
+  },
+  {
+    "name": "zap string sensitive field without mask",
+    "files": [
+      {
+        "path": "internal/application/demo/log_secret.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nfunc Run(apiKey string) zap.Field {\n\treturn zap.String(\"apiKey\", apiKey)\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.sensitive", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "internal test file is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/demo_test.go",
+        "content": "package demo\n\nimport \"testing\"\n\nfunc TestDemo(t *testing.T) {}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.internal_file", "severity": "error"}
+    ]
+  },
+  {
+    "name": "test root file is rejected",
+    "files": [
+      {
+        "path": "test/demo_test.go",
+        "content": "package test\n\nimport \"testing\"\n\nfunc TestDemo(t *testing.T) {}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.root_file", "severity": "error"}
+    ]
+  },
+  {
+    "name": "testify import is rejected",
+    "files": [
+      {
+        "path": "test/unit/demo/demo_test.go",
+        "content": "package demo\n\nimport \"github.com/stretchr/testify/require\"\n\nfunc TestDemo() {\n\trequire.True(nil, true)\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.testify", "severity": "error"}
+    ]
+  },
+  {
+    "name": "time sleep in test is rejected",
+    "files": [
+      {
+        "path": "test/unit/demo/sleep_test.go",
+        "content": "package demo\n\nimport \"time\"\n\nfunc TestDemo() {\n\ttime.Sleep(time.Second)\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "testing.sleep", "severity": "error"}
+    ]
+  },
+  {
+    "name": "handler direct dao call is rejected",
+    "files": [
+      {
+        "path": "internal/handler/demo.go",
+        "content": "package handler\n\nfunc Run() {\n\tdao.Find()\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.handler_db", "severity": "error"}
+    ]
+  },
+  {
+    "name": "interface layer root context is rejected",
+    "files": [
+      {
+        "path": "internal/handler/context.go",
+        "content": "package handler\n\nimport \"context\"\n\nfunc Run() {\n\t_ = context.Background()\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.root_context", "severity": "error"}
+    ]
+  },
+  {
+    "name": "domain infrastructure import is rejected",
+    "files": [
+      {
+        "path": "internal/domain/demo/domain.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/database\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.domain_dependency", "severity": "error"}
+    ]
+  },
+  {
+    "name": "application deprecated import is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/app.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/service\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.deprecated_application_import", "severity": "error"}
+    ]
+  },
+  {
+    "name": "passthrough wrapper warns",
+    "files": [
+      {
+        "path": "internal/application/demo/wrapper.go",
+        "content": "package demo\n\ntype Service struct{}\n\nfunc (s Service) Run() string {\n\treturn s.Other()\n}\n\nfunc (s Service) Other() string {\n\treturn \"ok\"\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.passthrough", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "commented out code warns",
+    "files": [
+      {
+        "path": "internal/application/demo/comment.go",
+        "content": "package demo\n\nfunc Run() {\n\t// if enabled {\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "style.commented_code", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "implementation detail variable name warns",
+    "files": [
+      {
+        "path": "internal/application/demo/name.go",
+        "content": "package demo\n\nfunc Run() {\n\tuserList := []string{}\n\t_ = userList\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "style.implementation_name", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "magic number is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/number.go",
+        "content": "package demo\n\nfunc Run() int {\n\treturn 128\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.number", "severity": "error"}
+    ]
+  },
+  {
+    "name": "magic duration is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/duration.go",
+        "content": "package demo\n\nimport \"time\"\n\nfunc Run() time.Duration {\n\treturn 5 * time.Second\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.duration", "severity": "error"}
+    ]
+  },
+  {
+    "name": "magic string is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/string.go",
+        "content": "package demo\n\nfunc Run() string {\n\treturn \"hello\"\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "anonymous struct is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/struct.go",
+        "content": "package demo\n\nfunc Run() {\n\tvalue := struct {\n\t\tName string\n\t}{}\n\t_ = value\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "anonymous_struct", "severity": "error"}
+    ]
+  },
+  {
+    "name": "domain depends on dto",
+    "files": [
+      {
+        "path": "internal/domain/demo/dto.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/dto\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.domain_dependency", "severity": "error"}
+    ]
+  },
+  {
+    "name": "domain depends on util",
+    "files": [
+      {
+        "path": "internal/domain/demo/util.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/util\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.domain_dependency", "severity": "error"}
+    ]
+  },
+  {
+    "name": "allowed sensitive field not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/allowed_secret.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nfunc Run(apiKeyName string) zap.Field {\n\treturn zap.String(\"apiKeyName\", apiKeyName)\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "logging.sensitive", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "small number not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/small.go",
+        "content": "package demo\n\nfunc Run() int {\n\treturn 5\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.number", "severity": "error"}
+    ]
+  },
+  {
+    "name": "allowed implementation name not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/allowed_name.go",
+        "content": "package demo\n\nfunc Run() {\n\tchoiceMap := map[string]int{}\n\t_ = choiceMap\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "style.implementation_name", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "non-code comment not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/note.go",
+        "content": "package demo\n\n// This is just a note\nfunc Run() {}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "style.commented_code", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "anonymous struct in test allowed",
+    "files": [
+      {
+        "path": "test/unit/demo/struct_test.go",
+        "content": "package demo\n\nfunc TestRun() {\n\tvalue := struct {\n\t\tName string\n\t}{}\n\t_ = value\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "anonymous_struct", "severity": "error"}
+    ]
+  },
+  {
+    "name": "forwarding constant outside enum not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/const.go",
+        "content": "package demo\n\nconst DemoStatus = upstream.StatusReady\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "constant.forwarding", "severity": "error"}
+    ]
+  },
+  {
+    "name": "deprecated constant error outside internal not flagged",
+    "files": [
+      {
+        "path": "cmd/demo/error.go",
+        "content": "package demo\n\nfunc Run() string {\n\treturn constant.ErrInvalidRequest\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "error.deprecated_constant", "severity": "error"}
+    ]
+  },
+  {
+    "name": "magic string in function call is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/string_arg.go",
+        "content": "package demo\n\nfunc helper(msg string) {}\n\nfunc Run() {\n\thelper(\"hello\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "ierr wrap message not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/ierr.go",
+        "content": "package demo\n\nfunc Run(err error) error {\n\treturn ierr.Wrap(ierr.ErrDBQuery, err, \"get user\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "logger message and fields not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/logger.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nfunc Run() {\n\tlog.Error(\"[Demo] failed\", zap.String(\"field\", \"value\"))\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "reflect type for type parameter not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/reflect.go",
+        "content": "package demo\n\nfunc Run() {\n\t_ = reflect.TypeFor[ResponseInputContent]()\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "huma schema name argument not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/schema.go",
+        "content": "package demo\n\nfunc Run(reg Registry) {\n\t_ = reg.Schema(reflect.TypeFor[ResponseInputContent](), true, \"ResponseInputContent\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "log message lowercase after module prefix",
+    "files": [
+      {
+        "path": "internal/application/demo/log_lower.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo] failed\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.format", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "log message no space after module prefix",
+    "files": [
+      {
+        "path": "internal/application/demo/log_nospace.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo]Failed\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.format", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "log message contains Chinese",
+    "files": [
+      {
+        "path": "internal/application/demo/log_cn.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo] 测试中文\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "proper log format not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/log_ok.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.Info(\"[Demo] PascalCaseMessage\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "logging.format", "severity": "warning"},
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "WithCtx chained call log format is checked",
+    "files": [
+      {
+        "path": "internal/application/demo/log_chain.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) WithCtx(ctx interface{}) *demoLogger { return nil }\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.WithCtx(nil).Info(\"[Demo] lowerStart\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.format", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "WithCtx chained proper log format not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/log_chain_ok.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) WithCtx(ctx interface{}) *demoLogger { return nil }\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.WithCtx(nil).Info(\"[Demo] PascalCaseMessage\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "logging.format", "severity": "warning"},
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "WithCtx chained log contains Chinese flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/log_chain_cn.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nvar logger demoLogger\n\ntype demoLogger struct{}\n\nfunc (demoLogger) WithCtx(ctx interface{}) *demoLogger { return nil }\n\nfunc (demoLogger) Info(msg string, fields ...zap.Field) {}\n\nfunc Run() {\n\tlogger.WithCtx(nil).Info(\"[Demo] 中文\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.chinese", "severity": "warning"}
+    ]
+  }
+]

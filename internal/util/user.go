@@ -3,10 +3,11 @@ package util
 import (
 	"strings"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
-const (
+var (
 	minNameLen = 2
 	maxNameLen = 20
 
@@ -14,7 +15,11 @@ const (
 )
 
 var specialNameblackList = []string{
-	"admin", "root", "administrator", "superuser", "me",
+	constant.UserNameBlacklistAdmin,
+	constant.UserNameBlacklistRoot,
+	constant.UserNameBlacklistAdministrator,
+	constant.UserNameBlacklistSuperuser,
+	constant.UserNameBlacklistMe,
 }
 
 // ValidateUserName 验证用户名

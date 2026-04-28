@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
@@ -16,7 +17,7 @@ import (
 var cosClient *cos.Client
 
 func initCosClient() {
-	endpoint := lo.Must1(url.Parse(fmt.Sprintf("https://%s-%s.cos.%s.myqcloud.com", config.CosBucketName, config.CosAppID, config.CosRegion)))
+	endpoint := lo.Must1(url.Parse(fmt.Sprintf(constant.COSBucketURLTemplate, config.CosBucketName, config.CosAppID, config.CosRegion)))
 
 	uri := &cos.BaseURL{
 		BucketURL: endpoint,

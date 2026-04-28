@@ -37,7 +37,7 @@ type SessionDeduplicateCron struct {
 func NewSessionDeduplicateCron() Cron {
 	return &SessionDeduplicateCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter("SessionDeduplicateCron", logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionDeduplicate, logger.Logger())),
 		),
 		sessionDAO: dao.GetSessionDAO(),
 	}
@@ -63,7 +63,7 @@ func (c *SessionDeduplicateCron) Stop() {
 //	@update 2026-04-03 10:00:00
 func (c *SessionDeduplicateCron) Start() error {
 	// 每天凌晨1:00执行，为后续摘要和评分任务减少处理量
-	entryID, err := c.cron.AddFunc("0 1 * * *", c.deduplicate)
+	entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, c.deduplicate)
 	if err != nil {
 		logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
 		return err
@@ -86,7 +86,7 @@ func (c *SessionDeduplicateCron) deduplicate() {
 	log := logger.WithCtx(ctx)
 	db := database.GetDBInstance(ctx)
 
-	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, []string{"id", "message_ids", "tool_ids"})
+	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, constant.SessionRepoFieldsDedup)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to load sessions", zap.Error(err))
 		return
@@ -119,7 +119,7 @@ func (c *SessionDeduplicateCron) deduplicate() {
 
 		// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
 		err := c.sessionDAO.Update(db, &dbmodel.Session{ID: sessionID}, map[string]any{
-			"tool_ids": lo.Must1(sonic.MarshalString(mergedToolIDs)),
+			constant.FieldToolIDs: lo.Must1(sonic.MarshalString(mergedToolIDs)),
 		})
 		if err != nil {
 			log.Error("[SessionDeduplicateCron] Failed to update session tool_ids",
@@ -130,7 +130,7 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		mergedCount++
 	}
 
-	err = c.sessionDAO.BatchDeleteByField(db, "id", mergeResult.RedundantIDs)
+	err = c.sessionDAO.BatchDeleteByField(db, constant.WhereFieldID, mergeResult.RedundantIDs)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to delete redundant sessions", zap.Error(err))
 		return
