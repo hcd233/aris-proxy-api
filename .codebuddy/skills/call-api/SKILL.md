@@ -1,9 +1,13 @@
 ---
 name: call-api
-description: 调用 aris-proxy-api 项目的 API。当用户询问"怎么调用 API"、"curl 怎么用"、"测试接口"、"给我一个 curl 示例"、"怎么用 curl 调 xxx 接口"或类似问题时，必须使用此 skill 提供准确的 curl 命令。即使只是间接提到需要发 HTTP 请求到这个项目的 API，也要主动使用此 skill 提供帮助。
+description: Use when the user asks how to call aris-proxy-api APIs, requests curl examples, wants to test endpoints manually, or needs interactive post-deploy verification.
 ---
 
 # aris-proxy-api curl 调用指南
+
+## 适用边界
+
+本 skill 只负责生成准确的 HTTP/curl 调用、排查认证参数和做交互式补充验证。生产 bugfix、新需求和部署闭环必须沉淀并运行仓库 E2E；禁止只用 `curl` 证明完成。若响应头或错误信息包含 `X-Trace-Id` / traceId，转入 `cls-log-bugfix`。
 
 ## 项目简介
 
