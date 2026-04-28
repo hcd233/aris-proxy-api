@@ -581,13 +581,15 @@ type OpenAITopTokenLogprob struct {
 // OpenAICompletionUsage 完成使用量统计
 //
 //	@author centonhuang
-//	@update 2026-03-10 10:00:00
+//	@update 2026-04-28 10:00:00
 type OpenAICompletionUsage struct {
 	CompletionTokens        int                            `json:"completion_tokens" doc:"生成的token数"`
 	PromptTokens            int                            `json:"prompt_tokens" doc:"提示的token数"`
 	TotalTokens             int                            `json:"total_tokens" doc:"总token数"`
 	CompletionTokensDetails *OpenAICompletionTokensDetails `json:"completion_tokens_details,omitempty" doc:"完成token详细信息"`
 	PromptTokensDetails     *OpenAIPromptTokensDetails     `json:"prompt_tokens_details,omitempty" doc:"提示token详细信息"`
+	PromptCacheHitTokens    *int                           `json:"prompt_cache_hit_tokens,omitempty" doc:"缓存命中的token数"`
+	PromptCacheMissTokens   *int                           `json:"prompt_cache_miss_tokens,omitempty" doc:"缓存未命中的token数"`
 }
 
 // OpenAICompletionTokensDetails 完成Token详细信息
