@@ -15,8 +15,8 @@ func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler)
 	apikeyGroup.UseMiddleware(middleware.JwtMiddleware())
 	// 限流: 防止快速创建 Key 或枚举 ID
 	apikeyGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
-		"apikey-manage",
-		string(constant.CtxKeyUserID),
+		"apikeyManage",
+		constant.CtxKeyUserID,
 		constant.PeriodManageAPIKey,
 		constant.LimitManageAPIKey,
 	))

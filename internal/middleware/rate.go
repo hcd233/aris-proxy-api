@@ -9,6 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -92,7 +93,7 @@ return {tostring(tokens), "0", tostring(capacity)}
 //     @return func(ctx huma.Context, next func(huma.Context))
 //     @author centonhuang
 //     @update 2026-03-20 10:00:00
-func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
+func TokenBucketRateLimiterMiddleware(serviceName string, key enum.CtxKey, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
 	rdb := cache.GetRedisClient()
 
 	// 每微秒补充的令牌数
@@ -111,9 +112,13 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 			value = fCtx.IP()
 		} else {
 			if ctxValue := ctx.Context().Value(key); ctxValue != nil {
-				keyValue = key
+				keyValue = string(key)
 				value = fmt.Sprintf(constant.FormatDefault, ctxValue)
 			} else {
+				logger.Warn("[TokenBucketRateLimiter] Context value not found",
+					zap.String("serviceName", serviceName),
+					zap.String("key", string(key)),
+				)
 				lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 				return
 			}
