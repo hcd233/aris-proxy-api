@@ -753,7 +753,7 @@ go test -count=1 ./...
 - [ ] **Step 2: Run lint conventions**
 
 ```bash
-make lint-conv
+make lint
 ```
 
 - [ ] **Step 3: Fix any failures**

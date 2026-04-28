@@ -844,7 +844,7 @@ go test -count=1 ./...
 - [ ] **Step 4: 运行 lint 扫描**
 
 ```bash
-make lint-conv
+make lint
 ```
 
 - [ ] **Step 5: 提交所有变更**

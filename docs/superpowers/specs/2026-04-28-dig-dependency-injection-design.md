@@ -97,7 +97,7 @@ provider 注册和容器 invoke 错误都发生在启动阶段。错误应返回
 
 - `go test -count=1 ./test/unit/...`
 - `go test -count=1 ./...`
-- `make lint-conv`
+- `make lint`
 
 如果部署后需要生产链路验证，使用既有 E2E 模式，并通过 `BASE_URL` 和 `API_KEY` 注入运行参数；禁止把密钥写入仓库。
 

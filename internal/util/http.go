@@ -83,8 +83,8 @@ type JSONResponseWriter struct {
 //	@update 2026-04-29 10:00:00
 func (rw JSONResponseWriter) WriteJSON(v any) {
 	if headers := GetPassthroughResponseHeaders(rw.Ctx); headers != nil {
-		for k, v := range headers {
-			rw.HumaCtx.SetHeader(k, v)
+		for k, hv := range headers {
+			rw.HumaCtx.SetHeader(k, hv)
 		}
 	}
 	rw.HumaCtx.SetStatus(fiber.StatusOK)

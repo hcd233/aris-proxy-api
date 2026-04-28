@@ -33,7 +33,7 @@
 - 创建对象存储桶：`go run main.go object bucket create`
 - 完整本地栈：先创建 `postgresql-data`、`redis-data`、`minio-data` 卷，再执行 `docker compose -f docker/docker-compose-full.yml up -d`
 - 构建：`make build`；调试构建：`make build-dev` 或 `make build-debug`
-- 自定义规范扫描：`make lint-conv`
+- 自定义规范扫描：`make lint`
 - 全量测试：`make test` 或 `go test -count=1 ./...`
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
 
@@ -43,7 +43,7 @@
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 修改前先定位相关 handler/service/proxy/converter/DAO/DTO，不做大范围重写。
 - 新需求和 bugfix 都应先补或更新测试；bugfix 必须有能复现问题的回归用例。
-- 每次改动后依次跑：聚焦测试 → `make lint-conv` → 必要时 `go test -count=1 ./...`。
+- 每次改动后依次跑：聚焦测试 → `make lint` → 必要时 `go test -count=1 ./...`。
 - 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 通过后，只有用户明确要求提交、推送或部署时才执行 git 提交/发布流程。
 - 正式发布使用 `deploy-to-production`：推送到 `master`，等待 `docker-publish.yml` 镜像构建完成，再在生产机执行部署脚本。

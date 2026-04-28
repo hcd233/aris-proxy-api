@@ -28,7 +28,7 @@
 - `go test -v -count=1 ./test/unit/bootstrap/`
 - `go test -count=1 ./test/unit/...`
 - `go test -count=1 ./...`
-- `make lint-conv`
+- `make lint`
 
 ## 实现要点
 
@@ -49,5 +49,5 @@
 - [x] 修改 handler 构造函数，让 handler 接收 application 接口。
 - [x] 收窄 `Server` 的容器字段为未导出，并调整 `RegisterRoutes`。
 - [x] 运行 `go test -v -count=1 ./test/unit/bootstrap/`。
-- [x] 运行 `make lint-conv`。
+- [x] 运行 `make lint`。
 - [x] 运行 `go test -count=1 ./...`。

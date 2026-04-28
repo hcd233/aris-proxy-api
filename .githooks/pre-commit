@@ -70,14 +70,14 @@ fi
 printf "$PASS go test\n"
 
 # --------------------------------------------------------------------------
-# 5. lint-conv — project convention lint
+# 5. lint — project convention lint
 # --------------------------------------------------------------------------
-printf "$INFO Running lint-conv...\n"
+printf "$INFO Running lint...\n"
 
-if ! $GO_BIN run main.go lint conv ./... 2>&1; then
-    fail "lint-conv failed. Please fix the convention violations above before committing."
+if ! $GO_BIN run main.go lint ./... 2>&1; then
+    fail "lint failed. Please fix the convention violations above before committing."
 fi
-printf "$PASS lint-conv\n"
+printf "$PASS lint\n"
 
 # --------------------------------------------------------------------------
 echo ""

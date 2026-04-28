@@ -37,7 +37,7 @@ type logSampler struct {
 	lastLogs map[string]time.Time
 }
 
-// sensitiveHeaders 需要掩码的请求头列表
+// sensitiveHeaders 需要掩码的敏感头列表
 var sensitiveHeaders = []string{
 	constant.HTTPHeaderAuthorization,
 	constant.HTTPHeaderAPIKey,
@@ -114,14 +114,14 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 
 		// request-headers
 		reqHeaders := make(map[string]any)
-		c.Request().Header.VisitAll(func(k, v []byte) {
+		for k, v := range c.Request().Header.All() {
 			key := string(k)
 			value := string(v)
 			if isSensitiveHeader(key) {
 				value = constant.MaskSecretPlaceholder
 			}
 			reqHeaders[key] = value
-		})
+		}
 		truncatedReqHeaders := util.TruncateMapValues(reqHeaders, constant.LogFieldValueMaxLength)
 		fields = append(fields, zap.Dict("request-headers", lo.MapToSlice(truncatedReqHeaders, func(key string, value any) zap.Field {
 			return zap.Any(key, value)
@@ -158,9 +158,14 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 
 		// response-headers
 		respHeaders := make(map[string]any)
-		c.Response().Header.VisitAll(func(k, v []byte) {
-			respHeaders[string(k)] = string(v)
-		})
+		for k, v := range c.Response().Header.All() {
+			key := string(k)
+			value := string(v)
+			if isSensitiveHeader(key) {
+				value = constant.MaskSecretPlaceholder
+			}
+			respHeaders[key] = value
+		}
 		truncatedRespHeaders := util.TruncateMapValues(respHeaders, constant.LogFieldValueMaxLength)
 		fields = append(fields, zap.Dict("response-headers", lo.MapToSlice(truncatedRespHeaders, func(key string, value any) zap.Field {
 			return zap.Any(key, value)
