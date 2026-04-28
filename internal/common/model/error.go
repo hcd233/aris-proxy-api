@@ -36,9 +36,10 @@ func (e *Error) Error() string {
 // UpstreamError 上游返回非 200 状态码的错误
 //
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
+//	@update 2026-04-29 10:00:00
 type UpstreamError struct {
 	StatusCode int
+	Headers    map[string]string
 	Body       string
 }
 

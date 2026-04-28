@@ -22,7 +22,23 @@ func CopyContextValues(src context.Context) (dst context.Context) {
 	dst = context.WithValue(dst, constant.CtxKeyAPIKeyID, src.Value(constant.CtxKeyAPIKeyID))
 	dst = context.WithValue(dst, constant.CtxKeyClient, src.Value(constant.CtxKeyClient))
 	dst = context.WithValue(dst, constant.CtxKeyPassthroughHeaders, src.Value(constant.CtxKeyPassthroughHeaders))
+	dst = context.WithValue(dst, constant.CtxKeyPassthroughResponseHeaders, src.Value(constant.CtxKeyPassthroughResponseHeaders))
 	return dst
+}
+
+// GetPassthroughResponseHeaders 从上下文中获取上游透传的响应头
+//
+//	@param ctx context.Context
+//	@return map[string]string
+//	@author centonhuang
+//	@update 2026-04-29 10:00:00
+func GetPassthroughResponseHeaders(ctx context.Context) map[string]string {
+	if v := ctx.Value(constant.CtxKeyPassthroughResponseHeaders); v != nil {
+		if m, ok := v.(map[string]string); ok {
+			return m
+		}
+	}
+	return nil
 }
 
 // GetPassthroughHeaders 从上下文中获取透传的请求头

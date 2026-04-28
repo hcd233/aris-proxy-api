@@ -37,6 +37,25 @@ type logSampler struct {
 	lastLogs map[string]time.Time
 }
 
+// sensitiveHeaders 需要掩码的请求头列表
+var sensitiveHeaders = []string{
+	constant.HTTPHeaderAuthorization,
+	constant.HTTPHeaderAPIKey,
+	constant.HTTPHeaderProxyAuthorization,
+	constant.HTTPHeaderCookie,
+	constant.HTTPHeaderSetCookie,
+}
+
+// isSensitiveHeader 判断是否为需要掩码的敏感请求头
+func isSensitiveHeader(key string) bool {
+	for _, h := range sensitiveHeaders {
+		if strings.EqualFold(key, h) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *logSampler) shouldLog(path string, interval time.Duration) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -93,6 +112,21 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 			zap.String("latency", latency.String()),
 		}
 
+		// request-headers
+		reqHeaders := make(map[string]any)
+		c.Request().Header.VisitAll(func(k, v []byte) {
+			key := string(k)
+			value := string(v)
+			if isSensitiveHeader(key) {
+				value = constant.MaskSecretPlaceholder
+			}
+			reqHeaders[key] = value
+		})
+		truncatedReqHeaders := util.TruncateMapValues(reqHeaders, constant.LogFieldValueMaxLength)
+		fields = append(fields, zap.Dict("request-headers", lo.MapToSlice(truncatedReqHeaders, func(key string, value any) zap.Field {
+			return zap.Any(key, value)
+		})...))
+
 		if strings.Contains(string(c.Request().Header.ContentType()), constant.HTTPContentTypeJSON) {
 			request := make(map[string]any)
 			if reqBody := c.Body(); reqBody != nil {
@@ -121,6 +155,16 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 				return zap.Any(key, value)
 			})...))
 		}
+
+		// response-headers
+		respHeaders := make(map[string]any)
+		c.Response().Header.VisitAll(func(k, v []byte) {
+			respHeaders[string(k)] = string(v)
+		})
+		truncatedRespHeaders := util.TruncateMapValues(respHeaders, constant.LogFieldValueMaxLength)
+		fields = append(fields, zap.Dict("response-headers", lo.MapToSlice(truncatedRespHeaders, func(key string, value any) zap.Field {
+			return zap.Any(key, value)
+		})...))
 
 		if err != nil {
 			fields = append([]zap.Field{zap.Error(err)}, fields...)

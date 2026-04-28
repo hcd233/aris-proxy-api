@@ -150,6 +150,42 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 	return util.ConcatChatCompletionChunks(collectedChunks)
 }
 
+// passthroughResponseExcludedHeaders 不从上游透传到客户端的响应头
+var passthroughResponseExcludedHeaders = map[string]struct{}{
+	constant.HTTPHeaderContentType:       {},
+	constant.HTTPHeaderContentLength:     {},
+	constant.HTTPHeaderTransferEncoding:  {},
+	constant.HTTPHeaderConnection:        {},
+	constant.HTTPHeaderUpgrade:           {},
+	constant.HTTPHeaderTrailer:           {},
+	constant.HTTPHeaderProxyAuthenticate: {},
+	constant.HTTPHeaderTraceID:           {},
+}
+
+// capturePassthroughResponseHeaders 从上游响应中提取需要透传的响应头
+func capturePassthroughResponseHeaders(header http.Header) map[string]string {
+	headers := make(map[string]string, 4)
+	for k := range header {
+		canonical := http.CanonicalHeaderKey(k)
+		if _, excluded := passthroughResponseExcludedHeaders[canonical]; !excluded {
+			headers[canonical] = header.Get(k)
+		}
+	}
+	return headers
+}
+
+// storePassthroughResponseHeaders 将响应头存入 context 的 map 中
+func storePassthroughResponseHeaders(ctx context.Context, header http.Header) {
+	if m := util.GetPassthroughResponseHeaders(ctx); m != nil {
+		for k := range header {
+			canonical := http.CanonicalHeaderKey(k)
+			if _, excluded := passthroughResponseExcludedHeaders[canonical]; !excluded {
+				m[canonical] = header.Get(k)
+			}
+		}
+	}
+}
+
 // sendRequest 构建并发送 OpenAI 协议的上游请求
 func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
@@ -193,8 +229,14 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 			zap.Int("statusCode", resp.StatusCode),
 			zap.String("responseBody", string(errorBody)),
 		)
-		return nil, &model.UpstreamError{StatusCode: resp.StatusCode, Body: string(errorBody)}
+		return nil, &model.UpstreamError{
+			StatusCode: resp.StatusCode,
+			Headers:    capturePassthroughResponseHeaders(resp.Header),
+			Body:       string(errorBody),
+		}
 	}
+
+	storePassthroughResponseHeaders(ctx, resp.Header)
 
 	return resp, nil
 }
@@ -298,8 +340,14 @@ func (p *openAIProxy) sendResponseRequest(ctx context.Context, ep UpstreamEndpoi
 			zap.Int("statusCode", resp.StatusCode),
 			zap.String("responseBody", string(errorBody)),
 		)
-		return nil, &model.UpstreamError{StatusCode: resp.StatusCode, Body: string(errorBody)}
+		return nil, &model.UpstreamError{
+			StatusCode: resp.StatusCode,
+			Headers:    capturePassthroughResponseHeaders(resp.Header),
+			Body:       string(errorBody),
+		}
 	}
+
+	storePassthroughResponseHeaders(ctx, resp.Header)
 
 	return resp, nil
 }
