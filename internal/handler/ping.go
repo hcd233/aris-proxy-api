@@ -41,7 +41,7 @@ func NewPingHandler() PingHandler {
 // HandlePing 健康检查处理器
 func (h *pingHandler) HandlePing(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.PingRsp], error) {
 	rsp := &dto.PingRsp{
-		Status: "ok",
+		Status: constant.PingStatusOK,
 	}
 
 	return util.WrapHTTPResponse(rsp, nil)
@@ -51,11 +51,11 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 	return &huma.StreamResponse{
 		Body: func(ctx huma.Context) {
 			fCtx := humafiber.Unwrap(ctx)
-			fCtx.Set("Content-Type", "text/event-stream")
-			fCtx.Set("Cache-Control", "no-cache")
-			fCtx.Set("Connection", "keep-alive")
-			fCtx.Set("Transfer-Encoding", "chunked")
-			fCtx.Set("X-Accel-Buffering", "no")
+			fCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
 			fCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 				for i := range constant.SSEHeartbeatCount {
@@ -63,7 +63,7 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 						DataType: enum.SSEDataTypeHeartBeat,
 						Data:     strconv.Itoa(i),
 					}
-					_, _ = fmt.Fprintf(w, "data: %s\n\n", lo.Must1(sonic.Marshal(data)))
+					_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(data)))
 					err := w.Flush()
 					if err != nil {
 						return

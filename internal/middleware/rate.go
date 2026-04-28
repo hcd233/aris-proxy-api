@@ -112,7 +112,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 		} else {
 			if ctxValue := ctx.Context().Value(key); ctxValue != nil {
 				keyValue = key
-				value = fmt.Sprintf("%v", ctxValue)
+				value = fmt.Sprintf(constant.FormatDefault, ctxValue)
 			} else {
 				lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 				return
@@ -139,7 +139,7 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 		remainingInt := int64(math.Max(0, math.Floor(remaining)))
 		limitStr := result[2]
 
-		rejected := result[1] == "1"
+		rejected := result[1] == constant.OneString
 		if rejected {
 			logger.Warn("[TokenBucketRateLimiter] Rate limit reached",
 				zap.String("serviceName", serviceName),
@@ -148,15 +148,15 @@ func TokenBucketRateLimiterMiddleware(serviceName, key string, period time.Durat
 				zap.Int64("remaining", remainingInt),
 				zap.String("capacity", limitStr),
 			)
-			ctx.SetHeader("X-RateLimit-Limit", limitStr)
-			ctx.SetHeader("X-RateLimit-Remaining", "0")
-			ctx.SetHeader("Retry-After", strconv.Itoa(retryAfterSeconds))
+			ctx.SetHeader(constant.HTTPHeaderXRateLimitLimit, limitStr)
+			ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, constant.ZeroString)
+			ctx.SetHeader(constant.HTTPHeaderRetryAfter, strconv.Itoa(retryAfterSeconds))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError()))
 			return
 		}
 
-		ctx.SetHeader("X-RateLimit-Limit", limitStr)
-		ctx.SetHeader("X-RateLimit-Remaining", strconv.FormatInt(remainingInt, 10))
+		ctx.SetHeader(constant.HTTPHeaderXRateLimitLimit, limitStr)
+		ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, strconv.FormatInt(remainingInt, constant.DecimalBase))
 
 		next(ctx)
 	}

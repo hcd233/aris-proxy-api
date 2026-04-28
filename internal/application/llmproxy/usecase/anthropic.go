@@ -138,8 +138,8 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
 			modifiedData := transport.ReplaceModelInSSEData(event.Data, exposedModel)
-			_, _ = fmt.Fprintf(w, "event: %s\n", event.Event)
-			_, _ = fmt.Fprintf(w, "data: %s\n\n", modifiedData)
+			_, _ = fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event)
+			_, _ = fmt.Fprintf(w, constant.SSEDataLineTemplate, modifiedData)
 			return w.Flush()
 		})
 		if !firstTokenTime.IsZero() {
@@ -238,8 +238,8 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 					firstTokenTime = time.Now()
 					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 				}
-				_, _ = fmt.Fprintf(w, "event: %s\n", event.Event)
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", string(event.Data))
+				_, _ = fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event)
+				_, _ = fmt.Fprintf(w, constant.SSEDataLineTemplate, string(event.Data))
 				if flushErr := w.Flush(); flushErr != nil {
 					return flushErr
 				}

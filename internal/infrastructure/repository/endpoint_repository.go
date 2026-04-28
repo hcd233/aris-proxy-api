@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -16,9 +17,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
-
-// endpointFields Endpoint 查询的统一字段清单；与原 service.endpointFields 一致
-var endpointFields = []string{"id", "alias", "model", "api_key", "base_url", "provider"}
 
 // endpointRepository EndpointRepository 的 GORM 实现
 type endpointRepository struct {
@@ -46,7 +44,7 @@ func NewEndpointRepository() llmproxy.EndpointRepository {
 //	@update 2026-04-22 16:30:00
 func (r *endpointRepository) FindByAliasAndProvider(ctx context.Context, alias vo.EndpointAlias, provider enum.ProviderType) (*aggregate.Endpoint, error) {
 	db := database.GetDBInstance(ctx)
-	ep, err := r.dao.Get(db, &dbmodel.ModelEndpoint{Alias: alias.String(), Provider: provider}, endpointFields)
+	ep, err := r.dao.Get(db, &dbmodel.ModelEndpoint{Alias: alias.String(), Provider: provider}, constant.EndpointRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -89,7 +87,7 @@ func NewEndpointReadRepository() llmproxy.EndpointReadRepository {
 // ListAliasesByProvider 按 Provider 查询所有别名
 func (r *endpointReadRepository) ListAliasesByProvider(ctx context.Context, provider enum.ProviderType) ([]*llmproxy.EndpointAliasProjection, error) {
 	db := database.GetDBInstance(ctx)
-	endpoints, err := r.dao.BatchGet(db, &dbmodel.ModelEndpoint{Provider: provider}, []string{"alias"})
+	endpoints, err := r.dao.BatchGet(db, &dbmodel.ModelEndpoint{Provider: provider}, constant.EndpointRepoFieldsAlias)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list aliases by provider")
 	}
@@ -103,7 +101,7 @@ func (r *endpointReadRepository) ListAliasesByProvider(ctx context.Context, prov
 // FindCredentialByAliasAndProvider 按 alias + provider 查询端点凭证
 func (r *endpointReadRepository) FindCredentialByAliasAndProvider(ctx context.Context, alias string, provider enum.ProviderType) (*llmproxy.EndpointCredentialProjection, error) {
 	db := database.GetDBInstance(ctx)
-	ep, err := r.dao.Get(db, &dbmodel.ModelEndpoint{Alias: alias, Provider: provider}, []string{"model", "api_key", "base_url"})
+	ep, err := r.dao.Get(db, &dbmodel.ModelEndpoint{Alias: alias, Provider: provider}, constant.EndpointRepoFieldsCredential)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

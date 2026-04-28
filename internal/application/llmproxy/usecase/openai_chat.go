@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -28,12 +29,13 @@ import (
 // forwardChatNative OpenAI 原生协议转发（provider=openai）
 //
 // 注意：此前实现会将 req.Body.MaxTokens 无条件改写为 MaxCompletionTokens，这会导致
-//  两类问题：
-//   1. 第三方 OpenAI 协议聚合网关（如 api.chatanywhere.tech）只认识 max_tokens，
-//      对 max_completion_tokens 直接忽略，相当于把用户设置的生成上限抹掉，从而触发
-//      上游模型跑飞/超长（如 503 "模型无返回结果"）；
-//   2. 即便上游是官方 OpenAI，max_tokens 对 GPT-4 / GPT-3.5 系列仍被官方接受，
-//      把字段 silent 改名会违背透传语义。
+//
+//	两类问题：
+//	 1. 第三方 OpenAI 协议聚合网关（如 api.chatanywhere.tech）只认识 max_tokens，
+//	    对 max_completion_tokens 直接忽略，相当于把用户设置的生成上限抹掉，从而触发
+//	    上游模型跑飞/超长（如 503 "模型无返回结果"）；
+//	 2. 即便上游是官方 OpenAI，max_tokens 对 GPT-4 / GPT-3.5 系列仍被官方接受，
+//	    把字段 silent 改名会违背透传语义。
 //
 // 因此这里保持用户请求的原样透传，由调用方自行选择 max_tokens 或 max_completion_tokens。
 func (u *openAIUseCase) forwardChatNative(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, stream bool) *huma.StreamResponse {
@@ -66,14 +68,14 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Lo
 				log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 				return marshalErr
 			}
-			_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData)
 			return w.Flush()
 		})
 		if !firstTokenTime.IsZero() {
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal)
 			_ = w.Flush()
 		} else {
 			util.WriteUpstreamSSEError(log, w, err)
@@ -170,7 +172,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 					log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 					return marshalErr
 				}
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", chunkData)
+				_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData)
 				if flushErr := w.Flush(); flushErr != nil {
 					return flushErr
 				}
@@ -181,7 +183,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal)
 			_ = w.Flush()
 		} else {
 			util.WriteUpstreamSSEError(log, w, err)

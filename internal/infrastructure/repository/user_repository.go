@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
@@ -15,12 +16,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
-
-// userRepoFields 用户查询默认字段（等价于原 service 行为）
-var userRepoFields = []string{
-	"id", "name", "email", "avatar", "permission",
-	"last_login", "created_at", "github_bind_id", "google_bind_id",
-}
 
 // userRepository UserRepository 的 GORM 实现
 type userRepository struct {
@@ -65,11 +60,11 @@ func (r *userRepository) Save(ctx context.Context, user *aggregate.User) error {
 	}
 
 	updates := map[string]any{
-		"name":       user.Name().String(),
-		"email":      user.Email().String(),
-		"avatar":     user.Avatar().String(),
-		"permission": user.Permission(),
-		"last_login": user.LastLogin(),
+		constant.FieldName:       user.Name().String(),
+		constant.FieldEmail:      user.Email().String(),
+		constant.FieldAvatar:     user.Avatar().String(),
+		constant.FieldPermission: user.Permission(),
+		constant.FieldLastLogin:  user.LastLogin(),
 	}
 	if err := r.dao.Update(db, &dbmodel.User{ID: user.AggregateID()}, updates); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update user")
@@ -88,7 +83,7 @@ func (r *userRepository) Save(ctx context.Context, user *aggregate.User) error {
 func (r *userRepository) TouchLastLogin(ctx context.Context, userID uint) error {
 	db := database.GetDBInstance(ctx)
 	if err := r.dao.Update(db, &dbmodel.User{ID: userID}, map[string]any{
-		"last_login": time.Now().UTC(),
+		constant.FieldLastLogin: time.Now().UTC(),
 	}); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "touch last login")
 	}
@@ -106,7 +101,7 @@ func (r *userRepository) TouchLastLogin(ctx context.Context, userID uint) error 
 //	@update 2026-04-22 17:00:00
 func (r *userRepository) FindByID(ctx context.Context, id uint) (*aggregate.User, error) {
 	db := database.GetDBInstance(ctx)
-	record, err := r.dao.Get(db, &dbmodel.User{ID: id}, userRepoFields)
+	record, err := r.dao.Get(db, &dbmodel.User{ID: id}, constant.UserRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -127,7 +122,7 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*aggregate.User
 //	@update 2026-04-22 17:00:00
 func (r *userRepository) FindByGithubBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
 	db := database.GetDBInstance(ctx)
-	record, err := r.dao.Get(db, &dbmodel.User{GithubBindID: bindID}, userRepoFields)
+	record, err := r.dao.Get(db, &dbmodel.User{GithubBindID: bindID}, constant.UserRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -148,7 +143,7 @@ func (r *userRepository) FindByGithubBindID(ctx context.Context, bindID string) 
 //	@update 2026-04-22 17:00:00
 func (r *userRepository) FindByGoogleBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
 	db := database.GetDBInstance(ctx)
-	record, err := r.dao.Get(db, &dbmodel.User{GoogleBindID: bindID}, userRepoFields)
+	record, err := r.dao.Get(db, &dbmodel.User{GoogleBindID: bindID}, constant.UserRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

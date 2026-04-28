@@ -112,7 +112,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 	reader := bufio.NewReader(resp.Body)
 	for {
 		raw, readErr := reader.ReadString('\n')
-		line := strings.TrimRight(raw, "\r\n")
+		line := strings.TrimRight(raw, constant.NewlineCRLF)
 
 		if line != "" {
 			if strings.HasPrefix(line, constant.SSEDataPrefix) {
@@ -222,7 +222,7 @@ func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep Upstre
 
 	for {
 		raw, readErr := reader.ReadString('\n')
-		line := strings.TrimRight(raw, "\r\n")
+		line := strings.TrimRight(raw, constant.NewlineCRLF)
 
 		if line != "" {
 			if strings.HasPrefix(line, constant.SSEEventPrefix) {

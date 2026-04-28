@@ -20,23 +20,6 @@ import (
 //	update 2024-09-16 12:47:59
 var defaultLogger *zap.Logger
 
-const (
-	logLevelDebug  = "DEBUG"
-	logLevelInfo   = "INFO"
-	logLevelWarn   = "WARN"
-	logLevelError  = "ERROR"
-	logLevelDPanic = "DPANIC"
-	logLevelPanic  = "PANIC"
-	logLevelFatal  = "FATAL"
-
-	timeKey       = "timestamp"
-	levelKey      = "level"
-	nameKey       = "logger"
-	callerKey     = "caller"
-	messageKey    = "message"
-	stacktraceKey = "stacktrace"
-)
-
 // Logger 日志单例
 //
 //	return *zap.Logger
@@ -110,13 +93,13 @@ func WithFCtx(c *fiber.Ctx) *zap.Logger {
 
 func init() {
 	zapLevelMapping := map[string]zap.AtomicLevel{
-		logLevelDebug:  zap.NewAtomicLevelAt(zap.DebugLevel),
-		logLevelInfo:   zap.NewAtomicLevelAt(zap.InfoLevel),
-		logLevelWarn:   zap.NewAtomicLevelAt(zap.WarnLevel),
-		logLevelError:  zap.NewAtomicLevelAt(zap.ErrorLevel),
-		logLevelDPanic: zap.NewAtomicLevelAt(zap.DPanicLevel),
-		logLevelPanic:  zap.NewAtomicLevelAt(zap.PanicLevel),
-		logLevelFatal:  zap.NewAtomicLevelAt(zap.FatalLevel),
+		constant.LogLevelDebug:  zap.NewAtomicLevelAt(zap.DebugLevel),
+		constant.LogLevelInfo:   zap.NewAtomicLevelAt(zap.InfoLevel),
+		constant.LogLevelWarn:   zap.NewAtomicLevelAt(zap.WarnLevel),
+		constant.LogLevelError:  zap.NewAtomicLevelAt(zap.ErrorLevel),
+		constant.LogLevelDPanic: zap.NewAtomicLevelAt(zap.DPanicLevel),
+		constant.LogLevelPanic:  zap.NewAtomicLevelAt(zap.PanicLevel),
+		constant.LogLevelFatal:  zap.NewAtomicLevelAt(zap.FatalLevel),
 	}
 
 	logLevel, ok := zapLevelMapping[strings.ToUpper(config.LogLevel)]
@@ -153,12 +136,12 @@ func init() {
 
 	// 配置文件输出的JSON结构化日志编码器
 	jsonEncoderConfig := zapcore.EncoderConfig{
-		TimeKey:        timeKey,
-		LevelKey:       levelKey,
-		NameKey:        nameKey,
-		CallerKey:      callerKey,
-		MessageKey:     messageKey,
-		StacktraceKey:  stacktraceKey,
+		TimeKey:        constant.LogTimeKey,
+		LevelKey:       constant.LogLevelKey,
+		NameKey:        constant.LogNameKey,
+		CallerKey:      constant.LogCallerKey,
+		MessageKey:     constant.LogMessageKey,
+		StacktraceKey:  constant.LogStacktraceKey,
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
 		EncodeTime:     zapcore.RFC3339TimeEncoder,
@@ -168,18 +151,18 @@ func init() {
 
 	// 配置控制台输出的彩色日志编码器
 	consoleEncoderConfig := zapcore.EncoderConfig{
-		TimeKey:          timeKey,
-		LevelKey:         levelKey,
-		NameKey:          nameKey,
-		CallerKey:        callerKey,
-		MessageKey:       messageKey,
-		StacktraceKey:    stacktraceKey,
+		TimeKey:          constant.LogTimeKey,
+		LevelKey:         constant.LogLevelKey,
+		NameKey:          constant.LogNameKey,
+		CallerKey:        constant.LogCallerKey,
+		MessageKey:       constant.LogMessageKey,
+		StacktraceKey:    constant.LogStacktraceKey,
 		LineEnding:       zapcore.DefaultLineEnding,
 		EncodeLevel:      zapcore.CapitalColorLevelEncoder, // 彩色级别编码
 		EncodeTime:       zapcore.RFC3339TimeEncoder,
 		EncodeDuration:   zapcore.SecondsDurationEncoder,
 		EncodeCaller:     zapcore.ShortCallerEncoder,
-		ConsoleSeparator: "  ", // 控制台分隔符
+		ConsoleSeparator: constant.LoggerConsoleSeparator, // 控制台分隔符
 	}
 
 	cores := []zapcore.Core{
@@ -199,13 +182,13 @@ func init() {
 		zapcore.NewCore(
 			zapcore.NewJSONEncoder(jsonEncoderConfig),
 			zapcore.NewMultiWriteSyncer(errFileWriter),
-			zapLevelMapping[logLevelError],
+			zapLevelMapping[constant.LogLevelError],
 		),
 		// Panic log 输出到 panic.log
 		zapcore.NewCore(
 			zapcore.NewJSONEncoder(jsonEncoderConfig),
 			zapcore.NewMultiWriteSyncer(panicFileWriter),
-			zapLevelMapping[logLevelPanic],
+			zapLevelMapping[constant.LogLevelPanic],
 		),
 	}
 
@@ -215,5 +198,5 @@ func init() {
 
 	core := zapcore.NewTee(cores...)
 
-	defaultLogger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zapLevelMapping[logLevelPanic]))
+	defaultLogger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zapLevelMapping[constant.LogLevelPanic]))
 }

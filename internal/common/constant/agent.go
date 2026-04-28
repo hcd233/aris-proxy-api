@@ -1,52 +1,8 @@
 package constant
 
 const (
-	// SummarizeMaxRetries Session总结最大重试次数
-	//
-	//	@author centonhuang
-	//	@update 2026-03-26 10:00:00
-	SummarizeMaxRetries = 3
-
-	// SummarizeMaxTokens Session总结最大Token数
-	//	@update 2026-03-31 01:41:45
-	SummarizeMaxTokens = 20
-
-	// ScoreMaxRetries Session评分最大重试次数
-	//
-	//	@author centonhuang
-	//	@update 2026-04-02 10:00:00
-	ScoreMaxRetries = 3
-
-	// ScoreMaxTokens Session评分最大Token数
-	//
-	//	@author centonhuang
-	//	@update 2026-04-02 10:00:00
-	ScoreMaxTokens = 200
-
-	// ScoreVersion 评分算法版本
-	//
-	//	@author centonhuang
-	//	@update 2026-04-02 10:00:00
-	ScoreVersion = "v1.0.0"
-
-	// SessionSummarizerAgentName Agent名称
-	//
-	//	@author centonhuang
-	//	@update 2026-03-31 18:00:00
-	SessionSummarizerAgentName = "SessionSummarizer"
-
-	// SessionSummarizerAgentDescription Agent描述
-	//
-	//	@author centonhuang
-	//	@update 2026-03-31 18:00:00
+	SessionSummarizerAgentName        = "SessionSummarizer"
 	SessionSummarizerAgentDescription = "Summarize the session content into a concise summary."
-
-	// SessionSummarizerAgentInstruction Agent指令 (Metaprompt风格)
-	//
-	// 使用元提示工程技术确保Agent严格遵循指令要求。
-	//
-	//	@author centonhuang
-	//	@update 2026-03-31 18:00:00
 	SessionSummarizerAgentInstruction = `# 角色定义
 你是一个专业的对话总结助手。你的唯一任务是将对话内容转化为简洁的中文摘要。
 
@@ -75,24 +31,8 @@ Go语言学习方法
 ## 执行指令
 直接输出总结内容，不要有任何其他内容。`
 
-	// SessionScorerAgentName Agent名称
-	//
-	//	@author centonhuang
-	//	@update 2026-04-02 10:00:00
-	SessionScorerAgentName = "SessionScorer"
-
-	// SessionScorerAgentDescription Agent描述
-	//
-	//	@author centonhuang
-	//	@update 2026-04-02 10:00:00
+	SessionScorerAgentName        = "SessionScorer"
 	SessionScorerAgentDescription = "Evaluate the quality of a conversation session across three dimensions: coherence, depth, and value."
-
-	// SessionScorerAgentInstruction Agent指令 (Metaprompt风格)
-	//
-	// 使用元提示工程技术确保Agent严格遵循指令要求。
-	//
-	//	@author centonhuang
-	//	@update 2026-04-02 10:00:00
 	SessionScorerAgentInstruction = `# 角色定义
 你是一个专业的对话质量评估专家。你的任务是分析对话内容，从三个维度对对话质量进行客观评分。
 

@@ -12,9 +12,9 @@ type ensureCase struct {
 	Name                      string `json:"name"`
 	Description               string `json:"description"`
 	Input                     string `json:"input"`
-	ExpectModified             bool   `json:"expectModified"`
-	ExpectedPropertiesPresent  bool   `json:"expectedPropertiesPresent,omitempty"`
-	ExpectedPropertiesEmpty    bool   `json:"expectedPropertiesEmpty,omitempty"`
+	ExpectModified            bool   `json:"expectModified"`
+	ExpectedPropertiesPresent bool   `json:"expectedPropertiesPresent,omitempty"`
+	ExpectedPropertiesEmpty   bool   `json:"expectedPropertiesEmpty,omitempty"`
 }
 
 func loadEnsureCases(t *testing.T) []ensureCase {

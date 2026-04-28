@@ -10,9 +10,10 @@ import (
 )
 
 type fixtureCase struct {
-	Name  string            `json:"name"`
-	Files []fixtureFile     `json:"files"`
-	Want  []fixtureExpected `json:"want"`
+	Name    string            `json:"name"`
+	Files   []fixtureFile     `json:"files"`
+	Want    []fixtureExpected `json:"want"`
+	NotWant []fixtureExpected `json:"notWant"`
 }
 
 type fixtureFile struct {
@@ -39,6 +40,11 @@ func TestRunReportsExpectedDiagnostics(t *testing.T) {
 			for _, want := range tc.Want {
 				if !hasDiagnostic(result.Diagnostics, want.Rule, lintconv.Severity(want.Severity)) {
 					t.Fatalf("missing diagnostic rule=%s severity=%s in %#v", want.Rule, want.Severity, result.Diagnostics)
+				}
+			}
+			for _, nw := range tc.NotWant {
+				if hasDiagnostic(result.Diagnostics, nw.Rule, lintconv.Severity(nw.Severity)) {
+					t.Fatalf("unexpected diagnostic rule=%s severity=%s in %#v", nw.Rule, nw.Severity, result.Diagnostics)
 				}
 			}
 		})

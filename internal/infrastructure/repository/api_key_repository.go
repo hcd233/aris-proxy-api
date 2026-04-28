@@ -6,6 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
@@ -14,9 +15,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
-
-// apiKeyRepoFields ProxyAPIKey 查询默认字段集（与原 service 行为一致）
-var apiKeyRepoFields = []string{"id", "user_id", "name", "key", "created_at"}
 
 // apiKeyRepository APIKeyRepository 的 GORM 实现
 type apiKeyRepository struct {
@@ -57,8 +55,8 @@ func (r *apiKeyRepository) Save(ctx context.Context, key *aggregate.ProxyAPIKey)
 	}
 
 	updates := map[string]any{
-		"name": key.Name().String(),
-		"key":  key.Secret().Raw(),
+		constant.FieldName: key.Name().String(),
+		constant.FieldKey:  key.Secret().Raw(),
 	}
 	if err := r.dao.Update(db, &dbmodel.ProxyAPIKey{ID: key.AggregateID()}, updates); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update api key")
@@ -77,7 +75,7 @@ func (r *apiKeyRepository) Save(ctx context.Context, key *aggregate.ProxyAPIKey)
 //	@update 2026-04-22 17:00:00
 func (r *apiKeyRepository) FindByID(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
 	db := database.GetDBInstance(ctx)
-	record, err := r.dao.Get(db, &dbmodel.ProxyAPIKey{ID: id}, apiKeyRepoFields)
+	record, err := r.dao.Get(db, &dbmodel.ProxyAPIKey{ID: id}, constant.ProxyAPIKeyRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -98,7 +96,7 @@ func (r *apiKeyRepository) FindByID(ctx context.Context, id uint) (*aggregate.Pr
 //	@update 2026-04-22 17:00:00
 func (r *apiKeyRepository) ListByUser(ctx context.Context, userID uint) ([]*aggregate.ProxyAPIKey, error) {
 	db := database.GetDBInstance(ctx)
-	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, apiKeyRepoFields)
+	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, constant.ProxyAPIKeyRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list api keys by user")
 	}
@@ -115,7 +113,7 @@ func (r *apiKeyRepository) ListByUser(ctx context.Context, userID uint) ([]*aggr
 //	@update 2026-04-22 17:00:00
 func (r *apiKeyRepository) ListAll(ctx context.Context) ([]*aggregate.ProxyAPIKey, error) {
 	db := database.GetDBInstance(ctx)
-	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{}, apiKeyRepoFields)
+	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{}, constant.ProxyAPIKeyRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list all api keys")
 	}

@@ -4,6 +4,7 @@
 package dao
 
 import (
+	"fmt"
 	"reflect"
 	"time"
 
@@ -54,7 +55,7 @@ func (dao *baseDAO[ModelT]) BatchCreate(db *gorm.DB, data []*ModelT) (err error)
 //	author centonhuang
 //	update 2024-10-17 02:52:18
 func (dao *baseDAO[ModelT]) Update(db *gorm.DB, data *ModelT, info map[string]any) (err error) {
-	info[constant.DBFieldUpdatedAt] = time.Now().UTC()
+	info[constant.FieldUpdatedAt] = time.Now().UTC()
 
 	sql := db.Model(data)
 	selectFields := lo.Filter(lo.Keys(info), func(item string, _ int) bool {
@@ -72,7 +73,7 @@ func (dao *baseDAO[ModelT]) Update(db *gorm.DB, data *ModelT, info map[string]an
 //	author centonhuang
 //	update 2024-10-17 02:52:33
 func (dao *baseDAO[ModelT]) Delete(db *gorm.DB, data *ModelT) (err error) {
-	err = db.Model(data).Update("deleted_at", time.Now().UTC().Unix()).Error
+	err = db.Model(data).Update(constant.FieldDeletedAt, time.Now().UTC().Unix()).Error
 	return
 }
 
@@ -90,7 +91,7 @@ func (dao *baseDAO[ModelT]) BatchDeleteByField(db *gorm.DB, whereField string, v
 		return nil
 	}
 	var m ModelT
-	err = db.Model(&m).Where(whereField+" IN ?", values).Update("deleted_at", time.Now().UTC().Unix()).Error
+	err = db.Model(&m).Where(fmt.Sprintf(constant.DBConditionInTemplate, whereField), values).Update(constant.FieldDeletedAt, time.Now().UTC().Unix()).Error
 	return
 }
 
@@ -105,13 +106,13 @@ func (dao *baseDAO[ModelT]) BatchDeleteByField(db *gorm.DB, whereField string, v
 //	@author centonhuang
 //	@update 2025-11-14 16:05:03
 func (dao *baseDAO[ModelT]) Get(db *gorm.DB, where *ModelT, fields []string) (data *ModelT, err error) {
-	err = db.Select(fields).Where(where).Where("deleted_at = 0").First(&data).Error
+	err = db.Select(fields).Where(where).Where(constant.DBConditionDeletedAtZero).First(&data).Error
 	return
 }
 
 func (dao *baseDAO[ModelT]) BatchGet(db *gorm.DB, where *ModelT, fields []string) (data []*ModelT, err error) {
 	var batch []*ModelT
-	err = db.Select(fields).Where(where).Where("deleted_at = 0").FindInBatches(&batch, config.SQLBatchSize, func(tx *gorm.DB, n int) error {
+	err = db.Select(fields).Where(where).Where(constant.DBConditionDeletedAtZero).FindInBatches(&batch, config.SQLBatchSize, func(tx *gorm.DB, n int) error {
 		data = append(data, batch...)
 		return nil
 	}).Error
@@ -129,7 +130,7 @@ func (dao *baseDAO[ModelT]) BatchGet(db *gorm.DB, where *ModelT, fields []string
 //	@update 2026-04-09 10:00:00
 func (dao *baseDAO[ModelT]) Count(db *gorm.DB, where *ModelT) (count int64, err error) {
 	var m ModelT
-	err = db.Model(&m).Where(where).Where("deleted_at = 0").Count(&count).Error
+	err = db.Model(&m).Where(where).Where(constant.DBConditionDeletedAtZero).Count(&count).Error
 	return
 }
 
@@ -148,7 +149,7 @@ func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, valu
 		return []*ModelT{}, nil
 	}
 	var batch []*ModelT
-	err = db.Select(selectFields).Where(whereField+" IN ?", values).Where("deleted_at = 0").FindInBatches(&batch, config.SQLBatchSize, func(tx *gorm.DB, n int) error {
+	err = db.Select(selectFields).Where(fmt.Sprintf(constant.DBConditionInTemplate, whereField), values).Where(constant.DBConditionDeletedAtZero).FindInBatches(&batch, config.SQLBatchSize, func(tx *gorm.DB, n int) error {
 		data = append(data, batch...)
 		return nil
 	}).Error
@@ -165,7 +166,7 @@ func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, valu
 //	@update 2026-03-29 10:00:00
 func (dao *baseDAO[ModelT]) HardDeleteSoftDeleted(db *gorm.DB) (int64, error) {
 	var m ModelT
-	result := db.Unscoped().Where("deleted_at != 0").Delete(&m)
+	result := db.Unscoped().Where(constant.DBConditionDeletedAtNotZero).Delete(&m)
 	return result.RowsAffected, result.Error
 }
 
@@ -178,7 +179,7 @@ func (dao *baseDAO[ModelT]) HardDeleteSoftDeleted(db *gorm.DB) (int64, error) {
 func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string, param *CommonParam) (data []*ModelT, pageInfo *model.PageInfo, err error) {
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 
-	sql := db.Model(where).Select(fields).Where(where).Where("deleted_at = 0")
+	sql := db.Model(where).Select(fields).Where(where).Where(constant.DBConditionDeletedAtZero)
 
 	if param.Query != "" && len(param.QueryFields) > 0 {
 		like := "%" + param.Query + "%"

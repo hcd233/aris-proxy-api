@@ -58,7 +58,7 @@ func InitDatabase() {
 	var dialector gorm.Dialector
 	var dbHost, dbPort, dbName string
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Shanghai",
+	dsn := fmt.Sprintf(constant.PostgresDSNTemplate,
 		config.PostgresHost, config.PostgresUser, config.PostgresPassword,
 		config.PostgresDatabase, config.PostgresPort, config.PostgresSSLMode)
 	dialector = postgres.Open(dsn)

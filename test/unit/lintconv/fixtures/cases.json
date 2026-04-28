@@ -226,5 +226,173 @@
     "want": [
       {"rule": "anonymous_struct", "severity": "error"}
     ]
+  },
+  {
+    "name": "domain depends on dto",
+    "files": [
+      {
+        "path": "internal/domain/demo/dto.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/dto\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.domain_dependency", "severity": "error"}
+    ]
+  },
+  {
+    "name": "domain depends on util",
+    "files": [
+      {
+        "path": "internal/domain/demo/util.go",
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/util\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.domain_dependency", "severity": "error"}
+    ]
+  },
+  {
+    "name": "allowed sensitive field not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/allowed_secret.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nfunc Run(apiKeyName string) zap.Field {\n\treturn zap.String(\"apiKeyName\", apiKeyName)\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "logging.sensitive", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "small number not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/small.go",
+        "content": "package demo\n\nfunc Run() int {\n\treturn 5\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.number", "severity": "error"}
+    ]
+  },
+  {
+    "name": "allowed implementation name not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/allowed_name.go",
+        "content": "package demo\n\nfunc Run() {\n\tchoiceMap := map[string]int{}\n\t_ = choiceMap\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "style.implementation_name", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "non-code comment not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/note.go",
+        "content": "package demo\n\n// This is just a note\nfunc Run() {}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "style.commented_code", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "anonymous struct in test allowed",
+    "files": [
+      {
+        "path": "test/unit/demo/struct_test.go",
+        "content": "package demo\n\nfunc TestRun() {\n\tvalue := struct {\n\t\tName string\n\t}{}\n\t_ = value\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "anonymous_struct", "severity": "error"}
+    ]
+  },
+  {
+    "name": "forwarding constant outside enum not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/const.go",
+        "content": "package demo\n\nconst DemoStatus = upstream.StatusReady\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "constant.forwarding", "severity": "error"}
+    ]
+  },
+  {
+    "name": "deprecated constant error outside internal not flagged",
+    "files": [
+      {
+        "path": "cmd/demo/error.go",
+        "content": "package demo\n\nfunc Run() string {\n\treturn constant.ErrInvalidRequest\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "error.deprecated_constant", "severity": "error"}
+    ]
+  },
+  {
+    "name": "magic string in function call is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/string_arg.go",
+        "content": "package demo\n\nfunc helper(msg string) {}\n\nfunc Run() {\n\thelper(\"hello\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "ierr wrap message not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/ierr.go",
+        "content": "package demo\n\nfunc Run(err error) error {\n\treturn ierr.Wrap(ierr.ErrDBQuery, err, \"get user\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "logger message and fields not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/logger.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nfunc Run() {\n\tlog.Error(\"[Demo] failed\", zap.String(\"field\", \"value\"))\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "reflect type for type parameter not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/reflect.go",
+        "content": "package demo\n\nfunc Run() {\n\t_ = reflect.TypeFor[ResponseInputContent]()\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
+  },
+  {
+    "name": "huma schema name argument not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/schema.go",
+        "content": "package demo\n\nfunc Run(reg Registry) {\n\t_ = reg.Schema(reflect.TypeFor[ResponseInputContent](), true, \"ResponseInputContent\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "magic.string", "severity": "error"}
+    ]
   }
 ]

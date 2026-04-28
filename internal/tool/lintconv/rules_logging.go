@@ -79,12 +79,16 @@ func stringLiteral(expr ast.Expr) string {
 
 func isSensitiveFieldName(name string) bool {
 	lower := strings.ToLower(name)
-	return strings.Contains(lower, "key") || strings.Contains(lower, "token") || strings.Contains(lower, "secret") || strings.Contains(lower, "password")
+	// Only flag actual sensitive-value semantics, not generic "key" identifiers.
+	return strings.Contains(lower, "apikey") ||
+		strings.Contains(lower, "token") ||
+		strings.Contains(lower, "secret") ||
+		strings.Contains(lower, "password")
 }
 
 func isAllowedSensitiveFieldName(name string) bool {
 	lower := strings.ToLower(name)
-	allowed := []string{"ctxkey", "apikeyname", "keyname", "lockkey", "cachekey", "configkey", "routekey", "sortkey", "tokentype", "tokenexpir", "sessionapikeyname"}
+	allowed := []string{"apikeyname", "tokentype", "tokenexpir", "sessionapikeyname"}
 	for _, item := range allowed {
 		if strings.Contains(lower, item) {
 			return true

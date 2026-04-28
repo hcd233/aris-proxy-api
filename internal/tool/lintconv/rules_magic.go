@@ -28,6 +28,13 @@ func (c *checker) checkMagicLiterals(file SourceFile) {
 	})
 }
 
+const (
+	RuleMagicNumber     = "magic.number"
+	RuleMagicString     = "magic.string"
+	RuleMagicDuration   = "magic.duration"
+	RuleAnonymousStruct = "anonymous_struct"
+)
+
 func (c *checker) checkMagicBasicLit(file SourceFile, lit *ast.BasicLit) {
 	if isConstLiteral(file, lit) || isImportLiteral(file, lit) || isLoggerMessageLiteral(file, lit) || isStructTagLiteral(file, lit) {
 		return
@@ -35,7 +42,7 @@ func (c *checker) checkMagicBasicLit(file SourceFile, lit *ast.BasicLit) {
 	if lit.Kind == token.INT {
 		value, err := strconv.Atoi(lit.Value)
 		if err == nil && value >= 30 {
-			c.report(file, lit, SeverityError, "magic.number", "发现魔法数字，应提取为具名常量")
+			c.report(file, lit, SeverityError, RuleMagicNumber, "magic number literal, should be extracted as a named constant")
 		}
 		return
 	}
@@ -43,10 +50,10 @@ func (c *checker) checkMagicBasicLit(file SourceFile, lit *ast.BasicLit) {
 		return
 	}
 	value, err := strconv.Unquote(lit.Value)
-	if err != nil || len(value) < 2 || strings.HasPrefix(value, "[") || !isMagicStringContext(file, lit, value) {
+	if err != nil || value == "" || len(value) < 2 || strings.HasPrefix(value, "[") || !isMagicStringContext(file, lit, value) {
 		return
 	}
-	c.report(file, lit, SeverityError, "magic.string", "发现魔法字符串，应提取为具名常量")
+	c.report(file, lit, SeverityError, RuleMagicString, "magic string literal, should be extracted as a named constant")
 }
 
 func (c *checker) checkMagicDuration(file SourceFile, expr *ast.BinaryExpr) {
@@ -58,7 +65,7 @@ func (c *checker) checkMagicDuration(file SourceFile, expr *ast.BinaryExpr) {
 	}
 	receiver, _, ok := selectorName(expr.Y)
 	if ok && receiver == "time" {
-		c.report(file, expr, SeverityError, "magic.duration", "发现魔法 duration 乘数，应提取为具名常量")
+		c.report(file, expr, SeverityError, RuleMagicDuration, "magic duration multiplier, should be extracted as a named constant")
 	}
 }
 
@@ -74,7 +81,7 @@ func (c *checker) checkAnonymousStructs(file SourceFile) {
 			if current.Fields == nil || len(current.Fields.List) == 0 {
 				return true
 			}
-			c.report(file, current, SeverityError, "anonymous_struct", "禁止使用匿名 struct，请提取为包内命名类型")
+			c.report(file, current, SeverityError, RuleAnonymousStruct, "anonymous struct is prohibited, extract as a named type in the package")
 		}
 		return true
 	})
@@ -188,6 +195,9 @@ func parentOf(file SourceFile, target ast.Node) ast.Node {
 }
 
 func isMagicStringContext(file SourceFile, lit *ast.BasicLit, value string) bool {
+	if isIgnoredMagicStringLiteral(file, lit) {
+		return false
+	}
 	parent := parentOf(file, lit)
 	switch current := parent.(type) {
 	case *ast.AssignStmt:
@@ -199,10 +209,53 @@ func isMagicStringContext(file SourceFile, lit *ast.BasicLit, value string) bool
 	case *ast.BinaryExpr:
 		return current.Op == token.EQL || current.Op == token.NEQ
 	case *ast.CompositeLit:
-		return strings.HasPrefix(value, "/")
+		return true // strings.HasPrefix(value, "/")
 	case *ast.KeyValueExpr:
-		return strings.HasPrefix(value, "/")
+		return true //strings.HasPrefix(value, "/")
+	case *ast.CallExpr:
+		return true
 	default:
 		return false
 	}
+}
+
+func isIgnoredMagicStringLiteral(file SourceFile, lit *ast.BasicLit) bool {
+	return hasAncestor(file, lit, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return false
+		}
+		return isIgnoredMagicStringCall(call) || isHumaSchemaNameArg(call, lit)
+	})
+}
+
+func isIgnoredMagicStringCall(call *ast.CallExpr) bool {
+	receiver, method, ok := selectorName(call.Fun)
+	if ok {
+		if receiver == "ierr" && (method == "Wrap" || method == "Wrapf") {
+			return true
+		}
+		if receiver == "ierr" && (method == "New" || method == "Newf") {
+			return true
+		}
+		if (receiver == "logger" || receiver == "log") && isLoggerMethod(method) {
+			return true
+		}
+		if receiver == "zap" {
+			return true
+		}
+		if receiver == "reflect" && method == "TypeFor" {
+			return true
+		}
+	}
+	method, ok = selectorMethodName(call.Fun)
+	return ok && isLoggerMethod(method)
+}
+
+func isHumaSchemaNameArg(call *ast.CallExpr, lit *ast.BasicLit) bool {
+	method, ok := selectorMethodName(call.Fun)
+	if !ok || method != "Schema" || len(call.Args) < 3 {
+		return false
+	}
+	return call.Args[2] == lit
 }
