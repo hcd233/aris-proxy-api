@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -24,30 +25,62 @@ type Cron interface {
 	Stop()
 }
 
+// CronRegistryEntry 单个定时任务注册项
+//
+//	@author centonhuang
+//	@update 2026-05-01 10:00:00
+type CronRegistryEntry struct {
+	Name    string
+	Enabled func() bool
+	Factory func() Cron
+}
+
 var cronInstances []Cron
+
+// DefaultCronRegistry 默认定时任务注册表，用于测试注入
+//
+//	@update 2026-05-01 10:00:00
+var DefaultCronRegistry = []CronRegistryEntry{
+	{
+		Name:    constant.CronModuleSessionDeduplicate,
+		Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
+		Factory: NewSessionDeduplicateCron,
+	},
+	{
+		Name:    constant.CronModuleSessionSummarize,
+		Enabled: func() bool { return config.CronSessionSummarizeEnabled },
+		Factory: NewSessionSummarizeCron,
+	},
+	{
+		Name:    constant.CronModuleSessionScore,
+		Enabled: func() bool { return config.CronSessionScoreEnabled },
+		Factory: NewSessionScoreCron,
+	},
+	{
+		Name:    constant.CronModuleSoftDeletePurge,
+		Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
+		Factory: NewSoftDeletePurgeCron,
+	},
+}
 
 // InitCronJobs 初始化定时任务
 //
 //	author centonhuang
 //	update 2026-04-02 10:00:00
 func InitCronJobs() {
-	sessionDeduplicateCron := NewSessionDeduplicateCron()
-	lo.Must0(sessionDeduplicateCron.Start())
-	cronInstances = append(cronInstances, sessionDeduplicateCron)
+	for _, entry := range DefaultCronRegistry {
+		if !entry.Enabled() {
+			logger.Logger().Info("[Cron] Cron job is disabled by configuration", zap.String("name", entry.Name))
+			continue
+		}
 
-	sessionSummarizeCron := NewSessionSummarizeCron()
-	lo.Must0(sessionSummarizeCron.Start())
-	cronInstances = append(cronInstances, sessionSummarizeCron)
+		c := entry.Factory()
+		lo.Must0(c.Start())
+		cronInstances = append(cronInstances, c)
+		logger.Logger().Info("[Cron] Cron job started", zap.String("name", entry.Name))
+	}
 
-	sessionScoreCron := NewSessionScoreCron()
-	lo.Must0(sessionScoreCron.Start())
-	cronInstances = append(cronInstances, sessionScoreCron)
-
-	softDeletePurgeCron := NewSoftDeletePurgeCron()
-	lo.Must0(softDeletePurgeCron.Start())
-	cronInstances = append(cronInstances, softDeletePurgeCron)
-
-	logger.Logger().Info("[Cron] Init cron jobs")
+	logger.Logger().Info("[Cron] Init cron jobs", zap.Int("count", len(cronInstances)))
 }
 
 // StopCronJobs 停止所有定时任务，用于优雅关闭
@@ -58,7 +91,16 @@ func StopCronJobs() {
 	for _, c := range cronInstances {
 		c.Stop()
 	}
+	cronInstances = nil
 	logger.Logger().Info("[Cron] All cron jobs stopped")
+}
+
+// CronInstanceCount 返回当前已注册的定时任务实例数量，供测试使用
+//
+//	@author centonhuang
+//	@update 2026-05-01 10:00:00
+func CronInstanceCount() int {
+	return len(cronInstances)
 }
 
 type cronLoggerAdapter struct {
