@@ -182,6 +182,22 @@ var (
 	// CLSLevel string 腾讯云 CLS 日志级别
 	//	@update 2026-04-25 10:00:00
 	CLSLevel string
+
+	// CronSessionDeduplicateEnabled bool 是否启用 Session 去重定时任务
+	//	@update 2026-05-01 10:00:00
+	CronSessionDeduplicateEnabled bool
+
+	// CronSessionSummarizeEnabled bool 是否启用 Session 总结定时任务
+	//	@update 2026-05-01 10:00:00
+	CronSessionSummarizeEnabled bool
+
+	// CronSessionScoreEnabled bool 是否启用 Session 评分定时任务
+	//	@update 2026-05-01 10:00:00
+	CronSessionScoreEnabled bool
+
+	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
+	//	@update 2026-05-01 10:00:00
+	CronSoftDeletePurgeEnabled bool
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -232,6 +248,10 @@ func initEnvironment() {
 	config.SetDefault("postgres.sslmode", "disable")
 
 	config.SetDefault("trusted.proxies", "172.18.0.1")
+	config.SetDefault("cron.session.deduplicate.enabled", true)
+	config.SetDefault("cron.session.summarize.enabled", true)
+	config.SetDefault("cron.session.score.enabled", true)
+	config.SetDefault("cron.soft.delete.purge.enabled", true)
 
 	config.AutomaticEnv()
 
@@ -293,6 +313,11 @@ func initEnvironment() {
 	CLSSecretKey = config.GetString("cls.secret.key")
 	CLSTopicID = config.GetString("cls.topic.id")
 	CLSLevel = config.GetString("cls.level")
+
+	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
+	CronSessionSummarizeEnabled = config.GetBool("cron.session.summarize.enabled")
+	CronSessionScoreEnabled = config.GetBool("cron.session.score.enabled")
+	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{
