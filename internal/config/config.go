@@ -249,8 +249,8 @@ func initEnvironment() {
 
 	config.SetDefault("trusted.proxies", "172.18.0.1")
 	config.SetDefault("cron.session.deduplicate.enabled", true)
-	config.SetDefault("cron.session.summarize.enabled", true)
-	config.SetDefault("cron.session.score.enabled", true)
+	config.SetDefault("cron.session.summarize.enabled", false)
+	config.SetDefault("cron.session.score.enabled", false)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 
 	config.AutomaticEnv()
