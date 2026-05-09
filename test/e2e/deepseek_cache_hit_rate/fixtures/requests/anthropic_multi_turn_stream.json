@@ -1,0 +1,21 @@
+{
+  "model": "deepseek-v4-flash",
+  "stream": true,
+  "max_tokens": 64,
+  "temperature": 0,
+  "system": "你是 aris-proxy-api 的端到端缓存命中率测试助手。请严格根据用户给出的固定上下文回答，不要扩展外部事实。固定上下文：项目代号 cache-hit-e2e；目标模型 deepseek-v4-flash；测试协议同时覆盖 OpenAI 与 Anthropic；缓存判断字段包含 prompt_cache_hit_tokens、prompt_cache_miss_tokens、prompt_tokens_details.cached_tokens、cache_read_input_tokens。请保持回答简短。",
+  "messages": [
+    {
+      "role": "user",
+      "content": "第一轮：记录项目代号和目标模型。"
+    },
+    {
+      "role": "user",
+      "content": "第二轮：记录要观察的缓存统计字段。"
+    },
+    {
+      "role": "user",
+      "content": "第三轮：用一句话总结这次测试要验证什么。"
+    }
+  ]
+}

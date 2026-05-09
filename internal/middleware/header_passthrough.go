@@ -12,6 +12,7 @@ var passthroughExcludedHeaders = map[string]struct{}{
 	constant.HTTPHeaderContentType:        {},
 	constant.HTTPHeaderContentLength:      {},
 	constant.HTTPHeaderAuthorization:      {},
+	constant.HTTPHeaderAcceptEncoding:     {},
 	constant.HTTPHeaderAPIKey:             {},
 	constant.HTTPHeaderAnthropicVersion:   {},
 	constant.HTTPHeaderHost:               {},

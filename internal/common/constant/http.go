@@ -15,6 +15,7 @@ const (
 	HTTPHeaderContentType         = "Content-Type"
 	HTTPHeaderContentLength       = "Content-Length"
 	HTTPHeaderAuthorization       = "Authorization"
+	HTTPHeaderAcceptEncoding      = "Accept-Encoding"
 	HTTPHeaderAPIKey              = "x-api-key"
 	HTTPHeaderAnthropicVersion    = "anthropic-version"
 	HTTPHeaderCacheControl        = "Cache-Control"
