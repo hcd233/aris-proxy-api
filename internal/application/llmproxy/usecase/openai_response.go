@@ -58,7 +58,9 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, log *za
 				}
 			}
 			replaced := transport.ReplaceModelInSSEData(data, req.Body.Model)
-			_, _ = fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, replaced)
+			if _, writeErr := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to write SSE event frame", zap.Error(writeErr))
+			}
 			return w.Flush()
 		})
 
@@ -175,7 +177,9 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, l
 					log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 					return marshalErr
 				}
-				_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData)
+				if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData); writeErr != nil {
+					log.Debug("[OpenAIUseCase] Failed to write SSE chunk", zap.Error(writeErr))
+				}
 				if flushErr := w.Flush(); flushErr != nil {
 					return flushErr
 				}
@@ -186,8 +190,12 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, l
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal)
-			_ = w.Flush()
+			if _, doneErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal); doneErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(doneErr))
+			}
+			if flushErr := w.Flush(); flushErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to flush SSE writer", zap.Error(flushErr))
+			}
 		} else {
 			util.WriteUpstreamSSEError(log, w, err)
 		}

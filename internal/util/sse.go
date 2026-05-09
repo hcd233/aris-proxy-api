@@ -51,7 +51,9 @@ func writeSSEErrorResponse(ctx context.Context, w *bufio.Writer, err *model.Erro
 		Status:   enum.SSEStatusError,
 		Data:     &dto.CommonRsp{Error: err},
 	}
-	_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(rsp)))
+	if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(rsp))); writeErr != nil {
+		logger.Debug("[WriteErrorResponse] Failed to write sse data frame", zap.Error(writeErr))
+	}
 	if err := w.Flush(); err != nil {
 		logger.Error("[WriteErrorResponse] Flush error", zap.Error(err))
 	}
@@ -87,15 +89,23 @@ func WriteUpstreamSSEError(log *zap.Logger, w *bufio.Writer, err error) {
 	var upstreamErr *model.UpstreamError
 	if errors.As(err, &upstreamErr) {
 		if upstreamErr.Body != "" {
-			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body)
+			if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body); writeErr != nil {
+				log.Debug("[WriteUpstreamSSEError] Failed to write upstream error body", zap.Error(writeErr))
+			}
 		} else {
-			_, _ = fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode)
+			if _, writeErr := fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode); writeErr != nil {
+				log.Debug("[WriteUpstreamSSEError] Failed to write upstream status frame", zap.Error(writeErr))
+			}
 		}
 	} else {
 		log.Error("[WriteUpstreamSSEError] Non-upstream error in SSE stream", zap.Error(err))
-		_, _ = fmt.Fprint(w, constant.SSEOpenAIInternalErrorFrame)
+		if _, writeErr := fmt.Fprint(w, constant.SSEOpenAIInternalErrorFrame); writeErr != nil {
+			log.Debug("[WriteUpstreamSSEError] Failed to write internal error frame", zap.Error(writeErr))
+		}
 	}
-	_ = w.Flush()
+	if flushErr := w.Flush(); flushErr != nil {
+		log.Debug("[WriteUpstreamSSEError] Failed to flush SSE writer", zap.Error(flushErr))
+	}
 }
 
 // SendOpenAIModelNotFoundError 发送OpenAI模型不存在错误

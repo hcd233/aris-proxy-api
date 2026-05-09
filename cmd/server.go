@@ -12,8 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"go.uber.org/zap"
@@ -21,6 +19,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
@@ -56,12 +55,7 @@ var startServerCmd = &cobra.Command{
 			zap.Int("sqlBatchSize", config.SQLBatchSize),
 		)
 
-		database.InitDatabase()
-		cache.InitCache()
-		httpclient.InitHTTPClient()
-		pool.InitPoolManager()
-		cron.InitCronJobs()
-
+		bootstrap.InitInfrastructure()
 		server, err := bootstrap.BuildServer()
 		if err != nil {
 			logger.Logger().Error("[Server] Build server failed", zap.Error(err))

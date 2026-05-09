@@ -13,6 +13,7 @@ import (
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
@@ -22,8 +23,12 @@ import (
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"go.uber.org/dig"
@@ -37,6 +42,18 @@ type Server struct {
 	container *dig.Container
 	App       *fiber.App
 	HumaAPI   huma.API
+}
+
+// InitInfrastructure 初始化所有基础设施组件（数据库、Redis、HTTP Client、协程池、定时任务）。
+//
+//	@author centonhuang
+//	@update 2026-05-09 10:00:00
+func InitInfrastructure() {
+	database.InitDatabase()
+	cache.InitCache()
+	httpclient.InitHTTPClient()
+	pool.InitPoolManager()
+	cron.InitCronJobs()
 }
 
 // BuildServer 构建启动依赖容器并解析 HTTP 服务对象。
