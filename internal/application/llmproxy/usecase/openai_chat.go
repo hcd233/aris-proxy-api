@@ -40,7 +40,6 @@ import (
 // 因此这里保持用户请求的原样透传，由调用方自行选择 max_tokens 或 max_completion_tokens。
 func (u *openAIUseCase) forwardChatNative(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, stream bool) *huma.StreamResponse {
 	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
-	body = util.EnsureAssistantMessageReasoningContent(body)
 
 	if stream {
 		return u.forwardChatNativeStream(ctx, log, req, ep, upstream, body)

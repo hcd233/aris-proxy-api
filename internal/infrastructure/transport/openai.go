@@ -152,8 +152,6 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 
 // sendRequest 构建并发送 Chat Completions 上游请求（含请求体预处理）
 func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
-	body = util.EnsureAssistantMessageReasoningContent(body)
-	body = util.EnsureToolParametersSchema(body)
 	return p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIChatCompletions)
 }
 

@@ -24,7 +24,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
 
@@ -39,7 +38,6 @@ func buildForwardBody(t *testing.T, req *dto.OpenAIChatCompletionReq, upstreamMo
 		t.Fatalf("sonic.Marshal error: %v", err)
 	}
 	body := transport.ReplaceModelInBody(raw, upstreamModel)
-	body = util.EnsureAssistantMessageReasoningContent(body)
 	return body
 }
 

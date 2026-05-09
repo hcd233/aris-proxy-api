@@ -8,7 +8,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type testCase struct {
@@ -133,51 +132,6 @@ func loadEnsureCases(t *testing.T) []ensureCase {
 		t.Fatalf("failed to unmarshal fixture: %v", err)
 	}
 	return cases
-}
-
-// TestEnsureAssistantMessageReasoningContent 覆盖 util.EnsureAssistantMessageReasoningContent
-// 的所有分支，并回归 Moonshot/opencode 的 400 bug：缺失或空串 reasoning_content 均需补位为 " "。
-func TestEnsureAssistantMessageReasoningContent(t *testing.T) {
-	for _, tc := range loadEnsureCases(t) {
-		t.Run(tc.Name, func(t *testing.T) {
-			got := util.EnsureAssistantMessageReasoningContent([]byte(tc.Input))
-
-			var parsed map[string]any
-			if err := sonic.Unmarshal(got, &parsed); err != nil {
-				t.Fatalf("output is not valid JSON: %v\nOutput: %s", err, string(got))
-			}
-
-			msgs, ok := parsed["messages"].([]any)
-			if !ok {
-				t.Fatalf("messages field missing or not array in output: %s", string(got))
-			}
-			if tc.ExpectedRoleAt >= len(msgs) {
-				t.Fatalf("expectedRoleAt %d out of range (len=%d)", tc.ExpectedRoleAt, len(msgs))
-			}
-			msg, ok := msgs[tc.ExpectedRoleAt].(map[string]any)
-			if !ok {
-				t.Fatalf("messages[%d] is not an object", tc.ExpectedRoleAt)
-			}
-
-			rc, hasRC := msg["reasoning_content"]
-			if tc.ExpectReasoningContentFilled {
-				if !hasRC {
-					t.Fatalf("expected reasoning_content present at messages[%d], body=%s", tc.ExpectedRoleAt, string(got))
-				}
-				rcStr, isStr := rc.(string)
-				if !isStr {
-					t.Fatalf("reasoning_content should be string, got %T (body=%s)", rc, string(got))
-				}
-				if rcStr != tc.ExpectedReasoningContent {
-					t.Fatalf("reasoning_content = %q, want %q", rcStr, tc.ExpectedReasoningContent)
-				}
-			} else {
-				if hasRC {
-					t.Fatalf("unexpected reasoning_content at messages[%d], body=%s", tc.ExpectedRoleAt, string(got))
-				}
-			}
-		})
-	}
 }
 
 func buildReqBody(t *testing.T, msgs []testMessage) *dto.OpenAIChatCompletionReq {
