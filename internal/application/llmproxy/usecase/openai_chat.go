@@ -68,15 +68,21 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Lo
 				log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 				return marshalErr
 			}
-			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData)
+			if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData); writeErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to write SSE chunk", zap.Error(writeErr))
+			}
 			return w.Flush()
 		})
 		if !firstTokenTime.IsZero() {
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal)
-			_ = w.Flush()
+			if _, doneErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal); doneErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(doneErr))
+			}
+			if flushErr := w.Flush(); flushErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to flush SSE writer", zap.Error(flushErr))
+			}
 		} else {
 			util.WriteUpstreamSSEError(log, w, err)
 		}
@@ -172,7 +178,9 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 					log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 					return marshalErr
 				}
-				_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData)
+				if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData); writeErr != nil {
+					log.Debug("[OpenAIUseCase] Failed to write SSE chunk", zap.Error(writeErr))
+				}
 				if flushErr := w.Flush(); flushErr != nil {
 					return flushErr
 				}
@@ -183,8 +191,12 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal)
-			_ = w.Flush()
+			if _, doneErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal); doneErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(doneErr))
+			}
+			if flushErr := w.Flush(); flushErr != nil {
+				log.Debug("[OpenAIUseCase] Failed to flush SSE writer", zap.Error(flushErr))
+			}
 		} else {
 			util.WriteUpstreamSSEError(log, w, err)
 		}

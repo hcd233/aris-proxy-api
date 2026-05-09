@@ -139,8 +139,12 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
 			modifiedData := transport.ReplaceModelInSSEData(event.Data, exposedModel)
-			_, _ = fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event)
-			_, _ = fmt.Fprintf(w, constant.SSEDataLineTemplate, modifiedData)
+			if _, writeErr := fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event); writeErr != nil {
+				log.Debug("[AnthropicUseCase] Failed to write SSE event line", zap.Error(writeErr))
+			}
+			if _, dataErr := fmt.Fprintf(w, constant.SSEDataLineTemplate, modifiedData); dataErr != nil {
+				log.Debug("[AnthropicUseCase] Failed to write SSE data line", zap.Error(dataErr))
+			}
 			return w.Flush()
 		})
 		if !firstTokenTime.IsZero() {
@@ -239,8 +243,12 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 					firstTokenTime = time.Now()
 					firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 				}
-				_, _ = fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event)
-				_, _ = fmt.Fprintf(w, constant.SSEDataLineTemplate, string(event.Data))
+				if _, writeErr := fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event); writeErr != nil {
+					log.Debug("[AnthropicUseCase] Failed to write SSE event line", zap.Error(writeErr))
+				}
+				if _, dataErr := fmt.Fprintf(w, constant.SSEDataLineTemplate, string(event.Data)); dataErr != nil {
+					log.Debug("[AnthropicUseCase] Failed to write SSE data line", zap.Error(dataErr))
+				}
 				if flushErr := w.Flush(); flushErr != nil {
 					return flushErr
 				}

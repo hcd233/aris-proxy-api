@@ -3,37 +3,49 @@ package constant
 const (
 	ProjectName = "aris-proxy-api"
 
-	FormatDefault          = "%v"
-	FormatDecimal          = "%d"
-	FormatFloatCompact     = "%g"
-	TruncateSuffixPrefix   = "...(truncated, total "
-	TruncateSuffixPostfix  = " chars)"
+	// ── 字符串模板（含 Printf/格式化占位符）──
+	FormatDefault        = "%v"
+	FormatDecimal        = "%d"
+	FormatFloatCompact   = "%g"
+	ColonMessageTemplate = ": %s"
+	HostPortTemplate     = "%s:%s"
+
+	PostgresDSNTemplate = "host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Shanghai"
+	DataURLTemplate     = "data:%s;base64,%s"
+
+	TruncateSuffixPrefix  = "...(truncated, total "
+	TruncateSuffixPostfix = " chars)"
+
+	// ── 运行时字符串字面量（无格式化占位符）──
 	NewlineString          = "\n"
 	NewlineCRLF            = "\r\n"
 	ZeroString             = "0"
 	OneString              = "1"
 	NullJSONLiteral        = "null"
 	QuoteString            = "\""
-	ColonMessageTemplate   = ": %s"
-	JSONSchemaTypeString   = "string"
-	JSONSchemaTypeNumber   = "number"
-	JSONSchemaTypeBoolean  = "boolean"
-	JSONSchemaTypeArray    = "array"
-	JSONSchemaTypeObject   = "object"
-	HostPortTemplate       = "%s:%s"
-	PostgresDSNTemplate    = "host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Shanghai"
 	DefaultFormatJSON      = "application/json"
-	DataURLTemplate        = "data:%s;base64,%s"
 	DataURLPrefix          = "data:"
 	DataURLBase64Separator = ";base64,"
 	Base64SourceType       = "base64"
 	URLSourceType          = "url"
-	DigNameAccessSigner    = "accessSigner"
-	DigNameRefreshSigner   = "refreshSigner"
-	OpenAPISchemasPrefix   = "#/components/schemas/"
-	OpenAPIDocsPath        = "/openapi"
-	OpenAPISchemasPath     = "/schemas"
 
+	// ── JSON Schema 类型字面量 ──
+	JSONSchemaTypeString  = "string"
+	JSONSchemaTypeNumber  = "number"
+	JSONSchemaTypeBoolean = "boolean"
+	JSONSchemaTypeArray   = "array"
+	JSONSchemaTypeObject  = "object"
+
+	// ── dig 容器命名 ──
+	DigNameAccessSigner  = "accessSigner"
+	DigNameRefreshSigner = "refreshSigner"
+
+	// ── OpenAPI 路径 ──
+	OpenAPISchemasPrefix = "#/components/schemas/"
+	OpenAPIDocsPath      = "/openapi"
+	OpenAPISchemasPath   = "/schemas"
+
+	// ── 数值常量 / 构建命令 ──
 	ParseFloat64BitSize       = 64
 	DecimalBase               = 10
 	GoCommand                 = "go"

@@ -150,14 +150,18 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 	return util.ConcatChatCompletionChunks(collectedChunks)
 }
 
-// sendRequest 构建并发送 OpenAI 协议的上游请求
+// sendRequest 构建并发送 Chat Completions 上游请求（含请求体预处理）
 func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
-	log := logger.WithCtx(ctx)
-
 	body = util.EnsureAssistantMessageReasoningContent(body)
 	body = util.EnsureToolParametersSchema(body)
+	return p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIChatCompletions)
+}
 
-	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + constant.UpstreamPathOpenAIChatCompletions
+// doUpstreamRequest 构建并发送上游 HTTP 请求的公共逻辑
+func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
+	log := logger.WithCtx(ctx)
+
+	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + pathSuffix
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
 	if err != nil {
@@ -208,7 +212,7 @@ func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body
 func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep UpstreamEndpoint, body []byte) ([]byte, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendResponseRequest(ctx, ep, body)
+	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIResponses)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +230,7 @@ func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep UpstreamEndp
 func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendResponseRequest(ctx, ep, body)
+	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIResponses)
 	if err != nil {
 		return err
 	}
@@ -262,56 +266,4 @@ func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep Upstre
 	}
 
 	return nil
-}
-
-// sendResponseRequest 构建并发送 Response API 的上游请求
-func (p *openAIProxy) sendResponseRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
-	log := logger.WithCtx(ctx)
-
-	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + constant.UpstreamPathOpenAIResponses
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
-	if err != nil {
-		log.Error("[OpenAIProxy] New response api request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "create response api request")
-	}
-
-	// 透传客户端请求头
-	if headers := util.GetPassthroughHeaders(ctx); headers != nil {
-		for k, v := range headers {
-			req.Header.Set(k, v)
-		}
-	}
-
-	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
-
-	log.Info("[OpenAIProxy] Send response api upstream request", zap.String("upstreamURL", upstreamURL),
-		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)))
-
-	resp, err := httpclient.GetHTTPClient().Do(req)
-	if err != nil {
-		log.Error("[OpenAIProxy] Send response api http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
-		return nil, &model.UpstreamConnectionError{Cause: err}
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		log.Error("[OpenAIProxy] Response API upstream returned non-200 status",
-			zap.String("upstreamURL", upstreamURL),
-			zap.Int("statusCode", resp.StatusCode),
-			zap.String("responseBody", string(errorBody)),
-		)
-		return nil, &model.UpstreamError{
-			StatusCode: resp.StatusCode,
-			Headers:    capturePassthroughResponseHeaders(resp.Header),
-			Body:       string(errorBody),
-		}
-	}
-
-	storePassthroughResponseHeaders(ctx, resp.Header)
-
-	return resp, nil
 }
