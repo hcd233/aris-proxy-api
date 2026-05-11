@@ -5,14 +5,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
-// passthroughExcludedHeaders 不透传到上游的请求头（使用 http.CanonicalHeaderKey 格式）
+// passthroughExcludedHeaders 不透传到上游的请求头（与 EachHeader 的 name 格式一致）。
+// 鉴权、Content-Type、Anthropic 版本等在 transport 层会强制覆盖，不再在此排除。
 var passthroughExcludedHeaders = map[string]struct{}{
-	constant.HTTPHeaderContentType:        {},
 	constant.HTTPHeaderContentLength:      {},
-	constant.HTTPHeaderAuthorization:      {},
 	constant.HTTPHeaderAcceptEncoding:     {},
-	constant.HTTPHeaderAPIKey:             {},
-	constant.HTTPHeaderAnthropicVersion:   {},
 	constant.HTTPHeaderHost:               {},
 	constant.HTTPHeaderConnection:         {},
 	constant.HTTPHeaderTransferEncoding:   {},
