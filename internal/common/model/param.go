@@ -34,7 +34,8 @@ type QueryParam struct {
 //	@author centonhuang
 //	@update 2025-11-07 01:41:47
 type SortParam struct {
-	Sort enum.Sort `query:"sort" enum:"asc,desc"`
+	Sort      enum.Sort `query:"sort" enum:"asc,desc"`
+	SortField string    `json:"sortField"`
 }
 
 // CommonParam 分页查询参数
