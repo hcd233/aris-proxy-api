@@ -21,9 +21,10 @@
 - Go `1.25.1` 后端，提供 LLM 代理网关、用户、API Key、会话管理。
 - 入口：`main.go` → `cmd.Execute()` → `cmd/server.go` 的 `server start`。
 - 启动链路：database、Redis、共享 HTTP Client、Pond 协程池、cron、Fiber 中间件、可选 `/docs`、API 路由。
-- 请求链路：Fiber 中间件 → Huma 路由/中间件 → handler → service → DAO/proxy/converter。
-- LLM 代理分层：`service` 编排端点查找、转换、代理和存储；`proxy` 只做 HTTP/SSE 传输；`converter` 只做 DTO 映射。
-- 模型路由和代理 Key 由数据库驱动：`ModelEndpoint`、`ProxyAPIKey`；运行配置来自 Viper 和 `env/api.env`。
+- 请求链路：Fiber 中间件 → Huma 路由 → handler → application usecase/command → domain service → infrastructure repository/transport。
+- 依赖注入：`go.uber.org/dig`，全部在 `internal/bootstrap/container.go` 中注册。
+- LLM 代理分层：`application/llmproxy/usecase` 编排端点查找、转换、代理和存储；`infrastructure/transport` 做 HTTP/SSE 传输；`application/llmproxy/converter` 做 DTO 映射。
+- 模型路由和代理 Key 由数据库驱动；运行配置来自 Viper 和 `env/api.env`。
 
 ## 3. 常用命令
 
@@ -33,7 +34,7 @@
 - 创建对象存储桶：`go run main.go object bucket create`
 - 完整本地栈：先创建 `postgresql-data`、`redis-data`、`minio-data` 卷，再执行 `docker compose -f docker/docker-compose-full.yml up -d`
 - 构建：`make build`；调试构建：`make build-dev` 或 `make build-debug`
-- 自定义规范扫描：`make lint`
+- 规范扫描：`make lint`
 - 全量测试：`make test` 或 `go test -count=1 ./...`
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
 
@@ -41,7 +42,7 @@
 
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
-- 修改前先定位相关 handler/service/proxy/converter/DAO/DTO，不做大范围重写。
+- 修改前先定位相关 handler/usecase/converter/transport/DTO，不做大范围重写。
 - 新需求和 bugfix 都应先补或更新测试；bugfix 必须有能复现问题的回归用例。
 - 每次改动后依次跑：聚焦测试 → `make lint` → 必要时 `go test -count=1 ./...`。
 - 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
@@ -65,8 +66,9 @@
 ## 6. 代码契约
 
 - 业务错误创建/包装统一走 `internal/common/ierr`；禁止 `fmt.Errorf` 或 `errors.New`。
-- Service 正常返回 `rsp, nil`；业务失败写入 `rsp.Error = ierr.ErrXxx.BizError()`。
-- Handler 保持薄封装：`return util.WrapHTTPResponse(h.svc.Method(ctx, req))`。
+- 内部链路（usecase/domain service）使用 `ierr.Wrap(sentinel, cause, msg)` 或 `ierr.New(sentinel, msg)` 传递错误。
+- Handler 从 error 中提取业务错误：`rsp.Error = ierr.ToBizError(err, ierr.ErrXxx.BizError())`，然后 `return util.WrapHTTPResponse(rsp, nil)`。
+- Handler 保持薄封装：`return util.WrapHTTPResponse(h.uc.Method(ctx, req))` 或流式直接透传 `*huma.StreamResponse`。
 - 日志使用 `logger.WithCtx(ctx)` 或 `logger.WithFCtx(c)`；消息前缀为 `[PascalCaseModule]`；key/token/secret/password 必须用 `util.MaskSecret()`。
 - 业务包禁止建 `common.go` 工具堆场；导出公共 helper 放 `internal/util/` 或 `internal/common/`。
 - Redis key、存储路径、ID 格式、Data URL 模板等字符串模板放 `internal/common/constant/string.go`。
@@ -87,7 +89,7 @@
 ## 8. DTO 与 API 契约
 
 - 修改 OpenAI 或 Anthropic DTO 前，先看 `/docs` 的 OpenAPI 文档，保持协议兼容。
-- OpenAI 和 Anthropic 接口支持跨 provider 转换；改 DTO 常需同步 service、proxy、converter、SSE 合并/归一化工具。
+- OpenAI 和 Anthropic 接口支持跨 provider 转换；改 DTO 常需同步 usecase、proxy、converter、SSE 合并/归一化工具。
 - Huma 安全方案：用户路由用 `jwtAuth`，LLM 代理路由用 `apiKeyAuth`。
 
 ## 9. 仓库与 CI

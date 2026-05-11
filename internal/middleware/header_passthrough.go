@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"net/http"
-
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
@@ -38,9 +36,12 @@ func HeaderPassthroughMiddleware() func(ctx huma.Context, next func(huma.Context
 	return func(ctx huma.Context, next func(huma.Context)) {
 		passthroughHeaders := make(map[string]string, 8)
 		ctx.EachHeader(func(name, value string) {
-			canonical := http.CanonicalHeaderKey(name)
-			if _, excluded := passthroughExcludedHeaders[canonical]; !excluded {
-				passthroughHeaders[canonical] = value
+			// canonical := http.CanonicalHeaderKey(name)
+			// if _, excluded := passthroughExcludedHeaders[canonical]; !excluded {
+			// 	passthroughHeaders[canonical] = value
+			// }
+			if _, excluded := passthroughExcludedHeaders[name]; !excluded {
+				passthroughHeaders[name] = value
 			}
 		})
 		ctx = huma.WithValue(ctx, constant.CtxKeyPassthroughHeaders, passthroughHeaders)
