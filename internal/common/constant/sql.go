@@ -92,4 +92,6 @@ var (
 	AuditRepoFields = []string{FieldID, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProvider, FieldAPIProvider, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, FieldCreatedAt}
 
 	AuditQueryFields = []string{FieldTraceID, FieldModel}
+
+	AuditMaxPageSize = 100
 )

@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -14,14 +15,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-const maxPageSize = 100
-
 var validSortFields = map[string]bool{
-	"created_at":              true,
-	"input_tokens":            true,
-	"output_tokens":           true,
-	"first_token_latency_ms":  true,
-	"stream_duration_ms":      true,
+	constant.FieldCreatedAt:            true,
+	constant.FieldInputTokens:          true,
+	constant.FieldOutputTokens:         true,
+	constant.FieldFirstTokenLatencyMs:  true,
+	constant.FieldStreamDurationMs:     true,
 }
 
 // ListAuditLogsQuery 审计日志列表查询
@@ -77,8 +76,8 @@ func (h *listAuditLogsHandler) Handle(ctx context.Context, q ListAuditLogsQuery)
 	if q.PageSize < 1 {
 		q.PageSize = 20
 	}
-	if q.PageSize > maxPageSize {
-		q.PageSize = maxPageSize
+	if q.PageSize > constant.AuditMaxPageSize {
+		q.PageSize = constant.AuditMaxPageSize
 	}
 	if q.Page < 1 {
 		q.Page = 1
@@ -91,7 +90,7 @@ func (h *listAuditLogsHandler) Handle(ctx context.Context, q ListAuditLogsQuery)
 		q.Sort = enum.SortDesc
 	}
 	if q.SortField == "" {
-		q.SortField = "created_at"
+		q.SortField = constant.FieldCreatedAt
 	}
 
 	param := model.CommonParam{
