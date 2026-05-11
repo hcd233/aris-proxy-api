@@ -17,6 +17,7 @@ type routeParams struct {
 	UserHandler      handler.UserHandler
 	APIKeyHandler    handler.APIKeyHandler
 	SessionHandler   handler.SessionHandler
+	AuditHandler     handler.AuditHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
 }
@@ -39,6 +40,7 @@ func RegisterRoutes(server *Server) error {
 			UserHandler:      params.UserHandler,
 			APIKeyHandler:    params.APIKeyHandler,
 			SessionHandler:   params.SessionHandler,
+			AuditHandler:     params.AuditHandler,
 			OpenAIHandler:    params.OpenAIHandler,
 			AnthropicHandler: params.AnthropicHandler,
 		})

@@ -6,6 +6,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
+	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
 	identitycommand "github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
@@ -20,6 +21,7 @@ import (
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	llmproxyservice "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
+	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -119,6 +121,9 @@ func provideInfrastructure(container *dig.Container) error {
 	if err := container.Provide(newSessionReadRepository); err != nil {
 		return err
 	}
+	if err := container.Provide(newAuditRepository); err != nil {
+		return err
+	}
 	if err := container.Provide(newEndpointRepository); err != nil {
 		return err
 	}
@@ -177,6 +182,9 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(sessionquery.NewListSessionsHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(auditquery.NewListAuditLogsHandler); err != nil {
+		return err
+	}
 	if err := container.Provide(sessionquery.NewGetSessionHandler); err != nil {
 		return err
 	}
@@ -214,6 +222,9 @@ func provideHandlers(container *dig.Container) error {
 	if err := container.Provide(newSessionDependencies); err != nil {
 		return err
 	}
+	if err := container.Provide(newAuditDependencies); err != nil {
+		return err
+	}
 	if err := container.Provide(newOpenAIDependencies); err != nil {
 		return err
 	}
@@ -236,6 +247,9 @@ func provideHandlers(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(handler.NewSessionHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewAuditHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(handler.NewOpenAIHandler); err != nil {
@@ -365,4 +379,12 @@ func newOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependen
 
 func newAnthropicDependencies(useCase usecase.AnthropicUseCase) handler.AnthropicDependencies {
 	return handler.AnthropicDependencies{UseCase: useCase}
+}
+
+func newAuditRepository() modelcall.AuditRepository {
+	return repository.NewAuditRepository()
+}
+
+func newAuditDependencies(list auditquery.ListAuditLogsHandler) handler.AuditDependencies {
+	return handler.AuditDependencies{List: list}
 }
