@@ -18,6 +18,7 @@ type APIRouterDependencies struct {
 	UserHandler      handler.UserHandler
 	APIKeyHandler    handler.APIKeyHandler
 	SessionHandler   handler.SessionHandler
+	AuditHandler     handler.AuditHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
 }
@@ -72,6 +73,9 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	sessionGroup := huma.NewGroup(v1Group, "/session")
 	initSessionRouter(sessionGroup, deps.SessionHandler)
+
+	auditGroup := huma.NewGroup(v1Group, "/audit")
+	initAuditRouter(auditGroup, deps.AuditHandler)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler)
