@@ -6,7 +6,9 @@ package modelcall
 
 import (
 	"context"
+	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 )
 
@@ -17,4 +19,6 @@ import (
 type AuditRepository interface {
 	// Save 持久化审计聚合（首次 Save 后回填 ID）
 	Save(ctx context.Context, audit *aggregate.ModelCallAudit) error
+	// ListByAPIKeyID 按 APIKeyID 分页查询审计记录，支持时间范围过滤、关键词搜索和多字段排序
+	ListByAPIKeyID(ctx context.Context, apiKeyID uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 }
