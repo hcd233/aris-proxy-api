@@ -30,9 +30,12 @@ func isPassthroughResponseHeader(name string) bool {
 func capturePassthroughResponseHeaders(header http.Header) map[string]string {
 	headers := make(map[string]string, 4)
 	for k := range header {
-		canonical := http.CanonicalHeaderKey(k)
-		if isPassthroughResponseHeader(canonical) {
-			headers[canonical] = header.Get(k)
+		// canonical := http.CanonicalHeaderKey(k)
+		// if isPassthroughResponseHeader(canonical) {
+		// 	headers[canonical] = header.Get(k)
+		// }
+		if isPassthroughResponseHeader(k) {
+			headers[k] = header.Get(k)
 		}
 	}
 	return headers
@@ -42,9 +45,12 @@ func capturePassthroughResponseHeaders(header http.Header) map[string]string {
 func storePassthroughResponseHeaders(ctx context.Context, header http.Header) {
 	if m := util.GetPassthroughResponseHeaders(ctx); m != nil {
 		for k := range header {
-			canonical := http.CanonicalHeaderKey(k)
-			if isPassthroughResponseHeader(canonical) {
-				m[canonical] = header.Get(k)
+			// canonical := http.CanonicalHeaderKey(k)
+			// if isPassthroughResponseHeader(canonical) {
+			// 	m[canonical] = header.Get(k)
+			// }
+			if isPassthroughResponseHeader(k) {
+				m[k] = header.Get(k)
 			}
 		}
 	}
