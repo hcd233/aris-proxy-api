@@ -7,15 +7,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
-// init 将排除列表的 key 统一转为小写，以便与 DisableHeaderNormalizing 开启后的原始小写 name 匹配。
-func init() {
-	lc := make(map[string]struct{}, len(passthroughExcludedHeaders))
-	for k := range passthroughExcludedHeaders {
-		lc[strings.ToLower(k)] = struct{}{}
-	}
-	passthroughExcludedHeaders = lc
-}
-
 // passthroughExcludedHeaders 不透传到上游的请求头（与 EachHeader 的 name 格式一致）。
 // 鉴权、Content-Type、Anthropic 版本等在 transport 层会强制覆盖，不再在此排除。
 var passthroughExcludedHeaders = map[string]struct{}{
@@ -29,7 +20,6 @@ var passthroughExcludedHeaders = map[string]struct{}{
 	constant.HTTPHeaderProxyAuthenticate:  {},
 	constant.HTTPHeaderTE:                 {},
 	constant.HTTPHeaderTrailer:            {},
-	constant.HTTPHeaderTraceID:            {},
 }
 
 // HeaderPassthroughMiddleware 透传请求头到上游的中间件
