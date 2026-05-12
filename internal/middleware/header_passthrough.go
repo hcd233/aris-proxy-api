@@ -1,20 +1,15 @@
 package middleware
 
 import (
-	"net/http"
-
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
-// passthroughExcludedHeaders 不透传到上游的请求头（使用 http.CanonicalHeaderKey 格式）
+// passthroughExcludedHeaders 不透传到上游的请求头（与 EachHeader 的 name 格式一致）。
+// 鉴权、Content-Type、Anthropic 版本等在 transport 层会强制覆盖，不再在此排除。
 var passthroughExcludedHeaders = map[string]struct{}{
-	constant.HTTPHeaderContentType:        {},
 	constant.HTTPHeaderContentLength:      {},
-	constant.HTTPHeaderAuthorization:      {},
 	constant.HTTPHeaderAcceptEncoding:     {},
-	constant.HTTPHeaderAPIKey:             {},
-	constant.HTTPHeaderAnthropicVersion:   {},
 	constant.HTTPHeaderHost:               {},
 	constant.HTTPHeaderConnection:         {},
 	constant.HTTPHeaderTransferEncoding:   {},
@@ -38,9 +33,9 @@ func HeaderPassthroughMiddleware() func(ctx huma.Context, next func(huma.Context
 	return func(ctx huma.Context, next func(huma.Context)) {
 		passthroughHeaders := make(map[string]string, 8)
 		ctx.EachHeader(func(name, value string) {
-			canonical := http.CanonicalHeaderKey(name)
-			if _, excluded := passthroughExcludedHeaders[canonical]; !excluded {
-				passthroughHeaders[canonical] = value
+			// Old: use http.CanonicalHeaderKey(name) for passthroughExcludedHeaders / map keys.
+			if _, excluded := passthroughExcludedHeaders[name]; !excluded {
+				passthroughHeaders[name] = value
 			}
 		})
 		ctx = huma.WithValue(ctx, constant.CtxKeyPassthroughHeaders, passthroughHeaders)
