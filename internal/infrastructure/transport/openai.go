@@ -15,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -29,39 +30,39 @@ type OpenAIProxy interface {
 	// ForwardChatCompletion 非流式转发
 	//
 	//	@param ctx context.Context
-	//	@param ep UpstreamEndpoint
+	//	@param ep vo.UpstreamEndpoint
 	//	@param body []byte
 	//	@return *dto.OpenAIChatCompletion
 	//	@return error
-	ForwardChatCompletion(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error)
+	ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error)
 
 	// ForwardChatCompletionStream 流式转发，每个 chunk 调用 onChunk 回调，返回合并后的完整响应
 	//
 	//	@param ctx context.Context
-	//	@param ep UpstreamEndpoint
+	//	@param ep vo.UpstreamEndpoint
 	//	@param body []byte
 	//	@param onChunk func(*dto.OpenAIChatCompletionChunk) error
 	//	@return *dto.OpenAIChatCompletion
 	//	@return error
-	ForwardChatCompletionStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error)
+	ForwardChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error)
 
 	// ForwardCreateResponse Response API 非流式转发
 	//
 	//	@param ctx context.Context
-	//	@param ep UpstreamEndpoint
+	//	@param ep vo.UpstreamEndpoint
 	//	@param body []byte
 	//	@return []byte 原始响应体
 	//	@return error
-	ForwardCreateResponse(ctx context.Context, ep UpstreamEndpoint, body []byte) ([]byte, error)
+	ForwardCreateResponse(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)
 
 	// ForwardCreateResponseStream Response API 流式转发，每个 SSE 事件调用 onEvent 回调
 	//
 	//	@param ctx context.Context
-	//	@param ep UpstreamEndpoint
+	//	@param ep vo.UpstreamEndpoint
 	//	@param body []byte
 	//	@param onEvent func(event string, data []byte) error
 	//	@return error
-	ForwardCreateResponseStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error
+	ForwardCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error
 }
 
 type openAIProxy struct{}
@@ -75,10 +76,10 @@ func NewOpenAIProxy() OpenAIProxy {
 	return &openAIProxy{}
 }
 
-func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
+func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, body)
+	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIChatCompletions)
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +100,10 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep UpstreamEndp
 	return completion, nil
 }
 
-func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
 	log := logger.WithCtx(ctx)
 
-	resp, err := p.sendRequest(ctx, ep, body)
+	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIChatCompletions)
 	if err != nil {
 		return nil, err
 	}
@@ -150,13 +151,8 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep Upstre
 	return util.ConcatChatCompletionChunks(collectedChunks)
 }
 
-// sendRequest 构建并发送 Chat Completions 上游请求（含请求体预处理）
-func (p *openAIProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, body []byte) (*http.Response, error) {
-	return p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIChatCompletions)
-}
-
 // doUpstreamRequest 构建并发送上游 HTTP 请求的公共逻辑
-func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
+func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
 
 	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + pathSuffix
@@ -168,14 +164,10 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep UpstreamEndpoint
 	}
 
 	// 透传客户端请求头
-	if headers := util.GetPassthroughHeaders(ctx); headers != nil {
-		for k, v := range headers {
-			req.Header.Set(k, v)
-		}
-	}
+	applyPassthroughRequestHeaders(ctx, req.Header)
 
-	req.Header.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	req.Header.Set(constant.HTTPTitleHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+	setRequestHeader(req.Header, constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
+	setRequestHeader(req.Header, constant.HTTPTitleHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
@@ -207,7 +199,7 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep UpstreamEndpoint
 	return resp, nil
 }
 
-func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep UpstreamEndpoint, body []byte) ([]byte, error) {
+func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error) {
 	log := logger.WithCtx(ctx)
 
 	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIResponses)
@@ -225,7 +217,7 @@ func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep UpstreamEndp
 	return respBody, nil
 }
 
-func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error {
+func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error {
 	log := logger.WithCtx(ctx)
 
 	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIResponses)

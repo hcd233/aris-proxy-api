@@ -5,6 +5,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 // APIRouterDependencies API 路由依赖
@@ -12,6 +14,8 @@ import (
 //	@author centonhuang
 //	@update 2026-04-28 10:00:00
 type APIRouterDependencies struct {
+	DB               *gorm.DB
+	RedisClient      *redis.Client
 	PingHandler      handler.PingHandler
 	TokenHandler     handler.TokenHandler
 	Oauth2Handler    handler.Oauth2Handler
@@ -60,26 +64,26 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initHealthRouter(humaAPI, deps.PingHandler)
 
 	tokenGroup := huma.NewGroup(v1Group, "/token")
-	initTokenRouter(tokenGroup, deps.TokenHandler)
+	initTokenRouter(tokenGroup, deps.TokenHandler, deps.RedisClient)
 
 	oauth2Group := huma.NewGroup(v1Group, "/oauth2")
-	initOauth2Router(oauth2Group, deps.Oauth2Handler)
+	initOauth2Router(oauth2Group, deps.Oauth2Handler, deps.RedisClient)
 
 	userGroup := huma.NewGroup(v1Group, "/user")
-	initUserRouter(userGroup, deps.UserHandler)
+	initUserRouter(userGroup, deps.UserHandler, deps.DB, deps.RedisClient)
 
 	apikeyGroup := huma.NewGroup(v1Group, "/apikey")
-	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler)
+	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.RedisClient)
 
 	sessionGroup := huma.NewGroup(v1Group, "/session")
-	initSessionRouter(sessionGroup, deps.SessionHandler)
+	initSessionRouter(sessionGroup, deps.SessionHandler, deps.DB)
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
-	initAuditRouter(auditGroup, deps.AuditHandler)
+	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
-	initOpenAIRouter(openaiGroup, deps.OpenAIHandler)
+	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.RedisClient)
 
 	anthropicGroup := huma.NewGroup(apiGroup, "/anthropic/v1")
-	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler)
+	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.RedisClient)
 }

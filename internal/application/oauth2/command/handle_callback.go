@@ -21,7 +21,6 @@ import (
 	identityvo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	oauth2vo "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
-	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -49,7 +48,8 @@ type InitiateLoginHandler interface {
 }
 
 type initiateLoginHandler struct {
-	platforms map[string]oauth2service.Platform
+	platforms    map[string]oauth2service.Platform
+	stateManager oauth2service.StateManager
 }
 
 // NewInitiateLoginHandler 构造发起登录处理器
@@ -58,8 +58,8 @@ type initiateLoginHandler struct {
 //	@return InitiateLoginHandler
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
-func NewInitiateLoginHandler(platforms map[string]oauth2service.Platform) InitiateLoginHandler {
-	return &initiateLoginHandler{platforms: platforms}
+func NewInitiateLoginHandler(platforms map[string]oauth2service.Platform, stateManager oauth2service.StateManager) InitiateLoginHandler {
+	return &initiateLoginHandler{platforms: platforms, stateManager: stateManager}
 }
 
 // Handle 执行登录发起
@@ -80,7 +80,7 @@ func (h *initiateLoginHandler) Handle(ctx context.Context, cmd InitiateLoginComm
 		return nil, ierr.New(ierr.ErrBadRequest, "invalid oauth platform")
 	}
 
-	state, err := infraoauth2.GenerateOAuth2State()
+	state, err := h.stateManager.GenerateState()
 	if err != nil {
 		log.Error("[OAuth2Command] Failed to generate state", zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrInternal, err, "generate oauth state")
@@ -141,6 +141,7 @@ type handleCallbackHandler struct {
 	accessSigner   identityservice.TokenSigner
 	refreshSigner  identityservice.TokenSigner
 	objStorageDirC ObjectStorageDirCreator
+	stateManager   oauth2service.StateManager
 }
 
 // NewHandleCallbackHandler 构造回调处理器
@@ -158,6 +159,7 @@ func NewHandleCallbackHandler(
 	userRepo identity.UserRepository,
 	accessSigner, refreshSigner identityservice.TokenSigner,
 	objStorageDirC ObjectStorageDirCreator,
+	stateManager oauth2service.StateManager,
 ) HandleCallbackHandler {
 	return &handleCallbackHandler{
 		platforms:      platforms,
@@ -165,6 +167,7 @@ func NewHandleCallbackHandler(
 		accessSigner:   accessSigner,
 		refreshSigner:  refreshSigner,
 		objStorageDirC: objStorageDirC,
+		stateManager:   stateManager,
 	}
 }
 
@@ -226,7 +229,7 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 func (h *handleCallbackHandler) validateStateAndPlatform(ctx context.Context, state, platform string) (oauth2service.Platform, error) {
 	log := logger.WithCtx(ctx)
 
-	if err := infraoauth2.VerifyOAuth2State(state); err != nil {
+	if err := h.stateManager.VerifyState(state); err != nil {
 		log.Error("[OAuth2Command] Invalid or expired state",
 			zap.String("platform", platform),
 			zap.String("state", state),

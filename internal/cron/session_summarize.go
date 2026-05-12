@@ -14,7 +14,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
@@ -22,6 +21,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // SessionSummarizeCron Session总结定时任务
@@ -29,9 +29,11 @@ import (
 //	@author centonhuang
 //	@update 2026-03-26 10:00:00
 type SessionSummarizeCron struct {
-	cron       *cron.Cron
-	sessionDAO *dao.SessionDAO
-	messageDAO *dao.MessageDAO
+	cron        *cron.Cron
+	db          *gorm.DB
+	poolManager *pool.PoolManager
+	sessionDAO  *dao.SessionDAO
+	messageDAO  *dao.MessageDAO
 }
 
 // NewSessionSummarizeCron 创建Session总结定时任务
@@ -39,13 +41,15 @@ type SessionSummarizeCron struct {
 //	@return Cron
 //	@author centonhuang
 //	@update 2026-03-26 10:00:00
-func NewSessionSummarizeCron() Cron {
+func NewSessionSummarizeCron(db *gorm.DB, poolManager *pool.PoolManager) Cron {
 	return &SessionSummarizeCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionSummarize, logger.Logger())),
 		),
-		sessionDAO: dao.GetSessionDAO(),
-		messageDAO: dao.GetMessageDAO(),
+		db:          db,
+		poolManager: poolManager,
+		sessionDAO:  dao.GetSessionDAO(),
+		messageDAO:  dao.GetMessageDAO(),
 	}
 }
 
@@ -90,8 +94,8 @@ func (c *SessionSummarizeCron) Start() error {
 func (c *SessionSummarizeCron) summarize() {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
 	log := logger.WithCtx(ctx)
-	db := database.GetDBInstance(ctx)
-	poolManager := pool.GetPoolManager()
+	db := c.db.WithContext(ctx)
+	poolManager := c.poolManager
 
 	sessions, err := c.sessionDAO.BatchGetByField(db, constant.WhereFieldSummary, []string{""}, constant.SessionRepoFieldsSummarize)
 	if err != nil {
@@ -107,7 +111,7 @@ func (c *SessionSummarizeCron) summarize() {
 	log.Info("[SessionSummarizeCron] Starting summarization", zap.Int("count", len(sessions)))
 
 	for _, session := range sessions {
-		content, err := c.getSessionContent(ctx, session)
+		content, err := c.getSessionContent(db, session)
 		if err != nil {
 			log.Error("[SessionSummarizeCron] Failed to get session content",
 				zap.Uint("sessionID", session.ID),
@@ -140,12 +144,12 @@ func (c *SessionSummarizeCron) summarize() {
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-26 10:00:00
-func (c *SessionSummarizeCron) getSessionContent(ctx context.Context, session *dbmodel.Session) (string, error) {
+func (c *SessionSummarizeCron) getSessionContent(db *gorm.DB, session *dbmodel.Session) (string, error) {
 	if len(session.MessageIDs) == 0 {
 		return "", nil
 	}
 
-	messages, err := c.messageDAO.BatchGetByField(database.GetDBInstance(ctx), constant.WhereFieldID, session.MessageIDs, constant.MessageRepoFieldsContent)
+	messages, err := c.messageDAO.BatchGetByField(db, constant.WhereFieldID, session.MessageIDs, constant.MessageRepoFieldsContent)
 	if err != nil {
 		return "", err
 	}

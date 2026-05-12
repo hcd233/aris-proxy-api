@@ -13,7 +13,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
@@ -21,6 +20,7 @@ import (
 // endpointRepository EndpointRepository 的 GORM 实现
 type endpointRepository struct {
 	dao *dao.ModelEndpointDAO
+	db  *gorm.DB
 }
 
 // NewEndpointRepository 构造 EndpointRepository
@@ -28,8 +28,8 @@ type endpointRepository struct {
 //	@return llmproxy.EndpointRepository
 //	@author centonhuang
 //	@update 2026-04-22 16:30:00
-func NewEndpointRepository() llmproxy.EndpointRepository {
-	return &endpointRepository{dao: dao.GetModelEndpointDAO()}
+func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
+	return &endpointRepository{dao: dao.GetModelEndpointDAO(), db: db}
 }
 
 // FindByAliasAndProvider 按 alias + provider 查询单个端点
@@ -43,7 +43,7 @@ func NewEndpointRepository() llmproxy.EndpointRepository {
 //	@author centonhuang
 //	@update 2026-04-22 16:30:00
 func (r *endpointRepository) FindByAliasAndProvider(ctx context.Context, alias vo.EndpointAlias, provider enum.ProviderType) (*aggregate.Endpoint, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	ep, err := r.dao.Get(db, &dbmodel.ModelEndpoint{Alias: alias.String(), Provider: provider}, constant.EndpointRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -73,6 +73,7 @@ func toAggregate(m *dbmodel.ModelEndpoint) (*aggregate.Endpoint, error) {
 // endpointReadRepository EndpointReadRepository 的 GORM 实现
 type endpointReadRepository struct {
 	dao *dao.ModelEndpointDAO
+	db  *gorm.DB
 }
 
 // NewEndpointReadRepository 构造只读仓储
@@ -80,13 +81,13 @@ type endpointReadRepository struct {
 //	@return llmproxy.EndpointReadRepository
 //	@author centonhuang
 //	@update 2026-04-24 20:00:00
-func NewEndpointReadRepository() llmproxy.EndpointReadRepository {
-	return &endpointReadRepository{dao: dao.GetModelEndpointDAO()}
+func NewEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
+	return &endpointReadRepository{dao: dao.GetModelEndpointDAO(), db: db}
 }
 
 // ListAliasesByProvider 按 Provider 查询所有别名
 func (r *endpointReadRepository) ListAliasesByProvider(ctx context.Context, provider enum.ProviderType) ([]*llmproxy.EndpointAliasProjection, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	endpoints, err := r.dao.BatchGet(db, &dbmodel.ModelEndpoint{Provider: provider}, constant.EndpointRepoFieldsAlias)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list aliases by provider")
@@ -100,7 +101,7 @@ func (r *endpointReadRepository) ListAliasesByProvider(ctx context.Context, prov
 
 // FindCredentialByAliasAndProvider 按 alias + provider 查询端点凭证
 func (r *endpointReadRepository) FindCredentialByAliasAndProvider(ctx context.Context, alias string, provider enum.ProviderType) (*llmproxy.EndpointCredentialProjection, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	ep, err := r.dao.Get(db, &dbmodel.ModelEndpoint{Alias: alias, Provider: provider}, constant.EndpointRepoFieldsCredential)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

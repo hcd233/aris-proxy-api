@@ -11,7 +11,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/redis/go-redis/v9"
@@ -93,9 +92,7 @@ return {tostring(tokens), "0", tostring(capacity)}
 //     @return func(ctx huma.Context, next func(huma.Context))
 //     @author centonhuang
 //     @update 2026-03-20 10:00:00
-func TokenBucketRateLimiterMiddleware(serviceName string, key enum.CtxKey, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
-	rdb := cache.GetRedisClient()
-
+func TokenBucketRateLimiterMiddleware(rdb *redis.Client, serviceName string, key enum.CtxKey, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
 	// 每微秒补充的令牌数
 	refillRate := float64(capacity) / float64(period.Microseconds())
 	expireMs := period.Milliseconds() * 2
@@ -105,6 +102,11 @@ func TokenBucketRateLimiterMiddleware(serviceName string, key enum.CtxKey, perio
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		logger := logger.WithCtx(ctx.Context())
+		if rdb == nil {
+			logger.Error("[TokenBucketRateLimiter] Redis dependency is nil")
+			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			return
+		}
 		var keyValue, value string
 		if key == "" {
 			keyValue = constant.RateLimitKeyByIP

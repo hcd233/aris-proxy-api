@@ -11,9 +11,11 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // Cron 定时任务接口
@@ -32,7 +34,7 @@ type Cron interface {
 type CronRegistryEntry struct {
 	Name    string
 	Enabled func() bool
-	Factory func() Cron
+	Factory func(db *gorm.DB, poolManager *pool.PoolManager) Cron
 }
 
 var cronInstances []Cron
@@ -44,7 +46,7 @@ var DefaultCronRegistry = []CronRegistryEntry{
 	{
 		Name:    constant.CronModuleSessionDeduplicate,
 		Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
-		Factory: NewSessionDeduplicateCron,
+		Factory: func(db *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionDeduplicateCron(db) },
 	},
 	{
 		Name:    constant.CronModuleSessionSummarize,
@@ -59,7 +61,7 @@ var DefaultCronRegistry = []CronRegistryEntry{
 	{
 		Name:    constant.CronModuleSoftDeletePurge,
 		Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
-		Factory: NewSoftDeletePurgeCron,
+		Factory: func(db *gorm.DB, _ *pool.PoolManager) Cron { return NewSoftDeletePurgeCron(db) },
 	},
 }
 
@@ -67,14 +69,14 @@ var DefaultCronRegistry = []CronRegistryEntry{
 //
 //	author centonhuang
 //	update 2026-04-02 10:00:00
-func InitCronJobs() {
+func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager) {
 	for _, entry := range DefaultCronRegistry {
 		if !entry.Enabled() {
 			logger.Logger().Info("[Cron] Cron job is disabled by configuration", zap.String("name", entry.Name))
 			continue
 		}
 
-		c := entry.Factory()
+		c := entry.Factory(db, poolManager)
 		lo.Must0(c.Start())
 		cronInstances = append(cronInstances, c)
 		logger.Logger().Info("[Cron] Cron job started", zap.String("name", entry.Name))

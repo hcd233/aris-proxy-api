@@ -4,13 +4,14 @@ import (
 	"context"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
@@ -18,6 +19,7 @@ import (
 // auditRepository AuditRepository 的 GORM 实现
 type auditRepository struct {
 	dao *dao.ModelCallAuditDAO
+	db  *gorm.DB
 }
 
 // NewAuditRepository 构造审计仓储
@@ -25,8 +27,8 @@ type auditRepository struct {
 //	@return modelcall.AuditRepository
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func NewAuditRepository() modelcall.AuditRepository {
-	return &auditRepository{dao: dao.GetModelCallAuditDAO()}
+func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
+	return &auditRepository{dao: dao.GetModelCallAuditDAO(), db: db}
 }
 
 // Save 持久化审计聚合
@@ -38,7 +40,7 @@ func NewAuditRepository() modelcall.AuditRepository {
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
 func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAudit) error {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	record := &dbmodel.ModelCallAudit{
 		APIKeyID:                 audit.APIKeyID(),
 		ModelID:                  audit.ModelID(),
@@ -77,7 +79,7 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 //	@author centonhuang
 //	@update 2026-05-11 10:00:00
 func (r *auditRepository) ListByAPIKeyID(ctx context.Context, apiKeyID uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 
 	if !startTime.IsZero() {
 		db = db.Where(constant.FieldCreatedAt+" >= ?", startTime)

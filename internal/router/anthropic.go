@@ -7,6 +7,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 // initAnthropicRouter 初始化Anthropic兼容路由
@@ -14,8 +16,8 @@ import (
 //	@param anthropicGroup huma.API
 //	@author centonhuang
 //	@update 2026-03-17 10:00:00
-func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.AnthropicHandler) {
-	anthropicGroup.UseMiddleware(middleware.APIKeyMiddleware(), middleware.HeaderPassthroughMiddleware())
+func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.AnthropicHandler, db *gorm.DB, rdb *redis.Client) {
+	anthropicGroup.UseMiddleware(middleware.APIKeyMiddleware(db), middleware.HeaderPassthroughMiddleware())
 
 	huma.Register(anthropicGroup, huma.Operation{
 		OperationID: "anthropicListModels",
@@ -36,7 +38,7 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 		Summary:     "Create a Message",
 		Description: "Send a structured list of input messages and the model will return the next message in the conversation.",
 		Tags:        []string{"Anthropic"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(rdb, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
 		Security: []map[string][]string{
 			{"apiKeyAuth": {}},
 		},

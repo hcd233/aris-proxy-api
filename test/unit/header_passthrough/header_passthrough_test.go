@@ -1,15 +1,22 @@
 package headerpassthrough
 
 import (
+	"bufio"
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	humago "github.com/danielgtaylor/huma/v2/adapters/humago"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -93,4 +100,99 @@ func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
 	if _, ok := got["Accept-Encoding"]; ok {
 		t.Fatalf("Accept-Encoding should not be passthrough headers: %v", got)
 	}
+}
+
+func TestOpenAIProxy_PreservesPassthroughHeaderCase(t *testing.T) {
+	const headerName = "X-CUSTOM-header"
+	const headerValue = "keep-me"
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen raw upstream: %v", err)
+	}
+	defer func() { _ = listener.Close() }()
+
+	rawRequest := make(chan string, 1)
+	serverDone := make(chan error, 1)
+	go serveRawOpenAIResponse(listener, rawRequest, serverDone)
+
+	httpclient.InitHTTPClient()
+	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, map[string]string{
+		headerName: headerValue,
+	})
+	proxy := transport.NewOpenAIProxy()
+	_, err = proxy.ForwardChatCompletion(ctx, vo.UpstreamEndpoint{
+		Model:   "test-model",
+		APIKey:  "test-key",
+		BaseURL: "http://" + listener.Addr().String(),
+	}, []byte(`{}`))
+	if err != nil {
+		t.Fatalf("forward chat completion: %v", err)
+	}
+
+	request := receiveRawRequest(t, rawRequest)
+	if !strings.Contains(request, "\r\n"+headerName+": "+headerValue+"\r\n") {
+		t.Fatalf("expected raw upstream request to contain preserved header %q, got:\n%s", headerName, request)
+	}
+	if strings.Contains(request, "\r\nX-Custom-Header: "+headerValue+"\r\n") {
+		t.Fatalf("passthrough header was canonicalized unexpectedly, got:\n%s", request)
+	}
+
+	if err := receiveServerDone(t, serverDone); err != nil {
+		t.Fatalf("raw upstream server: %v", err)
+	}
+}
+
+func serveRawOpenAIResponse(listener net.Listener, rawRequest chan<- string, serverDone chan<- error) {
+	conn, err := listener.Accept()
+	if err != nil {
+		serverDone <- err
+		return
+	}
+	defer func() { _ = conn.Close() }()
+
+	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		serverDone <- err
+		return
+	}
+
+	reader := bufio.NewReader(conn)
+	var request strings.Builder
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			serverDone <- err
+			return
+		}
+		request.WriteString(line)
+		if line == "\r\n" {
+			break
+		}
+	}
+	rawRequest <- request.String()
+
+	_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"))
+	serverDone <- err
+}
+
+func receiveRawRequest(t *testing.T, rawRequest <-chan string) string {
+	t.Helper()
+	select {
+	case request := <-rawRequest:
+		return request
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for raw upstream request")
+	}
+	return ""
+}
+
+func receiveServerDone(t *testing.T, serverDone <-chan error) error {
+	t.Helper()
+	select {
+	case err := <-serverDone:
+		return err
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for raw upstream server")
+	}
+	return nil
 }

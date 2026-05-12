@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -26,10 +25,8 @@ type Locker interface {
 //	@return Locker
 //	@author centonhuang
 //	@update 2025-11-11 17:49:18
-func NewLocker() Locker {
-	return &redisLocker{
-		rdb: cache.GetRedisClient(),
-	}
+func NewLocker(rdb *redis.Client) Locker {
+	return &redisLocker{rdb: rdb}
 }
 
 type redisLocker struct {

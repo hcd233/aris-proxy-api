@@ -6,10 +6,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"gorm.io/gorm"
 )
 
-func initSessionRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler) {
-	sessionGroup.UseMiddleware(middleware.APIKeyMiddleware())
+func initSessionRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB) {
+	sessionGroup.UseMiddleware(middleware.APIKeyMiddleware(db))
 
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessions",

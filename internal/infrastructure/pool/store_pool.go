@@ -9,7 +9,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -28,7 +27,7 @@ import (
 //	@update 2026-04-09 10:00:00
 func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
 	log := logger.WithCtx(task.Ctx)
-	db := database.GetDBInstance(task.Ctx)
+	db := pm.db.WithContext(task.Ctx)
 
 	return pm.storePool.Go(func() {
 		toolSchemas := vo.ToolSchemaMap{}
@@ -99,7 +98,7 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 //	@update 2026-04-09 10:00:00
 func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) error {
 	l := logger.WithCtx(task.Ctx)
-	db := database.GetDBInstance(task.Ctx)
+	db := pm.db.WithContext(task.Ctx)
 
 	return pm.storePool.Go(func() {
 		audit := &dbmodel.ModelCallAudit{

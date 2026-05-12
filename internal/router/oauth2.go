@@ -7,9 +7,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/redis/go-redis/v9"
 )
 
-func initOauth2Router(oauth2Group huma.API, oauth2Handler handler.Oauth2Handler) {
+func initOauth2Router(oauth2Group huma.API, oauth2Handler handler.Oauth2Handler, rdb *redis.Client) {
 	huma.Register(oauth2Group, huma.Operation{
 		OperationID: "oauth2Login",
 		Method:      http.MethodGet,
@@ -26,6 +27,6 @@ func initOauth2Router(oauth2Group huma.API, oauth2Handler handler.Oauth2Handler)
 		Summary:     "OAuth2Callback",
 		Description: "Handle OAuth2 callback with authorization code and state",
 		Tags:        []string{"OAuth2"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware("oauth2Callback", "", constant.PeriodOAuth2Callback, constant.LimitOAuth2Callback)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(rdb, "oauth2Callback", "", constant.PeriodOAuth2Callback, constant.LimitOAuth2Callback)},
 	}, oauth2Handler.HandleCallback)
 }

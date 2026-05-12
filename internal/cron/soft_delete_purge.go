@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // SoftDeletePurgeCron 软删除数据清理定时任务，每周硬删除所有已软删除的Message、Session、Tool记录
@@ -22,6 +22,7 @@ import (
 //	@update 2026-03-29 10:00:00
 type SoftDeletePurgeCron struct {
 	cron       *cron.Cron
+	db         *gorm.DB
 	messageDAO *dao.MessageDAO
 	sessionDAO *dao.SessionDAO
 	toolDAO    *dao.ToolDAO
@@ -32,11 +33,12 @@ type SoftDeletePurgeCron struct {
 //	@return Cron
 //	@author centonhuang
 //	@update 2026-03-29 10:00:00
-func NewSoftDeletePurgeCron() Cron {
+func NewSoftDeletePurgeCron(db *gorm.DB) Cron {
 	return &SoftDeletePurgeCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSoftDeletePurge, logger.Logger())),
 		),
+		db:         db,
 		messageDAO: dao.GetMessageDAO(),
 		sessionDAO: dao.GetSessionDAO(),
 		toolDAO:    dao.GetToolDAO(),
@@ -84,7 +86,7 @@ func (c *SoftDeletePurgeCron) Start() error {
 func (c *SoftDeletePurgeCron) purge() {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
 	log := logger.WithCtx(ctx)
-	db := database.GetDBInstance(ctx)
+	db := c.db.WithContext(ctx)
 
 	msgCount, err := c.messageDAO.HardDeleteSoftDeleted(db)
 	if err != nil {

@@ -5,6 +5,8 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
+	"gorm.io/gorm"
 )
 
 type mockCron struct {
@@ -40,7 +42,7 @@ func TestInitCronJobs_AllDisabled(t *testing.T) {
 	config.CronSoftDeletePurgeEnabled = false
 
 	cron.StopCronJobs()
-	cron.InitCronJobs()
+	cron.InitCronJobs(nil, nil)
 
 	if cron.CronInstanceCount() != 0 {
 		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount())
@@ -73,26 +75,26 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 		{
 			Name:    "SessionDeduplicate",
 			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
-			Factory: func() cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) cron.Cron { return &mockCron{} },
 		},
 		{
 			Name:    "SessionSummarize",
 			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
-			Factory: func() cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) cron.Cron { return &mockCron{} },
 		},
 		{
 			Name:    "SessionScore",
 			Enabled: func() bool { return config.CronSessionScoreEnabled },
-			Factory: func() cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) cron.Cron { return &mockCron{} },
 		},
 		{
 			Name:    "SoftDeletePurge",
 			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
-			Factory: func() cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) cron.Cron { return &mockCron{} },
 		},
 	}
 
-	cron.InitCronJobs()
+	cron.InitCronJobs(nil, nil)
 
 	if cron.CronInstanceCount() != 2 {
 		t.Fatalf("expected 2 cron instances, got %d", cron.CronInstanceCount())
@@ -126,11 +128,11 @@ func TestInitCronJobs_AllEnabled(t *testing.T) {
 		{
 			Name:    "TestCron",
 			Enabled: func() bool { return true },
-			Factory: func() cron.Cron { return mock },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) cron.Cron { return mock },
 		},
 	}
 
-	cron.InitCronJobs()
+	cron.InitCronJobs(nil, nil)
 
 	if cron.CronInstanceCount() != 1 {
 		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount())

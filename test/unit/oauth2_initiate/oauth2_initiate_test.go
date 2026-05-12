@@ -19,7 +19,17 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
+	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 )
+
+// stubStateManager 模拟 StateManager，委托给真实实现
+type stubStateManager struct {
+	service.StateManager
+}
+
+func newStubStateManager() service.StateManager {
+	return &stubStateManager{StateManager: infraoauth2.NewStateManager()}
+}
 
 type initiateCase struct {
 	Name                   string `json:"name"`
@@ -79,7 +89,8 @@ func TestInitiateLogin(t *testing.T) {
 		constant.OAuthProviderGithub: githubStub,
 		constant.OAuthProviderGoogle: googleStub,
 	}
-	handler := command.NewInitiateLoginHandler(platforms)
+	stateManager := newStubStateManager()
+	handler := command.NewInitiateLoginHandler(platforms, stateManager)
 
 	for _, tc := range loadCases(t) {
 		t.Run(tc.Name, func(t *testing.T) {

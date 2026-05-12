@@ -480,5 +480,17 @@
     "want": [
       {"rule": "logging.chinese", "severity": "warning"}
     ]
+  },
+  {
+    "name": "database instance with background context is rejected",
+    "files": [
+      {
+        "path": "internal/infrastructure/pool/context.go",
+        "content": "package pool\n\nimport \"context\"\n\nfunc Run() {\n\t_ = database.GetDBInstance(context.Background())\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.db_root_context", "severity": "error"}
+    ]
   }
 ]

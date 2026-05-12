@@ -20,26 +20,13 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 )
 
-// DB undefined 数据库连接
-//
-//	update 2024-09-16 01:24:51
-var db *gorm.DB
-
-// GetDBInstance 获取数据库实例
-//
-//	return *gorm.DB
-//	author centonhuang
-//	update 2024-10-17 08:35:47
-func GetDBInstance(ctx context.Context) *gorm.DB {
-	return db.WithContext(ctx)
-}
-
 // CloseDatabase 关闭数据库连接池，用于优雅关闭
 //
+//	@param db *gorm.DB
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-20 10:00:00
-func CloseDatabase() error {
+func CloseDatabase(db *gorm.DB) error {
 	if db == nil {
 		return nil
 	}
@@ -52,9 +39,10 @@ func CloseDatabase() error {
 
 // InitDatabase 初始化数据库
 //
+//	return *gorm.DB
 //	author centonhuang
 //	update 2024-09-22 10:04:36
-func InitDatabase() {
+func InitDatabase() *gorm.DB {
 	var dialector gorm.Dialector
 	var dbHost, dbPort, dbName string
 
@@ -72,7 +60,7 @@ func InitDatabase() {
 	// 	})
 	// 	dbHost, dbPort, dbName = config.MysqlHost, config.MysqlPort, config.MysqlDatabase
 
-	db = lo.Must(gorm.Open(dialector, &gorm.Config{
+	db := lo.Must(gorm.Open(dialector, &gorm.Config{
 		DryRun:         false, // 只生成SQL不运行
 		TranslateError: true,
 		Logger: &GormLoggerAdapter{
@@ -90,6 +78,7 @@ func InitDatabase() {
 		zap.String("host", dbHost),
 		zap.String("port", dbPort),
 		zap.String("database", dbName))
+	return db
 }
 
 // GormLoggerAdapter 实现gorm的logger接口,使用zap输出SQL日志
