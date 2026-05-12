@@ -31,11 +31,11 @@ func WrapErrorSSE(ctx context.Context, err *model.Error) (rsp *huma.StreamRespon
 	return &huma.StreamResponse{
 		Body: func(hCtx huma.Context) {
 			fCtx := humafiber.Unwrap(hCtx)
-			fCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
-			fCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
+			fCtx.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeEventStream)
+			fCtx.Set(constant.HTTPTitleHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
 			fCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 				writeSSEErrorResponse(ctx, w, err)
@@ -117,7 +117,7 @@ func SendOpenAIModelNotFoundError(modelName string) (rsp *huma.StreamResponse) {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusNotFound)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{
 				Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
 				Type:    constant.OpenAIInvalidRequestErrorType,
@@ -136,7 +136,7 @@ func SendOpenAIInternalError() (rsp *huma.StreamResponse) {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusInternalServerError)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
 			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{
 				Message: constant.OpenAIInternalErrorShortMessage,
 				Type:    constant.OpenAIInternalErrorType,

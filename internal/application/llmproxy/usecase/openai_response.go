@@ -109,7 +109,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap
 			}
 		}
 		writer.HumaCtx.SetStatus(fiber.StatusOK)
-		writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+		writer.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
 		_, _ = writer.HumaCtx.BodyWriter().Write(replaced)
 
 		var rsp dto.OpenAICreateResponseRsp

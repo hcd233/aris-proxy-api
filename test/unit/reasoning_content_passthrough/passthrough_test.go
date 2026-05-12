@@ -1,7 +1,6 @@
 package reasoning_content_passthrough
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -109,29 +108,6 @@ func TestReasoningContentWithToolCallsPreserved(t *testing.T) {
 	if !strings.Contains(bodyStr, "tool_calls") {
 		t.Fatalf("tool_calls should be preserved in serialized body: %s", bodyStr)
 	}
-}
-
-// ensureCase 对应 fixtures/ensure_cases.json 中的一条用例。
-type ensureCase struct {
-	Name                         string `json:"name"`
-	Description                  string `json:"description"`
-	Input                        string `json:"input"`
-	ExpectedRoleAt               int    `json:"expectedRoleAt"`
-	ExpectReasoningContentFilled bool   `json:"expectReasoningContentFilled"`
-	ExpectedReasoningContent     string `json:"expectedReasoningContent"`
-}
-
-func loadEnsureCases(t *testing.T) []ensureCase {
-	t.Helper()
-	data, err := os.ReadFile("./fixtures/ensure_cases.json")
-	if err != nil {
-		t.Fatalf("failed to read fixture: %v", err)
-	}
-	var cases []ensureCase
-	if err := sonic.Unmarshal(data, &cases); err != nil {
-		t.Fatalf("failed to unmarshal fixture: %v", err)
-	}
-	return cases
 }
 
 func buildReqBody(t *testing.T, msgs []testMessage) *dto.OpenAIChatCompletionReq {
