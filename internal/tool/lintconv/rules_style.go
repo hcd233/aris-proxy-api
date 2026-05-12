@@ -126,7 +126,7 @@ func (c *checker) checkTypeAlias(file SourceFile) {
 	if !isUnder(file.Path, constant.ConvCheckPathInternal) || strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
 		return
 	}
-	if isEnumPackage(file.Path) || isVOPackage(file.Path) {
+	if isEnumPackage(file.Path) || isVOPackage(file.Path) || isUnder(file.Path, constant.ConvCheckPathDTO) {
 		return
 	}
 	for _, decl := range file.File.Decls {

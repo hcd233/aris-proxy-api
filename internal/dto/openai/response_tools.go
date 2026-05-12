@@ -1,4 +1,4 @@
-package dto
+package openai
 
 import (
 	"reflect"
@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -277,12 +278,12 @@ type ResponseCustomToolFormat struct {
 
 // ResponseToolFunction Function 工具
 type ResponseToolFunction struct {
-	Type         string              `json:"type" doc:"固定 function"`
-	Name         string              `json:"name" doc:"函数名称"`
-	Parameters   *JSONSchemaProperty `json:"parameters" doc:"函数参数 JSON schema"`
-	Strict       bool                `json:"strict" doc:"是否严格校验参数"`
-	DeferLoading *bool               `json:"defer_loading,omitempty" doc:"是否延迟加载"`
-	Description  string              `json:"description,omitempty" doc:"函数描述"`
+	Type         string                     `json:"type" doc:"固定 function"`
+	Name         string                     `json:"name" doc:"函数名称"`
+	Parameters   *schema.JSONSchemaProperty `json:"parameters" doc:"函数参数 JSON schema"`
+	Strict       bool                       `json:"strict" doc:"是否严格校验参数"`
+	DeferLoading *bool                      `json:"defer_loading,omitempty" doc:"是否延迟加载"`
+	Description  string                     `json:"description,omitempty" doc:"函数描述"`
 }
 
 // ResponseToolFileSearch FileSearch 工具
@@ -382,21 +383,21 @@ type ResponseToolNamespace struct {
 
 // ResponseNamespaceTool Namespace.tools: Function | Custom
 type ResponseNamespaceTool struct {
-	Name         string                    `json:"name" doc:"工具名称"`
-	Type         string                    `json:"type" doc:"function 或 custom"`
-	DeferLoading *bool                     `json:"defer_loading,omitempty" doc:"是否延迟加载"`
-	Description  string                    `json:"description,omitempty" doc:"工具描述"`
-	Parameters   *JSONSchemaProperty       `json:"parameters,omitempty" doc:"函数参数 JSON schema"`
-	Strict       *bool                     `json:"strict,omitempty" doc:"严格模式"`
-	Format       *ResponseCustomToolFormat `json:"format,omitempty" doc:"自定义工具输入格式"`
+	Name         string                     `json:"name" doc:"工具名称"`
+	Type         string                     `json:"type" doc:"function 或 custom"`
+	DeferLoading *bool                      `json:"defer_loading,omitempty" doc:"是否延迟加载"`
+	Description  string                     `json:"description,omitempty" doc:"工具描述"`
+	Parameters   *schema.JSONSchemaProperty `json:"parameters,omitempty" doc:"函数参数 JSON schema"`
+	Strict       *bool                      `json:"strict,omitempty" doc:"严格模式"`
+	Format       *ResponseCustomToolFormat  `json:"format,omitempty" doc:"自定义工具输入格式"`
 }
 
 // ResponseToolToolSearch ToolSearch 工具
 type ResponseToolToolSearch struct {
-	Type        string              `json:"type" doc:"固定 tool_search"`
-	Description string              `json:"description,omitempty" doc:"工具描述"`
-	Execution   string              `json:"execution,omitempty" doc:"server 或 client"`
-	Parameters  *JSONSchemaProperty `json:"parameters,omitempty" doc:"参数 JSON schema"`
+	Type        string                     `json:"type" doc:"固定 tool_search"`
+	Description string                     `json:"description,omitempty" doc:"工具描述"`
+	Execution   string                     `json:"execution,omitempty" doc:"server 或 client"`
+	Parameters  *schema.JSONSchemaProperty `json:"parameters,omitempty" doc:"参数 JSON schema"`
 }
 
 // ResponseToolWebSearchPreview WebSearchPreview 工具
@@ -616,8 +617,8 @@ type ResponseToolChoiceObject struct {
 	Type string `json:"type" doc:"工具选择类型"`
 
 	// ToolChoiceAllowed
-	Mode  string                `json:"mode,omitempty" doc:"allowed_tools 模式: auto/required"`
-	Tools []*JSONSchemaProperty `json:"tools,omitempty" doc:"允许的工具定义列表"`
+	Mode  string                       `json:"mode,omitempty" doc:"allowed_tools 模式: auto/required"`
+	Tools []*schema.JSONSchemaProperty `json:"tools,omitempty" doc:"允许的工具定义列表"`
 
 	// ToolChoiceFunction / ToolChoiceCustom / ToolChoiceMcp
 	Name string `json:"name,omitempty" doc:"工具/函数名称"`

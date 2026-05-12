@@ -1,4 +1,4 @@
-package dto
+package openai
 
 import (
 	"reflect"
@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
 // ==================== Response API Input Item Types ====================
@@ -413,18 +414,18 @@ type ResponseReasoningTextContent struct {
 
 // ResponseMcpListToolsEntry McpListTools.tools 元素
 type ResponseMcpListToolsEntry struct {
-	InputSchema *JSONSchemaProperty `json:"input_schema" doc:"工具输入 JSON Schema"`
-	Name        string              `json:"name" doc:"工具名称"`
-	Annotations *JSONSchemaProperty `json:"annotations,omitempty" doc:"工具附加注解"`
-	Description string              `json:"description,omitempty" doc:"工具描述"`
+	InputSchema *schema.JSONSchemaProperty `json:"input_schema" doc:"工具输入 JSON Schema"`
+	Name        string                     `json:"name" doc:"工具名称"`
+	Annotations *schema.JSONSchemaProperty `json:"annotations,omitempty" doc:"工具附加注解"`
+	Description string                     `json:"description,omitempty" doc:"工具描述"`
 }
 
 // ==================== ToolSearchCall / ToolSearchOutput ====================
 
 // ResponseToolSearchCallArguments ToolSearchCall.arguments 为任意 JSON
-// 结构化为 JSONSchemaProperty 以兼容 schema 声明
+// 结构化为 schema.JSONSchemaProperty 以兼容 schema 声明
 type ResponseToolSearchCallArguments struct {
-	JSONSchemaProperty
+	schema.JSONSchemaProperty
 }
 
 // ==================== Unified Input Item ====================
@@ -517,8 +518,7 @@ type ResponseCodeInterpreterCallOutput struct {
 
 // ResponseInputItemAction ComputerCall / WebSearchCall / LocalShellCall / ShellCall
 // 中 action 字段的联合类型。通过 type 区分具体形态。
-type ResponseInputItemAction struct {
-	// 公共
+type ResponseInputItemAction struct { // 公共
 	Type string `json:"type" doc:"动作类型"`
 
 	// ComputerAction
@@ -553,8 +553,7 @@ type ResponseInputItemAction struct {
 // ResponseInputItemOutput ComputerCallOutput / FunctionCallOutput /
 // CustomToolCallOutput / LocalShellCallOutput / McpCall / ShellCallOutput 中
 // output 字段的联合
-type ResponseInputItemOutput struct {
-	// ComputerCallOutput: ResponseComputerToolCallOutputScreenshot
+type ResponseInputItemOutput struct { // ComputerCallOutput: ResponseComputerToolCallOutputScreenshot
 	Screenshot *ResponseComputerCallOutputScreenshot `json:"-"`
 	// FunctionCallOutput / CustomToolCallOutput: string | content list
 	FunctionOutput *ResponseFunctionCallOutputContent `json:"-"`

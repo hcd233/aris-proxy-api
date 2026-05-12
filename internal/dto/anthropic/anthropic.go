@@ -1,4 +1,4 @@
-package dto
+package anthropic
 
 import (
 	"reflect"
@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -66,8 +67,7 @@ type AnthropicContextManagement struct {
 //
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
-type AnthropicTool struct {
-	// 通用字段（所有工具类型共享）
+type AnthropicTool struct { // 通用字段（所有工具类型共享）
 	Type           string        `json:"type,omitempty" doc:"工具类型: custom/bash_20250124/text_editor_20250124/text_editor_20250429/text_editor_20250728/computer_20250124/code_execution_20250522/code_execution_20250825/code_execution_20260120/memory_20250818/web_search_20250305/web_search_20260209/web_fetch_20250910/web_fetch_20260209/web_fetch_20260309/tool_search_tool_bm25_20251119/tool_search_tool_regex_20251119"`
 	Name           string        `json:"name,omitempty" doc:"工具名称"`
 	CacheControl   *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
@@ -76,10 +76,10 @@ type AnthropicTool struct {
 	AllowedCallers []string      `json:"allowed_callers,omitempty" doc:"允许的调用者: direct/code_execution_20250825/code_execution_20260120"`
 
 	// 自定义工具字段 (type=custom 或 type 为空)
-	Description         string              `json:"description,omitempty" doc:"工具描述"`
-	InputSchema         *JSONSchemaProperty `json:"input_schema,omitempty" doc:"输入JSON Schema"`
-	InputExamples       []map[string]string `json:"input_examples,omitempty" doc:"输入示例"`
-	EagerInputStreaming *bool               `json:"eager_input_streaming,omitempty" doc:"启用增量输入流"`
+	Description         string                     `json:"description,omitempty" doc:"工具描述"`
+	InputSchema         *schema.JSONSchemaProperty `json:"input_schema,omitempty" doc:"输入JSON Schema"`
+	InputExamples       []map[string]string        `json:"input_examples,omitempty" doc:"输入示例"`
+	EagerInputStreaming *bool                      `json:"eager_input_streaming,omitempty" doc:"启用增量输入流"`
 
 	// 计算机使用工具字段 (type=computer_20250124)
 	DisplayWidthPx  *int `json:"display_width_px,omitempty" doc:"显示宽度(像素)"`

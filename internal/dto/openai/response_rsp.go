@@ -1,4 +1,4 @@
-package dto
+package openai
 
 // ==================== Response API Response DTOs ====================
 //
