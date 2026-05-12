@@ -6,11 +6,6 @@
       "application_llmproxy_usecase_openai_go",
       "converter_anthropic_generateopenaichunkid",
       "domain_llmproxy_vo_alias_go",
-      "handler_ping_go",
-      "handler_ping_newpinghandler",
-      "handler_pinghandler",
-      "handler_pinghandler_handleping",
-      "handler_pinghandler_handlesseping",
       "ierr_internalerror_unwrap",
       "infrastructure_transport_anthropic_go",
       "pool_pool_getpoolmanager",
@@ -60,7 +55,9 @@
       "util_anthropic_sendanthropicmodelnotfounderror",
       "util_anthropic_sendanthropicupstreamerror",
       "util_context_copycontextvalues",
+      "util_context_ctxvaluestring",
       "util_context_getpassthroughresponseheaders",
+      "util_context_go",
       "util_http_extractupstreamstatusanderror",
       "util_http_go",
       "util_http_wrapjsonresponse",
@@ -88,18 +85,8 @@
       "vo_endpointalias_string"
     ],
     "1": [
-      "dao_basedao_modelt",
-      "dao_basedao_modelt_batchcreate",
-      "dao_basedao_modelt_batchdeletebyfield",
-      "dao_basedao_modelt_batchget",
-      "dao_basedao_modelt_batchgetbyfield",
       "dao_basedao_modelt_count",
-      "dao_basedao_modelt_create",
-      "dao_basedao_modelt_delete",
-      "dao_basedao_modelt_get",
-      "dao_basedao_modelt_harddeletesoftdeleted",
       "dao_basedao_modelt_paginate",
-      "dao_basedao_modelt_update",
       "lintconv_checker",
       "lintconv_checker_checkanonymousstructs",
       "lintconv_checker_checkarchitecture",
@@ -175,200 +162,217 @@
       "tool_lintconv_source_go"
     ],
     "2": [
-      "dto_openai_response_input_go",
-      "dto_responseapplypatchoperation",
-      "dto_responsecodeinterpretercalloutput",
-      "dto_responsecomputeraction",
-      "dto_responsecomputeractionpathpoint",
-      "dto_responsecomputercalloutputscreenshot",
-      "dto_responsecontainernetworkdomainsecret",
-      "dto_responsecontainernetworkpolicy",
-      "dto_responsefilesearchcallresult",
-      "dto_responsefilesearchresultattribute",
-      "dto_responsefilesearchresultattribute_marshaljson",
-      "dto_responsefilesearchresultattribute_schema",
-      "dto_responsefilesearchresultattribute_unmarshaljson",
-      "dto_responsefunctioncalloutputcontent",
-      "dto_responsefunctioncalloutputcontent_marshaljson",
-      "dto_responsefunctioncalloutputcontent_schema",
-      "dto_responsefunctioncalloutputcontent_unmarshaljson",
-      "dto_responseinlineskillsource",
-      "dto_responseinput",
-      "dto_responseinput_marshaljson",
-      "dto_responseinput_schema",
-      "dto_responseinput_unmarshaljson",
-      "dto_responseinputcontent",
-      "dto_responseinputitem",
-      "dto_responseinputitemaction",
-      "dto_responseinputitemoutput",
-      "dto_responseinputitemoutput_marshaljson",
-      "dto_responseinputitemoutput_schema",
-      "dto_responseinputitemoutput_unmarshaljson",
-      "dto_responseinputmessagecontent",
-      "dto_responseinputmessagecontent_marshaljson",
-      "dto_responseinputmessagecontent_schema",
-      "dto_responseinputmessagecontent_unmarshaljson",
-      "dto_responselocalshellcallaction",
-      "dto_responsemcplisttoolsentry",
-      "dto_responseoutputtextannotation",
-      "dto_responseoutputtextlogprob",
-      "dto_responseoutputtexttoplogprobrow",
-      "dto_responsependingsafetycheck",
-      "dto_responsereasoningsummary",
-      "dto_responsereasoningtextcontent",
-      "dto_responseshellcallaction",
-      "dto_responseshellcalloutcome",
-      "dto_responseshellcalloutputcontent",
-      "dto_responseshellenvironment",
-      "dto_responseshellskill",
-      "dto_responsetoolsearchcallarguments",
-      "dto_responsewebsearchaction",
-      "dto_responsewebsearchactionsource"
+      "common_ierr_ierr_go",
+      "handler_anthropic_go",
+      "handler_anthropic_newanthropichandler",
+      "handler_anthropicdependencies",
+      "handler_anthropichandler",
+      "handler_anthropichandler_handlecounttokens",
+      "handler_anthropichandler_handlecreatemessage",
+      "handler_anthropichandler_handlelistmodels",
+      "handler_apikey_go",
+      "handler_apikey_newapikeyhandler",
+      "handler_apikeydependencies",
+      "handler_apikeyhandler",
+      "handler_apikeyhandler_handlecreateapikey",
+      "handler_apikeyhandler_handledeleteapikey",
+      "handler_apikeyhandler_handlelistapikeys",
+      "handler_audit_go",
+      "handler_audit_newaudithandler",
+      "handler_auditdependencies",
+      "handler_audithandler",
+      "handler_audithandler_handlelistauditlogs",
+      "handler_oauth2_go",
+      "handler_oauth2_newoauth2handler",
+      "handler_oauth2dependencies",
+      "handler_oauth2handler",
+      "handler_oauth2handler_handlecallback",
+      "handler_oauth2handler_handlelogin",
+      "handler_openai_go",
+      "handler_openai_newopenaihandler",
+      "handler_openaidependencies",
+      "handler_openaihandler",
+      "handler_openaihandler_handlechatcompletion",
+      "handler_openaihandler_handlecreateresponse",
+      "handler_openaihandler_handlelistmodels",
+      "handler_ping_go",
+      "handler_ping_newpinghandler",
+      "handler_pinghandler",
+      "handler_pinghandler_handleping",
+      "handler_pinghandler_handlesseping",
+      "handler_session_go",
+      "handler_session_newsessionhandler",
+      "handler_sessiondependencies",
+      "handler_sessionhandler",
+      "handler_sessionhandler_handlegetsession",
+      "handler_sessionhandler_handlelistsessions",
+      "handler_user_go",
+      "handler_user_newuserhandler",
+      "handler_userdependencies",
+      "handler_userhandler",
+      "handler_userhandler_handlegetcuruser",
+      "handler_userhandler_handleupdateuser",
+      "ierr_ierr_newfromsentinel",
+      "ierr_ierr_newsentinel",
+      "ierr_ierr_tobizerror",
+      "ierr_internalerror",
+      "ierr_internalerror_bizerror",
+      "ierr_internalerror_error",
+      "ierr_sentinel",
+      "util_context_ctxvaluepermission",
+      "util_context_ctxvalueuint",
+      "util_http_wraphttpresponse"
     ],
     "3": [
-      "dto_anthropic_go",
-      "dto_anthropic_newanthropicthinkingcontentblockwire",
-      "dto_anthropic_newanthropictoolusecontentblockwire",
-      "dto_anthropiccontentblock",
-      "dto_anthropiccontentblock_marshaljson",
-      "dto_anthropiccontentblockcaller",
-      "dto_anthropiccontentsource",
-      "dto_anthropiccontextmanagement",
-      "dto_anthropiccontextmanagementedit",
-      "dto_anthropiccounttokensreq",
-      "dto_anthropiccounttokensrequest",
-      "dto_anthropiccreatemessagereq",
-      "dto_anthropiccreatemessagerequest",
-      "dto_anthropicerror",
-      "dto_anthropicerrorresponse",
-      "dto_anthropicjsonoutputformat",
-      "dto_anthropiclistmodelsrsp",
-      "dto_anthropicmessage",
-      "dto_anthropicmessagecontent",
-      "dto_anthropicmessagecontent_marshaljson",
-      "dto_anthropicmessagecontent_schema",
-      "dto_anthropicmessagecontent_unmarshaljson",
-      "dto_anthropicmessageparam",
-      "dto_anthropicmetadata",
-      "dto_anthropicmodelinfo",
-      "dto_anthropicoutputconfig",
-      "dto_anthropicrefusalstopdetails",
-      "dto_anthropicssecontentblockdelta",
-      "dto_anthropicssecontentblockdeltapayload",
-      "dto_anthropicssecontentblockstart",
-      "dto_anthropicsseevent",
-      "dto_anthropicssemessagedelta",
-      "dto_anthropicssemessagedeltapayload",
-      "dto_anthropicssemessagestart",
-      "dto_anthropicthinkingconfig",
-      "dto_anthropicthinkingcontentblockwire",
-      "dto_anthropictokenscount",
-      "dto_anthropictool",
-      "dto_anthropictoolchoice",
-      "dto_anthropictoolresultcontent",
-      "dto_anthropictoolresultcontent_marshaljson",
-      "dto_anthropictoolresultcontent_schema",
-      "dto_anthropictoolresultcontent_unmarshaljson",
-      "dto_anthropictoolusecontentblockwire",
-      "dto_anthropicusage",
-      "dto_anthropicuserlocation",
-      "dto_cachecontrol",
-      "dto_citationsconfig"
+      "dto_openai_response_input_go",
+      "openai_responseapplypatchoperation",
+      "openai_responsecodeinterpretercalloutput",
+      "openai_responsecomputeraction",
+      "openai_responsecomputeractionpathpoint",
+      "openai_responsecomputercalloutputscreenshot",
+      "openai_responsecontainernetworkdomainsecret",
+      "openai_responsecontainernetworkpolicy",
+      "openai_responsefilesearchcallresult",
+      "openai_responsefilesearchresultattribute",
+      "openai_responsefilesearchresultattribute_marshaljson",
+      "openai_responsefilesearchresultattribute_schema",
+      "openai_responsefilesearchresultattribute_unmarshaljson",
+      "openai_responsefunctioncalloutputcontent",
+      "openai_responsefunctioncalloutputcontent_marshaljson",
+      "openai_responsefunctioncalloutputcontent_schema",
+      "openai_responsefunctioncalloutputcontent_unmarshaljson",
+      "openai_responseinlineskillsource",
+      "openai_responseinput",
+      "openai_responseinput_marshaljson",
+      "openai_responseinput_schema",
+      "openai_responseinput_unmarshaljson",
+      "openai_responseinputcontent",
+      "openai_responseinputitem",
+      "openai_responseinputitemaction",
+      "openai_responseinputitemoutput",
+      "openai_responseinputitemoutput_marshaljson",
+      "openai_responseinputitemoutput_schema",
+      "openai_responseinputitemoutput_unmarshaljson",
+      "openai_responseinputmessagecontent",
+      "openai_responseinputmessagecontent_marshaljson",
+      "openai_responseinputmessagecontent_schema",
+      "openai_responseinputmessagecontent_unmarshaljson",
+      "openai_responselocalshellcallaction",
+      "openai_responsemcplisttoolsentry",
+      "openai_responseoutputtextannotation",
+      "openai_responseoutputtextlogprob",
+      "openai_responseoutputtexttoplogprobrow",
+      "openai_responsependingsafetycheck",
+      "openai_responsereasoningsummary",
+      "openai_responsereasoningtextcontent",
+      "openai_responseshellcallaction",
+      "openai_responseshellcalloutcome",
+      "openai_responseshellcalloutputcontent",
+      "openai_responseshellenvironment",
+      "openai_responseshellskill",
+      "openai_responsetoolsearchcallarguments",
+      "openai_responsewebsearchaction",
+      "openai_responsewebsearchactionsource"
     ],
     "4": [
-      "dto_openai_go",
-      "dto_openaiallowedtoolsconfig",
-      "dto_openaiapproximatelocation",
-      "dto_openaichatcompletion",
-      "dto_openaichatcompletionaudio",
-      "dto_openaichatcompletionaudioparam",
-      "dto_openaichatcompletionaudioreference",
-      "dto_openaichatcompletionchoice",
-      "dto_openaichatcompletionchunk",
-      "dto_openaichatcompletionchunkchoice",
-      "dto_openaichatcompletionchunkdelta",
-      "dto_openaichatcompletioncontentpart",
-      "dto_openaichatcompletionfilecontent",
-      "dto_openaichatcompletionimageurl",
-      "dto_openaichatcompletioninputaudiocontent",
-      "dto_openaichatcompletionmessagecustomtoolcall",
-      "dto_openaichatcompletionmessagefunctiontoolcall",
-      "dto_openaichatcompletionmessageparam",
-      "dto_openaichatcompletionmessagetoolcall",
-      "dto_openaichatcompletionpredictioncontent",
-      "dto_openaichatcompletionreq",
-      "dto_openaichatcompletionrequest",
-      "dto_openaichatcompletionstreamoptions",
-      "dto_openaichatcompletiontokenlogprob",
-      "dto_openaichatcompletiontool",
-      "dto_openaichatcompletiontoolchoice",
-      "dto_openaicompletiontokensdetails",
-      "dto_openaicompletionusage",
-      "dto_openaicustomtooldefinition",
-      "dto_openaicustomtoolformat",
-      "dto_openaierror",
-      "dto_openaierrorresponse",
-      "dto_openaifunctiondefinition",
-      "dto_openaigrammarcontent",
-      "dto_openaijsonschemaformat",
-      "dto_openailistmodelsrsp",
-      "dto_openailogprobs",
-      "dto_openaimessageannotation",
-      "dto_openaimodel",
-      "dto_openaiprompttokensdetails",
-      "dto_openairesponseformat",
-      "dto_openaitoolchoicecustom",
-      "dto_openaitoolchoicefunction",
-      "dto_openaitoptokenlogprob",
-      "dto_openaiurlcitation",
-      "dto_openaiuserlocation",
-      "dto_openaivoiceparamcustomobject",
-      "dto_openaiwebsearchoptions"
+      "anthropic_anthropic_newanthropicthinkingcontentblockwire",
+      "anthropic_anthropic_newanthropictoolusecontentblockwire",
+      "anthropic_anthropiccontentblock",
+      "anthropic_anthropiccontentblock_marshaljson",
+      "anthropic_anthropiccontentblockcaller",
+      "anthropic_anthropiccontentsource",
+      "anthropic_anthropiccontextmanagement",
+      "anthropic_anthropiccontextmanagementedit",
+      "anthropic_anthropiccounttokensreq",
+      "anthropic_anthropiccounttokensrequest",
+      "anthropic_anthropiccreatemessagereq",
+      "anthropic_anthropiccreatemessagerequest",
+      "anthropic_anthropicerror",
+      "anthropic_anthropicerrorresponse",
+      "anthropic_anthropicjsonoutputformat",
+      "anthropic_anthropiclistmodelsrsp",
+      "anthropic_anthropicmessage",
+      "anthropic_anthropicmessagecontent",
+      "anthropic_anthropicmessagecontent_marshaljson",
+      "anthropic_anthropicmessagecontent_schema",
+      "anthropic_anthropicmessagecontent_unmarshaljson",
+      "anthropic_anthropicmessageparam",
+      "anthropic_anthropicmetadata",
+      "anthropic_anthropicmodelinfo",
+      "anthropic_anthropicoutputconfig",
+      "anthropic_anthropicrefusalstopdetails",
+      "anthropic_anthropicssecontentblockdelta",
+      "anthropic_anthropicssecontentblockdeltapayload",
+      "anthropic_anthropicssecontentblockstart",
+      "anthropic_anthropicsseevent",
+      "anthropic_anthropicssemessagedelta",
+      "anthropic_anthropicssemessagedeltapayload",
+      "anthropic_anthropicssemessagestart",
+      "anthropic_anthropicthinkingconfig",
+      "anthropic_anthropicthinkingcontentblockwire",
+      "anthropic_anthropictokenscount",
+      "anthropic_anthropictool",
+      "anthropic_anthropictoolchoice",
+      "anthropic_anthropictoolresultcontent",
+      "anthropic_anthropictoolresultcontent_marshaljson",
+      "anthropic_anthropictoolresultcontent_schema",
+      "anthropic_anthropictoolresultcontent_unmarshaljson",
+      "anthropic_anthropictoolusecontentblockwire",
+      "anthropic_anthropicusage",
+      "anthropic_anthropicuserlocation",
+      "anthropic_cachecontrol",
+      "anthropic_citationsconfig",
+      "dto_anthropic_anthropic_go"
     ],
     "5": [
-      "cache_redis_closecache",
-      "cache_redis_getredisclient",
-      "infrastructure_cache_redis_go",
-      "lock_lock_go",
-      "lock_lock_newlocker",
-      "lock_locker",
-      "lock_redislocker",
-      "lock_redislocker_lock",
-      "lock_redislocker_unlock",
-      "logger_cls_encodefields",
-      "logger_cls_go",
-      "logger_cls_newclscore",
-      "logger_cls_valuetostring",
-      "logger_clscallback",
-      "logger_clscallback_fail",
-      "logger_clscallback_success",
-      "logger_clscore",
-      "logger_clscore_check",
-      "logger_clscore_enabled",
-      "logger_clscore_sync",
-      "logger_clscore_with",
-      "logger_clscore_write",
-      "logger_logger_go",
-      "logger_logger_init",
-      "logger_logger_withfctx",
-      "middleware_guard_go",
-      "middleware_guard_guardmiddleware",
-      "middleware_guard_isroutenotfound",
-      "middleware_guardconfig",
-      "middleware_log_go",
-      "middleware_log_issensitiveheader",
-      "middleware_log_logmiddleware",
-      "middleware_logmiddlewareconfig",
-      "middleware_logsampler",
-      "middleware_logsampler_shouldlog",
-      "middleware_logsamplingrule",
-      "middleware_recover_go",
-      "middleware_recover_recovermiddleware",
-      "util_string_go",
-      "util_string_todataurl",
-      "util_string_truncatefieldvalue",
-      "util_string_truncatemapvalues",
-      "util_string_truncatevalue"
+      "dto_openai_chat_go",
+      "openai_openaiallowedtoolsconfig",
+      "openai_openaiapproximatelocation",
+      "openai_openaichatcompletion",
+      "openai_openaichatcompletionaudio",
+      "openai_openaichatcompletionaudioparam",
+      "openai_openaichatcompletionaudioreference",
+      "openai_openaichatcompletionchoice",
+      "openai_openaichatcompletionchunk",
+      "openai_openaichatcompletionchunkchoice",
+      "openai_openaichatcompletionchunkdelta",
+      "openai_openaichatcompletioncontentpart",
+      "openai_openaichatcompletionfilecontent",
+      "openai_openaichatcompletionimageurl",
+      "openai_openaichatcompletioninputaudiocontent",
+      "openai_openaichatcompletionmessagecustomtoolcall",
+      "openai_openaichatcompletionmessagefunctiontoolcall",
+      "openai_openaichatcompletionmessageparam",
+      "openai_openaichatcompletionmessagetoolcall",
+      "openai_openaichatcompletionpredictioncontent",
+      "openai_openaichatcompletionreq",
+      "openai_openaichatcompletionrequest",
+      "openai_openaichatcompletionstreamoptions",
+      "openai_openaichatcompletiontokenlogprob",
+      "openai_openaichatcompletiontool",
+      "openai_openaichatcompletiontoolchoice",
+      "openai_openaicompletiontokensdetails",
+      "openai_openaicompletionusage",
+      "openai_openaicustomtooldefinition",
+      "openai_openaicustomtoolformat",
+      "openai_openaierror",
+      "openai_openaierrorresponse",
+      "openai_openaifunctiondefinition",
+      "openai_openaigrammarcontent",
+      "openai_openaijsonschemaformat",
+      "openai_openailistmodelsrsp",
+      "openai_openailogprobs",
+      "openai_openaimessageannotation",
+      "openai_openaimodel",
+      "openai_openaiprompttokensdetails",
+      "openai_openairesponseformat",
+      "openai_openaitoolchoicecustom",
+      "openai_openaitoolchoicefunction",
+      "openai_openaitoptokenlogprob",
+      "openai_openaiurlcitation",
+      "openai_openaiuserlocation",
+      "openai_openaivoiceparamcustomobject",
+      "openai_openaiwebsearchoptions"
     ],
     "6": [
       "application_llmproxy_converter_anthropic_go",
@@ -408,6 +412,43 @@
       "ierr_ierr_wrapf"
     ],
     "7": [
+      "bootstrap_container_buildserver",
+      "bootstrap_container_go",
+      "bootstrap_container_newaccesstokensigner",
+      "bootstrap_container_newanthropicdependencies",
+      "bootstrap_container_newapikeydependencies",
+      "bootstrap_container_newapikeyrepository",
+      "bootstrap_container_newaudiodircreator",
+      "bootstrap_container_newauditdependencies",
+      "bootstrap_container_newauditrepository",
+      "bootstrap_container_newendpointreadrepository",
+      "bootstrap_container_newendpointrepository",
+      "bootstrap_container_newendpointresolver",
+      "bootstrap_container_newhandlecallbackhandler",
+      "bootstrap_container_newinitiateloginhandler",
+      "bootstrap_container_newoauth2dependencies",
+      "bootstrap_container_newopenaidependencies",
+      "bootstrap_container_newrefreshtokenshandler",
+      "bootstrap_container_newrefreshtokensigner",
+      "bootstrap_container_newsessiondependencies",
+      "bootstrap_container_newsessionreadrepository",
+      "bootstrap_container_newtokendependencies",
+      "bootstrap_container_newuserdependencies",
+      "bootstrap_container_newuserrepository",
+      "bootstrap_container_provide",
+      "bootstrap_container_provideapplication",
+      "bootstrap_container_providehandlers",
+      "bootstrap_container_providehttp",
+      "bootstrap_container_provideinfrastructure",
+      "bootstrap_handlecallbackparams",
+      "bootstrap_refreshtokensparams",
+      "bootstrap_server",
+      "infrastructure_jwt_singleton_go",
+      "jwt_singleton_getaccesstokensigner",
+      "jwt_singleton_getrefreshtokensigner",
+      "jwt_singleton_init"
+    ],
+    "8": [
       "agent_scorer_getscorer",
       "agent_scorer_newscorer",
       "agent_scoreresult",
@@ -444,129 +485,100 @@
       "vo_summary_score_newsessionscore",
       "vo_summary_score_newsessionsummary"
     ],
-    "8": [
-      "aggregate_proxy_api_key_issueproxyapikey",
-      "aggregate_proxy_api_key_restoreproxyapikey",
-      "aggregate_proxyapikey",
-      "aggregate_proxyapikey_aggregatetype",
-      "aggregate_proxyapikey_createdat",
-      "aggregate_proxyapikey_isownedby",
-      "aggregate_proxyapikey_name",
-      "aggregate_proxyapikey_secret",
-      "aggregate_proxyapikey_userid",
-      "application_apikey_command_issue_api_key_go",
-      "application_apikey_command_user_exists_checker_go",
-      "command_issue_api_key_newissueapikeyhandler",
-      "command_issueapikeycommand",
-      "command_issueapikeyhandler",
-      "command_issueapikeyhandler_handle",
-      "command_issueapikeyresult",
-      "command_user_exists_checker_newuserexistencechecker",
-      "command_userexistencechecker",
-      "command_userexistencechecker_exists",
-      "domain_apikey_aggregate_proxy_api_key_go",
-      "domain_apikey_vo_api_key_name_go",
-      "domain_apikey_vo_api_key_quota_go",
-      "vo_api_key_quota_defaultapikeyquota",
-      "vo_api_key_quota_newapikeyquota",
-      "vo_apikeyname",
-      "vo_apikeyname_isempty",
-      "vo_apikeyname_string",
-      "vo_apikeyquota",
-      "vo_apikeyquota_allows",
-      "vo_apikeyquota_maxcount"
-    ],
     "9": [
-      "dto_openai_response_tools_go",
-      "dto_responsecodeinterpretercontainerauto",
-      "dto_responsecustomtoolformat",
-      "dto_responsefilesearchfilter",
-      "dto_responsefilesearchhybridsearch",
-      "dto_responsefilesearchrankingoptions",
-      "dto_responseimagegenerationmask",
-      "dto_responsemcptoolapprovalfilter",
-      "dto_responsemcptoolfilter",
-      "dto_responsenamespacetool",
-      "dto_responsetoolapplypatch",
-      "dto_responsetoolchoiceobject",
-      "dto_responsetoolcodeinterpreter",
-      "dto_responsetoolcomputer",
-      "dto_responsetoolcomputerusepreview",
-      "dto_responsetoolcustom",
-      "dto_responsetoolfilesearch",
-      "dto_responsetoolfunction",
-      "dto_responsetoolimagegeneration",
-      "dto_responsetoollocalshell",
-      "dto_responsetoolmcp",
-      "dto_responsetoolnamespace",
-      "dto_responsetoolshell",
-      "dto_responsetooltoolsearch",
-      "dto_responsetooltypeprobe",
-      "dto_responsetoolwebsearch",
-      "dto_responsetoolwebsearchpreview",
-      "dto_responsewebsearchfilters",
-      "dto_responsewebsearchuserlocation"
+      "bootstrap_container_newoauth2platforms",
+      "domain_oauth2_vo_user_info_go",
+      "infrastructure_oauth2_github_go",
+      "infrastructure_oauth2_google_go",
+      "oauth2_github_newgithubplatform",
+      "oauth2_githubemail",
+      "oauth2_githubplatform",
+      "oauth2_githubplatform_exchangetoken",
+      "oauth2_githubplatform_getauthurlwithstate",
+      "oauth2_githubplatform_getuserinfo",
+      "oauth2_githubuserinfo",
+      "oauth2_githubuserinfo_getavatar",
+      "oauth2_githubuserinfo_getemail",
+      "oauth2_githubuserinfo_getid",
+      "oauth2_githubuserinfo_getname",
+      "oauth2_google_newgoogleplatform",
+      "oauth2_googleplatform",
+      "oauth2_googleplatform_exchangetoken",
+      "oauth2_googleplatform_getauthurlwithstate",
+      "oauth2_googleplatform_getuserinfo",
+      "oauth2_googleuserinfo",
+      "oauth2_googleuserinfo_getavatar",
+      "oauth2_googleuserinfo_getemail",
+      "oauth2_googleuserinfo_getid",
+      "oauth2_googleuserinfo_getname",
+      "oauth2_googleuserinfoapiresponse",
+      "vo_oauthuserinfo",
+      "vo_oauthuserinfo_avatar",
+      "vo_oauthuserinfo_email",
+      "vo_oauthuserinfo_id",
+      "vo_oauthuserinfo_isempty",
+      "vo_oauthuserinfo_name",
+      "vo_user_info_newoauthuserinfo"
     ],
     "10": [
-      "bootstrap_container_buildserver",
-      "bootstrap_container_go",
-      "bootstrap_container_newanthropicdependencies",
-      "bootstrap_container_newapikeydependencies",
-      "bootstrap_container_newapikeyrepository",
-      "bootstrap_container_newaudiodircreator",
-      "bootstrap_container_newauditdependencies",
-      "bootstrap_container_newauditrepository",
-      "bootstrap_container_newendpointreadrepository",
-      "bootstrap_container_newendpointrepository",
-      "bootstrap_container_newendpointresolver",
-      "bootstrap_container_newhandlecallbackhandler",
-      "bootstrap_container_newinitiateloginhandler",
-      "bootstrap_container_newoauth2dependencies",
-      "bootstrap_container_newopenaidependencies",
-      "bootstrap_container_newrefreshtokenshandler",
-      "bootstrap_container_newsessiondependencies",
-      "bootstrap_container_newsessionreadrepository",
-      "bootstrap_container_newtokendependencies",
-      "bootstrap_container_newuserdependencies",
-      "bootstrap_container_newuserrepository",
-      "bootstrap_container_provide",
-      "bootstrap_container_provideapplication",
-      "bootstrap_container_providehandlers",
-      "bootstrap_container_providehttp",
-      "bootstrap_container_provideinfrastructure",
-      "bootstrap_handlecallbackparams",
-      "bootstrap_refreshtokensparams",
-      "bootstrap_server"
+      "dto_openai_response_tools_go",
+      "openai_responsecodeinterpretercontainerauto",
+      "openai_responsecustomtoolformat",
+      "openai_responsefilesearchfilter",
+      "openai_responsefilesearchhybridsearch",
+      "openai_responsefilesearchrankingoptions",
+      "openai_responseimagegenerationmask",
+      "openai_responsemcptoolapprovalfilter",
+      "openai_responsemcptoolfilter",
+      "openai_responsenamespacetool",
+      "openai_responsetoolapplypatch",
+      "openai_responsetoolchoiceobject",
+      "openai_responsetoolcodeinterpreter",
+      "openai_responsetoolcomputer",
+      "openai_responsetoolcomputerusepreview",
+      "openai_responsetoolcustom",
+      "openai_responsetoolfilesearch",
+      "openai_responsetoolfunction",
+      "openai_responsetoolimagegeneration",
+      "openai_responsetoollocalshell",
+      "openai_responsetoolmcp",
+      "openai_responsetoolnamespace",
+      "openai_responsetoolshell",
+      "openai_responsetooltoolsearch",
+      "openai_responsetooltypeprobe",
+      "openai_responsetoolwebsearch",
+      "openai_responsetoolwebsearchpreview",
+      "openai_responsewebsearchfilters",
+      "openai_responsewebsearchuserlocation"
     ],
     "11": [
-      "common_ierr_ierr_go",
-      "domain_llmproxy_service_resolver_go",
-      "dto_unified_message_convertopenaicontent",
-      "dto_unified_message_convertopenaicontentpart",
-      "dto_unified_message_extractanthropicblocks",
-      "dto_unified_message_fromanthropicmessage",
-      "dto_unified_message_fromanthropicresponse",
-      "dto_unified_message_fromopenaimessage",
-      "dto_unified_message_go",
-      "dto_unified_tool_fromanthropictool",
-      "dto_unified_tool_fromopenaitool",
-      "dto_unified_tool_go",
-      "ierr_ierr_newf",
-      "ierr_ierr_newfromsentinel",
-      "ierr_ierr_newsentinel",
-      "ierr_internalerror",
-      "ierr_internalerror_bizerror",
-      "ierr_internalerror_error",
-      "ierr_sentinel",
-      "service_endpointresolver",
-      "service_endpointresolver_resolve",
-      "service_resolver_newendpointresolver",
-      "usecase_anthropicusecase_convertanthropicrequestmessages",
-      "util_user_go",
-      "util_user_validateusername",
-      "util_user_validateusernamelength",
-      "util_user_validateusernamespecialchars",
-      "util_user_validateusernamespecialname"
+      "aggregate_message_restoremessage",
+      "aggregate_tool_restoretool",
+      "database_postgresql_getdbinstance",
+      "ierr_ierr_wrap",
+      "repository_apikeyrepository",
+      "repository_apikeyrepository_countbyuser",
+      "repository_apikeyrepository_delete",
+      "repository_apikeyrepository_findbyid",
+      "repository_apikeyrepository_listall",
+      "repository_apikeyrepository_listbyuser",
+      "repository_apikeyrepository_save",
+      "repository_endpointreadrepository",
+      "repository_endpointreadrepository_findcredentialbyaliasandprovider",
+      "repository_endpointreadrepository_listaliasesbyprovider",
+      "repository_messagerepository",
+      "repository_messagerepository_batchsavededup",
+      "repository_messagerepository_findbyids",
+      "repository_sessionreadrepository_listsessions",
+      "repository_sessionrepository",
+      "repository_sessionrepository_delete",
+      "repository_sessionrepository_findbyid",
+      "repository_sessionrepository_paginate",
+      "repository_sessionrepository_updatescore",
+      "repository_sessionrepository_updatesummary",
+      "repository_toolrepository",
+      "repository_toolrepository_batchsavededup",
+      "repository_toolrepository_findbyids"
     ],
     "12": [
       "application_llmproxy_converter_openai_go",
@@ -595,100 +607,52 @@
       "converter_ssecontentblocktracker"
     ],
     "13": [
-      "database_postgresql_closedatabase",
-      "database_postgresql_getdbinstance",
-      "ierr_ierr_wrap",
-      "infrastructure_database_postgresql_go",
-      "repository_apikeyrepository_countbyuser",
-      "repository_apikeyrepository_save",
-      "repository_endpointreadrepository",
-      "repository_endpointreadrepository_findcredentialbyaliasandprovider",
-      "repository_endpointreadrepository_listaliasesbyprovider",
-      "repository_messagerepository",
-      "repository_messagerepository_batchsavededup",
-      "repository_messagerepository_findbyids",
-      "repository_sessionreadrepository_listsessions",
-      "repository_sessionrepository",
-      "repository_sessionrepository_delete",
-      "repository_sessionrepository_findbyid",
-      "repository_sessionrepository_paginate",
-      "repository_sessionrepository_updatescore",
-      "repository_sessionrepository_updatesummary",
-      "repository_toolrepository",
-      "repository_toolrepository_batchsavededup",
-      "repository_toolrepository_findbyids"
+      "domain_llmproxy_service_resolver_go",
+      "dto_unified_message_convertopenaicontent",
+      "dto_unified_message_convertopenaicontentpart",
+      "dto_unified_message_extractanthropicblocks",
+      "dto_unified_message_fromanthropicmessage",
+      "dto_unified_message_fromanthropicresponse",
+      "dto_unified_message_fromopenaimessage",
+      "dto_unified_message_go",
+      "dto_unified_tool_fromanthropictool",
+      "dto_unified_tool_fromopenaitool",
+      "dto_unified_tool_go",
+      "ierr_ierr_newf",
+      "service_endpointresolver",
+      "service_endpointresolver_resolve",
+      "service_resolver_newendpointresolver",
+      "usecase_anthropicusecase_convertanthropicrequestmessages",
+      "util_user_go",
+      "util_user_validateusername",
+      "util_user_validateusernamelength",
+      "util_user_validateusernamespecialchars",
+      "util_user_validateusernamespecialname"
     ],
     "14": [
-      "handler_apikeyhandler",
-      "handler_apikeyhandler_handlecreateapikey",
-      "handler_apikeyhandler_handledeleteapikey",
-      "handler_apikeyhandler_handlelistapikeys",
-      "handler_audithandler_handlelistauditlogs",
-      "handler_oauth2handler",
-      "handler_oauth2handler_handlecallback",
-      "handler_oauth2handler_handlelogin",
-      "handler_sessionhandler",
-      "handler_sessionhandler_handlegetsession",
-      "handler_sessionhandler_handlelistsessions",
-      "handler_userhandler",
-      "handler_userhandler_handlegetcuruser",
-      "handler_userhandler_handleupdateuser",
-      "ierr_ierr_tobizerror",
-      "logger_logger_withctx",
-      "pool_poolmanager_submitmodelcallaudittask",
-      "util_context_ctxvaluepermission",
-      "util_context_ctxvaluestring",
-      "util_context_ctxvalueuint",
-      "util_context_go",
-      "util_http_wraphttpresponse"
+      "aggregate_proxy_api_key_issueproxyapikey",
+      "aggregate_user_registeruser",
+      "api_huma_go",
+      "api_huma_newhumaapi",
+      "command_issueapikeyhandler_handle",
+      "common_enum_sort_go",
+      "cron_sessiondeduplicatecron_deduplicate",
+      "cron_softdeletepurgecron_purge",
+      "enum_sort",
+      "ierr_ierr_new",
+      "middleware_compress_compressmiddleware",
+      "middleware_compress_go",
+      "middleware_cors_corsmiddleware",
+      "middleware_cors_go",
+      "middleware_fgprof_fgprofmiddleware",
+      "middleware_fgprof_go",
+      "middleware_lock_go",
+      "middleware_lock_redislockmiddleware",
+      "middleware_trace_go",
+      "middleware_trace_tracemiddleware",
+      "query_getsessionhandler_handle"
     ],
     "15": [
-      "bootstrap_routeparams",
-      "bootstrap_router_go",
-      "bootstrap_router_registerroutes",
-      "dao_singleton_getproxyapikeydao",
-      "dao_singleton_getuserdao",
-      "middleware_apikey_apikeymiddleware",
-      "middleware_apikey_go",
-      "repository_api_key_repository_newapikeyrepository",
-      "repository_user_repository_newuserrepository",
-      "router_apirouterdependencies",
-      "router_audit_go",
-      "router_audit_initauditrouter",
-      "router_health_go",
-      "router_health_inithealthrouter",
-      "router_oauth2_go",
-      "router_oauth2_initoauth2router",
-      "router_router_go",
-      "router_router_registerapirouter",
-      "router_router_registerdocsrouter",
-      "router_session_go",
-      "router_session_initsessionrouter"
-    ],
-    "16": [
-      "httpclient_httpclient_gethttpclient",
-      "infrastructure_httpclient_httpclient_go",
-      "infrastructure_transport_header_passthrough_go",
-      "infrastructure_transport_openai_go",
-      "transport_anthropicproxy",
-      "transport_anthropicproxy_forwardcounttokens",
-      "transport_anthropicproxy_forwardcreatemessage",
-      "transport_anthropicproxy_forwardcreatemessagestream",
-      "transport_anthropicproxy_sendrequest",
-      "transport_header_passthrough_capturepassthroughresponseheaders",
-      "transport_header_passthrough_ispassthroughresponseheader",
-      "transport_header_passthrough_storepassthroughresponseheaders",
-      "transport_openai_newopenaiproxy",
-      "transport_openaiproxy",
-      "transport_openaiproxy_doupstreamrequest",
-      "transport_openaiproxy_forwardchatcompletion",
-      "transport_openaiproxy_forwardchatcompletionstream",
-      "transport_openaiproxy_forwardcreateresponse",
-      "transport_openaiproxy_forwardcreateresponsestream",
-      "transport_openaiproxy_sendrequest",
-      "util_context_getpassthroughheaders"
-    ],
-    "17": [
       "application_llmproxy_usecase_openai_store_go",
       "dto_unified_response_collectreasoningtext",
       "dto_unified_response_fromresponseapifunctioncall",
@@ -709,48 +673,27 @@
       "usecase_openaiusecase_storeresponsefromanthropicmsg",
       "usecase_openaiusecase_storeresponsefromrsp"
     ],
-    "18": [
-      "cron_cron_newcronloggeradapter",
-      "cron_session_dedup_newsessiondeduplicatecron",
-      "cron_session_score_go",
-      "cron_session_score_newsessionscorecron",
-      "cron_soft_delete_purge_go",
-      "cron_soft_delete_purge_newsoftdeletepurgecron",
-      "dao_singleton_getmessagedao",
-      "dao_singleton_getmodelcallauditdao",
-      "dao_singleton_getsessiondao",
-      "dao_singleton_gettooldao",
-      "dao_singleton_init",
-      "infrastructure_database_dao_singleton_go",
-      "infrastructure_repository_audit_repository_go",
-      "infrastructure_repository_message_repository_go",
-      "infrastructure_repository_tool_repository_go",
-      "repository_audit_repository_newauditrepository",
-      "repository_message_repository_newmessagerepository",
-      "repository_session_repository_newsessionreadrepository",
-      "repository_tool_repository_newtoolrepository"
-    ],
-    "19": [
+    "16": [
       "dto_openai_response_go",
-      "dto_openaicreateresponsereq",
-      "dto_openaicreateresponserequest",
-      "dto_responsecontextmanagemententry",
-      "dto_responseconversationparam",
-      "dto_responseconversationparam_marshaljson",
-      "dto_responseconversationparam_schema",
-      "dto_responseconversationparam_unmarshaljson",
-      "dto_responseconversationvalue",
-      "dto_responseprompt",
-      "dto_responsepromptvariable",
-      "dto_responsepromptvariable_marshaljson",
-      "dto_responsepromptvariable_schema",
-      "dto_responsepromptvariable_unmarshaljson",
-      "dto_responsereasoningconfig",
-      "dto_responsestreamoptions",
-      "dto_responsetextconfig",
-      "dto_responsetextformat"
+      "openai_openaicreateresponsereq",
+      "openai_openaicreateresponserequest",
+      "openai_responsecontextmanagemententry",
+      "openai_responseconversationparam",
+      "openai_responseconversationparam_marshaljson",
+      "openai_responseconversationparam_schema",
+      "openai_responseconversationparam_unmarshaljson",
+      "openai_responseconversationvalue",
+      "openai_responseprompt",
+      "openai_responsepromptvariable",
+      "openai_responsepromptvariable_marshaljson",
+      "openai_responsepromptvariable_schema",
+      "openai_responsepromptvariable_unmarshaljson",
+      "openai_responsereasoningconfig",
+      "openai_responsestreamoptions",
+      "openai_responsetextconfig",
+      "openai_responsetextformat"
     ],
-    "20": [
+    "17": [
       "aggregate_audit_newaudit",
       "aggregate_audit_recordcall",
       "aggregate_modelcallaudit",
@@ -769,43 +712,25 @@
       "aggregate_recordcallinput",
       "domain_modelcall_aggregate_audit_go"
     ],
-    "21": [
-      "infrastructure_repository_audio_dir_creator_go",
-      "infrastructure_storage_cos_go",
-      "infrastructure_storage_minio_go",
-      "infrastructure_storage_obj_dao_singleton_go",
-      "infrastructure_storage_storage_go",
-      "obj_dao_singleton_createobjectstoragedao",
-      "obj_dao_singleton_getaudioobjdao",
-      "repository_audio_dir_creator_newaudiodircreator",
-      "repository_audiodircreator",
-      "repository_audiodircreator_createdir",
-      "storage_cos_getcosclient",
-      "storage_cos_initcosclient",
-      "storage_minio_getminiostorage",
-      "storage_minio_initminioclient",
-      "storage_storage_getplatform",
-      "storage_storage_initobjectstorage"
+    "18": [
+      "aggregate_reconstruct_reconstructaudit",
+      "aggregate_reconstructauditinput",
+      "domain_modelcall_aggregate_reconstruct_go",
+      "domain_modelcall_vo_token_breakdown_go",
+      "infrastructure_repository_audit_repository_go",
+      "repository_audit_repository_newauditrepository",
+      "repository_auditrepository",
+      "repository_auditrepository_listbyapikeyid",
+      "repository_auditrepository_save",
+      "vo_token_breakdown_newtokenbreakdown",
+      "vo_tokenbreakdown",
+      "vo_tokenbreakdown_cachecreation",
+      "vo_tokenbreakdown_cacheread",
+      "vo_tokenbreakdown_input",
+      "vo_tokenbreakdown_iszero",
+      "vo_tokenbreakdown_output"
     ],
-    "22": [
-      "aggregate_base",
-      "aggregate_base_aggregateid",
-      "aggregate_base_setid",
-      "aggregate_root",
-      "domain_common_aggregate_root_go",
-      "infrastructure_storage_obj_dao_minio_go",
-      "obj_dao_minioobjdao",
-      "obj_dao_minioobjdao_composedirname",
-      "obj_dao_minioobjdao_createbucket",
-      "obj_dao_minioobjdao_createdir",
-      "obj_dao_minioobjdao_deleteobject",
-      "obj_dao_minioobjdao_downloadobject",
-      "obj_dao_minioobjdao_getbucketname",
-      "obj_dao_minioobjdao_listobjects",
-      "obj_dao_minioobjdao_presignobject",
-      "obj_dao_minioobjdao_uploadobject"
-    ],
-    "23": [
+    "19": [
       "aggregate_session",
       "aggregate_session_aggregatetype",
       "aggregate_session_createdat",
@@ -823,24 +748,43 @@
       "aggregate_session_updatesummary",
       "domain_session_aggregate_session_go"
     ],
-    "24": [
-      "aggregate_user",
-      "aggregate_user_aggregatetype",
-      "aggregate_user_avatar",
-      "aggregate_user_changepermission",
-      "aggregate_user_createdat",
-      "aggregate_user_email",
-      "aggregate_user_githubbindid",
-      "aggregate_user_googlebindid",
-      "aggregate_user_lastlogin",
-      "aggregate_user_name",
-      "aggregate_user_permission",
-      "aggregate_user_recordlogin",
-      "aggregate_user_registeruser",
-      "aggregate_user_restoreuser",
-      "domain_identity_aggregate_user_go"
+    "20": [
+      "infrastructure_repository_audio_dir_creator_go",
+      "infrastructure_storage_cos_go",
+      "infrastructure_storage_minio_go",
+      "infrastructure_storage_obj_dao_singleton_go",
+      "infrastructure_storage_storage_go",
+      "obj_dao_singleton_createobjectstoragedao",
+      "obj_dao_singleton_getaudioobjdao",
+      "repository_audio_dir_creator_newaudiodircreator",
+      "repository_audiodircreator",
+      "repository_audiodircreator_createdir",
+      "storage_cos_getcosclient",
+      "storage_cos_initcosclient",
+      "storage_minio_getminiostorage",
+      "storage_minio_initminioclient",
+      "storage_storage_getplatform",
+      "storage_storage_initobjectstorage"
     ],
-    "25": [
+    "21": [
+      "aggregate_base",
+      "aggregate_base_aggregateid",
+      "aggregate_base_setid",
+      "aggregate_root",
+      "domain_common_aggregate_root_go",
+      "infrastructure_storage_obj_dao_minio_go",
+      "obj_dao_minioobjdao",
+      "obj_dao_minioobjdao_composedirname",
+      "obj_dao_minioobjdao_createbucket",
+      "obj_dao_minioobjdao_createdir",
+      "obj_dao_minioobjdao_deleteobject",
+      "obj_dao_minioobjdao_downloadobject",
+      "obj_dao_minioobjdao_getbucketname",
+      "obj_dao_minioobjdao_listobjects",
+      "obj_dao_minioobjdao_presignobject",
+      "obj_dao_minioobjdao_uploadobject"
+    ],
+    "22": [
       "dao_singleton_getmodelendpointdao",
       "domain_llmproxy_vo_upstream_creds_go",
       "infrastructure_repository_endpoint_repository_go",
@@ -857,23 +801,56 @@
       "vo_upstreamcreds_maskedapikey",
       "vo_upstreamcreds_model"
     ],
-    "26": [
-      "database_gormloggeradapter",
-      "database_gormloggeradapter_error",
-      "database_gormloggeradapter_info",
-      "database_gormloggeradapter_logmode",
-      "database_gormloggeradapter_trace",
-      "database_gormloggeradapter_warn",
-      "middleware_header_passthrough_go",
-      "middleware_header_passthrough_headerpassthroughmiddleware",
-      "middleware_rate_go",
-      "middleware_rate_tokenbucketratelimitermiddleware",
-      "router_anthropic_go",
-      "router_anthropic_initanthropicrouter",
-      "router_openai_go",
-      "router_openai_initopenairouter"
+    "23": [
+      "aggregate_user",
+      "aggregate_user_aggregatetype",
+      "aggregate_user_avatar",
+      "aggregate_user_changepermission",
+      "aggregate_user_createdat",
+      "aggregate_user_email",
+      "aggregate_user_githubbindid",
+      "aggregate_user_googlebindid",
+      "aggregate_user_lastlogin",
+      "aggregate_user_name",
+      "aggregate_user_permission",
+      "aggregate_user_recordlogin",
+      "aggregate_user_restoreuser",
+      "aggregate_user_updateprofile",
+      "domain_identity_aggregate_user_go"
     ],
-    "27": [
+    "24": [
+      "dao_singleton_getmessagedao",
+      "dao_singleton_getmodelcallauditdao",
+      "dao_singleton_getsessiondao",
+      "dao_singleton_gettooldao",
+      "dao_singleton_init",
+      "infrastructure_database_dao_singleton_go",
+      "infrastructure_repository_message_repository_go",
+      "infrastructure_repository_tool_repository_go",
+      "pool_poolmanager",
+      "pool_poolmanager_deduplicateandstoremessages",
+      "pool_poolmanager_deduplicateandstoretools",
+      "pool_poolmanager_submitmodelcallaudittask",
+      "repository_message_repository_newmessagerepository",
+      "repository_session_repository_newsessionreadrepository",
+      "repository_tool_repository_newtoolrepository"
+    ],
+    "25": [
+      "cache_redis_closecache",
+      "cache_redis_getredisclient",
+      "infrastructure_cache_redis_go",
+      "lock_lock_go",
+      "lock_lock_newlocker",
+      "lock_locker",
+      "lock_redislocker",
+      "lock_redislocker_lock",
+      "lock_redislocker_unlock",
+      "middleware_guard_go",
+      "middleware_guard_guardmiddleware",
+      "middleware_guard_isroutenotfound",
+      "middleware_guardconfig"
+    ],
+    "26": [
       "application_llmproxy_usecase_query_go",
       "infrastructure_transport_endpoint_go",
       "transport_endpoint_newupstreamendpointfromcredential",
@@ -888,10 +865,66 @@
       "usecase_query_newlistanthropicmodels",
       "usecase_query_newlistopenaimodels"
     ],
+    "27": [
+      "agent_scorer",
+      "agent_scorer_score",
+      "agent_scorer_scorewithretry",
+      "cron_cron_newcronloggeradapter",
+      "cron_session_dedup_newsessiondeduplicatecron",
+      "cron_session_score_go",
+      "cron_session_score_newsessionscorecron",
+      "cron_soft_delete_purge_go",
+      "cron_soft_delete_purge_newsoftdeletepurgecron",
+      "cron_softdeletepurgecron",
+      "cron_softdeletepurgecron_start",
+      "cron_softdeletepurgecron_stop",
+      "logger_logger_logger"
+    ],
     "28": [
+      "openai_openaichatcompletiontoolchoiceparam",
+      "openai_openaichatcompletiontoolchoiceparam_marshaljson",
+      "openai_openaichatcompletiontoolchoiceparam_schema",
+      "openai_openaichatcompletiontoolchoiceparam_unmarshaljson",
+      "openai_openaimessagecontent",
+      "openai_openaimessagecontent_marshaljson",
+      "openai_openaimessagecontent_schema",
+      "openai_openaimessagecontent_unmarshaljson",
+      "openai_openaivoiceparam",
+      "openai_openaivoiceparam_marshaljson",
+      "openai_openaivoiceparam_schema",
+      "openai_openaivoiceparam_unmarshaljson"
+    ],
+    "29": [
+      "middleware_jwt_go",
+      "middleware_jwt_jwtmiddleware",
+      "middleware_jwt_jwtusercachekey",
+      "middleware_jwtusercache",
+      "middleware_permission_go",
+      "middleware_permission_limituserpermissionmiddleware",
+      "router_apikey_go",
+      "router_apikey_initapikeyrouter",
+      "router_user_go",
+      "router_user_inituserrouter",
+      "util_http_writeerrorhttpresponse",
+      "util_http_writeerrorresponse"
+    ],
+    "30": [
+      "logger_cls_encodefields",
+      "logger_cls_go",
+      "logger_cls_valuetostring",
+      "logger_clscallback",
+      "logger_clscallback_fail",
+      "logger_clscallback_success",
+      "logger_clscore",
+      "logger_clscore_check",
+      "logger_clscore_enabled",
+      "logger_clscore_sync",
+      "logger_clscore_with",
+      "logger_clscore_write"
+    ],
+    "31": [
       "application_session_query_session_queries_go",
       "query_getsessionhandler",
-      "query_getsessionhandler_handle",
       "query_getsessionquery",
       "query_listsessionshandler",
       "query_listsessionshandler_handle",
@@ -903,123 +936,20 @@
       "query_sessionsummaryview",
       "query_toolview"
     ],
-    "29": [
-      "bootstrap_container_newoauth2platforms",
-      "infrastructure_oauth2_github_go",
-      "oauth2_github_newgithubplatform",
-      "oauth2_githubemail",
-      "oauth2_githubplatform",
-      "oauth2_githubplatform_exchangetoken",
-      "oauth2_githubplatform_getauthurlwithstate",
-      "oauth2_githubplatform_getuserinfo",
-      "oauth2_githubuserinfo",
-      "oauth2_githubuserinfo_getavatar",
-      "oauth2_githubuserinfo_getemail",
-      "oauth2_githubuserinfo_getid",
-      "oauth2_githubuserinfo_getname"
-    ],
-    "30": [
-      "application_identity_command_update_profile_go",
-      "command_update_profile_newupdateprofilehandler",
-      "command_updateprofilecommand",
-      "command_updateprofilehandler",
-      "command_updateprofilehandler_handle",
-      "domain_identity_vo_profile_go",
-      "vo_avatar",
-      "vo_avatar_string",
-      "vo_email",
-      "vo_email_string",
-      "vo_username",
-      "vo_username_isempty",
-      "vo_username_string"
-    ],
-    "31": [
-      "cron_session_summarize_formatmessage",
-      "cron_session_summarize_go",
-      "cron_session_summarize_newsessionsummarizecron",
-      "cron_sessionscorecron",
-      "cron_sessionscorecron_getsessioncontent",
-      "cron_sessionscorecron_score",
-      "cron_sessionscorecron_start",
-      "cron_sessionscorecron_stop",
-      "cron_sessionsummarizecron",
-      "cron_sessionsummarizecron_getsessioncontent",
-      "cron_sessionsummarizecron_start",
-      "cron_sessionsummarizecron_stop",
-      "cron_sessionsummarizecron_summarize"
-    ],
     "32": [
-      "middleware_jwt_go",
-      "middleware_jwt_jwtmiddleware",
-      "middleware_jwt_jwtusercachekey",
-      "middleware_jwtusercache",
-      "middleware_lock_go",
-      "middleware_lock_redislockmiddleware",
-      "middleware_permission_go",
-      "middleware_permission_limituserpermissionmiddleware",
-      "router_apikey_go",
-      "router_apikey_initapikeyrouter",
-      "router_user_go",
-      "router_user_inituserrouter",
-      "util_http_writeerrorresponse"
+      "bootstrap_routeparams",
+      "bootstrap_router_go",
+      "bootstrap_router_registerroutes",
+      "router_apirouterdependencies",
+      "router_health_go",
+      "router_health_inithealthrouter",
+      "router_oauth2_go",
+      "router_oauth2_initoauth2router",
+      "router_router_go",
+      "router_router_registerapirouter",
+      "router_router_registerdocsrouter"
     ],
     "33": [
-      "dto_openaichatcompletiontoolchoiceparam",
-      "dto_openaichatcompletiontoolchoiceparam_marshaljson",
-      "dto_openaichatcompletiontoolchoiceparam_schema",
-      "dto_openaichatcompletiontoolchoiceparam_unmarshaljson",
-      "dto_openaimessagecontent",
-      "dto_openaimessagecontent_marshaljson",
-      "dto_openaimessagecontent_schema",
-      "dto_openaimessagecontent_unmarshaljson",
-      "dto_openaivoiceparam",
-      "dto_openaivoiceparam_marshaljson",
-      "dto_openaivoiceparam_schema",
-      "dto_openaivoiceparam_unmarshaljson"
-    ],
-    "34": [
-      "aggregate_user_updateprofile",
-      "api_huma_go",
-      "api_huma_newhumaapi",
-      "ierr_ierr_new",
-      "middleware_compress_compressmiddleware",
-      "middleware_compress_go",
-      "middleware_cors_corsmiddleware",
-      "middleware_cors_go",
-      "middleware_fgprof_fgprofmiddleware",
-      "middleware_fgprof_go",
-      "middleware_trace_go",
-      "middleware_trace_tracemiddleware"
-    ],
-    "35": [
-      "aggregate_reconstruct_reconstructaudit",
-      "aggregate_reconstructauditinput",
-      "domain_modelcall_aggregate_reconstruct_go",
-      "domain_modelcall_vo_call_status_go",
-      "repository_auditrepository",
-      "repository_auditrepository_listbyapikeyid",
-      "repository_auditrepository_save",
-      "vo_call_status_newcallstatus",
-      "vo_callstatus",
-      "vo_callstatus_errormessage",
-      "vo_callstatus_issuccess",
-      "vo_callstatus_upstreamstatuscode"
-    ],
-    "36": [
-      "common_enum_sort_go",
-      "cron_mergeresult",
-      "cron_session_dedup_findredundantsessions",
-      "cron_session_dedup_findredundantsessionswithmerge",
-      "cron_session_dedup_go",
-      "cron_session_dedup_isequalslice",
-      "cron_session_dedup_issubarray",
-      "cron_sessiondeduplicatecron",
-      "cron_sessiondeduplicatecron_deduplicate",
-      "cron_sessiondeduplicatecron_start",
-      "cron_sessiondeduplicatecron_stop",
-      "enum_sort"
-    ],
-    "37": [
       "application_identity_command_refresh_tokens_go",
       "command_refresh_tokens_newrefreshtokenshandler",
       "command_refreshtokenscommand",
@@ -1032,20 +962,7 @@
       "vo_tokenpair_isempty",
       "vo_tokenpair_refreshtoken"
     ],
-    "38": [
-      "infrastructure_oauth2_google_go",
-      "oauth2_google_newgoogleplatform",
-      "oauth2_googleplatform",
-      "oauth2_googleplatform_exchangetoken",
-      "oauth2_googleplatform_getauthurlwithstate",
-      "oauth2_googleuserinfo",
-      "oauth2_googleuserinfo_getavatar",
-      "oauth2_googleuserinfo_getemail",
-      "oauth2_googleuserinfo_getid",
-      "oauth2_googleuserinfo_getname",
-      "oauth2_googleuserinfoapiresponse"
-    ],
-    "39": [
+    "34": [
       "infrastructure_storage_obj_dao_cos_go",
       "obj_dao_cosobjdao",
       "obj_dao_cosobjdao_composedirname",
@@ -1058,7 +975,7 @@
       "obj_dao_cosobjdao_presignobject",
       "obj_dao_cosobjdao_uploadobject"
     ],
-    "40": [
+    "35": [
       "dto_asynctask_go",
       "dto_messagestoretask",
       "dto_modelcallaudittask",
@@ -1070,19 +987,31 @@
       "dto_scoretask",
       "dto_summarizetask"
     ],
-    "41": [
-      "application_oauth2_command_handle_callback_go",
-      "command_handle_callback_newhandlecallbackhandler",
-      "command_handle_callback_newinitiateloginhandler",
-      "command_handlecallbackcommand",
-      "command_handlecallbackresult",
-      "command_initiatelogincommand",
-      "command_initiateloginhandler",
-      "command_initiateloginhandler_handle",
-      "command_initiateloginresult",
-      "command_objectstoragedircreator"
+    "36": [
+      "dao_singleton_getproxyapikeydao",
+      "dao_singleton_getuserdao",
+      "middleware_apikey_apikeymiddleware",
+      "middleware_apikey_go",
+      "repository_api_key_repository_newapikeyrepository",
+      "repository_user_repository_newuserrepository",
+      "router_audit_go",
+      "router_audit_initauditrouter",
+      "router_session_go",
+      "router_session_initsessionrouter"
     ],
-    "42": [
+    "37": [
+      "dao_basedao_modelt",
+      "dao_basedao_modelt_batchcreate",
+      "dao_basedao_modelt_batchdeletebyfield",
+      "dao_basedao_modelt_batchget",
+      "dao_basedao_modelt_batchgetbyfield",
+      "dao_basedao_modelt_create",
+      "dao_basedao_modelt_delete",
+      "dao_basedao_modelt_get",
+      "dao_basedao_modelt_harddeletesoftdeleted",
+      "dao_basedao_modelt_update"
+    ],
+    "38": [
       "domain_apikey_service_generator_go",
       "domain_apikey_vo_api_key_secret_go",
       "service_apikeygenerator",
@@ -1094,7 +1023,31 @@
       "vo_apikeysecret_masked",
       "vo_apikeysecret_raw"
     ],
-    "43": [
+    "39": [
+      "infrastructure_transport_header_passthrough_go",
+      "transport_anthropicproxy",
+      "transport_anthropicproxy_forwardcounttokens",
+      "transport_anthropicproxy_forwardcreatemessage",
+      "transport_anthropicproxy_forwardcreatemessagestream",
+      "transport_anthropicproxy_sendrequest",
+      "transport_header_passthrough_capturepassthroughresponseheaders",
+      "transport_header_passthrough_ispassthroughresponseheader",
+      "transport_header_passthrough_storepassthroughresponseheaders",
+      "util_context_getpassthroughheaders"
+    ],
+    "40": [
+      "application_oauth2_command_handle_callback_go",
+      "command_handle_callback_newhandlecallbackhandler",
+      "command_handle_callback_newinitiateloginhandler",
+      "command_handlecallbackcommand",
+      "command_handlecallbackresult",
+      "command_initiatelogincommand",
+      "command_initiateloginhandler",
+      "command_initiateloginhandler_handle",
+      "command_initiateloginresult",
+      "command_objectstoragedircreator"
+    ],
+    "41": [
       "cron_cron",
       "cron_cron_capitalizefirst",
       "cron_cron_convertzapkeyvalues",
@@ -1106,7 +1059,19 @@
       "cron_cronloggeradapter_info",
       "cron_cronregistryentry"
     ],
-    "44": [
+    "42": [
+      "bootstrap_container_initinfrastructure",
+      "cache_redis_initcache",
+      "cron_cron_initcronjobs",
+      "httpclient_httpclient_gethttpclient",
+      "httpclient_httpclient_inithttpclient",
+      "infrastructure_httpclient_httpclient_go",
+      "infrastructure_pool_pool_go",
+      "pool_pool_initpoolmanager",
+      "pool_pool_stoppoolmanager",
+      "pool_poolmanager_stop"
+    ],
+    "43": [
       "dto_getsessionreq",
       "dto_getsessionrsp",
       "dto_listsessionsreq",
@@ -1117,27 +1082,38 @@
       "dto_sessionsummary",
       "dto_toolitem"
     ],
+    "44": [
+      "openai_responsecodeinterpretercontainer",
+      "openai_responsecodeinterpretercontainer_marshaljson",
+      "openai_responsecodeinterpretercontainer_schema",
+      "openai_responsecodeinterpretercontainer_unmarshaljson",
+      "openai_responsemcprequireapproval",
+      "openai_responsemcprequireapproval_marshaljson",
+      "openai_responsemcprequireapproval_schema",
+      "openai_responsemcprequireapproval_unmarshaljson",
+      "openai_responsetoolchoiceparam_schema"
+    ],
     "45": [
-      "infrastructure_oauth2_common_go",
-      "oauth2_common_generateoauth2state",
-      "oauth2_common_newstatemanager",
-      "oauth2_common_verifyoauth2state",
-      "oauth2_platform",
-      "oauth2_statemanager",
-      "oauth2_statemanager_cleanup",
-      "oauth2_statemanager_generatestate",
-      "oauth2_statemanager_verifystate"
+      "database_gormloggeradapter_warn",
+      "middleware_header_passthrough_go",
+      "middleware_header_passthrough_headerpassthroughmiddleware",
+      "middleware_rate_go",
+      "middleware_rate_tokenbucketratelimitermiddleware",
+      "router_anthropic_go",
+      "router_anthropic_initanthropicrouter",
+      "router_openai_go",
+      "router_openai_initopenairouter"
     ],
     "46": [
-      "domain_oauth2_vo_user_info_go",
-      "oauth2_googleplatform_getuserinfo",
-      "vo_oauthuserinfo",
-      "vo_oauthuserinfo_avatar",
-      "vo_oauthuserinfo_email",
-      "vo_oauthuserinfo_id",
-      "vo_oauthuserinfo_isempty",
-      "vo_oauthuserinfo_name",
-      "vo_user_info_newoauthuserinfo"
+      "application_apikey_command_issue_api_key_go",
+      "application_apikey_command_user_exists_checker_go",
+      "command_issue_api_key_newissueapikeyhandler",
+      "command_issueapikeycommand",
+      "command_issueapikeyhandler",
+      "command_issueapikeyresult",
+      "command_user_exists_checker_newuserexistencechecker",
+      "command_userexistencechecker",
+      "command_userexistencechecker_exists"
     ],
     "47": [
       "ierr_internalerror_is",
@@ -1151,37 +1127,61 @@
       "repository_userrepository_touchlastlogin"
     ],
     "48": [
-      "agent_scorer",
-      "agent_scorer_score",
-      "agent_scorer_scorewithretry",
-      "bootstrap_container_initinfrastructure",
-      "cache_redis_initcache",
-      "cron_cron_initcronjobs",
-      "database_postgresql_initdatabase",
-      "httpclient_httpclient_inithttpclient",
-      "logger_logger_logger"
+      "infrastructure_transport_openai_go",
+      "transport_openai_newopenaiproxy",
+      "transport_openaiproxy",
+      "transport_openaiproxy_doupstreamrequest",
+      "transport_openaiproxy_forwardchatcompletion",
+      "transport_openaiproxy_forwardchatcompletionstream",
+      "transport_openaiproxy_forwardcreateresponse",
+      "transport_openaiproxy_forwardcreateresponsestream",
+      "transport_openaiproxy_sendrequest"
     ],
     "49": [
-      "dto_responsemcpallowedtools",
-      "dto_responsemcpallowedtools_marshaljson",
-      "dto_responsemcpallowedtools_schema",
-      "dto_responsemcpallowedtools_unmarshaljson",
-      "dto_responsetoolchoiceparam",
-      "dto_responsetoolchoiceparam_marshaljson",
-      "dto_responsetoolchoiceparam_schema",
-      "dto_responsetoolchoiceparam_unmarshaljson"
+      "infrastructure_oauth2_common_go",
+      "oauth2_common_generateoauth2state",
+      "oauth2_common_newstatemanager",
+      "oauth2_common_verifyoauth2state",
+      "oauth2_platform",
+      "oauth2_statemanager",
+      "oauth2_statemanager_cleanup",
+      "oauth2_statemanager_generatestate",
+      "oauth2_statemanager_verifystate"
     ],
     "50": [
-      "dto_openai_response_rsp_go",
-      "dto_openaicreateresponsersp",
-      "dto_responseerrorbody",
-      "dto_responseincomplete",
-      "dto_responseinputtokensdetail",
-      "dto_responseoutputtokensdetail",
-      "dto_responsestreamterminalevent",
-      "dto_responseusage"
+      "command_handlecallbackhandler",
+      "command_handlecallbackhandler_exchangeandfetchuser",
+      "command_handlecallbackhandler_findbybindid",
+      "command_handlecallbackhandler_handle",
+      "command_handlecallbackhandler_logtokenreceived",
+      "command_handlecallbackhandler_resolveuser",
+      "command_handlecallbackhandler_signtokenpair",
+      "command_handlecallbackhandler_validatestateandplatform",
+      "logger_logger_withctx"
     ],
     "51": [
+      "aggregate_proxy_api_key_restoreproxyapikey",
+      "aggregate_proxyapikey",
+      "aggregate_proxyapikey_aggregatetype",
+      "aggregate_proxyapikey_createdat",
+      "aggregate_proxyapikey_isownedby",
+      "aggregate_proxyapikey_name",
+      "aggregate_proxyapikey_secret",
+      "aggregate_proxyapikey_userid",
+      "domain_apikey_aggregate_proxy_api_key_go"
+    ],
+    "52": [
+      "cron_mergeresult",
+      "cron_session_dedup_findredundantsessions",
+      "cron_session_dedup_findredundantsessionswithmerge",
+      "cron_session_dedup_go",
+      "cron_session_dedup_isequalslice",
+      "cron_session_dedup_issubarray",
+      "cron_sessiondeduplicatecron",
+      "cron_sessiondeduplicatecron_start",
+      "cron_sessiondeduplicatecron_stop"
+    ],
+    "53": [
       "dto_apikey_go",
       "dto_apikeydetail",
       "dto_apikeyitem",
@@ -1191,7 +1191,17 @@
       "dto_deleteapikeyreq",
       "dto_listapikeysrsp"
     ],
-    "52": [
+    "54": [
+      "dto_openai_response_rsp_go",
+      "openai_openaicreateresponsersp",
+      "openai_responseerrorbody",
+      "openai_responseincomplete",
+      "openai_responseinputtokensdetail",
+      "openai_responseoutputtokensdetail",
+      "openai_responsestreamterminalevent",
+      "openai_responseusage"
+    ],
+    "55": [
       "common_model_error_go",
       "model_error",
       "model_error_error",
@@ -1201,77 +1211,7 @@
       "model_upstreamerror",
       "model_upstreamerror_error"
     ],
-    "53": [
-      "aggregate_message",
-      "aggregate_message_aggregatetype",
-      "aggregate_message_checksum",
-      "aggregate_message_content",
-      "aggregate_message_model",
-      "aggregate_message_recordmessage",
-      "aggregate_message_restoremessage",
-      "domain_conversation_aggregate_message_go"
-    ],
-    "54": [
-      "command_handlecallbackhandler",
-      "command_handlecallbackhandler_exchangeandfetchuser",
-      "command_handlecallbackhandler_findbybindid",
-      "command_handlecallbackhandler_handle",
-      "command_handlecallbackhandler_logtokenreceived",
-      "command_handlecallbackhandler_resolveuser",
-      "command_handlecallbackhandler_signtokenpair",
-      "command_handlecallbackhandler_validatestateandplatform"
-    ],
-    "55": [
-      "domain_common_vo_json_schema_go",
-      "vo_jsonschemaproperty",
-      "vo_jsonschemaproperty_hastype",
-      "vo_jsonschemaproperty_schema",
-      "vo_jsonschematypevalue",
-      "vo_jsonschematypevalue_hastype",
-      "vo_jsonschematypevalue_marshaljson",
-      "vo_jsonschematypevalue_unmarshaljson"
-    ],
     "56": [
-      "domain_modelcall_vo_token_breakdown_go",
-      "vo_token_breakdown_newtokenbreakdown",
-      "vo_tokenbreakdown",
-      "vo_tokenbreakdown_cachecreation",
-      "vo_tokenbreakdown_cacheread",
-      "vo_tokenbreakdown_input",
-      "vo_tokenbreakdown_iszero",
-      "vo_tokenbreakdown_output"
-    ],
-    "57": [
-      "domain_conversation_vo_unified_message_go",
-      "vo_unifiedcontent",
-      "vo_unifiedcontent_marshaljson",
-      "vo_unifiedcontent_schema",
-      "vo_unifiedcontent_unmarshaljson",
-      "vo_unifiedcontentpart",
-      "vo_unifiedmessage",
-      "vo_unifiedtoolcall"
-    ],
-    "58": [
-      "domain_session_repository_go",
-      "session_messagedetailprojection",
-      "session_pageparam",
-      "session_sessiondetailprojection",
-      "session_sessionreadrepository",
-      "session_sessionrepository",
-      "session_sessionsummaryprojection",
-      "session_tooldetailprojection"
-    ],
-    "59": [
-      "infrastructure_repository_api_key_repository_go",
-      "repository_api_key_repository_toapikeyaggregate",
-      "repository_api_key_repository_toapikeyaggregatelist",
-      "repository_apikeyrepository",
-      "repository_apikeyrepository_delete",
-      "repository_apikeyrepository_findbyid",
-      "repository_apikeyrepository_listall",
-      "repository_apikeyrepository_listbyuser"
-    ],
-    "60": [
       "infrastructure_repository_session_repository_go",
       "repository_session_repository_applyscore",
       "repository_session_repository_applysummary",
@@ -1281,7 +1221,57 @@
       "repository_sessionreadrepository_getsessiondetail",
       "repository_sessionrepository_save"
     ],
+    "57": [
+      "database_gormloggeradapter",
+      "database_gormloggeradapter_error",
+      "database_gormloggeradapter_info",
+      "database_gormloggeradapter_logmode",
+      "database_gormloggeradapter_trace",
+      "database_postgresql_closedatabase",
+      "database_postgresql_initdatabase",
+      "infrastructure_database_postgresql_go"
+    ],
+    "58": [
+      "domain_identity_vo_profile_go",
+      "vo_avatar",
+      "vo_avatar_string",
+      "vo_email",
+      "vo_email_string",
+      "vo_username",
+      "vo_username_isempty",
+      "vo_username_string"
+    ],
+    "59": [
+      "domain_common_vo_json_schema_go",
+      "vo_jsonschemaproperty",
+      "vo_jsonschemaproperty_hastype",
+      "vo_jsonschemaproperty_schema",
+      "vo_jsonschematypevalue",
+      "vo_jsonschematypevalue_hastype",
+      "vo_jsonschematypevalue_marshaljson",
+      "vo_jsonschematypevalue_unmarshaljson"
+    ],
+    "60": [
+      "domain_conversation_vo_unified_message_go",
+      "vo_unifiedcontent",
+      "vo_unifiedcontent_marshaljson",
+      "vo_unifiedcontent_schema",
+      "vo_unifiedcontent_unmarshaljson",
+      "vo_unifiedcontentpart",
+      "vo_unifiedmessage",
+      "vo_unifiedtoolcall"
+    ],
     "61": [
+      "domain_session_repository_go",
+      "session_messagedetailprojection",
+      "session_pageparam",
+      "session_sessiondetailprojection",
+      "session_sessionreadrepository",
+      "session_sessionrepository",
+      "session_sessionsummaryprojection",
+      "session_tooldetailprojection"
+    ],
+    "62": [
       "domain_conversation_vo_checksum_go",
       "pool_poolmanager_submitmessagestoretask",
       "vo_checksum_computemessagechecksum",
@@ -1291,41 +1281,33 @@
       "vo_toolchecksumwire",
       "vo_toolschemamap"
     ],
-    "62": [
-      "handler_openai_go",
-      "handler_openai_newopenaihandler",
-      "handler_openaidependencies",
-      "handler_openaihandler",
-      "handler_openaihandler_handlechatcompletion",
-      "handler_openaihandler_handlecreateresponse",
-      "handler_openaihandler_handlelistmodels"
-    ],
     "63": [
-      "aggregate_tool",
-      "aggregate_tool_aggregatetype",
-      "aggregate_tool_checksum",
-      "aggregate_tool_content",
-      "aggregate_tool_recordtool",
-      "aggregate_tool_restoretool",
-      "domain_conversation_aggregate_tool_go"
+      "cron_session_summarize_formatmessage",
+      "cron_session_summarize_go",
+      "cron_session_summarize_newsessionsummarizecron",
+      "cron_sessionsummarizecron",
+      "cron_sessionsummarizecron_getsessioncontent",
+      "cron_sessionsummarizecron_start",
+      "cron_sessionsummarizecron_stop",
+      "cron_sessionsummarizecron_summarize"
     ],
     "64": [
-      "aggregate_endpoint",
-      "aggregate_endpoint_aggregatetype",
-      "aggregate_endpoint_alias",
-      "aggregate_endpoint_createendpoint",
-      "aggregate_endpoint_creds",
-      "aggregate_endpoint_provider",
-      "domain_llmproxy_aggregate_endpoint_go"
+      "middleware_log_go",
+      "middleware_log_issensitiveheader",
+      "middleware_log_logmiddleware",
+      "middleware_logmiddlewareconfig",
+      "middleware_logsampler",
+      "middleware_logsampler_shouldlog",
+      "middleware_logsamplingrule"
     ],
     "65": [
-      "domain_modelcall_vo_call_latency_go",
-      "vo_call_latency_newcalllatency",
-      "vo_calllatency",
-      "vo_calllatency_firsttoken",
-      "vo_calllatency_firsttokenms",
-      "vo_calllatency_stream",
-      "vo_calllatency_streamms"
+      "domain_apikey_vo_api_key_name_go",
+      "infrastructure_repository_api_key_repository_go",
+      "repository_api_key_repository_toapikeyaggregate",
+      "repository_api_key_repository_toapikeyaggregatelist",
+      "vo_apikeyname",
+      "vo_apikeyname_isempty",
+      "vo_apikeyname_string"
     ],
     "66": [
       "aggregate_session_restoresession",
@@ -1337,24 +1319,33 @@
       "vo_summary_score_restoresessionscore"
     ],
     "67": [
-      "infrastructure_pool_pool_go",
-      "pool_pool_initpoolmanager",
-      "pool_pool_stoppoolmanager",
-      "pool_poolmanager",
-      "pool_poolmanager_deduplicateandstoremessages",
-      "pool_poolmanager_deduplicateandstoretools",
-      "pool_poolmanager_stop"
+      "aggregate_endpoint",
+      "aggregate_endpoint_aggregatetype",
+      "aggregate_endpoint_alias",
+      "aggregate_endpoint_createendpoint",
+      "aggregate_endpoint_creds",
+      "aggregate_endpoint_provider",
+      "domain_llmproxy_aggregate_endpoint_go"
     ],
     "68": [
-      "handler_anthropic_go",
-      "handler_anthropic_newanthropichandler",
-      "handler_anthropicdependencies",
-      "handler_anthropichandler",
-      "handler_anthropichandler_handlecounttokens",
-      "handler_anthropichandler_handlecreatemessage",
-      "handler_anthropichandler_handlelistmodels"
+      "domain_modelcall_vo_call_latency_go",
+      "vo_call_latency_newcalllatency",
+      "vo_calllatency",
+      "vo_calllatency_firsttoken",
+      "vo_calllatency_firsttokenms",
+      "vo_calllatency_stream",
+      "vo_calllatency_streamms"
     ],
     "69": [
+      "aggregate_message",
+      "aggregate_message_aggregatetype",
+      "aggregate_message_checksum",
+      "aggregate_message_content",
+      "aggregate_message_model",
+      "aggregate_message_recordmessage",
+      "domain_conversation_aggregate_message_go"
+    ],
+    "70": [
       "dto_detaileduser",
       "dto_getcuruserrsp",
       "dto_updateuserreq",
@@ -1362,21 +1353,13 @@
       "dto_user",
       "dto_user_go"
     ],
-    "70": [
+    "71": [
       "dto_callbackreq",
       "dto_callbackreqbody",
       "dto_callbackrsp",
       "dto_loginreq",
       "dto_loginresp",
       "dto_oauth2_go"
-    ],
-    "71": [
-      "application_apikey_query_list_api_keys_go",
-      "query_apikeyview",
-      "query_list_api_keys_newlistapikeyshandler",
-      "query_listapikeyshandler",
-      "query_listapikeyshandler_handle",
-      "query_listapikeysquery"
     ],
     "72": [
       "common_model_param_go",
@@ -1387,6 +1370,14 @@
       "model_sortparam"
     ],
     "73": [
+      "application_apikey_query_list_api_keys_go",
+      "query_apikeyview",
+      "query_list_api_keys_newlistapikeyshandler",
+      "query_listapikeyshandler",
+      "query_listapikeyshandler_handle",
+      "query_listapikeysquery"
+    ],
+    "74": [
       "dao_commonparam",
       "dao_pageinfo",
       "dao_pageparam",
@@ -1394,7 +1385,15 @@
       "dao_sortparam",
       "infrastructure_database_dao_param_go"
     ],
-    "74": [
+    "75": [
+      "logger_cls_newclscore",
+      "logger_logger_go",
+      "logger_logger_init",
+      "logger_logger_withfctx",
+      "middleware_recover_go",
+      "middleware_recover_recovermiddleware"
+    ],
+    "76": [
       "application_identity_query_get_current_user_go",
       "query_get_current_user_newgetcurrentuserhandler",
       "query_getcurrentuserhandler",
@@ -1402,15 +1401,31 @@
       "query_getcurrentuserquery",
       "query_userview"
     ],
-    "75": [
-      "bootstrap_container_newaccesstokensigner",
-      "bootstrap_container_newrefreshtokensigner",
-      "infrastructure_jwt_singleton_go",
-      "jwt_singleton_getaccesstokensigner",
-      "jwt_singleton_getrefreshtokensigner",
-      "jwt_singleton_init"
+    "77": [
+      "domain_apikey_vo_api_key_quota_go",
+      "vo_api_key_quota_defaultapikeyquota",
+      "vo_api_key_quota_newapikeyquota",
+      "vo_apikeyquota",
+      "vo_apikeyquota_allows",
+      "vo_apikeyquota_maxcount"
     ],
-    "76": [
+    "78": [
+      "domain_modelcall_vo_call_status_go",
+      "vo_call_status_newcallstatus",
+      "vo_callstatus",
+      "vo_callstatus_errormessage",
+      "vo_callstatus_issuccess",
+      "vo_callstatus_upstreamstatuscode"
+    ],
+    "79": [
+      "aggregate_tool",
+      "aggregate_tool_aggregatetype",
+      "aggregate_tool_checksum",
+      "aggregate_tool_content",
+      "aggregate_tool_recordtool",
+      "domain_conversation_aggregate_tool_go"
+    ],
+    "80": [
       "lintconv_diagnostic",
       "lintconv_result",
       "lintconv_result_errorcount",
@@ -1418,547 +1433,538 @@
       "lintconv_result_warningcount",
       "tool_lintconv_diagnostic_go"
     ],
-    "77": [
-      "dto_json_schema_go",
-      "dto_jsonschemaproperty",
-      "dto_jsonschemaproperty_hastype",
-      "dto_jsonschemaproperty_schema",
-      "dto_jsonschematypevalue"
-    ],
-    "78": [
-      "infrastructure_jwt_jwt_go",
-      "jwt_claims",
-      "jwt_tokensigner",
-      "jwt_tokensigner_decodetoken",
-      "jwt_tokensigner_encodetoken"
-    ],
-    "79": [
-      "application_apikey_command_revoke_api_key_go",
-      "command_revoke_api_key_newrevokeapikeyhandler",
-      "command_revokeapikeycommand",
-      "command_revokeapikeyhandler",
-      "command_revokeapikeyhandler_handle"
-    ],
-    "80": [
-      "application_audit_query_list_audit_logs_go",
-      "query_list_audit_logs_newlistauditlogshandler",
-      "query_listauditlogshandler",
-      "query_listauditlogshandler_handle",
-      "query_listauditlogsquery"
-    ],
     "81": [
+      "dto_schema_schema_go",
+      "schema_jsonschemaproperty",
+      "schema_jsonschemaproperty_hastype",
+      "schema_jsonschemaproperty_schema",
+      "schema_jsonschematypevalue"
+    ],
+    "82": [
+      "util_string_go",
+      "util_string_todataurl",
+      "util_string_truncatefieldvalue",
+      "util_string_truncatemapvalues",
+      "util_string_truncatevalue"
+    ],
+    "83": [
       "config_config_go",
       "config_config_init",
       "config_config_initenvironment",
       "config_poolconfig",
       "config_poolgroupconfig"
     ],
-    "82": [
+    "84": [
+      "application_audit_query_list_audit_logs_go",
+      "query_list_audit_logs_newlistauditlogshandler",
+      "query_listauditlogshandler",
+      "query_listauditlogshandler_handle",
+      "query_listauditlogsquery"
+    ],
+    "85": [
+      "application_apikey_command_revoke_api_key_go",
+      "command_revoke_api_key_newrevokeapikeyhandler",
+      "command_revokeapikeycommand",
+      "command_revokeapikeyhandler",
+      "command_revokeapikeyhandler_handle"
+    ],
+    "86": [
+      "application_identity_command_update_profile_go",
+      "command_update_profile_newupdateprofilehandler",
+      "command_updateprofilecommand",
+      "command_updateprofilehandler",
+      "command_updateprofilehandler_handle"
+    ],
+    "87": [
+      "infrastructure_jwt_jwt_go",
+      "jwt_claims",
+      "jwt_tokensigner",
+      "jwt_tokensigner_decodetoken",
+      "jwt_tokensigner_encodetoken"
+    ],
+    "88": [
       "domain_llmproxy_repository_go",
       "llmproxy_endpointaliasprojection",
       "llmproxy_endpointcredentialprojection",
       "llmproxy_endpointreadrepository",
       "llmproxy_endpointrepository"
     ],
-    "83": [
+    "89": [
+      "cron_sessionscorecron",
+      "cron_sessionscorecron_getsessioncontent",
+      "cron_sessionscorecron_score",
+      "cron_sessionscorecron_start",
+      "cron_sessionscorecron_stop"
+    ],
+    "90": [
       "dto_audit_go",
       "dto_auditlogitem",
       "dto_listauditlogsreq",
       "dto_listauditlogsrsp"
     ],
-    "84": [
+    "91": [
       "dto_common_go",
       "dto_commonrsp",
       "dto_emptyreq",
       "dto_emptyrsp"
     ],
-    "85": [
-      "dto_openaistopsequence",
-      "dto_openaistopsequence_marshaljson",
-      "dto_openaistopsequence_schema",
-      "dto_openaistopsequence_unmarshaljson"
-    ],
-    "86": [
-      "dto_responsefilesearchfiltervalue",
-      "dto_responsefilesearchfiltervalue_marshaljson",
-      "dto_responsefilesearchfiltervalue_schema",
-      "dto_responsefilesearchfiltervalue_unmarshaljson"
-    ],
-    "87": [
-      "dto_responsetool",
-      "dto_responsetool_marshaljson",
-      "dto_responsetool_schema",
-      "dto_responsetool_unmarshaljson"
-    ],
-    "88": [
-      "dto_responsemcprequireapproval",
-      "dto_responsemcprequireapproval_marshaljson",
-      "dto_responsemcprequireapproval_schema",
-      "dto_responsemcprequireapproval_unmarshaljson"
-    ],
-    "89": [
-      "dto_responsecodeinterpretercontainer",
-      "dto_responsecodeinterpretercontainer_marshaljson",
-      "dto_responsecodeinterpretercontainer_schema",
-      "dto_responsecodeinterpretercontainer_unmarshaljson"
-    ],
-    "90": [
+    "92": [
       "dto_base_go",
       "dto_httpresponse",
       "dto_redirectresponse",
       "dto_sseresponse"
     ],
-    "91": [
+    "93": [
+      "openai_responsetool",
+      "openai_responsetool_marshaljson",
+      "openai_responsetool_schema",
+      "openai_responsetool_unmarshaljson"
+    ],
+    "94": [
+      "openai_responsefilesearchfiltervalue",
+      "openai_responsefilesearchfiltervalue_marshaljson",
+      "openai_responsefilesearchfiltervalue_schema",
+      "openai_responsefilesearchfiltervalue_unmarshaljson"
+    ],
+    "95": [
+      "openai_responsemcpallowedtools",
+      "openai_responsemcpallowedtools_marshaljson",
+      "openai_responsemcpallowedtools_schema",
+      "openai_responsemcpallowedtools_unmarshaljson"
+    ],
+    "96": [
+      "openai_openaistopsequence",
+      "openai_openaistopsequence_marshaljson",
+      "openai_openaistopsequence_schema",
+      "openai_openaistopsequence_unmarshaljson"
+    ],
+    "97": [
       "domain_oauth2_vo_provider_go",
       "vo_oauthprovider",
       "vo_oauthprovider_isvalid",
       "vo_oauthprovider_string"
     ],
-    "92": [
+    "98": [
       "lintstatic_result",
       "lintstatic_result_log",
       "lintstatic_runner_run",
       "tool_lintstatic_runner_go"
     ],
-    "93": [
-      "cron_softdeletepurgecron",
-      "cron_softdeletepurgecron_purge",
-      "cron_softdeletepurgecron_start",
-      "cron_softdeletepurgecron_stop"
+    "99": [
+      "openai_responsetoolchoiceparam",
+      "openai_responsetoolchoiceparam_marshaljson",
+      "openai_responsetoolchoiceparam_unmarshaljson"
     ],
-    "94": [
-      "handler_audit_go",
-      "handler_audit_newaudithandler",
-      "handler_auditdependencies",
-      "handler_audithandler"
-    ],
-    "95": [
+    "100": [
       "common_enum_permission_go",
       "enum_permission",
       "enum_permission_level"
     ],
-    "96": [
+    "101": [
       "infrastructure_storage_obj_dao_base_go",
       "obj_dao_objdao",
       "obj_dao_objectinfo"
     ],
-    "97": [
+    "102": [
       "domain_oauth2_service_platform_go",
       "service_platform",
       "service_statemanager"
     ],
-    "98": [
+    "103": [
       "conversation_messagerepository",
       "conversation_toolrepository",
       "domain_conversation_repository_go"
     ],
-    "99": [
-      "handler_user_go",
-      "handler_user_newuserhandler",
-      "handler_userdependencies"
-    ],
-    "100": [
-      "handler_session_go",
-      "handler_session_newsessionhandler",
-      "handler_sessiondependencies"
-    ],
-    "101": [
-      "handler_apikey_go",
-      "handler_apikey_newapikeyhandler",
-      "handler_apikeydependencies"
-    ],
-    "102": [
-      "handler_oauth2_go",
-      "handler_oauth2_newoauth2handler",
-      "handler_oauth2dependencies"
-    ],
-    "103": [
+    "104": [
       "dto_ping_go",
       "dto_pingrsp"
     ],
-    "104": [
+    "105": [
       "enum_lintconv_go",
       "enum_severity"
     ],
-    "105": [
+    "106": [
       "common_enum_ctxkey_go",
       "enum_ctxkey"
     ],
-    "106": [
+    "107": [
       "common_enum_objecttype_go",
       "enum_objecttype"
     ],
-    "107": [
+    "108": [
       "common_enum_objectstorage_go",
       "enum_objectstorageplatform"
     ],
-    "108": [
+    "109": [
       "common_enum_ssedatatype_go",
       "enum_ssedatatype"
     ],
-    "109": [
+    "110": [
       "common_enum_ssestatus_go",
       "enum_ssestatus"
     ],
-    "110": [
+    "111": [
       "api_fiber_go",
       "api_fiber_newfiberapp"
     ],
-    "111": [
+    "112": [
       "dao_proxyapikeydao",
       "infrastructure_database_dao_proxy_api_key_go"
     ],
-    "112": [
+    "113": [
       "dao_modelendpointdao",
       "infrastructure_database_dao_model_endpoint_go"
     ],
-    "113": [
+    "114": [
       "dao_userdao",
       "infrastructure_database_dao_user_go"
     ],
-    "114": [
+    "115": [
       "dao_messagedao",
       "infrastructure_database_dao_message_go"
     ],
-    "115": [
+    "116": [
       "dao_sessiondao",
       "infrastructure_database_dao_session_go"
     ],
-    "116": [
+    "117": [
       "dao_modelcallauditdao",
       "infrastructure_database_dao_model_call_audit_go"
     ],
-    "117": [
+    "118": [
       "dao_basedao",
       "infrastructure_database_dao_base_go"
     ],
-    "118": [
+    "119": [
       "dao_tooldao",
       "infrastructure_database_dao_tool_go"
     ],
-    "119": [
+    "120": [
       "infrastructure_database_model_proxy_api_key_go",
       "model_proxyapikey"
     ],
-    "120": [
+    "121": [
       "infrastructure_database_model_model_endpoint_go",
       "model_modelendpoint"
     ],
-    "121": [
+    "122": [
       "infrastructure_database_model_user_go",
       "model_user"
     ],
-    "122": [
+    "123": [
       "infrastructure_database_model_message_go",
       "model_message"
     ],
-    "123": [
+    "124": [
       "infrastructure_database_model_session_go",
       "model_session"
     ],
-    "124": [
+    "125": [
       "infrastructure_database_model_model_call_audit_go",
       "model_modelcallaudit"
     ],
-    "125": [
+    "126": [
       "infrastructure_database_model_base_go",
       "model_basemodel"
     ],
-    "126": [
+    "127": [
       "infrastructure_database_model_tool_go",
       "model_tool"
     ],
-    "127": [
+    "128": [
       "domain_identity_repository_go",
       "identity_userrepository"
     ],
-    "128": [
+    "129": [
       "domain_identity_service_token_signer_go",
       "service_tokensigner"
     ],
-    "129": [
+    "130": [
       "apikey_apikeyrepository",
       "domain_apikey_repository_go"
     ],
-    "130": [
+    "131": [
       "domain_modelcall_repository_go",
       "modelcall_auditrepository"
     ],
-    "131": [
+    "132": [
       "domain_conversation_vo_unified_tool_go",
       "vo_unifiedtool"
     ],
-    "132": [
-      "enum_input_audio_format_go"
-    ],
     "133": [
-      "enum_provider_go"
+      "dto_aliases_go"
     ],
     "134": [
-      "enum_env_go"
+      "enum_input_audio_format_go"
     ],
     "135": [
-      "enum_anthropic_thinking_type_go"
+      "enum_provider_go"
     ],
     "136": [
-      "enum_reasoning_effort_go"
+      "enum_env_go"
     ],
     "137": [
-      "enum_search_context_size_go"
+      "enum_anthropic_thinking_type_go"
     ],
     "138": [
-      "enum_modality_type_go"
+      "enum_reasoning_effort_go"
     ],
     "139": [
-      "enum_content_part_type_go"
+      "enum_search_context_size_go"
     ],
     "140": [
-      "enum_role_go"
+      "enum_modality_type_go"
     ],
     "141": [
-      "enum_tool_type_go"
+      "enum_content_part_type_go"
     ],
     "142": [
-      "enum_audio_format_go"
+      "enum_role_go"
     ],
     "143": [
-      "enum_anthropic_stop_reason_go"
+      "enum_tool_type_go"
     ],
     "144": [
-      "enum_verbosity_go"
+      "enum_audio_format_go"
     ],
     "145": [
-      "enum_anthropic_go"
+      "enum_anthropic_stop_reason_go"
     ],
     "146": [
-      "enum_service_tier_go"
+      "enum_verbosity_go"
     ],
     "147": [
-      "enum_anthropic_tool_choice_go"
+      "enum_anthropic_go"
     ],
     "148": [
-      "enum_image_detail_go"
+      "enum_service_tier_go"
     ],
     "149": [
-      "enum_image_source_type_go"
+      "enum_anthropic_tool_choice_go"
     ],
     "150": [
-      "enum_voice_go"
+      "enum_image_detail_go"
     ],
     "151": [
-      "enum_grammar_syntax_go"
+      "enum_image_source_type_go"
     ],
     "152": [
-      "enum_tool_choice_go"
+      "enum_voice_go"
     ],
     "153": [
-      "enum_openai_response_go"
+      "enum_grammar_syntax_go"
     ],
     "154": [
-      "enum_response_format_type_go"
+      "enum_tool_choice_go"
     ],
     "155": [
-      "enum_finish_reason_go"
+      "enum_openai_response_go"
     ],
     "156": [
-      "enum_prompt_cache_retention_go"
+      "enum_response_format_type_go"
     ],
     "157": [
-      "common_enum_oauth2platform_go"
+      "enum_finish_reason_go"
     ],
     "158": [
-      "common_constant_log_go"
+      "enum_prompt_cache_retention_go"
     ],
     "159": [
-      "common_constant_objectstorage_go"
+      "common_enum_oauth2platform_go"
     ],
     "160": [
-      "common_constant_sse_go"
+      "common_constant_log_go"
     ],
     "161": [
-      "common_constant_logger_go"
+      "common_constant_objectstorage_go"
     ],
     "162": [
-      "common_constant_ratelimit_go"
+      "common_constant_sse_go"
     ],
     "163": [
-      "common_constant_session_go"
+      "common_constant_logger_go"
     ],
     "164": [
-      "common_constant_route_go"
+      "common_constant_ratelimit_go"
     ],
     "165": [
-      "common_constant_security_go"
+      "common_constant_session_go"
     ],
     "166": [
-      "common_constant_rediskey_go"
+      "common_constant_route_go"
     ],
     "167": [
-      "common_constant_database_go"
+      "common_constant_security_go"
     ],
     "168": [
-      "common_constant_cron_go"
+      "common_constant_rediskey_go"
     ],
     "169": [
-      "common_constant_conversation_go"
+      "common_constant_database_go"
     ],
     "170": [
-      "common_constant_guard_go"
+      "common_constant_cron_go"
     ],
     "171": [
-      "common_constant_upstream_go"
+      "common_constant_conversation_go"
     ],
     "172": [
-      "common_constant_http_go"
+      "common_constant_guard_go"
     ],
     "173": [
-      "common_constant_agent_go"
+      "common_constant_upstream_go"
     ],
     "174": [
-      "common_constant_lint_go"
+      "common_constant_http_go"
     ],
     "175": [
-      "common_constant_oauth_go"
+      "common_constant_agent_go"
     ],
     "176": [
-      "common_constant_apikey_go"
+      "common_constant_lint_go"
     ],
     "177": [
-      "common_constant_convcheck_go"
+      "common_constant_oauth_go"
     ],
     "178": [
-      "common_constant_ctx_go"
+      "common_constant_apikey_go"
     ],
     "179": [
-      "common_constant_string_go"
+      "common_constant_convcheck_go"
     ],
     "180": [
-      "common_constant_sql_go"
+      "common_constant_ctx_go"
     ],
     "181": [
-      "common_ierr_sentinels_go"
+      "common_constant_string_go"
     ],
     "182": [
-      "application_llmproxy_usecase_openai_chat_go"
+      "common_constant_sql_go"
     ],
     "183": [
-      "application_llmproxy_usecase_openai_response_go"
+      "common_ierr_sentinels_go"
     ],
     "184": [
-      "infrastructure_pool_store_pool_go"
+      "application_llmproxy_usecase_openai_chat_go"
     ],
     "185": [
-      "domain_common_vo_doc_go"
+      "application_llmproxy_usecase_openai_response_go"
     ],
     "186": [
+      "infrastructure_pool_store_pool_go"
+    ],
+    "187": [
+      "domain_common_vo_doc_go"
+    ],
+    "188": [
       "tool_lintconv_rules_testing_go"
     ]
   },
   "cohesion": {
-    "0": 0.05,
-    "1": 0.05,
-    "2": 0.04,
+    "0": 0.06,
+    "1": 0.06,
+    "2": 0.05,
     "3": 0.04,
     "4": 0.04,
-    "5": 0.06,
+    "5": 0.04,
     "6": 0.11,
     "7": 0.07,
     "8": 0.07,
     "9": 0.07,
-    "10": 0.08,
-    "11": 0.09,
+    "10": 0.07,
+    "11": 0.16,
     "12": 0.14,
-    "13": 0.19,
-    "14": 0.24,
-    "15": 0.1,
-    "16": 0.16,
-    "17": 0.2,
-    "18": 0.15,
-    "19": 0.12,
-    "20": 0.12,
-    "21": 0.16,
-    "22": 0.17,
+    "13": 0.13,
+    "14": 0.1,
+    "15": 0.2,
+    "16": 0.12,
+    "17": 0.12,
+    "18": 0.12,
+    "19": 0.13,
+    "20": 0.16,
+    "21": 0.17,
+    "22": 0.15,
     "23": 0.13,
-    "24": 0.13,
-    "25": 0.15,
-    "26": 0.18,
-    "27": 0.15,
-    "28": 0.15,
+    "24": 0.17,
+    "25": 0.17,
+    "26": 0.15,
+    "27": 0.22,
+    "28": 0.17,
     "29": 0.21,
-    "30": 0.19,
-    "31": 0.19,
-    "32": 0.19,
-    "33": 0.17,
-    "34": 0.17,
-    "35": 0.17,
-    "36": 0.23,
-    "37": 0.18,
-    "38": 0.18,
-    "39": 0.29,
+    "30": 0.21,
+    "31": 0.17,
+    "32": 0.2,
+    "33": 0.18,
+    "34": 0.29,
+    "35": 0.2,
+    "36": 0.2,
+    "37": 0.27,
+    "38": 0.2,
+    "39": 0.33,
     "40": 0.2,
-    "41": 0.2,
+    "41": 0.31,
     "42": 0.2,
-    "43": 0.31,
+    "43": 0.22,
     "44": 0.22,
-    "45": 0.31,
+    "45": 0.25,
     "46": 0.22,
     "47": 0.36,
     "48": 0.36,
-    "49": 0.25,
-    "50": 0.25,
-    "51": 0.25,
-    "52": 0.25,
+    "49": 0.31,
+    "50": 0.53,
+    "51": 0.22,
+    "52": 0.31,
     "53": 0.25,
-    "54": 0.46,
+    "54": 0.25,
     "55": 0.25,
-    "56": 0.25,
-    "57": 0.25,
-    "58": 0.25,
-    "59": 0.39,
-    "60": 0.36,
-    "61": 0.36,
-    "62": 0.29,
-    "63": 0.29,
-    "64": 0.29,
-    "65": 0.29,
+    "56": 0.36,
+    "57": 0.36,
+    "58": 0.36,
+    "59": 0.25,
+    "60": 0.25,
+    "61": 0.25,
+    "62": 0.36,
+    "63": 0.32,
+    "64": 0.38,
+    "65": 0.38,
     "66": 0.33,
-    "67": 0.33,
+    "67": 0.29,
     "68": 0.29,
-    "69": 0.33,
+    "69": 0.29,
     "70": 0.33,
     "71": 0.33,
     "72": 0.33,
     "73": 0.33,
     "74": 0.33,
     "75": 0.33,
-    "76": 0.47,
+    "76": 0.33,
     "77": 0.4,
-    "78": 0.4,
-    "79": 0.4,
-    "80": 0.4,
-    "81": 0.5,
-    "82": 0.4,
+    "78": 0.33,
+    "79": 0.33,
+    "80": 0.47,
+    "81": 0.4,
+    "82": 0.6,
     "83": 0.5,
-    "84": 0.5,
-    "85": 0.5,
-    "86": 0.5,
-    "87": 0.5,
-    "88": 0.5,
+    "84": 0.4,
+    "85": 0.4,
+    "86": 0.4,
+    "87": 0.4,
+    "88": 0.4,
     "89": 0.5,
     "90": 0.5,
     "91": 0.5,
     "92": 0.5,
     "93": 0.5,
     "94": 0.5,
-    "95": 0.67,
-    "96": 0.67,
-    "97": 0.67,
-    "98": 0.67,
+    "95": 0.5,
+    "96": 0.5,
+    "97": 0.5,
+    "98": 0.5,
     "99": 0.67,
     "100": 0.67,
     "101": 0.67,
     "102": 0.67,
-    "103": 1.0,
+    "103": 0.67,
     "104": 1.0,
     "105": 1.0,
     "106": 1.0,
@@ -2041,7 +2047,9 @@
     "183": 1.0,
     "184": 1.0,
     "185": 1.0,
-    "186": 1.0
+    "186": 1.0,
+    "187": 1.0,
+    "188": 1.0
   },
   "gods": [
     {
@@ -2097,17 +2105,6 @@
   ],
   "surprises": [
     {
-      "source": "InitInfrastructure()",
-      "target": "InitPoolManager()",
-      "source_files": [
-        "bootstrap/container.go",
-        "infrastructure/pool/pool.go"
-      ],
-      "confidence": "INFERRED",
-      "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `InitPoolManager()` unexpectedly reaches hub `InitInfrastructure()`"
-    },
-    {
       "source": "validateUserNameSpecialChars()",
       "target": "New()",
       "source_files": [
@@ -2117,6 +2114,17 @@
       "confidence": "INFERRED",
       "relation": "calls",
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `validateUserNameSpecialChars()` unexpectedly reaches hub `New()`"
+    },
+    {
+      "source": "CloseDatabase()",
+      "target": "Wrap()",
+      "source_files": [
+        "infrastructure/database/postgresql.go",
+        "common/ierr/ierr.go"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `CloseDatabase()` unexpectedly reaches hub `Wrap()`"
     },
     {
       "source": "GenerateAnthropicMessageID()",
@@ -2155,18 +2163,18 @@
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `WithCtx()` connect `Community 14` to `Community 0`, `Community 5`, `Community 7`, `Community 8`, `Community 15`, `Community 16`, `Community 26`, `Community 27`, `Community 28`, `Community 30`, `Community 31`, `Community 32`, `Community 36`, `Community 37`, `Community 38`, `Community 41`, `Community 46`, `Community 54`, `Community 61`, `Community 71`, `Community 74`, `Community 79`, `Community 80`, `Community 93`?",
-      "why": "High betweenness centrality (0.126) - this node is a cross-community bridge."
+      "question": "Why does `WithCtx()` connect `Community 50` to `Community 0`, `Community 2`, `Community 8`, `Community 9`, `Community 14`, `Community 24`, `Community 26`, `Community 29`, `Community 31`, `Community 33`, `Community 36`, `Community 39`, `Community 40`, `Community 45`, `Community 48`, `Community 57`, `Community 62`, `Community 63`, `Community 73`, `Community 75`, `Community 76`, `Community 84`, `Community 85`, `Community 86`, `Community 89`?",
+      "why": "High betweenness centrality (0.132) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `New()` connect `Community 34` to `Community 0`, `Community 5`, `Community 8`, `Community 10`, `Community 11`, `Community 12`, `Community 23`, `Community 24`, `Community 25`, `Community 28`, `Community 30`, `Community 31`, `Community 32`, `Community 36`, `Community 37`, `Community 41`, `Community 42`, `Community 45`, `Community 53`, `Community 54`, `Community 63`, `Community 64`, `Community 74`, `Community 78`, `Community 79`, `Community 80`, `Community 81`, `Community 93`?",
-      "why": "High betweenness centrality (0.123) - this node is a cross-community bridge."
+      "question": "Why does `New()` connect `Community 14` to `Community 0`, `Community 2`, `Community 7`, `Community 12`, `Community 13`, `Community 19`, `Community 22`, `Community 23`, `Community 33`, `Community 38`, `Community 40`, `Community 49`, `Community 50`, `Community 63`, `Community 67`, `Community 69`, `Community 75`, `Community 76`, `Community 77`, `Community 79`, `Community 83`, `Community 84`, `Community 85`, `Community 86`, `Community 87`, `Community 89`?",
+      "why": "High betweenness centrality (0.111) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `Wrap()` connect `Community 13` to `Community 0`, `Community 35`, `Community 37`, `Community 6`, `Community 41`, `Community 42`, `Community 11`, `Community 12`, `Community 45`, `Community 47`, `Community 16`, `Community 21`, `Community 54`, `Community 25`, `Community 59`, `Community 60`?",
-      "why": "High betweenness centrality (0.051) - this node is a cross-community bridge."
+      "question": "Why does `Wrap()` connect `Community 11` to `Community 0`, `Community 33`, `Community 2`, `Community 6`, `Community 39`, `Community 40`, `Community 38`, `Community 12`, `Community 13`, `Community 47`, `Community 48`, `Community 49`, `Community 50`, `Community 18`, `Community 20`, `Community 22`, `Community 56`, `Community 57`?",
+      "why": "High betweenness centrality (0.041) - this node is a cross-community bridge."
     },
     {
       "type": "verify_inferred",
