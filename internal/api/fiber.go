@@ -14,14 +14,15 @@ import (
 //	@update 2026-04-28 10:00:00
 func NewFiberApp() *fiber.App {
 	return fiber.New(fiber.Config{
-		Prefork:                 false,
-		ReadTimeout:             config.ReadTimeout,
-		WriteTimeout:            config.WriteTimeout,
-		IdleTimeout:             constant.IdleTimeout,
-		JSONEncoder:             sonic.Marshal,
-		JSONDecoder:             sonic.Unmarshal,
-		EnableTrustedProxyCheck: true,
-		TrustedProxies:          config.TrustedProxies,
-		ProxyHeader:             fiber.HeaderXForwardedFor,
+		Prefork:                  false,
+		ReadTimeout:              config.ReadTimeout,
+		WriteTimeout:             config.WriteTimeout,
+		IdleTimeout:              constant.IdleTimeout,
+		JSONEncoder:              sonic.Marshal,
+		JSONDecoder:              sonic.Unmarshal,
+		DisableHeaderNormalizing: true,
+		EnableTrustedProxyCheck:  true,
+		TrustedProxies:           config.TrustedProxies,
+		ProxyHeader:              fiber.HeaderXForwardedFor,
 	})
 }
