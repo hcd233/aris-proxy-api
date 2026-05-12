@@ -55,7 +55,7 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		log := logger.WithCtx(ctx.Context())
 		db := database.GetDBInstance(ctx.Context())
 
-		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAPIKey), ctx.Header(constant.HTTPTitleHeaderAuthorization))
+		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAuthorization), ctx.Header(constant.HTTPTitleHeaderAuthorization))
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 		if tokenString == "" {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))

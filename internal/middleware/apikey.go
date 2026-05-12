@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
@@ -28,12 +29,12 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 	userDAO := dao.GetUserDAO()
 
 	return func(ctx huma.Context, next func(huma.Context)) {
-		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAPIKey), ctx.Header(constant.HTTPTitleHeaderAuthorization))
+		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAuthorization), ctx.Header(constant.HTTPTitleHeaderAuthorization))
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 
 		if tokenString == "" {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key is empty")
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
 			return
 		}
 
@@ -41,7 +42,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, constant.ProxyAPIKeyRepoFieldsAuth)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
 			return
 		}
 
@@ -49,7 +50,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		user, err := userDAO.Get(db, &dbmodel.User{ID: apiKey.UserID}, constant.UserRepoFieldsBasic)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] Failed to get user", zap.Error(err))
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
 			return
 		}
 
