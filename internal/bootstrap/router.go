@@ -5,18 +5,23 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/router"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/dig"
+	"gorm.io/gorm"
 )
 
 type routeParams struct {
 	dig.In
 
+	DB               *gorm.DB
+	RedisClient      *redis.Client
 	PingHandler      handler.PingHandler
 	TokenHandler     handler.TokenHandler
 	Oauth2Handler    handler.Oauth2Handler
 	UserHandler      handler.UserHandler
 	APIKeyHandler    handler.APIKeyHandler
 	SessionHandler   handler.SessionHandler
+	AuditHandler     handler.AuditHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
 }
@@ -33,12 +38,15 @@ func RegisterRoutes(server *Server) error {
 			router.RegisterDocsRouter(server.App)
 		}
 		router.RegisterAPIRouter(server.HumaAPI, router.APIRouterDependencies{
+			DB:               params.DB,
+			RedisClient:      params.RedisClient,
 			PingHandler:      params.PingHandler,
 			TokenHandler:     params.TokenHandler,
 			Oauth2Handler:    params.Oauth2Handler,
 			UserHandler:      params.UserHandler,
 			APIKeyHandler:    params.APIKeyHandler,
 			SessionHandler:   params.SessionHandler,
+			AuditHandler:     params.AuditHandler,
 			OpenAIHandler:    params.OpenAIHandler,
 			AnthropicHandler: params.AnthropicHandler,
 		})

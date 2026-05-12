@@ -46,6 +46,7 @@ type openAIUseCase struct {
 	modelsQuery    ListOpenAIModels
 	openAIProxy    transport.OpenAIProxy
 	anthropicProxy transport.AnthropicProxy
+	taskSubmitter  TaskSubmitter
 }
 
 // NewOpenAIUseCase 构造 OpenAI UseCase
@@ -62,12 +63,14 @@ func NewOpenAIUseCase(
 	modelsQuery ListOpenAIModels,
 	openAIProxy transport.OpenAIProxy,
 	anthropicProxy transport.AnthropicProxy,
+	taskSubmitter TaskSubmitter,
 ) OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
 		modelsQuery:    modelsQuery,
 		openAIProxy:    openAIProxy,
 		anthropicProxy: anthropicProxy,
+		taskSubmitter:  taskSubmitter,
 	}
 }
 
@@ -137,12 +140,8 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	return u.forwardResponseNative(ctx, log, req, ep, upstream, stream), nil
 }
 
-// toTransportEndpoint Endpoint 聚合 → transport.UpstreamEndpoint
-func toTransportEndpoint(ep *aggregate.Endpoint) transport.UpstreamEndpoint {
+// toTransportEndpoint Endpoint 聚合 → vo.UpstreamEndpoint
+func toTransportEndpoint(ep *aggregate.Endpoint) vo.UpstreamEndpoint {
 	creds := ep.Creds()
-	return transport.UpstreamEndpoint{
-		Model:   creds.Model(),
-		APIKey:  creds.APIKey(),
-		BaseURL: creds.BaseURL(),
-	}
+	return vo.NewUpstreamEndpointFromCredential(creds.Model(), creds.APIKey(), creds.BaseURL())
 }

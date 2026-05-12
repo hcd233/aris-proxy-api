@@ -18,21 +18,36 @@ import (
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
 type PoolManager struct {
+	db        *gorm.DB
 	storePool pond.Pool
 	agentPool pond.Pool
 }
 
 var poolManager *PoolManager
 
-// InitPoolManager 初始化全局协程池管理器
+// NewPoolManager 创建协程池管理器。
 //
+//	@param db *gorm.DB
+//	@return *PoolManager
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func InitPoolManager() {
-	poolManager = &PoolManager{
+//	@update 2026-05-12 20:30:00
+func NewPoolManager(db *gorm.DB) *PoolManager {
+	return &PoolManager{
+		db:        db,
 		storePool: pond.NewPool(config.Pool.Store.Workers, pond.WithQueueSize(config.Pool.Store.QueueSize)),
 		agentPool: pond.NewPool(config.Pool.Agent.Workers, pond.WithQueueSize(config.Pool.Agent.QueueSize)),
 	}
+}
+
+// InitPoolManager 初始化全局协程池管理器
+//
+//	@param db *gorm.DB
+//	@return *PoolManager
+//	@author centonhuang
+//	@update 2026-04-05 10:00:00
+func InitPoolManager(db *gorm.DB) *PoolManager {
+	poolManager = NewPoolManager(db)
+	return poolManager
 }
 
 // GetPoolManager 获取全局协程池管理器实例

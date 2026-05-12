@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
-	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -30,30 +30,30 @@ type AnthropicProxy interface {
 	// ForwardCreateMessage 非流式转发
 	//
 	//	@param ctx context.Context
-	//	@param ep UpstreamEndpoint
+	//	@param ep vo.UpstreamEndpoint
 	//	@param body []byte
 	//	@return *dto.AnthropicMessage
 	//	@return error
-	ForwardCreateMessage(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error)
+	ForwardCreateMessage(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error)
 
 	// ForwardCreateMessageStream 流式转发，每个事件调用 onEvent 回调，返回合并后的完整响应
 	//
 	//	@param ctx context.Context
-	//	@param ep UpstreamEndpoint
+	//	@param ep vo.UpstreamEndpoint
 	//	@param body []byte
 	//	@param onEvent func(dto.AnthropicSSEEvent) error
 	//	@return *dto.AnthropicMessage
 	//	@return error
-	ForwardCreateMessageStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error)
+	ForwardCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error)
 
 	// ForwardCountTokens 转发 Count Tokens 请求
 	//
 	//	@param ctx context.Context
-	//	@param ep UpstreamEndpoint
+	//	@param ep vo.UpstreamEndpoint
 	//	@param body []byte
 	//	@return *dto.AnthropicTokensCount
 	//	@return error
-	ForwardCountTokens(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error)
+	ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error)
 }
 
 type anthropicProxy struct{}
@@ -67,7 +67,7 @@ func NewAnthropicProxy() AnthropicProxy {
 	return &anthropicProxy{}
 }
 
-func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error) {
+func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error) {
 	log := logger.WithCtx(ctx)
 
 	resp, err := p.sendRequest(ctx, ep, constant.UpstreamPathAnthropicMessages, body)
@@ -91,7 +91,7 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep UpstreamEn
 	return message, nil
 }
 
-func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
 	log := logger.WithCtx(ctx)
 
 	resp, err := p.sendRequest(ctx, ep, constant.UpstreamPathAnthropicMessages, body)
@@ -141,7 +141,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep Upst
 	return util.ConcatAnthropicSSEEvents(collectedEvents)
 }
 
-func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error) {
+func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error) {
 	log := logger.WithCtx(ctx)
 
 	resp, err := p.sendRequest(ctx, ep, constant.UpstreamPathAnthropicCountTokens, body)
@@ -166,7 +166,7 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep UpstreamEndp
 }
 
 // sendRequest 构建并发送 Anthropic 协议的上游请求
-func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, path string, body []byte) (*http.Response, error) {
+func (p *anthropicProxy) sendRequest(ctx context.Context, ep vo.UpstreamEndpoint, path string, body []byte) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
 
 	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + path
@@ -178,15 +178,11 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 	}
 
 	// 透传客户端请求头
-	if headers := util.GetPassthroughHeaders(ctx); headers != nil {
-		for k, v := range headers {
-			req.Header.Set(k, v)
-		}
-	}
+	applyPassthroughRequestHeaders(ctx, req.Header)
 
-	req.Header.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	req.Header.Set(constant.HTTPLowerHeaderAPIKey, ep.APIKey)
-	req.Header.Set(constant.HTTPLowerHeaderAnthropicVersion, constant.AnthropicAPIVersion)
+	setRequestHeader(req.Header, constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
+	setRequestHeader(req.Header, constant.HTTPLowerHeaderAPIKey, ep.APIKey)
+	setRequestHeader(req.Header, constant.HTTPLowerHeaderAnthropicVersion, constant.AnthropicAPIVersion)
 
 	log.Info("[AnthropicProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
@@ -216,47 +212,4 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 	storePassthroughResponseHeaders(ctx, resp.Header)
 
 	return resp, nil
-}
-
-// ReplaceModelInBody 替换 JSON body 中的 model 字段
-//
-//	@param body []byte
-//	@param model string
-//	@return []byte
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func ReplaceModelInBody(body []byte, modelName string) []byte {
-	var bodyMap map[string]any
-	if err := sonic.Unmarshal(body, &bodyMap); err != nil {
-		logger.Logger().Warn("[AnthropicProxy] ReplaceModelInBody unmarshal error", zap.Error(err))
-		return body
-	}
-	bodyMap["model"] = modelName
-	return lo.Must1(sonic.Marshal(bodyMap))
-}
-
-// ReplaceModelInSSEData 替换 Anthropic SSE data 中的 model 字段（包括嵌套的 message.model）
-//
-//	@param data []byte
-//	@param model string
-//	@return []byte
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func ReplaceModelInSSEData(data []byte, modelName string) []byte {
-	var dataMap map[string]any
-	if err := sonic.Unmarshal(data, &dataMap); err != nil {
-		logger.Logger().Warn("[AnthropicProxy] ReplaceModelInSSEData unmarshal error", zap.Error(err))
-		return data
-	}
-	if msgRaw, ok := dataMap["message"]; ok {
-		if msgMap, ok := msgRaw.(map[string]any); ok {
-			if _, hasModel := msgMap["model"]; hasModel {
-				msgMap["model"] = modelName
-			}
-		}
-	}
-	if _, hasModel := dataMap["model"]; hasModel {
-		dataMap["model"] = modelName
-	}
-	return lo.Must1(sonic.Marshal(dataMap))
 }

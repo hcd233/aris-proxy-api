@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
@@ -27,9 +26,11 @@ import (
 //	@author centonhuang
 //	@update 2026-04-02 10:00:00
 type SessionScoreCron struct {
-	cron       *cron.Cron
-	sessionDAO *dao.SessionDAO
-	messageDAO *dao.MessageDAO
+	cron        *cron.Cron
+	db          *gorm.DB
+	poolManager *pool.PoolManager
+	sessionDAO  *dao.SessionDAO
+	messageDAO  *dao.MessageDAO
 }
 
 // NewSessionScoreCron 创建Session评分定时任务
@@ -37,13 +38,15 @@ type SessionScoreCron struct {
 //	@return Cron
 //	@author centonhuang
 //	@update 2026-04-02 10:00:00
-func NewSessionScoreCron() Cron {
+func NewSessionScoreCron(db *gorm.DB, poolManager *pool.PoolManager) Cron {
 	return &SessionScoreCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionScore, logger.Logger())),
 		),
-		sessionDAO: dao.GetSessionDAO(),
-		messageDAO: dao.GetMessageDAO(),
+		db:          db,
+		poolManager: poolManager,
+		sessionDAO:  dao.GetSessionDAO(),
+		messageDAO:  dao.GetMessageDAO(),
 	}
 }
 
@@ -88,8 +91,8 @@ func (c *SessionScoreCron) Start() error {
 func (c *SessionScoreCron) score() {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
 	log := logger.WithCtx(ctx)
-	db := database.GetDBInstance(ctx)
-	poolManager := pool.GetPoolManager()
+	db := c.db.WithContext(ctx)
+	poolManager := c.poolManager
 
 	// 获取未评分且未删除的session（score_version为空字符串）
 	sessions, err := c.sessionDAO.BatchGetByField(db, constant.WhereFieldScoreVersion, []string{""}, constant.SessionRepoFieldsScore)

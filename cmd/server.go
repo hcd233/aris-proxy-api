@@ -55,8 +55,8 @@ var startServerCmd = &cobra.Command{
 			zap.Int("sqlBatchSize", config.SQLBatchSize),
 		)
 
-		bootstrap.InitInfrastructure()
-		server, err := bootstrap.BuildServer()
+		infra := bootstrap.InitInfrastructure()
+		server, err := bootstrap.BuildServer(infra)
 		if err != nil {
 			logger.Logger().Error("[Server] Build server failed", zap.Error(err))
 			os.Exit(1)
@@ -65,7 +65,7 @@ var startServerCmd = &cobra.Command{
 
 		app.Use(
 			middleware.RecoverMiddleware(),
-			middleware.GuardMiddleware(middleware.GuardConfig{
+			middleware.GuardMiddleware(infra.RedisClient, middleware.GuardConfig{
 				StrikeThreshold: constant.GuardStrikeThreshold,
 				StrikeWindow:    constant.GuardStrikeWindow,
 				BanDuration:     constant.GuardBanDuration,
@@ -114,7 +114,7 @@ var startServerCmd = &cobra.Command{
 			}
 		case sig := <-quit:
 			logger.Logger().Info("[Server] Received shutdown signal, starting graceful shutdown...", zap.String("signal", sig.String()))
-			gracefulShutdown(app)
+			gracefulShutdown(app, infra)
 		}
 	},
 }
@@ -124,9 +124,10 @@ var startServerCmd = &cobra.Command{
 // 关闭顺序：HTTP 服务 → 日志同步 → 协程池 → 定时任务 → 数据库 → Redis
 //
 //	@param app *fiber.App
+//	@param infra *bootstrap.Infrastructure
 //	@author centonhuang
 //	@update 2026-04-04 10:00:00
-func gracefulShutdown(app *fiber.App) {
+func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
 	ctx, cancel := context.WithTimeout(context.Background(), constant.ShutdownTimeout)
 	defer cancel()
 
@@ -156,13 +157,13 @@ func gracefulShutdown(app *fiber.App) {
 
 		// Step 5: 关闭数据库连接池
 		logger.Logger().Info("[Server] Step 5/6: Closing database connection...")
-		if err := database.CloseDatabase(); err != nil {
+		if err := database.CloseDatabase(infra.DB); err != nil {
 			logger.Logger().Error("[Server] Database close error", zap.Error(err))
 		}
 
 		// Step 6: 关闭 Redis 连接
 		logger.Logger().Info("[Server] Step 6/6: Closing Redis connection...")
-		if err := cache.CloseCache(); err != nil {
+		if err := cache.CloseCache(infra.RedisClient); err != nil {
 			logger.Logger().Error("[Server] Redis close error", zap.Error(err))
 		}
 

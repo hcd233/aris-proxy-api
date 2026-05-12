@@ -9,12 +9,15 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
-func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler) {
-	apikeyGroup.UseMiddleware(middleware.JwtMiddleware())
+func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler, db *gorm.DB, rdb *redis.Client) {
+	apikeyGroup.UseMiddleware(middleware.JwtMiddleware(db, rdb))
 	// 限流: 防止快速创建 Key 或枚举 ID
 	apikeyGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
+		rdb,
 		"apikeyManage",
 		constant.CtxKeyUserID,
 		constant.PeriodManageAPIKey,

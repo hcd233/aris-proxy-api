@@ -11,13 +11,13 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // SessionDeduplicateCron Session去重定时任务，清理MessageIDs被其他Session包含的冗余Session
@@ -26,6 +26,7 @@ import (
 //	@update 2026-03-19 10:00:00
 type SessionDeduplicateCron struct {
 	cron       *cron.Cron
+	db         *gorm.DB
 	sessionDAO *dao.SessionDAO
 }
 
@@ -34,11 +35,12 @@ type SessionDeduplicateCron struct {
 //	@return Cron
 //	@author centonhuang
 //	@update 2026-03-19 10:00:00
-func NewSessionDeduplicateCron() Cron {
+func NewSessionDeduplicateCron(db *gorm.DB) Cron {
 	return &SessionDeduplicateCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionDeduplicate, logger.Logger())),
 		),
+		db:         db,
 		sessionDAO: dao.GetSessionDAO(),
 	}
 }
@@ -84,7 +86,7 @@ func (c *SessionDeduplicateCron) Start() error {
 func (c *SessionDeduplicateCron) deduplicate() {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
 	log := logger.WithCtx(ctx)
-	db := database.GetDBInstance(ctx)
+	db := c.db.WithContext(ctx)
 
 	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, constant.SessionRepoFieldsDedup)
 	if err != nil {

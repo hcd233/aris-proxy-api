@@ -21,7 +21,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -49,6 +48,7 @@ type anthropicUseCase struct {
 	countTokensQuery CountTokens
 	openAIProxy      transport.OpenAIProxy
 	anthropicProxy   transport.AnthropicProxy
+	taskSubmitter    TaskSubmitter
 }
 
 // NewAnthropicUseCase 构造 Anthropic UseCase
@@ -67,6 +67,7 @@ func NewAnthropicUseCase(
 	countTokensQuery CountTokens,
 	openAIProxy transport.OpenAIProxy,
 	anthropicProxy transport.AnthropicProxy,
+	taskSubmitter TaskSubmitter,
 ) AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -74,6 +75,7 @@ func NewAnthropicUseCase(
 		countTokensQuery: countTokensQuery,
 		openAIProxy:      openAIProxy,
 		anthropicProxy:   anthropicProxy,
+		taskSubmitter:    taskSubmitter,
 	}
 }
 
@@ -118,8 +120,8 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 // ==================== Anthropic Native ====================
 
 // forwardMessageNative Anthropic 原生协议转发
-func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
-	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
+func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+	body := util.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
 	if stream {
 		return u.forwardMessageNativeStream(ctx, log, req, ep, upstream, exposedModel, body)
 	}
@@ -127,7 +129,7 @@ func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, log *zap.Lo
 }
 
 // forwardMessageNativeStream Anthropic 原生流式
-func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -138,7 +140,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
-			modifiedData := transport.ReplaceModelInSSEData(event.Data, exposedModel)
+			modifiedData := util.ReplaceModelInSSEData(event.Data, exposedModel)
 			if _, writeErr := fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event); writeErr != nil {
 				log.Debug("[AnthropicUseCase] Failed to write SSE event line", zap.Error(writeErr))
 			}
@@ -169,19 +171,19 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
 }
 
 // forwardMessageNativeUnary Anthropic 原生非流式
-func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
-			auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
 		anthropicMsg.Model = exposedModel
@@ -199,14 +201,14 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *z
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
 }
 
 // ==================== Anthropic via OpenAI ====================
 
 // forwardMessageViaOpenAI Anthropic 请求通过 OpenAI 上游转发
-func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
 	conv := converter.OpenAIProtocolConverter{}
 	openAIReq, err := conv.FromAnthropicRequest(req.Body)
 	if err != nil {
@@ -223,7 +225,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, log *zap
 }
 
 // forwardMessageViaOpenAIStream OpenAI 上游流式 → Anthropic SSE
-func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -272,7 +274,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 				StreamDurationMs:    streamDurationMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(proxyErr)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
@@ -288,7 +290,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 				StreamDurationMs:    streamDurationMs,
 			}
 			task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
-			_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+			_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 			return
 		}
 		u.storeAnthropicFromMsg(ctx, log, req, anthropicMsg, nil, upstream.Model)
@@ -303,26 +305,26 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
 }
 
 // forwardMessageViaOpenAIUnary OpenAI 上游非流式 → Anthropic JSON
-func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream transport.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
-			auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
 		anthropicMsg, err := conv.ToAnthropicResponse(completion)
 		if err != nil {
 			log.Error("[AnthropicUseCase] Failed to convert OpenAI response", zap.Error(err))
 			writer.WriteError(fiber.StatusInternalServerError, anthropicInternalErrorBody)
-			auditFailure(ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
 		anthropicMsg.Model = exposedModel
@@ -340,7 +342,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = pool.GetPoolManager().SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
 }
 
@@ -359,7 +361,7 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, log *zap.
 		return
 	}
 
-	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
 		Model:        upstreamModel,

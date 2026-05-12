@@ -3,11 +3,12 @@ package repository
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
@@ -32,6 +33,7 @@ var messageRepoFieldsFull = constant.MessageRepoFieldsFull
 //     @update 2026-04-22 19:30:00
 type messageRepository struct {
 	dao *dao.MessageDAO
+	db  *gorm.DB
 }
 
 // NewMessageRepository 构造
@@ -39,8 +41,8 @@ type messageRepository struct {
 //	@return conversation.MessageRepository
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func NewMessageRepository() conversation.MessageRepository {
-	return &messageRepository{dao: dao.GetMessageDAO()}
+func NewMessageRepository(db *gorm.DB) conversation.MessageRepository {
+	return &messageRepository{dao: dao.GetMessageDAO(), db: db}
 }
 
 // BatchSaveDedup 批量去重保存消息
@@ -57,7 +59,7 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 		return []uint{}, nil
 	}
 
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 
 	checksums := make([]string, len(messages))
 	for i, m := range messages {
@@ -118,7 +120,7 @@ func (r *messageRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggre
 	if len(ids) == 0 {
 		return []*aggregate.Message{}, nil
 	}
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	records, err := r.dao.BatchGetByField(db, constant.WhereFieldID, ids, messageRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by id")

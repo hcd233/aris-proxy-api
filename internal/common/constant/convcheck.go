@@ -56,13 +56,14 @@ const (
 
 // 通用方法名
 const (
-	ConvCheckMethodMaskSecret = "MaskSecret"
-	ConvCheckMethodString     = "String"
-	ConvCheckMethodSchema     = "Schema"
-	ConvCheckMethodTypeFor    = "TypeFor"
-	ConvCheckMethodBackground = "Background"
-	ConvCheckMethodTODO       = "TODO"
-	ConvCheckMethodSleep      = "Sleep"
+	ConvCheckMethodMaskSecret    = "MaskSecret"
+	ConvCheckMethodString        = "String"
+	ConvCheckMethodSchema        = "Schema"
+	ConvCheckMethodTypeFor       = "TypeFor"
+	ConvCheckMethodBackground    = "Background"
+	ConvCheckMethodTODO          = "TODO"
+	ConvCheckMethodSleep         = "Sleep"
+	ConvCheckMethodGetDBInstance = "GetDBInstance"
 )
 
 // ierr 构造方法名
@@ -132,11 +133,14 @@ const (
 
 	ConvCheckSubPathVO = "/vo/"
 
-	ConvCheckMsgCommentedCode  = "possible dead code in comment, please confirm whether to delete"
-	ConvCheckMsgImplementation = "variable naming may expose implementation details; consider using plural form"
-	ConvCheckMsgLocalConst     = "local const blocks are prohibited in business packages; move to internal/common/constant or internal/enum"
-	ConvCheckMsgTypeAlias      = "type alias (type X = Y) is only allowed in enum and vo packages"
-	ConvCheckMsgTypeDef        = "type definition from another type (type X Y) is only allowed in enum and vo packages"
+	ConvCheckMinFunctionBodyLines = 2
+
+	ConvCheckMsgCommentedCode     = "possible dead code in comment, please confirm whether to delete"
+	ConvCheckMsgImplementation    = "variable naming may expose implementation details; consider using plural form"
+	ConvCheckMsgLocalConst        = "local const blocks are prohibited in business packages; move to internal/common/constant or internal/enum"
+	ConvCheckMsgTypeAlias         = "type alias (type X = Y) is only allowed in enum and vo packages"
+	ConvCheckMsgTypeDef           = "type definition from another type (type X Y) is only allowed in enum and vo packages"
+	ConvCheckMsgShortFunctionBody = "function body has fewer than 1 line; avoid empty wrappers and inline the logic instead"
 )
 
 // logging 检查常量
@@ -195,6 +199,7 @@ const (
 	ConvCheckMsgDeprecatedAppImport = "Application layer must not import deprecated internal/service/converter/proxy/agent/jwt/oauth2 packages"
 	ConvCheckMsgHandlerDB           = "Handler layer must not operate DAO/DB directly; business logic should be in Service layer"
 	ConvCheckMsgRootContext         = "context.Background()/context.TODO() is prohibited in interface layer, pass context from the caller"
+	ConvCheckMsgDBRootContext       = "binding root context to DB is prohibited, use the injected base DB and bind request context at operation time"
 	ConvCheckMsgPassthrough         = "passthrough wrapper detected, inline the logic or merge the method"
 )
 

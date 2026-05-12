@@ -8,7 +8,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
@@ -81,8 +80,7 @@ func isRouteNotFound(err error) bool {
 //     @return fiber.Handler
 //     @author centonhuang
 //     @update 2026-04-10 10:00:00
-func GuardMiddleware(cfg GuardConfig) fiber.Handler {
-	rdb := cache.GetRedisClient()
+func GuardMiddleware(rdb *redis.Client, cfg GuardConfig) fiber.Handler {
 	thresholdStr := strconv.Itoa(cfg.StrikeThreshold)
 	windowTTLStr := strconv.FormatInt(int64(cfg.StrikeWindow.Seconds()), 10)
 	banTTLStr := strconv.FormatInt(int64(cfg.BanDuration.Seconds()), 10)
@@ -90,6 +88,10 @@ func GuardMiddleware(cfg GuardConfig) fiber.Handler {
 		return p, struct{}{}
 	})
 	return func(c *fiber.Ctx) error {
+		if rdb == nil {
+			logger.WithFCtx(c).Warn("[GuardMiddleware] Redis dependency is nil")
+			return c.Next()
+		}
 		ip := c.IP()
 		banKey := fmt.Sprintf(constant.ScannerBanKeyTemplate, ip)
 		ctx := c.Context()

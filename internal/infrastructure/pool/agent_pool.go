@@ -5,6 +5,7 @@
 package pool
 
 import (
+	"context"
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -17,22 +18,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// sessionRepo 懒初始化的 Session 仓储实例（仅在 agent pool 协程中使用）
+// getSessionRepo 返回绑定调用方 context 的 Session 仓储。
 //
-//	@author centonhuang
-//	@update 2026-04-26 14:00:00
-var sessionRepo session.SessionRepository
-
-// getSessionRepo 返回 Session 仓储单例（懒初始化）
-//
+//	@param ctx context.Context
 //	@return session.SessionRepository
 //	@author centonhuang
-//	@update 2026-04-26 14:00:00
-func getSessionRepo() session.SessionRepository {
-	if sessionRepo == nil {
-		sessionRepo = repository.NewSessionRepository()
-	}
-	return sessionRepo
+//	@update 2026-05-12 19:33:00
+func (pm *PoolManager) getSessionRepo(ctx context.Context) session.SessionRepository {
+	return repository.NewSessionRepository(pm.db.WithContext(ctx))
 }
 
 // SubmitSummarizeTask 提交 Session 总结任务到协程池
@@ -52,7 +45,7 @@ func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 		if err != nil {
 			log.Error("[AgentPool] Failed to generate summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			failedSummary := vo.NewSessionSummary("", err.Error())
-			if updateErr := getSessionRepo().UpdateSummary(task.Ctx, task.SessionID, failedSummary); updateErr != nil {
+			if updateErr := pm.getSessionRepo(task.Ctx).UpdateSummary(task.Ctx, task.SessionID, failedSummary); updateErr != nil {
 				log.Error("[AgentPool] Failed to update summarize_error", zap.Uint("sessionID", task.SessionID), zap.Error(updateErr))
 			}
 			return
@@ -64,7 +57,7 @@ func (pm *PoolManager) SubmitSummarizeTask(task *dto.SummarizeTask) error {
 		}
 
 		successSummary := vo.NewSessionSummary(summary, "")
-		if err := getSessionRepo().UpdateSummary(task.Ctx, task.SessionID, successSummary); err != nil {
+		if err := pm.getSessionRepo(task.Ctx).UpdateSummary(task.Ctx, task.SessionID, successSummary); err != nil {
 			log.Error("[AgentPool] Failed to update session summary", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			return
 		}
@@ -90,7 +83,7 @@ func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 		if err != nil {
 			log.Error("[AgentPool] Failed to generate score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			failedScore := vo.NewFailedSessionScore(err.Error(), time.Now())
-			if updateErr := getSessionRepo().UpdateScore(task.Ctx, task.SessionID, failedScore); updateErr != nil {
+			if updateErr := pm.getSessionRepo(task.Ctx).UpdateScore(task.Ctx, task.SessionID, failedScore); updateErr != nil {
 				log.Error("[AgentPool] Failed to update score_error", zap.Uint("sessionID", task.SessionID), zap.Error(updateErr))
 			}
 			return
@@ -107,7 +100,7 @@ func (pm *PoolManager) SubmitScoreTask(task *dto.ScoreTask) error {
 			return
 		}
 
-		if err := getSessionRepo().UpdateScore(task.Ctx, task.SessionID, score); err != nil {
+		if err := pm.getSessionRepo(task.Ctx).UpdateScore(task.Ctx, task.SessionID, score); err != nil {
 			log.Error("[AgentPool] Failed to update session score", zap.Uint("sessionID", task.SessionID), zap.Error(err))
 			return
 		}

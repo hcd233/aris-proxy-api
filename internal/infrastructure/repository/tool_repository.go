@@ -3,11 +3,12 @@ package repository
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
@@ -26,6 +27,7 @@ var toolRepoFieldsFull = constant.ToolRepoFieldsFull
 //	@update 2026-04-22 19:30:00
 type toolRepository struct {
 	dao *dao.ToolDAO
+	db  *gorm.DB
 }
 
 // NewToolRepository 构造
@@ -33,8 +35,8 @@ type toolRepository struct {
 //	@return conversation.ToolRepository
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func NewToolRepository() conversation.ToolRepository {
-	return &toolRepository{dao: dao.GetToolDAO()}
+func NewToolRepository(db *gorm.DB) conversation.ToolRepository {
+	return &toolRepository{dao: dao.GetToolDAO(), db: db}
 }
 
 // BatchSaveDedup 批量去重保存工具
@@ -51,7 +53,7 @@ func (r *toolRepository) BatchSaveDedup(ctx context.Context, tools []*aggregate.
 		return []uint{}, nil
 	}
 
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 
 	checksums := make([]string, len(tools))
 	for i, t := range tools {
@@ -110,7 +112,7 @@ func (r *toolRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggregat
 	if len(ids) == 0 {
 		return []*aggregate.Tool{}, nil
 	}
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	records, err := r.dao.BatchGetByField(db, constant.WhereFieldID, ids, toolRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by id")

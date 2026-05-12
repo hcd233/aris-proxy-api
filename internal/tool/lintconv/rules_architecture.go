@@ -54,6 +54,9 @@ func (c *checker) checkArchitectureCalls(file SourceFile) {
 		if isInterfaceLayerPath(file.Path) && receiver == constant.ConvCheckRecvContext && (method == constant.ConvCheckMethodBackground || method == constant.ConvCheckMethodTODO) {
 			c.report(file, call, enum.SeverityError, constant.RuleRootContext, constant.ConvCheckMsgRootContext)
 		}
+		if receiver == constant.ConvCheckRecvDB && method == constant.ConvCheckMethodGetDBInstance && hasRootContextArg(call) {
+			c.report(file, call, enum.SeverityError, constant.RuleDBRootContext, constant.ConvCheckMsgDBRootContext)
+		}
 	})
 }
 
@@ -80,6 +83,18 @@ func (c *checker) checkPassthroughWrappers(file SourceFile) {
 			c.report(file, fn, enum.SeverityWarning, constant.RulePassthrough, constant.ConvCheckMsgPassthrough)
 		}
 	}
+}
+
+func hasRootContextArg(call *ast.CallExpr) bool {
+	if len(call.Args) == 0 {
+		return false
+	}
+	argCall, ok := call.Args[0].(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	receiver, method, ok := selectorName(argCall.Fun)
+	return ok && receiver == constant.ConvCheckRecvContext && (method == constant.ConvCheckMethodBackground || method == constant.ConvCheckMethodTODO)
 }
 
 func isDeprecatedApplicationImport(path string) bool {

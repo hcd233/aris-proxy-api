@@ -2,14 +2,15 @@ package constant
 
 // lint rule identifiers
 const (
-	RuleMagicNumber     = "magic.number"
-	RuleMagicString     = "magic.string"
-	RuleMagicDuration   = "magic.duration"
-	RuleAnonymousStruct = "anonymous_struct"
-	RuleLocalConst      = "style.local_const"
-	RuleCommentedCode   = "style.commented_code"
-	RuleImplementation  = "style.implementation_name"
-	RuleTypeAlias       = "style.type_alias"
+	RuleMagicNumber       = "magic.number"
+	RuleMagicString       = "magic.string"
+	RuleMagicDuration     = "magic.duration"
+	RuleAnonymousStruct   = "anonymous_struct"
+	RuleLocalConst        = "style.local_const"
+	RuleCommentedCode     = "style.commented_code"
+	RuleImplementation    = "style.implementation_name"
+	RuleTypeAlias         = "style.type_alias"
+	RuleShortFunctionBody = "style.short_function_body"
 
 	RuleErrorDeprecatedConstant = "error.deprecated_constant"
 	RuleConstantForwarding      = "constant.forwarding"
@@ -18,6 +19,7 @@ const (
 	RuleDeprecatedApplicationImport = "architecture.deprecated_application_import"
 	RuleHandlerDB                   = "architecture.handler_db"
 	RuleRootContext                 = "architecture.root_context"
+	RuleDBRootContext               = "architecture.db_root_context"
 	RulePassthrough                 = "architecture.passthrough"
 
 	RuleLoggingPrefix    = "logging.prefix"

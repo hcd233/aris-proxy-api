@@ -14,7 +14,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
@@ -22,6 +21,7 @@ import (
 // sessionRepository SessionRepository 的 GORM 实现
 type sessionRepository struct {
 	dao *dao.SessionDAO
+	db  *gorm.DB
 }
 
 // NewSessionRepository 构造 SessionRepository
@@ -29,8 +29,8 @@ type sessionRepository struct {
 //	@return session.SessionRepository
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func NewSessionRepository() session.SessionRepository {
-	return &sessionRepository{dao: dao.GetSessionDAO()}
+func NewSessionRepository(db *gorm.DB) session.SessionRepository {
+	return &sessionRepository{dao: dao.GetSessionDAO(), db: db}
 }
 
 // Save 持久化 Session 聚合（首次 Save 回填 ID；已有 ID 执行 Update）
@@ -42,7 +42,7 @@ func NewSessionRepository() session.SessionRepository {
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
 func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) error {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 
 	if s.AggregateID() == 0 {
 		record := &dbmodel.Session{
@@ -113,7 +113,7 @@ func applyScore(record *dbmodel.Session, score vo.SessionScore) {
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
 func (r *sessionRepository) FindByID(ctx context.Context, id uint) (*aggregate.Session, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	record, err := r.dao.Get(db, &dbmodel.Session{ID: id}, constant.SessionRepoFieldsDetail)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -136,7 +136,7 @@ func (r *sessionRepository) FindByID(ctx context.Context, id uint) (*aggregate.S
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
 func (r *sessionRepository) Paginate(ctx context.Context, owner string, param session.PageParam) ([]*aggregate.Session, *model.PageInfo, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.dao.Paginate(
 		db,
 		&dbmodel.Session{APIKeyName: owner},
@@ -165,7 +165,7 @@ func (r *sessionRepository) Paginate(ctx context.Context, owner string, param se
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
 func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	if err := r.dao.Delete(db, &dbmodel.Session{ID: id}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete session")
 	}
@@ -182,7 +182,7 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 //	@author centonhuang
 //	@update 2026-04-26 14:00:00
 func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary vo.SessionSummary) error {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	updates := map[string]any{
 		constant.FieldSummary:        summary.Text(),
 		constant.FieldSummarizeError: summary.Error(),
@@ -203,7 +203,7 @@ func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary 
 //	@author centonhuang
 //	@update 2026-04-26 14:00:00
 func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score vo.SessionScore) error {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	updates := map[string]any{
 		constant.FieldCoherenceScore: score.Coherence(),
 		constant.FieldDepthScore:     score.Depth(),
@@ -225,6 +225,7 @@ func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score vo.S
 
 // sessionReadRepository SessionReadRepository 的 GORM 实现
 type sessionReadRepository struct {
+	db         *gorm.DB
 	sessionDAO *dao.SessionDAO
 	messageDAO *dao.MessageDAO
 	toolDAO    *dao.ToolDAO
@@ -235,8 +236,9 @@ type sessionReadRepository struct {
 //	@return session.SessionReadRepository
 //	@author centonhuang
 //	@update 2026-04-24 20:00:00
-func NewSessionReadRepository() session.SessionReadRepository {
+func NewSessionReadRepository(db *gorm.DB) session.SessionReadRepository {
 	return &sessionReadRepository{
+		db:         db,
 		sessionDAO: dao.GetSessionDAO(),
 		messageDAO: dao.GetMessageDAO(),
 		toolDAO:    dao.GetToolDAO(),
@@ -245,7 +247,7 @@ func NewSessionReadRepository() session.SessionReadRepository {
 
 // ListSessions 分页查询 Session 列表投影
 func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.sessionDAO.Paginate(
 		db,
 		&dbmodel.Session{APIKeyName: owner},
@@ -274,7 +276,7 @@ func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, 
 
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (*session.SessionDetailProjection, error) {
-	db := database.GetDBInstance(ctx)
+	db := r.db.WithContext(ctx)
 
 	sessionRecord, err := r.sessionDAO.Get(db, &dbmodel.Session{ID: id}, constant.SessionRepoFieldsReadDetail)
 	if err != nil {

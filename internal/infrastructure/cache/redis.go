@@ -15,23 +15,13 @@ import (
 	"go.uber.org/zap"
 )
 
-var rdb *redis.Client
-
-// GetRedisClient 获取Redis客户端
-//
-//	return *redis.Client
-//	author centonhuang
-//	update 2024-12-09 15:56:40
-func GetRedisClient() *redis.Client {
-	return rdb
-}
-
 // CloseCache 关闭Redis客户端连接，用于优雅关闭
 //
+//	@param rdb *redis.Client
 //	@return error
 //	@author centonhuang
 //	@update 2026-03-20 10:00:00
-func CloseCache() error {
+func CloseCache(rdb *redis.Client) error {
 	if rdb == nil {
 		return nil
 	}
@@ -40,10 +30,11 @@ func CloseCache() error {
 
 // InitCache 初始化Redis客户端
 //
+//	return *redis.Client
 //	author centonhuang
 //	update 2024-12-09 15:56:36
-func InitCache() {
-	rdb = redis.NewClient(&redis.Options{
+func InitCache() *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf(constant.HostPortTemplate, config.RedisHost, config.RedisPort),
 		Password: config.RedisPassword,
 		DB:       constant.RedisDB,
@@ -52,4 +43,5 @@ func InitCache() {
 	_ = lo.Must1(rdb.Ping(context.Background()).Result())
 
 	logger.Logger().Info("[Cache] Connected to Redis database", zap.String("host", config.RedisHost), zap.String("port", config.RedisPort), zap.Int("db", constant.RedisDB))
+	return rdb
 }

@@ -219,7 +219,7 @@ func (s *stubObjStorageDirCreator) CreateDir(ctx context.Context, userID uint) e
 }
 
 // makeHandler 构造 HandleCallbackHandler 的工厂方法
-func makeHandler(userRepo *stubUserRepo, tc *callbackCase) command.HandleCallbackHandler {
+func makeHandler(userRepo *stubUserRepo, tc *callbackCase, stateManager service.StateManager) command.HandleCallbackHandler {
 	githubStub := newStubPlatform(constant.OAuthProviderGithub, tc.StubUserInfo)
 	platforms := map[string]service.Platform{
 		constant.OAuthProviderGithub: githubStub,
@@ -235,6 +235,7 @@ func makeHandler(userRepo *stubUserRepo, tc *callbackCase) command.HandleCallbac
 		accessSigner,
 		refreshSigner,
 		objDirCreator,
+		stateManager,
 	)
 }
 
@@ -244,13 +245,15 @@ func TestHandleCallback_NewUser(t *testing.T) {
 	tc := findCase(t, allCases, "callback_new_user")
 	ctx := context.Background()
 
-	state, err := infraoauth2.GenerateOAuth2State()
+	stateManager := infraoauth2.NewStateManager()
+
+	state, err := stateManager.GenerateState()
 	if err != nil {
-		t.Fatalf("GenerateOAuth2State() error: %v", err)
+		t.Fatalf("GenerateState() error: %v", err)
 	}
 
 	userRepo := newStubUserRepo()
-	handler := makeHandler(userRepo, &tc)
+	handler := makeHandler(userRepo, &tc, stateManager)
 
 	result, err := handler.Handle(ctx, command.HandleCallbackCommand{
 		Platform: tc.Platform,
@@ -286,9 +289,11 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 	tc := findCase(t, allCases, "callback_existing_user")
 	ctx := context.Background()
 
-	state, err := infraoauth2.GenerateOAuth2State()
+	stateManager := infraoauth2.NewStateManager()
+
+	state, err := stateManager.GenerateState()
 	if err != nil {
-		t.Fatalf("GenerateOAuth2State() error: %v", err)
+		t.Fatalf("GenerateState() error: %v", err)
 	}
 
 	existingUserID, parseErr := strconv.ParseUint(tc.StubExistingUser.ID, 10, 64)
@@ -328,7 +333,7 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 		return nil
 	}
 
-	handler := makeHandler(repo, &tc)
+	handler := makeHandler(repo, &tc, stateManager)
 
 	result, err := handler.Handle(ctx, command.HandleCallbackCommand{
 		Platform: tc.Platform,
@@ -358,13 +363,15 @@ func TestHandleCallback_InvalidPlatform(t *testing.T) {
 	tc := findCase(t, allCases, "callback_invalid_platform")
 	ctx := context.Background()
 
-	state, err := infraoauth2.GenerateOAuth2State()
+	stateManager := infraoauth2.NewStateManager()
+
+	state, err := stateManager.GenerateState()
 	if err != nil {
-		t.Fatalf("GenerateOAuth2State() error: %v", err)
+		t.Fatalf("GenerateState() error: %v", err)
 	}
 
 	userRepo := newStubUserRepo()
-	handler := makeHandler(userRepo, &tc)
+	handler := makeHandler(userRepo, &tc, stateManager)
 
 	_, err = handler.Handle(ctx, command.HandleCallbackCommand{
 		Platform: tc.Platform,
@@ -385,8 +392,9 @@ func TestHandleCallback_InvalidState(t *testing.T) {
 	tc := findCase(t, allCases, "callback_invalid_state")
 	ctx := context.Background()
 
+	stateManager := infraoauth2.NewStateManager()
 	userRepo := newStubUserRepo()
-	handler := makeHandler(userRepo, &tc)
+	handler := makeHandler(userRepo, &tc, stateManager)
 
 	_, err := handler.Handle(ctx, command.HandleCallbackCommand{
 		Platform: tc.Platform,

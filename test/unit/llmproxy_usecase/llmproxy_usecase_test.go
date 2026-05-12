@@ -8,6 +8,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
@@ -46,16 +47,16 @@ type mockAnthropicProxy struct {
 	forwardCountTokensErr    error
 }
 
-func (p *mockAnthropicProxy) ForwardCountTokens(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) (*dto.AnthropicTokensCount, error) {
+func (p *mockAnthropicProxy) ForwardCountTokens(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicTokensCount, error) {
 	p.forwardCountTokensCalled = true
 	return p.forwardCountTokensResult, p.forwardCountTokensErr
 }
 
-func (p *mockAnthropicProxy) ForwardCreateMessageStream(_ context.Context, _ transport.UpstreamEndpoint, _ []byte, _ func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+func (p *mockAnthropicProxy) ForwardCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte, _ func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
 	return nil, nil
 }
 
-func (p *mockAnthropicProxy) ForwardCreateMessage(_ context.Context, _ transport.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
+func (p *mockAnthropicProxy) ForwardCreateMessage(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
 	return nil, nil
 }
 

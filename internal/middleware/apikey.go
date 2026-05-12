@@ -8,13 +8,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // APIKeyMiddleware API Key 验证中间件
@@ -24,7 +24,7 @@ import (
 //	@return func(ctx huma.Context, next func(huma.Context))
 //	@author centonhuang
 //	@update 2026-04-09 17:10:00
-func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
+func APIKeyMiddleware(db *gorm.DB) func(ctx huma.Context, next func(huma.Context)) {
 	proxyAPIKeyDAO := dao.GetProxyAPIKeyDAO()
 	userDAO := dao.GetUserDAO()
 
@@ -38,8 +38,13 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 			return
 		}
 
-		db := database.GetDBInstance(ctx.Context())
-		apiKey, err := proxyAPIKeyDAO.Get(db, &dbmodel.ProxyAPIKey{Key: tokenString}, constant.ProxyAPIKeyRepoFieldsAuth)
+		if db == nil {
+			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] DB dependency is nil")
+			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
+			return
+		}
+		reqDB := db.WithContext(ctx.Context())
+		apiKey, err := proxyAPIKeyDAO.Get(reqDB, &dbmodel.ProxyAPIKey{Key: tokenString}, constant.ProxyAPIKeyRepoFieldsAuth)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
 			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
@@ -47,7 +52,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		}
 
 		// 通过 UserID 查询用户名
-		user, err := userDAO.Get(db, &dbmodel.User{ID: apiKey.UserID}, constant.UserRepoFieldsBasic)
+		user, err := userDAO.Get(reqDB, &dbmodel.User{ID: apiKey.UserID}, constant.UserRepoFieldsBasic)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] Failed to get user", zap.Error(err))
 			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))

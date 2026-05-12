@@ -16,7 +16,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -65,7 +64,7 @@ func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, log *zap.Lo
 		outputTokens = usage.CompletionTokens
 	}
 
-	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
 		Model:        upstreamModel,
@@ -139,7 +138,7 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, log *zap.Logge
 		outputTokens = rsp.Usage.OutputTokens
 	}
 
-	submitResponseMessageStoreTask(ctx, log, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
+	submitResponseMessageStoreTask(u.taskSubmitter, ctx, log, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
 }
 
 // convertResponseOutput 将 Response API 响应输出项转换为统一消息格式
@@ -185,7 +184,7 @@ func (u *openAIUseCase) storeResponseFromAnthropicMsg(ctx context.Context, log *
 		outputTokens = msg.Usage.OutputTokens
 	}
 
-	submitResponseMessageStoreTask(ctx, log, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
+	submitResponseMessageStoreTask(u.taskSubmitter, ctx, log, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
 }
 
 // buildResponseRequestUnifiedMessages Response API 请求 → UnifiedMessage 前置列表
@@ -272,8 +271,8 @@ func anthropicResponseContentToUnified(log *zap.Logger, blocks []*dto.AnthropicC
 }
 
 // submitResponseMessageStoreTask Response API 路径统一的消息存储投递
-func submitResponseMessageStoreTask(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, upstreamModel string, messages []*vo.UnifiedMessage, inputTokens, outputTokens int) {
-	if err := pool.GetPoolManager().SubmitMessageStoreTask(&dto.MessageStoreTask{
+func submitResponseMessageStoreTask(submitter TaskSubmitter, ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, upstreamModel string, messages []*vo.UnifiedMessage, inputTokens, outputTokens int) {
+	if err := submitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
 		Model:        upstreamModel,

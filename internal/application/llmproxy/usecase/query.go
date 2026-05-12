@@ -14,10 +14,12 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // ============================================================
@@ -150,8 +152,12 @@ func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensR
 		return &dto.AnthropicTokensCount{}, nil
 	}
 
-	upstream := transport.NewUpstreamEndpointFromCredential(creds)
-	body := transport.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
+	upstream := vo.UpstreamEndpoint{
+		Model:   creds.Model,
+		APIKey:  creds.APIKey,
+		BaseURL: creds.BaseURL,
+	}
+	body := util.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
 
 	rsp, err := q.proxy.ForwardCountTokens(ctx, upstream, body)
 	if err != nil {

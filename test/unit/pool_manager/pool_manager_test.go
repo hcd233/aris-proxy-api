@@ -212,7 +212,7 @@ func TestPoolConfig_MinimalValues(t *testing.T) {
 
 func TestPoolManager_GetPoolManager(t *testing.T) {
 	// Init first, then GetPoolManager should return non-nil PoolManager
-	pool.InitPoolManager()
+	pool.InitPoolManager(nil)
 	pm := pool.GetPoolManager()
 	if pm == nil {
 		t.Error("GetPoolManager() returned nil after InitPoolManager()")
@@ -222,7 +222,7 @@ func TestPoolManager_GetPoolManager(t *testing.T) {
 
 func TestPoolManager_Stop(t *testing.T) {
 	// InitPoolManager and StopPoolManager should work without panic
-	pool.InitPoolManager()
+	pool.InitPoolManager(nil)
 	pool.StopPoolManager()
 	t.Log("InitPoolManager and StopPoolManager executed successfully")
 }

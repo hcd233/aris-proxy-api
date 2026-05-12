@@ -11,6 +11,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
@@ -23,8 +24,8 @@ import (
 //	@return fiber.Handler
 //	@author centonhuang
 //	@update 2025-11-11 04:52:25
-func RedisLockMiddleware(serviceName, key string, expire time.Duration) func(ctx huma.Context, next func(huma.Context)) {
-	locker := lock.NewLocker()
+func RedisLockMiddleware(rdb *redis.Client, serviceName, key string, expire time.Duration) func(ctx huma.Context, next func(huma.Context)) {
+	locker := lock.NewLocker(rdb)
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		logger := logger.WithCtx(ctx.Context())

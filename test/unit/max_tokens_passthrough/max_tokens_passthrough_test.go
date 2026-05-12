@@ -11,7 +11,7 @@
 //	抹掉，叠加 32 个 tools + 超长 system prompt，最终触发上游模型 503
 //	"模型无返回结果，可能是内容违规、输入过长、输入格式有误或负载较高"。
 //
-// 本测试直接用 usecase 层 body 构建所用的两步纯函数（transport.ReplaceModelInBody +
+// 本测试直接用 usecase 层 body 构建所用的两步纯函数（util.ReplaceModelInBody +
 // util.EnsureAssistantMessageReasoningContent）构造发给上游的 body，断言
 // max_tokens 在整个链路中保持原样。
 package max_tokens_passthrough
@@ -23,13 +23,13 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
 
 // buildForwardBody 复刻 OpenAIUseCase.forwardChatNative 中的 body 构建流程：
 //  1. sonic.Marshal(req)
-//  2. transport.ReplaceModelInBody 替换 model 字段为上游真实 model
+//  2. util.ReplaceModelInBody 替换 model 字段为上游真实 model
 //  3. util.EnsureAssistantMessageReasoningContent 处理 thinking 模式 reasoning_content
 func buildForwardBody(t *testing.T, req *dto.OpenAIChatCompletionReq, upstreamModel string) []byte {
 	t.Helper()
@@ -37,7 +37,7 @@ func buildForwardBody(t *testing.T, req *dto.OpenAIChatCompletionReq, upstreamMo
 	if err != nil {
 		t.Fatalf("sonic.Marshal error: %v", err)
 	}
-	body := transport.ReplaceModelInBody(raw, upstreamModel)
+	body := util.ReplaceModelInBody(raw, upstreamModel)
 	return body
 }
 
