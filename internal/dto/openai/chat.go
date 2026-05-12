@@ -1,4 +1,4 @@
-package dto
+package openai
 
 import (
 	"reflect"
@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
@@ -360,10 +361,10 @@ type OpenAIChatCompletionTool struct {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type OpenAIFunctionDefinition struct {
-	Name        string              `json:"name" doc:"函数名称"`
-	Description string              `json:"description,omitempty" doc:"函数描述"`
-	Parameters  *JSONSchemaProperty `json:"parameters,omitempty" doc:"参数JSON Schema"`
-	Strict      *bool               `json:"strict,omitempty" doc:"是否启用严格模式"`
+	Name        string                     `json:"name" doc:"函数名称"`
+	Description string                     `json:"description,omitempty" doc:"函数描述"`
+	Parameters  *schema.JSONSchemaProperty `json:"parameters,omitempty" doc:"参数JSON Schema"`
+	Strict      *bool                      `json:"strict,omitempty" doc:"是否启用严格模式"`
 }
 
 // OpenAICustomToolDefinition 自定义工具定义

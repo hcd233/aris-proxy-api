@@ -1,5 +1,5 @@
 // Package dto 请求/响应数据传输对象定义
-package dto
+package schema
 
 import (
 	"github.com/danielgtaylor/huma/v2"

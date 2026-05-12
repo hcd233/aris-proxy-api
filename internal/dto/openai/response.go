@@ -1,4 +1,4 @@
-package dto
+package openai
 
 import (
 	"reflect"
@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
 // ==================== Response API Request DTOs ====================
@@ -42,10 +43,10 @@ type ResponseTextFormat struct {
 	Type string `json:"type" doc:"text/json_schema/json_object"`
 
 	// json_schema 专用
-	Name        string              `json:"name,omitempty" doc:"格式名称(json_schema)"`
-	Schema      *JSONSchemaProperty `json:"schema,omitempty" doc:"JSON Schema 描述"`
-	Description string              `json:"description,omitempty" doc:"格式描述"`
-	Strict      *bool               `json:"strict,omitempty" doc:"严格模式"`
+	Name        string                     `json:"name,omitempty" doc:"格式名称(json_schema)"`
+	Schema      *schema.JSONSchemaProperty `json:"schema,omitempty" doc:"JSON Schema 描述"`
+	Description string                     `json:"description,omitempty" doc:"格式描述"`
+	Strict      *bool                      `json:"strict,omitempty" doc:"严格模式"`
 }
 
 // ==================== prompt 字段 ====================
@@ -163,8 +164,7 @@ type ResponseContextManagementEntry struct {
 // ==================== 顶层请求 ====================
 
 // OpenAICreateResponseReq Response API 请求体（按文档精确建模）
-type OpenAICreateResponseReq struct {
-	// ---------- 布尔/标量 ----------
+type OpenAICreateResponseReq struct { // ---------- 布尔/标量 ----------
 	Background           *bool             `json:"background,omitempty" doc:"是否后台运行"`
 	Instructions         *string           `json:"instructions,omitempty" doc:"系统指令"`
 	MaxOutputTokens      *int64            `json:"max_output_tokens,omitempty" doc:"最大输出 token 数"`
