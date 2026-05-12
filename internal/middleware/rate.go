@@ -153,15 +153,15 @@ func TokenBucketRateLimiterMiddleware(serviceName string, key enum.CtxKey, perio
 				zap.Int64("remaining", remainingInt),
 				zap.String("capacity", limitStr),
 			)
-			ctx.SetHeader(constant.HTTPHeaderXRateLimitLimit, limitStr)
-			ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, constant.ZeroString)
-			ctx.SetHeader(constant.HTTPHeaderRetryAfter, strconv.Itoa(retryAfterSeconds))
+			ctx.SetHeader(constant.HTTPTitleHeaderXRateLimitLimit, limitStr)
+			ctx.SetHeader(constant.HTTPTitleHeaderXRateLimitRemaining, constant.ZeroString)
+			ctx.SetHeader(constant.HTTPTitleHeaderRetryAfter, strconv.Itoa(retryAfterSeconds))
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError()))
 			return
 		}
 
-		ctx.SetHeader(constant.HTTPHeaderXRateLimitLimit, limitStr)
-		ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, strconv.FormatInt(remainingInt, constant.DecimalBase))
+		ctx.SetHeader(constant.HTTPTitleHeaderXRateLimitLimit, limitStr)
+		ctx.SetHeader(constant.HTTPTitleHeaderXRateLimitRemaining, strconv.FormatInt(remainingInt, constant.DecimalBase))
 
 		next(ctx)
 	}

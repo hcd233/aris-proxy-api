@@ -4,6 +4,7 @@
 package middleware
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 
@@ -54,7 +55,7 @@ func JwtMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		log := logger.WithCtx(ctx.Context())
 		db := database.GetDBInstance(ctx.Context())
 
-		tokenString := ctx.Header(constant.HTTPHeaderAuthorization)
+		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAPIKey), ctx.Header(constant.HTTPTitleHeaderAuthorization))
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 		if tokenString == "" {
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))

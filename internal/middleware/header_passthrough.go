@@ -10,16 +10,16 @@ import (
 // passthroughExcludedHeaders 不透传到上游的请求头（与 EachHeader 的 name 格式一致）。
 // 鉴权、Content-Type、Anthropic 版本等在 transport 层会强制覆盖，不再在此排除。
 var passthroughExcludedHeaders = map[string]struct{}{
-	constant.HTTPHeaderContentLength:      {},
-	constant.HTTPHeaderAcceptEncoding:     {},
-	constant.HTTPHeaderHost:               {},
-	constant.HTTPHeaderConnection:         {},
-	constant.HTTPHeaderTransferEncoding:   {},
-	constant.HTTPHeaderUpgrade:            {},
-	constant.HTTPHeaderProxyAuthorization: {},
-	constant.HTTPHeaderProxyAuthenticate:  {},
-	constant.HTTPHeaderTE:                 {},
-	constant.HTTPHeaderTrailer:            {},
+	constant.HTTPLowerHeaderContentLength:      {},
+	constant.HTTPLowerHeaderAcceptEncoding:     {},
+	constant.HTTPLowerHeaderHost:               {},
+	constant.HTTPLowerHeaderConnection:         {},
+	constant.HTTPLowerHeaderTransferEncoding:   {},
+	constant.HTTPLowerHeaderUpgrade:            {},
+	constant.HTTPLowerHeaderProxyAuthorization: {},
+	constant.HTTPLowerHeaderProxyAuthenticate:  {},
+	constant.HTTPLowerHeaderTE:                 {},
+	constant.HTTPLowerHeaderTrailer:            {},
 }
 
 // HeaderPassthroughMiddleware 透传请求头到上游的中间件

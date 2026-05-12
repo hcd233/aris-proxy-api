@@ -284,7 +284,7 @@ func callOpenAINonStream(t *testing.T, baseURL, apiKey string, body []byte) (str
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPHeaderTraceID), string(respBody))
+		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPLowerHeaderTraceID), string(respBody))
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
@@ -338,12 +338,12 @@ func callOpenAIStream(t *testing.T, baseURL, apiKey string, body []byte) (string
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPHeaderTraceID), string(respBody))
+		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPLowerHeaderTraceID), string(respBody))
 	}
 	if ct := resp.Header.Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
 		t.Fatalf("unexpected Content-Type = %q, want text/event-stream", ct)
 	}
-	traceID := resp.Header.Get(constant.HTTPHeaderTraceID)
+	traceID := resp.Header.Get(constant.HTTPLowerHeaderTraceID)
 	if traceID == "" {
 		t.Errorf("missing X-Trace-Id header in stream response")
 	}
@@ -459,7 +459,7 @@ func callAnthropicNonStream(t *testing.T, baseURL, apiKey string, body []byte) (
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPHeaderTraceID), string(respBody))
+		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPLowerHeaderTraceID), string(respBody))
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
@@ -517,12 +517,12 @@ func callAnthropicStream(t *testing.T, baseURL, apiKey string, body []byte) (str
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPHeaderTraceID), string(respBody))
+		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPLowerHeaderTraceID), string(respBody))
 	}
 	if ct := resp.Header.Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
 		t.Fatalf("unexpected Content-Type = %q, want text/event-stream", ct)
 	}
-	traceID := resp.Header.Get(constant.HTTPHeaderTraceID)
+	traceID := resp.Header.Get(constant.HTTPLowerHeaderTraceID)
 	if traceID == "" {
 		t.Errorf("missing X-Trace-Id header in stream response")
 	}

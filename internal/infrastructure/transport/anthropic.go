@@ -184,9 +184,9 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep UpstreamEndpoint, p
 		}
 	}
 
-	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-	req.Header.Set(constant.HTTPHeaderAPIKey, ep.APIKey)
-	req.Header.Set(constant.HTTPHeaderAnthropicVersion, constant.AnthropicAPIVersion)
+	req.Header.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
+	req.Header.Set(constant.HTTPLowerHeaderAPIKey, ep.APIKey)
+	req.Header.Set(constant.HTTPLowerHeaderAnthropicVersion, constant.AnthropicAPIVersion)
 
 	log.Info("[AnthropicProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),

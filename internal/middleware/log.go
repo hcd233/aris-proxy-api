@@ -39,11 +39,13 @@ type logSampler struct {
 
 // sensitiveHeaders 需要掩码的敏感头列表
 var sensitiveHeaders = []string{
-	constant.HTTPHeaderAuthorization,
-	constant.HTTPHeaderAPIKey,
-	constant.HTTPHeaderProxyAuthorization,
-	constant.HTTPHeaderCookie,
-	constant.HTTPHeaderSetCookie,
+	constant.HTTPLowerHeaderAuthorization,
+	constant.HTTPTitleHeaderAuthorization,
+	constant.HTTPLowerHeaderAPIKey,
+	constant.HTTPTitleHeaderAPIKey,
+	constant.HTTPLowerHeaderProxyAuthorization,
+	constant.HTTPTitleHeaderCookie,
+	constant.HTTPTitleHeaderSetCookie,
 }
 
 // isSensitiveHeader 判断是否为需要掩码的敏感请求头

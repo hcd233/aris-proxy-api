@@ -10,14 +10,14 @@ import (
 
 // responsePassthroughExcludedHeaders 不从上游透传到客户端的响应头
 var responsePassthroughExcludedHeaders = map[string]struct{}{
-	constant.HTTPHeaderContentType:       {},
-	constant.HTTPHeaderContentLength:     {},
-	constant.HTTPHeaderTransferEncoding:  {},
-	constant.HTTPHeaderConnection:        {},
-	constant.HTTPHeaderUpgrade:           {},
-	constant.HTTPHeaderTrailer:           {},
-	constant.HTTPHeaderProxyAuthenticate: {},
-	constant.HTTPHeaderTraceID:           {},
+	constant.HTTPTitleHeaderContentType:       {},
+	constant.HTTPLowerHeaderContentLength:     {},
+	constant.HTTPLowerHeaderTransferEncoding:  {},
+	constant.HTTPLowerHeaderConnection:        {},
+	constant.HTTPLowerHeaderUpgrade:           {},
+	constant.HTTPLowerHeaderTrailer:           {},
+	constant.HTTPLowerHeaderProxyAuthenticate: {},
+	constant.HTTPLowerHeaderTraceID:           {},
 }
 
 // isPassthroughResponseHeader 判断响应头是否应透传

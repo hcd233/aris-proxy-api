@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -27,7 +28,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 	userDAO := dao.GetUserDAO()
 
 	return func(ctx huma.Context, next func(huma.Context)) {
-		tokenString := ctx.Header(constant.HTTPHeaderAuthorization)
+		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAPIKey), ctx.Header(constant.HTTPTitleHeaderAuthorization))
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 
 		if tokenString == "" {
@@ -55,7 +56,7 @@ func APIKeyMiddleware() func(ctx huma.Context, next func(huma.Context)) {
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, user.ID)
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, user.Name)
 		ctx = huma.WithValue(ctx, constant.CtxKeyAPIKeyID, apiKey.ID)
-		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header(constant.HTTPHeaderUserAgent))
+		ctx = huma.WithValue(ctx, constant.CtxKeyClient, ctx.Header(constant.HTTPTitleHeaderUserAgent))
 
 		next(ctx)
 	}
