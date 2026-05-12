@@ -46,6 +46,20 @@ func WriteErrorResponse(bodyWriter io.Writer, err *model.Error) error {
 	return writeErr
 }
 
+// WriteErrorHTTPResponse 写入带 HTTP 状态码和 JSON Content-Type 的错误响应
+//
+//	@param ctx huma.Context
+//	@param statusCode int
+//	@param err *model.Error
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-12 14:20:00
+func WriteErrorHTTPResponse(ctx huma.Context, statusCode int, err *model.Error) error {
+	ctx.SetStatus(statusCode)
+	ctx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
+	return WriteErrorResponse(ctx.BodyWriter(), err)
+}
+
 // WrapStreamResponse 创建 SSE 流式响应包装
 //
 //	@param handler func(w *bufio.Writer)
