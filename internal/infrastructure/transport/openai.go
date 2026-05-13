@@ -171,7 +171,10 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpo
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)))
+		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)),
+		zap.Any("upstreamHeaders", util.MaskHTTPHeadersForLog(req.Header)),
+		zap.ByteString("upstreamBody", body),
+	)
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {

@@ -25,16 +25,16 @@ type Locker interface {
 //	@return Locker
 //	@author centonhuang
 //	@update 2025-11-11 17:49:18
-func NewLocker(rdb *redis.Client) Locker {
-	return &redisLocker{rdb: rdb}
+func NewLocker(cache *redis.Client) Locker {
+	return &redisLocker{cache: cache}
 }
 
 type redisLocker struct {
-	rdb *redis.Client
+	cache *redis.Client
 }
 
 func (l *redisLocker) Lock(ctx context.Context, key, value string, expire time.Duration) (success bool, err error) {
-	return l.rdb.SetNX(ctx, key, value, expire).Result()
+	return l.cache.SetNX(ctx, key, value, expire).Result()
 }
 
 func (l *redisLocker) Unlock(ctx context.Context, key, value string) (err error) {
@@ -45,5 +45,5 @@ func (l *redisLocker) Unlock(ctx context.Context, key, value string) (err error)
 				return 0
 			end
 		`
-	return l.rdb.Eval(ctx, luaScript, []string{key}, value).Err()
+	return l.cache.Eval(ctx, luaScript, []string{key}, value).Err()
 }

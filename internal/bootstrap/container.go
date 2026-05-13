@@ -54,7 +54,7 @@ type Server struct {
 //	@update 2026-05-12 20:30:00
 type Infrastructure struct {
 	DB          *gorm.DB
-	RedisClient *redis.Client
+	Cache       *redis.Client
 	PoolManager *pool.PoolManager
 }
 
@@ -65,11 +65,11 @@ type Infrastructure struct {
 //	@update 2026-05-09 10:00:00
 func InitInfrastructure() *Infrastructure {
 	db := database.InitDatabase()
-	rdb := cache.InitCache()
+	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
 	poolManager := pool.InitPoolManager(db)
 	cron.InitCronJobs(db, poolManager)
-	return &Infrastructure{DB: db, RedisClient: rdb, PoolManager: poolManager}
+	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
 }
 
 // BuildServer 构建启动依赖容器并解析 HTTP 服务对象。
@@ -134,7 +134,7 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 	if err := container.Provide(func() *gorm.DB { return infra.DB }); err != nil {
 		return err
 	}
-	if err := container.Provide(func() *redis.Client { return infra.RedisClient }); err != nil {
+	if err := container.Provide(func() *redis.Client { return infra.Cache }); err != nil {
 		return err
 	}
 	if err := container.Provide(func() *pool.PoolManager { return infra.PoolManager }); err != nil {

@@ -16,7 +16,7 @@ import (
 //	@param anthropicGroup huma.API
 //	@author centonhuang
 //	@update 2026-03-17 10:00:00
-func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.AnthropicHandler, db *gorm.DB, rdb *redis.Client) {
+func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.AnthropicHandler, db *gorm.DB, cache *redis.Client) {
 	anthropicGroup.UseMiddleware(middleware.APIKeyMiddleware(db), middleware.HeaderPassthroughMiddleware())
 
 	huma.Register(anthropicGroup, huma.Operation{
@@ -38,7 +38,7 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 		Summary:     "Create a Message",
 		Description: "Send a structured list of input messages and the model will return the next message in the conversation.",
 		Tags:        []string{"Anthropic"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(rdb, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
 		Security: []map[string][]string{
 			{"apiKeyAuth": {}},
 		},

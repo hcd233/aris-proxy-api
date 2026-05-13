@@ -15,7 +15,7 @@ import (
 //	@update 2026-04-28 10:00:00
 type APIRouterDependencies struct {
 	DB               *gorm.DB
-	RedisClient      *redis.Client
+	Cache            *redis.Client
 	PingHandler      handler.PingHandler
 	TokenHandler     handler.TokenHandler
 	Oauth2Handler    handler.Oauth2Handler
@@ -64,16 +64,16 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initHealthRouter(humaAPI, deps.PingHandler)
 
 	tokenGroup := huma.NewGroup(v1Group, "/token")
-	initTokenRouter(tokenGroup, deps.TokenHandler, deps.RedisClient)
+	initTokenRouter(tokenGroup, deps.TokenHandler, deps.Cache)
 
 	oauth2Group := huma.NewGroup(v1Group, "/oauth2")
-	initOauth2Router(oauth2Group, deps.Oauth2Handler, deps.RedisClient)
+	initOauth2Router(oauth2Group, deps.Oauth2Handler, deps.Cache)
 
 	userGroup := huma.NewGroup(v1Group, "/user")
-	initUserRouter(userGroup, deps.UserHandler, deps.DB, deps.RedisClient)
+	initUserRouter(userGroup, deps.UserHandler, deps.DB, deps.Cache)
 
 	apikeyGroup := huma.NewGroup(v1Group, "/apikey")
-	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.RedisClient)
+	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.Cache)
 
 	sessionGroup := huma.NewGroup(v1Group, "/session")
 	initSessionRouter(sessionGroup, deps.SessionHandler, deps.DB)
@@ -82,8 +82,8 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
-	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.RedisClient)
+	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)
 
 	anthropicGroup := huma.NewGroup(apiGroup, "/anthropic/v1")
-	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.RedisClient)
+	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.Cache)
 }

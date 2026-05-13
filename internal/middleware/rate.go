@@ -92,7 +92,7 @@ return {tostring(tokens), "0", tostring(capacity)}
 //     @return func(ctx huma.Context, next func(huma.Context))
 //     @author centonhuang
 //     @update 2026-03-20 10:00:00
-func TokenBucketRateLimiterMiddleware(rdb *redis.Client, serviceName string, key enum.CtxKey, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
+func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, key enum.CtxKey, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
 	// 每微秒补充的令牌数
 	refillRate := float64(capacity) / float64(period.Microseconds())
 	expireMs := period.Milliseconds() * 2
@@ -102,7 +102,7 @@ func TokenBucketRateLimiterMiddleware(rdb *redis.Client, serviceName string, key
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		logger := logger.WithCtx(ctx.Context())
-		if rdb == nil {
+		if cache == nil {
 			logger.Error("[TokenBucketRateLimiter] Redis dependency is nil")
 			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
 			return
@@ -132,7 +132,7 @@ func TokenBucketRateLimiterMiddleware(rdb *redis.Client, serviceName string, key
 		now := time.Now().UnixMicro()
 
 		result, err := tokenBucketLua.Run(
-			ctx.Context(), rdb,
+			ctx.Context(), cache,
 			[]string{limiterKey},
 			capacity, refillRate, now, expireMs,
 		).StringSlice()

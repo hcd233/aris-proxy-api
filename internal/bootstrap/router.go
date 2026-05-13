@@ -14,7 +14,7 @@ type routeParams struct {
 	dig.In
 
 	DB               *gorm.DB
-	RedisClient      *redis.Client
+	Cache            *redis.Client
 	PingHandler      handler.PingHandler
 	TokenHandler     handler.TokenHandler
 	Oauth2Handler    handler.Oauth2Handler
@@ -39,7 +39,7 @@ func RegisterRoutes(server *Server) error {
 		}
 		router.RegisterAPIRouter(server.HumaAPI, router.APIRouterDependencies{
 			DB:               params.DB,
-			RedisClient:      params.RedisClient,
+			Cache:            params.Cache,
 			PingHandler:      params.PingHandler,
 			TokenHandler:     params.TokenHandler,
 			Oauth2Handler:    params.Oauth2Handler,

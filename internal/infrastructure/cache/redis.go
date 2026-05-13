@@ -17,15 +17,15 @@ import (
 
 // CloseCache 关闭Redis客户端连接，用于优雅关闭
 //
-//	@param rdb *redis.Client
+//	@param cache
 //	@return error
 //	@author centonhuang
-//	@update 2026-03-20 10:00:00
-func CloseCache(rdb *redis.Client) error {
-	if rdb == nil {
+//	@update 2026-05-13 11:44:13
+func CloseCache(cache *redis.Client) error {
+	if cache == nil {
 		return nil
 	}
-	return rdb.Close()
+	return cache.Close()
 }
 
 // InitCache 初始化Redis客户端
@@ -34,14 +34,14 @@ func CloseCache(rdb *redis.Client) error {
 //	author centonhuang
 //	update 2024-12-09 15:56:36
 func InitCache() *redis.Client {
-	rdb := redis.NewClient(&redis.Options{
+	cache := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf(constant.HostPortTemplate, config.RedisHost, config.RedisPort),
 		Password: config.RedisPassword,
 		DB:       constant.RedisDB,
 	})
 
-	_ = lo.Must1(rdb.Ping(context.Background()).Result())
+	_ = lo.Must1(cache.Ping(context.Background()).Result())
 
 	logger.Logger().Info("[Cache] Connected to Redis database", zap.String("host", config.RedisHost), zap.String("port", config.RedisPort), zap.Int("db", constant.RedisDB))
-	return rdb
+	return cache
 }

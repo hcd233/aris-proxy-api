@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func initTokenRouter(tokenGroup huma.API, tokenHandler handler.TokenHandler, rdb *redis.Client) {
+func initTokenRouter(tokenGroup huma.API, tokenHandler handler.TokenHandler, cache *redis.Client) {
 	huma.Register(tokenGroup, huma.Operation{
 		OperationID: "refreshToken",
 		Method:      http.MethodPost,
@@ -18,6 +18,6 @@ func initTokenRouter(tokenGroup huma.API, tokenHandler handler.TokenHandler, rdb
 		Summary:     "RefreshToken",
 		Description: "Refresh the access token using a refresh token",
 		Tags:        []string{"Token"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(rdb, "refreshToken", "", constant.PeriodRefreshToken, constant.LimitRefreshToken)},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(cache, "refreshToken", "", constant.PeriodRefreshToken, constant.LimitRefreshToken)},
 	}, tokenHandler.HandleRefreshToken)
 }

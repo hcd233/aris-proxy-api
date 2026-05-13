@@ -41,11 +41,13 @@ func jwtUserCacheKey(userID uint) string {
 // 优先从 Redis 缓存读取用户信息，未命中时查询数据库并写入缓存，缓存 TTL 与 AccessToken 过期时间一致。
 //
 //	@param db *gorm.DB
-//	@param rdb *redis.Client
+//	@param cache
+//	@return ctx
+//	@return next
 //	@return func(ctx huma.Context, next func(huma.Context))
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func JwtMiddleware(db *gorm.DB, rdb *redis.Client) func(ctx huma.Context, next func(huma.Context)) {
+//	@update 2026-05-13 11:44:46
+func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next func(huma.Context)) {
 	userDAO := dao.GetUserDAO()
 	accessTokenSvc := jwt.GetAccessTokenSigner()
 
@@ -75,8 +77,8 @@ func JwtMiddleware(db *gorm.DB, rdb *redis.Client) func(ctx huma.Context, next f
 		cacheHit := false
 
 		cacheKey := jwtUserCacheKey(userID)
-		if rdb != nil {
-			if raw, redisErr := rdb.Get(ctx.Context(), cacheKey).Bytes(); redisErr == nil {
+		if cache != nil {
+			if raw, redisErr := cache.Get(ctx.Context(), cacheKey).Bytes(); redisErr == nil {
 				var cached jwtUserCache
 				if unmarshalErr := sonic.Unmarshal(raw, &cached); unmarshalErr == nil {
 					name = cached.Name
@@ -95,9 +97,9 @@ func JwtMiddleware(db *gorm.DB, rdb *redis.Client) func(ctx huma.Context, next f
 			name = user.Name
 			permission = user.Permission
 
-			if rdb != nil {
+			if cache != nil {
 				if cacheVal, marshalErr := sonic.Marshal(&jwtUserCache{Name: name, Permission: permission}); marshalErr == nil {
-					if setErr := rdb.Set(ctx.Context(), cacheKey, cacheVal, config.JwtAccessTokenExpired).Err(); setErr != nil {
+					if setErr := cache.Set(ctx.Context(), cacheKey, cacheVal, config.JwtAccessTokenExpired).Err(); setErr != nil {
 						log.Warn("[JwtMiddleware] Failed to cache user info", zap.Uint("userID", userID), zap.Error(setErr))
 					}
 				}

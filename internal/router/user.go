@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func initUserRouter(userGroup huma.API, userHandler handler.UserHandler, db *gorm.DB, rdb *redis.Client) {
-	userGroup.UseMiddleware(middleware.JwtMiddleware(db, rdb))
+func initUserRouter(userGroup huma.API, userHandler handler.UserHandler, db *gorm.DB, cache *redis.Client) {
+	userGroup.UseMiddleware(middleware.JwtMiddleware(db, cache))
 
 	huma.Register(userGroup, huma.Operation{
 		OperationID: "getCurrentUser",

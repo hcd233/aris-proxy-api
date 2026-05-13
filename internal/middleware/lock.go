@@ -24,8 +24,8 @@ import (
 //	@return fiber.Handler
 //	@author centonhuang
 //	@update 2025-11-11 04:52:25
-func RedisLockMiddleware(rdb *redis.Client, serviceName, key string, expire time.Duration) func(ctx huma.Context, next func(huma.Context)) {
-	locker := lock.NewLocker(rdb)
+func RedisLockMiddleware(cache *redis.Client, serviceName, key string, expire time.Duration) func(ctx huma.Context, next func(huma.Context)) {
+	locker := lock.NewLocker(cache)
 
 	return func(ctx huma.Context, next func(huma.Context)) {
 		logger := logger.WithCtx(ctx.Context())
