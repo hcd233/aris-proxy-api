@@ -1180,8 +1180,10 @@ chunk objects if the request is streamed.
 
 - `top_logprobs: optional number`
 
-  An integer between 0 and 20 specifying the number of most likely tokens to
-  return at each token position, each with an associated log probability.
+  An integer between 0 and 20 specifying the maximum number of most likely
+  tokens to return at each token position, each with an associated log
+  probability. In some cases, the number of returned tokens may be fewer than
+  requested.
   `logprobs` must be set to `true` if this parameter is used.
 
 - `top_p: optional number`
@@ -1317,7 +1319,7 @@ chunk objects if the request is streamed.
 
         - `top_logprobs: array of object { token, bytes, logprob }`
 
-          List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested `top_logprobs` returned.
+          List of the most likely tokens and their log probability, at this token position. The number of entries may be fewer than the requested `top_logprobs`.
 
           - `token: string`
 
@@ -1349,7 +1351,7 @@ chunk objects if the request is streamed.
 
         - `top_logprobs: array of object { token, bytes, logprob }`
 
-          List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested `top_logprobs` returned.
+          List of the most likely tokens and their log probability, at this token position. The number of entries may be fewer than the requested `top_logprobs`.
 
     - `message: ChatCompletionMessage`
 
@@ -1667,7 +1669,7 @@ curl https://api.openai.com/v1/chat/completions \
               "end_index": 0,
               "start_index": 0,
               "title": "title",
-              "url": "url"
+              "url": "https://example.com"
             }
           }
         ],
