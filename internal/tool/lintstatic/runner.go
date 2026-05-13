@@ -2,10 +2,13 @@ package lintstatic
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
 )
 
@@ -36,8 +39,9 @@ func Run(args []string) Result {
 	}
 
 	// staticcheck
-	if staticcheckPath, lookErr := exec.LookPath(constant.StaticcheckCommand); lookErr == nil {
-		scCmd := exec.Command(staticcheckPath, args...)
+	scPath := resolveStaticcheck()
+	if scPath != "" {
+		scCmd := exec.Command(scPath, args...)
 		scOut, scErr := scCmd.CombinedOutput()
 		if len(scOut) > 0 {
 			out.Write(scOut)
@@ -47,7 +51,7 @@ func Run(args []string) Result {
 			hasErr = true
 		}
 	} else {
-		out.WriteString("[lintstatic] staticcheck not found in PATH, skipping. Install with: go install honnef.co/go/tools/cmd/staticcheck@latest\n")
+		out.WriteString("[lintstatic] staticcheck not found in PATH or $(go env GOPATH)/bin, skipping. Install with: go install honnef.co/go/tools/cmd/staticcheck@latest\n")
 	}
 
 	res := Result{Output: out.String()}
@@ -58,9 +62,10 @@ func Run(args []string) Result {
 }
 
 // Log 使用 zap logger 按行输出静态分析结果，替代直接 fmt.Print。
-func (r Result) Log(logger *zap.Logger) {
+func (r Result) Log() {
+	log := logger.Logger()
 	if strings.TrimSpace(r.Output) == "" {
-		logger.Info("[LintStatic] All static checks passed!")
+		log.Info("[LintStatic] All static checks passed!")
 		return
 	}
 	for _, line := range strings.Split(r.Output, "\n") {
@@ -69,9 +74,32 @@ func (r Result) Log(logger *zap.Logger) {
 			continue
 		}
 		if strings.Contains(line, ":") {
-			logger.Warn("[LintStatic] Static check issue", zap.String("detail", line))
+			log.Warn("[LintStatic] Static check issue", zap.String("detail", line))
 		} else {
-			logger.Info("[LintStatic] Static check info", zap.String("detail", line))
+			log.Info("[LintStatic] Static check info", zap.String("detail", line))
 		}
 	}
+}
+
+// resolveStaticcheck 按优先级查找 staticcheck 二进制：
+// 1. 系统 PATH
+// 2. GOBIN 环境变量
+// 3. $(go env GOPATH)/bin
+func resolveStaticcheck() string {
+	if p, err := exec.LookPath(constant.StaticcheckCommand); err == nil {
+		return p
+	}
+	if gobin := os.Getenv(constant.GobinEnvKey); gobin != constant.ZeroString {
+		p := filepath.Join(gobin, constant.StaticcheckCommand)
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+			return p
+		}
+	}
+	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil {
+		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.StaticcheckCommand)
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+			return p
+		}
+	}
+	return ""
 }

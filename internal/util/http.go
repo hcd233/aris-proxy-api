@@ -15,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -136,13 +137,13 @@ func WrapJSONResponse(ctx context.Context, handler func(writer JSONResponseWrite
 
 // WriteUpstreamError 将上游错误写入响应，支持上游错误透传和兜底错误
 //
-//	@param logger *zap.Logger
 //	@param writer JSONResponseWriter
 //	@param err error
 //	@param fallbackBody []byte
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error, fallbackBody []byte) {
+func WriteUpstreamError(writer JSONResponseWriter, err error, fallbackBody []byte) {
+	log := logger.WithCtx(writer.Ctx)
 	var upstreamErr *model.UpstreamError
 	if errors.As(err, &upstreamErr) {
 		for k, v := range upstreamErr.Headers {
@@ -153,7 +154,7 @@ func WriteUpstreamError(logger *zap.Logger, writer JSONResponseWriter, err error
 		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body))
 		return
 	}
-	logger.Error("[ProxyService] Proxy error", zap.Error(err))
+	log.Error("[ProxyService] Proxy error", zap.Error(err))
 	writer.WriteError(fiber.StatusBadGateway, fallbackBody)
 }
 

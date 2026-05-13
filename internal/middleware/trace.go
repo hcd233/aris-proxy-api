@@ -17,7 +17,7 @@ func TraceMiddleware() fiber.Handler {
 
 		c.Locals(constant.CtxKeyTraceID, traceID)
 
-		c.Set(constant.HTTPLowerHeaderTraceID, traceID)
+		c.Set(constant.HTTPTitleHeaderTraceID, traceID)
 
 		return c.Next()
 	}

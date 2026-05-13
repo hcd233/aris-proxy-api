@@ -13,20 +13,68 @@ import (
 
 func (c *checker) checkLogging() {
 	for _, file := range c.files {
-		if !isUnder(file.Path, constant.ConvCheckPathInternal) {
-			continue
-		}
+		zapAliases := zapImportAliases(file)
 		inspectFile(file, func(node ast.Node) {
-			call, ok := node.(*ast.CallExpr)
-			if !ok {
-				return
+			switch current := node.(type) {
+			case *ast.FuncType:
+				c.checkZapLoggerParams(file, current.Params, zapAliases)
+			case *ast.CallExpr:
+				if !isUnder(file.Path, constant.ConvCheckPathInternal) {
+					return
+				}
+				c.checkLoggerPrefix(file, current)
+				c.checkLogMessageFormat(file, current)
+				c.checkLogMessageChinese(file, current)
+				c.checkSensitiveZapString(file, current)
 			}
-			c.checkLoggerPrefix(file, call)
-			c.checkLogMessageFormat(file, call)
-			c.checkLogMessageChinese(file, call)
-			c.checkSensitiveZapString(file, call)
 		})
 	}
+}
+
+func (c *checker) checkZapLoggerParams(file SourceFile, fields *ast.FieldList, zapAliases map[string]bool) {
+	if fields == nil || len(zapAliases) == 0 {
+		return
+	}
+	for _, field := range fields.List {
+		if isZapLoggerParamType(field.Type, zapAliases) {
+			c.report(file, field, enum.SeverityError, constant.RuleLoggingZapLoggerParam, constant.ConvCheckMsgZapLoggerParam)
+		}
+	}
+}
+
+func zapImportAliases(file SourceFile) map[string]bool {
+	aliases := make(map[string]bool)
+	for _, imp := range file.File.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil || path != constant.ConvCheckImportZap {
+			continue
+		}
+		name := constant.ConvCheckRecvZap
+		if imp.Name != nil {
+			name = imp.Name.Name
+		}
+		if name == "_" || name == "." {
+			continue
+		}
+		aliases[name] = true
+	}
+	return aliases
+}
+
+func isZapLoggerParamType(expr ast.Expr, zapAliases map[string]bool) bool {
+	if variadic, ok := expr.(*ast.Ellipsis); ok {
+		expr = variadic.Elt
+	}
+	star, ok := expr.(*ast.StarExpr)
+	if !ok {
+		return false
+	}
+	selector, ok := star.X.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != constant.ConvCheckTypeLogger {
+		return false
+	}
+	ident, ok := selector.X.(*ast.Ident)
+	return ok && zapAliases[ident.Name]
 }
 
 func isLoggerCall(call *ast.CallExpr) (string, bool) {

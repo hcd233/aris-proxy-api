@@ -22,10 +22,11 @@ const (
 	RuleDBRootContext               = "architecture.db_root_context"
 	RulePassthrough                 = "architecture.passthrough"
 
-	RuleLoggingPrefix    = "logging.prefix"
-	RuleLoggingFormat    = "logging.format"
-	RuleLoggingChinese   = "logging.chinese"
-	RuleLoggingSensitive = "logging.sensitive"
+	RuleLoggingPrefix         = "logging.prefix"
+	RuleLoggingFormat         = "logging.format"
+	RuleLoggingChinese        = "logging.chinese"
+	RuleLoggingSensitive      = "logging.sensitive"
+	RuleLoggingZapLoggerParam = "logging.zap_logger_param"
 
 	RuleTestingInternalFile = "testing.internal_file"
 	RuleTestingRootFile     = "testing.root_file"

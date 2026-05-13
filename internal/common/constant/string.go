@@ -53,6 +53,11 @@ const (
 	GoAllPackagesPattern      = "./..."
 	StaticcheckCommand        = "staticcheck"
 	StaticChecksFailedMessage = "static checks failed"
+	GoEnvCommand              = "env"
+	GoEnvKeyGOPATH            = "GOPATH"
+	GobinEnvKey               = "GOBIN"
+	GopathBinSubDir           = "bin"
+	GopathBinFileMode         = 0o111
 
 	// OpenAPI / Huma configuration
 	OpenAPIVersion       = "3.1.0"

@@ -22,20 +22,22 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // forwardResponseNative OpenAI 原生 Response API 转发
-func (u *openAIUseCase) forwardResponseNative(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
-	body := util.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
+func (u *openAIUseCase) forwardResponseNative(ctx context.Context, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+	body := util.MarshalOpenAIResponseBodyForModel(req.Body, upstream.Model)
 	if stream {
-		return u.forwardResponseNativeStream(ctx, log, req, ep, upstream, body)
+		return u.forwardResponseNativeStream(ctx, req, ep, upstream, body)
 	}
-	return u.forwardResponseNativeUnary(ctx, log, req, ep, upstream, body)
+	return u.forwardResponseNativeUnary(ctx, req, ep, upstream, body)
 }
 
 // forwardResponseNativeStream Response API 原生流式
-func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -68,10 +70,10 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, log *za
 		}
 		if proxyErr != nil {
 			log.Error("[OpenAIUseCase] Response API stream error", zap.Error(proxyErr))
-			util.WriteUpstreamSSEError(log, w, proxyErr)
+			util.WriteUpstreamSSEError(ctx, w, proxyErr)
 		}
 
-		u.storeResponseFromRsp(ctx, log, req, finalResponse, proxyErr, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, finalResponse, proxyErr, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -90,13 +92,14 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, log *za
 }
 
 // forwardResponseNativeUnary Response API 原生非流式（直写 raw bytes）
-func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		respBody, err := u.openAIProxy.ForwardCreateResponse(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
+			util.WriteUpstreamError(writer, err, openAIInternalErrorBody)
 			auditFailure(u.taskSubmitter, ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
@@ -116,7 +119,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap
 		if parseErr != nil {
 			log.Warn("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
 		} else {
-			u.storeResponseFromRsp(ctx, log, req, &rsp, nil, upstream.Model)
+			u.storeResponseFromRsp(ctx, req, &rsp, nil, upstream.Model)
 		}
 
 		task := &dto.ModelCallAuditTask{
@@ -137,7 +140,8 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, log *zap
 }
 
 // forwardResponseViaAnthropic Response API 通过 Anthropic 上游转发
-func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	conv := converter.AnthropicProtocolConverter{}
 	anthropicReq, err := conv.FromResponseAPIRequest(req.Body)
 	if err != nil {
@@ -148,13 +152,14 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, log *za
 	body := lo.Must1(sonic.Marshal(anthropicReq))
 
 	if stream {
-		return u.forwardResponseViaAnthropicStream(ctx, log, req, ep, upstream, body, &conv)
+		return u.forwardResponseViaAnthropicStream(ctx, req, ep, upstream, body, &conv)
 	}
-	return u.forwardResponseViaAnthropicUnary(ctx, log, req, ep, upstream, body, &conv)
+	return u.forwardResponseViaAnthropicUnary(ctx, req, ep, upstream, body, &conv)
 }
 
 // forwardResponseViaAnthropicStream Anthropic 上游流式 → OpenAI chat chunk（Response API 跨协议变体）
-func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -196,10 +201,10 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, l
 				log.Debug("[OpenAIUseCase] Failed to flush SSE writer", zap.Error(flushErr))
 			}
 		} else {
-			util.WriteUpstreamSSEError(log, w, err)
+			util.WriteUpstreamSSEError(ctx, w, err)
 		}
 
-		u.storeResponseFromAnthropicMsg(ctx, log, req, anthropicMsg, err, upstream.Model)
+		u.storeResponseFromAnthropicMsg(ctx, req, anthropicMsg, err, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -217,13 +222,14 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, l
 }
 
 // forwardResponseViaAnthropicUnary Anthropic 上游非流式 → OpenAI chat JSON（Response API 跨协议变体）
-func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, log *zap.Logger, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
+			util.WriteUpstreamError(writer, err, openAIInternalErrorBody)
 			auditFailure(u.taskSubmitter, ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
@@ -237,7 +243,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, lo
 		completion.Model = req.Body.Model
 		writer.WriteJSON(completion)
 
-		u.storeResponseFromAnthropicMsg(ctx, log, req, anthropicMsg, nil, upstream.Model)
+		u.storeResponseFromAnthropicMsg(ctx, req, anthropicMsg, nil, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),

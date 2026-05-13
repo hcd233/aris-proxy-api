@@ -48,6 +48,30 @@
     ]
   },
   {
+    "name": "zap logger function parameter is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/zap_param.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\nfunc Run(log *zap.Logger) {}\n\nfunc Build() *zap.Logger {\n\treturn nil\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.zap_logger_param", "severity": "error"}
+    ]
+  },
+  {
+    "name": "zap logger function type parameter is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/zap_func_type.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\ntype Handler func(log *zap.Logger)\n\ntype Runner interface {\n\tRun(log *zap.Logger)\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.zap_logger_param", "severity": "error"}
+    ]
+  },
+  {
     "name": "internal test file is rejected",
     "files": [
       {

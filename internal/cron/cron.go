@@ -110,12 +110,12 @@ type cronLoggerAdapter struct {
 	logger *zap.Logger
 }
 
-func newCronLoggerAdapter(module string, log *zap.Logger) *cronLoggerAdapter {
+func newCronLoggerAdapter(module string) *cronLoggerAdapter {
 	if module == "" {
 		module = constant.CronDefaultModule
 	}
 	module = strings.TrimSpace(strings.TrimRight(strings.TrimLeft(strings.TrimSpace(module), "["), "]"))
-	return &cronLoggerAdapter{module: module, logger: log}
+	return &cronLoggerAdapter{module: module, logger: logger.Logger()}
 }
 
 func (l *cronLoggerAdapter) Error(err error, msg string, keysAndValues ...any) {

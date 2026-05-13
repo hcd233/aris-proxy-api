@@ -41,7 +41,7 @@ type SessionScoreCron struct {
 func NewSessionScoreCron(db *gorm.DB, poolManager *pool.PoolManager) Cron {
 	return &SessionScoreCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionScore, logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionScore)),
 		),
 		db:          db,
 		poolManager: poolManager,

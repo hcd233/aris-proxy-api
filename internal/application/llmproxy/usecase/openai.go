@@ -108,9 +108,9 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	upstream := toTransportEndpoint(ep)
 
 	if ep.Provider() == enum.ProviderAnthropic {
-		return u.forwardChatViaAnthropic(ctx, log, req, ep, upstream, stream), nil
+		return u.forwardChatViaAnthropic(ctx, req, ep, upstream, stream), nil
 	}
-	return u.forwardChatNative(ctx, log, req, ep, upstream, stream), nil
+	return u.forwardChatNative(ctx, req, ep, upstream, stream), nil
 }
 
 // CreateResponse 处理 /v1/responses (Response API)
@@ -135,9 +135,9 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	upstream := toTransportEndpoint(ep)
 
 	if ep.Provider() == enum.ProviderAnthropic {
-		return u.forwardResponseViaAnthropic(ctx, log, req, ep, upstream, stream), nil
+		return u.forwardResponseViaAnthropic(ctx, req, ep, upstream, stream), nil
 	}
-	return u.forwardResponseNative(ctx, log, req, ep, upstream, stream), nil
+	return u.forwardResponseNative(ctx, req, ep, upstream, stream), nil
 }
 
 // toTransportEndpoint Endpoint 聚合 → vo.UpstreamEndpoint

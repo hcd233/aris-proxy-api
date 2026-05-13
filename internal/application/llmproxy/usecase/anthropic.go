@@ -112,24 +112,25 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	upstream := toTransportEndpoint(ep)
 
 	if ep.Provider() == enum.ProviderOpenAI {
-		return u.forwardMessageViaOpenAI(ctx, log, req, ep, upstream, exposedModel, stream), nil
+		return u.forwardMessageViaOpenAI(ctx, req, ep, upstream, exposedModel, stream), nil
 	}
-	return u.forwardMessageNative(ctx, log, req, ep, upstream, exposedModel, stream), nil
+	return u.forwardMessageNative(ctx, req, ep, upstream, exposedModel, stream), nil
 }
 
 // ==================== Anthropic Native ====================
 
 // forwardMessageNative Anthropic 原生协议转发
-func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
-	body := util.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
+func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+	body := util.MarshalAnthropicMessageBodyForModel(req.Body, upstream.Model)
 	if stream {
-		return u.forwardMessageNativeStream(ctx, log, req, ep, upstream, exposedModel, body)
+		return u.forwardMessageNativeStream(ctx, req, ep, upstream, exposedModel, body)
 	}
-	return u.forwardMessageNativeUnary(ctx, log, req, ep, upstream, exposedModel, body)
+	return u.forwardMessageNativeUnary(ctx, req, ep, upstream, exposedModel, body)
 }
 
 // forwardMessageNativeStream Anthropic 原生流式
-func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -155,10 +156,10 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 		if err == nil {
 			_ = util.WriteAnthropicMessageStop(w)
 		} else {
-			util.WriteUpstreamSSEError(log, w, err)
+			util.WriteUpstreamSSEError(ctx, w, err)
 		}
 
-		u.storeAnthropicFromMsg(ctx, log, req, anthropicMsg, err, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -176,20 +177,20 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, log *
 }
 
 // forwardMessageNativeUnary Anthropic 原生非流式
-func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
+			util.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
 			auditFailure(u.taskSubmitter, ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
-		u.storeAnthropicFromMsg(ctx, log, req, anthropicMsg, nil, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -208,7 +209,8 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, log *z
 // ==================== Anthropic via OpenAI ====================
 
 // forwardMessageViaOpenAI Anthropic 请求通过 OpenAI 上游转发
-func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	conv := converter.OpenAIProtocolConverter{}
 	openAIReq, err := conv.FromAnthropicRequest(req.Body)
 	if err != nil {
@@ -219,13 +221,14 @@ func (u *anthropicUseCase) forwardMessageViaOpenAI(ctx context.Context, log *zap
 	body := lo.Must1(sonic.Marshal(openAIReq))
 
 	if stream {
-		return u.forwardMessageViaOpenAIStream(ctx, log, req, ep, upstream, exposedModel, body, &conv)
+		return u.forwardMessageViaOpenAIStream(ctx, req, ep, upstream, exposedModel, body, &conv)
 	}
-	return u.forwardMessageViaOpenAIUnary(ctx, log, req, ep, upstream, exposedModel, body, &conv)
+	return u.forwardMessageViaOpenAIUnary(ctx, req, ep, upstream, exposedModel, body, &conv)
 }
 
 // forwardMessageViaOpenAIStream OpenAI 上游流式 → Anthropic SSE
-func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -293,7 +296,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 			_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 			return
 		}
-		u.storeAnthropicFromMsg(ctx, log, req, anthropicMsg, nil, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model)
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             ep.AggregateID(),
@@ -310,13 +313,14 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIStream(ctx context.Context, lo
 }
 
 // forwardMessageViaOpenAIUnary OpenAI 上游非流式 → Anthropic JSON
-func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, body []byte, conv *converter.OpenAIProtocolConverter) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(log, writer, err, anthropicInternalErrorBody)
+			util.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
 			auditFailure(u.taskSubmitter, ctx, ep, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
@@ -330,7 +334,7 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
-		u.storeAnthropicFromMsg(ctx, log, req, anthropicMsg, nil, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -348,15 +352,16 @@ func (u *anthropicUseCase) forwardMessageViaOpenAIUnary(ctx context.Context, log
 
 // ==================== Anthropic audit/store helpers ====================
 
-func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
 		return
 	}
-	u.storeAnthropicMessages(ctx, log, req, msg, upstreamModel)
+	u.storeAnthropicMessages(ctx, req, msg, upstreamModel)
 }
 
-func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, log *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
-	unifiedMessages, unifiedTools, inputTokens, outputTokens, err := u.convertAnthropicRequestMessages(log, req, assistantMsg)
+func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
+	log := logger.WithCtx(ctx)
+	unifiedMessages, unifiedTools, inputTokens, outputTokens, err := u.convertAnthropicRequestMessages(ctx, req, assistantMsg)
 	if err != nil {
 		return
 	}
@@ -378,7 +383,6 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, log *zap.
 // convertAnthropicRequestMessages 将 Anthropic 请求消息和响应转换为统一格式
 //
 //	@receiver u *anthropicUseCase
-//	@param log *zap.Logger
 //	@param req *dto.AnthropicCreateMessageRequest
 //	@param assistantMsg *dto.AnthropicMessage
 //	@return []*convvo.UnifiedMessage 统一消息列表
@@ -388,7 +392,8 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, log *zap.
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (u *anthropicUseCase) convertAnthropicRequestMessages(log *zap.Logger, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage) ([]*convvo.UnifiedMessage, []*convvo.UnifiedTool, int, int, error) {
+func (u *anthropicUseCase) convertAnthropicRequestMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage) ([]*convvo.UnifiedMessage, []*convvo.UnifiedTool, int, int, error) {
+	log := logger.WithCtx(ctx)
 	unifiedMessages := make([]*convvo.UnifiedMessage, 0, len(req.Body.Messages)+1)
 	for _, msg := range req.Body.Messages {
 		um, err := dto.FromAnthropicMessage(msg)

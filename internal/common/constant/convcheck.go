@@ -151,6 +151,8 @@ const (
 	ConvCheckMsgMustStartUppercase = "log message after [ModuleName] must start with uppercase letter"
 	ConvCheckMsgMustNotChinese     = "log messages must not contain Chinese characters"
 	ConvCheckMsgUseMaskSecret      = "logging Key/Token/Secret/Password must use commonutil.MaskSecret()"
+	ConvCheckMsgZapLoggerParam     = "*zap.Logger must not be used as a function parameter; get logger from context or logger package inside the function"
+	ConvCheckTypeLogger            = "Logger"
 
 	ConvCheckSensitiveAPIKey   = "apikey"
 	ConvCheckSensitiveToken    = "token"
@@ -185,6 +187,7 @@ const (
 	ConvCheckImportInfra = "github.com/hcd233/aris-proxy-api/internal/infrastructure/"
 	ConvCheckImportDTO   = "github.com/hcd233/aris-proxy-api/internal/dto"
 	ConvCheckImportUtil  = "github.com/hcd233/aris-proxy-api/internal/util"
+	ConvCheckImportZap   = "go.uber.org/zap"
 
 	ConvCheckDeprecatedImportService   = "github.com/hcd233/aris-proxy-api/internal/service"
 	ConvCheckDeprecatedImportConverter = "github.com/hcd233/aris-proxy-api/internal/converter"

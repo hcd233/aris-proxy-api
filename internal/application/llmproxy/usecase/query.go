@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
@@ -157,7 +156,7 @@ func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensR
 		APIKey:  creds.APIKey,
 		BaseURL: creds.BaseURL,
 	}
-	body := util.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
+	body := util.MarshalAnthropicCountTokensBodyForModel(req.Body, upstream.Model)
 
 	rsp, err := q.proxy.ForwardCountTokens(ctx, upstream, body)
 	if err != nil {
