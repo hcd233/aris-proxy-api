@@ -1,5 +1,3 @@
-// Package endpoint_resolver 验证 domain/llmproxy/service.EndpointResolver
-// 的 primary→fallback 查询语义：命中返回、未命中回退、真 DB 错误不被降级。
 package endpoint_resolver
 
 import (
@@ -14,19 +12,16 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
-// resolverCase fixture 用例结构
 type resolverCase struct {
-	Name             string `json:"name"`
-	Description      string `json:"description"`
-	PrimaryBehavior  string `json:"primaryBehavior"`
-	FallbackBehavior string `json:"fallbackBehavior"`
-	Alias            string `json:"alias"`
-	ExpectResolved   bool   `json:"expectResolved"`
-	ExpectProvider   string `json:"expectProvider"`
-	ExpectErrKind    string `json:"expectErrKind"`
+	Name           string `json:"name"`
+	Description    string `json:"description"`
+	ModelBehavior  string `json:"modelBehavior"`
+	EndpointBehavior string `json:"endpointBehavior"`
+	Alias          string `json:"alias"`
+	ExpectResolved bool   `json:"expectResolved"`
+	ExpectErrKind  string `json:"expectErrKind"`
 }
 
 func loadCases(t *testing.T) []resolverCase {
@@ -42,83 +37,78 @@ func loadCases(t *testing.T) []resolverCase {
 	return cases
 }
 
-// stubRepository 按 provider 维度配置每一路查询的行为
-type stubRepository struct {
-	// behaviorByProvider: provider → "hit" | "miss" | "db_error" | "unused"
-	behaviorByProvider map[enum.ProviderType]string
-	// callsByProvider 记录每个 provider 被访问次数，供断言"未访问"
-	callsByProvider map[enum.ProviderType]int
+type stubModelRepo struct {
+	behaviorByAlias map[string]string
+	callsByAlias    map[string]int
 }
 
-func newStubRepository(primary, fallback enum.ProviderType, primaryBehavior, fallbackBehavior string) *stubRepository {
-	return &stubRepository{
-		behaviorByProvider: map[enum.ProviderType]string{
-			primary:  primaryBehavior,
-			fallback: fallbackBehavior,
-		},
-		callsByProvider: map[enum.ProviderType]int{},
+func newStubModelRepo(behavior string) *stubModelRepo {
+	return &stubModelRepo{
+		behaviorByAlias: map[string]string{"default": behavior},
+		callsByAlias:    map[string]int{},
 	}
 }
 
-// errStubDBFailure 模拟仓储层包装后的 DB 错误
 var errStubDBFailure = ierr.Wrap(ierr.ErrDBQuery, errors.New("simulated db outage"), "stub db query")
 
-// FindByAliasAndProvider 实现 EndpointRepository 接口
-func (s *stubRepository) FindByAliasAndProvider(_ context.Context, alias vo.EndpointAlias, provider enum.ProviderType) (*aggregate.Endpoint, error) {
-	s.callsByProvider[provider]++
-	switch s.behaviorByProvider[provider] {
+func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error) {
+	s.callsByAlias[alias.String()]++
+	b, ok := s.behaviorByAlias[alias.String()]
+	if !ok {
+		b = s.behaviorByAlias["default"]
+	}
+	switch b {
 	case "hit":
-		creds, credErr := vo.NewUpstreamCreds("https://api.example.com", "sk-test", "gpt-4")
-		if credErr != nil {
-			return nil, credErr
-		}
-		ep, err := aggregate.CreateEndpoint(1, alias, provider, creds)
-		if err != nil {
-			return nil, err
-		}
-		return ep, nil
+		m, _ := aggregate.CreateModel(1, alias, "test-model", 1)
+		return []*aggregate.Model{m}, nil
 	case "miss":
 		return nil, nil
 	case "db_error":
 		return nil, errStubDBFailure
-	case "unused":
-		// 被判定为 unused 的 provider 不应被访问；命中即视为测试失败（由调用方断言）
-		return nil, errors.New("unused provider should not be queried")
 	default:
 		return nil, errors.New("unknown stub behavior")
 	}
 }
 
+type stubEndpointRepo struct {
+	findByIDCalled bool
+}
+
+func (s *stubEndpointRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
+	s.findByIDCalled = true
+	if id == 0 {
+		return nil, nil
+	}
+	return aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true)
+}
+
 func TestEndpointResolver_Resolve(t *testing.T) {
 	ctx := context.Background()
-	primary := enum.ProviderOpenAI
-	fallback := enum.ProviderAnthropic
 
 	for _, tc := range loadCases(t) {
 		t.Run(tc.Name, func(t *testing.T) {
-			repo := newStubRepository(primary, fallback, tc.PrimaryBehavior, tc.FallbackBehavior)
-			resolver := service.NewEndpointResolver(repo)
+			modelRepo := newStubModelRepo(tc.ModelBehavior)
+			endpointRepo := &stubEndpointRepo{}
+			resolver := service.NewEndpointResolver(endpointRepo, modelRepo)
 
-			ep, err := resolver.Resolve(ctx, vo.EndpointAlias(tc.Alias), primary, fallback)
-
-			// 断言 unused provider 未被访问
-			if tc.PrimaryBehavior == "unused" && repo.callsByProvider[primary] != 0 {
-				t.Errorf("primary marked unused but queried %d times", repo.callsByProvider[primary])
-			}
-			if tc.FallbackBehavior == "unused" && repo.callsByProvider[fallback] != 0 {
-				t.Errorf("fallback marked unused but queried %d times", repo.callsByProvider[fallback])
-			}
+			ep, m, err := resolver.Resolve(ctx, vo.EndpointAlias(tc.Alias))
 
 			switch tc.ExpectErrKind {
 			case "":
 				if err != nil {
 					t.Fatalf("expected success, got err: %v", err)
 				}
-				if !tc.ExpectResolved || ep == nil {
-					t.Fatalf("expected endpoint resolved, got nil")
-				}
-				if string(ep.Provider()) != tc.ExpectProvider {
-					t.Errorf("provider = %q, want %q", ep.Provider(), tc.ExpectProvider)
+				if !tc.ExpectResolved {
+					if ep != nil || m != nil {
+						t.Fatal("expected nil endpoint and model, got non-nil")
+					}
+				} else {
+					if ep == nil || m == nil {
+						t.Fatal("expected endpoint and model resolved, got nil")
+					}
+					if m.Alias().String() != tc.Alias {
+						t.Errorf("alias = %q, want %q", m.Alias().String(), tc.Alias)
+					}
 				}
 			case "validation":
 				if !errors.Is(err, ierr.ErrValidation) {
@@ -130,7 +120,7 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 				}
 			case "db_query":
 				if !errors.Is(err, ierr.ErrDBQuery) {
-					t.Errorf("expected ErrDBQuery to propagate upward (not masked as ErrDataNotExists), got: %v", err)
+					t.Errorf("expected ErrDBQuery to propagate upward, got: %v", err)
 				}
 				if errors.Is(err, ierr.ErrDataNotExists) {
 					t.Errorf("DB error must not be masked as ErrDataNotExists, got: %v", err)

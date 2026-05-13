@@ -25,6 +25,12 @@ const (
 	FieldBaseURL        = "base_url"
 	FieldProvider       = "provider"
 	FieldAlias          = "alias"
+	FieldOpenaiBaseURL  = "openai_base_url"
+	FieldAnthropicBaseURL            = "anthropic_base_url"
+	FieldSupportOpenAIChatCompletion = "support_openai_chat_completion"
+	FieldSupportOpenAIResponse       = "support_openai_response"
+	FieldSupportAnthropicMessage     = "support_anthropic_message"
+	FieldEndpointID                  = "endpoint_id"
 	FieldLastLogin      = "last_login"
 	FieldCreatedAt      = "created_at"
 	FieldUpdatedAt      = "updated_at"
@@ -82,9 +88,11 @@ var (
 	SessionRepoFieldsScore      = []string{FieldID, FieldMessageIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
-	EndpointRepoFieldsFull       = []string{FieldID, FieldAlias, FieldModel, FieldAPIKey, FieldBaseURL, FieldProvider}
-	EndpointRepoFieldsAlias      = []string{FieldAlias}
-	EndpointRepoFieldsCredential = []string{FieldModel, FieldAPIKey, FieldBaseURL}
+	EndpointRepoFieldsFull = []string{FieldID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey,
+		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage}
+
+	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModel, FieldEndpointID}
+	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
 	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID}
