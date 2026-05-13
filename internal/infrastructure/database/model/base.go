@@ -23,7 +23,8 @@ var Models = []any{
 	&Message{},
 	&Session{},
 	&Tool{},
-	&ModelEndpoint{},
+	&Endpoint{},
+	&Model{},
 	&ProxyAPIKey{},
 	&ModelCallAudit{},
 }

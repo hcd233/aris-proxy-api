@@ -14,6 +14,7 @@ const (
 	DBConditionInTemplate       = "%s IN ?"
 
 	AggregateTypeEndpoint       = "llmproxy.endpoint"
+	AggregateTypeModel          = "llmproxy.model"
 	AggregateTypeAPIKey         = "apikey.proxy_api_key"
 	AggregateTypeUser           = "identity.user"
 	AggregateTypeOAuthIdentity  = "oauth2.identity"

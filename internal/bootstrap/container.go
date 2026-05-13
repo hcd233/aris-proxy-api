@@ -155,6 +155,9 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 	if err := container.Provide(newEndpointRepository); err != nil {
 		return err
 	}
+	if err := container.Provide(newModelRepository); err != nil {
+		return err
+	}
 	if err := container.Provide(newEndpointReadRepository); err != nil {
 		return err
 	}
@@ -311,6 +314,10 @@ func newEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
 	return repository.NewEndpointRepository(db)
 }
 
+func newModelRepository(db *gorm.DB) llmproxy.ModelRepository {
+	return repository.NewModelRepository(db)
+}
+
 func newEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
 	return repository.NewEndpointReadRepository(db)
 }
@@ -345,8 +352,11 @@ func newStateManager() oauth2service.StateManager {
 	return infraoauth2.NewStateManager()
 }
 
-func newEndpointResolver(repo llmproxy.EndpointRepository) llmproxyservice.EndpointResolver {
-	return llmproxyservice.NewEndpointResolver(repo)
+func newEndpointResolver(
+	endpointRepo llmproxy.EndpointRepository,
+	modelRepo llmproxy.ModelRepository,
+) llmproxyservice.EndpointResolver {
+	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo)
 }
 
 type refreshTokensParams struct {

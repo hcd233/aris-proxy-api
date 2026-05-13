@@ -1,80 +1,62 @@
-// Package service llmproxy 域领域服务
 package service
 
 import (
 	"context"
+	"math/rand"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 // EndpointResolver 模型端点解析领域服务
 //
-// 按「主 Provider → 回退 Provider」的顺序查找端点。规则继承自原
-// service.findEndpoint（openai 入站优先 openai、回退 anthropic；anthropic 入站反之）。
-//
-//	@author centonhuang
-//	@update 2026-04-22 16:30:00
+// 按 alias 查询 model 表 → 随机选一个 endpoint → 返回 endpoint + model。
 type EndpointResolver interface {
-	// Resolve 按主/回退 Provider 查询别名对应的端点
-	//
-	//	@param ctx context.Context
-	//	@param alias vo.EndpointAlias
-	//	@param primary enum.ProviderType 主 provider
-	//	@param fallback enum.ProviderType 回退 provider
-	//	@return *aggregate.Endpoint
-	//	@return error 两个 provider 都未命中时返回 ierr.ErrDataNotExists
-	Resolve(ctx context.Context, alias vo.EndpointAlias, primary, fallback enum.ProviderType) (*aggregate.Endpoint, error)
+	Resolve(ctx context.Context, alias vo.EndpointAlias) (*aggregate.Endpoint, *aggregate.Model, error)
 }
 
 type endpointResolver struct {
-	repo llmproxy.EndpointRepository
+	endpointRepo llmproxy.EndpointRepository
+	modelRepo    llmproxy.ModelRepository
 }
 
 // NewEndpointResolver 构造领域服务
-//
-//	@param repo llmproxy.EndpointRepository
-//	@return EndpointResolver
-//	@author centonhuang
-//	@update 2026-04-22 16:30:00
-func NewEndpointResolver(repo llmproxy.EndpointRepository) EndpointResolver {
-	return &endpointResolver{repo: repo}
+func NewEndpointResolver(
+	endpointRepo llmproxy.EndpointRepository,
+	modelRepo llmproxy.ModelRepository,
+) EndpointResolver {
+	return &endpointResolver{
+		endpointRepo: endpointRepo,
+		modelRepo:    modelRepo,
+	}
 }
 
-// Resolve 实现接口
+// Resolve 按 alias 解析端点
 //
-// 按 primary → fallback 顺序查询；仓储未找到返回 (nil, nil)，真 DB 错误直接上抛，
-// 不再向 fallback 降级，避免把基础设施故障伪装成 ErrDataNotExists。
-//
-//	@receiver r *endpointResolver
-//	@param ctx context.Context
-//	@param alias vo.EndpointAlias
-//	@param primary enum.ProviderType
-//	@param fallback enum.ProviderType
-//	@return *aggregate.Endpoint
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-24 14:00:00
-func (r *endpointResolver) Resolve(ctx context.Context, alias vo.EndpointAlias, primary, fallback enum.ProviderType) (*aggregate.Endpoint, error) {
+// 1. 查 model 表（按 alias）→ 收集所有 endpointID
+// 2. 随机选一个 endpointID
+// 3. 查 endpoint 表（按 id）
+// 4. 返回 (endpoint, model)
+func (r *endpointResolver) Resolve(ctx context.Context, alias vo.EndpointAlias) (*aggregate.Endpoint, *aggregate.Model, error) {
 	if alias.IsEmpty() {
-		return nil, ierr.New(ierr.ErrValidation, "endpoint alias is empty")
+		return nil, nil, ierr.New(ierr.ErrValidation, "endpoint alias is empty")
 	}
-	ep, err := r.repo.FindByAliasAndProvider(ctx, alias, primary)
+	models, err := r.modelRepo.FindByAlias(ctx, alias)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if ep != nil {
-		return ep, nil
+	if len(models) == 0 {
+		return nil, nil, ierr.Newf(ierr.ErrDataNotExists, "model %q not found", alias.String())
 	}
-	ep, err = r.repo.FindByAliasAndProvider(ctx, alias, fallback)
+	m := models[rand.Intn(len(models))]
+	ep, err := r.endpointRepo.FindByID(ctx, m.EndpointID())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if ep != nil {
-		return ep, nil
+	if ep == nil {
+		return nil, nil, ierr.Newf(ierr.ErrDataNotExists, "endpoint %d not found for model %q", m.EndpointID(), alias.String())
 	}
-	return nil, ierr.Newf(ierr.ErrDataNotExists, "endpoint %q not found for providers [%s, %s]", alias.String(), primary, fallback)
+	return ep, m, nil
 }
