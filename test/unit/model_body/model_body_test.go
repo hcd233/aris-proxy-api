@@ -7,6 +7,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/samber/lo"
 )
 
 func TestMarshalOpenAIChatCompletionBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
@@ -32,7 +33,7 @@ func TestMarshalOpenAIChatCompletionBodyForModel_UsesUpstreamModelWithoutMutatin
 }
 
 func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
-	req := &dto.OpenAICreateResponseReq{Model: "exposed-response-model"}
+	req := &dto.OpenAICreateResponseReq{Model: lo.ToPtr("exposed-response-model")}
 
 	body := util.MarshalOpenAIResponseBodyForModel(req, "upstream-response-model")
 	bodyStr := string(body)
@@ -43,8 +44,8 @@ func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingReque
 	if strings.Contains(bodyStr, `"model":"exposed-response-model"`) {
 		t.Fatalf("upstream body must not use exposed model, got: %s", bodyStr)
 	}
-	if req.Model != "exposed-response-model" {
-		t.Fatalf("request model must remain exposed model, got: %s", req.Model)
+	if lo.FromPtr(req.Model) != "exposed-response-model" {
+		t.Fatalf("request model must remain exposed model, got: %s", lo.FromPtr(req.Model))
 	}
 }
 

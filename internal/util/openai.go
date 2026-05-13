@@ -114,8 +114,8 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 					cs.toolCallMap[tcIdx] = tcs
 					cs.toolCallOrder = append(cs.toolCallOrder, tcIdx)
 				}
-				if tc.ID != "" {
-					tcs.id = tc.ID
+				if lo.FromPtr(tc.ID) != "" {
+					tcs.id = lo.FromPtr(tc.ID)
 				}
 				if tc.Type != "" {
 					tcs.toolType = tc.Type
@@ -162,8 +162,9 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 		var mergedToolCalls []*dto.OpenAIChatCompletionMessageToolCall
 		for _, tcIdx := range cs.toolCallOrder {
 			tcs := cs.toolCallMap[tcIdx]
+			id := tcs.id
 			tc := &dto.OpenAIChatCompletionMessageToolCall{
-				ID:   tcs.id,
+				ID:   &id,
 				Type: tcs.toolType,
 			}
 			if tcs.hasFunction {
@@ -188,11 +189,13 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 			content = &dto.OpenAIMessageContent{Text: joined}
 		}
 
+		reasoningContent := strings.Join(cs.reasoningContentParts, "")
+		refusal := strings.Join(cs.refusalParts, "")
 		message := &dto.OpenAIChatCompletionMessageParam{
 			Role:             cmp.Or(cs.role, enum.RoleAssistant),
 			Content:          content,
-			ReasoningContent: strings.Join(cs.reasoningContentParts, ""),
-			Refusal:          strings.Join(cs.refusalParts, ""),
+			ReasoningContent: &reasoningContent,
+			Refusal:          &refusal,
 			ToolCalls:        mergedToolCalls,
 		}
 		cmpl.Choices = append(cmpl.Choices, &dto.OpenAIChatCompletionChoice{

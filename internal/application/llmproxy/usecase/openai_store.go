@@ -248,7 +248,7 @@ func anthropicResponseContentToUnified(blocks []*dto.AnthropicContentBlock) ([]*
 		case enum.AnthropicContentBlockTypeText:
 			messages = append(messages, &vo.UnifiedMessage{
 				Role:    enum.RoleAssistant,
-				Content: &vo.UnifiedContent{Text: block.Text},
+				Content: &vo.UnifiedContent{Text: lo.FromPtr(block.Text)},
 			})
 		case enum.AnthropicContentBlockTypeThinking:
 			messages = append(messages, &vo.UnifiedMessage{
@@ -259,14 +259,16 @@ func anthropicResponseContentToUnified(blocks []*dto.AnthropicContentBlock) ([]*
 			args, err := sonic.MarshalString(block.Input)
 			if err != nil {
 				log.Error("[OpenAIUseCase] Failed to marshal tool_use input, abort storage to avoid partial conversation",
-					zap.String("toolID", block.ID), zap.String("toolName", block.Name), zap.Error(err))
+					zap.String("toolID", lo.FromPtr(block.ID)), zap.String("toolName", lo.FromPtr(block.Name)), zap.Error(err))
 				return nil, false
 			}
+			id := lo.FromPtr(block.ID)
+			name := lo.FromPtr(block.Name)
 			messages = append(messages, &vo.UnifiedMessage{
 				Role: enum.RoleAssistant,
 				ToolCalls: []*vo.UnifiedToolCall{{
-					ID:   block.ID,
-					Name: block.Name,
+					ID:   id,
+					Name: name,
 				}},
 				Content: &vo.UnifiedContent{Text: args},
 			})

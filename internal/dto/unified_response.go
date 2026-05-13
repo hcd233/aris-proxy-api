@@ -69,7 +69,8 @@ func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*vo.UnifiedMessag
 		if item == nil {
 			continue
 		}
-		switch item.Type {
+		itemType := lo.FromPtr(item.Type)
+		switch itemType {
 		case enum.ResponseInputItemTypeReasoning:
 			// Reasoning 项单独处理：不生成独立 UnifiedMessage，而是挂到下一个 assistant message 上
 			if text := collectReasoningText(item); text != "" {
@@ -107,7 +108,8 @@ func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*vo.UnifiedMessag
 
 // fromResponseAPIItem 转换单个 Response API item，无法映射时返回 (nil, nil)
 func fromResponseAPIItem(item *ResponseInputItem) (*vo.UnifiedMessage, error) {
-	switch item.Type {
+	itemType := lo.FromPtr(item.Type)
+	switch itemType {
 	case "", enum.ResponseInputItemTypeMessage:
 		return fromResponseAPIMessage(item)
 	case enum.ResponseInputItemTypeFunctionCall, enum.ResponseInputItemTypeCustomToolCall:
@@ -125,7 +127,7 @@ func fromResponseAPIItem(item *ResponseInputItem) (*vo.UnifiedMessage, error) {
 
 // fromResponseAPIMessage 转换 message 类型 item（EasyInputMessage / Message / OutputMessage 共用）
 func fromResponseAPIMessage(item *ResponseInputItem) (*vo.UnifiedMessage, error) {
-	role := resolveRole(item.Role)
+	role := resolveRole(lo.FromPtr(item.Role))
 	um := &vo.UnifiedMessage{Role: role}
 	if item.Content == nil {
 		return um, nil
@@ -190,15 +192,15 @@ func fromResponseAPIMessage(item *ResponseInputItem) (*vo.UnifiedMessage, error)
 }
 
 func fromResponseAPIFunctionCall(item *ResponseInputItem) *vo.UnifiedMessage {
-	args := item.Arguments
+	args := lo.FromPtr(item.Arguments)
 	if args == "" {
-		args = item.Input
+		args = lo.FromPtr(item.Input)
 	}
 	return &vo.UnifiedMessage{
 		Role: enum.RoleAssistant,
 		ToolCalls: []*vo.UnifiedToolCall{{
-			ID:        item.CallID,
-			Name:      item.Name,
+			ID:        lo.FromPtr(item.CallID),
+			Name:      lo.FromPtr(item.Name),
 			Arguments: args,
 		}},
 	}
@@ -208,7 +210,7 @@ func fromResponseAPIFunctionCall(item *ResponseInputItem) *vo.UnifiedMessage {
 func fromResponseAPIFunctionCallOutput(item *ResponseInputItem) *vo.UnifiedMessage {
 	um := &vo.UnifiedMessage{
 		Role:       enum.RoleTool,
-		ToolCallID: item.CallID,
+		ToolCallID: lo.FromPtr(item.CallID),
 	}
 	if item.Output == nil {
 		return um
@@ -297,13 +299,13 @@ func FromResponseAPITool(tool *ResponseTool) *vo.UnifiedTool {
 	case tool.Function != nil:
 		return &vo.UnifiedTool{
 			Name:        tool.Function.Name,
-			Description: tool.Function.Description,
+			Description: lo.FromPtr(tool.Function.Description),
 			Parameters:  &tool.Function.Parameters.JSONSchemaProperty,
 		}
 	case tool.Custom != nil:
 		return &vo.UnifiedTool{
 			Name:        tool.Custom.Name,
-			Description: tool.Custom.Description,
+			Description: lo.FromPtr(tool.Custom.Description),
 		}
 	default:
 		return nil

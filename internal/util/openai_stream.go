@@ -1,6 +1,9 @@
 package util
 
-import "github.com/hcd233/aris-proxy-api/internal/dto"
+import (
+	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/samber/lo"
+)
 
 // NormalizeOpenAIStreamToolCalls 规范化 OpenAI 流式工具调用增量。
 //
@@ -23,11 +26,11 @@ func NormalizeOpenAIStreamToolCalls(chunk *dto.OpenAIChatCompletionChunk, toolCa
 			if toolCall.Index == nil {
 				toolCall.Index = &choice.Index
 			}
-			if toolCall.ID != "" {
-				toolCallIDs[*toolCall.Index] = toolCall.ID
+			if lo.FromPtr(toolCall.ID) != "" {
+				toolCallIDs[*toolCall.Index] = lo.FromPtr(toolCall.ID)
 				continue
 			}
-			toolCall.ID = toolCallIDs[*toolCall.Index]
+			toolCall.ID = lo.ToPtr(toolCallIDs[*toolCall.Index])
 		}
 	}
 }

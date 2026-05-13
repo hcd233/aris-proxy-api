@@ -7,6 +7,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/samber/lo"
 )
 
 type testCase struct {
@@ -64,8 +65,8 @@ func TestNormalizeOpenAIStreamToolCalls_IndexZeroAndFollowupID(t *testing.T) {
 	}
 
 	followup := tc.Chunks[1].Choices[0].Delta.ToolCalls[0]
-	if followup.ID != "call_123" {
-		t.Errorf("followup ID = %q, want %q", followup.ID, "call_123")
+	if lo.FromPtr(followup.ID) != "call_123" {
+		t.Errorf("followup ID = %q, want %q", lo.FromPtr(followup.ID), "call_123")
 	}
 	followupPayload, err := sonic.MarshalString(tc.Chunks[1])
 	if err != nil {

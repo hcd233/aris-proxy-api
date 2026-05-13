@@ -21,11 +21,19 @@ import (
 //	@update 2026-04-22 14:10:00
 func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*vo.UnifiedMessage, error) {
 	um := &vo.UnifiedMessage{
-		Role:             msg.Role,
-		ReasoningContent: msg.ReasoningContent,
-		Name:             msg.Name,
-		ToolCallID:       msg.ToolCallID,
-		Refusal:          msg.Refusal,
+		Role: msg.Role,
+	}
+	if msg.ReasoningContent != nil {
+		um.ReasoningContent = *msg.ReasoningContent
+	}
+	if msg.Name != nil {
+		um.Name = *msg.Name
+	}
+	if msg.ToolCallID != nil {
+		um.ToolCallID = *msg.ToolCallID
+	}
+	if msg.Refusal != nil {
+		um.Refusal = *msg.Refusal
 	}
 
 	// 转换 Content: *OpenAIMessageContent -> *UnifiedContent
@@ -41,8 +49,9 @@ func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*vo.UnifiedMessag
 	if len(msg.ToolCalls) > 0 {
 		um.ToolCalls = make([]*vo.UnifiedToolCall, 0, len(msg.ToolCalls))
 		for _, tc := range msg.ToolCalls {
-			utc := &vo.UnifiedToolCall{
-				ID: tc.ID,
+			utc := &vo.UnifiedToolCall{}
+			if tc.ID != nil {
+				utc.ID = *tc.ID
 			}
 			if tc.Function != nil {
 				utc.Name = tc.Function.Name
@@ -78,9 +87,17 @@ func convertOpenAIContent(mc *OpenAIMessageContent) (*vo.UnifiedContent, error) 
 func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*vo.UnifiedContentPart, error) {
 	switch p.Type {
 	case enum.ContentPartTypeText:
-		return &vo.UnifiedContentPart{Type: enum.ContentPartTypeText, Text: p.Text}, nil
+		text := ""
+		if p.Text != nil {
+			text = *p.Text
+		}
+		return &vo.UnifiedContentPart{Type: enum.ContentPartTypeText, Text: text}, nil
 	case enum.ContentPartTypeRefusal:
-		return &vo.UnifiedContentPart{Type: enum.ContentPartTypeRefusal, Text: p.Refusal}, nil
+		refusal := ""
+		if p.Refusal != nil {
+			refusal = *p.Refusal
+		}
+		return &vo.UnifiedContentPart{Type: enum.ContentPartTypeRefusal, Text: refusal}, nil
 	case enum.ContentPartTypeImageURL:
 		if p.ImageURL == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "image_url part missing image_url field")
@@ -103,11 +120,23 @@ func convertOpenAIContentPart(p *OpenAIChatCompletionContentPart) (*vo.UnifiedCo
 		if p.File == nil {
 			return nil, ierr.New(ierr.ErrDTOConvert, "file part missing file field")
 		}
+		fileData := ""
+		if p.File.FileData != nil {
+			fileData = *p.File.FileData
+		}
+		fileID := ""
+		if p.File.FileID != nil {
+			fileID = *p.File.FileID
+		}
+		filename := ""
+		if p.File.Filename != nil {
+			filename = *p.File.Filename
+		}
 		return &vo.UnifiedContentPart{
 			Type:     enum.ContentPartTypeFile,
-			FileData: p.File.FileData,
-			FileID:   p.File.FileID,
-			Filename: p.File.Filename,
+			FileData: fileData,
+			FileID:   fileID,
+			Filename: filename,
 		}, nil
 	default:
 		return nil, ierr.Newf(ierr.ErrDTOConvert, "unknown content part type: %q", p.Type)
@@ -191,7 +220,9 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 	for i, block := range blocks {
 		switch block.Type {
 		case enum.AnthropicContentBlockTypeText:
-			textParts = append(textParts, block.Text)
+			if block.Text != nil {
+				textParts = append(textParts, *block.Text)
+			}
 
 		case enum.AnthropicContentBlockTypeThinking:
 			if block.Thinking != nil {
@@ -207,14 +238,24 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 			if err != nil {
 				return ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
 			}
+			id := ""
+			if block.ID != nil {
+				id = *block.ID
+			}
+			name := ""
+			if block.Name != nil {
+				name = *block.Name
+			}
 			toolCalls = append(toolCalls, &vo.UnifiedToolCall{
-				ID:        block.ID,
-				Name:      block.Name,
+				ID:        id,
+				Name:      name,
 				Arguments: args,
 			})
 
 		case enum.AnthropicContentBlockTypeToolResult:
-			toolResultID = block.ToolUseID
+			if block.ToolUseID != nil {
+				toolResultID = *block.ToolUseID
+			}
 			if block.Content != nil {
 				// tool_result 的 content 可以是字符串或 ContentBlock 数组
 				if block.Content.Text != "" && len(block.Content.Blocks) == 0 {
@@ -223,8 +264,8 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 					// 嵌套的 content blocks，提取文本
 					var nestedTexts []string
 					for _, nested := range block.Content.Blocks {
-						if nested.Type == enum.AnthropicContentBlockTypeText {
-							nestedTexts = append(nestedTexts, nested.Text)
+						if nested.Type == enum.AnthropicContentBlockTypeText && nested.Text != nil {
+							nestedTexts = append(nestedTexts, *nested.Text)
 						}
 						// 其他类型（image 等）也可以在这里扩展
 					}

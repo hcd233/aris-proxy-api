@@ -17,9 +17,9 @@ import (
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type CacheControl struct {
-	Type  string `json:"type" doc:"缓存类型: ephemeral"`
-	TTL   string `json:"ttl,omitempty" doc:"缓存存活时间: 5m/1h"`
-	Scope string `json:"scope,omitempty" doc:"beta cache scope (e.g. global)"`
+	Type  string  `json:"type" doc:"缓存类型: ephemeral"`
+	TTL   *string `json:"ttl,omitempty" doc:"缓存存活时间: 5m/1h"`
+	Scope *string `json:"scope,omitempty" doc:"beta cache scope (e.g. global)"`
 }
 
 // CitationsConfig Anthropic 引用配置
@@ -35,11 +35,11 @@ type CitationsConfig struct {
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type AnthropicUserLocation struct {
-	Type     string `json:"type" doc:"位置类型: approximate"`
-	City     string `json:"city,omitempty" doc:"用户所在城市"`
-	Country  string `json:"country,omitempty" doc:"ISO 3166-1 alpha-2 国家代码"`
-	Region   string `json:"region,omitempty" doc:"用户所在地区"`
-	Timezone string `json:"timezone,omitempty" doc:"IANA 时区"`
+	Type     string  `json:"type" doc:"位置类型: approximate"`
+	City     *string `json:"city,omitempty" doc:"用户所在城市"`
+	Country  *string `json:"country,omitempty" doc:"ISO 3166-1 alpha-2 国家代码"`
+	Region   *string `json:"region,omitempty" doc:"用户所在地区"`
+	Timezone *string `json:"timezone,omitempty" doc:"IANA 时区"`
 }
 
 // ==================== Anthropic Context Management DTOs ====================
@@ -49,8 +49,8 @@ type AnthropicUserLocation struct {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicContextManagementEdit struct {
-	Type string `json:"type" doc:"编辑类型"`
-	Keep string `json:"keep,omitempty" doc:"保留策略"`
+	Type string  `json:"type" doc:"编辑类型"`
+	Keep *string `json:"keep,omitempty" doc:"保留策略"`
 }
 
 // AnthropicContextManagement Anthropic 上下文管理配置
@@ -68,15 +68,15 @@ type AnthropicContextManagement struct {
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type AnthropicTool struct { // 通用字段（所有工具类型共享）
-	Type           string        `json:"type,omitempty" doc:"工具类型: custom/bash_20250124/text_editor_20250124/text_editor_20250429/text_editor_20250728/computer_20250124/code_execution_20250522/code_execution_20250825/code_execution_20260120/memory_20250818/web_search_20250305/web_search_20260209/web_fetch_20250910/web_fetch_20260209/web_fetch_20260309/tool_search_tool_bm25_20251119/tool_search_tool_regex_20251119"`
-	Name           string        `json:"name,omitempty" doc:"工具名称"`
+	Type           *string       `json:"type,omitempty" doc:"工具类型: custom/bash_20250124/text_editor_20250124/text_editor_20250429/text_editor_20250728/computer_20250124/code_execution_20250522/code_execution_20250825/code_execution_20260120/memory_20250818/web_search_20250305/web_search_20260209/web_fetch_20250910/web_fetch_20260209/web_fetch_20260309/tool_search_tool_bm25_20251119/tool_search_tool_regex_20251119"`
+	Name           *string       `json:"name,omitempty" doc:"工具名称"`
 	CacheControl   *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
 	DeferLoading   *bool         `json:"defer_loading,omitempty" doc:"延迟加载"`
 	Strict         *bool         `json:"strict,omitempty" doc:"严格模式"`
 	AllowedCallers []string      `json:"allowed_callers,omitempty" doc:"允许的调用者: direct/code_execution_20250825/code_execution_20260120"`
 
 	// 自定义工具字段 (type=custom 或 type 为空)
-	Description         string                     `json:"description,omitempty" doc:"工具描述"`
+	Description         *string                    `json:"description,omitempty" doc:"工具描述"`
 	InputSchema         *schema.JSONSchemaProperty `json:"input_schema,omitempty" doc:"输入JSON Schema"`
 	InputExamples       []map[string]string        `json:"input_examples,omitempty" doc:"输入示例"`
 	EagerInputStreaming *bool                      `json:"eager_input_streaming,omitempty" doc:"启用增量输入流"`
@@ -187,9 +187,9 @@ func (c AnthropicToolResultContent) Schema(r huma.Registry) *huma.Schema {
 //	@update 2026-03-31 10:00:00
 type AnthropicContentSource struct {
 	Type      string                   `json:"type" doc:"来源类型: base64/url/text/content"`
-	MediaType string                   `json:"media_type,omitempty" doc:"媒体类型: image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain"`
-	Data      string                   `json:"data,omitempty" doc:"Base64编码数据或纯文本数据"`
-	URL       string                   `json:"url,omitempty" doc:"资源URL"`
+	MediaType *string                  `json:"media_type,omitempty" doc:"媒体类型: image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain"`
+	Data      *string                  `json:"data,omitempty" doc:"Base64编码数据或纯文本数据"`
+	URL       *string                  `json:"url,omitempty" doc:"资源URL"`
 	Content   *AnthropicMessageContent `json:"content,omitempty" doc:"内容块(type=content时)"`
 }
 
@@ -198,8 +198,8 @@ type AnthropicContentSource struct {
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type AnthropicContentBlockCaller struct {
-	Type   string `json:"type" doc:"调用者类型: direct/code_execution_20250825/code_execution_20260120"`
-	ToolID string `json:"tool_id,omitempty" doc:"工具ID(server tool caller)"`
+	Type   string  `json:"type" doc:"调用者类型: direct/code_execution_20250825/code_execution_20260120"`
+	ToolID *string `json:"tool_id,omitempty" doc:"工具ID(server tool caller)"`
 }
 
 // AnthropicMessageParam Anthropic 消息参数
@@ -219,7 +219,7 @@ type AnthropicContentBlock struct {
 	Type string `json:"type" doc:"内容块类型: text/image/document/search_result/thinking/redacted_thinking/tool_use/tool_result/tool_search_tool_result/container_upload"`
 
 	// TextBlock 字段
-	Text      string           `json:"text,omitempty" doc:"文本内容(type=text)"`
+	Text      *string          `json:"text,omitempty" doc:"文本内容(type=text)"`
 	Citations *CitationsConfig `json:"citations,omitempty" doc:"引用配置(type=text/document/search_result)"`
 
 	// ThinkingBlock 字段
@@ -227,19 +227,19 @@ type AnthropicContentBlock struct {
 	// content block type. MarshalJSON for type=thinking always emits a JSON "thinking" key
 	// (including empty string) for upstream API compatibility.
 	Thinking  *string `json:"thinking,omitempty" doc:"思考内容(type=thinking 时必填; 见 MarshalJSON 序列化行为)"`
-	Signature string  `json:"signature,omitempty" doc:"思考签名(type=thinking)"`
+	Signature *string `json:"signature,omitempty" doc:"思考签名(type=thinking)"`
 
 	// RedactedThinkingBlock 字段
-	Data string `json:"data,omitempty" doc:"编辑后的思考数据(type=redacted_thinking)"`
+	Data *string `json:"data,omitempty" doc:"编辑后的思考数据(type=redacted_thinking)"`
 
 	// ToolUseBlock 字段
-	ID     string                       `json:"id,omitempty" doc:"工具调用ID(type=tool_use)"`
-	Name   string                       `json:"name,omitempty" doc:"工具名称(type=tool_use)"`
+	ID     *string                      `json:"id,omitempty" doc:"工具调用ID(type=tool_use)"`
+	Name   *string                      `json:"name,omitempty" doc:"工具名称(type=tool_use)"`
 	Input  map[string]any               `json:"input,omitempty" doc:"工具输入(type=tool_use)"`
 	Caller *AnthropicContentBlockCaller `json:"caller,omitempty" doc:"调用者信息(type=tool_use)"`
 
 	// ToolResultBlock 字段
-	ToolUseID string                      `json:"tool_use_id,omitempty" doc:"关联的工具调用ID(type=tool_result)"`
+	ToolUseID *string                     `json:"tool_use_id,omitempty" doc:"关联的工具调用ID(type=tool_result)"`
 	IsError   *bool                       `json:"is_error,omitempty" doc:"是否为错误结果(type=tool_result)"`
 	Content   *AnthropicToolResultContent `json:"content,omitempty" doc:"工具结果内容(type=tool_result)"`
 
@@ -247,11 +247,11 @@ type AnthropicContentBlock struct {
 	Source *AnthropicContentSource `json:"source,omitempty" doc:"内容来源(type=image/document)"`
 
 	// DocumentBlock/SearchResultBlock 字段
-	Title   string `json:"title,omitempty" doc:"文档/搜索结果标题(type=document/search_result)"`
-	Context string `json:"context,omitempty" doc:"文档上下文(type=document)"`
+	Title   *string `json:"title,omitempty" doc:"文档/搜索结果标题(type=document/search_result)"`
+	Context *string `json:"context,omitempty" doc:"文档上下文(type=document)"`
 
 	// ContainerUploadBlock 字段
-	FileID string `json:"file_id,omitempty" doc:"文件ID(type=container_upload)"`
+	FileID *string `json:"file_id,omitempty" doc:"文件ID(type=container_upload)"`
 
 	// 通用字段
 	CacheControl *CacheControl `json:"cache_control,omitempty" doc:"缓存控制"`
@@ -271,10 +271,14 @@ func newAnthropicThinkingContentBlockWire(b *AnthropicContentBlock) anthropicThi
 	if b.Thinking != nil {
 		th = *b.Thinking
 	}
+	sig := ""
+	if b.Signature != nil {
+		sig = *b.Signature
+	}
 	return anthropicThinkingContentBlockWire{
 		Type:         b.Type,
 		Thinking:     th,
-		Signature:    b.Signature,
+		Signature:    sig,
 		CacheControl: b.CacheControl,
 	}
 }
@@ -295,10 +299,18 @@ func newAnthropicToolUseContentBlockWire(b *AnthropicContentBlock) anthropicTool
 	if input == nil {
 		input = map[string]any{}
 	}
+	id := ""
+	if b.ID != nil {
+		id = *b.ID
+	}
+	name := ""
+	if b.Name != nil {
+		name = *b.Name
+	}
 	return anthropicToolUseContentBlockWire{
 		Type:         b.Type,
-		ID:           b.ID,
-		Name:         b.Name,
+		ID:           id,
+		Name:         name,
 		Input:        input,
 		Caller:       b.Caller,
 		CacheControl: b.CacheControl,
@@ -347,7 +359,7 @@ type AnthropicJSONOutputFormat struct {
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type AnthropicOutputConfig struct {
-	Effort string                     `json:"effort,omitempty" doc:"努力级别: low/medium/high/max"`
+	Effort *string                    `json:"effort,omitempty" doc:"努力级别: low/medium/high/max"`
 	Format *AnthropicJSONOutputFormat `json:"format,omitempty" doc:"输出格式配置"`
 }
 
@@ -358,9 +370,9 @@ type AnthropicOutputConfig struct {
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type AnthropicThinkingConfig struct {
-	Type         string `json:"type" doc:"思考类型: enabled/disabled/adaptive"`
-	BudgetTokens *int   `json:"budget_tokens,omitempty" doc:"思考预算token数(type=enabled时必填)"`
-	Display      string `json:"display,omitempty" doc:"思考展示模式: summarized/omitted(type=enabled/adaptive时可选)"`
+	Type         string  `json:"type" doc:"思考类型: enabled/disabled/adaptive"`
+	BudgetTokens *int    `json:"budget_tokens,omitempty" doc:"思考预算token数(type=enabled时必填)"`
+	Display      *string `json:"display,omitempty" doc:"思考展示模式: summarized/omitted(type=enabled/adaptive时可选)"`
 }
 
 // ==================== Anthropic Tool Choice DTOs ====================
@@ -370,9 +382,9 @@ type AnthropicThinkingConfig struct {
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 type AnthropicToolChoice struct {
-	Type                   string `json:"type" doc:"工具选择类型: auto/any/tool/none"`
-	Name                   string `json:"name,omitempty" doc:"指定工具名称(type=tool时必填)"`
-	DisableParallelToolUse *bool  `json:"disable_parallel_tool_use,omitempty" doc:"禁用并行工具调用"`
+	Type                   string  `json:"type" doc:"工具选择类型: auto/any/tool/none"`
+	Name                   *string `json:"name,omitempty" doc:"指定工具名称(type=tool时必填)"`
+	DisableParallelToolUse *bool   `json:"disable_parallel_tool_use,omitempty" doc:"禁用并行工具调用"`
 }
 
 // ==================== Anthropic Metadata DTOs ====================
@@ -382,7 +394,7 @@ type AnthropicToolChoice struct {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicMetadata struct {
-	UserID string `json:"user_id,omitempty" doc:"用户标识符"`
+	UserID *string `json:"user_id,omitempty" doc:"用户标识符"`
 }
 
 // ==================== Anthropic Create Message Request DTOs ====================
@@ -405,11 +417,11 @@ type AnthropicCreateMessageReq struct {
 	ToolChoice        *AnthropicToolChoice        `json:"tool_choice,omitempty" doc:"工具选择配置"`
 	Thinking          *AnthropicThinkingConfig    `json:"thinking,omitempty" doc:"思考配置"`
 	Metadata          *AnthropicMetadata          `json:"metadata,omitempty" doc:"元数据"`
-	ServiceTier       string                      `json:"service_tier,omitempty" doc:"服务层级: auto/standard_only"`
+	ServiceTier       *string                     `json:"service_tier,omitempty" doc:"服务层级: auto/standard_only"`
 	OutputConfig      *AnthropicOutputConfig      `json:"output_config,omitempty" doc:"输出配置(输出格式、努力级别等)"`
 	CacheControl      *CacheControl               `json:"cache_control,omitempty" doc:"顶层缓存控制"`
-	Container         string                      `json:"container,omitempty" doc:"容器标识符"`
-	InferenceGeo      string                      `json:"inference_geo,omitempty" doc:"推理地理区域"`
+	Container         *string                     `json:"container,omitempty" doc:"容器标识符"`
+	InferenceGeo      *string                     `json:"inference_geo,omitempty" doc:"推理地理区域"`
 	ContextManagement *AnthropicContextManagement `json:"context_management,omitempty" doc:"上下文管理配置"`
 }
 

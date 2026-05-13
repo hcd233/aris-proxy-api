@@ -215,7 +215,7 @@ func resolveOpenAIContentText(content *dto.OpenAIMessageContent) string {
 		var texts []string
 		for _, part := range content.Parts {
 			if part.Type == enum.ContentPartTypeText {
-				texts = append(texts, part.Text)
+				texts = append(texts, lo.FromPtr(part.Text))
 			}
 		}
 		return strings.Join(texts, "\n")
@@ -284,19 +284,22 @@ func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL
 		parts := strings.SplitN(img.URL, constant.DataURLBase64Separator, 2)
 		if len(parts) == 2 {
 			mediaType := strings.TrimPrefix(parts[0], constant.DataURLPrefix)
+			mt := mediaType
+			d := parts[1]
 			block.Source = &dto.AnthropicContentSource{
 				Type:      constant.Base64SourceType,
-				MediaType: mediaType,
-				Data:      parts[1],
+				MediaType: &mt,
+				Data:      &d,
 			}
 			return block
 		}
 	}
 
 	// URL 形式
+	u := img.URL
 	block.Source = &dto.AnthropicContentSource{
 		Type: constant.URLSourceType,
-		URL:  img.URL,
+		URL:  &u,
 	}
 	return block
 }
@@ -309,10 +312,10 @@ func convertOpenAIAssistantMessageToAnthropic(msg *dto.OpenAIChatCompletionMessa
 	var blocks []*dto.AnthropicContentBlock
 
 	// 推理内容 -> thinking block
-	if msg.ReasoningContent != "" {
+	if lo.FromPtr(msg.ReasoningContent) != "" {
 		blocks = append(blocks, &dto.AnthropicContentBlock{
 			Type:     enum.AnthropicContentBlockTypeThinking,
-			Thinking: lo.ToPtr(msg.ReasoningContent),
+			Thinking: msg.ReasoningContent,
 		})
 	}
 
@@ -320,9 +323,10 @@ func convertOpenAIAssistantMessageToAnthropic(msg *dto.OpenAIChatCompletionMessa
 	if msg.Content != nil {
 		text := resolveOpenAIContentText(msg.Content)
 		if text != "" {
+			t := text
 			blocks = append(blocks, &dto.AnthropicContentBlock{
 				Type: enum.AnthropicContentBlockTypeText,
-				Text: text,
+				Text: &t,
 			})
 		}
 	}
@@ -336,10 +340,11 @@ func convertOpenAIAssistantMessageToAnthropic(msg *dto.OpenAIChatCompletionMessa
 					return nil, ierr.Wrapf(ierr.ErrDTOUnmarshal, err, "unmarshal tool call arguments[%d]", i)
 				}
 			}
+			name := tc.Function.Name
 			blocks = append(blocks, &dto.AnthropicContentBlock{
 				Type:  enum.AnthropicContentBlockTypeToolUse,
 				ID:    tc.ID,
-				Name:  tc.Function.Name,
+				Name:  &name,
 				Input: input,
 			})
 		}
@@ -391,8 +396,9 @@ func convertOpenAIToolsToAnthropic(tools []dto.OpenAIChatCompletionTool) []*dto.
 	anthropicTools := make([]*dto.AnthropicTool, 0, len(tools))
 	for _, tool := range tools {
 		if tool.Function != nil {
+			name := tool.Function.Name
 			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
-				Name:        tool.Function.Name,
+				Name:        &name,
 				Description: tool.Function.Description,
 				InputSchema: tool.Function.Parameters,
 				Strict:      tool.Function.Strict,
@@ -404,9 +410,10 @@ func convertOpenAIToolsToAnthropic(tools []dto.OpenAIChatCompletionTool) []*dto.
 
 func convertOpenAIToolChoiceToAnthropic(tc *dto.OpenAIChatCompletionToolChoiceParam) *dto.AnthropicToolChoice {
 	if tc.Named != nil && tc.Named.Function != nil {
+		name := tc.Named.Function.Name
 		return &dto.AnthropicToolChoice{
 			Type: enum.AnthropicToolChoiceTypeTool,
-			Name: tc.Named.Function.Name,
+			Name: &name,
 		}
 	}
 	switch tc.Mode {
@@ -448,7 +455,7 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 	for i, block := range blocks {
 		switch block.Type {
 		case enum.AnthropicContentBlockTypeText:
-			textParts = append(textParts, block.Text)
+			textParts = append(textParts, lo.FromPtr(block.Text))
 
 		case enum.AnthropicContentBlockTypeThinking:
 			thinkingParts = append(thinkingParts, lo.FromPtr(block.Thinking))
@@ -458,11 +465,12 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 			if err != nil {
 				return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
 			}
+			name := lo.FromPtr(block.Name)
 			toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
 				ID:   block.ID,
 				Type: enum.ToolTypeFunction,
 				Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
-					Name:      block.Name,
+					Name:      name,
 					Arguments: args,
 				},
 			})
@@ -479,7 +487,8 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 		msg.Content = &dto.OpenAIMessageContent{Text: joined}
 	}
 	if len(thinkingParts) > 0 {
-		msg.ReasoningContent = strings.Join(thinkingParts, "\n")
+		thinking := strings.Join(thinkingParts, "\n")
+		msg.ReasoningContent = &thinking
 	}
 	if len(toolCalls) > 0 {
 		msg.ToolCalls = toolCalls
@@ -572,6 +581,7 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 
 	// tool_use 开始事件 -> OpenAI tool_calls chunk
 	if payload.ContentBlock.Type == enum.AnthropicContentBlockTypeToolUse {
+		name := lo.FromPtr(payload.ContentBlock.Name)
 		chunk := &dto.OpenAIChatCompletionChunk{
 			ID:      chunkID,
 			Object:  constant.OpenAICompletionChunkObject,
@@ -585,7 +595,7 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 						ID:    payload.ContentBlock.ID,
 						Type:  enum.ToolTypeFunction,
 						Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
-							Name: payload.ContentBlock.Name,
+							Name: name,
 						},
 					}},
 				},
@@ -629,8 +639,9 @@ func GenerateOpenAIChunkID() string {
 //	@author centonhuang
 //	@update 2026-04-18 18:00:00
 func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateResponseReq) (*dto.AnthropicCreateMessageReq, error) {
+	model := lo.FromPtr(req.Model)
 	anthropicReq := &dto.AnthropicCreateMessageReq{
-		Model: req.Model,
+		Model: model,
 	}
 
 	// 转换 max_tokens
@@ -645,7 +656,7 @@ func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateR
 	// 转换 reasoning → Anthropic thinking
 	if req.Reasoning != nil {
 		anthropicReq.Thinking = &dto.AnthropicThinkingConfig{}
-		switch strings.ToLower(req.Reasoning.Effort) {
+		switch strings.ToLower(lo.FromPtr(req.Reasoning.Effort)) {
 		case enum.ResponseEffortLow:
 			anthropicReq.Thinking.Type = enum.AnthropicThinkingTypeLow
 		case enum.ResponseEffortMedium:
@@ -743,7 +754,8 @@ func convertResponseInputItemToAnthropic(item *dto.ResponseInputItem) (*dto.Anth
 		return nil, nil
 	}
 
-	switch item.Type {
+	itemType := lo.FromPtr(item.Type)
+	switch itemType {
 	case "", enum.ResponseInputItemTypeMessage:
 		return convertResponseMessageToAnthropic(item)
 	case enum.ResponseInputItemTypeFunctionCall, enum.ResponseInputItemTypeCustomToolCall:
@@ -760,7 +772,7 @@ func convertResponseInputItemToAnthropic(item *dto.ResponseInputItem) (*dto.Anth
 
 // convertResponseMessageToAnthropic 将 message 类型 item 转换为 Anthropic 消息
 func convertResponseMessageToAnthropic(item *dto.ResponseInputItem) (*dto.AnthropicMessageParam, error) {
-	role := resolveResponseAPIRole(item.Role)
+	role := resolveResponseAPIRole(lo.FromPtr(item.Role))
 	msg := &dto.AnthropicMessageParam{
 		Role: role,
 	}
@@ -811,32 +823,32 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 		}
 		switch p.Type {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
-			text := lo.FromPtr(p.Text)
 			if p.Text != nil {
 				blocks = append(blocks, &dto.AnthropicContentBlock{
 					Type: enum.AnthropicContentBlockTypeText,
-					Text: text,
+					Text: p.Text,
 				})
 			}
 		case enum.ResponseContentTypeInputImage:
-			imageURL := lo.FromPtr(p.ImageURL)
 			block := &dto.AnthropicContentBlock{
 				Type: enum.AnthropicContentBlockTypeImage,
 			}
-			if strings.HasPrefix(imageURL, constant.DataURLPrefix) {
-				parts := strings.SplitN(imageURL, constant.DataURLBase64Separator, 2)
-				if len(parts) == 2 {
-					mediaType := strings.TrimPrefix(parts[0], constant.DataURLPrefix)
+			if p.ImageURL != nil && strings.HasPrefix(*p.ImageURL, constant.DataURLPrefix) {
+				dataURLParts := strings.SplitN(*p.ImageURL, constant.DataURLBase64Separator, 2)
+				if len(dataURLParts) == 2 {
+					mt := strings.TrimPrefix(dataURLParts[0], constant.DataURLPrefix)
+					d := dataURLParts[1]
 					block.Source = &dto.AnthropicContentSource{
 						Type:      constant.Base64SourceType,
-						MediaType: mediaType,
-						Data:      parts[1],
+						MediaType: &mt,
+						Data:      &d,
 					}
 				}
-			} else {
+			} else if p.ImageURL != nil {
+				u := *p.ImageURL
 				block.Source = &dto.AnthropicContentSource{
 					Type: constant.URLSourceType,
-					URL:  imageURL,
+					URL:  &u,
 				}
 			}
 			blocks = append(blocks, block)
@@ -851,9 +863,9 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 
 // convertResponseFunctionCallToAnthropic 将 function_call / custom_tool_call 转换为 Anthropic assistant 消息
 func convertResponseFunctionCallToAnthropic(item *dto.ResponseInputItem) *dto.AnthropicMessageParam {
-	args := item.Arguments
+	args := lo.FromPtr(item.Arguments)
 	if args == "" {
-		args = item.Input
+		args = lo.FromPtr(item.Input)
 	}
 	return &dto.AnthropicMessageParam{
 		Role: string(enum.RoleAssistant),
@@ -943,15 +955,17 @@ func convertResponseToolsToAnthropic(tools []*dto.ResponseTool) []*dto.Anthropic
 		}
 		switch {
 		case tool.Function != nil:
+			name := tool.Function.Name
 			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
-				Name:        tool.Function.Name,
+				Name:        &name,
 				Description: tool.Function.Description,
 				InputSchema: tool.Function.Parameters,
 				Strict:      &tool.Function.Strict,
 			})
 		case tool.Custom != nil:
+			name := tool.Custom.Name
 			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
-				Name:        tool.Custom.Name,
+				Name:        &name,
 				Description: tool.Custom.Description,
 			})
 		}

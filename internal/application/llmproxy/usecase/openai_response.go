@@ -58,7 +58,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 					finalResponse = ev.Response
 				}
 			}
-			replaced := util.ReplaceModelInSSEData(data, req.Body.Model)
+			replaced := util.ReplaceModelInSSEData(data, lo.FromPtr(req.Body.Model))
 			if _, writeErr := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
 				log.Debug("[OpenAIUseCase] Failed to write SSE event frame", zap.Error(writeErr))
 			}
@@ -78,7 +78,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             ep.AggregateID(),
-			Model:               req.Body.Model,
+			Model:               lo.FromPtr(req.Body.Model),
 			UpstreamProvider:    ep.Provider(),
 			APIProvider:         enum.ProviderOpenAI,
 			FirstTokenLatencyMs: firstTokenLatencyMs,
@@ -100,11 +100,11 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(u.taskSubmitter, ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, ep, lo.FromPtr(req.Body.Model), enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 
-		replaced := util.ReplaceModelInBody(respBody, req.Body.Model)
+		replaced := util.ReplaceModelInBody(respBody, lo.FromPtr(req.Body.Model))
 		if headers := util.GetPassthroughResponseHeaders(ctx); headers != nil {
 			for k, v := range headers {
 				writer.HumaCtx.SetHeader(k, v)
@@ -125,7 +125,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             ep.AggregateID(),
-			Model:               req.Body.Model,
+			Model:               lo.FromPtr(req.Body.Model),
 			UpstreamProvider:    ep.Provider(),
 			APIProvider:         enum.ProviderOpenAI,
 			FirstTokenLatencyMs: totalMs,
@@ -167,7 +167,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 
 		chunkID := converter.GenerateOpenAIChunkID()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
-			chunks, convErr := conv.ToOpenAISSEResponse(event, req.Body.Model, chunkID)
+			chunks, convErr := conv.ToOpenAISSEResponse(event, lo.FromPtr(req.Body.Model), chunkID)
 			if convErr != nil {
 				return convErr
 			}
@@ -209,7 +209,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             ep.AggregateID(),
-			Model:               req.Body.Model,
+			Model:               lo.FromPtr(req.Body.Model),
 			UpstreamProvider:    ep.Provider(),
 			APIProvider:         enum.ProviderOpenAI,
 			FirstTokenLatencyMs: firstTokenLatencyMs,
@@ -230,17 +230,17 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			util.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(u.taskSubmitter, ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, ep, lo.FromPtr(req.Body.Model), enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 		completion, err := conv.ToOpenAIResponse(anthropicMsg)
 		if err != nil {
 			log.Error("[OpenAIUseCase] Failed to convert Anthropic response", zap.Error(err))
 			writer.WriteError(fiber.StatusInternalServerError, openAIInternalErrorBody)
-			auditFailure(u.taskSubmitter, ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, ep, lo.FromPtr(req.Body.Model), enum.ProviderOpenAI, totalMs, err)
 			return
 		}
-		completion.Model = req.Body.Model
+		completion.Model = lo.FromPtr(req.Body.Model)
 		writer.WriteJSON(completion)
 
 		u.storeResponseFromAnthropicMsg(ctx, req, anthropicMsg, nil, upstream.Model)
@@ -248,7 +248,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             ep.AggregateID(),
-			Model:               req.Body.Model,
+			Model:               lo.FromPtr(req.Body.Model),
 			UpstreamProvider:    ep.Provider(),
 			APIProvider:         enum.ProviderOpenAI,
 			FirstTokenLatencyMs: totalMs,
