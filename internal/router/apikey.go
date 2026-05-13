@@ -13,11 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler, db *gorm.DB, rdb *redis.Client) {
-	apikeyGroup.UseMiddleware(middleware.JwtMiddleware(db, rdb))
+func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler, db *gorm.DB, cache *redis.Client) {
+	apikeyGroup.UseMiddleware(middleware.JwtMiddleware(db, cache))
 	// 限流: 防止快速创建 Key 或枚举 ID
 	apikeyGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
-		rdb,
+		cache,
 		"apikeyManage",
 		constant.CtxKeyUserID,
 		constant.PeriodManageAPIKey,

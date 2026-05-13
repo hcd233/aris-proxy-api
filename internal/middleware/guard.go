@@ -80,7 +80,7 @@ func isRouteNotFound(err error) bool {
 //     @return fiber.Handler
 //     @author centonhuang
 //     @update 2026-04-10 10:00:00
-func GuardMiddleware(rdb *redis.Client, cfg GuardConfig) fiber.Handler {
+func GuardMiddleware(cache *redis.Client, cfg GuardConfig) fiber.Handler {
 	thresholdStr := strconv.Itoa(cfg.StrikeThreshold)
 	windowTTLStr := strconv.FormatInt(int64(cfg.StrikeWindow.Seconds()), 10)
 	banTTLStr := strconv.FormatInt(int64(cfg.BanDuration.Seconds()), 10)
@@ -88,7 +88,7 @@ func GuardMiddleware(rdb *redis.Client, cfg GuardConfig) fiber.Handler {
 		return p, struct{}{}
 	})
 	return func(c *fiber.Ctx) error {
-		if rdb == nil {
+		if cache == nil {
 			logger.WithFCtx(c).Warn("[GuardMiddleware] Redis dependency is nil")
 			return c.Next()
 		}
@@ -96,7 +96,7 @@ func GuardMiddleware(rdb *redis.Client, cfg GuardConfig) fiber.Handler {
 		banKey := fmt.Sprintf(constant.ScannerBanKeyTemplate, ip)
 		ctx := c.Context()
 
-		banned, err := rdb.Exists(ctx, banKey).Result()
+		banned, err := cache.Exists(ctx, banKey).Result()
 		if err != nil {
 			logger.WithFCtx(c).Warn("[GuardMiddleware] Failed to check ban status", zap.String("ip", ip), zap.Error(err))
 		}
@@ -114,7 +114,7 @@ func GuardMiddleware(rdb *redis.Client, cfg GuardConfig) fiber.Handler {
 			strikeKey := fmt.Sprintf(constant.ScannerStrikeKeyTemplate, ip)
 
 			result, luaErr := scannerGuardLua.Run(
-				ctx, rdb,
+				ctx, cache,
 				[]string{strikeKey, banKey},
 				thresholdStr, windowTTLStr, banTTLStr,
 			).Int64Slice()

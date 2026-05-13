@@ -186,7 +186,10 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep vo.UpstreamEndpoint
 
 	log.Info("[AnthropicProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)))
+		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)),
+		zap.Any("upstreamHeaders", util.MaskHTTPHeadersForLog(req.Header)),
+		zap.ByteString("upstreamBody", body),
+	)
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {

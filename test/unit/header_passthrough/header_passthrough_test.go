@@ -66,6 +66,32 @@ func TestGetPassthroughHeaders_EmptyMap(t *testing.T) {
 	}
 }
 
+func TestMaskHTTPHeadersForLog_MasksSensitiveHeaders(t *testing.T) {
+	headers := http.Header{
+		constant.HTTPTitleHeaderAuthorization:      {"Bearer raw-secret-token"},
+		constant.HTTPTitleHeaderCookie:             {"session=raw-secret-cookie"},
+		constant.HTTPLowerHeaderProxyAuthorization: {"Basic raw-proxy-secret"},
+		constant.HTTPTitleHeaderAPIKey:             {"raw-api-key"},
+		"X-Custom-Header":                          {"keep-me"},
+	}
+
+	got := util.MaskHTTPHeadersForLog(headers)
+
+	for _, key := range []string{
+		constant.HTTPTitleHeaderAuthorization,
+		constant.HTTPTitleHeaderCookie,
+		constant.HTTPLowerHeaderProxyAuthorization,
+		constant.HTTPTitleHeaderAPIKey,
+	} {
+		if got[key] != constant.MaskSecretPlaceholder {
+			t.Errorf("%s = %v, want %s", key, got[key], constant.MaskSecretPlaceholder)
+		}
+	}
+	if got["X-Custom-Header"] != "keep-me" {
+		t.Errorf("X-Custom-Header = %v, want keep-me", got["X-Custom-Header"])
+	}
+}
+
 func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
 	var got map[string]string
 	mux := http.NewServeMux()

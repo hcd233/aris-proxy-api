@@ -65,7 +65,7 @@ var startServerCmd = &cobra.Command{
 
 		app.Use(
 			middleware.RecoverMiddleware(),
-			middleware.GuardMiddleware(infra.RedisClient, middleware.GuardConfig{
+			middleware.GuardMiddleware(infra.Cache, middleware.GuardConfig{
 				StrikeThreshold: constant.GuardStrikeThreshold,
 				StrikeWindow:    constant.GuardStrikeWindow,
 				BanDuration:     constant.GuardBanDuration,
@@ -163,7 +163,7 @@ func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
 
 		// Step 6: 关闭 Redis 连接
 		logger.Logger().Info("[Server] Step 6/6: Closing Redis connection...")
-		if err := cache.CloseCache(infra.RedisClient); err != nil {
+		if err := cache.CloseCache(infra.Cache); err != nil {
 			logger.Logger().Error("[Server] Redis close error", zap.Error(err))
 		}
 
