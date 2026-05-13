@@ -25,7 +25,6 @@ const (
 	HTTPLowerHeaderTrailer            = "trailer"
 	HTTPLowerHeaderProxyAuthorization = "proxy-authorization"
 	HTTPLowerHeaderProxyAuthenticate  = "proxy-authenticate"
-	HTTPLowerHeaderTraceID            = "x-trace-id"
 	HTTPLowerHeaderAuthorization      = "authorization"
 
 	// HTTPTitleHeader Title-Case格式的HTTP头部（用于响应/标准头部）
@@ -42,6 +41,7 @@ const (
 	HTTPTitleHeaderRetryAfter          = "Retry-After"
 	HTTPTitleHeaderAuthorization       = "Authorization"
 	HTTPTitleHeaderAPIKey              = "X-Api-Key"
+	HTTPTitleHeaderTraceID             = "X-Trace-Id"
 
 	HTTPAuthBearerPrefix              = "Bearer "
 	HTTPContentTypeJSON               = "application/json"

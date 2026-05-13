@@ -80,12 +80,13 @@ func WriteAnthropicMessageStop(w *bufio.Writer) error {
 // 当上游在流式请求开始后（HTTP 200 已发送）返回错误时，本函数将上游错误体
 // 以 SSE data 帧的形式写入客户端，避免客户端收到空的截断流。
 //
-//	@param log *zap.Logger
+//	@param ctx context.Context
 //	@param w *bufio.Writer
 //	@param err error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func WriteUpstreamSSEError(log *zap.Logger, w *bufio.Writer, err error) {
+func WriteUpstreamSSEError(ctx context.Context, w *bufio.Writer, err error) {
+	log := logger.WithCtx(ctx)
 	var upstreamErr *model.UpstreamError
 	if errors.As(err, &upstreamErr) {
 		if upstreamErr.Body != "" {

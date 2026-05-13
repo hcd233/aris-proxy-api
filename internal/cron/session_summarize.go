@@ -44,7 +44,7 @@ type SessionSummarizeCron struct {
 func NewSessionSummarizeCron(db *gorm.DB, poolManager *pool.PoolManager) Cron {
 	return &SessionSummarizeCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionSummarize, logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionSummarize)),
 		),
 		db:          db,
 		poolManager: poolManager,

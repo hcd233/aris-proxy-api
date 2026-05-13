@@ -18,7 +18,7 @@ var responsePassthroughExcludedHeaders = map[string]struct{}{
 	constant.HTTPLowerHeaderUpgrade:           {},
 	constant.HTTPLowerHeaderTrailer:           {},
 	constant.HTTPLowerHeaderProxyAuthenticate: {},
-	constant.HTTPLowerHeaderTraceID:           {},
+	constant.HTTPTitleHeaderTraceID:           {},
 }
 
 // isPassthroughResponseHeader 判断响应头是否应透传

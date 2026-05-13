@@ -22,6 +22,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -37,17 +38,18 @@ import (
 //	    把字段 silent 改名会违背透传语义。
 //
 // 因此这里保持用户请求的原样透传，由调用方自行选择 max_tokens 或 max_completion_tokens。
-func (u *openAIUseCase) forwardChatNative(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
-	body := util.ReplaceModelInBody(lo.Must1(sonic.Marshal(req.Body)), upstream.Model)
+func (u *openAIUseCase) forwardChatNative(ctx context.Context, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+	body := util.MarshalOpenAIChatCompletionBodyForModel(req.Body, upstream.Model)
 
 	if stream {
-		return u.forwardChatNativeStream(ctx, log, req, ep, upstream, body)
+		return u.forwardChatNativeStream(ctx, req, ep, upstream, body)
 	}
-	return u.forwardChatNativeUnary(ctx, log, req, ep, upstream, body)
+	return u.forwardChatNativeUnary(ctx, req, ep, upstream, body)
 }
 
 // forwardChatNativeStream OpenAI 原生流式：SSE chunks → 客户端
-func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -82,10 +84,10 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Lo
 				log.Debug("[OpenAIUseCase] Failed to flush SSE writer", zap.Error(flushErr))
 			}
 		} else {
-			util.WriteUpstreamSSEError(log, w, err)
+			util.WriteUpstreamSSEError(ctx, w, err)
 		}
 
-		u.storeOpenAIChatFromCompletion(ctx, log, req, completion, err, upstream.Model)
+		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, upstream.Model)
 
 		var usage *dto.OpenAICompletionUsage
 		if completion != nil {
@@ -107,20 +109,20 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, log *zap.Lo
 }
 
 // forwardChatNativeUnary OpenAI 原生非流式：JSON → 客户端
-func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
+			util.WriteUpstreamError(writer, err, openAIInternalErrorBody)
 			auditFailure(u.taskSubmitter, ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
 		completion.Model = req.Body.Model
 		writer.WriteJSON(completion)
 
-		u.storeOpenAIChatFromCompletion(ctx, log, req, completion, nil, upstream.Model)
+		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -137,7 +139,8 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, log *zap.Log
 }
 
 // forwardChatViaAnthropic OpenAI 请求通过 Anthropic 上游转发
-func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	conv := converter.AnthropicProtocolConverter{}
 	anthropicReq, err := conv.FromOpenAIRequest(req.Body)
 	if err != nil {
@@ -148,13 +151,14 @@ func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, log *zap.Lo
 	body := lo.Must1(sonic.Marshal(anthropicReq))
 
 	if stream {
-		return u.forwardChatViaAnthropicStream(ctx, log, req, ep, upstream, body, &conv)
+		return u.forwardChatViaAnthropicStream(ctx, req, ep, upstream, body, &conv)
 	}
-	return u.forwardChatViaAnthropicUnary(ctx, log, req, ep, upstream, body, &conv)
+	return u.forwardChatViaAnthropicUnary(ctx, req, ep, upstream, body, &conv)
 }
 
 // forwardChatViaAnthropicStream Anthropic 上游流式 → OpenAI SSE
-func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -196,10 +200,10 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 				log.Debug("[OpenAIUseCase] Failed to flush SSE writer", zap.Error(flushErr))
 			}
 		} else {
-			util.WriteUpstreamSSEError(log, w, err)
+			util.WriteUpstreamSSEError(ctx, w, err)
 		}
 
-		u.storeOpenAIChatFromAnthropicMsg(ctx, log, req, anthropicMsg, err, upstream.Model)
+		u.storeOpenAIChatFromAnthropicMsg(ctx, req, anthropicMsg, err, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -217,13 +221,14 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, log *
 }
 
 // forwardChatViaAnthropicUnary Anthropic 上游非流式 → OpenAI JSON
-func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, log *zap.Logger, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *dto.OpenAIChatCompletionRequest, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, conv *converter.AnthropicProtocolConverter) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(log, writer, err, openAIInternalErrorBody)
+			util.WriteUpstreamError(writer, err, openAIInternalErrorBody)
 			auditFailure(u.taskSubmitter, ctx, ep, req.Body.Model, enum.ProviderOpenAI, totalMs, err)
 			return
 		}
@@ -237,7 +242,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, log *z
 		completion.Model = req.Body.Model
 		writer.WriteJSON(completion)
 
-		u.storeOpenAIChatFromCompletion(ctx, log, req, completion, nil, upstream.Model)
+		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),

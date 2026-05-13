@@ -3,7 +3,6 @@ package cmd
 import (
 	"os"
 
-	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/tool/lintconv"
 	"github.com/hcd233/aris-proxy-api/internal/tool/lintstatic"
 	"github.com/spf13/cobra"
@@ -34,7 +33,7 @@ var staticLintCmd = &cobra.Command{
 	Long:  `Run go vet and staticcheck (if installed) for standard static analysis across the project.`,
 	Run: func(_ *cobra.Command, args []string) {
 		result := lintstatic.Run(args)
-		result.Log(logger.Logger())
+		result.Log()
 		if result.Err != nil {
 			os.Exit(1)
 		}

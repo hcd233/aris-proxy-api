@@ -38,7 +38,7 @@ type SessionDeduplicateCron struct {
 func NewSessionDeduplicateCron(db *gorm.DB) Cron {
 	return &SessionDeduplicateCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionDeduplicate, logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionDeduplicate)),
 		),
 		db:         db,
 		sessionDAO: dao.GetSessionDAO(),

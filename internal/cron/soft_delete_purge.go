@@ -36,7 +36,7 @@ type SoftDeletePurgeCron struct {
 func NewSoftDeletePurgeCron(db *gorm.DB) Cron {
 	return &SoftDeletePurgeCron{
 		cron: cron.New(
-			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSoftDeletePurge, logger.Logger())),
+			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSoftDeletePurge)),
 		),
 		db:         db,
 		messageDAO: dao.GetMessageDAO(),
