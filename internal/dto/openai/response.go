@@ -24,8 +24,8 @@ import (
 // Response API reasoning summary/generate_summary 常量
 // ResponseReasoningConfig reasoning 配置对象
 type ResponseReasoningConfig struct {
-	Effort  string `json:"effort,omitempty" doc:"推理强度: none/minimal/low/medium/high/xhigh"`
-	Summary string `json:"summary,omitempty" doc:"摘要策略: auto/concise/detailed"`
+	Effort  *string `json:"effort,omitempty" doc:"推理强度: none/minimal/low/medium/high/xhigh"`
+	Summary *string `json:"summary,omitempty" doc:"摘要策略: auto/concise/detailed"`
 }
 
 // ==================== text 字段 ====================
@@ -35,7 +35,7 @@ type ResponseReasoningConfig struct {
 // ResponseTextConfig text 配置对象
 type ResponseTextConfig struct {
 	Format    *ResponseTextFormat `json:"format,omitempty" doc:"输出格式"`
-	Verbosity string              `json:"verbosity,omitempty" doc:"详细程度: low/medium/high"`
+	Verbosity *string             `json:"verbosity,omitempty" doc:"详细程度: low/medium/high"`
 }
 
 // ResponseTextFormat text.format 联合（ResponseFormatText / ResponseFormatTextJSONSchemaConfig / ResponseFormatJSONObject）
@@ -43,9 +43,9 @@ type ResponseTextFormat struct {
 	Type string `json:"type" doc:"text/json_schema/json_object"`
 
 	// json_schema 专用
-	Name        string                     `json:"name,omitempty" doc:"格式名称(json_schema)"`
+	Name        *string                    `json:"name,omitempty" doc:"格式名称(json_schema)"`
 	Schema      *schema.JSONSchemaProperty `json:"schema,omitempty" doc:"JSON Schema 描述"`
-	Description string                     `json:"description,omitempty" doc:"格式描述"`
+	Description *string                    `json:"description,omitempty" doc:"格式描述"`
 	Strict      *bool                      `json:"strict,omitempty" doc:"严格模式"`
 }
 
@@ -55,7 +55,7 @@ type ResponseTextFormat struct {
 type ResponsePrompt struct {
 	ID        string                             `json:"id" doc:"prompt 模板 ID"`
 	Variables map[string]*ResponsePromptVariable `json:"variables,omitempty" doc:"模板变量值"`
-	Version   string                             `json:"version,omitempty" doc:"模板版本"`
+	Version   *string                            `json:"version,omitempty" doc:"模板版本"`
 }
 
 // ResponsePromptVariable prompt.variables 值（string | ResponseInputText | ResponseInputImage | ResponseInputFile）
@@ -170,7 +170,7 @@ type OpenAICreateResponseReq struct { // ---------- 布尔/标量 ----------
 	MaxOutputTokens      *int64            `json:"max_output_tokens,omitempty" doc:"最大输出 token 数"`
 	MaxToolCalls         *int64            `json:"max_tool_calls,omitempty" doc:"最大工具调用数"`
 	Metadata             map[string]string `json:"metadata,omitempty" doc:"元数据"`
-	Model                string            `json:"model,omitempty" doc:"模型 ID"`
+	Model                *string           `json:"model,omitempty" doc:"模型 ID"`
 	ParallelToolCalls    *bool             `json:"parallel_tool_calls,omitempty" doc:"是否并行工具调用"`
 	PreviousResponseID   *string           `json:"previous_response_id,omitempty" doc:"前置响应 ID"`
 	PromptCacheKey       *string           `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`

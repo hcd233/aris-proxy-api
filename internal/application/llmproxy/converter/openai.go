@@ -183,7 +183,7 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 			if _, started := tracker.startedTextBlocks[choice.Index]; !started {
 				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
 					Type: enum.AnthropicContentBlockTypeText,
-					Text: "",
+					Text: lo.ToPtr(""),
 				}))
 				tracker.startedTextBlocks[choice.Index] = struct{}{}
 			}
@@ -209,12 +209,13 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 			if tc.Index != nil {
 				toolCallIndex = *tc.Index
 			}
-			if tc.Function != nil && tc.ID != "" {
+			if tc.Function != nil && lo.FromPtr(tc.ID) != "" {
 				if _, started := tracker.startedToolBlocks[toolCallIndex]; !started {
+					name := tc.Function.Name
 					events = append(events, newContentBlockStartEvent(toolCallIndex, &dto.AnthropicContentBlock{
 						Type:  enum.AnthropicContentBlockTypeToolUse,
 						ID:    tc.ID,
-						Name:  tc.Function.Name,
+						Name:  &name,
 						Input: map[string]any{},
 					}))
 					tracker.startedToolBlocks[toolCallIndex] = struct{}{}
@@ -260,7 +261,7 @@ func convertAnthropicSystemToOpenAI(system *dto.AnthropicMessageContent) ([]*dto
 		var texts []string
 		for _, block := range system.Blocks {
 			if block.Type == enum.AnthropicContentBlockTypeText {
-				texts = append(texts, block.Text)
+				texts = append(texts, lo.FromPtr(block.Text))
 			}
 		}
 		if len(texts) > 0 {
@@ -316,11 +317,12 @@ func convertAnthropicBlocksToOpenAIMessages(role string, blocks []*dto.Anthropic
 			if err != nil {
 				return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
 			}
+			name := lo.FromPtr(block.Name)
 			toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
 				ID:   block.ID,
 				Type: enum.ToolTypeFunction,
 				Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
-					Name:      block.Name,
+					Name:      name,
 					Arguments: args,
 				},
 			})
@@ -367,14 +369,15 @@ func convertAnthropicBlocksToOpenAIMessages(role string, blocks []*dto.Anthropic
 				// 纯文本，合并为单个字符串
 				var texts []string
 				for _, p := range contentParts {
-					texts = append(texts, p.Text)
+					texts = append(texts, lo.FromPtr(p.Text))
 				}
 				mainMsg.Content = &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")}
 			}
 		}
 
 		if len(thinkingParts) > 0 {
-			mainMsg.ReasoningContent = strings.Join(thinkingParts, "\n")
+			thinking := strings.Join(thinkingParts, "\n")
+			mainMsg.ReasoningContent = &thinking
 		}
 		if len(toolCalls) > 0 {
 			mainMsg.ToolCalls = toolCalls
@@ -402,7 +405,7 @@ func extractAnthropicToolResultText(content *dto.AnthropicToolResultContent) str
 		var texts []string
 		for _, block := range content.Blocks {
 			if block.Type == enum.AnthropicContentBlockTypeText {
-				texts = append(texts, block.Text)
+				texts = append(texts, lo.FromPtr(block.Text))
 			}
 		}
 		return strings.Join(texts, "\n")
@@ -419,14 +422,14 @@ func convertAnthropicImageToOpenAIPart(block *dto.AnthropicContentBlock) *dto.Op
 		return &dto.OpenAIChatCompletionContentPart{
 			Type: enum.ContentPartTypeImageURL,
 			ImageURL: &dto.OpenAIChatCompletionImageURL{
-				URL: fmt.Sprintf(constant.DataURLTemplate, block.Source.MediaType, block.Source.Data),
+				URL: fmt.Sprintf(constant.DataURLTemplate, lo.FromPtr(block.Source.MediaType), lo.FromPtr(block.Source.Data)),
 			},
 		}
 	case enum.ImageSourceTypeURL:
 		return &dto.OpenAIChatCompletionContentPart{
 			Type: enum.ContentPartTypeImageURL,
 			ImageURL: &dto.OpenAIChatCompletionImageURL{
-				URL: block.Source.URL,
+				URL: lo.FromPtr(block.Source.URL),
 			},
 		}
 	}
@@ -437,7 +440,7 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 	openAITools := make([]dto.OpenAIChatCompletionTool, 0, len(tools))
 	for _, tool := range tools {
 		// 仅转换自定义工具（有 input_schema 的），跳过内置工具
-		if tool.InputSchema == nil && tool.Name == "" {
+		if tool.InputSchema == nil && lo.FromPtr(tool.Name) == "" {
 			continue
 		}
 
@@ -454,10 +457,11 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 			parameters = &dto.JSONSchemaProperty{JSONSchemaProperty: *params}
 		}
 
+		name := lo.FromPtr(tool.Name)
 		openAITools = append(openAITools, dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.Name,
+				Name:        name,
 				Description: tool.Description,
 				Parameters:  parameters,
 				Strict:      tool.Strict,
@@ -502,11 +506,12 @@ func convertAnthropicToolChoiceToOpenAI(tc *dto.AnthropicToolChoice) *dto.OpenAI
 	case enum.AnthropicToolChoiceTypeNone:
 		return &dto.OpenAIChatCompletionToolChoiceParam{Mode: enum.ToolChoiceNone}
 	case enum.AnthropicToolChoiceTypeTool:
+		name := lo.FromPtr(tc.Name)
 		return &dto.OpenAIChatCompletionToolChoiceParam{
 			Named: &dto.OpenAIChatCompletionToolChoice{
 				Type: enum.ToolTypeFunction,
 				Function: &dto.OpenAIToolChoiceFunction{
-					Name: tc.Name,
+					Name: name,
 				},
 			},
 		}
@@ -537,23 +542,24 @@ func convertOpenAIMessageToAnthropicContent(msg *dto.OpenAIChatCompletionMessage
 	var blocks []*dto.AnthropicContentBlock
 
 	// 推理内容 -> thinking block
-	if msg.ReasoningContent != "" {
+	if lo.FromPtr(msg.ReasoningContent) != "" {
 		blocks = append(blocks, &dto.AnthropicContentBlock{
 			Type:     enum.AnthropicContentBlockTypeThinking,
-			Thinking: lo.ToPtr(msg.ReasoningContent),
+			Thinking: msg.ReasoningContent,
 		})
 	}
 
 	// 文本内容 -> text block
 	if msg.Content != nil {
 		if msg.Content.Text != "" {
+			t := msg.Content.Text
 			blocks = append(blocks, &dto.AnthropicContentBlock{
 				Type: enum.AnthropicContentBlockTypeText,
-				Text: msg.Content.Text,
+				Text: &t,
 			})
 		} else if len(msg.Content.Parts) > 0 {
 			for _, part := range msg.Content.Parts {
-				if part.Type == enum.ContentPartTypeText && part.Text != "" {
+				if part.Type == enum.ContentPartTypeText && lo.FromPtr(part.Text) != "" {
 					blocks = append(blocks, &dto.AnthropicContentBlock{
 						Type: enum.AnthropicContentBlockTypeText,
 						Text: part.Text,
@@ -572,10 +578,11 @@ func convertOpenAIMessageToAnthropicContent(msg *dto.OpenAIChatCompletionMessage
 					return nil, ierr.Wrapf(ierr.ErrDTOUnmarshal, err, "unmarshal tool call arguments for %q", tc.Function.Name)
 				}
 			}
+			name := tc.Function.Name
 			blocks = append(blocks, &dto.AnthropicContentBlock{
 				Type:  enum.AnthropicContentBlockTypeToolUse,
 				ID:    tc.ID,
-				Name:  tc.Function.Name,
+				Name:  &name,
 				Input: input,
 			})
 		}
@@ -584,7 +591,7 @@ func convertOpenAIMessageToAnthropicContent(msg *dto.OpenAIChatCompletionMessage
 	if len(blocks) == 0 {
 		blocks = append(blocks, &dto.AnthropicContentBlock{
 			Type: enum.AnthropicContentBlockTypeText,
-			Text: "",
+			Text: lo.ToPtr(""),
 		})
 	}
 

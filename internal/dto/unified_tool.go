@@ -14,7 +14,9 @@ func FromOpenAITool(tool *OpenAIChatCompletionTool) *vo.UnifiedTool {
 	unified := &vo.UnifiedTool{}
 	if tool.Function != nil {
 		unified.Name = tool.Function.Name
-		unified.Description = tool.Function.Description
+		if tool.Function.Description != nil {
+			unified.Description = *tool.Function.Description
+		}
 		unified.Parameters = &tool.Function.Parameters.JSONSchemaProperty
 	}
 	return unified
@@ -27,9 +29,12 @@ func FromOpenAITool(tool *OpenAIChatCompletionTool) *vo.UnifiedTool {
 //	@author centonhuang
 //	@update 2026-04-22 14:10:00
 func FromAnthropicTool(tool *AnthropicTool) *vo.UnifiedTool {
-	unified := &vo.UnifiedTool{
-		Name:        tool.Name,
-		Description: tool.Description,
+	unified := &vo.UnifiedTool{}
+	if tool.Name != nil {
+		unified.Name = *tool.Name
+	}
+	if tool.Description != nil {
+		unified.Description = *tool.Description
 	}
 	if tool.InputSchema != nil {
 		unified.Parameters = &tool.InputSchema.JSONSchemaProperty

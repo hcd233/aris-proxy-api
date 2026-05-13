@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/samber/lo"
 )
 
 // responseDTOCase mirrors the structure of fixtures/cases.json
@@ -107,8 +108,8 @@ func TestOpenAICreateResponseReq_CodexFullBody(t *testing.T) {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
 
-	if req.Model != "gpt-5.4" {
-		t.Errorf("Model = %q, want gpt-5.4", req.Model)
+	if lo.FromPtr(req.Model) != "gpt-5.4" {
+		t.Errorf("Model = %q, want gpt-5.4", lo.FromPtr(req.Model))
 	}
 	if req.Stream == nil || *req.Stream != true {
 		t.Errorf("Stream should be true")
@@ -133,12 +134,12 @@ func TestOpenAICreateResponseReq_CodexFullBody(t *testing.T) {
 	if len(req.Input.Items) != 2 {
 		t.Fatalf("Input.Items len = %d, want 2", len(req.Input.Items))
 	}
-	if req.Input.Items[0].Role != "developer" || req.Input.Items[0].Type != "message" {
-		t.Errorf("Input.Items[0] role/type mismatch: role=%q type=%q", req.Input.Items[0].Role, req.Input.Items[0].Type)
+	if lo.FromPtr(req.Input.Items[0].Role) != "developer" || lo.FromPtr(req.Input.Items[0].Type) != "message" {
+		t.Errorf("Input.Items[0] role/type mismatch: role=%q type=%q", lo.FromPtr(req.Input.Items[0].Role), lo.FromPtr(req.Input.Items[0].Type))
 	}
 
 	// Reasoning
-	if req.Reasoning == nil || req.Reasoning.Effort != "medium" || req.Reasoning.Summary != "auto" {
+	if req.Reasoning == nil || lo.FromPtr(req.Reasoning.Effort) != "medium" || lo.FromPtr(req.Reasoning.Summary) != "auto" {
 		t.Errorf("Reasoning not correctly populated: %+v", req.Reasoning)
 	}
 
@@ -146,8 +147,8 @@ func TestOpenAICreateResponseReq_CodexFullBody(t *testing.T) {
 	if req.Text == nil || req.Text.Format == nil || req.Text.Format.Type != "json_schema" {
 		t.Errorf("Text.Format.Type = json_schema expected, got %+v", req.Text)
 	}
-	if req.Text.Verbosity != "low" {
-		t.Errorf("Text.Verbosity = %q, want low", req.Text.Verbosity)
+	if lo.FromPtr(req.Text.Verbosity) != "low" {
+		t.Errorf("Text.Verbosity = %q, want low", lo.FromPtr(req.Text.Verbosity))
 	}
 
 	// Tools: function
@@ -178,8 +179,8 @@ func TestOpenAICreateResponseReq_Minimal(t *testing.T) {
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
-	if req.Model != "gpt-4o" {
-		t.Errorf("Model = %q, want gpt-4o", req.Model)
+	if lo.FromPtr(req.Model) != "gpt-4o" {
+		t.Errorf("Model = %q, want gpt-4o", lo.FromPtr(req.Model))
 	}
 	if req.Stream != nil {
 		t.Errorf("Stream should be nil")
@@ -232,7 +233,7 @@ func TestOpenAICreateResponseReq_ToolChoiceVariants(t *testing.T) {
 			t.Fatalf("unmarshal: %v", err)
 		}
 		if req.ToolChoice == nil || req.ToolChoice.Object == nil ||
-			req.ToolChoice.Object.Type != "function" || req.ToolChoice.Object.Name != "get_weather" {
+			req.ToolChoice.Object.Type != "function" || lo.FromPtr(req.ToolChoice.Object.Name) != "get_weather" {
 			t.Errorf("unexpected tool_choice function: %+v", req.ToolChoice)
 		}
 	})
@@ -245,8 +246,8 @@ func TestOpenAICreateResponseReq_ToolChoiceVariants(t *testing.T) {
 		}
 		if req.ToolChoice == nil || req.ToolChoice.Object == nil ||
 			req.ToolChoice.Object.Type != "mcp" ||
-			req.ToolChoice.Object.ServerLabel != "deepwiki" ||
-			req.ToolChoice.Object.Name != "search" {
+			lo.FromPtr(req.ToolChoice.Object.ServerLabel) != "deepwiki" ||
+			lo.FromPtr(req.ToolChoice.Object.Name) != "search" {
 			t.Errorf("unexpected tool_choice mcp: %+v", req.ToolChoice)
 		}
 	})
@@ -277,7 +278,7 @@ func TestOpenAICreateResponseReq_InputVariants(t *testing.T) {
 			t.Fatalf("expected 1 input item, got %+v", req.Input)
 		}
 		item := req.Input.Items[0]
-		if item.Role != "user" || item.Content == nil || item.Content.Text != "hi there" {
+		if lo.FromPtr(item.Role) != "user" || item.Content == nil || item.Content.Text != "hi there" {
 			t.Errorf("unexpected item: %+v content=%+v", item, item.Content)
 		}
 	})
@@ -321,7 +322,7 @@ func TestOpenAICreateResponseReq_TextJSONSchema(t *testing.T) {
 		t.Fatal("Text.Format should be populated")
 	}
 	f := req.Text.Format
-	if f.Type != "json_schema" || f.Name != "person" || f.Strict == nil || *f.Strict != true {
+	if f.Type != "json_schema" || lo.FromPtr(f.Name) != "person" || f.Strict == nil || *f.Strict != true {
 		t.Errorf("unexpected format: %+v", f)
 	}
 	if f.Schema == nil || !f.Schema.HasType("object") {
@@ -346,7 +347,7 @@ func TestOpenAICreateResponseReq_ToolsFileSearch(t *testing.T) {
 	if fs.Filters == nil || fs.Filters.Type != "and" || len(fs.Filters.Filters) != 2 {
 		t.Errorf("compound filter not parsed: %+v", fs.Filters)
 	}
-	if fs.Filters.Filters[0].Type != "eq" || fs.Filters.Filters[0].Key != "lang" {
+	if fs.Filters.Filters[0].Type != "eq" || lo.FromPtr(fs.Filters.Filters[0].Key) != "lang" {
 		t.Errorf("first inner filter mismatch: %+v", fs.Filters.Filters[0])
 	}
 	if v := fs.Filters.Filters[0].Value; v == nil || v.StringValue == nil || *v.StringValue != "zh" {

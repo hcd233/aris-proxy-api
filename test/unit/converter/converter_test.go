@@ -109,9 +109,10 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_ToolCallFlow(t *testing.T)
 	if len(result.Tools) != 1 {
 		t.Fatalf("len(Tools) = %d, want 1", len(result.Tools))
 	}
-	if result.Tools[0].Name != "get_weather" {
-		t.Errorf("Tools[0].Name = %q, want %q", result.Tools[0].Name, "get_weather")
+	if lo.FromPtr(result.Tools[0].Name) != "get_weather" {
+		t.Errorf("Tools[0].Name = %q, want %q", lo.FromPtr(result.Tools[0].Name), "get_weather")
 	}
+
 	if result.Tools[0].InputSchema == nil {
 		t.Error("Tools[0].InputSchema should not be nil")
 	}
@@ -131,11 +132,11 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_ToolCallFlow(t *testing.T)
 			for _, block := range msg.Content.Blocks {
 				if block.Type == enum.AnthropicContentBlockTypeToolUse {
 					found = true
-					if block.Name != "get_weather" {
-						t.Errorf("tool_use block Name = %q, want %q", block.Name, "get_weather")
+					if lo.FromPtr(block.Name) != "get_weather" {
+						t.Errorf("tool_use block Name = %q, want %q", lo.FromPtr(block.Name), "get_weather")
 					}
-					if block.ID != "call_abc123" {
-						t.Errorf("tool_use block ID = %q, want %q", block.ID, "call_abc123")
+					if lo.FromPtr(block.ID) != "call_abc123" {
+						t.Errorf("tool_use block ID = %q, want %q", lo.FromPtr(block.ID), "call_abc123")
 					}
 				}
 			}
@@ -152,8 +153,8 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_ToolCallFlow(t *testing.T)
 			for _, block := range msg.Content.Blocks {
 				if block.Type == enum.AnthropicContentBlockTypeToolResult {
 					foundToolResult = true
-					if block.ToolUseID != "call_abc123" {
-						t.Errorf("tool_result ToolUseID = %q, want %q", block.ToolUseID, "call_abc123")
+					if lo.FromPtr(block.ToolUseID) != "call_abc123" {
+						t.Errorf("tool_result ToolUseID = %q, want %q", lo.FromPtr(block.ToolUseID), "call_abc123")
 					}
 				}
 			}
@@ -234,8 +235,8 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_ImageContent(t *testing.T)
 	if msg.Content.Blocks[1].Source.Type != "base64" {
 		t.Errorf("Image source type = %q, want %q", msg.Content.Blocks[1].Source.Type, "base64")
 	}
-	if msg.Content.Blocks[1].Source.MediaType != "image/png" {
-		t.Errorf("Image media type = %q, want %q", msg.Content.Blocks[1].Source.MediaType, "image/png")
+	if lo.FromPtr(msg.Content.Blocks[1].Source.MediaType) != "image/png" {
+		t.Errorf("Image media type = %q, want %q", lo.FromPtr(msg.Content.Blocks[1].Source.MediaType), "image/png")
 	}
 }
 
@@ -334,8 +335,8 @@ func TestOpenAIProtocolConverter_FromAnthropicRequest_ToolCallFlow(t *testing.T)
 	for _, msg := range result.Messages {
 		if msg.Role == enum.RoleTool {
 			foundToolMsg = true
-			if msg.ToolCallID != "call_abc123" {
-				t.Errorf("ToolCallID = %q, want %q", msg.ToolCallID, "call_abc123")
+			if lo.FromPtr(msg.ToolCallID) != "call_abc123" {
+				t.Errorf("ToolCallID = %q, want %q", lo.FromPtr(msg.ToolCallID), "call_abc123")
 			}
 		}
 	}
@@ -417,8 +418,8 @@ func TestAnthropicProtocolConverter_ToOpenAIResponse_WithReasoning(t *testing.T)
 	if choice.Message.Content == nil || choice.Message.Content.Text != "x = -1" {
 		t.Errorf("Message.Content.Text = %v, want %q", choice.Message.Content, "x = -1")
 	}
-	if choice.Message.ReasoningContent != "This is a perfect square: (x+1)^2 = 0" {
-		t.Errorf("Message.ReasoningContent = %q, want %q", choice.Message.ReasoningContent, "This is a perfect square: (x+1)^2 = 0")
+	if lo.FromPtr(choice.Message.ReasoningContent) != "This is a perfect square: (x+1)^2 = 0" {
+		t.Errorf("Message.ReasoningContent = %q, want %q", lo.FromPtr(choice.Message.ReasoningContent), "This is a perfect square: (x+1)^2 = 0")
 	}
 
 	// 检查 usage
@@ -457,8 +458,8 @@ func TestAnthropicProtocolConverter_ToOpenAIResponse_WithToolUse(t *testing.T) {
 	}
 
 	tc0 := choice.Message.ToolCalls[0]
-	if tc0.ID != "call_xyz" {
-		t.Errorf("ToolCalls[0].ID = %q, want %q", tc0.ID, "call_xyz")
+	if lo.FromPtr(tc0.ID) != "call_xyz" {
+		t.Errorf("ToolCalls[0].ID = %q, want %q", lo.FromPtr(tc0.ID), "call_xyz")
 	}
 	if tc0.Function == nil {
 		t.Fatal("ToolCalls[0].Function should not be nil")
@@ -506,8 +507,8 @@ func TestOpenAIProtocolConverter_ToAnthropicResponse_WithReasoning(t *testing.T)
 	if result.Content[1].Type != enum.AnthropicContentBlockTypeText {
 		t.Errorf("Content[1].Type = %q, want %q", result.Content[1].Type, enum.AnthropicContentBlockTypeText)
 	}
-	if result.Content[1].Text != "x = -1" {
-		t.Errorf("Content[1].Text = %q, want %q", result.Content[1].Text, "x = -1")
+	if lo.FromPtr(result.Content[1].Text) != "x = -1" {
+		t.Errorf("Content[1].Text = %q, want %q", lo.FromPtr(result.Content[1].Text), "x = -1")
 	}
 
 	// 检查 stop_reason
@@ -546,11 +547,11 @@ func TestOpenAIProtocolConverter_ToAnthropicResponse_WithToolUse(t *testing.T) {
 	for _, block := range result.Content {
 		if block.Type == enum.AnthropicContentBlockTypeToolUse {
 			foundToolUse = true
-			if block.ID != "call_xyz" {
-				t.Errorf("tool_use ID = %q, want %q", block.ID, "call_xyz")
+			if lo.FromPtr(block.ID) != "call_xyz" {
+				t.Errorf("tool_use ID = %q, want %q", lo.FromPtr(block.ID), "call_xyz")
 			}
-			if block.Name != "search" {
-				t.Errorf("tool_use Name = %q, want %q", block.Name, "search")
+			if lo.FromPtr(block.Name) != "search" {
+				t.Errorf("tool_use Name = %q, want %q", lo.FromPtr(block.Name), "search")
 			}
 			query, ok := block.Input["query"]
 			if !ok || query != "hello" {
@@ -668,8 +669,8 @@ func TestRoundtrip_OpenAIResponse_ToAnthropic_BackToOpenAI(t *testing.T) {
 	if msg.Content == nil || msg.Content.Text != "x = -1" {
 		t.Errorf("Roundtrip Content = %v, want 'x = -1'", msg.Content)
 	}
-	if msg.ReasoningContent != "This is a perfect square: (x+1)^2 = 0" {
-		t.Errorf("Roundtrip ReasoningContent = %q, want %q", msg.ReasoningContent, "This is a perfect square: (x+1)^2 = 0")
+	if lo.FromPtr(msg.ReasoningContent) != "This is a perfect square: (x+1)^2 = 0" {
+		t.Errorf("Roundtrip ReasoningContent = %q, want %q", lo.FromPtr(msg.ReasoningContent), "This is a perfect square: (x+1)^2 = 0")
 	}
 }
 
@@ -878,8 +879,8 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_SimpleText(t *testing
 	}
 
 	// 检查 model
-	if result.Model != tc.OpenAIResponseReq.Model {
-		t.Errorf("Model = %q, want %q", result.Model, tc.OpenAIResponseReq.Model)
+	if result.Model != lo.FromPtr(tc.OpenAIResponseReq.Model) {
+		t.Errorf("Model = %q, want %q", result.Model, lo.FromPtr(tc.OpenAIResponseReq.Model))
 	}
 
 	// 检查 messages: instructions 作为 system 消息 + user 消息
@@ -1023,8 +1024,8 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_FunctionCall(t *testi
 	if len(result.Tools) != 1 {
 		t.Fatalf("len(Tools) = %d, want 1", len(result.Tools))
 	}
-	if result.Tools[0].Name != "get_weather" {
-		t.Errorf("Tools[0].Name = %q, want %q", result.Tools[0].Name, "get_weather")
+	if lo.FromPtr(result.Tools[0].Name) != "get_weather" {
+		t.Errorf("Tools[0].Name = %q, want %q", lo.FromPtr(result.Tools[0].Name), "get_weather")
 	}
 
 	// 检查 tool_choice
@@ -1056,7 +1057,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_EmptyInput(t *testing
 	// 测试空 input 时不崩溃
 	conv := converter.AnthropicProtocolConverter{}
 	req := &dto.OpenAICreateResponseReq{
-		Model: "gpt-4o",
+		Model: lo.ToPtr("gpt-4o"),
 		Input: &dto.ResponseInput{
 			Items: []*dto.ResponseInputItem{},
 		},

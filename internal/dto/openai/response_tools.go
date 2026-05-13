@@ -29,7 +29,7 @@ import (
 // ResponseFileSearchFilter FileSearch.filters 联合：ComparisonFilter / CompoundFilter
 type ResponseFileSearchFilter struct {
 	Type    string                         `json:"type" doc:"过滤类型"`
-	Key     string                         `json:"key,omitempty" doc:"比较字段"`
+	Key     *string                        `json:"key,omitempty" doc:"比较字段"`
 	Value   *ResponseFileSearchFilterValue `json:"value,omitempty" doc:"比较值"`
 	Filters []*ResponseFileSearchFilter    `json:"filters,omitempty" doc:"子过滤器列表"`
 }
@@ -100,7 +100,7 @@ func (ResponseFileSearchFilterValue) Schema(_ huma.Registry) *huma.Schema {
 // ResponseFileSearchRankingOptions FileSearch.ranking_options
 type ResponseFileSearchRankingOptions struct {
 	HybridSearch   *ResponseFileSearchHybridSearch `json:"hybrid_search,omitempty" doc:"混合检索权重"`
-	Ranker         string                          `json:"ranker,omitempty" doc:"ranker: auto/default-2024-11-15"`
+	Ranker         *string                         `json:"ranker,omitempty" doc:"ranker: auto/default-2024-11-15"`
 	ScoreThreshold *float64                        `json:"score_threshold,omitempty" doc:"分数阈值"`
 }
 
@@ -119,11 +119,11 @@ type ResponseWebSearchFilters struct {
 
 // ResponseWebSearchUserLocation 用户位置
 type ResponseWebSearchUserLocation struct {
-	Type     string `json:"type,omitempty" doc:"固定 approximate"`
-	City     string `json:"city,omitempty" doc:"城市"`
-	Country  string `json:"country,omitempty" doc:"国家 ISO 代码"`
-	Region   string `json:"region,omitempty" doc:"地区"`
-	Timezone string `json:"timezone,omitempty" doc:"IANA 时区"`
+	Type     *string `json:"type,omitempty" doc:"固定 approximate"`
+	City     *string `json:"city,omitempty" doc:"城市"`
+	Country  *string `json:"country,omitempty" doc:"国家 ISO 代码"`
+	Region   *string `json:"region,omitempty" doc:"地区"`
+	Timezone *string `json:"timezone,omitempty" doc:"IANA 时区"`
 }
 
 // ==================== MCP 相关 ====================
@@ -252,7 +252,7 @@ func (ResponseCodeInterpreterContainer) Schema(reg huma.Registry) *huma.Schema {
 type ResponseCodeInterpreterContainerAuto struct {
 	Type          string                          `json:"type" doc:"固定 auto"`
 	FileIDs       []string                        `json:"file_ids,omitempty" doc:"文件 ID 列表"`
-	MemoryLimit   string                          `json:"memory_limit,omitempty" doc:"内存限制 1g/4g/16g/64g"`
+	MemoryLimit   *string                         `json:"memory_limit,omitempty" doc:"内存限制 1g/4g/16g/64g"`
 	NetworkPolicy *ResponseContainerNetworkPolicy `json:"network_policy,omitempty" doc:"网络策略"`
 }
 
@@ -260,8 +260,8 @@ type ResponseCodeInterpreterContainerAuto struct {
 
 // ResponseImageGenerationMask ImageGeneration.input_image_mask
 type ResponseImageGenerationMask struct {
-	FileID   string `json:"file_id,omitempty" doc:"掩码文件 ID"`
-	ImageURL string `json:"image_url,omitempty" doc:"base64 掩码图像"`
+	FileID   *string `json:"file_id,omitempty" doc:"掩码文件 ID"`
+	ImageURL *string `json:"image_url,omitempty" doc:"base64 掩码图像"`
 }
 
 // ==================== Custom tool format ====================
@@ -269,9 +269,9 @@ type ResponseImageGenerationMask struct {
 // Response API custom tool format type 常量
 // ResponseCustomToolFormat Custom.format (Text/Grammar)
 type ResponseCustomToolFormat struct {
-	Type       string `json:"type" doc:"text 或 grammar"`
-	Definition string `json:"definition,omitempty" doc:"grammar 定义（type=grammar）"`
-	Syntax     string `json:"syntax,omitempty" doc:"lark 或 regex (type=grammar)"`
+	Type       string  `json:"type" doc:"text 或 grammar"`
+	Definition *string `json:"definition,omitempty" doc:"grammar 定义（type=grammar）"`
+	Syntax     *string `json:"syntax,omitempty" doc:"lark 或 regex (type=grammar)"`
 }
 
 // ==================== 14 种 tool 的独立定义 ====================
@@ -283,7 +283,7 @@ type ResponseToolFunction struct {
 	Parameters   *schema.JSONSchemaProperty `json:"parameters" doc:"函数参数 JSON schema"`
 	Strict       bool                       `json:"strict" doc:"是否严格校验参数"`
 	DeferLoading *bool                      `json:"defer_loading,omitempty" doc:"是否延迟加载"`
-	Description  string                     `json:"description,omitempty" doc:"函数描述"`
+	Description  *string                    `json:"description,omitempty" doc:"函数描述"`
 }
 
 // ResponseToolFileSearch FileSearch 工具
@@ -313,7 +313,7 @@ type ResponseToolWebSearch struct {
 	Type              string                         `json:"type" doc:"web_search 或 web_search_2025_08_26"`
 	ExternalWebAccess *bool                          `json:"external_web_access,omitempty" doc:"是否允许外部网络访问"`
 	Filters           *ResponseWebSearchFilters      `json:"filters,omitempty" doc:"WebSearch 过滤器"`
-	SearchContextSize string                         `json:"search_context_size,omitempty" doc:"low/medium/high"`
+	SearchContextSize *string                        `json:"search_context_size,omitempty" doc:"low/medium/high"`
 	UserLocation      *ResponseWebSearchUserLocation `json:"user_location,omitempty" doc:"用户位置"`
 }
 
@@ -322,13 +322,13 @@ type ResponseToolMcp struct {
 	Type              string                      `json:"type" doc:"固定 mcp"`
 	ServerLabel       string                      `json:"server_label" doc:"MCP 服务器标签"`
 	AllowedTools      *ResponseMcpAllowedTools    `json:"allowed_tools,omitempty" doc:"允许的工具"`
-	Authorization     string                      `json:"authorization,omitempty" doc:"OAuth token"`
-	ConnectorID       string                      `json:"connector_id,omitempty" doc:"连接器 ID"`
+	Authorization     *string                     `json:"authorization,omitempty" doc:"OAuth token"`
+	ConnectorID       *string                     `json:"connector_id,omitempty" doc:"连接器 ID"`
 	DeferLoading      *bool                       `json:"defer_loading,omitempty" doc:"是否延迟加载"`
 	Headers           map[string]string           `json:"headers,omitempty" doc:"HTTP 头"`
 	RequireApproval   *ResponseMcpRequireApproval `json:"require_approval,omitempty" doc:"审批配置"`
-	ServerDescription string                      `json:"server_description,omitempty" doc:"服务器描述"`
-	ServerURL         string                      `json:"server_url,omitempty" doc:"服务器 URL"`
+	ServerDescription *string                     `json:"server_description,omitempty" doc:"服务器描述"`
+	ServerURL         *string                     `json:"server_url,omitempty" doc:"服务器 URL"`
 }
 
 // ResponseToolCodeInterpreter CodeInterpreter 工具
@@ -340,17 +340,17 @@ type ResponseToolCodeInterpreter struct {
 // ResponseToolImageGeneration ImageGeneration 工具
 type ResponseToolImageGeneration struct {
 	Type              string                       `json:"type" doc:"固定 image_generation"`
-	Action            string                       `json:"action,omitempty" doc:"generate/edit/auto"`
-	Background        string                       `json:"background,omitempty" doc:"transparent/opaque/auto"`
-	InputFidelity     string                       `json:"input_fidelity,omitempty" doc:"high/low"`
+	Action            *string                      `json:"action,omitempty" doc:"generate/edit/auto"`
+	Background        *string                      `json:"background,omitempty" doc:"transparent/opaque/auto"`
+	InputFidelity     *string                      `json:"input_fidelity,omitempty" doc:"high/low"`
 	InputImageMask    *ResponseImageGenerationMask `json:"input_image_mask,omitempty" doc:"掩码图像"`
-	Model             string                       `json:"model,omitempty" doc:"图像模型"`
-	Moderation        string                       `json:"moderation,omitempty" doc:"auto/low"`
+	Model             *string                      `json:"model,omitempty" doc:"图像模型"`
+	Moderation        *string                      `json:"moderation,omitempty" doc:"auto/low"`
 	OutputCompression *int                         `json:"output_compression,omitempty" doc:"压缩度"`
-	OutputFormat      string                       `json:"output_format,omitempty" doc:"png/webp/jpeg"`
+	OutputFormat      *string                      `json:"output_format,omitempty" doc:"png/webp/jpeg"`
 	PartialImages     *int                         `json:"partial_images,omitempty" doc:"部分图像数量"`
-	Quality           string                       `json:"quality,omitempty" doc:"low/medium/high/auto"`
-	Size              string                       `json:"size,omitempty" doc:"图像尺寸"`
+	Quality           *string                      `json:"quality,omitempty" doc:"low/medium/high/auto"`
+	Size              *string                      `json:"size,omitempty" doc:"图像尺寸"`
 }
 
 // ResponseToolLocalShell LocalShell 工具
@@ -369,7 +369,7 @@ type ResponseToolCustom struct {
 	Type         string                    `json:"type" doc:"固定 custom"`
 	Name         string                    `json:"name" doc:"自定义工具名称"`
 	DeferLoading *bool                     `json:"defer_loading,omitempty" doc:"是否延迟加载"`
-	Description  string                    `json:"description,omitempty" doc:"工具描述"`
+	Description  *string                   `json:"description,omitempty" doc:"工具描述"`
 	Format       *ResponseCustomToolFormat `json:"format,omitempty" doc:"输入格式"`
 }
 
@@ -386,7 +386,7 @@ type ResponseNamespaceTool struct {
 	Name         string                     `json:"name" doc:"工具名称"`
 	Type         string                     `json:"type" doc:"function 或 custom"`
 	DeferLoading *bool                      `json:"defer_loading,omitempty" doc:"是否延迟加载"`
-	Description  string                     `json:"description,omitempty" doc:"工具描述"`
+	Description  *string                    `json:"description,omitempty" doc:"工具描述"`
 	Parameters   *schema.JSONSchemaProperty `json:"parameters,omitempty" doc:"函数参数 JSON schema"`
 	Strict       *bool                      `json:"strict,omitempty" doc:"严格模式"`
 	Format       *ResponseCustomToolFormat  `json:"format,omitempty" doc:"自定义工具输入格式"`
@@ -395,8 +395,8 @@ type ResponseNamespaceTool struct {
 // ResponseToolToolSearch ToolSearch 工具
 type ResponseToolToolSearch struct {
 	Type        string                     `json:"type" doc:"固定 tool_search"`
-	Description string                     `json:"description,omitempty" doc:"工具描述"`
-	Execution   string                     `json:"execution,omitempty" doc:"server 或 client"`
+	Description *string                    `json:"description,omitempty" doc:"工具描述"`
+	Execution   *string                    `json:"execution,omitempty" doc:"server 或 client"`
 	Parameters  *schema.JSONSchemaProperty `json:"parameters,omitempty" doc:"参数 JSON schema"`
 }
 
@@ -404,7 +404,7 @@ type ResponseToolToolSearch struct {
 type ResponseToolWebSearchPreview struct {
 	Type               string                         `json:"type" doc:"web_search_preview 或 web_search_preview_2025_03_11"`
 	SearchContentTypes []string                       `json:"search_content_types,omitempty" doc:"text 或 image"`
-	SearchContextSize  string                         `json:"search_context_size,omitempty" doc:"low/medium/high"`
+	SearchContextSize  *string                        `json:"search_context_size,omitempty" doc:"low/medium/high"`
 	UserLocation       *ResponseWebSearchUserLocation `json:"user_location,omitempty" doc:"用户位置"`
 }
 
@@ -617,12 +617,12 @@ type ResponseToolChoiceObject struct {
 	Type string `json:"type" doc:"工具选择类型"`
 
 	// ToolChoiceAllowed
-	Mode  string                       `json:"mode,omitempty" doc:"allowed_tools 模式: auto/required"`
+	Mode  *string                      `json:"mode,omitempty" doc:"allowed_tools 模式: auto/required"`
 	Tools []*schema.JSONSchemaProperty `json:"tools,omitempty" doc:"允许的工具定义列表"`
 
 	// ToolChoiceFunction / ToolChoiceCustom / ToolChoiceMcp
-	Name string `json:"name,omitempty" doc:"工具/函数名称"`
+	Name *string `json:"name,omitempty" doc:"工具/函数名称"`
 
 	// ToolChoiceMcp
-	ServerLabel string `json:"server_label,omitempty" doc:"MCP 服务器标签"`
+	ServerLabel *string `json:"server_label,omitempty" doc:"MCP 服务器标签"`
 }

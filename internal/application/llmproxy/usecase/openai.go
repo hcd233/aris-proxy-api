@@ -125,10 +125,11 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
 
-	ep, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), enum.ProviderOpenAI, enum.ProviderAnthropic)
+	model := lo.FromPtr(req.Body.Model)
+	ep, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model), enum.ProviderOpenAI, enum.ProviderAnthropic)
 	if err != nil {
-		log.Error("[OpenAIUseCase] Response API model not found", zap.String("model", req.Body.Model), zap.Error(err))
-		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+		log.Error("[OpenAIUseCase] Response API model not found", zap.String("model", model), zap.Error(err))
+		return util.SendOpenAIModelNotFoundError(model), nil
 	}
 
 	stream := req.Body.Stream != nil && *req.Body.Stream

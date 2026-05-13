@@ -19,7 +19,7 @@ func MarshalOpenAIChatCompletionBodyForModel(req *dto.OpenAIChatCompletionReq, m
 // MarshalOpenAIResponseBodyForModel 使用上游模型名序列化 Response API 请求体，且不修改原请求。
 func MarshalOpenAIResponseBodyForModel(req *dto.OpenAICreateResponseReq, modelName string) []byte {
 	body := *req
-	body.Model = modelName
+	body.Model = &modelName
 	return lo.Must1(sonic.Marshal(&body))
 }
 

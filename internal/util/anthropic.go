@@ -137,7 +137,7 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 				bs.inputParts = append(bs.inputParts, payload.Delta.PartialJSON)
 			case enum.AnthropicDeltaTypeSignatureDelta:
 				if bs.block != nil {
-					bs.block.Signature += payload.Delta.Text
+					bs.block.Signature = lo.ToPtr(lo.FromPtr(bs.block.Signature) + payload.Delta.Text)
 				}
 			}
 
@@ -174,7 +174,8 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 		switch block.Type {
 		case enum.AnthropicContentBlockTypeText:
 			if len(bs.textParts) > 0 {
-				block.Text = strings.Join(bs.textParts, "")
+				text := strings.Join(bs.textParts, "")
+				block.Text = &text
 			}
 		case enum.AnthropicContentBlockTypeThinking:
 			if len(bs.thinkingParts) > 0 {
@@ -241,8 +242,8 @@ func ExtractAnthropicMetadata(meta *dto.AnthropicMetadata) map[string]string {
 		return nil
 	}
 	m := make(map[string]string)
-	if meta.UserID != "" {
-		m["user_id"] = meta.UserID
+	if lo.FromPtr(meta.UserID) != "" {
+		m["user_id"] = lo.FromPtr(meta.UserID)
 	}
 
 	if len(m) == 0 {

@@ -7,6 +7,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/samber/lo"
 )
 
 type testCase struct {
@@ -88,9 +89,9 @@ func TestReasoningContentWithToolCallsPreserved(t *testing.T) {
 			{
 				Role:             enum.RoleAssistant,
 				Content:          &dto.OpenAIMessageContent{Text: ""},
-				ReasoningContent: "some reasoning",
+				ReasoningContent: lo.ToPtr("some reasoning"),
 				ToolCalls: []*dto.OpenAIChatCompletionMessageToolCall{
-					{ID: "call_1", Type: enum.ToolTypeFunction, Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{Name: "test", Arguments: "{}"}},
+					{ID: lo.ToPtr("call_1"), Type: enum.ToolTypeFunction, Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{Name: "test", Arguments: "{}"}},
 				},
 			},
 		},
@@ -115,8 +116,10 @@ func buildReqBody(t *testing.T, msgs []testMessage) *dto.OpenAIChatCompletionReq
 	req := &dto.OpenAIChatCompletionReq{Model: "test-model"}
 	for _, m := range msgs {
 		msg := &dto.OpenAIChatCompletionMessageParam{
-			Role:             enum.Role(m.Role),
-			ReasoningContent: m.ReasoningContent,
+			Role: enum.Role(m.Role),
+		}
+		if m.ReasoningContent != "" {
+			msg.ReasoningContent = lo.ToPtr(m.ReasoningContent)
 		}
 		if m.Content != nil {
 			if s, ok := m.Content.(string); ok {

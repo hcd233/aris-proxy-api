@@ -153,16 +153,16 @@ type ResponseComputerActionPathPoint struct {
 
 // ResponsePendingSafetyCheck ComputerCall 的待处理安全检查
 type ResponsePendingSafetyCheck struct {
-	ID      string `json:"id" doc:"安全检查 ID"`
-	Code    string `json:"code,omitempty" doc:"安全检查类型"`
-	Message string `json:"message,omitempty" doc:"安全检查详情"`
+	ID      string  `json:"id" doc:"安全检查 ID"`
+	Code    *string `json:"code,omitempty" doc:"安全检查类型"`
+	Message *string `json:"message,omitempty" doc:"安全检查详情"`
 }
 
 // ResponseComputerCallOutputScreenshot ComputerCallOutput 的截图
 type ResponseComputerCallOutputScreenshot struct {
-	Type     string `json:"type" doc:"固定为 computer_screenshot"`
-	FileID   string `json:"file_id,omitempty" doc:"截图文件 ID"`
-	ImageURL string `json:"image_url,omitempty" doc:"截图 URL"`
+	Type     string  `json:"type" doc:"固定为 computer_screenshot"`
+	FileID   *string `json:"file_id,omitempty" doc:"截图文件 ID"`
+	ImageURL *string `json:"image_url,omitempty" doc:"截图 URL"`
 }
 
 // ==================== Web Search Call Action ====================
@@ -173,15 +173,15 @@ type ResponseWebSearchAction struct {
 	Type string `json:"type" doc:"动作类型: search/open_page/find_in_page"`
 
 	// search 专用
-	Query   string                           `json:"query,omitempty" doc:"[deprecated] 单条搜索查询"`
+	Query   *string                          `json:"query,omitempty" doc:"[deprecated] 单条搜索查询"`
 	Queries []string                         `json:"queries,omitempty" doc:"搜索查询列表"`
 	Sources []*ResponseWebSearchActionSource `json:"sources,omitempty" doc:"搜索结果来源"`
 
 	// open_page/find_in_page 共用
-	URL string `json:"url,omitempty" doc:"URL"`
+	URL *string `json:"url,omitempty" doc:"URL"`
 
 	// find_in_page 专用
-	Pattern string `json:"pattern,omitempty" doc:"页内搜索模式"`
+	Pattern *string `json:"pattern,omitempty" doc:"页内搜索模式"`
 }
 
 // ResponseWebSearchActionSource WebSearchAction 的来源 URL
@@ -198,8 +198,8 @@ type ResponseLocalShellCallAction struct {
 	Env              map[string]string `json:"env,omitempty" doc:"环境变量"`
 	Type             string            `json:"type" doc:"固定为 exec"`
 	TimeoutMS        *int64            `json:"timeout_ms,omitempty" doc:"超时毫秒"`
-	User             string            `json:"user,omitempty" doc:"运行用户"`
-	WorkingDirectory string            `json:"working_directory,omitempty" doc:"工作目录"`
+	User             *string           `json:"user,omitempty" doc:"运行用户"`
+	WorkingDirectory *string           `json:"working_directory,omitempty" doc:"工作目录"`
 }
 
 // ResponseShellCallAction ShellCall.action
@@ -217,12 +217,12 @@ type ResponseShellEnvironment struct {
 
 	// container_auto 专用
 	FileIDs       []string                        `json:"file_ids,omitempty" doc:"上传的文件 ID"`
-	MemoryLimit   string                          `json:"memory_limit,omitempty" doc:"内存限制 1g/4g/16g/64g"`
+	MemoryLimit   *string                         `json:"memory_limit,omitempty" doc:"内存限制 1g/4g/16g/64g"`
 	NetworkPolicy *ResponseContainerNetworkPolicy `json:"network_policy,omitempty" doc:"网络策略"`
 	Skills        []*ResponseShellSkill           `json:"skills,omitempty" doc:"技能列表"`
 
 	// container_reference 专用
-	ContainerID string `json:"container_id,omitempty" doc:"容器 ID"`
+	ContainerID *string `json:"container_id,omitempty" doc:"容器 ID"`
 }
 
 // Response API container network policy type 常量
@@ -243,21 +243,21 @@ type ResponseContainerNetworkDomainSecret struct {
 // Response API shell skill type 常量
 // ResponseShellSkill ContainerAuto/LocalEnvironment 中的 skill（SkillReference/InlineSkill/LocalSkill）
 type ResponseShellSkill struct {
-	Type string `json:"type,omitempty" doc:"技能类型"`
+	Type *string `json:"type,omitempty" doc:"技能类型"`
 
 	// skill_reference 专用
-	SkillID string `json:"skill_id,omitempty" doc:"技能 ID"`
-	Version string `json:"version,omitempty" doc:"技能版本"`
+	SkillID *string `json:"skill_id,omitempty" doc:"技能 ID"`
+	Version *string `json:"version,omitempty" doc:"技能版本"`
 
 	// inline / local 共用
-	Description string `json:"description,omitempty" doc:"技能描述"`
-	Name        string `json:"name,omitempty" doc:"技能名称"`
+	Description *string `json:"description,omitempty" doc:"技能描述"`
+	Name        *string `json:"name,omitempty" doc:"技能名称"`
 
 	// inline 专用
 	Source *ResponseInlineSkillSource `json:"source,omitempty" doc:"inline 技能源"`
 
 	// local 专用
-	Path string `json:"path,omitempty" doc:"本地目录路径"`
+	Path *string `json:"path,omitempty" doc:"本地目录路径"`
 }
 
 // ResponseInlineSkillSource Inline skill source (base64)
@@ -288,10 +288,10 @@ type ResponseShellCallOutcome struct {
 // ResponseFileSearchCallResult FileSearchCall.results 单条
 type ResponseFileSearchCallResult struct {
 	Attributes map[string]*ResponseFileSearchResultAttribute `json:"attributes,omitempty" doc:"属性键值对"`
-	FileID     string                                        `json:"file_id,omitempty" doc:"文件 ID"`
-	Filename   string                                        `json:"filename,omitempty" doc:"文件名"`
+	FileID     *string                                       `json:"file_id,omitempty" doc:"文件 ID"`
+	Filename   *string                                       `json:"filename,omitempty" doc:"文件名"`
 	Score      *float64                                      `json:"score,omitempty" doc:"相关性分数 0-1"`
-	Text       string                                        `json:"text,omitempty" doc:"文件内检索到的文本"`
+	Text       *string                                       `json:"text,omitempty" doc:"文件内检索到的文本"`
 }
 
 // ResponseFileSearchResultAttribute FileSearchCall.results[].attributes 值
@@ -391,9 +391,9 @@ func (ResponseFunctionCallOutputContent) Schema(r huma.Registry) *huma.Schema {
 
 // ResponseApplyPatchOperation ApplyPatchCall.operation
 type ResponseApplyPatchOperation struct {
-	Type string `json:"type" doc:"操作类型"`
-	Path string `json:"path" doc:"文件路径"`
-	Diff string `json:"diff,omitempty" doc:"unified diff 内容"`
+	Type string  `json:"type" doc:"操作类型"`
+	Path string  `json:"path" doc:"文件路径"`
+	Diff *string `json:"diff,omitempty" doc:"unified diff 内容"`
 }
 
 // ==================== Reasoning summary/content ====================
@@ -417,7 +417,7 @@ type ResponseMcpListToolsEntry struct {
 	InputSchema *schema.JSONSchemaProperty `json:"input_schema" doc:"工具输入 JSON Schema"`
 	Name        string                     `json:"name" doc:"工具名称"`
 	Annotations *schema.JSONSchemaProperty `json:"annotations,omitempty" doc:"工具附加注解"`
-	Description string                     `json:"description,omitempty" doc:"工具描述"`
+	Description *string                    `json:"description,omitempty" doc:"工具描述"`
 }
 
 // ==================== ToolSearchCall / ToolSearchOutput ====================
@@ -439,13 +439,13 @@ type ResponseToolSearchCallArguments struct {
 //
 // 各子类型字段按需合并到此结构体，非当前分支字段使用 omitempty。
 type ResponseInputItem struct {
-	Type   string `json:"type,omitempty" doc:"item 类型，省略时按 message 处理"`
-	ID     string `json:"id,omitempty" doc:"item ID"`
-	Status string `json:"status,omitempty" doc:"item 状态: in_progress/completed/incomplete/..."`
+	Type   *string `json:"type,omitempty" doc:"item 类型，省略时按 message 处理"`
+	ID     *string `json:"id,omitempty" doc:"item ID"`
+	Status *string `json:"status,omitempty" doc:"item 状态: in_progress/completed/incomplete/..."`
 
 	// ---------- Message / EasyInputMessage / OutputMessage ----------
-	Role    string                       `json:"role,omitempty" doc:"消息角色: user/assistant/system/developer"`
-	Phase   string                       `json:"phase,omitempty" doc:"消息阶段: commentary/final_answer"`
+	Role    *string                      `json:"role,omitempty" doc:"消息角色: user/assistant/system/developer"`
+	Phase   *string                      `json:"phase,omitempty" doc:"消息阶段: commentary/final_answer"`
 	Content *ResponseInputMessageContent `json:"content,omitempty" doc:"消息内容：字符串或 content 数组"`
 
 	// ---------- FileSearchCall ----------
@@ -453,7 +453,7 @@ type ResponseInputItem struct {
 	Results []*ResponseFileSearchCallResult `json:"results,omitempty" doc:"FileSearchCall 结果"`
 
 	// ---------- ComputerCall / ComputerCallOutput ----------
-	CallID                   string                        `json:"call_id,omitempty" doc:"调用 ID"`
+	CallID                   *string                       `json:"call_id,omitempty" doc:"调用 ID"`
 	PendingSafetyChecks      []*ResponsePendingSafetyCheck `json:"pending_safety_checks,omitempty" doc:"待处理安全检查"`
 	AcknowledgedSafetyChecks []*ResponsePendingSafetyCheck `json:"acknowledged_safety_checks,omitempty" doc:"已确认安全检查"`
 	Action                   *ResponseInputItemAction      `json:"action,omitempty" doc:"动作（ComputerCall/WebSearchCall/LocalShellCall/ShellCall 等）"`
@@ -461,40 +461,40 @@ type ResponseInputItem struct {
 	Output                   *ResponseInputItemOutput      `json:"output,omitempty" doc:"输出（ComputerCallOutput/FunctionCallOutput/CustomToolCallOutput/LocalShellCallOutput 等）"`
 
 	// ---------- FunctionCall / CustomToolCall ----------
-	Arguments string `json:"arguments,omitempty" doc:"函数参数 JSON 字符串（FunctionCall/McpApprovalRequest/McpCall）或 ToolSearchCall 任意 JSON"`
-	Name      string `json:"name,omitempty" doc:"函数/工具/命名空间名称"`
-	Namespace string `json:"namespace,omitempty" doc:"工具命名空间"`
-	Input     string `json:"input,omitempty" doc:"自定义工具调用输入"`
+	Arguments *string `json:"arguments,omitempty" doc:"函数参数 JSON 字符串（FunctionCall/McpApprovalRequest/McpCall）或 ToolSearchCall 任意 JSON"`
+	Name      *string `json:"name,omitempty" doc:"函数/工具/命名空间名称"`
+	Namespace *string `json:"namespace,omitempty" doc:"工具命名空间"`
+	Input     *string `json:"input,omitempty" doc:"自定义工具调用输入"`
 
 	// ---------- ToolSearchCall ----------
-	Execution string `json:"execution,omitempty" doc:"执行端: server/client (ToolSearchCall/ToolSearchOutput)"`
+	Execution *string `json:"execution,omitempty" doc:"执行端: server/client (ToolSearchCall/ToolSearchOutput)"`
 
 	// ---------- ToolSearchOutput ----------
 	Tools []*ResponseTool `json:"tools,omitempty" doc:"ToolSearchOutput 返回的工具定义 / McpListTools 条目通过 McpTools"`
 
 	// ---------- McpListTools ----------
 	McpTools    []*ResponseMcpListToolsEntry `json:"mcp_tools,omitempty" doc:"McpListTools 返回的工具列表（内部字段，序列化使用 MarshalJSON）"`
-	ServerLabel string                       `json:"server_label,omitempty" doc:"MCP 服务器标签"`
-	Error       string                       `json:"error,omitempty" doc:"MCP 调用错误信息"`
+	ServerLabel *string                      `json:"server_label,omitempty" doc:"MCP 服务器标签"`
+	Error       *string                      `json:"error,omitempty" doc:"MCP 调用错误信息"`
 
 	// ---------- McpApprovalRequest / McpApprovalResponse / McpCall ----------
-	ApprovalRequestID string `json:"approval_request_id,omitempty" doc:"MCP 审批请求 ID"`
-	Approve           *bool  `json:"approve,omitempty" doc:"MCP 审批结果"`
-	Reason            string `json:"reason,omitempty" doc:"MCP 审批原因"`
+	ApprovalRequestID *string `json:"approval_request_id,omitempty" doc:"MCP 审批请求 ID"`
+	Approve           *bool   `json:"approve,omitempty" doc:"MCP 审批结果"`
+	Reason            *string `json:"reason,omitempty" doc:"MCP 审批原因"`
 
 	// ---------- Reasoning ----------
 	Summary          []*ResponseReasoningSummary     `json:"summary,omitempty" doc:"Reasoning 摘要内容"`
 	ReasoningContent []*ResponseReasoningTextContent `json:"-"` // 内部保留，序列化时借由自定义 MarshalJSON 输出为 content 字段
 
 	// ---------- Compaction / Reasoning ----------
-	EncryptedContent string `json:"encrypted_content,omitempty" doc:"加密内容（Compaction/Reasoning）"`
+	EncryptedContent *string `json:"encrypted_content,omitempty" doc:"加密内容（Compaction/Reasoning）"`
 
 	// ---------- ImageGenerationCall ----------
-	Result string `json:"result,omitempty" doc:"ImageGenerationCall 生成的 base64 图像"`
+	Result *string `json:"result,omitempty" doc:"ImageGenerationCall 生成的 base64 图像"`
 
 	// ---------- CodeInterpreterCall ----------
-	Code        string                               `json:"code,omitempty" doc:"代码内容"`
-	ContainerID string                               `json:"container_id,omitempty" doc:"容器 ID (CodeInterpreterCall)"`
+	Code        *string                              `json:"code,omitempty" doc:"代码内容"`
+	ContainerID *string                              `json:"container_id,omitempty" doc:"容器 ID (CodeInterpreterCall)"`
 	Outputs     []*ResponseCodeInterpreterCallOutput `json:"outputs,omitempty" doc:"代码执行产物"`
 
 	// ---------- ShellCall ----------
@@ -509,9 +509,9 @@ type ResponseInputItem struct {
 
 // ResponseCodeInterpreterCallOutput CodeInterpreterCall 输出 (logs|image)
 type ResponseCodeInterpreterCallOutput struct {
-	Type string `json:"type" doc:"logs 或 image"`
-	Logs string `json:"logs,omitempty" doc:"日志内容（type=logs）"`
-	URL  string `json:"url,omitempty" doc:"图像 URL（type=image）"`
+	Type string  `json:"type" doc:"logs 或 image"`
+	Logs *string `json:"logs,omitempty" doc:"日志内容（type=logs）"`
+	URL  *string `json:"url,omitempty" doc:"图像 URL（type=image）"`
 }
 
 // ==================== ResponseInputItem action/output 联合 ====================
@@ -532,18 +532,18 @@ type ResponseInputItemAction struct { // 公共
 	Text    *string                            `json:"text,omitempty"`
 
 	// WebSearchAction
-	Query   string                           `json:"query,omitempty"`
+	Query   *string                          `json:"query,omitempty"`
 	Queries []string                         `json:"queries,omitempty"`
 	Sources []*ResponseWebSearchActionSource `json:"sources,omitempty"`
-	URL     string                           `json:"url,omitempty"`
-	Pattern string                           `json:"pattern,omitempty"`
+	URL     *string                          `json:"url,omitempty"`
+	Pattern *string                          `json:"pattern,omitempty"`
 
 	// LocalShellCallAction (type=exec)
 	Command          []string          `json:"command,omitempty"`
 	Env              map[string]string `json:"env,omitempty"`
 	TimeoutMS        *int64            `json:"timeout_ms,omitempty"`
-	User             string            `json:"user,omitempty"`
-	WorkingDirectory string            `json:"working_directory,omitempty"`
+	User             *string           `json:"user,omitempty"`
+	WorkingDirectory *string           `json:"working_directory,omitempty"`
 
 	// ShellCallAction
 	Commands        []string `json:"commands,omitempty"`

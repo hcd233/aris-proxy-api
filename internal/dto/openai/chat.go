@@ -59,8 +59,8 @@ func (c OpenAIMessageContent) Schema(r huma.Registry) *huma.Schema {
 //	@update 2026-03-18 10:00:00
 type OpenAIChatCompletionContentPart struct {
 	Type       string                                 `json:"type"`
-	Text       string                                 `json:"text,omitempty"`
-	Refusal    string                                 `json:"refusal,omitempty"`
+	Text       *string                                `json:"text,omitempty"`
+	Refusal    *string                                `json:"refusal,omitempty"`
 	ImageURL   *OpenAIChatCompletionImageURL          `json:"image_url,omitempty"`
 	InputAudio *OpenAIChatCompletionInputAudioContent `json:"input_audio,omitempty"`
 	File       *OpenAIChatCompletionFileContent       `json:"file,omitempty"`
@@ -216,11 +216,11 @@ type OpenAIChatCompletionReq struct {
 	ParallelToolCalls    *bool                                  `json:"parallel_tool_calls,omitempty" doc:"是否启用并行工具调用"`
 	Prediction           *OpenAIChatCompletionPredictionContent `json:"prediction,omitempty" doc:"预测输出内容"`
 	PresencePenalty      *float64                               `json:"presence_penalty,omitempty" doc:"存在惩罚(-2.0到2.0)"`
-	PromptCacheKey       string                                 `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`
+	PromptCacheKey       *string                                `json:"prompt_cache_key,omitempty" doc:"提示缓存键"`
 	PromptCacheRetention enum.PromptCacheRetention              `json:"prompt_cache_retention,omitempty" doc:"提示缓存保留策略"`
 	ReasoningEffort      enum.ReasoningEffort                   `json:"reasoning_effort,omitempty" doc:"推理努力级别"`
 	ResponseFormat       *OpenAIResponseFormat                  `json:"response_format,omitempty" doc:"响应格式"`
-	SafetyIdentifier     string                                 `json:"safety_identifier,omitempty" doc:"安全标识符"`
+	SafetyIdentifier     *string                                `json:"safety_identifier,omitempty" doc:"安全标识符"`
 	Seed                 *int                                   `json:"seed,omitempty" doc:"随机种子"`
 	ServiceTier          enum.ServiceTier                       `json:"service_tier,omitempty" doc:"服务层级"`
 	Stop                 *OpenAIStopSequence                    `json:"stop,omitempty" doc:"停止序列(字符串或字符串数组)"`
@@ -232,7 +232,7 @@ type OpenAIChatCompletionReq struct {
 	Tools                []OpenAIChatCompletionTool             `json:"tools,omitempty" doc:"可用工具列表"`
 	TopLogprobs          *int                                   `json:"top_logprobs,omitempty" doc:"返回的最可能token数量(0-20)"`
 	TopP                 *float64                               `json:"top_p,omitempty" doc:"核采样概率质量"`
-	User                 string                                 `json:"user,omitempty" doc:"用户标识符(已废弃，使用safety_identifier或prompt_cache_key)"`
+	User                 *string                                `json:"user,omitempty" doc:"用户标识符(已废弃，使用safety_identifier或prompt_cache_key)"`
 	Verbosity            enum.Verbosity                         `json:"verbosity,omitempty" doc:"响应详细程度"`
 	WebSearchOptions     *OpenAIWebSearchOptions                `json:"web_search_options,omitempty" doc:"网页搜索选项"`
 }
@@ -244,8 +244,8 @@ type OpenAIChatCompletionReq struct {
 type OpenAIChatCompletionMessageParam struct {
 	Role             enum.Role             `json:"role" doc:"消息角色"`
 	Content          *OpenAIMessageContent `json:"content,omitempty" doc:"消息内容(字符串或数组)"`
-	ReasoningContent string                `json:"reasoning_content,omitempty" doc:"推理内容"`
-	Name             string                `json:"name,omitempty" doc:"参与者名称"`
+	ReasoningContent *string               `json:"reasoning_content,omitempty" doc:"推理内容"`
+	Name             *string               `json:"name,omitempty" doc:"参与者名称"`
 
 	// 开发者/系统消息特有
 
@@ -254,10 +254,10 @@ type OpenAIChatCompletionMessageParam struct {
 	// 助手消息特有
 	Audio     *OpenAIChatCompletionAudioReference    `json:"audio,omitempty" doc:"音频响应数据"`
 	ToolCalls []*OpenAIChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
-	Refusal   string                                 `json:"refusal,omitempty" doc:"拒绝消息"`
+	Refusal   *string                                `json:"refusal,omitempty" doc:"拒绝消息"`
 
 	// 工具消息特有
-	ToolCallID string `json:"tool_call_id,omitempty" doc:"工具调用ID"`
+	ToolCallID *string `json:"tool_call_id,omitempty" doc:"工具调用ID"`
 
 	// 额外字段
 	Annotations []*OpenAIMessageAnnotation `json:"annotations,omitempty" doc:"消息注解"`
@@ -294,9 +294,9 @@ type OpenAIChatCompletionInputAudioContent struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionFileContent struct {
-	FileData string `json:"file_data,omitempty" doc:"base64编码的文件数据"`
-	FileID   string `json:"file_id,omitempty" doc:"上传文件的ID"`
-	Filename string `json:"filename,omitempty" doc:"文件名"`
+	FileData *string `json:"file_data,omitempty" doc:"base64编码的文件数据"`
+	FileID   *string `json:"file_id,omitempty" doc:"上传文件的ID"`
+	Filename *string `json:"filename,omitempty" doc:"文件名"`
 }
 
 // OpenAIChatCompletionAudioParam 音频输出参数
@@ -332,7 +332,7 @@ type OpenAIResponseFormat struct {
 //	@update 2026-03-10 10:00:00
 type OpenAIJSONSchemaFormat struct {
 	Name        string         `json:"name" doc:"响应格式名称"`
-	Description string         `json:"description,omitempty" doc:"响应格式描述"`
+	Description *string        `json:"description,omitempty" doc:"响应格式描述"`
 	Schema      map[string]any `json:"schema,omitempty" doc:"JSON Schema对象"`
 	Strict      *bool          `json:"strict,omitempty" doc:"是否启用严格模式"`
 }
@@ -362,7 +362,7 @@ type OpenAIChatCompletionTool struct {
 //	@update 2026-03-18 10:00:00
 type OpenAIFunctionDefinition struct {
 	Name        string                     `json:"name" doc:"函数名称"`
-	Description string                     `json:"description,omitempty" doc:"函数描述"`
+	Description *string                    `json:"description,omitempty" doc:"函数描述"`
 	Parameters  *schema.JSONSchemaProperty `json:"parameters,omitempty" doc:"参数JSON Schema"`
 	Strict      *bool                      `json:"strict,omitempty" doc:"是否启用严格模式"`
 }
@@ -373,7 +373,7 @@ type OpenAIFunctionDefinition struct {
 //	@update 2026-03-10 10:00:00
 type OpenAICustomToolDefinition struct {
 	Name        string                  `json:"name" doc:"自定义工具名称"`
-	Description string                  `json:"description,omitempty" doc:"自定义工具描述"`
+	Description *string                 `json:"description,omitempty" doc:"自定义工具描述"`
 	Format      *OpenAICustomToolFormat `json:"format,omitempty" doc:"输入格式"`
 }
 
@@ -454,10 +454,10 @@ type OpenAIUserLocation struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIApproximateLocation struct {
-	City     string `json:"city,omitempty" doc:"城市"`
-	Country  string `json:"country,omitempty" doc:"国家(ISO 3166-1两位代码)"`
-	Region   string `json:"region,omitempty" doc:"地区/州"`
-	Timezone string `json:"timezone,omitempty" doc:"时区(IANA格式)"`
+	City     *string `json:"city,omitempty" doc:"城市"`
+	Country  *string `json:"country,omitempty" doc:"国家(ISO 3166-1两位代码)"`
+	Region   *string `json:"region,omitempty" doc:"地区/州"`
+	Timezone *string `json:"timezone,omitempty" doc:"时区(IANA格式)"`
 }
 
 // ==================== Chat Completion Response DTOs ====================
@@ -525,7 +525,7 @@ type OpenAIChatCompletionAudio struct {
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionMessageToolCall struct {
 	Index    *int                                         `json:"index,omitempty" doc:"工具调用索引(流式delta中使用)"`
-	ID       string                                       `json:"id,omitempty" doc:"工具调用ID"`
+	ID       *string                                      `json:"id,omitempty" doc:"工具调用ID"`
 	Type     enum.ToolType                                `json:"type,omitempty" doc:"工具类型: function/custom"`
 	Function *OpenAIChatCompletionMessageFunctionToolCall `json:"function,omitempty" doc:"函数工具调用"`
 	Custom   *OpenAIChatCompletionMessageCustomToolCall   `json:"custom,omitempty" doc:"自定义工具调用"`

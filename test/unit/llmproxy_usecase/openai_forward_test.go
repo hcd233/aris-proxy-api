@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/samber/lo"
 )
 
 // mockOpenAIProxy 模拟 OpenAI 代理
@@ -209,7 +210,7 @@ func TestOpenAICreateResponse_NativeStream(t *testing.T) {
 
 	stream := true
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
-		Model:  "test-alias",
+		Model:  lo.ToPtr("test-alias"),
 		Stream: &stream,
 	}}
 
@@ -230,7 +231,7 @@ func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
-		Model:  "test-alias",
+		Model:  lo.ToPtr("test-alias"),
 		Stream: &stream,
 	}}
 
@@ -251,7 +252,7 @@ func TestOpenAICreateResponse_ViaAnthropicStream(t *testing.T) {
 
 	stream := true
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
-		Model:  "test-alias",
+		Model:  lo.ToPtr("test-alias"),
 		Stream: &stream,
 	}}
 
@@ -272,7 +273,7 @@ func TestOpenAICreateResponse_ViaAnthropicUnary(t *testing.T) {
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
-		Model:  "test-alias",
+		Model:  lo.ToPtr("test-alias"),
 		Stream: &stream,
 	}}
 
@@ -292,7 +293,7 @@ func TestOpenAICreateResponse_ModelNotFound(t *testing.T) {
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
-		Model:  "nonexistent-model",
+		Model:  lo.ToPtr("nonexistent-model"),
 		Stream: &stream,
 	}}
 
