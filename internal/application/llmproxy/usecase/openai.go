@@ -29,26 +29,23 @@ type OpenAIUseCase interface {
 }
 
 type openAIUseCase struct {
-	resolver       service.EndpointResolver
-	modelsQuery    ListOpenAIModels
-	openAIProxy    transport.OpenAIProxy
-	anthropicProxy transport.AnthropicProxy
-	taskSubmitter  TaskSubmitter
+	resolver      service.EndpointResolver
+	modelsQuery   ListOpenAIModels
+	openAIProxy   transport.OpenAIProxy
+	taskSubmitter TaskSubmitter
 }
 
 func NewOpenAIUseCase(
 	resolver service.EndpointResolver,
 	modelsQuery ListOpenAIModels,
 	openAIProxy transport.OpenAIProxy,
-	anthropicProxy transport.AnthropicProxy,
 	taskSubmitter TaskSubmitter,
 ) OpenAIUseCase {
 	return &openAIUseCase{
-		resolver:       resolver,
-		modelsQuery:    modelsQuery,
-		openAIProxy:    openAIProxy,
-		anthropicProxy: anthropicProxy,
-		taskSubmitter:  taskSubmitter,
+		resolver:      resolver,
+		modelsQuery:   modelsQuery,
+		openAIProxy:   openAIProxy,
+		taskSubmitter: taskSubmitter,
 	}
 }
 
@@ -59,13 +56,11 @@ func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRs
 func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
 
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model))
+	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+		return ep.SupportOpenAIChatCompletion()
+	})
 	if err != nil {
-		log.Error("[OpenAIUseCase] Model not found", zap.String("model", req.Body.Model), zap.Error(err))
-		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
-	}
-	if !ep.SupportOpenAIChatCompletion() {
-		log.Error("[OpenAIUseCase] Endpoint does not support chat completion", zap.String("model", req.Body.Model))
+		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
@@ -78,13 +73,11 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	log := logger.WithCtx(ctx)
 
 	model := lo.FromPtr(req.Body.Model)
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model))
+	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
+		return ep.SupportOpenAIResponse()
+	})
 	if err != nil {
-		log.Error("[OpenAIUseCase] Response API model not found", zap.String("model", model), zap.Error(err))
-		return util.SendOpenAIModelNotFoundError(model), nil
-	}
-	if !ep.SupportOpenAIResponse() {
-		log.Error("[OpenAIUseCase] Endpoint does not support response API", zap.String("model", model))
+		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(model), nil
 	}
 

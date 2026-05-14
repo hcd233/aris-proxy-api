@@ -7,11 +7,9 @@ package usecase
 import (
 	"context"
 
-	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -23,24 +21,6 @@ import (
 // storeOpenAIChatFromCompletion 原生 OpenAI 响应 → 消息存储
 func (u *openAIUseCase) storeOpenAIChatFromCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
-		return
-	}
-	u.storeOpenAIChatMessages(ctx, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
-}
-
-// storeOpenAIChatFromAnthropicMsg Anthropic 响应先转 OpenAI 再落盘
-func (u *openAIUseCase) storeOpenAIChatFromAnthropicMsg(ctx context.Context, req *dto.OpenAIChatCompletionRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
-	log := logger.WithCtx(ctx)
-	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
-		return
-	}
-	conv := converter.AnthropicProtocolConverter{}
-	completion, err := conv.ToOpenAIResponse(msg)
-	if err != nil {
-		log.Error("[OpenAIUseCase] Failed to convert for storage", zap.Error(err))
-		return
-	}
-	if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return
 	}
 	u.storeOpenAIChatMessages(ctx, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
@@ -164,32 +144,6 @@ func convertResponseOutput(rsp *dto.OpenAICreateResponseRsp) ([]*vo.UnifiedMessa
 	return outputMsgs, true
 }
 
-// storeResponseFromAnthropicMsg Response API Anthropic 变体 → 消息存储
-func (u *openAIUseCase) storeResponseFromAnthropicMsg(ctx context.Context, req *dto.OpenAICreateResponseRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
-	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
-		return
-	}
-
-	unifiedMessages, ok := buildResponseRequestUnifiedMessages(ctx, req)
-	if !ok {
-		return
-	}
-
-	outputMsgs, ok := anthropicResponseContentToUnified(msg.Content)
-	if !ok {
-		return
-	}
-	unifiedMessages = append(unifiedMessages, outputMsgs...)
-
-	var inputTokens, outputTokens int
-	if msg.Usage != nil {
-		inputTokens = msg.Usage.InputTokens
-		outputTokens = msg.Usage.OutputTokens
-	}
-
-	submitResponseMessageStoreTask(ctx, u.taskSubmitter, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
-}
-
 // buildResponseRequestUnifiedMessages Response API 请求 → UnifiedMessage 前置列表
 //
 // 返回 (messages, ok)：ok=false 表示 input.Items 转换失败；ok=true 时 messages 可能为空。
@@ -232,49 +186,6 @@ func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*vo.UnifiedTool {
 		}
 	}
 	return result
-}
-
-// anthropicResponseContentToUnified Anthropic content blocks → UnifiedMessage 列表
-//
-// 任何 tool_use 块 marshal 失败 → 放弃整条响应落盘（避免残缺消息写入）。
-func anthropicResponseContentToUnified(blocks []*dto.AnthropicContentBlock) ([]*vo.UnifiedMessage, bool) {
-	log := logger.Logger()
-	var messages []*vo.UnifiedMessage
-	for _, block := range blocks {
-		if block == nil {
-			continue
-		}
-		switch block.Type {
-		case enum.AnthropicContentBlockTypeText:
-			messages = append(messages, &vo.UnifiedMessage{
-				Role:    enum.RoleAssistant,
-				Content: &vo.UnifiedContent{Text: lo.FromPtr(block.Text)},
-			})
-		case enum.AnthropicContentBlockTypeThinking:
-			messages = append(messages, &vo.UnifiedMessage{
-				Role:             enum.RoleAssistant,
-				ReasoningContent: lo.FromPtr(block.Thinking),
-			})
-		case enum.AnthropicContentBlockTypeToolUse:
-			args, err := sonic.MarshalString(block.Input)
-			if err != nil {
-				log.Error("[OpenAIUseCase] Failed to marshal tool_use input, abort storage to avoid partial conversation",
-					zap.String("toolID", lo.FromPtr(block.ID)), zap.String("toolName", lo.FromPtr(block.Name)), zap.Error(err))
-				return nil, false
-			}
-			id := lo.FromPtr(block.ID)
-			name := lo.FromPtr(block.Name)
-			messages = append(messages, &vo.UnifiedMessage{
-				Role: enum.RoleAssistant,
-				ToolCalls: []*vo.UnifiedToolCall{{
-					ID:   id,
-					Name: name,
-				}},
-				Content: &vo.UnifiedContent{Text: args},
-			})
-		}
-	}
-	return messages, true
 }
 
 // submitResponseMessageStoreTask Response API 路径统一的消息存储投递

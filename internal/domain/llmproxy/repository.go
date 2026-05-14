@@ -39,5 +39,5 @@ type EndpointProjection struct {
 // EndpointReadRepository CQRS 读模型仓储接口
 type EndpointReadRepository interface {
 	ListAliases(ctx context.Context) ([]*ModelAliasProjection, error)
-	FindEndpointByAlias(ctx context.Context, alias string) (*EndpointProjection, *ModelAliasProjection, error)
+	FindEndpointByAlias(ctx context.Context, alias string, matcher func(*EndpointProjection) bool) (*EndpointProjection, *ModelAliasProjection, error)
 }

@@ -31,8 +31,14 @@ func CreateEndpoint(
 	if name == "" {
 		return nil, ierr.New(ierr.ErrValidation, "endpoint name cannot be empty")
 	}
-	if openaiBaseURL == "" || anthropicBaseURL == "" || apiKey == "" {
-		return nil, ierr.New(ierr.ErrValidation, "endpoint baseURLs and apiKey must not be empty")
+	if apiKey == "" {
+		return nil, ierr.New(ierr.ErrValidation, "endpoint apiKey cannot be empty")
+	}
+	if (supportChatCompletion || supportResponse) && openaiBaseURL == "" {
+		return nil, ierr.New(ierr.ErrValidation, "endpoint openai baseURL cannot be empty when OpenAI APIs are supported")
+	}
+	if supportMessage && anthropicBaseURL == "" {
+		return nil, ierr.New(ierr.ErrValidation, "endpoint anthropic baseURL cannot be empty when Anthropic messages API is supported")
 	}
 	ep := &Endpoint{
 		name:                        name,
@@ -49,10 +55,10 @@ func CreateEndpoint(
 
 func (*Endpoint) AggregateType() string { return constant.AggregateTypeEndpoint }
 
-func (e *Endpoint) Name() string                        { return e.name }
-func (e *Endpoint) OpenaiBaseURL() string               { return e.openaiBaseURL }
-func (e *Endpoint) AnthropicBaseURL() string            { return e.anthropicBaseURL }
-func (e *Endpoint) APIKey() string                      { return e.apiKey }
-func (e *Endpoint) SupportOpenAIChatCompletion() bool   { return e.supportOpenAIChatCompletion }
-func (e *Endpoint) SupportOpenAIResponse() bool         { return e.supportOpenAIResponse }
-func (e *Endpoint) SupportAnthropicMessage() bool       { return e.supportAnthropicMessage }
+func (e *Endpoint) Name() string                      { return e.name }
+func (e *Endpoint) OpenaiBaseURL() string             { return e.openaiBaseURL }
+func (e *Endpoint) AnthropicBaseURL() string          { return e.anthropicBaseURL }
+func (e *Endpoint) APIKey() string                    { return e.apiKey }
+func (e *Endpoint) SupportOpenAIChatCompletion() bool { return e.supportOpenAIChatCompletion }
+func (e *Endpoint) SupportOpenAIResponse() bool       { return e.supportOpenAIResponse }
+func (e *Endpoint) SupportAnthropicMessage() bool     { return e.supportAnthropicMessage }
