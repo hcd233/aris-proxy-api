@@ -5,7 +5,8 @@ var (
 	messageDAOSingleton        *MessageDAO
 	sessionDAOSingleton        *SessionDAO
 	toolDAOSingleton           *ToolDAO
-	modelEndpointDAOSingleton  *ModelEndpointDAO
+	endpointDAOSingleton       *EndpointDAO
+	modelDAOSingleton          *ModelDAO
 	proxyAPIKeyDAOSingleton    *ProxyAPIKeyDAO
 	modelCallAuditDAOSingleton *ModelCallAuditDAO
 )
@@ -15,7 +16,8 @@ func init() {
 	messageDAOSingleton = &MessageDAO{}
 	sessionDAOSingleton = &SessionDAO{}
 	toolDAOSingleton = &ToolDAO{}
-	modelEndpointDAOSingleton = &ModelEndpointDAO{}
+	endpointDAOSingleton = &EndpointDAO{}
+	modelDAOSingleton = &ModelDAO{}
 	proxyAPIKeyDAOSingleton = &ProxyAPIKeyDAO{}
 	modelCallAuditDAOSingleton = &ModelCallAuditDAO{}
 }
@@ -56,13 +58,14 @@ func GetToolDAO() *ToolDAO {
 	return toolDAOSingleton
 }
 
-// GetModelEndpointDAO 获取模型端点DAO
-//
-//	@return *ModelEndpointDAO
-//	@author centonhuang
-//	@update 2026-04-04 10:00:00
-func GetModelEndpointDAO() *ModelEndpointDAO {
-	return modelEndpointDAOSingleton
+// GetEndpointDAO 获取Endpoint表DAO
+func GetEndpointDAO() *EndpointDAO {
+	return endpointDAOSingleton
+}
+
+// GetModelDAO 获取Model表DAO
+func GetModelDAO() *ModelDAO {
+	return modelDAOSingleton
 }
 
 // GetProxyAPIKeyDAO 获取代理API密钥DAO
