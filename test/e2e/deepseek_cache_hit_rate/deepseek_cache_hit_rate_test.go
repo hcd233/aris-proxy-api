@@ -175,46 +175,47 @@ func TestDeepSeekCacheHitRate_OpenAI_NonStream(t *testing.T) {
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadOpenAIScript(t, "openai_multi_turn_non_stream")
 
-	warm := runOpenAIScript(t, baseURL, apiKey, script)
-	measured := runOpenAIScript(t, baseURL, apiKey, script)
+	warmTurns, warmTotal := runOpenAIScript(t, baseURL, apiKey, script)
+	measuredTurns, measuredTotal := runOpenAIScript(t, baseURL, apiKey, script)
 
-	assertMeasuredCacheHit(t, "openai non-stream", warm, measured)
+	assertMeasuredCacheHit(t, "openai non-stream", warmTurns, measuredTurns, warmTotal, measuredTotal)
 }
 
 func TestDeepSeekCacheHitRate_OpenAI_Stream(t *testing.T) {
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadOpenAIScript(t, "openai_multi_turn_stream")
 
-	warm := runOpenAIScript(t, baseURL, apiKey, script)
-	measured := runOpenAIScript(t, baseURL, apiKey, script)
+	warmTurns, warmTotal := runOpenAIScript(t, baseURL, apiKey, script)
+	measuredTurns, measuredTotal := runOpenAIScript(t, baseURL, apiKey, script)
 
-	assertMeasuredCacheHit(t, "openai stream", warm, measured)
+	assertMeasuredCacheHit(t, "openai stream", warmTurns, measuredTurns, warmTotal, measuredTotal)
 }
 
 func TestDeepSeekCacheHitRate_Anthropic_NonStream(t *testing.T) {
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadAnthropicScript(t, "anthropic_multi_turn_non_stream")
 
-	warm := runAnthropicScript(t, baseURL, apiKey, script)
-	measured := runAnthropicScript(t, baseURL, apiKey, script)
+	warmTurns, warmTotal := runAnthropicScript(t, baseURL, apiKey, script)
+	measuredTurns, measuredTotal := runAnthropicScript(t, baseURL, apiKey, script)
 
-	assertMeasuredCacheHit(t, "anthropic non-stream", warm, measured)
+	assertMeasuredCacheHit(t, "anthropic non-stream", warmTurns, measuredTurns, warmTotal, measuredTotal)
 }
 
 func TestDeepSeekCacheHitRate_Anthropic_Stream(t *testing.T) {
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadAnthropicScript(t, "anthropic_multi_turn_stream")
 
-	warm := runAnthropicScript(t, baseURL, apiKey, script)
-	measured := runAnthropicScript(t, baseURL, apiKey, script)
+	warmTurns, warmTotal := runAnthropicScript(t, baseURL, apiKey, script)
+	measuredTurns, measuredTotal := runAnthropicScript(t, baseURL, apiKey, script)
 
-	assertMeasuredCacheHit(t, "anthropic stream", warm, measured)
+	assertMeasuredCacheHit(t, "anthropic stream", warmTurns, measuredTurns, warmTotal, measuredTotal)
 }
 
-func runOpenAIScript(t *testing.T, baseURL, apiKey string, script *openAIScript) cacheStats {
+func runOpenAIScript(t *testing.T, baseURL, apiKey string, script *openAIScript) ([]cacheStats, cacheStats) {
 	t.Helper()
 	conversation, userTurns := splitOpenAIScript(t, script)
 	var total cacheStats
+	perTurnStats := make([]cacheStats, len(userTurns))
 	for i, userText := range userTurns {
 		messages := append([]openAIMessage{}, conversation...)
 		messages = append(messages, openAIMessage{Role: "user", Content: userText})
@@ -234,10 +235,11 @@ func runOpenAIScript(t *testing.T, baseURL, apiKey string, script *openAIScript)
 			t.Fatalf("failed to marshal openai turn %d: %v", i+1, err)
 		}
 		assistantText, stats := callOpenAITurn(t, baseURL, apiKey, req.Stream, body)
+		perTurnStats[i] = stats
 		total = total.Add(stats)
 		conversation = append(messages, openAIMessage{Role: "assistant", Content: assistantText})
 	}
-	return total
+	return perTurnStats, total
 }
 
 func splitOpenAIScript(t *testing.T, script *openAIScript) ([]openAIMessage, []string) {
@@ -394,10 +396,11 @@ func callOpenAIStream(t *testing.T, baseURL, apiKey string, body []byte) (string
 	return assistantText, openAICacheStats(lastUsage)
 }
 
-func runAnthropicScript(t *testing.T, baseURL, apiKey string, script *anthropicScript) cacheStats {
+func runAnthropicScript(t *testing.T, baseURL, apiKey string, script *anthropicScript) ([]cacheStats, cacheStats) {
 	t.Helper()
 	conversation, userTurns := splitAnthropicScript(t, script)
 	var total cacheStats
+	perTurnStats := make([]cacheStats, len(userTurns))
 	for i, userText := range userTurns {
 		messages := append([]anthropicMessage{}, conversation...)
 		messages = append(messages, anthropicMessage{Role: "user", Content: userText})
@@ -414,10 +417,11 @@ func runAnthropicScript(t *testing.T, baseURL, apiKey string, script *anthropicS
 			t.Fatalf("failed to marshal anthropic turn %d: %v", i+1, err)
 		}
 		assistantText, stats := callAnthropicTurn(t, baseURL, apiKey, req.Stream, body)
+		perTurnStats[i] = stats
 		total = total.Add(stats)
 		conversation = append(messages, anthropicMessage{Role: "assistant", Content: assistantText})
 	}
-	return total
+	return perTurnStats, total
 }
 
 func splitAnthropicScript(t *testing.T, script *anthropicScript) ([]anthropicMessage, []string) {
@@ -691,18 +695,69 @@ func anthropicCacheStats(usage *anthropicUsage) cacheStats {
 	return stats
 }
 
-func assertMeasuredCacheHit(t *testing.T, name string, warm, measured cacheStats) {
+func assertMeasuredCacheHit(t *testing.T, name string, warmTurns, measuredTurns []cacheStats, warmTotal, measuredTotal cacheStats) {
 	t.Helper()
-	if !measured.Explicit {
-		t.Fatalf("%s cache usage fields are missing: warm=%+v measured=%+v", name, warm, measured)
+	if !measuredTotal.Explicit {
+		t.Fatalf("%s cache usage fields are missing: warm=%+v measured=%+v", name, warmTotal, measuredTotal)
 	}
-	if measured.HitTokens <= 0 {
+	if measuredTotal.HitTokens <= 0 {
 		t.Fatalf("%s cache was not hit: warm=%+v measured=%+v warm_rate=%.4f measured_rate=%.4f",
-			name, warm, measured, warm.HitRate(), measured.HitRate())
+			name, warmTotal, measuredTotal, warmTotal.HitRate(), measuredTotal.HitRate())
 	}
-	t.Logf("%s cache hit rate: warm=%.4f (%d/%d), measured=%.4f (%d/%d)",
-		name,
-		warm.HitRate(), warm.HitTokens, warm.HitTokens+warm.MissTokens,
-		measured.HitRate(), measured.HitTokens, measured.HitTokens+measured.MissTokens,
-	)
+	t.Logf("=== %s per-turn cache stats ===", name)
+	for i := range warmTurns {
+		t.Logf("  warm[%d]:      hit=%d miss=%d input=%d rate=%.4f",
+			i+1, warmTurns[i].HitTokens, warmTurns[i].MissTokens, warmTurns[i].InputTokens, warmTurns[i].HitRate())
+	}
+	for i := range measuredTurns {
+		t.Logf("  measured[%d]:  hit=%d miss=%d input=%d rate=%.4f",
+			i+1, measuredTurns[i].HitTokens, measuredTurns[i].MissTokens, measuredTurns[i].InputTokens, measuredTurns[i].HitRate())
+	}
+	t.Logf("  warm total:      hit=%d miss=%d input=%d rate=%.4f",
+		warmTotal.HitTokens, warmTotal.MissTokens, warmTotal.InputTokens, warmTotal.HitRate())
+	t.Logf("  measured total:  hit=%d miss=%d input=%d rate=%.4f",
+		measuredTotal.HitTokens, measuredTotal.MissTokens, measuredTotal.InputTokens, measuredTotal.HitRate())
+	logCacheConsistency(t, name, warmTurns, measuredTurns)
+	logCacheImprovement(t, name, warmTurns, measuredTurns, warmTotal, measuredTotal)
+}
+
+func logCacheConsistency(t *testing.T, name string, warmTurns, measuredTurns []cacheStats) {
+	t.Helper()
+	logTurnConsistency := func(label string, turns []cacheStats) {
+		for i, ts := range turns {
+			if !ts.Explicit {
+				t.Logf("%s %s[%d] cache fields are missing, skipping consistency check", name, label, i+1)
+				continue
+			}
+			sum := ts.HitTokens + ts.MissTokens
+			if sum > ts.InputTokens {
+				t.Errorf("%s %s[%d] hit(%d)+miss(%d)=%d > input(%d)",
+					name, label, i+1, ts.HitTokens, ts.MissTokens, sum, ts.InputTokens)
+			}
+			if ts.HitTokens == 0 && ts.MissTokens == 0 && ts.InputTokens > 0 {
+				t.Logf("%s %s[%d] has 0 in both hit and miss despite input=%d (cache not yet populated)",
+					name, label, i+1, ts.InputTokens)
+			}
+		}
+	}
+	logTurnConsistency("warm", warmTurns)
+	logTurnConsistency("measured", measuredTurns)
+}
+
+func logCacheImprovement(t *testing.T, name string, warmTurns, measuredTurns []cacheStats, warmTotal, measuredTotal cacheStats) {
+	t.Helper()
+	if measuredTotal.HitTokens > warmTotal.HitTokens {
+		t.Logf("%s cache improvement: total hit %d -> %d (+%d)",
+			name, warmTotal.HitTokens, measuredTotal.HitTokens, measuredTotal.HitTokens-warmTotal.HitTokens)
+	}
+	if measuredTotal.HitTokens <= warmTotal.HitTokens && measuredTotal.Explicit && warmTotal.Explicit {
+		t.Logf("%s measured total hit(%d) <= warm total hit(%d), warmup may not have helped",
+			name, measuredTotal.HitTokens, warmTotal.HitTokens)
+	}
+	if len(warmTurns) > 0 && len(measuredTurns) > 0 {
+		if measuredTurns[0].HitTokens > warmTurns[0].HitTokens {
+			t.Logf("%s turn[1] hit improvement: %d -> %d (first-turn prefix cached by warmup)",
+				name, warmTurns[0].HitTokens, measuredTurns[0].HitTokens)
+		}
+	}
 }
