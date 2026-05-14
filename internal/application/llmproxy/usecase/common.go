@@ -9,23 +9,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-// auditFailure 提交失败态审计任务（非流式错误分支共享）
-//
-//	@param submitter TaskSubmitter
-//	@param ctx context.Context
-//	@param ep *aggregate.Endpoint
-//	@param exposedModel string
-//	@param apiProvider enum.ProviderType
-//	@param totalMs int64
-//	@param err error
-//	@author centonhuang
-//	@update 2026-04-25 10:00:00
-func auditFailure(submitter TaskSubmitter, ctx context.Context, ep *aggregate.Endpoint, exposedModel string, apiProvider enum.ProviderType, totalMs int64, err error) {
+func auditFailure(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel string, apiProvider enum.ProviderType, totalMs int64, err error) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
-		ModelID:             ep.AggregateID(),
+		ModelID:             m.AggregateID(),
 		Model:               exposedModel,
-		UpstreamProvider:    ep.Provider(),
+		UpstreamProvider:    apiProvider,
 		APIProvider:         apiProvider,
 		FirstTokenLatencyMs: totalMs,
 	}

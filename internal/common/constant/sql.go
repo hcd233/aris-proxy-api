@@ -1,40 +1,46 @@
 package constant
 
 const (
-	FieldID             = "id"
-	FieldDeletedAt      = "deleted_at"
-	FieldCheckSum       = "check_sum"
-	FieldMessageIDs     = "message_ids"
-	FieldToolIDs        = "tool_ids"
-	FieldMetadata       = "metadata"
-	FieldSummary        = "summary"
-	FieldSummarizeError = "summarize_error"
-	FieldScoreVersion   = "score_version"
-	FieldCoherenceScore = "coherence_score"
-	FieldDepthScore     = "depth_score"
-	FieldValueScore     = "value_score"
-	FieldTotalScore     = "total_score"
-	FieldScoredAt       = "scored_at"
-	FieldScoreError     = "score_error"
-	FieldName           = "name"
-	FieldKey            = "key"
-	FieldUserID         = "user_id"
-	FieldModel          = "model"
-	FieldAPIKey         = "api_key"
-	FieldAPIKeyName     = "api_key_name"
-	FieldBaseURL        = "base_url"
-	FieldProvider       = "provider"
-	FieldAlias          = "alias"
-	FieldLastLogin      = "last_login"
-	FieldCreatedAt      = "created_at"
-	FieldUpdatedAt      = "updated_at"
-	FieldMessage        = "message"
-	FieldTool           = "tool"
-	FieldEmail          = "email"
-	FieldAvatar         = "avatar"
-	FieldPermission     = "permission"
-	FieldGithubBindID   = "github_bind_id"
-	FieldGoogleBindID   = "google_bind_id"
+	FieldID                          = "id"
+	FieldDeletedAt                   = "deleted_at"
+	FieldCheckSum                    = "check_sum"
+	FieldMessageIDs                  = "message_ids"
+	FieldToolIDs                     = "tool_ids"
+	FieldMetadata                    = "metadata"
+	FieldSummary                     = "summary"
+	FieldSummarizeError              = "summarize_error"
+	FieldScoreVersion                = "score_version"
+	FieldCoherenceScore              = "coherence_score"
+	FieldDepthScore                  = "depth_score"
+	FieldValueScore                  = "value_score"
+	FieldTotalScore                  = "total_score"
+	FieldScoredAt                    = "scored_at"
+	FieldScoreError                  = "score_error"
+	FieldName                        = "name"
+	FieldKey                         = "key"
+	FieldUserID                      = "user_id"
+	FieldModel                       = "model"
+	FieldAPIKey                      = "api_key"
+	FieldAPIKeyName                  = "api_key_name"
+	FieldBaseURL                     = "base_url"
+	FieldProvider                    = "provider"
+	FieldAlias                       = "alias"
+	FieldOpenaiBaseURL               = "openai_base_url"
+	FieldAnthropicBaseURL            = "anthropic_base_url"
+	FieldSupportOpenAIChatCompletion = "support_openai_chat_completion"
+	FieldSupportOpenAIResponse       = "support_openai_response"
+	FieldSupportAnthropicMessage     = "support_anthropic_message"
+	FieldEndpointID                  = "endpoint_id"
+	FieldLastLogin                   = "last_login"
+	FieldCreatedAt                   = "created_at"
+	FieldUpdatedAt                   = "updated_at"
+	FieldMessage                     = "message"
+	FieldTool                        = "tool"
+	FieldEmail                       = "email"
+	FieldAvatar                      = "avatar"
+	FieldPermission                  = "permission"
+	FieldGithubBindID                = "github_bind_id"
+	FieldGoogleBindID                = "google_bind_id"
 
 	FieldTraceID                  = "trace_id"
 	FieldInputTokens              = "input_tokens"
@@ -82,9 +88,11 @@ var (
 	SessionRepoFieldsScore      = []string{FieldID, FieldMessageIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
-	EndpointRepoFieldsFull       = []string{FieldID, FieldAlias, FieldModel, FieldAPIKey, FieldBaseURL, FieldProvider}
-	EndpointRepoFieldsAlias      = []string{FieldAlias}
-	EndpointRepoFieldsCredential = []string{FieldModel, FieldAPIKey, FieldBaseURL}
+	EndpointRepoFieldsFull = []string{FieldID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey,
+		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage}
+
+	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModel, FieldEndpointID}
+	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
 	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID}
