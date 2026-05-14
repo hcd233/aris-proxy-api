@@ -28,26 +28,6 @@ func (p *mockAnthropicProxyForAnthropic) ForwardCountTokens(_ context.Context, _
 
 var _ transport.AnthropicProxy = (*mockAnthropicProxyForAnthropic)(nil)
 
-type mockOpenAIProxyForAnthropic struct{}
-
-func (p *mockOpenAIProxyForAnthropic) ForwardChatCompletion(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.OpenAIChatCompletion, error) {
-	return &dto.OpenAIChatCompletion{ID: "test"}, nil
-}
-
-func (p *mockOpenAIProxyForAnthropic) ForwardChatCompletionStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte, _ func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
-	return &dto.OpenAIChatCompletion{ID: "test"}, nil
-}
-
-func (p *mockOpenAIProxyForAnthropic) ForwardCreateResponse(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) ([]byte, error) {
-	return nil, nil
-}
-
-func (p *mockOpenAIProxyForAnthropic) ForwardCreateResponseStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte, _ func(string, []byte) error) error {
-	return nil
-}
-
-var _ transport.OpenAIProxy = (*mockOpenAIProxyForAnthropic)(nil)
-
 type mockAnthropicListModels struct{}
 
 func (m *mockAnthropicListModels) Handle(_ context.Context) (*dto.AnthropicListModelsRsp, error) {
@@ -89,7 +69,7 @@ func buildAnthropicTestModel() *aggregate.Model {
 func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockOpenAIProxyForAnthropic{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
 
 	stream := true
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -113,7 +93,7 @@ func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockOpenAIProxyForAnthropic{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -136,7 +116,7 @@ func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 
 func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 	mockResolver := &mockResolver{resolveErr: errors.New("model not found")}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockOpenAIProxyForAnthropic{}, &mockAnthropicProxyForAnthropic{}, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockAnthropicProxyForAnthropic{}, &mockTaskSubmitter{})
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -160,7 +140,7 @@ func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 func TestAnthropicCreateMessage_NativeStream_UpstreamError(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockOpenAIProxyForAnthropic{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
 
 	stream := true
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -184,7 +164,7 @@ func TestAnthropicCreateMessage_NativeStream_UpstreamError(t *testing.T) {
 func TestAnthropicCreateMessage_NativeUnary_UpstreamError(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockOpenAIProxyForAnthropic{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}

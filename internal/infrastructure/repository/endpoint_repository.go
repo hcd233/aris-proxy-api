@@ -122,8 +122,8 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context) ([]*llmproxy.M
 	return out, nil
 }
 
-// FindEndpointByAlias 按 alias 随机选 endpoint，返回端点信息 + 上游模型名
-func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, alias string) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
+// FindEndpointByAlias 按 alias 随机选满足 matcher 的 endpoint，返回端点信息 + 上游模型名。
+func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, alias string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
 	db := r.db.WithContext(ctx)
 	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias}, constant.ModelRepoFieldsFull)
 	if err != nil {
@@ -132,14 +132,24 @@ func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, alias 
 	if len(models) == 0 {
 		return nil, nil, nil
 	}
-	m := models[rand.Intn(len(models))]
-	ep, err := r.endpointDAO.Get(db, &dbmodel.Endpoint{ID: m.EndpointID}, constant.EndpointRepoFieldsFull)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil, nil
+	for _, idx := range rand.Perm(len(models)) {
+		m := models[idx]
+		ep, getErr := r.endpointDAO.Get(db, &dbmodel.Endpoint{ID: m.EndpointID}, constant.EndpointRepoFieldsFull)
+		if getErr != nil {
+			if errors.Is(getErr, gorm.ErrRecordNotFound) {
+				continue
+			}
+			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, getErr, "find endpoint by id")
 		}
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "find endpoint by id")
+		proj := toEndpointProjection(ep)
+		if matcher == nil || matcher(proj) {
+			return proj, &llmproxy.ModelAliasProjection{Alias: m.ModelName}, nil
+		}
 	}
+	return nil, nil, nil
+}
+
+func toEndpointProjection(ep *dbmodel.Endpoint) *llmproxy.EndpointProjection {
 	return &llmproxy.EndpointProjection{
 		ID:                          ep.ID,
 		Name:                        ep.Name,
@@ -149,5 +159,5 @@ func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, alias 
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion,
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse,
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage,
-	}, &llmproxy.ModelAliasProjection{Alias: m.ModelName}, nil
+	}
 }

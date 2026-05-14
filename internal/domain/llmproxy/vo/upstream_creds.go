@@ -22,7 +22,7 @@ func NewUpstreamCreds(baseURL, apiKey string) (UpstreamCreds, error) {
 	return UpstreamCreds{baseURL: baseURL, apiKey: apiKey}, nil
 }
 
-func (c UpstreamCreds) BaseURL() string        { return c.baseURL }
-func (c UpstreamCreds) APIKey() string          { return c.apiKey }
-func (c UpstreamCreds) IsValid() bool           { return c.baseURL != "" && c.apiKey != "" }
-func (c UpstreamCreds) MaskedAPIKey() string    { return util.MaskSecret(c.apiKey) }
+func (c UpstreamCreds) BaseURL() string      { return c.baseURL }
+func (c UpstreamCreds) APIKey() string       { return c.apiKey }
+func (c UpstreamCreds) IsValid() bool        { return c.baseURL != "" && c.apiKey != "" }
+func (c UpstreamCreds) MaskedAPIKey() string { return util.MaskSecret(c.apiKey) }

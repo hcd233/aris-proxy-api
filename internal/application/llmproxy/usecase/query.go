@@ -100,7 +100,9 @@ func NewCountTokens(readRepo llmproxy.EndpointReadRepository, proxy transport.An
 func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
 	log := logger.WithCtx(ctx)
 
-	epProj, modelNameProj, err := q.readRepo.FindEndpointByAlias(ctx, req.Body.Model)
+	epProj, modelNameProj, err := q.readRepo.FindEndpointByAlias(ctx, req.Body.Model, func(ep *llmproxy.EndpointProjection) bool {
+		return ep.SupportAnthropicMessage
+	})
 	if err != nil {
 		log.Warn("[AnthropicQuery] Model lookup error, returning 0", zap.String("model", req.Body.Model), zap.Error(err))
 		return &dto.AnthropicTokensCount{}, nil

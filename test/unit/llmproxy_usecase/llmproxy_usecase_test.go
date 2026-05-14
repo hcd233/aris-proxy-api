@@ -33,8 +33,14 @@ func (r *mockReadRepo) ListAliases(_ context.Context) ([]*llmproxy.ModelAliasPro
 	return r.listAliasesResult, r.listAliasesErr
 }
 
-func (r *mockReadRepo) FindEndpointByAlias(_ context.Context, _ string) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
-	return r.findResult, r.findModelResult, r.findErr
+func (r *mockReadRepo) FindEndpointByAlias(_ context.Context, _ string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
+	if r.findErr != nil || r.findResult == nil {
+		return r.findResult, r.findModelResult, r.findErr
+	}
+	if matcher != nil && !matcher(r.findResult) {
+		return nil, nil, nil
+	}
+	return r.findResult, r.findModelResult, nil
 }
 
 type mockAnthropicProxy struct {

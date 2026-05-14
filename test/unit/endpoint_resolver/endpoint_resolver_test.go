@@ -15,13 +15,13 @@ import (
 )
 
 type resolverCase struct {
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	ModelBehavior  string `json:"modelBehavior"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	ModelBehavior    string `json:"modelBehavior"`
 	EndpointBehavior string `json:"endpointBehavior"`
-	Alias          string `json:"alias"`
-	ExpectResolved bool   `json:"expectResolved"`
-	ExpectErrKind  string `json:"expectErrKind"`
+	Alias            string `json:"alias"`
+	ExpectResolved   bool   `json:"expectResolved"`
+	ExpectErrKind    string `json:"expectErrKind"`
 }
 
 func loadCases(t *testing.T) []resolverCase {
@@ -82,6 +82,48 @@ func (s *stubEndpointRepo) FindByID(_ context.Context, id uint) (*aggregate.Endp
 	return aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true)
 }
 
+type staticModelRepo struct {
+	models []*aggregate.Model
+}
+
+func (s *staticModelRepo) FindByAlias(_ context.Context, _ vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return s.models, nil
+}
+
+type endpointByIDRepo struct {
+	endpoints map[uint]*aggregate.Endpoint
+}
+
+func (s *endpointByIDRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
+	return s.endpoints[id], nil
+}
+
+func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
+	ctx := context.Background()
+	alias := vo.EndpointAlias("test-model")
+	anthropicOnly, _ := aggregate.CreateEndpoint(1, "anthropic-only", "", "https://api.anthropic.com", "sk-ant", false, false, true)
+	openAIOnly, _ := aggregate.CreateEndpoint(2, "openai-only", "https://api.openai.com", "", "sk-openai", true, false, false)
+	anthropicModel, _ := aggregate.CreateModel(1, alias, "claude-upstream", 1)
+	openAIModel, _ := aggregate.CreateModel(2, alias, "gpt-upstream", 2)
+	resolver := service.NewEndpointResolver(
+		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: anthropicOnly, 2: openAIOnly}},
+		&staticModelRepo{models: []*aggregate.Model{anthropicModel, openAIModel}},
+	)
+
+	ep, m, err := resolver.Resolve(ctx, alias, func(ep *aggregate.Endpoint) bool {
+		return ep.SupportOpenAIChatCompletion()
+	})
+	if err != nil {
+		t.Fatalf("Resolve() error: %v", err)
+	}
+	if ep.AggregateID() != 2 {
+		t.Fatalf("endpoint id = %d, want 2", ep.AggregateID())
+	}
+	if m.ModelName() != "gpt-upstream" {
+		t.Fatalf("model name = %q, want %q", m.ModelName(), "gpt-upstream")
+	}
+}
+
 func TestEndpointResolver_Resolve(t *testing.T) {
 	ctx := context.Background()
 
@@ -91,7 +133,7 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 			endpointRepo := &stubEndpointRepo{}
 			resolver := service.NewEndpointResolver(endpointRepo, modelRepo)
 
-			ep, m, err := resolver.Resolve(ctx, vo.EndpointAlias(tc.Alias))
+			ep, m, err := resolver.Resolve(ctx, vo.EndpointAlias(tc.Alias), nil)
 
 			switch tc.ExpectErrKind {
 			case "":
