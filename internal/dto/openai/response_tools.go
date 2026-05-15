@@ -310,11 +310,12 @@ type ResponseToolComputerUsePreview struct {
 
 // ResponseToolWebSearch WebSearch 工具
 type ResponseToolWebSearch struct {
-	Type              string                         `json:"type" doc:"web_search 或 web_search_2025_08_26"`
-	ExternalWebAccess *bool                          `json:"external_web_access,omitempty" doc:"是否允许外部网络访问"`
-	Filters           *ResponseWebSearchFilters      `json:"filters,omitempty" doc:"WebSearch 过滤器"`
-	SearchContextSize *string                        `json:"search_context_size,omitempty" doc:"low/medium/high"`
-	UserLocation      *ResponseWebSearchUserLocation `json:"user_location,omitempty" doc:"用户位置"`
+	Type               string                         `json:"type" doc:"固定 web_search 或 web_search_2025_08_26"`
+	ExternalWebAccess  *bool                          `json:"external_web_access,omitempty" doc:"是否允许外部网络访问"`
+	Filters            *ResponseWebSearchFilters      `json:"filters,omitempty" doc:"WebSearch 过滤器"`
+	SearchContentTypes []string                       `json:"search_content_types,omitempty" doc:"搜索内容类型(text/image)"`
+	SearchContextSize  *string                        `json:"search_context_size,omitempty" doc:"low/medium/high"`
+	UserLocation       *ResponseWebSearchUserLocation `json:"user_location,omitempty" doc:"用户位置"`
 }
 
 // ResponseToolMcp Mcp 工具
