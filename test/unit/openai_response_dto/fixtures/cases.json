@@ -235,6 +235,20 @@
     }
   },
   {
+    "name": "tools_web_search_with_search_content_types",
+    "description": "WebSearch tool should accept search_content_types from Codex Desktop payloads (regression: 422 validation error)",
+    "request_body": {
+      "model": "gpt-5.4",
+      "tools": [
+        {
+          "type": "web_search",
+          "external_web_access": false,
+          "search_content_types": ["text", "image"]
+        }
+      ]
+    }
+  },
+  {
     "name": "tools_function_schema_type_array",
     "description": "Function tool JSON Schema should accept type as string array, e.g. [\"string\", \"null\"].",
     "request_body": {
