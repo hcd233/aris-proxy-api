@@ -10,11 +10,15 @@ import (
 )
 
 func auditFailure(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel string, apiProvider enum.ProviderType, totalMs int64, err error) {
+	auditFailureWithProviders(submitter, ctx, m, exposedModel, apiProvider, apiProvider, totalMs, err)
+}
+
+func auditFailureWithProviders(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel string, upstreamProvider, apiProvider enum.ProviderType, totalMs int64, err error) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
 		ModelID:             m.AggregateID(),
 		Model:               exposedModel,
-		UpstreamProvider:    apiProvider,
+		UpstreamProvider:    upstreamProvider,
 		APIProvider:         apiProvider,
 		FirstTokenLatencyMs: totalMs,
 	}

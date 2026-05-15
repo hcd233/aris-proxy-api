@@ -82,6 +82,7 @@ const (
 	// OpenAI protocol object types
 	OpenAICompletionObject      = "chat.completion"
 	OpenAICompletionChunkObject = "chat.completion.chunk"
+	OpenAIResponseObject        = "response"
 
 	// OpenAI list models response fields
 	OpenAIListObject   = "list"

@@ -40,12 +40,10 @@ type StateManager struct {
 
 // NewStateManager 创建State管理器
 func NewStateManager() *StateManager {
-	sm := &StateManager{
+	return &StateManager{
 		states: make(map[string]time.Time),
 		ttl:    constant.OAuthStateManagerTTL,
 	}
-	go sm.cleanup()
-	return sm
 }
 
 // GenerateState 生成随机state
@@ -58,6 +56,9 @@ func (sm *StateManager) GenerateState() (string, error) {
 
 	sm.mu.Lock()
 	sm.states[state] = time.Now().UTC()
+	if len(sm.states) > constant.OAuthStateMaxPending {
+		sm.cleanupExpired()
+	}
 	sm.mu.Unlock()
 
 	return state, nil
@@ -85,20 +86,13 @@ func (sm *StateManager) VerifyState(state string) error {
 	return nil
 }
 
-// cleanup 定期清理过期state
-func (sm *StateManager) cleanup() {
-	ticker := time.NewTicker(constant.OAuthStateCleanupInterval)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		sm.mu.Lock()
-		now := time.Now().UTC()
-		for state, createdAt := range sm.states {
-			if now.Sub(createdAt) > sm.ttl {
-				delete(sm.states, state)
-			}
+// cleanupExpired 清理过期state（调用方需持有锁）
+func (sm *StateManager) cleanupExpired() {
+	now := time.Now().UTC()
+	for state, createdAt := range sm.states {
+		if now.Sub(createdAt) > sm.ttl {
+			delete(sm.states, state)
 		}
-		sm.mu.Unlock()
 	}
 }
 

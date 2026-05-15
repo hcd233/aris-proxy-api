@@ -365,6 +365,12 @@ const (
 	ResponseStreamEventFailed ResponseStreamEventType = "response.failed"
 	// ResponseStreamEventIncomplete 响应未完成
 	ResponseStreamEventIncomplete ResponseStreamEventType = "response.incomplete"
+	// ResponseStreamEventOutputTextDelta 输出文本增量
+	ResponseStreamEventOutputTextDelta ResponseStreamEventType = "response.output_text.delta"
+	// ResponseStreamEventReasoningTextDelta 推理文本增量
+	ResponseStreamEventReasoningTextDelta ResponseStreamEventType = "response.reasoning_text.delta"
+	// ResponseStreamEventFunctionCallArgumentsDelta 函数调用参数增量
+	ResponseStreamEventFunctionCallArgumentsDelta ResponseStreamEventType = "response.function_call_arguments.delta"
 )
 
 // ResponseStreamEventDeltaSuffix Response API 承载增量 token 的 SSE 事件后缀
