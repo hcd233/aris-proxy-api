@@ -4,7 +4,6 @@ import "time"
 
 const (
 	LogMiddlewareSamplingInterval = 5 * time.Minute
-	LogFieldValueMaxLength        = 512
 
 	LogInfoMaxSizeMB  = 100
 	LogInfoMaxBackups = 3
