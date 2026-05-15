@@ -9,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
@@ -124,8 +123,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 			}
 			reqHeaders[key] = value
 		}
-		truncatedReqHeaders := util.TruncateMapValues(reqHeaders, constant.LogFieldValueMaxLength)
-		fields = append(fields, zap.Dict("request-headers", lo.MapToSlice(truncatedReqHeaders, func(key string, value any) zap.Field {
+		fields = append(fields, zap.Dict("request-headers", lo.MapToSlice(reqHeaders, func(key string, value any) zap.Field {
 			return zap.Any(key, value)
 		})...))
 
@@ -136,8 +134,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 					logger.Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(jsonErr))
 				}
 			}
-			truncated := util.TruncateMapValues(request, constant.LogFieldValueMaxLength)
-			fields = append(fields, zap.Dict("request", lo.MapToSlice(truncated, func(key string, value any) zap.Field {
+			fields = append(fields, zap.Dict("request", lo.MapToSlice(request, func(key string, value any) zap.Field {
 				return zap.Any(key, value)
 			})...))
 		}
@@ -152,8 +149,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 					logger.Warn("[LogMiddleware] Unmarshal response error", zap.ByteString("response", respBody), zap.Error(jsonErr))
 				}
 			}
-			truncated := util.TruncateMapValues(response, constant.LogFieldValueMaxLength)
-			fields = append(fields, zap.Dict("response", lo.MapToSlice(truncated, func(key string, value any) zap.Field {
+			fields = append(fields, zap.Dict("response", lo.MapToSlice(response, func(key string, value any) zap.Field {
 				return zap.Any(key, value)
 			})...))
 		}
@@ -168,8 +164,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 			}
 			respHeaders[key] = value
 		}
-		truncatedRespHeaders := util.TruncateMapValues(respHeaders, constant.LogFieldValueMaxLength)
-		fields = append(fields, zap.Dict("response-headers", lo.MapToSlice(truncatedRespHeaders, func(key string, value any) zap.Field {
+		fields = append(fields, zap.Dict("response-headers", lo.MapToSlice(respHeaders, func(key string, value any) zap.Field {
 			return zap.Any(key, value)
 		})...))
 
