@@ -10,6 +10,9 @@ const (
 
 	AnthropicMessageIDTemplate = "msg_%s"
 	OpenAIChunkIDTemplate      = "chatcmpl-%s"
+	ConvertedChunkIDSuffix     = "converted"
+	ResponseStreamFieldType    = "type"
+	ResponseStreamFieldDelta   = "delta"
 
 	OpenAIInvalidRequestErrorType      = "invalid_request_error"
 	OpenAIModelNotFoundCode            = "model_not_found"

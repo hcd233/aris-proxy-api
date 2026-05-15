@@ -17,6 +17,6 @@ const (
 	PeriodOAuth2Callback = 5 * time.Second
 	LimitOAuth2Callback  = 16
 
-	OAuthStateManagerTTL      = 10 * time.Minute
-	OAuthStateCleanupInterval = 5 * time.Minute
+	OAuthStateManagerTTL = 10 * time.Minute
+	OAuthStateMaxPending = 100
 )

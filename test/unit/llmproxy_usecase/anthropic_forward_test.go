@@ -9,21 +9,31 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
-type mockAnthropicProxyForAnthropic struct{}
+type mockAnthropicProxyForAnthropic struct {
+	messageUnaryCalled  bool
+	messageStreamCalled bool
+}
 
 func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessage(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
+	p.messageUnaryCalled = true
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
 func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte, _ func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+	p.messageStreamCalled = true
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
 func (p *mockAnthropicProxyForAnthropic) ForwardCountTokens(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicTokensCount, error) {
 	return &dto.AnthropicTokensCount{InputTokens: 10}, nil
+}
+
+func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessageCalled() bool {
+	return p.messageUnaryCalled || p.messageStreamCalled
 }
 
 var _ transport.AnthropicProxy = (*mockAnthropicProxyForAnthropic)(nil)
@@ -69,7 +79,7 @@ func buildAnthropicTestModel() *aggregate.Model {
 func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
 
 	stream := true
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -93,7 +103,7 @@ func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -116,7 +126,7 @@ func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 
 func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 	mockResolver := &mockResolver{resolveErr: errors.New("model not found")}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockAnthropicProxyForAnthropic{}, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockAnthropicProxyForAnthropic{}, &mockOpenAIProxy{}, &mockTaskSubmitter{})
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -140,7 +150,7 @@ func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 func TestAnthropicCreateMessage_NativeStream_UpstreamError(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
 
 	stream := true
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -164,7 +174,7 @@ func TestAnthropicCreateMessage_NativeStream_UpstreamError(t *testing.T) {
 func TestAnthropicCreateMessage_NativeUnary_UpstreamError(t *testing.T) {
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -183,4 +193,36 @@ func TestAnthropicCreateMessage_NativeUnary_UpstreamError(t *testing.T) {
 	if rsp == nil {
 		t.Fatal("CreateMessage() returned nil response")
 	}
+}
+
+func TestAnthropicCreateMessage_ChatResponseEndpointUsesChatCompatibility(t *testing.T) {
+	anthropicProxy := &mockAnthropicProxyForAnthropic{}
+	openAIProxy := &mockOpenAIProxy{}
+	mockResolver := &mockResolver{
+		resolveEndpoint: buildCompatEndpoint("chat-response", true, true, false),
+		resolveModel:    buildAnthropicTestModel(),
+	}
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, anthropicProxy, openAIProxy, &mockTaskSubmitter{})
+
+	stream := false
+	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
+		Model: "claude-alias",
+		Messages: []*dto.AnthropicMessageParam{
+			{Role: string(enum.RoleUser), Content: &dto.AnthropicMessageContent{Text: "Hello"}},
+		},
+		Stream: &stream,
+	}}
+
+	rsp, err := uc.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage() error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("CreateMessage() returned nil response")
+	}
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIAnthropicMessage, mockResolver.resolveEndpoint); route != enum.CompatRouteViaOpenAIChat {
+		t.Fatalf("route = %v, want via chat", route)
+	}
+	_ = openAIProxy
+	_ = anthropicProxy
 }

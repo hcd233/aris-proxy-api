@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -29,23 +30,26 @@ type OpenAIUseCase interface {
 }
 
 type openAIUseCase struct {
-	resolver      service.EndpointResolver
-	modelsQuery   ListOpenAIModels
-	openAIProxy   transport.OpenAIProxy
-	taskSubmitter TaskSubmitter
+	resolver       service.EndpointResolver
+	modelsQuery    ListOpenAIModels
+	openAIProxy    transport.OpenAIProxy
+	anthropicProxy transport.AnthropicProxy
+	taskSubmitter  TaskSubmitter
 }
 
 func NewOpenAIUseCase(
 	resolver service.EndpointResolver,
 	modelsQuery ListOpenAIModels,
 	openAIProxy transport.OpenAIProxy,
+	anthropicProxy transport.AnthropicProxy,
 	taskSubmitter TaskSubmitter,
 ) OpenAIUseCase {
 	return &openAIUseCase{
-		resolver:      resolver,
-		modelsQuery:   modelsQuery,
-		openAIProxy:   openAIProxy,
-		taskSubmitter: taskSubmitter,
+		resolver:       resolver,
+		modelsQuery:    modelsQuery,
+		openAIProxy:    openAIProxy,
+		anthropicProxy: anthropicProxy,
+		taskSubmitter:  taskSubmitter,
 	}
 }
 
@@ -56,34 +60,48 @@ func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRs
 func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
 
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
-		return ep.SupportOpenAIChatCompletion()
-	})
+	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), supportsCompatRoute(enum.ProxyAPIOpenAIChat))
 	if err != nil {
 		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
 	stream := req.Body.Stream != nil && *req.Body.Stream
-	upstream := toTransportEndpoint(m, ep, false)
-	return u.forwardChatNative(ctx, req, m, ep, upstream, stream), nil
+	switch SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) {
+	case enum.CompatRouteNative:
+		upstream := toTransportEndpoint(m, ep, false)
+		return u.forwardChatNative(ctx, req, m, ep, upstream, stream), nil
+	case enum.CompatRouteViaAnthropicMessage:
+		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model), nil
+	default:
+		log.Error("[OpenAIUseCase] Unsupported chat compatibility route", zap.String("model", req.Body.Model))
+		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+	}
 }
 
 func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
 
 	model := lo.FromPtr(req.Body.Model)
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
-		return ep.SupportOpenAIResponse()
-	})
+	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model), supportsCompatRoute(enum.ProxyAPIOpenAIResponse))
 	if err != nil {
 		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(model), nil
 	}
 
 	stream := req.Body.Stream != nil && *req.Body.Stream
-	upstream := toTransportEndpoint(m, ep, false)
-	return u.forwardResponseNative(ctx, req, m, ep, upstream, stream), nil
+	switch SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) {
+	case enum.CompatRouteNative:
+		upstream := toTransportEndpoint(m, ep, false)
+		return u.forwardResponseNative(ctx, req, m, ep, upstream, stream), nil
+	case enum.CompatRouteViaOpenAIChat:
+		return u.forwardResponseViaChat(ctx, req, m, ep), nil
+	case enum.CompatRouteViaAnthropicMessage:
+		return u.forwardResponseViaAnthropic(ctx, req, m, ep), nil
+	default:
+		log.Error("[OpenAIUseCase] Unsupported response compatibility route", zap.String("model", model))
+		return util.SendOpenAIModelNotFoundError(model), nil
+	}
 }
 
 func toTransportEndpoint(m *aggregate.Model, ep *aggregate.Endpoint, isAnthropic bool) vo.UpstreamEndpoint {
