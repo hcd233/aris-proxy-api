@@ -1,37 +1,9 @@
 {
-  "model": "kimi-k2.6",
+  "model": "gpt-5.5",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "请帮我检查一下环境状态"},
-    {
-      "role": "assistant",
-      "content": "",
-      "tool_calls": [
-        {
-          "id": "skill:0",
-          "type": "function",
-          "function": {
-            "name": "skill",
-            "arguments": "{\"name\":\"deploy-to-production\"}"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "content": "环境正常",
-      "tool_call_id": "skill:0"
-    }
-  ],
-  "tools": [
-    {
-      "type": "function",
-      "function": {
-        "name": "skill",
-        "description": "Run a skill"
-      }
-    }
+    {"role": "user", "content": "Hello"}
   ],
   "stream": false,
-  "max_tokens": 100
+  "max_tokens": 50
 }
