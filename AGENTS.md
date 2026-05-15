@@ -12,8 +12,8 @@
 ## 1. Skill 路由
 
 - **生产 bug / 线上错误 / traceId / `X-Trace-Id` / CLS / E2E 失败**：使用 `cls-log-bugfix`，在 `ap-guangzhou` 查日志并按 trace 追链路。
-- **API 调用 / curl 示例 / 手工接口验证**：使用 `call-api`；它只负责交互式调用示例，不替代 E2E 回归。
-- **发布 / 部署 / 生产验证**：使用 `deploy-to-production`；提交、推送、CI、SSH 部署和线上 E2E 都在该 skill 中维护。
+- **API 调用 / curl 示例 / 生产验证**：使用 `call-api`；它只负责交互式调用示例，不替代 E2E 回归。
+- **发布 / 部署**：使用 `deploy-to-production`；提交、推送、CI、SSH 部署和线上 E2E 都在该 skill 中维护。
 - 专项流程细节放在对应 skill，主文档只保留触发条件和项目级硬约束。
 
 ## 2. 项目模型
