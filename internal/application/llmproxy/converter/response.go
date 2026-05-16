@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -266,15 +267,13 @@ func responseTextFormatToChat(format *dto.ResponseTextFormat) *dto.OpenAIRespons
 	}
 	rspFormat := &dto.OpenAIResponseFormat{Type: enum.ResponseFormatType(format.Type)}
 	if format.Schema != nil {
-		var schema map[string]any
-		schemaBytes, err := sonic.Marshal(format.Schema)
-		if err == nil {
-			_ = sonic.Unmarshal(schemaBytes, &schema)
-		}
+		schema := lo.Must1(sonic.Marshal(format.Schema))
+		var schemaMap map[string]any
+		_ = sonic.Unmarshal(schema, &schemaMap)
 		rspFormat.JSONSchema = &dto.OpenAIJSONSchemaFormat{
 			Name:        lo.FromPtr(format.Name),
 			Description: format.Description,
-			Schema:      schema,
+			Schema:      schemaMap,
 			Strict:      format.Strict,
 		}
 	}
@@ -287,19 +286,146 @@ func responseToolsToChat(tools []*dto.ResponseTool) []dto.OpenAIChatCompletionTo
 		if tool == nil {
 			continue
 		}
-		if tool.Function != nil {
-			chatTools = append(chatTools, dto.OpenAIChatCompletionTool{
-				Type: enum.ToolTypeFunction,
-				Function: &dto.OpenAIFunctionDefinition{
-					Name:        tool.Function.Name,
-					Description: tool.Function.Description,
-					Parameters:  tool.Function.Parameters,
-					Strict:      &tool.Function.Strict,
-				},
-			})
+		chatTool, ok := convertResponseToolToChat(tool)
+		if ok {
+			chatTools = append(chatTools, chatTool)
 		}
 	}
 	return chatTools
+}
+
+func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletionTool, bool) {
+	switch {
+	case tool.Function != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name:        tool.Function.Name,
+				Description: tool.Function.Description,
+				Parameters:  tool.Function.Parameters,
+				Strict:      &tool.Function.Strict,
+			},
+		}, true
+	case tool.Custom != nil:
+		chatTool := dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeCustom,
+			Custom: &dto.OpenAICustomToolDefinition{
+				Name:        tool.Custom.Name,
+				Description: tool.Custom.Description,
+			},
+		}
+		if tool.Custom.Format != nil {
+			chatTool.Custom.Format = &dto.OpenAICustomToolFormat{
+				Type: tool.Custom.Format.Type,
+			}
+		}
+		return chatTool, true
+	case tool.FileSearch != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.FileSearch.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescFileSearch),
+			},
+		}, true
+	case tool.WebSearch != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.WebSearch.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescWebSearch),
+			},
+		}, true
+	case tool.WebSearchPreview != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.WebSearchPreview.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescWebSearchPreview),
+			},
+		}, true
+	case tool.Computer != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.Computer.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescComputer),
+			},
+		}, true
+	case tool.ComputerUsePreview != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.ComputerUsePreview.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescComputerPreview),
+			},
+		}, true
+	case tool.Mcp != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.Mcp.Type,
+				Description: lo.ToPtr(fmt.Sprintf(constant.ChatCompletionConvertToolDescMCPTemplate, tool.Mcp.ServerLabel)),
+			},
+		}, true
+	case tool.CodeInterpreter != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.CodeInterpreter.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescCodeInterpreter),
+			},
+		}, true
+	case tool.ImageGeneration != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.ImageGeneration.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescImageGeneration),
+			},
+		}, true
+	case tool.LocalShell != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.LocalShell.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescLocalShell),
+			},
+		}, true
+	case tool.Shell != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.Shell.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescShell),
+			},
+		}, true
+	case tool.Namespace != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.Namespace.Name,
+				Description: lo.ToPtr(tool.Namespace.Description),
+			},
+		}, true
+	case tool.ToolSearch != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.ToolSearch.Type,
+				Description: tool.ToolSearch.Description,
+			},
+		}, true
+	case tool.ApplyPatch != nil:
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
+				Name: tool.ApplyPatch.Type,
+				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescApplyPatch),
+			},
+		}, true
+	}
+	return dto.OpenAIChatCompletionTool{}, false
 }
 
 func responseToolChoiceToChat(tc *dto.ResponseToolChoiceParam) *dto.OpenAIChatCompletionToolChoiceParam {
@@ -370,8 +496,12 @@ func chatContentToResponseContent(content *dto.OpenAIMessageContent, textType st
 			parts = append(parts, &dto.ResponseInputContent{Type: textType, Text: part.Text})
 		case enum.ContentPartTypeImageURL:
 			if part.ImageURL != nil {
-				detail := string(part.ImageURL.Detail)
-				parts = append(parts, &dto.ResponseInputContent{Type: enum.ResponseContentTypeInputImage, ImageURL: lo.ToPtr(part.ImageURL.URL), Detail: &detail})
+				content := &dto.ResponseInputContent{Type: enum.ResponseContentTypeInputImage, ImageURL: lo.ToPtr(part.ImageURL.URL)}
+				if part.ImageURL.Detail != "" {
+					detail := string(part.ImageURL.Detail)
+					content.Detail = &detail
+				}
+				parts = append(parts, content)
 			}
 		}
 	}

@@ -173,11 +173,12 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
-			if firstTokenTime.IsZero() && responseChunkHasDelta(chunk) {
+			hasWritten, writeErr := writeResponseDeltaFromChatChunk(w, chunk)
+			if firstTokenTime.IsZero() && hasWritten {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
-			return writeResponseDeltaFromChatChunk(w, chunk)
+			return writeErr
 		})
 		if !firstTokenTime.IsZero() {
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
@@ -268,17 +269,17 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 			}
 			chunks, convErr := anthropicConv.ToOpenAISSEResponse(event, exposedModel, chunkID)
 			if convErr != nil {
-				log.Debug("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
-				return nil
+				log.Error("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
+				return convErr
 			}
 			for _, chunk := range chunks {
 				if chunk == nil {
 					continue
 				}
 				allChunks = append(allChunks, chunk)
-				if writeErr := writeResponseDeltaFromChatChunk(w, chunk); writeErr != nil {
-					return writeErr
-				}
+			if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk); writeErr != nil {
+				return writeErr
+			}
 			}
 			return nil
 		})
@@ -364,45 +365,40 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	})
 }
 
-func responseChunkHasDelta(chunk *dto.OpenAIChatCompletionChunk) bool {
+func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk) (bool, error) {
 	if chunk == nil {
-		return false
+		return false, nil
 	}
-	for _, choice := range chunk.Choices {
-		if choice != nil && choice.Delta != nil && (choice.Delta.Content != "" || choice.Delta.ReasoningContent != "" || len(choice.Delta.ToolCalls) > 0) {
-			return true
-		}
-	}
-	return false
-}
-
-func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk) error {
-	if chunk == nil {
-		return nil
-	}
+	wroteDelta := false
 	for _, choice := range chunk.Choices {
 		if choice == nil || choice.Delta == nil {
 			continue
 		}
 		if choice.Delta.Content != "" {
+			wroteDelta = true
 			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventOutputTextDelta, choice.Delta.Content); err != nil {
-				return err
+				return wroteDelta, err
 			}
 		}
 		if choice.Delta.ReasoningContent != "" {
+			wroteDelta = true
 			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventReasoningTextDelta, choice.Delta.ReasoningContent); err != nil {
-				return err
+				return wroteDelta, err
 			}
 		}
 		for _, toolCall := range choice.Delta.ToolCalls {
 			if toolCall != nil && toolCall.Function != nil && toolCall.Function.Arguments != "" {
+				wroteDelta = true
 				if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventFunctionCallArgumentsDelta, toolCall.Function.Arguments); err != nil {
-					return err
+					return wroteDelta, err
 				}
 			}
 		}
 	}
-	return w.Flush()
+	if wroteDelta {
+		return true, w.Flush()
+	}
+	return false, nil
 }
 
 func writeResponseDeltaEvent(w *bufio.Writer, event enum.ResponseStreamEventType, delta string) error {

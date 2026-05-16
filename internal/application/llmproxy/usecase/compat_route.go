@@ -37,9 +37,3 @@ func SelectCompatRoute(requestAPI enum.ProxyAPI, ep *aggregate.Endpoint) enum.Co
 	}
 	return enum.CompatRouteUnsupported
 }
-
-func supportsCompatRoute(requestAPI enum.ProxyAPI) func(*aggregate.Endpoint) bool {
-	return func(ep *aggregate.Endpoint) bool {
-		return SelectCompatRoute(requestAPI, ep) != enum.CompatRouteUnsupported
-	}
-}

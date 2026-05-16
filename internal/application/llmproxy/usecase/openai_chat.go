@@ -91,15 +91,8 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 		if completion != nil {
 			usage = completion.Usage
 		}
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               req.Body.Model,
-			UpstreamProvider:    enum.ProviderOpenAI,
-			APIProvider:         enum.ProviderOpenAI,
-			FirstTokenLatencyMs: firstTokenLatencyMs,
-			StreamDurationMs:    streamDurationMs,
-		}
+		task := newAuditTask(ctx, m, req.Body.Model, enum.ProviderOpenAI, enum.ProviderOpenAI, firstTokenLatencyMs)
+		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromOpenAIUsage(usage)
 		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
@@ -121,15 +114,8 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 
 		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
 
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               req.Body.Model,
-			UpstreamProvider:    enum.ProviderOpenAI,
-			APIProvider:         enum.ProviderOpenAI,
-			FirstTokenLatencyMs: totalMs,
-			UpstreamStatusCode:  fiber.StatusOK,
-		}
+		task := newAuditTask(ctx, m, req.Body.Model, enum.ProviderOpenAI, enum.ProviderOpenAI, totalMs)
+		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromOpenAIUsage(completion.Usage)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
@@ -152,8 +138,8 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 			}
 			chunks, convErr := conv.ToOpenAISSEResponse(event, exposedModel, chunkID)
 			if convErr != nil {
-				log.Debug("[OpenAIUseCase] Failed to convert anthropic SSE to openai chunk", zap.Error(convErr))
-				return nil
+				log.Error("[OpenAIUseCase] Failed to convert anthropic SSE to openai chunk", zap.Error(convErr))
+				return convErr
 			}
 			for _, chunk := range chunks {
 				if chunk == nil {
@@ -187,15 +173,8 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 			completion.Model = exposedModel
 		}
 		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, upstream.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               exposedModel,
-			UpstreamProvider:    enum.ProviderAnthropic,
-			APIProvider:         enum.ProviderOpenAI,
-			FirstTokenLatencyMs: firstTokenLatencyMs,
-			StreamDurationMs:    streamDurationMs,
-		}
+		task := newAuditTask(ctx, m, exposedModel, enum.ProviderAnthropic, enum.ProviderOpenAI, firstTokenLatencyMs)
+		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
@@ -222,15 +201,8 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 		completion.Model = exposedModel
 		writer.WriteJSON(completion)
 		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               exposedModel,
-			UpstreamProvider:    enum.ProviderAnthropic,
-			APIProvider:         enum.ProviderOpenAI,
-			FirstTokenLatencyMs: totalMs,
-			UpstreamStatusCode:  fiber.StatusOK,
-		}
+		task := newAuditTask(ctx, m, exposedModel, enum.ProviderAnthropic, enum.ProviderOpenAI, totalMs)
+		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
