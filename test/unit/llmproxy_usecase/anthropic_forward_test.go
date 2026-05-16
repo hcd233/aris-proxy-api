@@ -32,10 +32,6 @@ func (p *mockAnthropicProxyForAnthropic) ForwardCountTokens(_ context.Context, _
 	return &dto.AnthropicTokensCount{InputTokens: 10}, nil
 }
 
-func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessageCalled() bool {
-	return p.messageUnaryCalled || p.messageStreamCalled
-}
-
 var _ transport.AnthropicProxy = (*mockAnthropicProxyForAnthropic)(nil)
 
 type mockAnthropicListModels struct{}

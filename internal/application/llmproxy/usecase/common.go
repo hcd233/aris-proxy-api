@@ -25,3 +25,14 @@ func auditFailureWithProviders(submitter TaskSubmitter, ctx context.Context, m *
 	task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
 	_ = submitter.SubmitModelCallAuditTask(task)
 }
+
+func newAuditTask(ctx context.Context, m *aggregate.Model, exposedModel string, upstreamProvider, apiProvider enum.ProviderType, firstTokenLatencyMs int64) *dto.ModelCallAuditTask {
+	return &dto.ModelCallAuditTask{
+		Ctx:                 util.CopyContextValues(ctx),
+		ModelID:             m.AggregateID(),
+		Model:               exposedModel,
+		UpstreamProvider:    upstreamProvider,
+		APIProvider:         apiProvider,
+		FirstTokenLatencyMs: firstTokenLatencyMs,
+	}
+}

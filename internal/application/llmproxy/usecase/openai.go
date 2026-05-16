@@ -60,15 +60,19 @@ func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRs
 func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
 
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), supportsCompatRoute(enum.ProxyAPIOpenAIChat))
+	var compatRoute enum.CompatRoute
+	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
+		return compatRoute != enum.CompatRouteUnsupported
+	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
-	stream := req.Body.Stream != nil && *req.Body.Stream
-	switch SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) {
+	switch compatRoute {
 	case enum.CompatRouteNative:
+		stream := req.Body.Stream != nil && *req.Body.Stream
 		upstream := toTransportEndpoint(m, ep, false)
 		return u.forwardChatNative(ctx, req, m, ep, upstream, stream), nil
 	case enum.CompatRouteViaAnthropicMessage:
@@ -83,15 +87,19 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	log := logger.WithCtx(ctx)
 
 	model := lo.FromPtr(req.Body.Model)
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model), supportsCompatRoute(enum.ProxyAPIOpenAIResponse))
+	var compatRoute enum.CompatRoute
+	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
+		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep)
+		return compatRoute != enum.CompatRouteUnsupported
+	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
 		return util.SendOpenAIModelNotFoundError(model), nil
 	}
 
-	stream := req.Body.Stream != nil && *req.Body.Stream
-	switch SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) {
+	switch compatRoute {
 	case enum.CompatRouteNative:
+		stream := req.Body.Stream != nil && *req.Body.Stream
 		upstream := toTransportEndpoint(m, ep, false)
 		return u.forwardResponseNative(ctx, req, m, ep, upstream, stream), nil
 	case enum.CompatRouteViaOpenAIChat:
