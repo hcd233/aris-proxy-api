@@ -46,7 +46,7 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 
 func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
@@ -110,7 +110,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 	log := logger.WithCtx(ctx)
 	conv := &converter.OpenAIProtocolConverter{}
 	tracker := converter.NewSSEContentBlockTracker()
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64

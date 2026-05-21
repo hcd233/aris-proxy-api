@@ -67,10 +67,15 @@ func WriteErrorHTTPResponse(ctx huma.Context, statusCode int, err *model.Error) 
 //	@return *huma.StreamResponse
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
+func WrapStreamResponse(ctx context.Context, handler func(w *bufio.Writer)) *huma.StreamResponse {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			fiberCtx := humafiber.Unwrap(humaCtx)
+			if headers := GetPassthroughResponseHeaders(ctx); headers != nil {
+				for k, hv := range headers {
+					fiberCtx.Set(k, hv)
+				}
+			}
 			fiberCtx.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeEventStream)
 			fiberCtx.Set(constant.HTTPTitleHeaderCacheControl, constant.HTTPCacheControlNoCache)
 			fiberCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)

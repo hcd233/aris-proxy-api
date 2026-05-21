@@ -64,7 +64,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
@@ -168,7 +168,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	log := logger.WithCtx(ctx)
 	conv := &converter.ResponseProtocolConverter{}
 	exposedModel := lo.FromPtr(req.Body.Model)
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
@@ -257,7 +257,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 	responseConv := &converter.ResponseProtocolConverter{}
 	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
 	exposedModel := lo.FromPtr(req.Body.Model)
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64

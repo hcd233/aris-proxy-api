@@ -107,7 +107,8 @@ const (
 	// Fallback JSON map key for parse errors
 	FallbackJSONRawKey = "raw"
 
-	FieldNameID = "id"
+	FieldNameID    = "id"
+	FieldNameModel = "model"
 
 	MCPApprovalAlways = "always"
 	MCPApprovalNever  = "never"
