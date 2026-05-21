@@ -22,17 +22,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+
+	usecase "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 )
 
 type anthropicProxy struct{}
 
 var _ usecase.AnthropicProxyPort = (*anthropicProxy)(nil)
 
-// NewAnthropicProxy 创建 Anthropic 代理
-//
-//	@return usecase.AnthropicProxyPort
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
 func NewAnthropicProxy() usecase.AnthropicProxyPort {
 	return &anthropicProxy{}
 }

@@ -17,12 +17,20 @@ type TaskSubmitter interface {
 	SubmitMessageStoreTask(task *dto.MessageStoreTask) error
 }
 
+// AnthropicProxyPort Anthropic 协议上游代理端口
+//
+// 由 infrastructure/transport.anthropicProxy 实现。
+// 定义在 application 层，确保 application 层不直接依赖 infrastructure 层的接口定义。
 type AnthropicProxyPort interface {
 	ForwardCreateMessage(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error)
 	ForwardCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error)
 	ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error)
 }
 
+// OpenAIProxyPort OpenAI 协议上游代理端口
+//
+// 由 infrastructure/transport.openAIProxy 实现。
+// 定义在 application 层，确保 application 层不直接依赖 infrastructure 层的接口定义。
 type OpenAIProxyPort interface {
 	ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error)
 	ForwardChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error)
