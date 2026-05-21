@@ -3,6 +3,7 @@ package headerpassthrough
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +12,9 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	humago "github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -125,6 +128,35 @@ func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
 	}
 	if _, ok := got["Accept-Encoding"]; ok {
 		t.Fatalf("Accept-Encoding should not be passthrough headers: %v", got)
+	}
+}
+
+func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
+	app := fiber.New()
+	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))
+	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughResponseHeaders, map[string]string{
+		"X-Upstream-Cache": "hit",
+	})
+	huma.Register(api, huma.Operation{
+		OperationID: "streamHeaders",
+		Method:      http.MethodGet,
+		Path:        "/stream",
+	}, func(_ context.Context, _ *struct{}) (*huma.StreamResponse, error) {
+		return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
+			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, []byte(`{"ok":true}`))
+			_ = w.Flush()
+		}), nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/stream", nil)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("stream request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.Header.Get("X-Upstream-Cache") != "hit" {
+		t.Fatalf("X-Upstream-Cache = %q, want hit", resp.Header.Get("X-Upstream-Cache"))
 	}
 }
 

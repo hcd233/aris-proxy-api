@@ -48,7 +48,7 @@ func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.Op
 
 func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
@@ -125,7 +125,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 	log := logger.WithCtx(ctx)
 	conv := &converter.AnthropicProtocolConverter{}
 	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
