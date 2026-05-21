@@ -6,6 +6,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"go.uber.org/zap"
 
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -41,7 +42,7 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 
 func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
@@ -74,18 +75,18 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 		task := newAuditTask(ctx, m, exposedModel, enum.ProviderAnthropic, enum.ProviderAnthropic, firstTokenLatencyMs)
 		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
 }
 
 func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
-	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
+	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
+			apiutil.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
 			auditFailure(u.taskSubmitter, ctx, m, exposedModel, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
@@ -105,7 +106,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 	log := logger.WithCtx(ctx)
 	conv := &converter.OpenAIProtocolConverter{}
 	tracker := converter.NewSSEContentBlockTracker()
-	return util.WrapStreamResponse(func(w *bufio.Writer) {
+	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
@@ -152,19 +153,19 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 		if completion != nil {
 			task.SetTokensFromOpenAIUsage(completion.Usage)
 		}
-		task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
 	})
 }
 
 func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel string, body []byte) *huma.StreamResponse {
 	conv := &converter.OpenAIProtocolConverter{}
-	return util.WrapJSONResponse(ctx, func(writer util.JSONResponseWriter) {
+	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
 		completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
-			util.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
+			apiutil.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
 			auditFailureWithProviders(u.taskSubmitter, ctx, m, exposedModel, enum.ProviderOpenAI, enum.ProviderAnthropic, totalMs, err)
 			return
 		}
