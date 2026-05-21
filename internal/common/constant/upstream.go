@@ -41,9 +41,9 @@ const (
 	ChatCompletionConvertToolDescShell = "Shell tool"
 	// ChatCompletionConvertToolDescApplyPatch ApplyPatch 工具转换描述
 	ChatCompletionConvertToolDescApplyPatch = "Apply patch tool"
-	OpenAIInternalErrorMessage         = "Internal server error"
-	OpenAIInternalErrorType            = "server_error"
-	OpenAIInternalErrorCode            = "internal_error"
+	OpenAIInternalErrorMessage              = "Internal server error"
+	OpenAIInternalErrorType                 = "server_error"
+	OpenAIInternalErrorCode                 = "internal_error"
 
 	AnthropicNotFoundErrorType            = "not_found_error"
 	AnthropicModelNotFoundMessageTemplate = "model: %s"

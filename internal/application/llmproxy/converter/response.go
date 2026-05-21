@@ -324,7 +324,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.FileSearch.Type,
+				Name:        tool.FileSearch.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescFileSearch),
 			},
 		}, true
@@ -332,7 +332,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.WebSearch.Type,
+				Name:        tool.WebSearch.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescWebSearch),
 			},
 		}, true
@@ -340,7 +340,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.WebSearchPreview.Type,
+				Name:        tool.WebSearchPreview.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescWebSearchPreview),
 			},
 		}, true
@@ -348,7 +348,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.Computer.Type,
+				Name:        tool.Computer.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescComputer),
 			},
 		}, true
@@ -356,7 +356,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.ComputerUsePreview.Type,
+				Name:        tool.ComputerUsePreview.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescComputerPreview),
 			},
 		}, true
@@ -364,7 +364,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.Mcp.Type,
+				Name:        tool.Mcp.Type,
 				Description: lo.ToPtr(fmt.Sprintf(constant.ChatCompletionConvertToolDescMCPTemplate, tool.Mcp.ServerLabel)),
 			},
 		}, true
@@ -372,7 +372,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.CodeInterpreter.Type,
+				Name:        tool.CodeInterpreter.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescCodeInterpreter),
 			},
 		}, true
@@ -380,7 +380,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.ImageGeneration.Type,
+				Name:        tool.ImageGeneration.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescImageGeneration),
 			},
 		}, true
@@ -388,7 +388,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.LocalShell.Type,
+				Name:        tool.LocalShell.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescLocalShell),
 			},
 		}, true
@@ -396,7 +396,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.Shell.Type,
+				Name:        tool.Shell.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescShell),
 			},
 		}, true
@@ -404,7 +404,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.Namespace.Name,
+				Name:        tool.Namespace.Name,
 				Description: lo.ToPtr(tool.Namespace.Description),
 			},
 		}, true
@@ -412,7 +412,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.ToolSearch.Type,
+				Name:        tool.ToolSearch.Type,
 				Description: tool.ToolSearch.Description,
 			},
 		}, true
@@ -420,7 +420,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
-				Name: tool.ApplyPatch.Type,
+				Name:        tool.ApplyPatch.Type,
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescApplyPatch),
 			},
 		}, true

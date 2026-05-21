@@ -277,9 +277,9 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 					continue
 				}
 				allChunks = append(allChunks, chunk)
-			if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk); writeErr != nil {
-				return writeErr
-			}
+				if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk); writeErr != nil {
+					return writeErr
+				}
 			}
 			return nil
 		})
