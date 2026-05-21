@@ -9,7 +9,7 @@ const (
 	HTTPDialTimeout           = 10 * time.Second
 	HTTPKeepAlive             = 30 * time.Second
 	HTTPTLSHandshakeTimeout   = 10 * time.Second
-	HTTPResponseHeaderTimeout = 30 * time.Second
+	HTTPResponseHeaderTimeout = 60 * time.Second
 	HTTPIdleConnTimeout       = 90 * time.Second
 
 	// HTTPLowerHeader 小写格式的HTTP头部（用于请求/响应）
