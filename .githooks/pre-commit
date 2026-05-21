@@ -21,7 +21,30 @@ fail() {
 }
 
 # --------------------------------------------------------------------------
-# 1. gofmt — auto-format source files and re-stage changed files
+# 1. codegraph sync — sync file changes to the code knowledge graph index
+# --------------------------------------------------------------------------
+printf "$INFO Running codegraph sync ...\n"
+
+if command -v codegraph >/dev/null 2>&1; then
+    SYNC_OUTPUT=$(codegraph sync 2>&1)
+    SYNC_EXIT=$?
+    if [ $SYNC_EXIT -ne 0 ]; then
+        # "database is locked" is transient (MCP server holds a reader lock)
+        if echo "$SYNC_OUTPUT" | grep -q "database is locked"; then
+            printf "$INFO codegraph database locked by MCP server — skipping (index stays fresh after next MCP query)\n"
+        else
+            printf "$FAIL codegraph sync failed:\n"
+            echo "$SYNC_OUTPUT" | sed 's/^/       /'
+            fail "codegraph sync failed. Ensure .codegraph/ exists and is healthy."
+        fi
+    fi
+else
+    printf "$INFO codegraph CLI not found — skipping\n"
+fi
+printf "$PASS codegraph sync\n"
+
+# --------------------------------------------------------------------------
+# 2. gofmt — auto-format source files and re-stage changed files
 # --------------------------------------------------------------------------
 printf "$INFO Running gofmt -w ...\n"
 gofmt -w .
@@ -36,7 +59,7 @@ fi
 printf "$PASS gofmt\n"
 
 # --------------------------------------------------------------------------
-# 2. go mod tidy — verify go.mod / go.sum are consistent and re-stage
+# 3. go mod tidy — verify go.mod / go.sum are consistent and re-stage
 # --------------------------------------------------------------------------
 printf "$INFO Running go mod tidy...\n"
 $GO_BIN mod tidy
@@ -50,7 +73,7 @@ fi
 printf "$PASS go mod tidy\n"
 
 # --------------------------------------------------------------------------
-# 3. go vet — static analysis
+# 4. go vet — static analysis
 # --------------------------------------------------------------------------
 printf "$INFO Running go vet ./...\n"
 
@@ -60,7 +83,7 @@ fi
 printf "$PASS go vet\n"
 
 # --------------------------------------------------------------------------
-# 4. go test — run all unit tests, block commit on any failure
+# 5. go test — run all unit tests, block commit on any failure
 # --------------------------------------------------------------------------
 printf "$INFO Running go test -count=1 ./...\n"
 
@@ -70,7 +93,7 @@ fi
 printf "$PASS go test\n"
 
 # --------------------------------------------------------------------------
-# 5. lint — project convention lint
+# 6. lint — project convention lint
 # --------------------------------------------------------------------------
 printf "$INFO Running lint...\n"
 
