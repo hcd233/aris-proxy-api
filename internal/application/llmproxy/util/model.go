@@ -1,4 +1,4 @@
-package util
+package proxyutil
 
 import (
 	"github.com/bytedance/sonic"

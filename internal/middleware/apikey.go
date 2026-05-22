@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"cmp"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -11,7 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -34,20 +34,20 @@ func APIKeyMiddleware(db *gorm.DB) func(ctx huma.Context, next func(huma.Context
 
 		if tokenString == "" {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key is empty")
-			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
 			return
 		}
 
 		if db == nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] DB dependency is nil")
-			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
 			return
 		}
 		reqDB := db.WithContext(ctx.Context())
 		apiKey, err := proxyAPIKeyDAO.Get(reqDB, &dbmodel.ProxyAPIKey{Key: tokenString}, constant.ProxyAPIKeyRepoFieldsAuth)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
-			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
 			return
 		}
 
@@ -55,7 +55,7 @@ func APIKeyMiddleware(db *gorm.DB) func(ctx huma.Context, next func(huma.Context
 		user, err := userDAO.Get(reqDB, &dbmodel.User{ID: apiKey.UserID}, constant.UserRepoFieldsBasic)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] Failed to get user", zap.Error(err))
-			lo.Must0(util.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
 			return
 		}
 

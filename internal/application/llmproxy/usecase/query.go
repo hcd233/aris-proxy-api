@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"time"
 
 	"github.com/samber/lo"
@@ -11,9 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // ListOpenAIModels 列出 OpenAI 兼容模型
@@ -90,10 +89,10 @@ type CountTokens interface {
 
 type countTokens struct {
 	readRepo llmproxy.EndpointReadRepository
-	proxy    transport.AnthropicProxy
+	proxy    AnthropicProxyPort
 }
 
-func NewCountTokens(readRepo llmproxy.EndpointReadRepository, proxy transport.AnthropicProxy) CountTokens {
+func NewCountTokens(readRepo llmproxy.EndpointReadRepository, proxy AnthropicProxyPort) CountTokens {
 	return &countTokens{readRepo: readRepo, proxy: proxy}
 }
 
@@ -121,7 +120,7 @@ func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensR
 		APIKey:  epProj.APIKey,
 		BaseURL: epProj.AnthropicBaseURL,
 	}
-	body := util.MarshalAnthropicCountTokensBodyForModel(req.Body, upstream.Model)
+	body := proxyutil.MarshalAnthropicCountTokensBodyForModel(req.Body, upstream.Model)
 
 	rsp, err := q.proxy.ForwardCountTokens(ctx, upstream, body)
 	if err != nil {

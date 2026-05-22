@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -71,7 +72,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] List audit logs failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	rsp.Logs = lo.Map(audits, func(a *aggregate.ModelCallAudit, _ int) *dto.AuditLogItem {
@@ -94,5 +95,5 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 		}
 	})
 	rsp.PageInfo = pageInfo
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

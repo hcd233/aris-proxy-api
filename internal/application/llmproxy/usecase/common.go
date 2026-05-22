@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -22,7 +23,7 @@ func auditFailureWithProviders(submitter TaskSubmitter, ctx context.Context, m *
 		APIProvider:         apiProvider,
 		FirstTokenLatencyMs: totalMs,
 	}
-	task.UpstreamStatusCode, task.ErrorMessage = util.ExtractUpstreamStatusAndError(err)
+	task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 	_ = submitter.SubmitModelCallAuditTask(task)
 }
 

@@ -6,6 +6,7 @@
 package model_body
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"strings"
 	"testing"
 
@@ -13,7 +14,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
 
@@ -26,7 +26,7 @@ func TestMarshalOpenAIChatCompletionBody_UpstreamModel(t *testing.T) {
 		},
 	}
 
-	body := util.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-chat-model")
+	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-chat-model")
 	bodyStr := string(body)
 
 	if !strings.Contains(bodyStr, `"model":"upstream-chat-model"`) {
@@ -53,7 +53,7 @@ func TestMarshalOpenAIChatCompletionBody_SystemMessagePreserved(t *testing.T) {
 		},
 	}
 
-	body := util.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-model")
+	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-model")
 
 	var unmarshalled dto.OpenAIChatCompletionReq
 	if err := sonic.Unmarshal(body, &unmarshalled); err != nil {
@@ -92,7 +92,7 @@ func TestMarshalOpenAIChatCompletionBody_FullRoundTripRawJSON(t *testing.T) {
 			len(parsed.Messages[0].Content.Text), fullLength)
 	}
 
-	body := util.MarshalOpenAIChatCompletionBodyForModel(&parsed, "upstream-model")
+	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(&parsed, "upstream-model")
 
 	var roundTripped dto.OpenAIChatCompletionReq
 	if err := sonic.Unmarshal(body, &roundTripped); err != nil {
@@ -165,7 +165,7 @@ func TestOpenAIChatCompletionReq_MessagesWithMixedContent(t *testing.T) {
 		},
 	}
 
-	body := util.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-model")
+	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-model")
 
 	var unmarshalled dto.OpenAIChatCompletionReq
 	if err := sonic.Unmarshal(body, &unmarshalled); err != nil {
@@ -196,7 +196,7 @@ func TestMarshalOpenAIChatCompletionBody_ComplexRequestPreserved(t *testing.T) {
 		ReasoningEffort:     enum.ReasoningEffortMedium,
 	}
 
-	body := util.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-model")
+	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-model")
 
 	var unmarshalled dto.OpenAIChatCompletionReq
 	if err := sonic.Unmarshal(body, &unmarshalled); err != nil {

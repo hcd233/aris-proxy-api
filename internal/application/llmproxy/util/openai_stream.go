@@ -1,4 +1,4 @@
-package util
+package proxyutil
 
 import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"

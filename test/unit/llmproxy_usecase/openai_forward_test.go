@@ -12,7 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
 type mockOpenAIProxy struct {
@@ -75,7 +74,7 @@ func (p *mockOpenAIProxy) ForwardCreateResponseStream(_ context.Context, _ vo.Up
 	return nil
 }
 
-var _ transport.OpenAIProxy = (*mockOpenAIProxy)(nil)
+var _ usecase.OpenAIProxyPort = (*mockOpenAIProxy)(nil)
 
 type mockResolver struct {
 	resolveEndpoint *aggregate.Endpoint

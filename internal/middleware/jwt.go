@@ -6,6 +6,7 @@ package middleware
 import (
 	"cmp"
 	"fmt"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -18,7 +19,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -55,7 +55,7 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next
 		log := logger.WithCtx(ctx.Context())
 		if db == nil {
 			log.Error("[JwtMiddleware] DB dependency is nil")
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
 			return
 		}
 		reqDB := db.WithContext(ctx.Context())
@@ -63,12 +63,12 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next
 		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAuthorization), ctx.Header(constant.HTTPTitleHeaderAuthorization))
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 		if tokenString == "" {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
 			return
 		}
 		userID, err := accessTokenSvc.DecodeToken(tokenString)
 		if err != nil {
-			lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError()))
 			return
 		}
 
@@ -91,7 +91,7 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next
 		if !cacheHit {
 			user, dbErr := userDAO.Get(reqDB, &model.User{ID: userID}, constant.UserRepoFieldsAuth)
 			if dbErr != nil {
-				lo.Must0(util.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
+				lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
 				return
 			}
 			name = user.Name

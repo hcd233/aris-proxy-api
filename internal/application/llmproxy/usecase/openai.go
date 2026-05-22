@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
@@ -14,9 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
@@ -32,16 +31,16 @@ type OpenAIUseCase interface {
 type openAIUseCase struct {
 	resolver       service.EndpointResolver
 	modelsQuery    ListOpenAIModels
-	openAIProxy    transport.OpenAIProxy
-	anthropicProxy transport.AnthropicProxy
+	openAIProxy    OpenAIProxyPort
+	anthropicProxy AnthropicProxyPort
 	taskSubmitter  TaskSubmitter
 }
 
 func NewOpenAIUseCase(
 	resolver service.EndpointResolver,
 	modelsQuery ListOpenAIModels,
-	openAIProxy transport.OpenAIProxy,
-	anthropicProxy transport.AnthropicProxy,
+	openAIProxy OpenAIProxyPort,
+	anthropicProxy AnthropicProxyPort,
 	taskSubmitter TaskSubmitter,
 ) OpenAIUseCase {
 	return &openAIUseCase{
@@ -67,7 +66,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
-		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+		return proxyutil.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 
 	switch compatRoute {
@@ -79,7 +78,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model), nil
 	default:
 		log.Error("[OpenAIUseCase] Unsupported chat compatibility route", zap.String("model", req.Body.Model))
-		return util.SendOpenAIModelNotFoundError(req.Body.Model), nil
+		return proxyutil.SendOpenAIModelNotFoundError(req.Body.Model), nil
 	}
 }
 
@@ -94,7 +93,7 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
-		return util.SendOpenAIModelNotFoundError(model), nil
+		return proxyutil.SendOpenAIModelNotFoundError(model), nil
 	}
 
 	switch compatRoute {
@@ -108,7 +107,7 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 		return u.forwardResponseViaAnthropic(ctx, req, m, ep), nil
 	default:
 		log.Error("[OpenAIUseCase] Unsupported response compatibility route", zap.String("model", model))
-		return util.SendOpenAIModelNotFoundError(model), nil
+		return proxyutil.SendOpenAIModelNotFoundError(model), nil
 	}
 }
 

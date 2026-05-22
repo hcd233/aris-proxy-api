@@ -3,12 +3,12 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // OpenAIHandler OpenAI兼容接口处理器
@@ -55,7 +55,7 @@ func NewOpenAIHandler(deps OpenAIDependencies) OpenAIHandler {
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *openAIHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.OpenAIListModelsRsp], error) {
-	return util.WrapHTTPResponse(h.uc.ListModels(ctx))
+	return apiutil.WrapHTTPResponse(h.uc.ListModels(ctx))
 }
 
 // HandleChatCompletion 处理聊天补全请求

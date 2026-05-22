@@ -8,7 +8,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
 type mockReadRepo struct {
@@ -62,7 +61,7 @@ func (p *mockAnthropicProxy) ForwardCreateMessage(_ context.Context, _ vo.Upstre
 	return nil, nil
 }
 
-var _ transport.AnthropicProxy = (*mockAnthropicProxy)(nil)
+var _ usecase.AnthropicProxyPort = (*mockAnthropicProxy)(nil)
 
 func TestListOpenAIModels_Success(t *testing.T) {
 	repo := newMockReadRepo([]string{"gpt-4o", "gpt-4o-mini", "gpt-4-turbo"})

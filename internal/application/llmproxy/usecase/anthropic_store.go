@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 
 	"go.uber.org/zap"
 
@@ -34,7 +35,7 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.
 		Tools:        unifiedTools,
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
-		Metadata:     util.ExtractAnthropicMetadata(req.Body.Metadata),
+		Metadata:     proxyutil.ExtractAnthropicMetadata(req.Body.Metadata),
 	}); err != nil {
 		log.Error("[AnthropicUseCase] Failed to submit message store task", zap.Error(err))
 	}
