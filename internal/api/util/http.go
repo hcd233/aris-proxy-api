@@ -1,5 +1,5 @@
-// Package util 工具包
-package util
+// Package apiutil API 响应工具包
+package apiutil
 
 import (
 	"bufio"
@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -71,7 +72,7 @@ func WrapStreamResponse(ctx context.Context, handler func(w *bufio.Writer)) *hum
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			fiberCtx := humafiber.Unwrap(humaCtx)
-			if headers := GetPassthroughResponseHeaders(ctx); headers != nil {
+			if headers := util.GetPassthroughResponseHeaders(ctx); headers != nil {
 				for k, hv := range headers {
 					fiberCtx.Set(k, hv)
 				}
@@ -102,7 +103,7 @@ type JSONResponseWriter struct {
 //	@author centonhuang
 //	@update 2026-04-29 10:00:00
 func (rw JSONResponseWriter) WriteJSON(v any) {
-	if headers := GetPassthroughResponseHeaders(rw.Ctx); headers != nil {
+	if headers := util.GetPassthroughResponseHeaders(rw.Ctx); headers != nil {
 		for k, hv := range headers {
 			rw.HumaCtx.SetHeader(k, hv)
 		}

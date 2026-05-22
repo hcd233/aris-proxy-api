@@ -5,6 +5,7 @@
 package unified_response
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"os"
 	"testing"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type conversionCase struct {
@@ -316,7 +316,7 @@ func TestIsResponseAPIDeltaEvent(t *testing.T) {
 		{"response.audio.delta", true},
 	}
 	for _, tc := range cases {
-		if got := util.IsResponseAPIDeltaEvent(tc.event); got != tc.want {
+		if got := proxyutil.IsResponseAPIDeltaEvent(tc.event); got != tc.want {
 			t.Errorf("IsResponseAPIDeltaEvent(%q) = %v, want %v", tc.event, got, tc.want)
 		}
 	}
@@ -341,7 +341,7 @@ func TestIsResponseAPITerminalEvent(t *testing.T) {
 		{"", false},
 	}
 	for _, tc := range cases {
-		if got := util.IsResponseAPITerminalEvent(tc.event); got != tc.want {
+		if got := proxyutil.IsResponseAPITerminalEvent(tc.event); got != tc.want {
 			t.Errorf("IsResponseAPITerminalEvent(%q) = %v, want %v", tc.event, got, tc.want)
 		}
 	}

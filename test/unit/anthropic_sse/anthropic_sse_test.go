@@ -3,18 +3,18 @@
 // 回归保护：
 //   - 提交 184dcf9 将 forwardViaOpenAI 的 message_stop data 从 `{}` 统一为
 //     `{"type":"message_stop"}`，与 forwardNative 对齐，符合 Anthropic SSE 协议规范。
-//     本测试断言 util.WriteAnthropicMessageStop 产出的字节序列完全一致。
+//     本测试断言 proxyutil.WriteAnthropicMessageStop 产出的字节序列完全一致。
 package anthropic_sse
 
 import (
 	"bufio"
 	"bytes"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"os"
 	"testing"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type testCase struct {
@@ -43,7 +43,7 @@ func TestWriteAnthropicMessageStop_Frame(t *testing.T) {
 			var buf bytes.Buffer
 			w := bufio.NewWriter(&buf)
 
-			if err := util.WriteAnthropicMessageStop(w); err != nil {
+			if err := proxyutil.WriteAnthropicMessageStop(w); err != nil {
 				t.Fatalf("WriteAnthropicMessageStop unexpected error: %v", err)
 			}
 

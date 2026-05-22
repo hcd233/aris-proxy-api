@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"strings"
 
 	"go.uber.org/zap"
@@ -12,7 +13,6 @@ import (
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // TokenHandler 令牌处理器
@@ -61,7 +61,7 @@ func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshT
 
 	if strings.TrimSpace(req.Body.RefreshToken) == "" {
 		rsp.Error = ierr.ErrValidation.BizError()
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	pair, err := h.refresh.Handle(ctx, command.RefreshTokensCommand{
@@ -72,10 +72,10 @@ func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshT
 			zap.String("refreshToken", commonutil.MaskSecret(req.Body.RefreshToken)),
 			zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	rsp.AccessToken = pair.AccessToken()
 	rsp.RefreshToken = pair.RefreshToken()
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

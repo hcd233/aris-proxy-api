@@ -4,7 +4,7 @@ import "github.com/hcd233/aris-proxy-api/internal/common/constant"
 
 // CallStatus 模型调用状态值对象
 //
-// UpstreamStatusCode 语义（与原 util.ExtractUpstreamStatusAndError 一致）：
+// UpstreamStatusCode 语义（与原 apiutil.ExtractUpstreamStatusAndError 一致）：
 //
 //   - 200   ：成功
 //

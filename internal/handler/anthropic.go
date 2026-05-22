@@ -3,12 +3,12 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // AnthropicHandler Anthropic兼容接口处理器
@@ -55,7 +55,7 @@ func NewAnthropicHandler(deps AnthropicDependencies) AnthropicHandler {
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *anthropicHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.AnthropicListModelsRsp], error) {
-	return util.WrapHTTPResponse(h.uc.ListModels(ctx))
+	return apiutil.WrapHTTPResponse(h.uc.ListModels(ctx))
 }
 
 // HandleCreateMessage 处理创建消息请求
@@ -81,5 +81,5 @@ func (h *anthropicHandler) HandleCreateMessage(ctx context.Context, req *dto.Ant
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *anthropicHandler) HandleCountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.HTTPResponse[*dto.AnthropicTokensCount], error) {
-	return util.WrapHTTPResponse(h.uc.CountTokens(ctx, req))
+	return apiutil.WrapHTTPResponse(h.uc.CountTokens(ctx, req))
 }

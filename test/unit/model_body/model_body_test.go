@@ -1,12 +1,12 @@
 package model_body
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"strings"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
 
@@ -18,7 +18,7 @@ func TestMarshalOpenAIChatCompletionBodyForModel_UsesUpstreamModelWithoutMutatin
 		},
 	}
 
-	body := util.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-chat-model")
+	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-chat-model")
 	bodyStr := string(body)
 
 	if !strings.Contains(bodyStr, `"model":"upstream-chat-model"`) {
@@ -35,7 +35,7 @@ func TestMarshalOpenAIChatCompletionBodyForModel_UsesUpstreamModelWithoutMutatin
 func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
 	req := &dto.OpenAICreateResponseReq{Model: lo.ToPtr("exposed-response-model")}
 
-	body := util.MarshalOpenAIResponseBodyForModel(req, "upstream-response-model")
+	body := proxyutil.MarshalOpenAIResponseBodyForModel(req, "upstream-response-model")
 	bodyStr := string(body)
 
 	if !strings.Contains(bodyStr, `"model":"upstream-response-model"`) {
@@ -58,7 +58,7 @@ func TestMarshalAnthropicMessageBodyForModel_UsesUpstreamModelWithoutMutatingReq
 		},
 	}
 
-	body := util.MarshalAnthropicMessageBodyForModel(req, "upstream-anthropic-model")
+	body := proxyutil.MarshalAnthropicMessageBodyForModel(req, "upstream-anthropic-model")
 	bodyStr := string(body)
 
 	if !strings.Contains(bodyStr, `"model":"upstream-anthropic-model"`) {
@@ -80,7 +80,7 @@ func TestMarshalAnthropicCountTokensBodyForModel_UsesUpstreamModelWithoutMutatin
 		},
 	}
 
-	body := util.MarshalAnthropicCountTokensBodyForModel(req, "upstream-count-model")
+	body := proxyutil.MarshalAnthropicCountTokensBodyForModel(req, "upstream-count-model")
 	bodyStr := string(body)
 
 	if !strings.Contains(bodyStr, `"model":"upstream-count-model"`) {

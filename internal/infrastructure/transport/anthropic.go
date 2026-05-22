@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"io"
 	"net/http"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/bytedance/sonic"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -22,48 +24,16 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-// AnthropicProxy Anthropic 协议上游代理
-//
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-type AnthropicProxy interface {
-	// ForwardCreateMessage 非流式转发
-	//
-	//	@param ctx context.Context
-	//	@param ep vo.UpstreamEndpoint
-	//	@param body []byte
-	//	@return *dto.AnthropicMessage
-	//	@return error
-	ForwardCreateMessage(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error)
-
-	// ForwardCreateMessageStream 流式转发，每个事件调用 onEvent 回调，返回合并后的完整响应
-	//
-	//	@param ctx context.Context
-	//	@param ep vo.UpstreamEndpoint
-	//	@param body []byte
-	//	@param onEvent func(dto.AnthropicSSEEvent) error
-	//	@return *dto.AnthropicMessage
-	//	@return error
-	ForwardCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error)
-
-	// ForwardCountTokens 转发 Count Tokens 请求
-	//
-	//	@param ctx context.Context
-	//	@param ep vo.UpstreamEndpoint
-	//	@param body []byte
-	//	@return *dto.AnthropicTokensCount
-	//	@return error
-	ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error)
-}
-
 type anthropicProxy struct{}
+
+var _ usecase.AnthropicProxyPort = (*anthropicProxy)(nil)
 
 // NewAnthropicProxy 创建 Anthropic 代理
 //
-//	@return AnthropicProxy
+//	@return usecase.AnthropicProxyPort
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func NewAnthropicProxy() AnthropicProxy {
+func NewAnthropicProxy() usecase.AnthropicProxyPort {
 	return &anthropicProxy{}
 }
 
@@ -138,7 +108,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep vo.U
 		return nil, nil
 	}
 
-	return util.ConcatAnthropicSSEEvents(collectedEvents)
+	return proxyutil.ConcatAnthropicSSEEvents(collectedEvents)
 }
 
 func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error) {

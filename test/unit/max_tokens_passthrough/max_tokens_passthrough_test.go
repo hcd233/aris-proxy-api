@@ -16,21 +16,21 @@
 package max_tokens_passthrough
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"strings"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
 
 // buildForwardBody 复刻 OpenAIUseCase.forwardChatNative 中的 body 构建流程：
-//  1. util.MarshalOpenAIChatCompletionBodyForModel 替换 model 字段为上游真实 model
+//  1. proxyutil.MarshalOpenAIChatCompletionBodyForModel 替换 model 字段为上游真实 model
 //  2. util.EnsureAssistantMessageReasoningContent 处理 thinking 模式 reasoning_content
 func buildForwardBody(t *testing.T, req *dto.OpenAIChatCompletionReq, upstreamModel string) []byte {
 	t.Helper()
-	body := util.MarshalOpenAIChatCompletionBodyForModel(req, upstreamModel)
+	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req, upstreamModel)
 	return body
 }
 

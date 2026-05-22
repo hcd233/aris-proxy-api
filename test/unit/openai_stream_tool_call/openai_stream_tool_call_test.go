@@ -1,12 +1,12 @@
 package openai_stream_tool_call
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"os"
 	"testing"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
 
@@ -50,7 +50,7 @@ func TestNormalizeOpenAIStreamToolCalls_IndexZeroAndFollowupID(t *testing.T) {
 
 	toolCallIDs := make(map[int]string)
 	for _, chunk := range tc.Chunks {
-		util.NormalizeOpenAIStreamToolCalls(chunk, toolCallIDs)
+		proxyutil.NormalizeOpenAIStreamToolCalls(chunk, toolCallIDs)
 	}
 
 	firstPayload, err := sonic.MarshalString(tc.Chunks[0])

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -142,7 +143,7 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 		Method:      http.MethodGet,
 		Path:        "/stream",
 	}, func(_ context.Context, _ *struct{}) (*huma.StreamResponse, error) {
-		return util.WrapStreamResponse(ctx, func(w *bufio.Writer) {
+		return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, []byte(`{"ok":true}`))
 			_ = w.Flush()
 		}), nil

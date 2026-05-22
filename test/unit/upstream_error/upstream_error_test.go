@@ -1,4 +1,4 @@
-// Package upstream_error 验证 util.ExtractUpstreamStatusAndError 对不同错误类型的状态码语义。
+// Package upstream_error 验证 apiutil.ExtractUpstreamStatusAndError 对不同错误类型的状态码语义。
 //
 // 回归保护范围：
 //   - 提交 74c598d：新增 UpstreamConnectionError 类型后，对网络层错误返回 -1。
@@ -9,13 +9,13 @@ package upstream_error
 import (
 	"context"
 	"errors"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // testCase 与 fixtures/cases.json 对齐
@@ -70,7 +70,7 @@ func TestExtractUpstreamStatusAndError(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			err := buildError(t, tc)
 
-			status, message := util.ExtractUpstreamStatusAndError(err)
+			status, message := apiutil.ExtractUpstreamStatusAndError(err)
 
 			if status != tc.ExpectedStatus {
 				t.Errorf("status = %d, want %d (desc: %s)", status, tc.ExpectedStatus, tc.Description)
@@ -91,8 +91,8 @@ func TestExtractUpstreamStatusAndError(t *testing.T) {
 // TestExtractUpstreamStatusAndError_ConnectionErrorIsDistinctFromUnknown 专项回归：
 // UpstreamConnectionError 必须映射为 -1，与未知错误的 0 区分。
 func TestExtractUpstreamStatusAndError_ConnectionErrorIsDistinctFromUnknown(t *testing.T) {
-	connStatus, _ := util.ExtractUpstreamStatusAndError(&model.UpstreamConnectionError{Cause: errors.New("dial failed")})
-	unknownStatus, _ := util.ExtractUpstreamStatusAndError(errors.New("convert failed"))
+	connStatus, _ := apiutil.ExtractUpstreamStatusAndError(&model.UpstreamConnectionError{Cause: errors.New("dial failed")})
+	unknownStatus, _ := apiutil.ExtractUpstreamStatusAndError(errors.New("convert failed"))
 
 	if connStatus != -1 {
 		t.Fatalf("connection error status = %d, want -1", connStatus)

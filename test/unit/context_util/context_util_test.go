@@ -2,6 +2,7 @@ package context_util
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"os"
 	"testing"
 
@@ -134,7 +135,7 @@ func TestExtractAnthropicMetadata(t *testing.T) {
 
 	t.Run("nil metadata", func(t *testing.T) {
 		tc := findMetaCase(t, allCases, "extract_anthropic_metadata_nil")
-		got := util.ExtractAnthropicMetadata(tc.Metadata)
+		got := proxyutil.ExtractAnthropicMetadata(tc.Metadata)
 		if got != nil {
 			t.Errorf("ExtractAnthropicMetadata(nil) = %v, want nil", got)
 		}
@@ -142,7 +143,7 @@ func TestExtractAnthropicMetadata(t *testing.T) {
 
 	t.Run("metadata with user_id", func(t *testing.T) {
 		tc := findMetaCase(t, allCases, "extract_anthropic_metadata_with_user_id")
-		got := util.ExtractAnthropicMetadata(tc.Metadata)
+		got := proxyutil.ExtractAnthropicMetadata(tc.Metadata)
 		if got == nil {
 			t.Fatalf("ExtractAnthropicMetadata() returned nil, want non-nil")
 		}
@@ -158,7 +159,7 @@ func TestExtractAnthropicMetadata(t *testing.T) {
 
 	t.Run("metadata with empty user_id", func(t *testing.T) {
 		tc := findMetaCase(t, allCases, "extract_anthropic_metadata_empty_user_id")
-		got := util.ExtractAnthropicMetadata(tc.Metadata)
+		got := proxyutil.ExtractAnthropicMetadata(tc.Metadata)
 		if got != nil {
 			t.Errorf("ExtractAnthropicMetadata() = %v, want nil", got)
 		}

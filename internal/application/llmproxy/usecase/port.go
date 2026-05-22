@@ -1,7 +1,12 @@
 // Package usecase LLMProxy 域用例层 — 端口定义
 package usecase
 
-import "github.com/hcd233/aris-proxy-api/internal/dto"
+import (
+	"context"
+
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
+)
 
 // TaskSubmitter 异步任务提交端口
 //
@@ -10,4 +15,17 @@ import "github.com/hcd233/aris-proxy-api/internal/dto"
 type TaskSubmitter interface {
 	SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) error
 	SubmitMessageStoreTask(task *dto.MessageStoreTask) error
+}
+
+type AnthropicProxyPort interface {
+	ForwardCreateMessage(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error)
+	ForwardCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error)
+	ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error)
+}
+
+type OpenAIProxyPort interface {
+	ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error)
+	ForwardChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error)
+	ForwardCreateResponse(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)
+	ForwardCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error
 }

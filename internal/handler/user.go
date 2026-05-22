@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"go.uber.org/zap"
 
@@ -68,7 +69,7 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 	if err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Get current user failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	rsp.User = &dto.DetailedUser{
@@ -90,7 +91,7 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 		zap.Time("lastLogin", view.LastLogin),
 		zap.String("permission", string(view.Permission)))
 
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleUpdateUser 更新当前用户资料
@@ -115,7 +116,7 @@ func (h *userHandler) HandleUpdateUser(ctx context.Context, req *dto.UpdateUserR
 	if err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Update user failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

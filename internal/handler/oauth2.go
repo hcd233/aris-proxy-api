@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"go.uber.org/zap"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // Oauth2Handler OAuth2处理器接口
@@ -65,10 +65,10 @@ func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dt
 		logger.WithCtx(ctx).Error("[OAuth2Handler] Initiate login failed",
 			zap.String("platform", req.Platform), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.RedirectURL = result.RedirectURL
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleCallback OAuth2回调
@@ -91,9 +91,9 @@ func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq
 		logger.WithCtx(ctx).Error("[OAuth2Handler] Callback failed",
 			zap.String("platform", req.Body.Platform), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.AccessToken = result.TokenPair.AccessToken()
 	rsp.RefreshToken = result.TokenPair.RefreshToken()
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

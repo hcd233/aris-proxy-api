@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -72,7 +73,7 @@ func (h *sessionHandler) HandleListSessions(ctx context.Context, req *dto.ListSe
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List sessions failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	rsp.Sessions = lo.Map(views, func(v *sessionquery.SessionSummaryView, _ int) *dto.SessionSummary {
@@ -86,7 +87,7 @@ func (h *sessionHandler) HandleListSessions(ctx context.Context, req *dto.ListSe
 		}
 	})
 	rsp.PageInfo = pageInfo
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleGetSession 获取Session详情
@@ -110,7 +111,7 @@ func (h *sessionHandler) HandleGetSession(ctx context.Context, req *dto.GetSessi
 		logger.WithCtx(ctx).Error("[SessionHandler] Get session failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	messageItems := lo.Map(view.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
@@ -145,5 +146,5 @@ func (h *sessionHandler) HandleGetSession(ctx context.Context, req *dto.GetSessi
 		zap.Int("messageCount", len(messageItems)),
 		zap.Int("toolCount", len(toolItems)))
 
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

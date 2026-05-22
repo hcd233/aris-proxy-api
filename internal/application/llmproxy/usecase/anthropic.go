@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
@@ -14,9 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 var anthropicInternalErrorBody = lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
@@ -34,8 +33,8 @@ type anthropicUseCase struct {
 	resolver         service.EndpointResolver
 	modelsQuery      ListAnthropicModels
 	countTokensQuery CountTokens
-	anthropicProxy   transport.AnthropicProxy
-	openAIProxy      transport.OpenAIProxy
+	anthropicProxy   AnthropicProxyPort
+	openAIProxy      OpenAIProxyPort
 	taskSubmitter    TaskSubmitter
 }
 
@@ -43,8 +42,8 @@ func NewAnthropicUseCase(
 	resolver service.EndpointResolver,
 	modelsQuery ListAnthropicModels,
 	countTokensQuery CountTokens,
-	anthropicProxy transport.AnthropicProxy,
-	openAIProxy transport.OpenAIProxy,
+	anthropicProxy AnthropicProxyPort,
+	openAIProxy OpenAIProxyPort,
 	taskSubmitter TaskSubmitter,
 ) AnthropicUseCase {
 	return &anthropicUseCase{
@@ -75,7 +74,7 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	})
 	if err != nil {
 		log.Error("[AnthropicUseCase] Model not found or unsupported for messages API", zap.String("model", req.Body.Model), zap.Error(err))
-		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
+		return proxyutil.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 
 	exposedModel := req.Body.Model
@@ -88,6 +87,6 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 		return u.forwardMessageViaChat(ctx, req, m, ep, exposedModel), nil
 	default:
 		log.Error("[AnthropicUseCase] Unsupported messages compatibility route", zap.String("model", req.Body.Model))
-		return util.SendAnthropicModelNotFoundError(req.Body.Model), nil
+		return proxyutil.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
 }

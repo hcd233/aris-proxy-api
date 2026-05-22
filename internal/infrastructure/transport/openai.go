@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"io"
 	"net/http"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/bytedance/sonic"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -22,57 +24,16 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-// OpenAIProxy OpenAI 协议上游代理
-//
-//	@author centonhuang
-//	@update 2026-04-17 10:00:00
-type OpenAIProxy interface {
-	// ForwardChatCompletion 非流式转发
-	//
-	//	@param ctx context.Context
-	//	@param ep vo.UpstreamEndpoint
-	//	@param body []byte
-	//	@return *dto.OpenAIChatCompletion
-	//	@return error
-	ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error)
-
-	// ForwardChatCompletionStream 流式转发，每个 chunk 调用 onChunk 回调，返回合并后的完整响应
-	//
-	//	@param ctx context.Context
-	//	@param ep vo.UpstreamEndpoint
-	//	@param body []byte
-	//	@param onChunk func(*dto.OpenAIChatCompletionChunk) error
-	//	@return *dto.OpenAIChatCompletion
-	//	@return error
-	ForwardChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error)
-
-	// ForwardCreateResponse Response API 非流式转发
-	//
-	//	@param ctx context.Context
-	//	@param ep vo.UpstreamEndpoint
-	//	@param body []byte
-	//	@return []byte 原始响应体
-	//	@return error
-	ForwardCreateResponse(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)
-
-	// ForwardCreateResponseStream Response API 流式转发，每个 SSE 事件调用 onEvent 回调
-	//
-	//	@param ctx context.Context
-	//	@param ep vo.UpstreamEndpoint
-	//	@param body []byte
-	//	@param onEvent func(event string, data []byte) error
-	//	@return error
-	ForwardCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error
-}
-
 type openAIProxy struct{}
+
+var _ usecase.OpenAIProxyPort = (*openAIProxy)(nil)
 
 // NewOpenAIProxy 创建 OpenAI 代理
 //
-//	@return OpenAIProxy
+//	@return usecase.OpenAIProxyPort
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func NewOpenAIProxy() OpenAIProxy {
+func NewOpenAIProxy() usecase.OpenAIProxyPort {
 	return &openAIProxy{}
 }
 
@@ -148,7 +109,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 		return nil, nil
 	}
 
-	return util.ConcatChatCompletionChunks(collectedChunks)
+	return proxyutil.ConcatChatCompletionChunks(collectedChunks)
 }
 
 // doUpstreamRequest 构建并发送上游 HTTP 请求的公共逻辑

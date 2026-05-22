@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"strings"
 
 	"go.uber.org/zap"
@@ -73,7 +74,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 	if strings.TrimSpace(req.Body.Name) == "" {
 		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: empty api key name")
 		rsp.Error = ierr.ErrValidation.BizError()
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	result, err := h.issue.Handle(ctx, command.IssueAPIKeyCommand{
@@ -83,7 +84,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] Create api key failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	rsp.Key = &dto.APIKeyDetail{
@@ -92,7 +93,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 		Key:       result.Secret,
 		CreatedAt: result.CreatedAt,
 	}
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleListAPIKeys 列出当前用户的 API Keys（admin 可见全量）
@@ -116,7 +117,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, _ *dto.EmptyReq) 
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] List api keys failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	rsp.Keys = make([]*dto.APIKeyItem, 0, len(views))
@@ -128,7 +129,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, _ *dto.EmptyReq) 
 			CreatedAt: v.CreatedAt,
 		})
 	}
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleDeleteAPIKey 删除指定 API Key
@@ -149,7 +150,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 	if req.ID == 0 {
 		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: invalid api key id")
 		rsp.Error = ierr.ErrValidation.BizError()
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	err := h.revoke.Handle(ctx, command.RevokeAPIKeyCommand{
@@ -160,7 +161,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] Delete api key failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return util.WrapHTTPResponse(rsp, nil)
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	return util.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

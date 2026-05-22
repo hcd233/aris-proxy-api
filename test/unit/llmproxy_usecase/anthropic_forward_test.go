@@ -10,7 +10,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
 type mockAnthropicProxyForAnthropic struct {
@@ -32,7 +31,7 @@ func (p *mockAnthropicProxyForAnthropic) ForwardCountTokens(_ context.Context, _
 	return &dto.AnthropicTokensCount{InputTokens: 10}, nil
 }
 
-var _ transport.AnthropicProxy = (*mockAnthropicProxyForAnthropic)(nil)
+var _ usecase.AnthropicProxyPort = (*mockAnthropicProxyForAnthropic)(nil)
 
 type mockAnthropicListModels struct{}
 
