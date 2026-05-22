@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -15,8 +14,9 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	humago "github.com/danielgtaylor/huma/v2/adapters/humago"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
@@ -135,22 +135,25 @@ func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
 func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))
-	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughResponseHeaders, map[string]string{
-		"X-Upstream-Cache": "hit",
+	api.UseMiddleware(func(ctx huma.Context, next func(huma.Context)) {
+		ctx = huma.WithValue(ctx, constant.CtxKeyPassthroughResponseHeaders, map[string]string{
+			"X-Upstream-Cache": "hit",
+		})
+		next(ctx)
 	})
 	huma.Register(api, huma.Operation{
 		OperationID: "streamHeaders",
 		Method:      http.MethodGet,
 		Path:        "/stream",
 	}, func(_ context.Context, _ *struct{}) (*huma.StreamResponse, error) {
-		return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
+		return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, []byte(`{"ok":true}`))
 			_ = w.Flush()
 		}), nil
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/stream", nil)
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0})
 	if err != nil {
 		t.Fatalf("stream request: %v", err)
 	}

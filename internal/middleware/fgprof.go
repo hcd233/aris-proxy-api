@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"github.com/gofiber/contrib/fgprof"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/contrib/v3/fgprof"
+	"github.com/gofiber/fiber/v3"
 )
 
 // FgprofMiddleware fgprof中间件

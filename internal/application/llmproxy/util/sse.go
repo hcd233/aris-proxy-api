@@ -16,7 +16,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
-	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
 
@@ -37,9 +36,9 @@ func WrapErrorSSE(ctx context.Context, err *model.Error) (rsp *huma.StreamRespon
 			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
-			fCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			fCtx.SendStreamWriter(func(w *bufio.Writer) {
 				writeSSEErrorResponse(ctx, w, err)
-			}))
+			})
 		},
 	}
 }

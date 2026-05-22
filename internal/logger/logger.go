@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"go.uber.org/zap"
@@ -66,7 +66,7 @@ func WithCtx(ctx context.Context) *zap.Logger {
 //	return *zap.Logger
 //	author centonhuang
 //	update 2025-08-22 14:30:03
-func WithFCtx(c *fiber.Ctx) *zap.Logger {
+func WithFCtx(c fiber.Ctx) *zap.Logger {
 	logger := defaultLogger
 	if traceID := c.Locals(constant.CtxKeyTraceID); traceID != nil {
 		if s, ok := traceID.(string); ok {

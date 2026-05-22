@@ -2,11 +2,12 @@ package middleware
 
 import (
 	"cmp"
-	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"

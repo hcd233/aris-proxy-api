@@ -16,7 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"go.uber.org/zap"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
@@ -137,7 +137,9 @@ func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
 
 		// Step 1: 停止接受新 HTTP 请求，等待现有请求完成
 		logger.Logger().Info("[Server] Step 1/6: Shutting down HTTP server...")
-		if err := app.ShutdownWithTimeout(constant.FiberShutdownTimeout); err != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), constant.FiberShutdownTimeout)
+		defer shutdownCancel()
+		if err := app.ShutdownWithContext(shutdownCtx); err != nil {
 			logger.Logger().Error("[Server] HTTP server shutdown error", zap.Error(err))
 		}
 

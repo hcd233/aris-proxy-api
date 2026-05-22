@@ -3,7 +3,7 @@ package router
 
 import (
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -32,7 +32,7 @@ type APIRouterDependencies struct {
 //	@author centonhuang
 //	@update 2025-11-10 17:26:08
 func RegisterDocsRouter(app *fiber.App) {
-	app.Get("/docs", func(c *fiber.Ctx) error {
+	app.Get("/docs", func(c fiber.Ctx) error {
 		html := `<!doctype html>
 <html>
   <head>

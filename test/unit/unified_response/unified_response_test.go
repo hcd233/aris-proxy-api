@@ -5,12 +5,12 @@
 package unified_response
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"os"
 	"testing"
 
 	"github.com/bytedance/sonic"
 
+	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"

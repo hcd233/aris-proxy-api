@@ -6,12 +6,12 @@
 package model_body
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"strings"
 	"testing"
 
 	"github.com/bytedance/sonic"
 
+	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"

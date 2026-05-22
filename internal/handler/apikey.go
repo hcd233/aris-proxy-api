@@ -3,11 +3,11 @@ package handler
 
 import (
 	"context"
-	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"strings"
 
 	"go.uber.org/zap"
 
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"

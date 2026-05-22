@@ -87,16 +87,13 @@ func TestConverterAndUsecaseFilesAreSplitByResponsibility(t *testing.T) {
 		"internal/application/llmproxy/converter/anthropic_response.go",
 		"internal/application/llmproxy/converter/anthropic_sse.go",
 		"internal/application/llmproxy/converter/openai_sse.go",
-		"internal/application/llmproxy/usecase/openai_chat_stream.go",
-		"internal/application/llmproxy/usecase/openai_chat_unary.go",
-		"internal/application/llmproxy/usecase/openai_response_stream.go",
-		"internal/application/llmproxy/usecase/openai_response_unary.go",
-		"internal/application/llmproxy/usecase/anthropic_message_stream.go",
-		"internal/application/llmproxy/usecase/anthropic_message_unary.go",
+		"internal/application/llmproxy/usecase/anthropic_message.go",
+		"internal/application/llmproxy/usecase/openai_chat.go",
+		"internal/application/llmproxy/usecase/openai_response.go",
 	}
 	for _, file := range files {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(file))); err != nil {
-			t.Fatalf("expected split file %s to exist: %v", file, err)
+			t.Fatalf("expected file %s to exist: %v", file, err)
 		}
 	}
 }

@@ -4,18 +4,18 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"strconv"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
-	"github.com/valyala/fasthttp"
 )
 
 // PingHandler 健康检查处理器
@@ -57,7 +57,7 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
-			fCtx.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			fCtx.SendStreamWriter(func(w *bufio.Writer) {
 				for i := range constant.SSEHeartbeatCount {
 					data := &dto.SSEResponse{
 						DataType: enum.SSEDataTypeHeartBeat,
@@ -70,7 +70,7 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 					}
 					time.Sleep(constant.HeartbeatInterval)
 				}
-			}))
+			})
 		},
 	}, nil
 }

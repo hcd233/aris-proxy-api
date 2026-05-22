@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"io"
 	"net/http"
 	"strings"
@@ -12,7 +11,7 @@ import (
 	"github.com/bytedance/sonic"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -22,17 +21,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+
+	usecase "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 )
 
 type openAIProxy struct{}
 
 var _ usecase.OpenAIProxyPort = (*openAIProxy)(nil)
 
-// NewOpenAIProxy 创建 OpenAI 代理
-//
-//	@return usecase.OpenAIProxyPort
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
 func NewOpenAIProxy() usecase.OpenAIProxyPort {
 	return &openAIProxy{}
 }
