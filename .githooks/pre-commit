@@ -21,7 +21,66 @@ fail() {
 }
 
 # --------------------------------------------------------------------------
-# 1. codegraph sync — sync file changes to the code knowledge graph index
+# 1. gofmt — auto-format source files and re-stage changed files
+# --------------------------------------------------------------------------
+printf "$INFO Running gofmt -w ...\n"
+gofmt -w .
+
+if ! git diff --quiet; then
+    FORMATTED=$(git diff --name-only)
+    printf "$INFO gofmt reformatted the following files (auto-staging):\n"
+    echo "$FORMATTED" | sed 's/^/       /'
+    echo ""
+    git add $FORMATTED
+fi
+printf "$PASS gofmt\n"
+
+# --------------------------------------------------------------------------
+# 2. go mod tidy — verify go.mod / go.sum are consistent and re-stage
+# --------------------------------------------------------------------------
+printf "$INFO Running go mod tidy...\n"
+$GO_BIN mod tidy
+
+if ! git diff --quiet go.mod go.sum; then
+    printf "$INFO go.mod or go.sum changed after 'go mod tidy' (auto-staging):\n"
+    git diff --name-only go.mod go.sum | sed 's/^/       /'
+    echo ""
+    git add go.mod go.sum
+fi
+printf "$PASS go mod tidy\n"
+
+# --------------------------------------------------------------------------
+# 3. go vet — static analysis
+# --------------------------------------------------------------------------
+printf "$INFO Running go vet ./...\n"
+
+if ! $GO_BIN vet ./... 2>&1; then
+    fail "go vet failed. Please fix the issues above before committing."
+fi
+printf "$PASS go vet\n"
+
+# --------------------------------------------------------------------------
+# 4. go test — run all unit tests, block commit on any failure
+# --------------------------------------------------------------------------
+printf "$INFO Running go test -count=1 ./...\n"
+
+if ! $GO_BIN test -count=1 ./... 2>&1; then
+    fail "go test failed. All tests must pass before committing."
+fi
+printf "$PASS go test\n"
+
+# --------------------------------------------------------------------------
+# 5. lint — project convention lint
+# --------------------------------------------------------------------------
+printf "$INFO Running lint...\n"
+
+if ! $GO_BIN run main.go lint ./... 2>&1; then
+    fail "lint failed. Please fix the convention violations above before committing."
+fi
+printf "$PASS lint\n"
+
+# --------------------------------------------------------------------------
+# 6. codegraph sync — sync file changes to the code knowledge graph index
 # --------------------------------------------------------------------------
 printf "$INFO Running codegraph sync ...\n"
 
@@ -42,65 +101,6 @@ else
     printf "$INFO codegraph CLI not found — skipping\n"
 fi
 printf "$PASS codegraph sync\n"
-
-# --------------------------------------------------------------------------
-# 2. gofmt — auto-format source files and re-stage changed files
-# --------------------------------------------------------------------------
-printf "$INFO Running gofmt -w ...\n"
-gofmt -w .
-
-if ! git diff --quiet; then
-    FORMATTED=$(git diff --name-only)
-    printf "$INFO gofmt reformatted the following files (auto-staging):\n"
-    echo "$FORMATTED" | sed 's/^/       /'
-    echo ""
-    git add $FORMATTED
-fi
-printf "$PASS gofmt\n"
-
-# --------------------------------------------------------------------------
-# 3. go mod tidy — verify go.mod / go.sum are consistent and re-stage
-# --------------------------------------------------------------------------
-printf "$INFO Running go mod tidy...\n"
-$GO_BIN mod tidy
-
-if ! git diff --quiet go.mod go.sum; then
-    printf "$INFO go.mod or go.sum changed after 'go mod tidy' (auto-staging):\n"
-    git diff --name-only go.mod go.sum | sed 's/^/       /'
-    echo ""
-    git add go.mod go.sum
-fi
-printf "$PASS go mod tidy\n"
-
-# --------------------------------------------------------------------------
-# 4. go vet — static analysis
-# --------------------------------------------------------------------------
-printf "$INFO Running go vet ./...\n"
-
-if ! $GO_BIN vet ./... 2>&1; then
-    fail "go vet failed. Please fix the issues above before committing."
-fi
-printf "$PASS go vet\n"
-
-# --------------------------------------------------------------------------
-# 5. go test — run all unit tests, block commit on any failure
-# --------------------------------------------------------------------------
-printf "$INFO Running go test -count=1 ./...\n"
-
-if ! $GO_BIN test -count=1 ./... 2>&1; then
-    fail "go test failed. All tests must pass before committing."
-fi
-printf "$PASS go test\n"
-
-# --------------------------------------------------------------------------
-# 6. lint — project convention lint
-# --------------------------------------------------------------------------
-printf "$INFO Running lint...\n"
-
-if ! $GO_BIN run main.go lint ./... 2>&1; then
-    fail "lint failed. Please fix the convention violations above before committing."
-fi
-printf "$PASS lint\n"
 
 # --------------------------------------------------------------------------
 echo ""
