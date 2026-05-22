@@ -1,7 +1,6 @@
 package openai_stream_tool_call
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"os"
 	"testing"
 

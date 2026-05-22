@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -87,14 +87,14 @@ func GuardMiddleware(cache *redis.Client, cfg GuardConfig) fiber.Handler {
 	ignoredPaths := lo.SliceToMap(cfg.IgnoredPaths, func(p string) (string, struct{}) {
 		return p, struct{}{}
 	})
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		if cache == nil {
 			logger.WithFCtx(c).Warn("[GuardMiddleware] Redis dependency is nil")
 			return c.Next()
 		}
 		ip := c.IP()
 		banKey := fmt.Sprintf(constant.ScannerBanKeyTemplate, ip)
-		ctx := c.Context()
+		ctx := c.RequestCtx()
 
 		banned, err := cache.Exists(ctx, banKey).Result()
 		if err != nil {

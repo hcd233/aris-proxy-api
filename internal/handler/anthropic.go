@@ -3,7 +3,6 @@ package handler
 
 import (
 	"context"
-	"github.com/hcd233/aris-proxy-api/internal/api/util"
 
 	"github.com/danielgtaylor/huma/v2"
 

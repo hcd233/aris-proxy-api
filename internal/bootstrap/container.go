@@ -2,7 +2,7 @@ package bootstrap
 
 import (
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"

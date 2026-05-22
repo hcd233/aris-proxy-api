@@ -9,7 +9,6 @@ package upstream_error
 import (
 	"context"
 	"errors"
-	"github.com/hcd233/aris-proxy-api/internal/api/util"
 	"os"
 	"strings"
 	"testing"

@@ -9,7 +9,6 @@ package anthropic_sse
 import (
 	"bufio"
 	"bytes"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"os"
 	"testing"
 

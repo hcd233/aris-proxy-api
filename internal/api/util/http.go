@@ -10,14 +10,13 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
-	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
 
@@ -42,7 +41,7 @@ func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			fiberCtx := humafiber.Unwrap(humaCtx)
-			if headers := util.GetPassthroughResponseHeaders(ctx); headers != nil {
+			if headers := util.GetPassthroughResponseHeaders(humaCtx.Context()); headers != nil {
 				for k, hv := range headers {
 					fiberCtx.Set(k, hv)
 				}
@@ -52,7 +51,8 @@ func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
 			fiberCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)
 			fiberCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fiberCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
-			fiberCtx.Status(fiber.StatusOK).Response().SetBodyStreamWriter(fasthttp.StreamWriter(handler))
+			fiberCtx.Status(fiber.StatusOK)
+			fiberCtx.SendStreamWriter(handler)
 		},
 	}
 }

@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 
 	"go.uber.org/zap"
 
