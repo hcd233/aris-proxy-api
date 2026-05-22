@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -84,7 +84,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 
 	sampler := &logSampler{lastLogs: make(map[string]time.Time, len(cfg.SamplingRules))}
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now().UTC()
 		path := c.Path()
 		query := string(c.Request().URI().QueryString())

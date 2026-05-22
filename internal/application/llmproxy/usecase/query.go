@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"time"
 
 	"github.com/samber/lo"
@@ -12,6 +11,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+
+	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
