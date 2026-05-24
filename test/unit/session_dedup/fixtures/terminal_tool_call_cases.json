@@ -1,0 +1,99 @@
+[
+    {
+        "name": "terminal_tool_call_basic",
+        "description": "Session with last message being assistant+tool_calls is marked redundant, ToolIDs merged to parent",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5], "tool_ids": [10]},
+            {"id": 2, "message_ids": [1, 2, 3], "tool_ids": [20]}
+        ],
+        "messages": [
+            {"id": 5, "role": "user", "tool_calls": []},
+            {"id": 3, "role": "assistant", "tool_calls": [{"id": "tc1", "function": {"name": "search"}}]}
+        ],
+        "exclude_ids": [],
+        "expected_redundant_ids": [2],
+        "expected_merge_mapping": {"1": [10, 20]}
+    },
+    {
+        "name": "terminal_tool_call_no_parent",
+        "description": "Terminal tool call session has no parent (no longer session contains it), still marked redundant but no merge",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2], "tool_ids": [10]}
+        ],
+        "messages": [
+            {"id": 2, "role": "assistant", "tool_calls": [{"id": "tc1", "function": {"name": "search"}}]}
+        ],
+        "exclude_ids": [],
+        "expected_redundant_ids": [1],
+        "expected_merge_mapping": {}
+    },
+    {
+        "name": "terminal_tool_call_excluded_session",
+        "description": "Session already in excludeIDs is skipped",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3], "tool_ids": [10]},
+            {"id": 2, "message_ids": [1, 2], "tool_ids": [20]}
+        ],
+        "messages": [
+            {"id": 2, "role": "assistant", "tool_calls": [{"id": "tc1", "function": {"name": "search"}}]},
+            {"id": 3, "role": "user", "tool_calls": []}
+        ],
+        "exclude_ids": [2],
+        "expected_redundant_ids": [],
+        "expected_merge_mapping": {}
+    },
+    {
+        "name": "terminal_tool_call_multiple_parents_picks_longest",
+        "description": "When multiple sessions contain the target, the longest is chosen as parent; if same length, smallest ID wins",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5, 6], "tool_ids": [100]},
+            {"id": 2, "message_ids": [1, 2, 3, 4, 5], "tool_ids": [200]},
+            {"id": 3, "message_ids": [1, 2, 3], "tool_ids": [30]}
+        ],
+        "messages": [
+            {"id": 3, "role": "assistant", "tool_calls": [{"id": "tc1", "function": {"name": "search"}}]},
+            {"id": 5, "role": "user", "tool_calls": []},
+            {"id": 6, "role": "user", "tool_calls": []}
+        ],
+        "exclude_ids": [],
+        "expected_redundant_ids": [3],
+        "expected_merge_mapping": {"1": [30, 100]}
+    },
+    {
+        "name": "terminal_tool_call_no_tool_ids",
+        "description": "Terminal tool call session with no tool_ids is still marked redundant",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4], "tool_ids": []},
+            {"id": 2, "message_ids": [1, 2, 3], "tool_ids": []}
+        ],
+        "messages": [
+            {"id": 3, "role": "assistant", "tool_calls": [{"id": "tc1", "function": {"name": "search"}}]},
+            {"id": 4, "role": "user", "tool_calls": []}
+        ],
+        "exclude_ids": [],
+        "expected_redundant_ids": [2],
+        "expected_merge_mapping": {}
+    },
+    {
+        "name": "terminal_tool_call_last_msg_not_assistant",
+        "description": "Session whose last message is user role should NOT be marked redundant",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3], "tool_ids": [10]}
+        ],
+        "messages": [
+            {"id": 3, "role": "user", "tool_calls": []}
+        ],
+        "exclude_ids": [],
+        "expected_redundant_ids": [],
+        "expected_merge_mapping": {}
+    },
+    {
+        "name": "terminal_tool_call_empty_sessions",
+        "description": "No sessions at all returns empty result",
+        "sessions": [],
+        "messages": [],
+        "exclude_ids": [],
+        "expected_redundant_ids": [],
+        "expected_merge_mapping": {}
+    }
+]
