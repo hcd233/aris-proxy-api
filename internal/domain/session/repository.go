@@ -99,6 +99,10 @@ type SessionDetailProjection struct {
 type SessionReadRepository interface {
 	// ListSessions 分页查询 Session 列表投影
 	ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	// ListAllSessions 分页查询所有 Session 列表投影（admin 用）
+	ListAllSessions(ctx context.Context, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影
+	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
 }

@@ -83,6 +83,22 @@ type GetSessionReq struct {
 	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
 }
 
+// ListSessionsByUserReq 分页获取当前用户Session列表请求（JWT认证）
+//
+//	@author centonhuang
+//	@update 2026-05-24 10:00:00
+type ListSessionsByUserReq struct {
+	model.PageParam
+}
+
+// GetSessionByUserReq 获取当前用户Session详情请求（JWT认证）
+//
+//	@author centonhuang
+//	@update 2026-05-24 10:00:00
+type GetSessionByUserReq struct {
+	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+}
+
 // GetSessionRsp 获取Session详情响应
 //
 //	@author centonhuang

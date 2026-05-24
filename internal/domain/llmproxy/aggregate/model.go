@@ -44,3 +44,16 @@ func (*Model) AggregateType() string { return constant.AggregateTypeModel }
 func (m *Model) Alias() vo.EndpointAlias { return m.alias }
 func (m *Model) ModelName() string       { return m.model }
 func (m *Model) EndpointID() uint        { return m.endpointID }
+
+// Update 更新 Model 字段（仅非 nil 字段更新）
+func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint) {
+	if alias != nil {
+		m.alias = *alias
+	}
+	if model != nil {
+		m.model = *model
+	}
+	if endpointID != nil {
+		m.endpointID = *endpointID
+	}
+}
