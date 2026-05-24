@@ -111,21 +111,14 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		// 不return，继续执行已有的去重结果
 	}
 
-	var terminalToolCallResult MergeResult
 	if len(messages) > 0 {
-		terminalToolCallResult = FindTerminalToolCallSessions(sessions, messages, mergeResult.RedundantIDs)
-	}
-	if len(terminalToolCallResult.RedundantIDs) > 0 {
-		mergeResult.RedundantIDs = append(mergeResult.RedundantIDs, terminalToolCallResult.RedundantIDs...)
+		terminalToolCallResult := FindTerminalToolCallSessions(sessions, messages, mergeResult.RedundantIDs)
+		if len(terminalToolCallResult.RedundantIDs) > 0 {
+			mergeResult.RedundantIDs = append(mergeResult.RedundantIDs, terminalToolCallResult.RedundantIDs...)
 
-		// 合并TerminalToolCall的ToolIDs映射到主结果
-		for sessionID, toolIDSet := range terminalToolCallResult.MergeMapping {
-			if mergeResult.MergeMapping[sessionID] == nil {
-				mergeResult.MergeMapping[sessionID] = toolIDSet
-			} else {
-				for tid := range toolIDSet {
-					mergeResult.MergeMapping[sessionID][tid] = struct{}{}
-				}
+			// 合并TerminalToolCall的ToolIDs映射到主结果
+			for sessionID, toolIDSet := range terminalToolCallResult.MergeMapping {
+				mergeResult.MergeMapping[sessionID] = mergeToolIDs(mergeResult.MergeMapping[sessionID], toolIDSet)
 			}
 		}
 	}
@@ -195,6 +188,9 @@ func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.D
 		return nil, nil
 	}
 
+	// lo.Uniq 去重保留首次出现顺序，但传入 BatchGetByField 做 WHERE IN 查询时
+	// 数据库不保证返回顺序与 IN 子句一致。当前代码用 msgMap 按 ID 映射取值，
+	// 因此不依赖查询结果的顺序。如需依赖顺序，须在此处手动排序。
 	uniqIDs := lo.Uniq(lastMsgIDs)
 	messages, err := c.messageDAO.BatchGetByField(db, constant.WhereFieldID, uniqIDs,
 		[]string{constant.FieldID, constant.FieldMessage})
@@ -299,13 +295,13 @@ func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
 				redundantIDs = append(redundantIDs, shorter.id)
 
 				// 将短Session的ToolIDs合并到长Session
-				if len(shorter.toolIDs) > 0 {
+				if len(shorter.toolIDs) > 0 || len(longer.toolIDs) > 0 {
 					if mergeMapping[longer.id] == nil {
 						mergeMapping[longer.id] = make(map[uint]struct{})
-						// 先把长Session自己的ToolIDs加入集合
-						for _, tid := range longer.toolIDs {
-							mergeMapping[longer.id][tid] = struct{}{}
-						}
+					}
+					// 先把长Session自己的ToolIDs加入集合
+					for _, tid := range longer.toolIDs {
+						mergeMapping[longer.id][tid] = struct{}{}
 					}
 					// 合并短Session的ToolIDs
 					for _, tid := range shorter.toolIDs {
@@ -320,6 +316,26 @@ func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
 		RedundantIDs: redundantIDs,
 		MergeMapping: mergeMapping,
 	}
+}
+
+// mergeToolIDs 合并两个 ToolID 集合，返回新的集合
+//
+//	@param existing map[uint]struct{} 已有的 ToolID 集合（可以为 nil）
+//	@param incoming map[uint]struct{} 需要合并的 ToolID 集合
+//	@return map[uint]struct{} 合并后的集合
+//	@author centonhuang
+//	@update 2026-05-24 10:00:00
+func mergeToolIDs(existing, incoming map[uint]struct{}) map[uint]struct{} {
+	if len(incoming) == 0 {
+		return existing
+	}
+	if existing == nil {
+		existing = make(map[uint]struct{}, len(incoming))
+	}
+	for tid := range incoming {
+		existing[tid] = struct{}{}
+	}
+	return existing
 }
 
 // FindRedundantSessions 查找MessageIDs被其他Session完全包含（子数组）的冗余Session
@@ -451,16 +467,14 @@ func FindTerminalToolCallSessions(sessions []*dbmodel.Session, messages []*dbmod
 			if len(s.ToolIDs) > 0 {
 				parentID := findParentSessionID(s, sessions)
 				if parentID > 0 {
-					if result.MergeMapping[parentID] == nil {
-						parentSet := make(map[uint]struct{})
-						for _, tid := range sessionByID[parentID].ToolIDs {
-							parentSet[tid] = struct{}{}
-						}
-						result.MergeMapping[parentID] = parentSet
+					parentToolIDSet := make(map[uint]struct{})
+					for _, tid := range sessionByID[parentID].ToolIDs {
+						parentToolIDSet[tid] = struct{}{}
 					}
 					for _, tid := range s.ToolIDs {
-						result.MergeMapping[parentID][tid] = struct{}{}
+						parentToolIDSet[tid] = struct{}{}
 					}
+					result.MergeMapping[parentID] = parentToolIDSet
 				}
 			}
 		}
@@ -474,6 +488,9 @@ func findParentSessionID(target *dbmodel.Session, sessions []*dbmodel.Session) u
 		return 0
 	}
 
+	// 选择 MessageIDs 最长且 ID 最小的 session 作为 parent，保证确定性
+	var parentID uint
+	var parentLen int
 	for _, s := range sessions {
 		if s.ID == target.ID {
 			continue
@@ -481,9 +498,14 @@ func findParentSessionID(target *dbmodel.Session, sessions []*dbmodel.Session) u
 		if len(s.MessageIDs) <= len(target.MessageIDs) {
 			continue
 		}
-		if IsSubArray(target.MessageIDs, s.MessageIDs) {
-			return s.ID
+		if !IsSubArray(target.MessageIDs, s.MessageIDs) {
+			continue
+		}
+		// 优先选 MessageIDs 最长的；长度相同选 ID 最小的
+		if len(s.MessageIDs) > parentLen || (len(s.MessageIDs) == parentLen && s.ID < parentID) {
+			parentID = s.ID
+			parentLen = len(s.MessageIDs)
 		}
 	}
-	return 0
+	return parentID
 }
