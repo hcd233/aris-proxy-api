@@ -24,7 +24,7 @@ func TestInfrastructureClientsAreInjectedWithoutGlobalGetters(t *testing.T) {
 		}
 		if entry.IsDir() {
 			name := entry.Name()
-			if name == ".git" || name == ".worktrees" || name == "graphify-out" {
+			if name == ".git" || name == ".worktrees" {
 				return filepath.SkipDir
 			}
 			return nil
