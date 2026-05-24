@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -28,6 +29,7 @@ type SessionDeduplicateCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
 	sessionDAO *dao.SessionDAO
+	messageDAO *dao.MessageDAO
 }
 
 // NewSessionDeduplicateCron 创建Session去重定时任务
@@ -42,6 +44,7 @@ func NewSessionDeduplicateCron(db *gorm.DB) Cron {
 		),
 		db:         db,
 		sessionDAO: dao.GetSessionDAO(),
+		messageDAO: dao.GetMessageDAO(),
 	}
 }
 
@@ -100,6 +103,33 @@ func (c *SessionDeduplicateCron) deduplicate() {
 	}
 
 	mergeResult := FindRedundantSessionsWithMerge(sessions)
+
+	// 额外检查：Session最后一条消息是assistant且有tool_calls的也标记为冗余
+	messages, err := c.loadLastMessagesForTerminalToolCheck(db, sessions, mergeResult.RedundantIDs)
+	if err != nil {
+		log.Error("[SessionDeduplicateCron] Failed to load last messages for terminal tool call check", zap.Error(err))
+		// 不return，继续执行已有的去重结果
+	}
+
+	var terminalToolCallResult MergeResult
+	if len(messages) > 0 {
+		terminalToolCallResult = FindTerminalToolCallSessions(sessions, messages, mergeResult.RedundantIDs)
+	}
+	if len(terminalToolCallResult.RedundantIDs) > 0 {
+		mergeResult.RedundantIDs = append(mergeResult.RedundantIDs, terminalToolCallResult.RedundantIDs...)
+
+		// 合并TerminalToolCall的ToolIDs映射到主结果
+		for sessionID, toolIDSet := range terminalToolCallResult.MergeMapping {
+			if mergeResult.MergeMapping[sessionID] == nil {
+				mergeResult.MergeMapping[sessionID] = toolIDSet
+			} else {
+				for tid := range toolIDSet {
+					mergeResult.MergeMapping[sessionID][tid] = struct{}{}
+				}
+			}
+		}
+	}
+
 	if len(mergeResult.RedundantIDs) == 0 {
 		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", len(sessions)))
 		return
@@ -142,6 +172,37 @@ func (c *SessionDeduplicateCron) deduplicate() {
 		zap.Int("total", len(sessions)),
 		zap.Int("deleted", len(mergeResult.RedundantIDs)),
 		zap.Int("merged", mergedCount))
+}
+
+func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.DB, sessions []*dbmodel.Session, excludeIDs []uint) ([]*dbmodel.Message, error) {
+	excludeSet := make(map[uint]struct{}, len(excludeIDs))
+	for _, id := range excludeIDs {
+		excludeSet[id] = struct{}{}
+	}
+
+	lastMsgIDs := make([]uint, 0)
+	for _, s := range sessions {
+		if _, excluded := excludeSet[s.ID]; excluded {
+			continue
+		}
+		if len(s.MessageIDs) == 0 {
+			continue
+		}
+		lastMsgIDs = append(lastMsgIDs, s.MessageIDs[len(s.MessageIDs)-1])
+	}
+
+	if len(lastMsgIDs) == 0 {
+		return nil, nil
+	}
+
+	uniqIDs := lo.Uniq(lastMsgIDs)
+	messages, err := c.messageDAO.BatchGetByField(db, constant.WhereFieldID, uniqIDs,
+		[]string{constant.FieldID, constant.FieldMessage})
+	if err != nil {
+		return nil, err
+	}
+
+	return messages, nil
 }
 
 // MergeResult 表示Session去重后的合并结果
@@ -336,4 +397,93 @@ func isEqualSlice(a, b []uint) bool {
 		}
 	}
 	return true
+}
+
+// FindTerminalToolCallSessions 查找最后一条消息是assistant且有tool_calls的session
+//
+// 这些session的对话在工具调用阶段中断，属于不完整分支。
+// 标记为冗余并尝试查找parent session以合并ToolIDs。
+//
+//	@param sessions []*dbmodel.Session
+//	@param messages []*dbmodel.Message
+//	@param excludeIDs []uint 已被子数组检查标记为冗余的session ID
+//	@return MergeResult
+//	@author centonhuang
+//	@update 2026-05-24 10:00:00
+func FindTerminalToolCallSessions(sessions []*dbmodel.Session, messages []*dbmodel.Message, excludeIDs []uint) MergeResult {
+	excludeSet := make(map[uint]struct{}, len(excludeIDs))
+	for _, id := range excludeIDs {
+		excludeSet[id] = struct{}{}
+	}
+
+	msgMap := make(map[uint]*dbmodel.Message, len(messages))
+	for _, m := range messages {
+		msgMap[m.ID] = m
+	}
+
+	sessionByID := make(map[uint]*dbmodel.Session, len(sessions))
+	for _, s := range sessions {
+		sessionByID[s.ID] = s
+	}
+
+	result := MergeResult{
+		RedundantIDs: make([]uint, 0),
+		MergeMapping: make(map[uint]map[uint]struct{}),
+	}
+
+	for _, s := range sessions {
+		if _, excluded := excludeSet[s.ID]; excluded {
+			continue
+		}
+		if len(s.MessageIDs) == 0 {
+			continue
+		}
+
+		lastMsgID := s.MessageIDs[len(s.MessageIDs)-1]
+		msg, ok := msgMap[lastMsgID]
+		if !ok || msg.Message == nil {
+			continue
+		}
+
+		if msg.Message.Role == enum.RoleAssistant && len(msg.Message.ToolCalls) > 0 {
+			result.RedundantIDs = append(result.RedundantIDs, s.ID)
+
+			if len(s.ToolIDs) > 0 {
+				parentID := findParentSessionID(s, sessions)
+				if parentID > 0 {
+					if result.MergeMapping[parentID] == nil {
+						parentSet := make(map[uint]struct{})
+						for _, tid := range sessionByID[parentID].ToolIDs {
+							parentSet[tid] = struct{}{}
+						}
+						result.MergeMapping[parentID] = parentSet
+					}
+					for _, tid := range s.ToolIDs {
+						result.MergeMapping[parentID][tid] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+func findParentSessionID(target *dbmodel.Session, sessions []*dbmodel.Session) uint {
+	if len(target.MessageIDs) == 0 {
+		return 0
+	}
+
+	for _, s := range sessions {
+		if s.ID == target.ID {
+			continue
+		}
+		if len(s.MessageIDs) <= len(target.MessageIDs) {
+			continue
+		}
+		if IsSubArray(target.MessageIDs, s.MessageIDs) {
+			return s.ID
+		}
+	}
+	return 0
 }

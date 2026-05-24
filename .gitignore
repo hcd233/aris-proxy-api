@@ -52,3 +52,6 @@ logs/
 *.obj
 *.o
 *.ko
+
+# OMO
+.omo/
