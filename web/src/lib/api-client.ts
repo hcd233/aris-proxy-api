@@ -117,7 +117,7 @@ class ApiClient {
   // ─── Auth ──────────────────────────────────────────────────────────────────
 
   getOAuth2LoginURL(provider: OAuth2Provider): string {
-    return `${API_BASE}/api/v1/oauth2/${provider}/login`;
+    return `${API_BASE}/api/v1/oauth2/login?platform=${provider}`;
   }
 
   async oauth2Callback(body: CallbackReqBody): Promise<CallbackRsp> {
