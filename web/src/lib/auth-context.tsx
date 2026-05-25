@@ -89,8 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const login = useCallback((provider: OAuth2Provider) => {
-    window.location.href = api.getOAuth2LoginURL(provider);
+  const login = useCallback(async (provider: OAuth2Provider) => {
+    try {
+      const rsp = await api.oauth2Login(provider);
+      if (rsp.error) {
+        console.error("[Auth] Login failed", rsp.error);
+        return;
+      }
+      if (rsp.redirectURL) {
+        window.location.href = rsp.redirectURL;
+      }
+    } catch (err) {
+      console.error("[Auth] Login error", err);
+    }
   }, []);
 
   const handleCallback = useCallback(
