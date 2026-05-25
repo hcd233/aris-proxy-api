@@ -7,7 +7,7 @@ COPY web/package.json web/package-lock.json ./
 RUN npm ci
 
 COPY web/src/ ./src/
-COPY web/public/ ./public/ 2>/dev/null || true
+COPY web/public/ ./public/
 COPY web/next.config.ts web/postcss.config.mjs web/components.json web/tsconfig.json web/eslint.config.mjs ./
 RUN npm run build
 
