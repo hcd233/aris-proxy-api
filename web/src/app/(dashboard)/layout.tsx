@@ -37,34 +37,34 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: "Dashboard",
-    href: "/web/",
+    href: "/",
     icon: <LayoutDashboard className="size-4" />,
   },
   {
     label: "Sessions",
-    href: "/web/sessions/",
+    href: "/sessions/",
     icon: <MessageSquare className="size-4" />,
   },
   {
     label: "API Keys",
-    href: "/web/apikeys/",
+    href: "/apikeys/",
     icon: <Key className="size-4" />,
   },
   {
     label: "Endpoints",
-    href: "/web/endpoints/",
+    href: "/endpoints/",
     icon: <Server className="size-4" />,
     adminOnly: true,
   },
   {
     label: "Models",
-    href: "/web/models/",
+    href: "/models/",
     icon: <Cpu className="size-4" />,
     adminOnly: true,
   },
   {
     label: "Profile",
-    href: "/web/profile/",
+    href: "/profile/",
     icon: <User className="size-4" />,
   },
 ];
@@ -87,8 +87,8 @@ function SidebarNav({
     <nav className="flex flex-col gap-1 px-2">
       {visibleItems.map((item) => {
         const isActive =
-          item.href === "/web/"
-            ? pathname === "/web/" || pathname === "/web"
+          item.href === "/"
+            ? pathname === "/"
             : pathname.startsWith(item.href);
 
         return (

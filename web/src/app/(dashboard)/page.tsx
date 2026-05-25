@@ -142,7 +142,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Sessions</CardTitle>
-            <Link href="/web/sessions/">
+            <Link href="/sessions/">
               <Button variant="ghost" size="sm">
                 View all <ArrowRight className="ml-1 size-3" />
               </Button>
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                 {recentSessions.map((s) => (
                   <Link
                     key={s.id}
-                    href={`/web/sessions/detail/?id=${s.id}`}
+                    href={`/sessions/detail/?id=${s.id}`}
                     className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-accent"
                   >
                     <div className="min-w-0 flex-1">
@@ -191,13 +191,13 @@ export default function DashboardPage() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/web/apikeys/" className="block">
+            <Link href="/apikeys/" className="block">
               <Button variant="outline" className="w-full justify-start gap-2">
                 <Plus className="size-4" />
                 Create API Key
               </Button>
             </Link>
-            <Link href="/web/sessions/" className="block">
+            <Link href="/sessions/" className="block">
               <Button variant="outline" className="w-full justify-start gap-2">
                 <MessageSquare className="size-4" />
                 View Sessions
@@ -205,13 +205,13 @@ export default function DashboardPage() {
             </Link>
             {isAdmin() && (
               <>
-                <Link href="/web/endpoints/" className="block">
+                <Link href="/endpoints/" className="block">
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <Server className="size-4" />
                     Manage Endpoints
                   </Button>
                 </Link>
-                <Link href="/web/models/" className="block">
+                <Link href="/models/" className="block">
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <Cpu className="size-4" />
                     Manage Models

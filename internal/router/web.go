@@ -16,13 +16,19 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 		return
 	}
 
+	indexContent, err := fs.ReadFile(subFS, "index.html")
+	if err != nil {
+		logger.Logger().Error("failed to read index.html from embedded dist/", zap.Error(err))
+		return
+	}
+
 	app.Use("/web", static.New("", static.Config{
 		FS:         subFS,
 		IndexNames: []string{"index.html"},
 	}))
 
-	app.Use("/web/*", static.New("", static.Config{
-		FS:         subFS,
-		IndexNames: []string{"index.html"},
-	}))
+	app.Get("/web/*", func(c fiber.Ctx) error {
+		c.Type("html", "utf-8")
+		return c.Send(indexContent)
+	})
 }
