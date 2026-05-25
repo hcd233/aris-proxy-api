@@ -324,3 +324,12 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - 使用 `.worktrees/` 作为 git worktree 目录。
 - `AGENTS.md`、`CLAUDE.md`、`CODEBUDDY.md` 是项目级持久规范，修改其中一个时保持同步。
 - 编写文档必须使用中文
+
+### Git 分支规范
+
+- **feature/\***：新功能开发，如 `feature/web-management-frontend`、`feature/add-audit-log`
+- **hotfix/\***：线上紧急修复，如 `hotfix/fix-token-expiry`、`hotfix/fix-sse-panic`
+- **refactor/\***：重构，如 `refactor/split-endpoint-model`
+- **chore/\***：杂项（依赖升级、工具链配置等），如 `chore/upgrade-go-version`
+- 分支名使用小写 kebab-case，简短描述意图
+- 禁止使用 `feat/`、`fix/` 等缩写前缀

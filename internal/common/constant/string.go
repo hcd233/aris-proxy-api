@@ -134,4 +134,37 @@ const (
 	UpstreamErrorTemplate           = "upstream returned status %d"
 	UpstreamConnectionErrorTemplate = "upstream connection error: %v"
 	UpstreamConnectionErrorMsg      = "upstream connection error"
+
+	// Endpoint/Model DB field names
+	FieldEndpointName                        = "name"
+	FieldEndpointOpenaiBaseURL               = "openai_base_url"
+	FieldEndpointAnthropicBaseURL            = "anthropic_base_url"
+	FieldEndpointAPIKey                      = "api_key"
+	FieldEndpointSupportOpenAIChatCompletion = "support_openai_chat_completion"
+	FieldEndpointSupportOpenAIResponse       = "support_openai_response"
+	FieldEndpointSupportAnthropicMessage     = "support_anthropic_message"
+	FieldModelAlias                          = "alias"
+	FieldModelModelName                      = "model_name"
+	FieldModelEndpointID                     = "endpoint_id"
+
+	// OAuth2 callback Redis keys
+	OAuthCallbackCodeKeyPrefix = "oauth:callback:"
+	FieldOAuthAccessToken      = "access_token"
+	FieldOAuthRefreshToken     = "refresh_token"
+
+	// Router path/query/field constants
+	PathOAuth2Callback      = "/api/v1/oauth2/callback"
+	PathOAuth2ExchangeCode  = "/api/v1/oauth2/exchange-code"
+	PathWebAuthCallback     = "/web/auth/callback"
+	PathWebLogin            = "/web/login"
+	QueryCode               = "code"
+	QueryState              = "state"
+	QueryPlatform           = "platform"
+	QueryParamError         = "error"
+	MsgAuthFailed           = "auth_failed"
+	FieldAccessToken        = "accessToken"
+	FieldRefreshToken       = "refreshToken"
+	MsgCodeRequired         = "code is required"
+	MsgInvalidOrExpiredCode = "invalid or expired code"
+	WhereIDEquals           = "id = ?"
 )

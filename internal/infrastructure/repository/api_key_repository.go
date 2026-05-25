@@ -154,6 +154,20 @@ func (r *apiKeyRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+// LookupOwnerNamesByUserID 查询指定用户的所有 API Key 名称
+func (r *apiKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
+	db := r.db.WithContext(ctx)
+	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, []string{constant.FieldName})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key names by user id")
+	}
+	names := make([]string, 0, len(records))
+	for _, rec := range records {
+		names = append(names, rec.Name)
+	}
+	return names, nil
+}
+
 // toAPIKeyAggregate 将 GORM 模型映射为聚合根
 func toAPIKeyAggregate(m *dbmodel.ProxyAPIKey) (*aggregate.ProxyAPIKey, error) {
 	secret, err := vo.NewAPIKeySecret(m.Key)

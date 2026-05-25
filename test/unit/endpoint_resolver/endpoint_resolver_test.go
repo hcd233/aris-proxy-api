@@ -70,6 +70,26 @@ func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) (
 	}
 }
 
+func (s *stubModelRepo) FindByID(_ context.Context, _ uint) (*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (s *stubModelRepo) Create(_ context.Context, _ *aggregate.Model) (uint, error) {
+	return 0, nil
+}
+
+func (s *stubModelRepo) Update(_ context.Context, _ *aggregate.Model) error {
+	return nil
+}
+
+func (s *stubModelRepo) Delete(_ context.Context, _ uint) error {
+	return nil
+}
+
+func (s *stubModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
 type stubEndpointRepo struct {
 	findByIDCalled bool
 }
@@ -82,6 +102,22 @@ func (s *stubEndpointRepo) FindByID(_ context.Context, id uint) (*aggregate.Endp
 	return aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true)
 }
 
+func (s *stubEndpointRepo) Create(_ context.Context, _ *aggregate.Endpoint) (uint, error) {
+	return 0, nil
+}
+
+func (s *stubEndpointRepo) Update(_ context.Context, _ *aggregate.Endpoint) error {
+	return nil
+}
+
+func (s *stubEndpointRepo) Delete(_ context.Context, _ uint) error {
+	return nil
+}
+
+func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error) {
+	return nil, nil
+}
+
 type staticModelRepo struct {
 	models []*aggregate.Model
 }
@@ -90,12 +126,48 @@ func (s *staticModelRepo) FindByAlias(_ context.Context, _ vo.EndpointAlias) ([]
 	return s.models, nil
 }
 
+func (s *staticModelRepo) FindByID(_ context.Context, _ uint) (*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (s *staticModelRepo) Create(_ context.Context, _ *aggregate.Model) (uint, error) {
+	return 0, nil
+}
+
+func (s *staticModelRepo) Update(_ context.Context, _ *aggregate.Model) error {
+	return nil
+}
+
+func (s *staticModelRepo) Delete(_ context.Context, _ uint) error {
+	return nil
+}
+
+func (s *staticModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
 type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
 }
 
 func (s *endpointByIDRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
 	return s.endpoints[id], nil
+}
+
+func (s *endpointByIDRepo) Create(_ context.Context, _ *aggregate.Endpoint) (uint, error) {
+	return 0, nil
+}
+
+func (s *endpointByIDRepo) Update(_ context.Context, _ *aggregate.Endpoint) error {
+	return nil
+}
+
+func (s *endpointByIDRepo) Delete(_ context.Context, _ uint) error {
+	return nil
+}
+
+func (s *endpointByIDRepo) List(_ context.Context) ([]*aggregate.Endpoint, error) {
+	return nil, nil
 }
 
 func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {

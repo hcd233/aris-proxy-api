@@ -41,7 +41,7 @@ func (r *endpointRepository) FindByID(ctx context.Context, id uint) (*aggregate.
 }
 
 func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
-	return aggregate.CreateEndpoint(
+	ep, err := aggregate.CreateEndpoint(
 		m.ID,
 		m.Name,
 		m.OpenaiBaseURL,
@@ -51,6 +51,79 @@ func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
 		m.SupportOpenAIResponse,
 		m.SupportAnthropicMessage,
 	)
+	if err != nil {
+		return nil, err
+	}
+	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
+	return ep, nil
+}
+
+func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
+	return &dbmodel.Endpoint{
+		ID:                          ep.AggregateID(),
+		Name:                        ep.Name(),
+		OpenaiBaseURL:               ep.OpenaiBaseURL(),
+		AnthropicBaseURL:            ep.AnthropicBaseURL(),
+		APIKey:                      ep.APIKey(),
+		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
+		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
+		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+	}
+}
+
+// Create 创建端点
+func (r *endpointRepository) Create(ctx context.Context, ep *aggregate.Endpoint) (uint, error) {
+	db := r.db.WithContext(ctx)
+	m := toEndpointModel(ep)
+	if err := db.Create(m).Error; err != nil {
+		return 0, ierr.Wrap(ierr.ErrDBCreate, err, "create endpoint")
+	}
+	return m.ID, nil
+}
+
+// Update 更新端点（仅更新非零值字段）
+func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint) error {
+	db := r.db.WithContext(ctx)
+	updates := map[string]any{
+		constant.FieldEndpointName:                        ep.Name(),
+		constant.FieldEndpointOpenaiBaseURL:               ep.OpenaiBaseURL(),
+		constant.FieldEndpointAnthropicBaseURL:            ep.AnthropicBaseURL(),
+		constant.FieldEndpointAPIKey:                      ep.APIKey(),
+		constant.FieldEndpointSupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
+		constant.FieldEndpointSupportOpenAIResponse:       ep.SupportOpenAIResponse(),
+		constant.FieldEndpointSupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+	}
+	if err := db.Model(&dbmodel.Endpoint{}).Where(constant.WhereIDEquals, ep.AggregateID()).Updates(updates).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "update endpoint")
+	}
+	return nil
+}
+
+// Delete 删除端点
+func (r *endpointRepository) Delete(ctx context.Context, id uint) error {
+	db := r.db.WithContext(ctx)
+	if err := db.Delete(&dbmodel.Endpoint{}, id).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
+	}
+	return nil
+}
+
+// List 列出所有端点
+func (r *endpointRepository) List(ctx context.Context) ([]*aggregate.Endpoint, error) {
+	db := r.db.WithContext(ctx)
+	var models []*dbmodel.Endpoint
+	if err := db.Find(&models).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list endpoints")
+	}
+	result := make([]*aggregate.Endpoint, 0, len(models))
+	for _, m := range models {
+		ep, err := toEndpointAggregate(m)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, ep)
+	}
+	return result, nil
 }
 
 // modelRepository ModelRepository 的 GORM 实现
@@ -83,7 +156,85 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 }
 
 func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
-	return aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID)
+	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID)
+	if err != nil {
+		return nil, err
+	}
+	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
+	return model, nil
+}
+
+func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
+	return &dbmodel.Model{
+		ID:         m.AggregateID(),
+		Alias:      m.Alias().String(),
+		ModelName:  m.ModelName(),
+		EndpointID: m.EndpointID(),
+	}
+}
+
+// FindByID 按 ID 查询模型
+func (r *modelRepository) FindByID(ctx context.Context, id uint) (*aggregate.Model, error) {
+	db := r.db.WithContext(ctx)
+	m, err := r.dao.Get(db, &dbmodel.Model{ID: id}, constant.ModelRepoFieldsFull)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find model by id")
+	}
+	return toModelAggregate(m)
+}
+
+// Create 创建模型
+func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model) (uint, error) {
+	db := r.db.WithContext(ctx)
+	mdl := toModelDBModel(m)
+	if err := db.Create(mdl).Error; err != nil {
+		return 0, ierr.Wrap(ierr.ErrDBCreate, err, "create model")
+	}
+	return mdl.ID, nil
+}
+
+// Update 更新模型（仅更新非零值字段）
+func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
+	db := r.db.WithContext(ctx)
+	updates := map[string]any{
+		constant.FieldModelAlias:      m.Alias().String(),
+		constant.FieldModelModelName:  m.ModelName(),
+		constant.FieldModelEndpointID: m.EndpointID(),
+	}
+	if err := db.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "update model")
+	}
+	return nil
+}
+
+// Delete 删除模型
+func (r *modelRepository) Delete(ctx context.Context, id uint) error {
+	db := r.db.WithContext(ctx)
+	if err := db.Delete(&dbmodel.Model{}, id).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBDelete, err, "delete model")
+	}
+	return nil
+}
+
+// List 列出所有模型
+func (r *modelRepository) List(ctx context.Context) ([]*aggregate.Model, error) {
+	db := r.db.WithContext(ctx)
+	var models []*dbmodel.Model
+	if err := db.Find(&models).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list models")
+	}
+	result := make([]*aggregate.Model, 0, len(models))
+	for _, m := range models {
+		agg, err := toModelAggregate(m)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, agg)
+	}
+	return result, nil
 }
 
 // ==================== CQRS 读模型实现 ====================

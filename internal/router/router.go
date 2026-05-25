@@ -22,6 +22,8 @@ type APIRouterDependencies struct {
 	UserHandler      handler.UserHandler
 	APIKeyHandler    handler.APIKeyHandler
 	SessionHandler   handler.SessionHandler
+	EndpointHandler  handler.EndpointHandler
+	ModelHandler     handler.ModelHandler
 	AuditHandler     handler.AuditHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
@@ -77,6 +79,13 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	sessionGroup := huma.NewGroup(v1Group, "/session")
 	initSessionRouter(sessionGroup, deps.SessionHandler, deps.DB)
+	initSessionJWTRouter(sessionGroup, deps.SessionHandler, deps.DB, deps.Cache)
+
+	endpointGroup := huma.NewGroup(v1Group, "/endpoint")
+	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache)
+
+	modelGroup := huma.NewGroup(v1Group, "/model")
+	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache)
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
 	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB)

@@ -274,6 +274,64 @@ func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, 
 	return out, pageInfo, nil
 }
 
+// ListAllSessions 分页查询所有 Session 列表投影
+func (r *sessionReadRepository) ListAllSessions(ctx context.Context, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	records, pageInfo, err := r.sessionDAO.Paginate(
+		db,
+		&dbmodel.Session{},
+		constant.SessionRepoFieldsReadList,
+		&dao.CommonParam{
+			PageParam: dao.PageParam{Page: page, PageSize: pageSize},
+			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate all sessions")
+	}
+	out := make([]*session.SessionSummaryProjection, 0, len(records))
+	for _, s := range records {
+		out = append(out, &session.SessionSummaryProjection{
+			ID:         s.ID,
+			CreatedAt:  s.CreatedAt,
+			UpdatedAt:  s.UpdatedAt,
+			Summary:    s.Summary,
+			MessageIDs: s.MessageIDs,
+			ToolIDs:    s.ToolIDs,
+		})
+	}
+	return out, pageInfo, nil
+}
+
+// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影
+func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	records, pageInfo, err := r.sessionDAO.Paginate(
+		db.Where(constant.FieldAPIKeyName+" IN ?", ownerNames),
+		&dbmodel.Session{},
+		constant.SessionRepoFieldsReadList,
+		&dao.CommonParam{
+			PageParam: dao.PageParam{Page: page, PageSize: pageSize},
+			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions by owner names")
+	}
+	out := make([]*session.SessionSummaryProjection, 0, len(records))
+	for _, s := range records {
+		out = append(out, &session.SessionSummaryProjection{
+			ID:         s.ID,
+			CreatedAt:  s.CreatedAt,
+			UpdatedAt:  s.UpdatedAt,
+			Summary:    s.Summary,
+			MessageIDs: s.MessageIDs,
+			ToolIDs:    s.ToolIDs,
+		})
+	}
+	return out, pageInfo, nil
+}
+
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (*session.SessionDetailProjection, error) {
 	db := r.db.WithContext(ctx)
