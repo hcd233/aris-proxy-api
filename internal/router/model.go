@@ -34,7 +34,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 	}, modelHandler.HandleCreateModel)
 
 	huma.Register(modelGroup, huma.Operation{
-		OperationID: "listModels",
+		OperationID: "listModelMappings",
 		Method:      http.MethodGet,
 		Path:        "/",
 		Summary:     "ListModels",

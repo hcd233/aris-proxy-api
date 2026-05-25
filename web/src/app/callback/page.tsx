@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import type { OAuth2Provider } from "@/lib/types";
 
 export default function CallbackPage() {
   const { handleCallback } = useAuth();
@@ -11,27 +10,28 @@ export default function CallbackPage() {
   const processCallback = useCallback(async () => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-    const state = params.get("state");
 
-    if (!code || !state) {
-      setError("Missing authorization code or state parameter");
+    if (!code) {
+      setError("Missing authorization code");
       return;
     }
 
-    const platformMatch = state.match(/^provider:(github|google):/);
-    const platform: OAuth2Provider = platformMatch
-      ? (platformMatch[1] as OAuth2Provider)
-      : "github";
-
     try {
-      const { api } = await import("@/lib/api-client");
-      const rsp = await api.oauth2Callback({ platform, code, state });
-      if (rsp.error) {
-        setError(rsp.error.message);
+      const res = await fetch("/api/v1/oauth2/exchange-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Exchange failed" }));
+        setError(data.error || "Token exchange failed");
         return;
       }
-      if (rsp.accessToken && rsp.refreshToken) {
-        await handleCallback(rsp.accessToken, rsp.refreshToken);
+
+      const data = await res.json();
+      if (data.accessToken && data.refreshToken) {
+        await handleCallback(data.accessToken, data.refreshToken);
         window.location.href = "/web/";
       } else {
         setError("Login failed: no tokens received");

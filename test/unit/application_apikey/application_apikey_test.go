@@ -66,6 +66,10 @@ func (m *mockAPIKeyRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (m *mockAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
+	return nil, nil
+}
+
 // mockAPIKeyGenerator mock APIKeyGenerator
 type mockAPIKeyGenerator struct {
 	generateFunc func() (vo.APIKeySecret, error)
@@ -413,6 +417,10 @@ func (m *mockRevokeAPIKeyRepository) Delete(ctx context.Context, id uint) error 
 		return m.deleteFunc(ctx, id)
 	}
 	return nil
+}
+
+func (m *mockRevokeAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
+	return nil, nil
 }
 
 // TestRevokeAPIKeyHandler_OwnerSuccess 验证所有者成功吊销

@@ -47,7 +47,7 @@ func NewModelHandler(deps ModelDependencies) ModelHandler {
 
 func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
-	_, _ = util.CtxValueUint(ctx, constant.CtxKeyUserID), util.CtxValuePermission(ctx)
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	result, err := h.create.Handle(ctx, command.CreateModelCommand{
 		Alias:      req.Body.Alias,
@@ -61,6 +61,8 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	}
 
 	_ = result.ModelID
+	logger.WithCtx(ctx).Info("[ModelHandler] Create model success",
+		zap.Uint("userID", userID), zap.String("alias", req.Body.Alias))
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -81,6 +83,8 @@ func (h *modelHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (*
 			Alias:      v.Alias,
 			ModelName:  v.ModelName,
 			EndpointID: v.EndpointID,
+			CreatedAt:  v.CreatedAt,
+			UpdatedAt:  v.UpdatedAt,
 		})
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)

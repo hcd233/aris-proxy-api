@@ -34,6 +34,8 @@ export class ApiError extends Error {
 }
 
 class ApiClient {
+  private refreshing: Promise<boolean> | null = null;
+
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = { "Content-Type": "application/json" };
     if (typeof window !== "undefined") {
@@ -45,6 +47,39 @@ class ApiClient {
     return headers;
   }
 
+  private async tryRefreshToken(): Promise<boolean> {
+    if (this.refreshing) return this.refreshing;
+
+    this.refreshing = (async () => {
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) return false;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/token/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (data.accessToken) {
+          localStorage.setItem("access_token", data.accessToken);
+          if (data.refreshToken) {
+            localStorage.setItem("refresh_token", data.refreshToken);
+          }
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      } finally {
+        this.refreshing = null;
+      }
+    })();
+
+    return this.refreshing;
+  }
+
   private async request<T>(
     path: string,
     options?: RequestInit
@@ -53,6 +88,24 @@ class ApiClient {
       ...options,
       headers: { ...this.getHeaders(), ...options?.headers },
     });
+
+    if (res.status === 401) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        const retryRes = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          headers: { ...this.getHeaders(), ...options?.headers },
+        });
+        if (!retryRes.ok) {
+          throw new ApiError(retryRes.status, await retryRes.text());
+        }
+        return retryRes.json();
+      }
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      window.location.href = "/web/login";
+      throw new ApiError(401, "Authentication required");
+    }
 
     if (!res.ok) {
       throw new ApiError(res.status, await res.text());

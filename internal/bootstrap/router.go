@@ -1,12 +1,14 @@
 package bootstrap
 
 import (
-	"fmt"
-	"net/url"
+	"crypto/rand"
+	"encoding/hex"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	appenum "github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -19,6 +21,10 @@ import (
 	"go.uber.org/dig"
 	"gorm.io/gorm"
 )
+
+type oauth2ExchangeCodeBody struct {
+	Code string `json:"code"`
+}
 
 type routeParams struct {
 	dig.In
@@ -66,10 +72,10 @@ func RegisterRoutes(server *Server) error {
 			AnthropicHandler: params.AnthropicHandler,
 		})
 
-		server.App.Get("/api/v1/oauth2/callback", func(c fiber.Ctx) error {
-			code := c.Query("code")
-			state := c.Query("state")
-			platform := c.Query("platform", string(enum.Oauth2PlatformGithub))
+		server.App.Get(constant.RoutePathOAuth2Callback, func(c fiber.Ctx) error {
+			code := c.Query(constant.QueryCode)
+			state := c.Query(constant.QueryState)
+			platform := c.Query(constant.QueryPlatform, string(enum.Oauth2PlatformGithub))
 
 			result, err := params.Oauth2Callback.Handle(c.Context(), command.HandleCallbackCommand{
 				Platform: enum.Oauth2Platform(platform),
@@ -78,16 +84,72 @@ func RegisterRoutes(server *Server) error {
 			})
 			if err != nil {
 				logger.WithCtx(c.Context()).Error("[OAuth2BrowserCallback] Callback failed", zap.Error(err))
-				return c.Redirect().Status(fiber.StatusFound).To("/web/login?error=auth_failed")
+				return c.Redirect().Status(fiber.StatusFound).To(constant.RoutePathWebLogin + "?" + constant.QueryParamError + "=" + constant.MsgAuthFailed)
 			}
 
-			redirectURL := fmt.Sprintf("/web/auth/callback?access_token=%s&refresh_token=%s",
-				url.QueryEscape(result.TokenPair.AccessToken()),
-				url.QueryEscape(result.TokenPair.RefreshToken()),
-			)
+			oneTimeCode, storeErr := storeOAuthCallbackTokens(c, params.Cache, result.TokenPair.AccessToken(), result.TokenPair.RefreshToken())
+			if storeErr != nil {
+				logger.WithCtx(c.Context()).Error("[OAuth2BrowserCallback] Failed to store callback tokens", zap.Error(storeErr))
+				return c.Redirect().Status(fiber.StatusFound).To(constant.RoutePathWebLogin + "?" + constant.QueryParamError + "=" + constant.MsgAuthFailed)
+			}
+
+			redirectURL := constant.RoutePathWebAuthCallback + "?" + constant.QueryCode + "=" + oneTimeCode
 			return c.Redirect().Status(fiber.StatusFound).To(redirectURL)
+		})
+
+		server.App.Post(constant.RoutePathOAuth2ExchangeCode, func(c fiber.Ctx) error {
+			var body oauth2ExchangeCodeBody
+			if err := c.Bind().JSON(&body); err != nil || body.Code == "" {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{constant.QueryParamError: constant.MsgCodeRequired})
+			}
+
+			accessToken, refreshToken, err := exchangeOAuthCallbackCode(c, params.Cache, body.Code)
+			if err != nil {
+				return c.Status(fiber.StatusGone).JSON(fiber.Map{constant.QueryParamError: constant.MsgInvalidOrExpiredCode})
+			}
+
+			return c.JSON(fiber.Map{
+				constant.FieldAccessToken:  accessToken,
+				constant.FieldRefreshToken: refreshToken,
+			})
 		})
 
 		router.RegisterWebRouter(server.App, web.DistFS)
 	})
+}
+
+func storeOAuthCallbackTokens(c fiber.Ctx, cache *redis.Client, accessToken, refreshToken string) (string, error) {
+	b := make([]byte, constant.OAuthCallbackCodeLen)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	oneTimeCode := hex.EncodeToString(b)
+
+	key := constant.OAuthCallbackCodeKeyPrefix + oneTimeCode
+	if err := cache.HSet(c.Context(), key, constant.FieldOAuthAccessToken, accessToken, constant.FieldOAuthRefreshToken, refreshToken).Err(); err != nil {
+		return "", err
+	}
+	if err := cache.Expire(c.Context(), key, constant.OAuthCallbackCodeTTL).Err(); err != nil {
+		return "", err
+	}
+	return oneTimeCode, nil
+}
+
+func exchangeOAuthCallbackCode(c fiber.Ctx, cache *redis.Client, code string) (string, string, error) {
+	key := constant.OAuthCallbackCodeKeyPrefix + code
+
+	pipe := cache.Pipeline()
+	getCmd := pipe.HGetAll(c.Context(), key)
+	pipe.Del(c.Context(), key)
+	if _, err := pipe.Exec(c.Context()); err != nil {
+		return "", "", err
+	}
+
+	result := getCmd.Val()
+	accessToken, hasAccess := result[constant.FieldOAuthAccessToken]
+	refreshToken, hasRefresh := result[constant.FieldOAuthRefreshToken]
+	if !hasAccess || !hasRefresh {
+		return "", "", ierr.New(ierr.ErrUnauthorized, constant.MsgInvalidOrExpiredCode)
+	}
+	return accessToken, refreshToken, nil
 }

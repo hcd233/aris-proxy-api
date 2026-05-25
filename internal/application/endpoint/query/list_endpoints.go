@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -23,6 +24,8 @@ type EndpointView struct {
 	SupportOpenAIChatCompletion bool
 	SupportOpenAIResponse       bool
 	SupportAnthropicMessage     bool
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
 }
 
 // ListEndpointsHandler 查询处理器
@@ -60,6 +63,8 @@ func (h *listEndpointsHandler) Handle(ctx context.Context, _ ListEndpointsQuery)
 			SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 			SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 			SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+			CreatedAt:                   ep.CreatedAt(),
+			UpdatedAt:                   ep.UpdatedAt(),
 		})
 	}
 

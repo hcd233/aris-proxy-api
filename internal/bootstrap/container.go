@@ -211,7 +211,7 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(endpointcommand.NewUpdateEndpointHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(endpointcommand.NewDeleteEndpointHandler); err != nil {
+	if err := container.Provide(newDeleteEndpointHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(endpointquery.NewListEndpointsHandler); err != nil {
@@ -253,10 +253,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(sessionquery.NewGetSessionHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(sessionquery.NewListSessionsByUserHandler); err != nil {
+	if err := container.Provide(newListSessionsByUserHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(sessionquery.NewGetSessionByUserHandler); err != nil {
+	if err := container.Provide(newGetSessionByUserHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
@@ -493,6 +493,18 @@ func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, updat
 	return handler.EndpointDependencies{Create: create, Update: update, Delete: delete, List: list}
 }
 
+func newDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) endpointcommand.DeleteEndpointHandler {
+	return endpointcommand.NewDeleteEndpointHandler(endpointRepo, modelRepo)
+}
+
 func newModelDependencies(create modelcommand.CreateModelHandler, update modelcommand.UpdateModelHandler, delete modelcommand.DeleteModelHandler, list modelquery.ListModelsHandler) handler.ModelDependencies {
 	return handler.ModelDependencies{Create: create, Update: update, Delete: delete, List: list}
+}
+
+func newListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionquery.ListSessionsByUserHandler {
+	return sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo)
+}
+
+func newGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionquery.GetSessionByUserHandler {
+	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo)
 }

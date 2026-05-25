@@ -7,11 +7,9 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"gorm.io/gorm"
 )
 
 type ListSessionsByUserQuery struct {
@@ -35,14 +33,17 @@ type GetSessionByUserHandler interface {
 	Handle(ctx context.Context, q GetSessionByUserQuery) (*SessionDetailView, error)
 }
 
-type listSessionsByUserHandler struct {
-	readRepo  session.SessionReadRepository
-	db        *gorm.DB
-	apiKeyDAO *dao.ProxyAPIKeyDAO
+type ownerNameLookup interface {
+	LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error)
 }
 
-func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, db *gorm.DB) ListSessionsByUserHandler {
-	return &listSessionsByUserHandler{readRepo: readRepo, db: db, apiKeyDAO: dao.GetProxyAPIKeyDAO()}
+type listSessionsByUserHandler struct {
+	readRepo   session.SessionReadRepository
+	apiKeyRepo ownerNameLookup
+}
+
+func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) ListSessionsByUserHandler {
+	return &listSessionsByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
 }
 
 func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsByUserQuery) ([]*SessionSummaryView, *model.PageInfo, error) {
@@ -55,7 +56,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 	if q.IsAdmin {
 		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, q.Page, q.PageSize)
 	} else {
-		ownerNames, lookupErr := h.lookupOwnerNames(ctx, q.UserID)
+		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
 			log.Error("[SessionQuery] Failed to lookup owner names", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
 			return nil, nil, lookupErr
@@ -85,26 +86,13 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 	return views, pageInfo, nil
 }
 
-func (h *listSessionsByUserHandler) lookupOwnerNames(ctx context.Context, userID uint) ([]string, error) {
-	records, err := h.apiKeyDAO.BatchGet(h.db.WithContext(ctx), &dbmodel.ProxyAPIKey{UserID: userID}, []string{"name"})
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key names")
-	}
-	names := make([]string, 0, len(records))
-	for _, r := range records {
-		names = append(names, r.Name)
-	}
-	return names, nil
-}
-
 type getSessionByUserHandler struct {
-	readRepo  session.SessionReadRepository
-	db        *gorm.DB
-	apiKeyDAO *dao.ProxyAPIKeyDAO
+	readRepo   session.SessionReadRepository
+	apiKeyRepo ownerNameLookup
 }
 
-func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, db *gorm.DB) GetSessionByUserHandler {
-	return &getSessionByUserHandler{readRepo: readRepo, db: db, apiKeyDAO: dao.GetProxyAPIKeyDAO()}
+func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) GetSessionByUserHandler {
+	return &getSessionByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
 }
 
 func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUserQuery) (*SessionDetailView, error) {
@@ -121,7 +109,7 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUser
 	}
 
 	if !q.IsAdmin {
-		ownerNames, lookupErr := h.lookupOwnerNames(ctx, q.UserID)
+		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
 			log.Error("[SessionQuery] Failed to lookup owner names", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
 			return nil, lookupErr
@@ -172,16 +160,4 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUser
 		Messages:   messages,
 		Tools:      tools,
 	}, nil
-}
-
-func (h *getSessionByUserHandler) lookupOwnerNames(ctx context.Context, userID uint) ([]string, error) {
-	records, err := h.apiKeyDAO.BatchGet(h.db.WithContext(ctx), &dbmodel.ProxyAPIKey{UserID: userID}, []string{"name"})
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key names")
-	}
-	names := make([]string, 0, len(records))
-	for _, r := range records {
-		names = append(names, r.Name)
-	}
-	return names, nil
 }

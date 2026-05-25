@@ -56,7 +56,10 @@ clean:
 
 ## web-build: 构建前端静态文件
 web-build:
-	@if [ -d web ]; then cd web && npm ci && npm run build; rm -rf ../internal/web/dist; cp -r out ../internal/web/dist; fi
+	@if [ ! -d web ]; then echo "WARNING: web/ directory not found, skipping frontend build"; exit 0; fi
+	cd web && npm ci && npm run build
+	rm -rf internal/web/dist
+	cp -r web/out internal/web/dist
 
 ## web-clean: 清理前端构建产物
 web-clean:

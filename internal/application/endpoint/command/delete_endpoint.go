@@ -21,19 +21,18 @@ type DeleteEndpointHandler interface {
 }
 
 type deleteEndpointHandler struct {
-	repo llmproxy.EndpointRepository
+	endpointRepo llmproxy.EndpointRepository
+	modelRepo    llmproxy.ModelRepository
 }
 
-// NewDeleteEndpointHandler 构造删除命令处理器
-func NewDeleteEndpointHandler(repo llmproxy.EndpointRepository) DeleteEndpointHandler {
-	return &deleteEndpointHandler{repo: repo}
+func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) DeleteEndpointHandler {
+	return &deleteEndpointHandler{endpointRepo: endpointRepo, modelRepo: modelRepo}
 }
 
-// Handle 执行删除命令
 func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd DeleteEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
-	ep, err := h.repo.FindByID(ctx, cmd.EndpointID)
+	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID)
 	if err != nil {
 		return err
 	}
@@ -41,7 +40,18 @@ func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd DeleteEndpointCo
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
 
-	if err := h.repo.Delete(ctx, cmd.EndpointID); err != nil {
+	models, err := h.modelRepo.List(ctx)
+	if err != nil {
+		log.Error("[EndpointCommand] Check model references failed", zap.Error(err))
+		return err
+	}
+	for _, m := range models {
+		if m.EndpointID() == cmd.EndpointID {
+			return ierr.New(ierr.ErrValidation, "endpoint is still referenced by models, delete models first")
+		}
+	}
+
+	if err := h.endpointRepo.Delete(ctx, cmd.EndpointID); err != nil {
 		log.Error("[EndpointCommand] Delete endpoint failed", zap.Error(err))
 		return err
 	}

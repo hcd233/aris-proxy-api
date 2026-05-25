@@ -307,7 +307,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, page, pageS
 func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.sessionDAO.Paginate(
-		db.Where("api_key_name IN ?", ownerNames),
+		db.Where(constant.FieldAPIKeyName+" IN ?", ownerNames),
 		&dbmodel.Session{},
 		constant.SessionRepoFieldsReadList,
 		&dao.CommonParam{

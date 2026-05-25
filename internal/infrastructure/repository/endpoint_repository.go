@@ -41,7 +41,7 @@ func (r *endpointRepository) FindByID(ctx context.Context, id uint) (*aggregate.
 }
 
 func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
-	return aggregate.CreateEndpoint(
+	ep, err := aggregate.CreateEndpoint(
 		m.ID,
 		m.Name,
 		m.OpenaiBaseURL,
@@ -51,6 +51,11 @@ func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
 		m.SupportOpenAIResponse,
 		m.SupportAnthropicMessage,
 	)
+	if err != nil {
+		return nil, err
+	}
+	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
+	return ep, nil
 }
 
 func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
@@ -76,11 +81,19 @@ func (r *endpointRepository) Create(ctx context.Context, ep *aggregate.Endpoint)
 	return m.ID, nil
 }
 
-// Update 更新端点
+// Update 更新端点（仅更新非零值字段）
 func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint) error {
 	db := r.db.WithContext(ctx)
-	m := toEndpointModel(ep)
-	if err := db.Save(m).Error; err != nil {
+	updates := map[string]any{
+		constant.FieldEndpointName:                        ep.Name(),
+		constant.FieldEndpointOpenaiBaseURL:               ep.OpenaiBaseURL(),
+		constant.FieldEndpointAnthropicBaseURL:            ep.AnthropicBaseURL(),
+		constant.FieldEndpointAPIKey:                      ep.APIKey(),
+		constant.FieldEndpointSupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
+		constant.FieldEndpointSupportOpenAIResponse:       ep.SupportOpenAIResponse(),
+		constant.FieldEndpointSupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+	}
+	if err := db.Model(&dbmodel.Endpoint{}).Where(constant.WhereIDEquals, ep.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update endpoint")
 	}
 	return nil
@@ -143,7 +156,12 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 }
 
 func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
-	return aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID)
+	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID)
+	if err != nil {
+		return nil, err
+	}
+	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
+	return model, nil
 }
 
 func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
@@ -178,11 +196,15 @@ func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model) (uint,
 	return mdl.ID, nil
 }
 
-// Update 更新模型
+// Update 更新模型（仅更新非零值字段）
 func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
 	db := r.db.WithContext(ctx)
-	mdl := toModelDBModel(m)
-	if err := db.Save(mdl).Error; err != nil {
+	updates := map[string]any{
+		constant.FieldModelAlias:      m.Alias().String(),
+		constant.FieldModelModelName:  m.ModelName(),
+		constant.FieldModelEndpointID: m.EndpointID(),
+	}
+	if err := db.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update model")
 	}
 	return nil

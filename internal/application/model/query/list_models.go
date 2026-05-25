@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -18,6 +19,8 @@ type ModelView struct {
 	Alias      string
 	ModelName  string
 	EndpointID uint
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // ListModelsHandler 查询处理器
@@ -51,6 +54,8 @@ func (h *listModelsHandler) Handle(ctx context.Context, _ ListModelsQuery) ([]*M
 			Alias:      m.Alias().String(),
 			ModelName:  m.ModelName(),
 			EndpointID: m.EndpointID(),
+			CreatedAt:  m.CreatedAt(),
+			UpdatedAt:  m.UpdatedAt(),
 		})
 	}
 

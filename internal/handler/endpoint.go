@@ -47,7 +47,7 @@ func NewEndpointHandler(deps EndpointDependencies) EndpointHandler {
 
 func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.CreateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
-	_, _ = util.CtxValueUint(ctx, constant.CtxKeyUserID), util.CtxValuePermission(ctx)
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	result, err := h.create.Handle(ctx, command.CreateEndpointCommand{
 		Name:                        req.Body.Name,
@@ -65,6 +65,8 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 	}
 
 	_ = result.EndpointID
+	logger.WithCtx(ctx).Info("[EndpointHandler] Create endpoint success",
+		zap.Uint("userID", userID), zap.String("name", req.Body.Name))
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -89,6 +91,8 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, _ *dto.EmptyR
 			SupportOpenAIChatCompletion: v.SupportOpenAIChatCompletion,
 			SupportOpenAIResponse:       v.SupportOpenAIResponse,
 			SupportAnthropicMessage:     v.SupportAnthropicMessage,
+			CreatedAt:                   v.CreatedAt,
+			UpdatedAt:                   v.UpdatedAt,
 		})
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
