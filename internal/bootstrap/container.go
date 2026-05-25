@@ -7,9 +7,13 @@ import (
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
+	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
+	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
 	identitycommand "github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
+	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
 	applicationoauth2 "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -201,6 +205,30 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(apikeyquery.NewListAPIKeysHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(endpointcommand.NewCreateEndpointHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(endpointcommand.NewUpdateEndpointHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newDeleteEndpointHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(endpointquery.NewListEndpointsHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(modelcommand.NewCreateModelHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(modelcommand.NewUpdateModelHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(modelcommand.NewDeleteModelHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(modelquery.NewListModelsHandler); err != nil {
+		return err
+	}
 	if err := container.Provide(newRefreshTokensHandler); err != nil {
 		return err
 	}
@@ -223,6 +251,12 @@ func provideApplication(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(sessionquery.NewGetSessionHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newListSessionsByUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newGetSessionByUserHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
@@ -256,6 +290,12 @@ func provideHandlers(container *dig.Container) error {
 	if err := container.Provide(newAPIKeyDependencies); err != nil {
 		return err
 	}
+	if err := container.Provide(newEndpointDependencies); err != nil {
+		return err
+	}
+	if err := container.Provide(newModelDependencies); err != nil {
+		return err
+	}
 	if err := container.Provide(newSessionDependencies); err != nil {
 		return err
 	}
@@ -281,6 +321,12 @@ func provideHandlers(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(handler.NewAPIKeyHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewEndpointHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(handler.NewModelHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(handler.NewSessionHandler); err != nil {
@@ -423,8 +469,8 @@ func newAPIKeyDependencies(issue apikeycommand.IssueAPIKeyHandler, revoke apikey
 	}
 }
 
-func newSessionDependencies(list sessionquery.ListSessionsHandler, get sessionquery.GetSessionHandler) handler.SessionDependencies {
-	return handler.SessionDependencies{List: list, Get: get}
+func newSessionDependencies(list sessionquery.ListSessionsHandler, get sessionquery.GetSessionHandler, listByUser sessionquery.ListSessionsByUserHandler, getByUser sessionquery.GetSessionByUserHandler) handler.SessionDependencies {
+	return handler.SessionDependencies{List: list, Get: get, ListByUser: listByUser, GetByUser: getByUser}
 }
 
 func newOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependencies {
@@ -441,4 +487,24 @@ func newAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 
 func newAuditDependencies(list auditquery.ListAuditLogsHandler) handler.AuditDependencies {
 	return handler.AuditDependencies{List: list}
+}
+
+func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {
+	return handler.EndpointDependencies{Create: create, Update: update, Delete: delete, List: list}
+}
+
+func newDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) endpointcommand.DeleteEndpointHandler {
+	return endpointcommand.NewDeleteEndpointHandler(endpointRepo, modelRepo)
+}
+
+func newModelDependencies(create modelcommand.CreateModelHandler, update modelcommand.UpdateModelHandler, delete modelcommand.DeleteModelHandler, list modelquery.ListModelsHandler) handler.ModelDependencies {
+	return handler.ModelDependencies{Create: create, Update: update, Delete: delete, List: list}
+}
+
+func newListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionquery.ListSessionsByUserHandler {
+	return sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo)
+}
+
+func newGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionquery.GetSessionByUserHandler {
+	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo)
 }

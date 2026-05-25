@@ -1,6 +1,8 @@
 package aggregate
 
 import (
+	"time"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonagg "github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
@@ -20,6 +22,8 @@ type Endpoint struct {
 	supportOpenAIChatCompletion bool
 	supportOpenAIResponse       bool
 	supportAnthropicMessage     bool
+	createdAt                   time.Time
+	updatedAt                   time.Time
 }
 
 // CreateEndpoint 构造 Endpoint 聚合根
@@ -62,3 +66,35 @@ func (e *Endpoint) APIKey() string                    { return e.apiKey }
 func (e *Endpoint) SupportOpenAIChatCompletion() bool { return e.supportOpenAIChatCompletion }
 func (e *Endpoint) SupportOpenAIResponse() bool       { return e.supportOpenAIResponse }
 func (e *Endpoint) SupportAnthropicMessage() bool     { return e.supportAnthropicMessage }
+func (e *Endpoint) CreatedAt() time.Time              { return e.createdAt }
+func (e *Endpoint) UpdatedAt() time.Time              { return e.updatedAt }
+
+func (e *Endpoint) SetTimestamps(createdAt, updatedAt time.Time) {
+	e.createdAt = createdAt
+	e.updatedAt = updatedAt
+}
+
+// Update 更新 Endpoint 字段（仅非 nil 字段更新）
+func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string, supportChatCompletion, supportResponse, supportMessage *bool) {
+	if name != nil {
+		e.name = *name
+	}
+	if openaiBaseURL != nil {
+		e.openaiBaseURL = *openaiBaseURL
+	}
+	if anthropicBaseURL != nil {
+		e.anthropicBaseURL = *anthropicBaseURL
+	}
+	if apiKey != nil {
+		e.apiKey = *apiKey
+	}
+	if supportChatCompletion != nil {
+		e.supportOpenAIChatCompletion = *supportChatCompletion
+	}
+	if supportResponse != nil {
+		e.supportOpenAIResponse = *supportResponse
+	}
+	if supportMessage != nil {
+		e.supportAnthropicMessage = *supportMessage
+	}
+}

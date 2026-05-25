@@ -10,11 +10,20 @@ import (
 // EndpointRepository Endpoint 聚合根仓储接口
 type EndpointRepository interface {
 	FindByID(ctx context.Context, id uint) (*aggregate.Endpoint, error)
+	Create(ctx context.Context, endpoint *aggregate.Endpoint) (uint, error)
+	Update(ctx context.Context, endpoint *aggregate.Endpoint) error
+	Delete(ctx context.Context, id uint) error
+	List(ctx context.Context) ([]*aggregate.Endpoint, error)
 }
 
 // ModelRepository Model 聚合根仓储接口
 type ModelRepository interface {
 	FindByAlias(ctx context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error)
+	FindByID(ctx context.Context, id uint) (*aggregate.Model, error)
+	Create(ctx context.Context, model *aggregate.Model) (uint, error)
+	Update(ctx context.Context, model *aggregate.Model) error
+	Delete(ctx context.Context, id uint) error
+	List(ctx context.Context) ([]*aggregate.Model, error)
 }
 
 // ==================== CQRS 读模型 ====================

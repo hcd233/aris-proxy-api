@@ -17,10 +17,10 @@ BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 GOLANGCI_LINT_VERSION ?= v2.11.4
 GOLANGCI_LINT         := $(shell which golangci-lint 2>/dev/null || echo $(HOME)/go/bin/golangci-lint)
 
-.PHONY: build build-upx build-dev build-debug clean test test-cover lint lint-conv lint-static fgprof help
+.PHONY: build build-upx build-dev build-debug clean test test-cover lint lint-conv lint-static fgprof web-build web-clean help
 
-## build: 生产构建（strip 符号）
-build:
+## build: 生产构建（strip 符号，含前端）
+build: web-build
 	CGO_ENABLED=0 go build \
 		$(BUILD_FLAGS) \
 		-ldflags="$(LDFLAGS)" \
@@ -53,6 +53,17 @@ warm-cache:
 ## clean: 清理构建产物
 clean:
 	rm -f $(OUTPUT)
+
+## web-build: 构建前端静态文件
+web-build:
+	@if [ ! -d web ]; then echo "WARNING: web/ directory not found, skipping frontend build"; exit 0; fi
+	cd web && npm ci && npm run build
+	rm -rf internal/web/dist
+	cp -r web/out internal/web/dist
+
+## web-clean: 清理前端构建产物
+web-clean:
+	rm -rf internal/web/dist web/.next web/out
 
 ## clean-all: 清理构建产物和编译缓存
 clean-all: clean

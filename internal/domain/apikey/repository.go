@@ -26,4 +26,6 @@ type APIKeyRepository interface {
 	CountByUser(ctx context.Context, userID uint) (int64, error)
 	// Delete 删除 Key（软删除）
 	Delete(ctx context.Context, id uint) error
+	// LookupOwnerNamesByUserID 查询指定用户的所有 API Key 名称
+	LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error)
 }
