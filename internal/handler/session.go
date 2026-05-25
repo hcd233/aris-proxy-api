@@ -33,10 +33,10 @@ type SessionHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type SessionDependencies struct {
-	List                sessionquery.ListSessionsHandler
-	Get                 sessionquery.GetSessionHandler
-	ListByUser          sessionquery.ListSessionsByUserHandler
-	GetByUser           sessionquery.GetSessionByUserHandler
+	List       sessionquery.ListSessionsHandler
+	Get        sessionquery.GetSessionHandler
+	ListByUser sessionquery.ListSessionsByUserHandler
+	GetByUser  sessionquery.GetSessionByUserHandler
 }
 
 type sessionHandler struct {

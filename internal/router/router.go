@@ -22,8 +22,8 @@ type APIRouterDependencies struct {
 	UserHandler      handler.UserHandler
 	APIKeyHandler    handler.APIKeyHandler
 	SessionHandler   handler.SessionHandler
-	EndpointHandler   handler.EndpointHandler
-	ModelHandler      handler.ModelHandler
+	EndpointHandler  handler.EndpointHandler
+	ModelHandler     handler.ModelHandler
 	AuditHandler     handler.AuditHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler

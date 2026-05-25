@@ -23,20 +23,20 @@ import (
 type routeParams struct {
 	dig.In
 
-	DB                *gorm.DB
-	Cache             *redis.Client
-	PingHandler       handler.PingHandler
-	TokenHandler      handler.TokenHandler
-	Oauth2Handler     handler.Oauth2Handler
-	Oauth2Callback    command.HandleCallbackHandler
-	UserHandler       handler.UserHandler
-	APIKeyHandler     handler.APIKeyHandler
-	SessionHandler    handler.SessionHandler
-	EndpointHandler   handler.EndpointHandler
-	ModelHandler      handler.ModelHandler
-	AuditHandler      handler.AuditHandler
-	OpenAIHandler     handler.OpenAIHandler
-	AnthropicHandler  handler.AnthropicHandler
+	DB               *gorm.DB
+	Cache            *redis.Client
+	PingHandler      handler.PingHandler
+	TokenHandler     handler.TokenHandler
+	Oauth2Handler    handler.Oauth2Handler
+	Oauth2Callback   command.HandleCallbackHandler
+	UserHandler      handler.UserHandler
+	APIKeyHandler    handler.APIKeyHandler
+	SessionHandler   handler.SessionHandler
+	EndpointHandler  handler.EndpointHandler
+	ModelHandler     handler.ModelHandler
+	AuditHandler     handler.AuditHandler
+	OpenAIHandler    handler.OpenAIHandler
+	AnthropicHandler handler.AnthropicHandler
 }
 
 // RegisterRoutes 注册文档和 API 路由。

@@ -36,8 +36,8 @@ type GetSessionByUserHandler interface {
 }
 
 type listSessionsByUserHandler struct {
-	readRepo session.SessionReadRepository
-	db       *gorm.DB
+	readRepo  session.SessionReadRepository
+	db        *gorm.DB
 	apiKeyDAO *dao.ProxyAPIKeyDAO
 }
 

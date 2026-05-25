@@ -17,8 +17,8 @@ type CreateModelReqBody struct {
 
 // UpdateModelReq 更新 Model 请求
 type UpdateModelReq struct {
-	ID   uint                   `path:"id" required:"true" minimum:"1" doc:"Model ID"`
-	Body *UpdateModelReqBody    `json:"body" doc:"Request body"`
+	ID   uint                `path:"id" required:"true" minimum:"1" doc:"Model ID"`
+	Body *UpdateModelReqBody `json:"body" doc:"Request body"`
 }
 
 // UpdateModelReqBody 更新 Model 请求体
