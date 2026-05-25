@@ -137,7 +137,7 @@ export default function SessionDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">Invalid session ID</p>
-        <Button variant="outline" className="mt-4" onClick={() => router.push("/web/sessions/")}>
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/sessions/")}>
           Back to Sessions
         </Button>
       </div>
@@ -158,7 +158,7 @@ export default function SessionDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">Session not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => router.push("/web/sessions/")}>
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/sessions/")}>
           Back to Sessions
         </Button>
       </div>
@@ -173,7 +173,7 @@ export default function SessionDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon-sm" onClick={() => router.push("/web/sessions/")}>
+        <Button variant="ghost" size="icon-sm" onClick={() => router.push("/sessions/")}>
           <ArrowLeft className="size-4" />
         </Button>
         <div>

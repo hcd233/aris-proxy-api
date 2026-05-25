@@ -7,8 +7,8 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 	vo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
 
@@ -108,7 +108,7 @@ type terminalToolCallMessageFix struct {
 
 // terminalToolCallFix represents a tool call fixture
 type terminalToolCallFix struct {
-	ID   string `json:"id"`
+	ID       string `json:"id"`
 	Function struct {
 		Name string `json:"name"`
 	} `json:"function"`
