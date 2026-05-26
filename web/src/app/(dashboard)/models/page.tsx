@@ -142,7 +142,7 @@ export default function ModelsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Models</h1>
+            <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Models</h1>
             <p className="text-sm text-muted-foreground">
               Manage model aliases and routing
             </p>

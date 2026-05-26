@@ -52,6 +52,7 @@ type AnthropicSSEMessageDelta = anthropic.AnthropicSSEMessageDelta
 type OpenAIMessageContent = openai.OpenAIMessageContent
 type OpenAIChatCompletionContentPart = openai.OpenAIChatCompletionContentPart
 type OpenAIStopSequence = openai.OpenAIStopSequence
+type OpenAIThinkingParam = openai.OpenAIThinkingParam
 type OpenAIChatCompletionToolChoiceParam = openai.OpenAIChatCompletionToolChoiceParam
 type OpenAIVoiceParam = openai.OpenAIVoiceParam
 type OpenAIChatCompletionReq = openai.OpenAIChatCompletionReq

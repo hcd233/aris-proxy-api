@@ -30,11 +30,11 @@ function ChatBubble({ message }: { message: MessageItem }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
+        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
           isUser
             ? "bg-primary text-primary-foreground"
             : isAssistant
-              ? "bg-muted text-foreground"
+              ? "border bg-card text-foreground"
               : "bg-secondary text-secondary-foreground"
         }`}
       >
@@ -95,7 +95,7 @@ function ToolCallBlock({ tool }: { tool: ToolItem }) {
           {output != null && (
             <div>
               <p className="mb-1 text-xs font-medium text-muted-foreground">Output</p>
-              <pre className="overflow-x-auto rounded bg-muted p-2 text-xs">
+              <pre className="overflow-x-auto rounded-xl bg-muted/70 p-3 text-xs">
                 {renderValue(output)}
               </pre>
             </div>
@@ -177,7 +177,7 @@ export default function SessionDetailPage() {
           <ArrowLeft className="size-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">
             Session #{session.id}
           </h1>
           <p className="text-sm text-muted-foreground">

@@ -74,7 +74,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
+        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Profile</h1>
         <p className="text-sm text-muted-foreground">
           Manage your account settings
         </p>

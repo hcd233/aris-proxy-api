@@ -8,6 +8,27 @@ interface PermissionGuardProps {
   adminOnly?: boolean;
 }
 
+function GuardState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md rounded-3xl border bg-card p-8 text-center shadow-[0_24px_70px_rgba(92,62,29,0.14)]">
+        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">
+          {title}
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function PermissionGuard({
   children,
   adminOnly = false,
@@ -21,11 +42,7 @@ export function PermissionGuard({
   }, [isLoading, user]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <GuardState title="Loading" description="Preparing your console..." />;
   }
 
   if (!user) {
@@ -48,14 +65,10 @@ export function PermissionGuard({
 
   if (adminOnly && !isAdmin()) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p className="mt-2 text-muted-foreground">
-            You need administrator privileges to access this page.
-          </p>
-        </div>
-      </div>
+      <GuardState
+        title="Access Denied"
+        description="You need administrator privileges to access this page."
+      />
     );
   }
 

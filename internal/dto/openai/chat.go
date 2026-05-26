@@ -228,6 +228,7 @@ type OpenAIChatCompletionReq struct {
 	Stream               *bool                                  `json:"stream,omitempty" doc:"是否流式响应"`
 	StreamOptions        *OpenAIChatCompletionStreamOptions     `json:"stream_options,omitempty" doc:"流式选项"`
 	Temperature          *float64                               `json:"temperature,omitempty" doc:"采样温度(0-2)"`
+	Thinking             *OpenAIThinkingParam                   `json:"thinking,omitempty" doc:"思考/推理参数(如 {\"type\":\"enabled\"})"`
 	ToolChoice           *OpenAIChatCompletionToolChoiceParam   `json:"tool_choice,omitempty" doc:"工具选择(字符串或对象)"`
 	Tools                []OpenAIChatCompletionTool             `json:"tools,omitempty" doc:"可用工具列表"`
 	TopLogprobs          *int                                   `json:"top_logprobs,omitempty" doc:"返回的最可能token数量(0-20)"`
@@ -438,6 +439,14 @@ type OpenAIAllowedToolsConfig struct {
 type OpenAIWebSearchOptions struct {
 	SearchContextSize enum.SearchContextSize `json:"search_context_size,omitempty" doc:"搜索上下文大小"`
 	UserLocation      *OpenAIUserLocation    `json:"user_location,omitempty" doc:"用户位置信息"`
+}
+
+// OpenAIThinkingParam 思考/推理参数
+//
+//	@author centonhuang
+//	@update 2026-05-26 10:00:00
+type OpenAIThinkingParam struct {
+	Type string `json:"type" doc:"思考类型: enabled/disabled"`
 }
 
 // OpenAIUserLocation 用户位置
