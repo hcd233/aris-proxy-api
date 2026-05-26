@@ -147,24 +147,14 @@ const (
 	FieldModelModelName                      = "model_name"
 	FieldModelEndpointID                     = "endpoint_id"
 
-	// OAuth2 callback Redis keys
-	OAuthCallbackCodeKeyPrefix = "oauth:callback:"
-	FieldOAuthAccessToken      = "access_token"
-	FieldOAuthRefreshToken     = "refresh_token"
-
 	// Router path/query/field constants
-	PathOAuth2Callback      = "/api/v1/oauth2/callback"
-	PathOAuth2ExchangeCode  = "/api/v1/oauth2/exchange-code"
-	PathWebAuthCallback     = "/web/auth/callback"
-	PathWebLogin            = "/web/login"
-	QueryCode               = "code"
-	QueryState              = "state"
-	QueryPlatform           = "platform"
-	QueryParamError         = "error"
-	MsgAuthFailed           = "auth_failed"
-	FieldAccessToken        = "accessToken"
-	FieldRefreshToken       = "refreshToken"
-	MsgCodeRequired         = "code is required"
-	MsgInvalidOrExpiredCode = "invalid or expired code"
-	WhereIDEquals           = "id = ?"
+	PathWebLogin      = "/web/login"
+	QueryCode         = "code"
+	QueryState        = "state"
+	QueryPlatform     = "platform"
+	QueryParamError   = "error"
+	MsgAuthFailed     = "auth_failed"
+	FieldAccessToken  = "accessToken"
+	FieldRefreshToken = "refreshToken"
+	WhereIDEquals     = "id = ?"
 )

@@ -46,13 +46,13 @@ func NewStateManager() *StateManager {
 	}
 }
 
-// GenerateState 生成随机state
-func (sm *StateManager) GenerateState() (string, error) {
+// GenerateState 生成携带平台前缀的一次性 state，如 "provider:github:<hex>"
+func (sm *StateManager) GenerateState(platform string) (string, error) {
 	b := make([]byte, constant.OAuthStateBytes)
 	if _, err := rand.Read(b); err != nil {
 		return "", ierr.Wrap(ierr.ErrInternal, err, "generate random state")
 	}
-	state := hex.EncodeToString(b)
+	state := constant.StateProviderPrefix + platform + constant.StateProviderSeparator + hex.EncodeToString(b)
 
 	sm.mu.Lock()
 	sm.states[state] = time.Now().UTC()
@@ -98,11 +98,6 @@ func (sm *StateManager) cleanupExpired() {
 
 // globalStateManager 全局state管理器实例
 var globalStateManager = NewStateManager()
-
-// GenerateOAuth2State 生成OAuth2 state
-func GenerateOAuth2State() (string, error) {
-	return globalStateManager.GenerateState()
-}
 
 // VerifyOAuth2State 验证OAuth2 state
 func VerifyOAuth2State(state string) error {

@@ -20,6 +20,7 @@ const (
 	OAuthStateManagerTTL = 10 * time.Minute
 	OAuthStateMaxPending = 100
 
-	OAuthCallbackCodeTTL = 60 * time.Second
-	OAuthCallbackCodeLen = 32
+	// StateProviderPrefix + platform + StateProviderSeparator + random hex
+	StateProviderPrefix    = "provider:"
+	StateProviderSeparator = ":"
 )

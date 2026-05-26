@@ -36,8 +36,8 @@ type Platform interface {
 //	@author centonhuang
 //	@update 2026-04-26 14:00:00
 type StateManager interface {
-	// GenerateState 生成一个一次性 state
-	GenerateState() (string, error)
+	// GenerateState 生成一个携带平台前缀的一次性 state（如 "provider:github:<hex>"）
+	GenerateState(platform string) (string, error)
 	// VerifyState 校验 state 有效性并标记为已使用（一次性）
 	// 返回 error 以区分「state 无效」和「存储故障」
 	VerifyState(state string) error
