@@ -49,7 +49,7 @@ export default function SessionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Sessions</h1>
+        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Sessions</h1>
         <p className="text-sm text-muted-foreground">
           View and browse your conversation sessions
         </p>

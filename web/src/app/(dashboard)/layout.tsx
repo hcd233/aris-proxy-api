@@ -96,10 +96,10 @@ function SidebarNav({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
               isActive
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
             {item.icon}
@@ -125,7 +125,7 @@ function UserBar() {
       .slice(0, 2);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/40 p-2 text-sidebar-foreground">
       <Avatar size="sm">
         {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
         <AvatarFallback>{initials}</AvatarFallback>
@@ -135,7 +135,7 @@ function UserBar() {
           {user.name ?? user.email ?? "User"}
         </p>
         <div className="mt-1 flex items-center gap-1.5">
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
             {user.permission}
           </Badge>
         </div>
@@ -175,14 +175,14 @@ export default function DashboardLayout({
 
   return (
     <PermissionGuard>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex h-screen overflow-hidden bg-background text-foreground">
         {/* Desktop sidebar */}
         <aside
-          className={`hidden md:flex flex-col border-r border-border bg-card transition-[width] duration-200 ${
-            collapsed ? "w-16" : "w-56"
+          className={`hidden md:flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[0_24px_70px_rgba(62,38,16,0.22)] transition-[width] duration-200 ${
+            collapsed ? "w-16" : "w-64"
           }`}
         >
-          <div className="flex h-14 items-center justify-between border-b px-3">
+          <div className="flex h-16 items-center justify-between border-b border-sidebar-border/70 px-3">
             {!collapsed && (
               <span className="text-base font-semibold tracking-tight">
                 Aris Proxy
@@ -192,7 +192,7 @@ export default function DashboardLayout({
               variant="ghost"
               size="icon-sm"
               onClick={toggleCollapsed}
-              className={collapsed ? "mx-auto" : ""}
+              className={collapsed ? "mx-auto text-sidebar-foreground" : "text-sidebar-foreground"}
             >
               <Menu className="size-4" />
             </Button>
@@ -210,14 +210,14 @@ export default function DashboardLayout({
 
         {/* Mobile sidebar via Sheet */}
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetContent side="left" className="w-64 p-0">
-            <SheetHeader className="border-b px-4 py-3">
-              <SheetTitle>Aris Proxy</SheetTitle>
+          <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+            <SheetHeader className="border-b border-sidebar-border/70 px-4 py-4">
+              <SheetTitle className="font-display text-2xl">Aris Proxy</SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto py-3">
               <SidebarNav items={navItems} onNavigate={closeMobileSidebar} />
             </div>
-            <Separator />
+            <Separator className="bg-sidebar-border/70" />
             <div className="p-3">
               <UserBar />
             </div>
@@ -227,7 +227,7 @@ export default function DashboardLayout({
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Mobile top bar */}
-          <header className="flex h-14 items-center gap-3 border-b px-4 md:hidden">
+          <header className="flex h-16 items-center gap-3 border-b bg-card/75 px-4 shadow-sm backdrop-blur md:hidden">
             <SheetTrigger
               render={
                 <Button
@@ -239,11 +239,11 @@ export default function DashboardLayout({
             >
               <Menu className="size-5" />
             </SheetTrigger>
-            <span className="text-base font-semibold">Aris Proxy</span>
+            <span className="font-display text-2xl font-bold">Aris Proxy</span>
           </header>
 
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-            {children}
+            <div className="mx-auto max-w-7xl">{children}</div>
           </main>
         </div>
       </div>

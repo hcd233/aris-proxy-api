@@ -108,7 +108,7 @@ export default function APIKeysPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">API Keys</h1>
           <p className="text-sm text-muted-foreground">
             Manage your API keys for authentication
           </p>

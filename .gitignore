@@ -43,6 +43,9 @@ logs/
 .codebuddy/memory
 .codebuddy/*.md
 
+# Superpowers visual brainstorming
+.superpowers/
+
 # Worktrees
 .worktrees/
 
