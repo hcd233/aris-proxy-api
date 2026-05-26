@@ -77,9 +77,8 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	apikeyGroup := huma.NewGroup(v1Group, "/apikey")
 	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.Cache)
 
-	sessionGroup := huma.NewGroup(v1Group, "/session")
-	initSessionRouter(sessionGroup, deps.SessionHandler, deps.DB)
-	initSessionJWTRouter(sessionGroup, deps.SessionHandler, deps.DB, deps.Cache)
+	sessionJWTGroup := huma.NewGroup(v1Group, "/session")
+	initSessionJWTRouter(sessionJWTGroup, deps.SessionHandler, deps.DB, deps.Cache)
 
 	endpointGroup := huma.NewGroup(v1Group, "/endpoint")
 	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache)

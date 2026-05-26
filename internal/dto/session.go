@@ -57,14 +57,6 @@ type ToolItem struct {
 	CreatedAt time.Time       `json:"createdAt" doc:"创建时间"`
 }
 
-// ListSessionsReq 分页获取Session列表请求
-//
-//	@author centonhuang
-//	@update 2026-03-19 10:00:00
-type ListSessionsReq struct {
-	model.PageParam
-}
-
 // ListSessionsRsp 分页获取Session列表响应
 //
 //	@author centonhuang
@@ -73,14 +65,6 @@ type ListSessionsRsp struct {
 	CommonRsp
 	Sessions []*SessionSummary `json:"sessions,omitempty" doc:"Session列表"`
 	PageInfo *model.PageInfo   `json:"pageInfo,omitempty" doc:"分页信息"`
-}
-
-// GetSessionReq 获取Session详情请求
-//
-//	@author centonhuang
-//	@update 2026-03-19 10:00:00
-type GetSessionReq struct {
-	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
 }
 
 // ListSessionsByUserReq 分页获取当前用户Session列表请求（JWT认证）

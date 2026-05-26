@@ -155,13 +155,13 @@ class ApiClient {
     pageSize: number = 20
   ): Promise<ListSessionsRsp> {
     return this.request<ListSessionsRsp>(
-      `/api/v1/session/jwt/list?page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/list?page=${page}&pageSize=${pageSize}`
     );
   }
 
   async getSession(sessionId: number): Promise<GetSessionRsp> {
     return this.request<GetSessionRsp>(
-      `/api/v1/session/jwt/?sessionId=${sessionId}`
+      `/api/v1/session/?sessionId=${sessionId}`
     );
   }
 

@@ -244,13 +244,7 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newHandleCallbackHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(sessionquery.NewListSessionsHandler); err != nil {
-		return err
-	}
 	if err := container.Provide(auditquery.NewListAuditLogsHandler); err != nil {
-		return err
-	}
-	if err := container.Provide(sessionquery.NewGetSessionHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
@@ -469,8 +463,8 @@ func newAPIKeyDependencies(issue apikeycommand.IssueAPIKeyHandler, revoke apikey
 	}
 }
 
-func newSessionDependencies(list sessionquery.ListSessionsHandler, get sessionquery.GetSessionHandler, listByUser sessionquery.ListSessionsByUserHandler, getByUser sessionquery.GetSessionByUserHandler) handler.SessionDependencies {
-	return handler.SessionDependencies{List: list, Get: get, ListByUser: listByUser, GetByUser: getByUser}
+func newSessionDependencies(listByUser sessionquery.ListSessionsByUserHandler, getByUser sessionquery.GetSessionByUserHandler) handler.SessionDependencies {
+	return handler.SessionDependencies{ListByUser: listByUser, GetByUser: getByUser}
 }
 
 func newOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependencies {
