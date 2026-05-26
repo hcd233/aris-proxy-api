@@ -11,56 +11,28 @@ import (
 	"gorm.io/gorm"
 )
 
-func initSessionRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB) {
-	sessionGroup.UseMiddleware(middleware.APIKeyMiddleware(db))
+func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB, cache *redis.Client) {
+	sessionGroup.UseMiddleware(middleware.JwtMiddleware(db, cache))
 
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessions",
 		Method:      http.MethodGet,
 		Path:        "/list",
 		Summary:     "ListSessions",
-		Description: "Paginate session list filtered by current API key",
+		Description: "Paginate session list for current user (JWT auth)",
 		Tags:        []string{"Session"},
-		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
-		},
-	}, sessionHandler.HandleListSessions)
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessions", enum.PermissionUser)},
+	}, sessionHandler.HandleListSessionsByUser)
 
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "getSession",
 		Method:      http.MethodGet,
 		Path:        "/",
 		Summary:     "GetSession",
-		Description: "Get session detail by session ID, including messages and tools",
-		Tags:        []string{"Session"},
-		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
-		},
-	}, sessionHandler.HandleGetSession)
-}
-
-func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB, cache *redis.Client) {
-	sessionGroup.UseMiddleware(middleware.JwtMiddleware(db, cache))
-
-	huma.Register(sessionGroup, huma.Operation{
-		OperationID: "listSessionsJWT",
-		Method:      http.MethodGet,
-		Path:        "/jwt/list",
-		Summary:     "ListSessions (JWT)",
-		Description: "Paginate session list for current user (JWT auth)",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionsJWT", enum.PermissionUser)},
-	}, sessionHandler.HandleListSessionsByUser)
-
-	huma.Register(sessionGroup, huma.Operation{
-		OperationID: "getSessionJWT",
-		Method:      http.MethodGet,
-		Path:        "/jwt/",
-		Summary:     "GetSession (JWT)",
 		Description: "Get session detail by session ID (JWT auth)",
 		Tags:        []string{"Session"},
 		Security:    []map[string][]string{{"jwtAuth": {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getSessionJWT", enum.PermissionUser)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getSession", enum.PermissionUser)},
 	}, sessionHandler.HandleGetSessionByUser)
 }
