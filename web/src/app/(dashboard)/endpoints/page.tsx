@@ -26,8 +26,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, Server } from "lucide-react";
+import { Plus, Trash2, Pencil, Server, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface EndpointForm {
   name: string;
@@ -57,6 +67,8 @@ export default function EndpointsPage() {
   const [form, setForm] = useState<EndpointForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const fetchEndpoints = useCallback(async () => {
     setLoading(true);
@@ -135,16 +147,24 @@ export default function EndpointsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    setDeleting(id);
+  const openDeleteConfirm = (ep: EndpointItem) => {
+    setDeleteTarget({ id: ep.id, name: ep.name });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
     try {
-      await api.deleteEndpoint(id);
+      await api.deleteEndpoint(deleteTarget.id);
       toast.success("Endpoint deleted");
       fetchEndpoints();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete endpoint");
     } finally {
       setDeleting(null);
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -188,7 +208,7 @@ export default function EndpointsPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>OpenAI Base URL</TableHead>
-                    <TableHead>Capabilities</TableHead>
+                    <TableHead>Supported APIs</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -201,15 +221,21 @@ export default function EndpointsPage() {
                         {ep.openaiBaseURL || "—"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1.5">
                           {ep.supportOpenAIChatCompletion && (
-                            <Badge variant="secondary" className="text-[10px]">Chat</Badge>
+                            <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                              OpenAI / Chat Completions
+                            </Badge>
                           )}
                           {ep.supportOpenAIResponse && (
-                            <Badge variant="secondary" className="text-[10px]">Response</Badge>
+                            <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                              OpenAI / Response
+                            </Badge>
                           )}
                           {ep.supportAnthropicMessage && (
-                            <Badge variant="secondary" className="text-[10px]">Anthropic</Badge>
+                            <Badge variant="outline" className="text-[10px] border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-400">
+                              Anthropic / Messages
+                            </Badge>
                           )}
                         </div>
                       </TableCell>
@@ -225,7 +251,7 @@ export default function EndpointsPage() {
                             variant="destructive"
                             size="xs"
                             disabled={deleting === ep.id}
-                            onClick={() => handleDelete(ep.id)}
+                            onClick={() => openDeleteConfirm(ep)}
                           >
                             <Trash2 className="mr-1 size-3" />
                             Delete
@@ -239,6 +265,26 @@ export default function EndpointsPage() {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="size-5 text-destructive" />
+                Are you sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
+                {deleting !== null ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-md">
