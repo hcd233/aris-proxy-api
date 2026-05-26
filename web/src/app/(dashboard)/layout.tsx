@@ -210,19 +210,6 @@ export default function DashboardLayout({
 
         {/* Mobile sidebar via Sheet */}
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
-            <SheetHeader className="border-b border-sidebar-border/70 px-4 py-4">
-              <SheetTitle className="font-display text-2xl">Aris Proxy</SheetTitle>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto py-3">
-              <SidebarNav items={navItems} onNavigate={closeMobileSidebar} />
-            </div>
-            <Separator className="bg-sidebar-border/70" />
-            <div className="p-3">
-              <UserBar />
-            </div>
-          </SheetContent>
-
           {/* Main content */}
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Mobile top bar */}
@@ -245,6 +232,19 @@ export default function DashboardLayout({
               <div className="mx-auto max-w-7xl">{children}</div>
             </main>
           </div>
+
+          <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+            <SheetHeader className="border-b border-sidebar-border/70 px-4 py-4">
+              <SheetTitle className="font-display text-2xl">Aris Proxy</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto py-3">
+              <SidebarNav items={navItems} onNavigate={closeMobileSidebar} />
+            </div>
+            <Separator className="bg-sidebar-border/70" />
+            <div className="p-3">
+              <UserBar />
+            </div>
+          </SheetContent>
         </Sheet>
       </div>
     </PermissionGuard>
