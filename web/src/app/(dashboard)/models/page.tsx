@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { ModelItem, EndpointItem } from "@/lib/types";
@@ -25,7 +26,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, Cpu } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Trash2, Pencil, Cpu, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface ModelForm {
@@ -41,6 +59,7 @@ const emptyForm: ModelForm = {
 };
 
 export default function ModelsPage() {
+  const router = useRouter();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +68,8 @@ export default function ModelsPage() {
   const [form, setForm] = useState<ModelForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -119,16 +140,24 @@ export default function ModelsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    setDeleting(id);
+  const openDeleteConfirm = (model: ModelItem) => {
+    setDeleteTarget({ id: model.id, name: model.alias });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
     try {
-      await api.deleteModel(id);
+      await api.deleteModel(deleteTarget.id);
       toast.success("Model deleted");
       fetchData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete model");
     } finally {
       setDeleting(null);
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -175,8 +204,8 @@ export default function ModelsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Alias</TableHead>
                     <TableHead>Model ID</TableHead>
+                    <TableHead>Alias</TableHead>
                     <TableHead>Endpoint</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -185,9 +214,16 @@ export default function ModelsPage() {
                 <TableBody>
                   {models.map((model) => (
                     <TableRow key={model.id}>
-                      <TableCell className="font-medium">{model.alias}</TableCell>
                       <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
-                      <TableCell>{getEndpointName(model.endpointID)}</TableCell>
+                      <TableCell className="font-medium">{model.alias}</TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => router.push("/endpoints")}
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          {getEndpointName(model.endpointID)}
+                        </button>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(model.createdAt).toLocaleDateString()}
                       </TableCell>
@@ -200,7 +236,7 @@ export default function ModelsPage() {
                             variant="destructive"
                             size="xs"
                             disabled={deleting === model.id}
-                            onClick={() => handleDelete(model.id)}
+                            onClick={() => openDeleteConfirm(model)}
                           >
                             <Trash2 className="mr-1 size-3" />
                             Delete
@@ -214,6 +250,26 @@ export default function ModelsPage() {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="size-5 text-destructive" />
+                Are you sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
+                {deleting !== null ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-md">
@@ -248,23 +304,23 @@ export default function ModelsPage() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="model-endpoint">Endpoint</Label>
-                <select
-                  id="model-endpoint"
-                  value={form.endpointID}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, endpointID: Number(e.target.value) }))
+                <Select
+                  value={String(form.endpointID)}
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, endpointID: Number(value as string) }))
                   }
-                  className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                 >
-                  <option value={0} disabled>
-                    Select endpoint
-                  </option>
-                  {endpoints.map((ep) => (
-                    <option key={ep.id} value={ep.id}>
-                      {ep.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="model-endpoint">
+                    <SelectValue placeholder="Select endpoint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {endpoints.map((ep) => (
+                      <SelectItem key={ep.id} value={String(ep.id)}>
+                        {ep.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>

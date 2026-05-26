@@ -25,8 +25,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Key, Plus, Trash2, Copy, Check } from "lucide-react";
+import { Key, Plus, Trash2, Copy, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function APIKeysPage() {
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
@@ -37,6 +47,8 @@ export default function APIKeysPage() {
   const [createdKey, setCreatedKey] = useState<APIKeyDetail | null>(null);
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const fetchKeys = useCallback(async () => {
     setLoading(true);
@@ -78,16 +90,24 @@ export default function APIKeysPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    setDeleting(id);
+  const openDeleteConfirm = (key: APIKeyItem) => {
+    setDeleteTarget({ id: key.id, name: key.name });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
     try {
-      await api.deleteAPIKey(id);
+      await api.deleteAPIKey(deleteTarget.id);
       toast.success("API key deleted");
       fetchKeys();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete key");
     } finally {
       setDeleting(null);
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -226,7 +246,7 @@ export default function APIKeysPage() {
                         variant="destructive"
                         size="xs"
                         disabled={deleting === key.id}
-                        onClick={() => handleDelete(key.id)}
+                        onClick={() => openDeleteConfirm(key)}
                       >
                         <Trash2 className="mr-1 size-3" />
                         Delete
@@ -239,6 +259,26 @@ export default function APIKeysPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-5 text-destructive" />
+              Are you sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete API key <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
+              {deleting !== null ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
