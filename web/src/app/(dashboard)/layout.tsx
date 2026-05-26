@@ -222,30 +222,30 @@ export default function DashboardLayout({
               <UserBar />
             </div>
           </SheetContent>
+
+          {/* Main content */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {/* Mobile top bar */}
+            <header className="flex h-16 items-center gap-3 border-b bg-card/75 px-4 shadow-sm backdrop-blur md:hidden">
+              <SheetTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setSidebarOpen(true)}
+                  />
+                }
+              >
+                <Menu className="size-5" />
+              </SheetTrigger>
+              <span className="font-display text-2xl font-bold">Aris Proxy</span>
+            </header>
+
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+              <div className="mx-auto max-w-7xl">{children}</div>
+            </main>
+          </div>
         </Sheet>
-
-        {/* Main content */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Mobile top bar */}
-          <header className="flex h-16 items-center gap-3 border-b bg-card/75 px-4 shadow-sm backdrop-blur md:hidden">
-            <SheetTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setSidebarOpen(true)}
-                />
-              }
-            >
-              <Menu className="size-5" />
-            </SheetTrigger>
-            <span className="font-display text-2xl font-bold">Aris Proxy</span>
-          </header>
-
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-            <div className="mx-auto max-w-7xl">{children}</div>
-          </main>
-        </div>
       </div>
     </PermissionGuard>
   );
