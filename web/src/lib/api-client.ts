@@ -56,7 +56,7 @@ class ApiClient {
       if (!refreshToken) return false;
 
       try {
-        const res = await fetch(`${API_BASE}/api/v1/token/refresh`, {
+        const res = await fetch(`${API_BASE}/api/v1/token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -129,7 +129,7 @@ class ApiClient {
   }
 
   async refreshToken(body: RefreshTokenReqBody): Promise<RefreshTokenRsp> {
-    return this.request<RefreshTokenRsp>("/api/v1/token/refresh", {
+    return this.request<RefreshTokenRsp>("/api/v1/token", {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -168,7 +168,7 @@ class ApiClient {
   // ─── API Keys ──────────────────────────────────────────────────────────────
 
   async listAPIKeys(): Promise<ListAPIKeysRsp> {
-    return this.request<ListAPIKeysRsp>("/api/v1/apikey/");
+    return this.request<ListAPIKeysRsp>("/api/v1/apikey/list");
   }
 
   async createAPIKey(
@@ -189,7 +189,7 @@ class ApiClient {
   // ─── Endpoints (admin) ─────────────────────────────────────────────────────
 
   async listEndpoints(): Promise<ListEndpointsRsp> {
-    return this.request<ListEndpointsRsp>("/api/v1/endpoint/");
+    return this.request<ListEndpointsRsp>("/api/v1/endpoint/list");
   }
 
   async createEndpoint(
@@ -220,7 +220,7 @@ class ApiClient {
   // ─── Models (admin) ────────────────────────────────────────────────────────
 
   async listModels(): Promise<ListModelsRsp> {
-    return this.request<ListModelsRsp>("/api/v1/model/");
+    return this.request<ListModelsRsp>("/api/v1/model/list");
   }
 
   async createModel(body: CreateModelReqBody): Promise<ListModelsRsp> {
