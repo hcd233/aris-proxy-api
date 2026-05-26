@@ -13,6 +13,7 @@ import (
 )
 
 var commonMIME = map[string]string{
+	".html":  "text/html",
 	".js":    "application/javascript",
 	".css":   "text/css",
 	".woff2": "font/woff2",
@@ -49,14 +50,14 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 		if err == nil {
 			ext := filepath.Ext(filePath)
 			if ct, ok := commonMIME[ext]; ok {
-				c.Type(ct)
+				c.Set("Content-Type", ct)
 			} else if ct := mime.TypeByExtension(ext); ct != "" {
-				c.Type(ct)
+				c.Set("Content-Type", ct)
 			}
 			return c.Send(data)
 		}
 
-		c.Type("html", "utf-8")
+		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.Send(indexContent)
 	})
 }
