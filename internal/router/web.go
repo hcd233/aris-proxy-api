@@ -57,6 +57,13 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 			return c.Send(data)
 		}
 
+		ext := filepath.Ext(filePath)
+		// 静态资源文件（如 js, css, 图片等）如果找不到，应直接返回 404，而不是 fallback 到 index.html
+		// 这可以避免浏览器缓存错误的 200 HTML 响应（当作 JS/CSS 解析报错）导致页面彻底崩溃无法恢复
+		if (ext != "" && ext != ".html") || strings.Contains(filePath, "_next/") || strings.Contains(filePath, "static/") {
+			return c.Status(fiber.StatusNotFound).SendString("404 Not Found")
+		}
+
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.Send(indexContent)
 	})
