@@ -14,7 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare, ListFilter } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -107,10 +113,29 @@ export default function SessionsPage() {
               </Table>
 
               {/* Pagination */}
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {pageInfo.total} session{pageInfo.total !== 1 ? "s" : ""} total
-                </p>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
+                      <ListFilter className="size-3.5" />
+                      {pageInfo.pageSize} / page
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {[20, 50, 100, 200].map((size) => (
+                        <DropdownMenuItem
+                          key={size}
+                          onClick={() => fetchSessions(1, size)}
+                        >
+                          {size} per page
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <p className="text-sm text-muted-foreground">
+                    {pageInfo.total} session{pageInfo.total !== 1 ? "s" : ""} total
+                  </p>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -120,9 +145,32 @@ export default function SessionsPage() {
                   >
                     <ChevronLeft className="size-4" />
                   </Button>
-                  <span className="text-sm">
-                    {pageInfo.page} / {totalPages}
-                  </span>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <span className="text-muted-foreground">Page</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={totalPages}
+                      defaultValue={pageInfo.page}
+                      className="h-8 w-14 rounded-md border border-input bg-transparent px-2 py-1 text-center text-sm tabular-nums focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const target = e.currentTarget;
+                          let page = parseInt(target.value, 10);
+                          if (Number.isNaN(page)) page = 1;
+                          page = Math.max(1, Math.min(page, totalPages));
+                          fetchSessions(page, pageInfo.pageSize);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        let page = parseInt(e.target.value, 10);
+                        if (Number.isNaN(page)) page = 1;
+                        page = Math.max(1, Math.min(page, totalPages));
+                        fetchSessions(page, pageInfo.pageSize);
+                      }}
+                    />
+                    <span className="text-muted-foreground">/ {totalPages}</span>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
