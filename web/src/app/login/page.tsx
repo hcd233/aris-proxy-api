@@ -63,8 +63,8 @@ export default function LoginPage() {
   if (processing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm rounded-3xl border bg-card p-8 text-center shadow-[0_24px_70px_rgba(92,62,29,0.14)]">
-          <p className="font-display text-3xl font-bold text-foreground">
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center">
+          <p className="font-display text-3xl font-semibold text-foreground">
             Aris Proxy
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -77,13 +77,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border bg-card shadow-[0_28px_90px_rgba(92,62,29,0.16)] md:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border bg-card md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between">
           <div>
-            <div className="mb-10 inline-flex size-14 items-center justify-center rounded-2xl bg-sidebar-primary font-display text-3xl font-bold text-sidebar-primary-foreground">
+            <div className="mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground">
               A
             </div>
-            <h1 className="font-display text-5xl font-bold leading-none tracking-tight">
+            <h1 className="font-display text-5xl font-semibold leading-none tracking-tight">
               Aris Proxy
             </h1>
             <p className="mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
@@ -98,7 +98,7 @@ export default function LoginPage() {
 
         <div className="flex flex-col justify-center p-8 md:p-10">
           <div className="mb-8 md:hidden">
-            <h1 className="font-display text-5xl font-bold tracking-tight text-foreground">
+            <h1 className="font-display text-5xl font-semibold tracking-tight text-foreground">
               Aris Proxy
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -106,7 +106,7 @@ export default function LoginPage() {
             </p>
           </div>
           <div className="hidden md:block">
-            <h2 className="font-display text-4xl font-bold tracking-tight text-foreground">
+            <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
               Welcome back
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -115,7 +115,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="mt-6 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </div>
           )}

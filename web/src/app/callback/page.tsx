@@ -49,13 +49,13 @@ export default function CallbackPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive">Login Failed</h1>
-          <p className="mt-2 text-muted-foreground">{error}</p>
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center">
+          <h1 className="font-display text-2xl font-semibold text-destructive">Login Failed</h1>
+          <p className="mt-3 text-sm text-muted-foreground">{error}</p>
           <a
             href="/web/login/"
-            className="mt-4 inline-block text-primary hover:underline"
+            className="mt-6 inline-block text-sm font-medium text-primary hover:text-[var(--primary-hover)] transition-colors"
           >
             Back to login
           </a>
@@ -65,8 +65,11 @@ export default function CallbackPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">Completing login...</p>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="text-center">
+        <p className="font-display text-xl font-semibold text-foreground">Completing login...</p>
+        <p className="mt-2 text-sm text-muted-foreground">Please wait a moment</p>
+      </div>
     </div>
   );
 }

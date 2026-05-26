@@ -71,9 +71,11 @@ const navItems: NavItem[] = [
 function SidebarNav({
   items,
   onNavigate,
+  collapsed = false,
 }: {
   items: NavItem[];
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const { isAdmin } = useAuth();
@@ -83,7 +85,7 @@ function SidebarNav({
   );
 
   return (
-    <nav className="flex flex-col gap-1 px-2">
+    <nav className="flex flex-col gap-0.5 px-2">
       {visibleItems.map((item) => {
         const isActive =
           item.href === "/"
@@ -95,14 +97,15 @@ function SidebarNav({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
               isActive
-                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`}
+            } ${collapsed ? "justify-center" : ""}`}
+            title={collapsed ? item.label : undefined}
           >
-            {item.icon}
-            {item.label}
+            <span className={isActive ? "text-white" : ""}>{item.icon}</span>
+            {!collapsed && <span>{item.label}</span>}
           </Link>
         );
       })}
@@ -110,7 +113,7 @@ function SidebarNav({
   );
 }
 
-function UserBar() {
+function UserBar({ collapsed = false }: { collapsed?: boolean }) {
   const { user, logout } = useAuth();
 
   if (!user) return null;
@@ -124,24 +127,30 @@ function UserBar() {
       .slice(0, 2);
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/40 p-2 text-sidebar-foreground">
+    <div className={`flex items-center gap-3 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 p-2 text-sidebar-foreground transition-all duration-150 ${collapsed ? "justify-center" : ""}`}>
       <Avatar size="sm">
         {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
-        <AvatarFallback>{initials}</AvatarFallback>
+        <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-medium">
+          {initials}
+        </AvatarFallback>
       </Avatar>
-      <div className="hidden min-w-0 flex-1 md:block">
-        <p className="truncate text-sm font-medium leading-none">
-          {user.name ?? user.email ?? "User"}
-        </p>
-        <div className="mt-1 flex items-center gap-1.5">
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-            {user.permission}
-          </Badge>
-        </div>
-      </div>
-      <Button variant="ghost" size="icon-sm" onClick={logout} title="Logout">
-        <LogOut className="size-4" />
-      </Button>
+      {!collapsed && (
+        <>
+          <div className="hidden min-w-0 flex-1 md:block">
+            <p className="truncate text-sm font-medium leading-none">
+              {user.name ?? user.email ?? "User"}
+            </p>
+            <div className="mt-1 flex items-center gap-1.5">
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
+                {user.permission}
+              </Badge>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon-sm" onClick={logout} title="Logout" className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+            <LogOut className="size-4" />
+          </Button>
+        </>
+      )}
     </div>
   );
 }
@@ -177,13 +186,13 @@ export default function DashboardLayout({
       <div className="flex h-screen overflow-hidden bg-background text-foreground">
         {/* Desktop sidebar */}
         <aside
-          className={`hidden md:flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[0_24px_70px_rgba(62,38,16,0.22)] transition-[width] duration-200 ${
+          className={`hidden md:flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
             collapsed ? "w-16" : "w-64"
           }`}
         >
-          <div className="flex h-16 items-center justify-between border-b border-sidebar-border/70 px-3">
+          <div className="flex h-14 items-center justify-between border-b border-sidebar-border/50 px-3">
             {!collapsed && (
-              <span className="text-base font-semibold tracking-tight">
+              <span className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground">
                 Aris Proxy
               </span>
             )}
@@ -191,19 +200,17 @@ export default function DashboardLayout({
               variant="ghost"
               size="icon-sm"
               onClick={toggleCollapsed}
-              className={collapsed ? "mx-auto text-sidebar-foreground" : "text-sidebar-foreground"}
+              className={collapsed ? "mx-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent" : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"}
             >
               <Menu className="size-4" />
             </Button>
           </div>
           <div className="flex-1 overflow-y-auto py-3">
-            <SidebarNav
-              items={collapsed ? navItems.map((n) => ({ ...n, label: "" })) : navItems}
-            />
+            <SidebarNav items={navItems} collapsed={collapsed} />
           </div>
-          <Separator />
-          <div className="p-3">
-            <UserBar />
+          <Separator className="bg-sidebar-border/50" />
+          <div className="p-2">
+            <UserBar collapsed={collapsed} />
           </div>
         </aside>
 
@@ -212,31 +219,32 @@ export default function DashboardLayout({
           {/* Main content */}
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Mobile top bar */}
-            <header className="flex h-16 items-center gap-3 border-b bg-card/75 px-4 shadow-sm backdrop-blur md:hidden">
+            <header className="flex h-14 items-center gap-3 border-b border-border bg-card/60 px-4 backdrop-blur-sm md:hidden">
               <Button
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => setSidebarOpen(true)}
+                className="text-foreground/60 hover:text-foreground hover:bg-secondary"
               >
                 <Menu className="size-5" />
               </Button>
-              <span className="font-display text-2xl font-bold">Aris Proxy</span>
+              <span className="font-display text-xl font-semibold tracking-tight">Aris Proxy</span>
             </header>
 
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-              <div className="mx-auto max-w-7xl">{children}</div>
+            <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
+              <div className="mx-auto max-w-6xl">{children}</div>
             </main>
           </div>
 
           <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
-            <SheetHeader className="border-b border-sidebar-border/70 px-4 py-4">
-              <SheetTitle className="font-display text-2xl">Aris Proxy</SheetTitle>
+            <SheetHeader className="border-b border-sidebar-border/50 px-4 py-3">
+              <SheetTitle className="font-display text-xl font-semibold tracking-tight">Aris Proxy</SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto py-3">
               <SidebarNav items={navItems} onNavigate={closeMobileSidebar} />
             </div>
-            <Separator className="bg-sidebar-border/70" />
-            <div className="p-3">
+            <Separator className="bg-sidebar-border/50" />
+            <div className="p-2">
               <UserBar />
             </div>
           </SheetContent>

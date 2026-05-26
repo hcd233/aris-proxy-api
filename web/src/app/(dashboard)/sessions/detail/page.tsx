@@ -7,7 +7,6 @@ import type { SessionDetail, MessageItem, ToolItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ChevronDown, ChevronRight, Wrench } from "lucide-react";
 
@@ -171,16 +170,16 @@ export default function SessionDetailPage() {
   ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon-sm" onClick={() => router.push("/sessions/")}>
+        <Button variant="ghost" size="icon-sm" onClick={() => router.push("/sessions/")} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />
         </Button>
         <div>
-          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
             Session #{session.id}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             {session.apiKeyName && `Key: ${session.apiKeyName}`}
           </p>
         </div>
@@ -188,35 +187,33 @@ export default function SessionDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Session Info</CardTitle>
+          <CardTitle className="font-display text-base">Session Info</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <p className="text-xs text-muted-foreground">ID</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">ID</p>
               <p className="font-mono text-sm">{session.id}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">API Key</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">API Key</p>
               <p className="text-sm">{session.apiKeyName || "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Created</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Created</p>
               <p className="text-sm">{new Date(session.createdAt).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Updated</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Updated</p>
               <p className="text-sm">{new Date(session.updatedAt).toLocaleString()}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Separator />
-
       <div>
-        <h2 className="mb-4 text-lg font-semibold">Conversation</h2>
-        <div className="space-y-3">
+        <h2 className="font-display mb-4 text-lg font-semibold">Conversation</h2>
+        <div className="space-y-4">
           {allItems.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No messages in this session
