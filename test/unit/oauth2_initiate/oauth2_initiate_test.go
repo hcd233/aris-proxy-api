@@ -116,8 +116,8 @@ func TestInitiateLogin(t *testing.T) {
 				if tc.ExpectURLContainsState && !strings.Contains(result.RedirectURL, state) {
 					t.Errorf("redirect URL does not contain state: url=%q state=%q", result.RedirectURL, state)
 				}
-				// 安全断言：state 必须是 StateManager 生成的一次性值（非空、长度 >= 32 hex chars = 16 bytes）
-				if len(state) < 32 {
+				// 安全断言：state 必须是 StateManager 生成的一次性值（格式 "provider:<platform>:<hex>"）
+				if len(state) < 40 {
 					t.Errorf("state length = %d, expected at least 32 hex chars (16 bytes) from one-time StateManager", len(state))
 				}
 			case "bad_request":

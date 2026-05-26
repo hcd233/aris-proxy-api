@@ -80,7 +80,7 @@ func (h *initiateLoginHandler) Handle(ctx context.Context, cmd InitiateLoginComm
 		return nil, ierr.New(ierr.ErrBadRequest, "invalid oauth platform")
 	}
 
-	state, err := h.stateManager.GenerateState()
+	state, err := h.stateManager.GenerateState(cmd.Platform)
 	if err != nil {
 		log.Error("[OAuth2Command] Failed to generate state", zap.Error(err))
 		return nil, ierr.Wrap(ierr.ErrInternal, err, "generate oauth state")

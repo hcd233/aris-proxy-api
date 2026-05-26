@@ -247,7 +247,7 @@ func TestHandleCallback_NewUser(t *testing.T) {
 
 	stateManager := infraoauth2.NewStateManager()
 
-	state, err := stateManager.GenerateState()
+	state, err := stateManager.GenerateState(tc.Platform)
 	if err != nil {
 		t.Fatalf("GenerateState() error: %v", err)
 	}
@@ -291,7 +291,7 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 
 	stateManager := infraoauth2.NewStateManager()
 
-	state, err := stateManager.GenerateState()
+	state, err := stateManager.GenerateState(tc.Platform)
 	if err != nil {
 		t.Fatalf("GenerateState() error: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestHandleCallback_InvalidPlatform(t *testing.T) {
 
 	stateManager := infraoauth2.NewStateManager()
 
-	state, err := stateManager.GenerateState()
+	state, err := stateManager.GenerateState(tc.Platform)
 	if err != nil {
 		t.Fatalf("GenerateState() error: %v", err)
 	}
