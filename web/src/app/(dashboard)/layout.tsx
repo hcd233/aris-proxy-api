@@ -14,7 +14,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -214,17 +213,13 @@ export default function DashboardLayout({
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Mobile top bar */}
             <header className="flex h-16 items-center gap-3 border-b bg-card/75 px-4 shadow-sm backdrop-blur md:hidden">
-              <SheetTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setSidebarOpen(true)}
-                  />
-                }
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setSidebarOpen(true)}
               >
                 <Menu className="size-5" />
-              </SheetTrigger>
+              </Button>
               <span className="font-display text-2xl font-bold">Aris Proxy</span>
             </header>
 
@@ -246,6 +241,7 @@ export default function DashboardLayout({
             </div>
           </SheetContent>
         </Sheet>
+
       </div>
     </PermissionGuard>
   );
