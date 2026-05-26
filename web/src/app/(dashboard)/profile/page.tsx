@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
 export default function ProfilePage() {
@@ -72,72 +71,72 @@ export default function ProfilePage() {
     .slice(0, 2);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Profile</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Profile</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
           Manage your account settings
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-start gap-6">
-            <Avatar size="lg">
-              {localUser.avatar && (
-                <AvatarImage src={localUser.avatar} alt={localUser.name ?? ""} />
-              )}
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <div className="space-y-2">
-              <div>
-                <p className="font-medium">{localUser.name ?? "Unnamed"}</p>
-                <p className="text-sm text-muted-foreground">{localUser.email ?? "—"}</p>
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display">Account Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center text-center gap-4">
+              <Avatar size="lg" className="size-20">
+                {localUser.avatar && (
+                  <AvatarImage src={localUser.avatar} alt={localUser.name ?? ""} />
+                )}
+                <AvatarFallback className="bg-secondary text-2xl font-medium">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="space-y-2">
+                <div>
+                  <p className="font-display text-lg font-medium">{localUser.name ?? "Unnamed"}</p>
+                  <p className="text-sm text-muted-foreground">{localUser.email ?? "—"}</p>
+                </div>
+                <Badge variant="secondary" className="text-xs">{localUser.permission}</Badge>
+                {localUser.createdAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Joined {new Date(localUser.createdAt).toLocaleDateString()}
+                  </p>
+                )}
               </div>
-              <Badge variant="secondary">{localUser.permission}</Badge>
-              {localUser.createdAt && (
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display">Edit Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="max-w-md space-y-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="profile-name" className="text-sm font-medium">Display Name</Label>
+                <Input
+                  id="profile-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Email</Label>
+                <Input value={localUser.email ?? ""} disabled className="opacity-60 bg-muted/30" />
                 <p className="text-xs text-muted-foreground">
-                  Joined {new Date(localUser.createdAt).toLocaleDateString()}
+                  Email is managed by your OAuth2 provider.
                 </p>
-              )}
+              </div>
+              <Button onClick={handleSave} disabled={saving || name === (localUser.name ?? "")}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit Profile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="max-w-sm space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="profile-name">Display Name</Label>
-              <Input
-                id="profile-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Email</Label>
-              <Input value={localUser.email ?? ""} disabled className="opacity-60" />
-              <p className="text-xs text-muted-foreground">
-                Email is managed by your OAuth2 provider.
-              </p>
-            </div>
-            <Button onClick={handleSave} disabled={saving || name === (localUser.name ?? "")}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

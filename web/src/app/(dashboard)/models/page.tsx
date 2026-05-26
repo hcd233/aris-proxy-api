@@ -139,11 +139,11 @@ export default function ModelsPage() {
 
   return (
     <PermissionGuard adminOnly>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Models</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Models</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
               Manage model aliases and routing
             </p>
           </div>
@@ -155,18 +155,18 @@ export default function ModelsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>All Models</CardTitle>
+            <CardTitle className="font-display">All Models</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             ) : models.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Cpu className="mb-3 size-10 text-muted-foreground/50" />
+                <Cpu className="mb-3 size-10 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">
                   No models configured. Create one to get started.
                 </p>
@@ -193,7 +193,7 @@ export default function ModelsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)}>
+                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
                             <Pencil className="size-3.5" />
                           </Button>
                           <Button

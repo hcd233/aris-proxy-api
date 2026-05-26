@@ -105,11 +105,11 @@ export default function APIKeysPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">API Keys</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">API Keys</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
             Manage your API keys for authentication
           </p>
         </div>
@@ -185,18 +185,18 @@ export default function APIKeysPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Your Keys</CardTitle>
+          <CardTitle className="font-display">Your Keys</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
+                <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
           ) : keys.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Key className="mb-3 size-10 text-muted-foreground/50" />
+              <Key className="mb-3 size-10 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 No API keys yet. Create one to get started.
               </p>

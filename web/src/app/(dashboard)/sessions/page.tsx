@@ -47,17 +47,17 @@ export default function SessionsPage() {
   const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Sessions</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Sessions</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
           View and browse your conversation sessions
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Sessions</CardTitle>
+          <CardTitle className="font-display">All Sessions</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
