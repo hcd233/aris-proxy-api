@@ -42,7 +42,7 @@ func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler,
 	huma.Register(apikeyGroup, huma.Operation{
 		OperationID: "listAPIKeys",
 		Method:      http.MethodGet,
-		Path:        "/",
+		Path:        "/list",
 		Summary:     "ListAPIKeys",
 		Description: "List all API keys for the current user (admin sees all)",
 		Tags:        []string{"APIKey"},

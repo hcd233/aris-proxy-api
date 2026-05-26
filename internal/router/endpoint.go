@@ -36,7 +36,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 	huma.Register(endpointGroup, huma.Operation{
 		OperationID: "listEndpoints",
 		Method:      http.MethodGet,
-		Path:        "/",
+		Path:        "/list",
 		Summary:     "ListEndpoints",
 		Description: "List all endpoint configurations",
 		Tags:        []string{"Endpoint"},

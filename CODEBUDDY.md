@@ -333,3 +333,46 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - **chore/\***：杂项（依赖升级、工具链配置等），如 `chore/upgrade-go-version`
 - 分支名使用小写 kebab-case，简短描述意图
 - 禁止使用 `feat/`、`fix/` 等缩写前缀
+
+## 11. API 路由命名规范
+
+### 11.1 分层结构
+
+```
+/api/v1/{resource}[/{action}]
+/api/{provider}/v1/{action}      # LLM 代理路由 (openai/anthropic)
+```
+
+### 11.2 通用规则
+
+- **资源名使用单数小写**：`/user`、`/session`、`/apikey`、`/endpoint`、`/model`、`/audit`
+- **禁止裸尾斜杠**：`POST /endpoint` ✅，`POST /endpoint/` ❌；所有路径必须有明确路径段
+- **操作通过 Path 段表达，不依赖 HTTP Method 表达语义差异**（即不使用 `GET /endpoint` + `POST /endpoint` 作为唯一区分）
+
+### 11.3 操作映射
+
+| 操作 | Method | Path | 示例 |
+|------|--------|------|------|
+| 创建 | POST | `/{resource}` | `POST /endpoint` |
+| 列表 | GET | `/{resource}/list` | `GET /endpoint/list` |
+| 查询详情 | GET | `/{resource}` | `GET /session?sessionId=1` |
+| 获取当前用户 | GET | `/user/current` | `GET /user/current` |
+| 按 ID 更新 | PATCH | `/{resource}/{id}` | `PATCH /endpoint/{id}` |
+| 按 ID 删除 | DELETE | `/{resource}/{id}` | `DELETE /endpoint/{id}` |
+| 特殊动作 | POST/GET | `/{resource}/{action}` | `POST /token`、`GET /audit/logs` |
+
+### 11.4 已注册资源路由一览
+
+| 资源 | 分组路径 | 操作路径 |
+|------|---------|---------|
+| Health | `/health`, `/ssehealth` | `GET /health`, `GET /ssehealth` |
+| Token | `/api/v1/token` | `POST /` |
+| OAuth2 | `/api/v1/oauth2` | `GET /{provider}/login`, `POST /{provider}/callback` |
+| User | `/api/v1/user` | `GET /current`, `PATCH /`, `GET /{userID}` |
+| APIKey | `/api/v1/apikey` | `POST /`, `GET /list`, `DELETE /{id}` |
+| Session | `/api/v1/session` | `GET /list`, `GET /` |
+| Endpoint | `/api/v1/endpoint` | `POST /`, `GET /list`, `PATCH /{id}`, `DELETE /{id}` |
+| Model | `/api/v1/model` | `POST /`, `GET /list`, `PATCH /{id}`, `DELETE /{id}` |
+| Audit | `/api/v1/audit` | `GET /logs` |
+| OpenAI | `/api/openai/v1` | `POST /chat/completions` |
+| Anthropic | `/api/anthropic/v1` | `POST /messages`, `POST /messages/count_tokens` |

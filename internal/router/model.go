@@ -36,7 +36,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 	huma.Register(modelGroup, huma.Operation{
 		OperationID: "listModelMappings",
 		Method:      http.MethodGet,
-		Path:        "/",
+		Path:        "/list",
 		Summary:     "ListModels",
 		Description: "List all model mappings",
 		Tags:        []string{"Model"},
