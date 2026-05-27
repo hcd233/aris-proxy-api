@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, MessageSquare, ListFilter } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare, ListFilter, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,11 @@ export default function SessionsPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [pageInputValue, setPageInputValue] = useState("1");
+
+  useEffect(() => {
+    setPageInputValue(String(pageInfo.page));
+  }, [pageInfo.page]);
 
   const fetchSessions = useCallback(async (page: number, pageSize: number) => {
     setLoading(true);
@@ -126,7 +131,12 @@ export default function SessionsPage() {
                           key={size}
                           onClick={() => fetchSessions(1, size)}
                         >
-                          {size} per page
+                          {size === pageInfo.pageSize && (
+                            <Check className="size-4" />
+                          )}
+                          <span className={size === pageInfo.pageSize ? "ml-0" : "ml-6"}>
+                            {size} per page
+                          </span>
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
@@ -151,19 +161,19 @@ export default function SessionsPage() {
                       type="number"
                       min={1}
                       max={totalPages}
-                      defaultValue={pageInfo.page}
+                      value={pageInputValue}
+                      onChange={(e) => setPageInputValue(e.target.value)}
                       className="h-8 w-14 rounded-md border border-input bg-transparent px-2 py-1 text-center text-sm tabular-nums focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          const target = e.currentTarget;
-                          let page = parseInt(target.value, 10);
+                          let page = parseInt(pageInputValue, 10);
                           if (Number.isNaN(page)) page = 1;
                           page = Math.max(1, Math.min(page, totalPages));
                           fetchSessions(page, pageInfo.pageSize);
                         }
                       }}
-                      onBlur={(e) => {
-                        let page = parseInt(e.target.value, 10);
+                      onBlur={() => {
+                        let page = parseInt(pageInputValue, 10);
                         if (Number.isNaN(page)) page = 1;
                         page = Math.max(1, Math.min(page, totalPages));
                         fetchSessions(page, pageInfo.pageSize);

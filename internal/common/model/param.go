@@ -18,7 +18,7 @@ type PageInfo struct {
 //	update 2024-09-21 09:00:57
 type PageParam struct {
 	Page     int `query:"page" required:"true" minimum:"1"`
-	PageSize int `query:"pageSize" required:"true" minimum:"1" maximum:"50"`
+	PageSize int `query:"pageSize" required:"true" minimum:"1" maximum:"200"`
 }
 
 // QueryParam 查询参数
