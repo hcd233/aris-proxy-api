@@ -23,6 +23,15 @@ import (
 //	update 2024-10-17 02:32:22
 type baseDAO[ModelT any] struct{}
 
+func isValidSortField(field string) bool {
+	for _, c := range field {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+			return false
+		}
+	}
+	return field != ""
+}
+
 // Create 创建数据
 //
 //	param dao *BaseDAO[T]
@@ -177,6 +186,12 @@ func (dao *baseDAO[ModelT]) HardDeleteSoftDeleted(db *gorm.DB) (int64, error) {
 //	author centonhuang
 //	update 2024-10-17 03:09:11
 func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string, param *CommonParam) (data []*ModelT, pageInfo *model.PageInfo, err error) {
+	if param.Page < 1 {
+		param.Page = 1
+	}
+	if param.PageSize < 1 {
+		param.PageSize = 10
+	}
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 
 	sql := db.Model(where).Select(fields).Where(where).Where(constant.DBConditionDeletedAtZero)
@@ -199,6 +214,11 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 		}
 	}
 
+	if param.Sort != "" && param.SortField != "" {
+		if !isValidSortField(param.SortField) {
+			param.SortField = ""
+		}
+	}
 	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}

@@ -74,11 +74,7 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 	rsp := &dto.ListEndpointsRsp{}
 
 	views, pageInfo, err := h.list.Handle(ctx, query.ListEndpointsQuery{
-		Page:      req.Page,
-		PageSize:  req.PageSize,
-		Query:     req.Query,
-		Sort:      string(req.Sort),
-		SortField: req.SortField,
+		CommonParam: req.CommonParam,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] List endpoints failed", zap.Error(err))

@@ -30,20 +30,9 @@ type APIKeyView struct {
 //	@author centonhuang
 //	@update 2026-05-27 10:00:00
 type ListAPIKeysQuery struct {
-	// RequesterID 查询者用户 ID
-	RequesterID uint
-	// RequesterPermission 查询者权限（admin 可见全量，其他只见自己）
+	RequesterID         uint
 	RequesterPermission commonenum.Permission
-	// Page 页码
-	Page int
-	// PageSize 每页数量
-	PageSize int
-	// Query 搜索关键词
-	Query string
-	// Sort 排序方式
-	Sort string
-	// SortField 排序字段
-	SortField string
+	model.CommonParam
 }
 
 // ListAPIKeysHandler 查询处理器
@@ -81,23 +70,15 @@ func NewListAPIKeysHandler(repo apikey.APIKeyRepository) ListAPIKeysHandler {
 func (h *listAPIKeysHandler) Handle(ctx context.Context, q ListAPIKeysQuery) ([]*APIKeyView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	param := apikey.PageParam{
-		Page:      q.Page,
-		PageSize:  q.PageSize,
-		Query:     q.Query,
-		Sort:      q.Sort,
-		SortField: q.SortField,
-	}
-
 	var (
 		keys     []*aggregate.ProxyAPIKey
 		pageInfo *model.PageInfo
 		err      error
 	)
 	if q.RequesterPermission == commonenum.PermissionAdmin {
-		keys, pageInfo, err = h.repo.PaginateAll(ctx, param)
+		keys, pageInfo, err = h.repo.PaginateAll(ctx, q.CommonParam)
 	} else {
-		keys, pageInfo, err = h.repo.PaginateByUser(ctx, q.RequesterID, param)
+		keys, pageInfo, err = h.repo.PaginateByUser(ctx, q.RequesterID, q.CommonParam)
 	}
 	if err != nil {
 		log.Error("[APIKeyQuery] List api keys failed", zap.Error(err))

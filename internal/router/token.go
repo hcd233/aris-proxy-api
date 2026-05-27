@@ -14,7 +14,7 @@ func initTokenRouter(tokenGroup huma.API, tokenHandler handler.TokenHandler, cac
 	huma.Register(tokenGroup, huma.Operation{
 		OperationID: "refreshToken",
 		Method:      http.MethodPost,
-		Path:        "/",
+		Path:        "/refresh",
 		Summary:     "RefreshToken",
 		Description: "Refresh the access token using a refresh token",
 		Tags:        []string{"Token"},

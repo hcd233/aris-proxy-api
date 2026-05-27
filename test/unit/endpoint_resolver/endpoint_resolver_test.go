@@ -10,7 +10,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -92,7 +91,7 @@ func (s *stubModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
-func (s *stubModelRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Model, *model.PageInfo, error) {
+func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -124,7 +123,7 @@ func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *stubEndpointRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (s *stubEndpointRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -156,7 +155,7 @@ func (s *staticModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
-func (s *staticModelRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Model, *model.PageInfo, error) {
+func (s *staticModelRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -184,7 +183,7 @@ func (s *endpointByIDRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *endpointByIDRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (s *endpointByIDRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 

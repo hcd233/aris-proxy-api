@@ -46,6 +46,9 @@ type DeleteEndpointReq struct {
 }
 
 // ListEndpointsReq 列出 Endpoint 请求
+//
+//	@author centonhuang
+//	@update 2026-05-27 10:00:00
 type ListEndpointsReq struct {
 	model.CommonParam
 }

@@ -38,6 +38,9 @@ type DeleteModelReq struct {
 }
 
 // ListModelsReq 列出 Model 请求
+//
+//	@author centonhuang
+//	@update 2026-05-27 10:00:00
 type ListModelsReq struct {
 	model.CommonParam
 }

@@ -13,16 +13,7 @@ import (
 
 // ListModelsQuery 列出 Models 查询命令
 type ListModelsQuery struct {
-	// Page 页码
-	Page int
-	// PageSize 每页数量
-	PageSize int
-	// Query 搜索关键词
-	Query string
-	// Sort 排序方式
-	Sort string
-	// SortField 排序字段
-	SortField string
+	model.CommonParam
 }
 
 // ModelView Model 只读投影
@@ -53,15 +44,7 @@ func NewListModelsHandler(repo llmproxy.ModelRepository) ListModelsHandler {
 func (h *listModelsHandler) Handle(ctx context.Context, q ListModelsQuery) ([]*ModelView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	param := llmproxy.PageParam{
-		Page:      q.Page,
-		PageSize:  q.PageSize,
-		Query:     q.Query,
-		Sort:      q.Sort,
-		SortField: q.SortField,
-	}
-
-	models, pageInfo, err := h.repo.Paginate(ctx, param)
+	models, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam)
 	if err != nil {
 		log.Error("[ModelQuery] List models failed", zap.Error(err))
 		return nil, nil, err
