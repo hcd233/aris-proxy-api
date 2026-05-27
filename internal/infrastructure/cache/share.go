@@ -16,10 +16,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const (
-	shareTTL = 24 * time.Hour
-)
-
 // shareRecord 分享记录（存储在 Redis Sorted Set 的 member 中）
 type shareRecord struct {
 	ShareID   string `json:"shareId"`
@@ -67,7 +63,7 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 	shareID := uuid.New().String()
 	key := fmt.Sprintf(constant.ShareKeyTemplate, shareID)
 	userSharesKey := fmt.Sprintf(constant.UserSharesKeyTemplate, userID)
-	expiresAt := time.Now().Add(shareTTL)
+	expiresAt := time.Now().Add(constant.ShareTTL)
 
 	record := &shareRecord{
 		ShareID:   shareID,
@@ -80,12 +76,12 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 	}
 
 	pipe := s.cache.Pipeline()
-	pipe.Set(ctx, key, sessionID, shareTTL)
+	pipe.Set(ctx, key, sessionID, constant.ShareTTL)
 	pipe.ZAdd(ctx, userSharesKey, redis.Z{
 		Score:  float64(record.CreatedAt),
 		Member: string(recordJSON),
 	})
-	pipe.Expire(ctx, userSharesKey, shareTTL)
+	pipe.Expire(ctx, userSharesKey, constant.ShareTTL)
 
 	if _, execErr := pipe.Exec(ctx); execErr != nil {
 		return "", time.Time{}, ierr.Wrap(ierr.ErrInternal, execErr, "failed to create share")

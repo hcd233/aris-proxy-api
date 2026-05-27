@@ -13,4 +13,6 @@ const (
 
 	PeriodGetShareContent = 1 * time.Minute
 	LimitGetShareContent  = 30
+
+	ShareTTL = 24 * time.Hour
 )
