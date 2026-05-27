@@ -241,17 +241,17 @@ export default function EndpointsPage() {
                         <TableCell>
                           <div className="flex flex-wrap gap-1.5">
                             {ep.supportOpenAIChatCompletion && (
-                              <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                              <Badge variant="secondary" className="text-[11px] font-normal">
                                 OpenAI / Chat Completions
                               </Badge>
                             )}
                             {ep.supportOpenAIResponse && (
-                              <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                              <Badge variant="secondary" className="text-[11px] font-normal">
                                 OpenAI / Response
                               </Badge>
                             )}
                             {ep.supportAnthropicMessage && (
-                              <Badge variant="outline" className="text-[10px] border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-400">
+                              <Badge variant="secondary" className="text-[11px] font-normal">
                                 Anthropic / Messages
                               </Badge>
                             )}
