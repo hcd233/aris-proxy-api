@@ -87,14 +87,14 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 			if cs.role == "" && choice.Delta.Role != "" {
 				cs.role = choice.Delta.Role
 			}
-			if choice.Delta.Content != "" {
-				cs.contentParts = append(cs.contentParts, choice.Delta.Content)
+			if choice.Delta.Content != nil && *choice.Delta.Content != "" {
+				cs.contentParts = append(cs.contentParts, *choice.Delta.Content)
 			}
-			if choice.Delta.ReasoningContent != "" {
-				cs.reasoningContentParts = append(cs.reasoningContentParts, choice.Delta.ReasoningContent)
+			if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
+				cs.reasoningContentParts = append(cs.reasoningContentParts, *choice.Delta.ReasoningContent)
 			}
-			if choice.Delta.Refusal != "" {
-				cs.refusalParts = append(cs.refusalParts, choice.Delta.Refusal)
+			if choice.Delta.Refusal != nil && *choice.Delta.Refusal != "" {
+				cs.refusalParts = append(cs.refusalParts, *choice.Delta.Refusal)
 			}
 
 			// Merge tool_call deltas by their index within the tool_calls array.
@@ -140,8 +140,8 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 				}
 			}
 
-			if choice.FinishReason != "" {
-				cs.finishReason = choice.FinishReason
+			if choice.FinishReason != nil && *choice.FinishReason != "" {
+				cs.finishReason = *choice.FinishReason
 			}
 
 			if choice.Logprobs != nil {

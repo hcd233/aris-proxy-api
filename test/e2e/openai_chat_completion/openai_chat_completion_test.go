@@ -349,8 +349,8 @@ func hasSubstantiveDelta(payload string) bool {
 	var chunk struct {
 		Choices []struct {
 			Delta struct {
-				Content          string `json:"content"`
-				ReasoningContent string `json:"reasoning_content"`
+				Content          *string `json:"content"`
+				ReasoningContent *string `json:"reasoning_content"`
 			} `json:"delta"`
 		} `json:"choices"`
 	}
@@ -358,7 +358,7 @@ func hasSubstantiveDelta(payload string) bool {
 		return false
 	}
 	for _, c := range chunk.Choices {
-		if c.Delta.Content != "" || c.Delta.ReasoningContent != "" {
+		if (c.Delta.Content != nil && *c.Delta.Content != "") || (c.Delta.ReasoningContent != nil && *c.Delta.ReasoningContent != "") {
 			return true
 		}
 	}

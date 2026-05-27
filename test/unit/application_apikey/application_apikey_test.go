@@ -10,6 +10,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
 )
@@ -68,6 +70,14 @@ func (m *mockAPIKeyRepository) Delete(ctx context.Context, id uint) error {
 
 func (m *mockAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
 	return nil, nil
+}
+
+func (m *mockAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
+func (m *mockAPIKeyRepository) PaginateAll(ctx context.Context, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	return nil, nil, nil
 }
 
 // mockAPIKeyGenerator mock APIKeyGenerator
@@ -421,6 +431,14 @@ func (m *mockRevokeAPIKeyRepository) Delete(ctx context.Context, id uint) error 
 
 func (m *mockRevokeAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
 	return nil, nil
+}
+
+func (m *mockRevokeAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
+func (m *mockRevokeAPIKeyRepository) PaginateAll(ctx context.Context, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	return nil, nil, nil
 }
 
 // TestRevokeAPIKeyHandler_OwnerSuccess 验证所有者成功吊销

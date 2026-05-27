@@ -6,13 +6,25 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
 // ListEndpointsQuery 列出 Endpoints 查询命令
-type ListEndpointsQuery struct{}
+type ListEndpointsQuery struct {
+	// Page 页码
+	Page int
+	// PageSize 每页数量
+	PageSize int
+	// Query 搜索关键词
+	Query string
+	// Sort 排序方式
+	Sort string
+	// SortField 排序字段
+	SortField string
+}
 
 // EndpointView Endpoint 只读投影
 type EndpointView struct {
@@ -30,7 +42,7 @@ type EndpointView struct {
 
 // ListEndpointsHandler 查询处理器
 type ListEndpointsHandler interface {
-	Handle(ctx context.Context, q ListEndpointsQuery) ([]*EndpointView, error)
+	Handle(ctx context.Context, q ListEndpointsQuery) ([]*EndpointView, *model.PageInfo, error)
 }
 
 type listEndpointsHandler struct {
@@ -43,13 +55,21 @@ func NewListEndpointsHandler(repo llmproxy.EndpointRepository) ListEndpointsHand
 }
 
 // Handle 执行列表查询
-func (h *listEndpointsHandler) Handle(ctx context.Context, _ ListEndpointsQuery) ([]*EndpointView, error) {
+func (h *listEndpointsHandler) Handle(ctx context.Context, q ListEndpointsQuery) ([]*EndpointView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	endpoints, err := h.repo.List(ctx)
+	param := llmproxy.PageParam{
+		Page:      q.Page,
+		PageSize:  q.PageSize,
+		Query:     q.Query,
+		Sort:      q.Sort,
+		SortField: q.SortField,
+	}
+
+	endpoints, pageInfo, err := h.repo.Paginate(ctx, param)
 	if err != nil {
 		log.Error("[EndpointQuery] List endpoints failed", zap.Error(err))
-		return nil, err
+		return nil, nil, err
 	}
 
 	views := make([]*EndpointView, 0, len(endpoints))
@@ -69,5 +89,5 @@ func (h *listEndpointsHandler) Handle(ctx context.Context, _ ListEndpointsQuery)
 	}
 
 	log.Info("[EndpointQuery] List endpoints", zap.Int("count", len(views)))
-	return views, nil
+	return views, pageInfo, nil
 }

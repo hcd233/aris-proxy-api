@@ -376,15 +376,15 @@ func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 		if choice == nil || choice.Delta == nil {
 			continue
 		}
-		if choice.Delta.Content != "" {
+		if choice.Delta.Content != nil && *choice.Delta.Content != "" {
 			wroteDelta = true
-			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventOutputTextDelta, choice.Delta.Content); err != nil {
+			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventOutputTextDelta, *choice.Delta.Content); err != nil {
 				return wroteDelta, err
 			}
 		}
-		if choice.Delta.ReasoningContent != "" {
+		if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
 			wroteDelta = true
-			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventReasoningTextDelta, choice.Delta.ReasoningContent); err != nil {
+			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventReasoningTextDelta, *choice.Delta.ReasoningContent); err != nil {
 				return wroteDelta, err
 			}
 		}

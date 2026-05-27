@@ -9,6 +9,8 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -90,6 +92,10 @@ func (s *stubModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
+func (s *stubModelRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
 type stubEndpointRepo struct {
 	findByIDCalled bool
 }
@@ -116,6 +122,10 @@ func (s *stubEndpointRepo) Delete(_ context.Context, _ uint) error {
 
 func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error) {
 	return nil, nil
+}
+
+func (s *stubEndpointRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+	return nil, nil, nil
 }
 
 type staticModelRepo struct {
@@ -146,6 +156,10 @@ func (s *staticModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
+func (s *staticModelRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
 type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
 }
@@ -168,6 +182,10 @@ func (s *endpointByIDRepo) Delete(_ context.Context, _ uint) error {
 
 func (s *endpointByIDRepo) List(_ context.Context) ([]*aggregate.Endpoint, error) {
 	return nil, nil
+}
+
+func (s *endpointByIDRepo) Paginate(_ context.Context, _ llmproxy.PageParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+	return nil, nil, nil
 }
 
 func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {

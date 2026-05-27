@@ -6,12 +6,24 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
 // ListModelsQuery 列出 Models 查询命令
-type ListModelsQuery struct{}
+type ListModelsQuery struct {
+	// Page 页码
+	Page int
+	// PageSize 每页数量
+	PageSize int
+	// Query 搜索关键词
+	Query string
+	// Sort 排序方式
+	Sort string
+	// SortField 排序字段
+	SortField string
+}
 
 // ModelView Model 只读投影
 type ModelView struct {
@@ -25,7 +37,7 @@ type ModelView struct {
 
 // ListModelsHandler 查询处理器
 type ListModelsHandler interface {
-	Handle(ctx context.Context, q ListModelsQuery) ([]*ModelView, error)
+	Handle(ctx context.Context, q ListModelsQuery) ([]*ModelView, *model.PageInfo, error)
 }
 
 type listModelsHandler struct {
@@ -38,13 +50,21 @@ func NewListModelsHandler(repo llmproxy.ModelRepository) ListModelsHandler {
 }
 
 // Handle 执行列表查询
-func (h *listModelsHandler) Handle(ctx context.Context, _ ListModelsQuery) ([]*ModelView, error) {
+func (h *listModelsHandler) Handle(ctx context.Context, q ListModelsQuery) ([]*ModelView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	models, err := h.repo.List(ctx)
+	param := llmproxy.PageParam{
+		Page:      q.Page,
+		PageSize:  q.PageSize,
+		Query:     q.Query,
+		Sort:      q.Sort,
+		SortField: q.SortField,
+	}
+
+	models, pageInfo, err := h.repo.Paginate(ctx, param)
 	if err != nil {
 		log.Error("[ModelQuery] List models failed", zap.Error(err))
-		return nil, err
+		return nil, nil, err
 	}
 
 	views := make([]*ModelView, 0, len(models))
@@ -60,5 +80,5 @@ func (h *listModelsHandler) Handle(ctx context.Context, _ ListModelsQuery) ([]*M
 	}
 
 	log.Info("[ModelQuery] List models", zap.Int("count", len(views)))
-	return views, nil
+	return views, pageInfo, nil
 }

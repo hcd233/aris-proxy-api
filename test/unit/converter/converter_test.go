@@ -699,7 +699,7 @@ func TestOpenAIProtocolConverter_ToAnthropicSSEResponse(t *testing.T) {
 		Choices: []*dto.OpenAIChatCompletionChunkChoice{{
 			Index: 0,
 			Delta: &dto.OpenAIChatCompletionChunkDelta{
-				Content: "Hello",
+				Content: lo.ToPtr("Hello"),
 			},
 		}},
 	}
@@ -761,8 +761,8 @@ func TestAnthropicProtocolConverter_ToOpenAISSEResponse_TextDelta(t *testing.T) 
 	if len(chunk.Choices) != 1 {
 		t.Fatalf("len(Choices) = %d, want 1", len(chunk.Choices))
 	}
-	if chunk.Choices[0].Delta.Content != "Hello world" {
-		t.Errorf("Delta.Content = %q, want %q", chunk.Choices[0].Delta.Content, "Hello world")
+	if chunk.Choices[0].Delta.Content == nil || *chunk.Choices[0].Delta.Content != "Hello world" {
+		t.Errorf("Delta.Content = %v, want %q", chunk.Choices[0].Delta.Content, "Hello world")
 	}
 }
 
@@ -823,8 +823,8 @@ func TestAnthropicProtocolConverter_ToOpenAISSEResponse_MessageDelta(t *testing.
 	}
 
 	chunk := chunks[0]
-	if chunk.Choices[0].FinishReason != enum.FinishReasonStop {
-		t.Errorf("FinishReason = %q, want %q", chunk.Choices[0].FinishReason, enum.FinishReasonStop)
+	if chunk.Choices[0].FinishReason == nil || *chunk.Choices[0].FinishReason != enum.FinishReasonStop {
+		t.Errorf("FinishReason = %v, want %q", chunk.Choices[0].FinishReason, enum.FinishReasonStop)
 	}
 	if chunk.Usage == nil {
 		t.Fatal("Usage should not be nil")
