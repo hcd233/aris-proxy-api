@@ -3,9 +3,22 @@ package llmproxy
 import (
 	"context"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 )
+
+// PageParam 分页查询参数
+//
+//	@author centonhuang
+//	@update 2026-05-27 10:00:00
+type PageParam struct {
+	Page      int
+	PageSize  int
+	Query     string
+	Sort      string
+	SortField string
+}
 
 // EndpointRepository Endpoint 聚合根仓储接口
 type EndpointRepository interface {
@@ -14,6 +27,7 @@ type EndpointRepository interface {
 	Update(ctx context.Context, endpoint *aggregate.Endpoint) error
 	Delete(ctx context.Context, id uint) error
 	List(ctx context.Context) ([]*aggregate.Endpoint, error)
+	Paginate(ctx context.Context, param PageParam) ([]*aggregate.Endpoint, *model.PageInfo, error)
 }
 
 // ModelRepository Model 聚合根仓储接口
@@ -24,6 +38,7 @@ type ModelRepository interface {
 	Update(ctx context.Context, model *aggregate.Model) error
 	Delete(ctx context.Context, id uint) error
 	List(ctx context.Context) ([]*aggregate.Model, error)
+	Paginate(ctx context.Context, param PageParam) ([]*aggregate.Model, *model.PageInfo, error)
 }
 
 // ==================== CQRS 读模型 ====================

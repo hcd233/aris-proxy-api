@@ -1,7 +1,11 @@
 // Package dto API Key DTO
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
+)
 
 // CreateAPIKeyReq 创建 API Key 请求
 //
@@ -28,13 +32,22 @@ type CreateAPIKeyRsp struct {
 	Key *APIKeyDetail `json:"key,omitempty" doc:"创建的 API Key 详情"`
 }
 
+// ListAPIKeysReq 列出 API Key 请求
+//
+//	@author centonhuang
+//	@update 2026-05-27 10:00:00
+type ListAPIKeysReq struct {
+	model.CommonParam
+}
+
 // ListAPIKeysRsp 列出 API Key 响应
 //
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-05-27 10:00:00
 type ListAPIKeysRsp struct {
 	CommonRsp
-	Keys []*APIKeyItem `json:"keys,omitempty" doc:"API Key 列表"`
+	Keys     []*APIKeyItem   `json:"keys,omitempty" doc:"API Key 列表"`
+	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }
 
 // APIKeyItem API Key 列表项（masked key）

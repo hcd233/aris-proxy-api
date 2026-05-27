@@ -1,7 +1,11 @@
 // Package dto Endpoint DTO
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
+)
 
 // CreateEndpointReq 创建 Endpoint 请求
 type CreateEndpointReq struct {
@@ -41,10 +45,16 @@ type DeleteEndpointReq struct {
 	ID uint `path:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
 }
 
+// ListEndpointsReq 列出 Endpoint 请求
+type ListEndpointsReq struct {
+	model.CommonParam
+}
+
 // ListEndpointsRsp 列出 Endpoint 响应
 type ListEndpointsRsp struct {
 	CommonRsp
 	Endpoints []*EndpointItem `json:"endpoints,omitempty" doc:"Endpoint 列表"`
+	PageInfo  *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }
 
 // EndpointItem Endpoint 列表项

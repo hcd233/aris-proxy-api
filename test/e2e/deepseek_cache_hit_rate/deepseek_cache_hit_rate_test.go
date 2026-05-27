@@ -595,8 +595,8 @@ func parseOpenAIStreamPayload(payload string) (*openAIUsage, bool, string, strin
 	var chunk struct {
 		Choices []struct {
 			Delta struct {
-				Content          string `json:"content"`
-				ReasoningContent string `json:"reasoning_content"`
+				Content          *string `json:"content"`
+				ReasoningContent *string `json:"reasoning_content"`
 			} `json:"delta"`
 		} `json:"choices"`
 		Usage *openAIUsage `json:"usage"`
@@ -607,8 +607,12 @@ func parseOpenAIStreamPayload(payload string) (*openAIUsage, bool, string, strin
 	var content strings.Builder
 	var reasoning strings.Builder
 	for _, choice := range chunk.Choices {
-		content.WriteString(choice.Delta.Content)
-		reasoning.WriteString(choice.Delta.ReasoningContent)
+		if choice.Delta.Content != nil {
+			content.WriteString(*choice.Delta.Content)
+		}
+		if choice.Delta.ReasoningContent != nil {
+			reasoning.WriteString(*choice.Delta.ReasoningContent)
+		}
 	}
 	return chunk.Usage, chunk.Usage != nil, content.String(), reasoning.String()
 }

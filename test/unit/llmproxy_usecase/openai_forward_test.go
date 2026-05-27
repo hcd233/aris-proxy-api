@@ -44,7 +44,7 @@ func (p *mockOpenAIProxy) ForwardChatCompletionStream(_ context.Context, ep vo.U
 		Model: ep.Model,
 		Choices: []*dto.OpenAIChatCompletionChunkChoice{{
 			Index: 0,
-			Delta: &dto.OpenAIChatCompletionChunkDelta{Content: "ok"},
+			Delta: &dto.OpenAIChatCompletionChunkDelta{Content: lo.ToPtr("ok")},
 		}},
 	}
 	if onChunk != nil {

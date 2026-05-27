@@ -20,10 +20,10 @@ import (
 // APIKeyHandler API Key 处理器
 //
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-05-27 10:00:00
 type APIKeyHandler interface {
 	HandleCreateAPIKey(ctx context.Context, req *dto.CreateAPIKeyReq) (*dto.HTTPResponse[*dto.CreateAPIKeyRsp], error)
-	HandleListAPIKeys(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListAPIKeysRsp], error)
+	HandleListAPIKeys(ctx context.Context, req *dto.ListAPIKeysReq) (*dto.HTTPResponse[*dto.ListAPIKeysRsp], error)
 	HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteAPIKeyReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
@@ -100,19 +100,24 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 //
 //	@receiver h *apiKeyHandler
 //	@param ctx context.Context
-//	@param req *dto.EmptyReq
+//	@param req *dto.ListAPIKeysReq
 //	@return *dto.HTTPResponse[*dto.ListAPIKeysRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-22 20:00:00
-func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListAPIKeysRsp], error) {
+//	@update 2026-05-27 10:00:00
+func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIKeysReq) (*dto.HTTPResponse[*dto.ListAPIKeysRsp], error) {
 	rsp := &dto.ListAPIKeysRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	permission := util.CtxValuePermission(ctx)
 
-	views, err := h.list.Handle(ctx, query.ListAPIKeysQuery{
+	views, pageInfo, err := h.list.Handle(ctx, query.ListAPIKeysQuery{
 		RequesterID:         userID,
 		RequesterPermission: permission,
+		Page:                req.Page,
+		PageSize:            req.PageSize,
+		Query:               req.Query,
+		Sort:                string(req.Sort),
+		SortField:           req.SortField,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] List api keys failed", zap.Error(err))
@@ -129,6 +134,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, _ *dto.EmptyReq) 
 			CreatedAt: v.CreatedAt,
 		})
 	}
+	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

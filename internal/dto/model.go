@@ -1,7 +1,11 @@
 // Package dto Model DTO
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
+)
 
 // CreateModelReq 创建 Model 请求
 type CreateModelReq struct {
@@ -33,10 +37,16 @@ type DeleteModelReq struct {
 	ID uint `path:"id" required:"true" minimum:"1" doc:"Model ID"`
 }
 
+// ListModelsReq 列出 Model 请求
+type ListModelsReq struct {
+	model.CommonParam
+}
+
 // ListModelsRsp 列出 Model 响应
 type ListModelsRsp struct {
 	CommonRsp
-	Models []*ModelItem `json:"models,omitempty" doc:"Model 列表"`
+	Models   []*ModelItem    `json:"models,omitempty" doc:"Model 列表"`
+	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }
 
 // ModelItem Model 列表项

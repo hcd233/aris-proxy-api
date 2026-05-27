@@ -8,7 +8,9 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -126,6 +128,33 @@ func (r *endpointRepository) List(ctx context.Context) ([]*aggregate.Endpoint, e
 	return result, nil
 }
 
+// Paginate 分页查询端点列表
+func (r *endpointRepository) Paginate(ctx context.Context, param llmproxy.PageParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	records, pageInfo, err := r.endpointDAO.Paginate(
+		db,
+		&dbmodel.Endpoint{},
+		constant.EndpointRepoFieldsFull,
+		&dao.CommonParam{
+			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
+			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName}},
+			SortParam:  dao.SortParam{Sort: enum.Sort(param.Sort), SortField: param.SortField},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate endpoints")
+	}
+	out := make([]*aggregate.Endpoint, 0, len(records))
+	for _, m := range records {
+		ep, convErr := toEndpointAggregate(m)
+		if convErr != nil {
+			return nil, nil, convErr
+		}
+		out = append(out, ep)
+	}
+	return out, pageInfo, nil
+}
+
 // modelRepository ModelRepository 的 GORM 实现
 type modelRepository struct {
 	dao *dao.ModelDAO
@@ -235,6 +264,33 @@ func (r *modelRepository) List(ctx context.Context) ([]*aggregate.Model, error) 
 		result = append(result, agg)
 	}
 	return result, nil
+}
+
+// Paginate 分页查询模型列表
+func (r *modelRepository) Paginate(ctx context.Context, param llmproxy.PageParam) ([]*aggregate.Model, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	records, pageInfo, err := r.dao.Paginate(
+		db,
+		&dbmodel.Model{},
+		constant.ModelRepoFieldsFull,
+		&dao.CommonParam{
+			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
+			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldAlias, constant.FieldModelModelName}},
+			SortParam:  dao.SortParam{Sort: enum.Sort(param.Sort), SortField: param.SortField},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate models")
+	}
+	out := make([]*aggregate.Model, 0, len(records))
+	for _, m := range records {
+		agg, convErr := toModelAggregate(m)
+		if convErr != nil {
+			return nil, nil, convErr
+		}
+		out = append(out, agg)
+	}
+	return out, pageInfo, nil
 }
 
 // ==================== CQRS 读模型实现 ====================

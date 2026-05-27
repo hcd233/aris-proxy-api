@@ -28,9 +28,9 @@ func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkI
 
 	switch payload.Delta.Type {
 	case enum.AnthropicDeltaTypeTextDelta:
-		delta.Content = payload.Delta.Text
+		delta.Content = &payload.Delta.Text
 	case enum.AnthropicDeltaTypeThinkingDelta:
-		delta.ReasoningContent = payload.Delta.Thinking
+		delta.ReasoningContent = &payload.Delta.Thinking
 	case enum.AnthropicDeltaTypeInputJSONDelta:
 		delta.ToolCalls = []*dto.OpenAIChatCompletionMessageToolCall{{
 			Index: lo.ToPtr(payload.Index),
@@ -69,7 +69,7 @@ func convertMessageDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID str
 	chunk.Choices = []*dto.OpenAIChatCompletionChunkChoice{{
 		Index:        0,
 		Delta:        &dto.OpenAIChatCompletionChunkDelta{},
-		FinishReason: finishReason,
+		FinishReason: &finishReason,
 	}}
 
 	if payload.Usage != nil {

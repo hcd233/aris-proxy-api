@@ -7,7 +7,9 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
@@ -118,6 +120,71 @@ func (r *apiKeyRepository) ListAll(ctx context.Context) ([]*aggregate.ProxyAPIKe
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list all api keys")
 	}
 	return toAPIKeyAggregateList(records)
+}
+
+// PaginateByUser 分页查询指定用户的 Key 列表
+//
+//	@receiver r *apiKeyRepository
+//	@param ctx context.Context
+//	@param userID uint
+//	@param param apikey.PageParam
+//	@return []*aggregate.ProxyAPIKey
+//	@return *model.PageInfo
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-27 10:00:00
+func (r *apiKeyRepository) PaginateByUser(ctx context.Context, userID uint, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	records, pageInfo, err := r.dao.Paginate(
+		db,
+		&dbmodel.ProxyAPIKey{UserID: userID},
+		constant.ProxyAPIKeyRepoFieldsFull,
+		&dao.CommonParam{
+			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
+			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName}},
+			SortParam:  dao.SortParam{Sort: enum.Sort(param.Sort), SortField: param.SortField},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate api keys by user")
+	}
+	out, err := toAPIKeyAggregateList(records)
+	if err != nil {
+		return nil, nil, err
+	}
+	return out, pageInfo, nil
+}
+
+// PaginateAll 分页查询所有 Key（admin 视图）
+//
+//	@receiver r *apiKeyRepository
+//	@param ctx context.Context
+//	@param param apikey.PageParam
+//	@return []*aggregate.ProxyAPIKey
+//	@return *model.PageInfo
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-27 10:00:00
+func (r *apiKeyRepository) PaginateAll(ctx context.Context, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	records, pageInfo, err := r.dao.Paginate(
+		db,
+		&dbmodel.ProxyAPIKey{},
+		constant.ProxyAPIKeyRepoFieldsFull,
+		&dao.CommonParam{
+			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
+			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName}},
+			SortParam:  dao.SortParam{Sort: enum.Sort(param.Sort), SortField: param.SortField},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate all api keys")
+	}
+	out, err := toAPIKeyAggregateList(records)
+	if err != nil {
+		return nil, nil, err
+	}
+	return out, pageInfo, nil
 }
 
 // CountByUser 统计用户持有的 Key 总数（含 UserID==0 的历史 key）

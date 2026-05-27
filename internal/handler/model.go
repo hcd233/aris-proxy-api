@@ -17,7 +17,7 @@ import (
 
 type ModelHandler interface {
 	HandleCreateModel(ctx context.Context, req *dto.CreateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
-	HandleListModels(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
+	HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
 	HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
@@ -66,10 +66,16 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-func (h *modelHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error) {
+func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error) {
 	rsp := &dto.ListModelsRsp{}
 
-	views, err := h.list.Handle(ctx, query.ListModelsQuery{})
+	views, pageInfo, err := h.list.Handle(ctx, query.ListModelsQuery{
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+		Query:     req.Query,
+		Sort:      string(req.Sort),
+		SortField: req.SortField,
+	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
@@ -87,6 +93,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (*
 			UpdatedAt:  v.UpdatedAt,
 		})
 	}
+	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

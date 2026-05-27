@@ -695,7 +695,7 @@ type OpenAIChatCompletionChunk struct {
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionChunkChoice struct {
 	Delta        *OpenAIChatCompletionChunkDelta `json:"delta" doc:"增量内容"`
-	FinishReason enum.FinishReason               `json:"finish_reason,omitempty" doc:"完成原因"`
+	FinishReason *enum.FinishReason              `json:"finish_reason,omitempty" doc:"完成原因"`
 	Index        int                             `json:"index" doc:"选择索引"`
 	Logprobs     *OpenAILogprobs                 `json:"logprobs,omitempty" doc:"Log概率信息"`
 }
@@ -705,9 +705,9 @@ type OpenAIChatCompletionChunkChoice struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionChunkDelta struct {
-	Content          string                                 `json:"content,omitempty" doc:"内容增量"`
-	ReasoningContent string                                 `json:"reasoning_content,omitempty" doc:"推理内容增量"`
-	Refusal          string                                 `json:"refusal,omitempty" doc:"拒绝消息增量"`
+	Content          *string                                `json:"content,omitempty" doc:"内容增量"`
+	ReasoningContent *string                                `json:"reasoning_content,omitempty" doc:"推理内容增量"`
+	Refusal          *string                                `json:"refusal,omitempty" doc:"拒绝消息增量"`
 	Role             enum.Role                              `json:"role,omitempty" doc:"角色"`
 	ToolCalls        []*OpenAIChatCompletionMessageToolCall `json:"tool_calls,omitempty" doc:"工具调用增量"`
 }

@@ -17,7 +17,7 @@ import (
 
 type EndpointHandler interface {
 	HandleCreateEndpoint(ctx context.Context, req *dto.CreateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
-	HandleListEndpoints(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error)
+	HandleListEndpoints(ctx context.Context, req *dto.ListEndpointsReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error)
 	HandleUpdateEndpoint(ctx context.Context, req *dto.UpdateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleDeleteEndpoint(ctx context.Context, req *dto.DeleteEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
@@ -70,10 +70,16 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-func (h *endpointHandler) HandleListEndpoints(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error) {
+func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.ListEndpointsReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error) {
 	rsp := &dto.ListEndpointsRsp{}
 
-	views, err := h.list.Handle(ctx, query.ListEndpointsQuery{})
+	views, pageInfo, err := h.list.Handle(ctx, query.ListEndpointsQuery{
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+		Query:     req.Query,
+		Sort:      string(req.Sort),
+		SortField: req.SortField,
+	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] List endpoints failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
@@ -95,6 +101,7 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, _ *dto.EmptyR
 			UpdatedAt:                   v.UpdatedAt,
 		})
 	}
+	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

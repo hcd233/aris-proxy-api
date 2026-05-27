@@ -179,7 +179,7 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 		}
 
 		// 文本内容增量
-		if choice.Delta.Content != "" {
+		if choice.Delta.Content != nil && *choice.Delta.Content != "" {
 			if _, started := tracker.startedTextBlocks[choice.Index]; !started {
 				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
 					Type: enum.AnthropicContentBlockTypeText,
@@ -187,11 +187,11 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 				}))
 				tracker.startedTextBlocks[choice.Index] = struct{}{}
 			}
-			events = append(events, newTextDeltaEvent(choice.Index, choice.Delta.Content))
+			events = append(events, newTextDeltaEvent(choice.Index, *choice.Delta.Content))
 		}
 
 		// 推理内容增量（thinking 与 text 共用同一 index，用负数偏移区分）
-		if choice.Delta.ReasoningContent != "" {
+		if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
 			thinkingKey := -(choice.Index + 1)
 			if _, started := tracker.startedTextBlocks[thinkingKey]; !started {
 				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
@@ -200,7 +200,7 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 				}))
 				tracker.startedTextBlocks[thinkingKey] = struct{}{}
 			}
-			events = append(events, newThinkingDeltaEvent(choice.Index, choice.Delta.ReasoningContent))
+			events = append(events, newThinkingDeltaEvent(choice.Index, *choice.Delta.ReasoningContent))
 		}
 
 		// 工具调用增量
@@ -227,12 +227,12 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 		}
 
 		// finish_reason
-		if choice.FinishReason != "" {
+		if choice.FinishReason != nil && *choice.FinishReason != "" {
 			events = append(events, dto.AnthropicSSEEvent{
 				Event: enum.AnthropicSSEEventTypeMessageDelta,
 				Data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEMessageDelta{
 					Delta: dto.AnthropicSSEMessageDeltaPayload{
-						StopReason: convertOpenAIFinishReasonToAnthropic(choice.FinishReason),
+						StopReason: convertOpenAIFinishReasonToAnthropic(*choice.FinishReason),
 					},
 					Usage: convertChunkUsageToAnthropic(chunk.Usage),
 				})),
