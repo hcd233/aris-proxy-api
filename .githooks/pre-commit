@@ -21,6 +21,28 @@ fail() {
 }
 
 # --------------------------------------------------------------------------
+# 0. skills symlink sync — mirror .agents/skills into IDE skill directories
+# --------------------------------------------------------------------------
+printf "$INFO Running skills symlink sync ...\n"
+
+if [ -f script/sync-skills-symlinks.sh ]; then
+    chmod +x script/sync-skills-symlinks.sh 2>/dev/null || true
+    if ! sh script/sync-skills-symlinks.sh; then
+        fail "skills symlink sync failed. Please fix the issues above before committing."
+    fi
+    SKILLS_CHANGES=$(git status --porcelain -- .claude/skills .codebuddy/skills)
+    if [ -n "$SKILLS_CHANGES" ]; then
+        printf "$INFO skills symlinks changed after sync (auto-staging):\n"
+        echo "$SKILLS_CHANGES" | sed 's/^/       /'
+        echo ""
+        git add .claude/skills .codebuddy/skills
+    fi
+else
+    printf "$INFO script/sync-skills-symlinks.sh not found — skipping\n"
+fi
+printf "$PASS skills symlink sync\n"
+
+# --------------------------------------------------------------------------
 # 1. gofmt — auto-format source files and re-stage changed files
 # --------------------------------------------------------------------------
 printf "$INFO Running gofmt -w ...\n"
