@@ -14,16 +14,7 @@ import (
 
 // ListEndpointsQuery 列出 Endpoints 查询命令
 type ListEndpointsQuery struct {
-	// Page 页码
-	Page int
-	// PageSize 每页数量
-	PageSize int
-	// Query 搜索关键词
-	Query string
-	// Sort 排序方式
-	Sort string
-	// SortField 排序字段
-	SortField string
+	model.CommonParam
 }
 
 // EndpointView Endpoint 只读投影
@@ -58,15 +49,7 @@ func NewListEndpointsHandler(repo llmproxy.EndpointRepository) ListEndpointsHand
 func (h *listEndpointsHandler) Handle(ctx context.Context, q ListEndpointsQuery) ([]*EndpointView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	param := llmproxy.PageParam{
-		Page:      q.Page,
-		PageSize:  q.PageSize,
-		Query:     q.Query,
-		Sort:      q.Sort,
-		SortField: q.SortField,
-	}
-
-	endpoints, pageInfo, err := h.repo.Paginate(ctx, param)
+	endpoints, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam)
 	if err != nil {
 		log.Error("[EndpointQuery] List endpoints failed", zap.Error(err))
 		return nil, nil, err

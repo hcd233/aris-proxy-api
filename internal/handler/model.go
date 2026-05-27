@@ -70,11 +70,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 	rsp := &dto.ListModelsRsp{}
 
 	views, pageInfo, err := h.list.Handle(ctx, query.ListModelsQuery{
-		Page:      req.Page,
-		PageSize:  req.PageSize,
-		Query:     req.Query,
-		Sort:      string(req.Sort),
-		SortField: req.SortField,
+		CommonParam: req.CommonParam,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))

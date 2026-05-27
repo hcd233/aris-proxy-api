@@ -113,11 +113,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIK
 	views, pageInfo, err := h.list.Handle(ctx, query.ListAPIKeysQuery{
 		RequesterID:         userID,
 		RequesterPermission: permission,
-		Page:                req.Page,
-		PageSize:            req.PageSize,
-		Query:               req.Query,
-		Sort:                string(req.Sort),
-		SortField:           req.SortField,
+		CommonParam:         req.CommonParam,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] List api keys failed", zap.Error(err))

@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -133,7 +132,7 @@ func (r *apiKeyRepository) ListAll(ctx context.Context) ([]*aggregate.ProxyAPIKe
 //	@return error
 //	@author centonhuang
 //	@update 2026-05-27 10:00:00
-func (r *apiKeyRepository) PaginateByUser(ctx context.Context, userID uint, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+func (r *apiKeyRepository) PaginateByUser(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.dao.Paginate(
 		db,
@@ -142,7 +141,7 @@ func (r *apiKeyRepository) PaginateByUser(ctx context.Context, userID uint, para
 		&dao.CommonParam{
 			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
 			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName}},
-			SortParam:  dao.SortParam{Sort: enum.Sort(param.Sort), SortField: param.SortField},
+			SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
 		},
 	)
 	if err != nil {
@@ -165,7 +164,7 @@ func (r *apiKeyRepository) PaginateByUser(ctx context.Context, userID uint, para
 //	@return error
 //	@author centonhuang
 //	@update 2026-05-27 10:00:00
-func (r *apiKeyRepository) PaginateAll(ctx context.Context, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+func (r *apiKeyRepository) PaginateAll(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.dao.Paginate(
 		db,
@@ -174,7 +173,7 @@ func (r *apiKeyRepository) PaginateAll(ctx context.Context, param apikey.PagePar
 		&dao.CommonParam{
 			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
 			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName}},
-			SortParam:  dao.SortParam{Sort: enum.Sort(param.Sort), SortField: param.SortField},
+			SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
 		},
 	)
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
 )
@@ -72,11 +71,11 @@ func (m *mockAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, use
 	return nil, nil
 }
 
-func (m *mockAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+func (m *mockAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
-func (m *mockAPIKeyRepository) PaginateAll(ctx context.Context, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+func (m *mockAPIKeyRepository) PaginateAll(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -433,11 +432,11 @@ func (m *mockRevokeAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Contex
 	return nil, nil
 }
 
-func (m *mockRevokeAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+func (m *mockRevokeAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
-func (m *mockRevokeAPIKeyRepository) PaginateAll(ctx context.Context, param apikey.PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+func (m *mockRevokeAPIKeyRepository) PaginateAll(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 

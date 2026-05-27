@@ -8,18 +8,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 )
 
-// PageParam 分页查询参数
-//
-//	@author centonhuang
-//	@update 2026-05-27 10:00:00
-type PageParam struct {
-	Page      int
-	PageSize  int
-	Query     string
-	Sort      string
-	SortField string
-}
-
 // APIKeyRepository API Key 仓储接口
 //
 // 具体实现由 infrastructure/repository 提供；领域层通过接口倒置 GORM 依赖。
@@ -36,9 +24,9 @@ type APIKeyRepository interface {
 	// ListAll 查询所有 Key（admin 视图）
 	ListAll(ctx context.Context) ([]*aggregate.ProxyAPIKey, error)
 	// PaginateByUser 分页查询指定用户的 Key 列表
-	PaginateByUser(ctx context.Context, userID uint, param PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error)
+	PaginateByUser(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error)
 	// PaginateAll 分页查询所有 Key（admin 视图）
-	PaginateAll(ctx context.Context, param PageParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error)
+	PaginateAll(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error)
 	// CountByUser 统计指定用户的 Key 总数（含 UserID==0 的历史 key）
 	CountByUser(ctx context.Context, userID uint) (int64, error)
 	// Delete 删除 Key（软删除）
