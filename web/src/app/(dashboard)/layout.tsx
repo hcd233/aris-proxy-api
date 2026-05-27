@@ -14,6 +14,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -220,14 +221,17 @@ export default function DashboardLayout({
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Mobile top bar */}
             <header className="flex h-14 items-center gap-3 border-b border-border bg-card/60 px-4 backdrop-blur-sm md:hidden">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setSidebarOpen(true)}
-                className="text-foreground/60 hover:text-foreground hover:bg-secondary"
+              <SheetTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-foreground/60 hover:text-foreground hover:bg-secondary"
+                  />
+                }
               >
                 <Menu className="size-5" />
-              </Button>
+              </SheetTrigger>
               <span className="font-display text-xl font-semibold tracking-tight">Aris Proxy</span>
             </header>
 
