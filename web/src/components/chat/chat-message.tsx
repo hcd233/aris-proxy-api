@@ -438,7 +438,7 @@ export function ChatMessage({
               <Fragment key={call.id ?? i}>
                 <ToolCallCard
                   call={call}
-                  result={call.id ? toolResultsByID[call.id] : undefined}
+                  result={call.id ? lookupToolResult(toolResultsByID, call.id) : undefined}
                 />
               </Fragment>
             ))}
@@ -450,6 +450,37 @@ export function ChatMessage({
 }
 
 // ─── Build tool-result map from a flat message list ──────────────────────────
+
+/**
+ * Normalize a tool_call_id for fuzzy matching. Strips characters that some
+ * upstream clients occasionally drop during serialization round-trips (notably
+ * underscores in OpenAI-style ids like "call_xxxx"). The post-stripping hex
+ * suffix is long enough that collisions across a single conversation are
+ * effectively impossible.
+ */
+function normalizeToolCallID(id: string): string {
+  return id.replace(/[_-]/g, "").toLowerCase();
+}
+
+/**
+ * Look up a tool result by tool_call_id. Tries an exact match first (the
+ * common case), then falls back to a normalized match — this rescues
+ * conversations where the assistant message and the tool message reference
+ * the same call with slightly differing id formatting (e.g. one side dropped
+ * an underscore), which has been observed in the wild from some upstream
+ * agents.
+ */
+function lookupToolResult(
+  map: Record<string, string>,
+  id: string,
+): string | undefined {
+  if (id in map) return map[id];
+  const normalized = normalizeToolCallID(id);
+  for (const key of Object.keys(map)) {
+    if (normalizeToolCallID(key) === normalized) return map[key];
+  }
+  return undefined;
+}
 
 /**
  * Tool-result messages may appear in two shapes depending on the upstream
