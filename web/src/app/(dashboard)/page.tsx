@@ -164,7 +164,7 @@ export default function DashboardPage() {
                   {recentSessions.map((s) => (
                     <Link
                       key={s.id}
-                      href={`/sessions/detail/?id=${s.id}`}
+                      href={`/sessions/detail/${s.id}`}
                       className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-all duration-150 hover:bg-secondary"
                     >
                       <div className="min-w-0 flex-1">

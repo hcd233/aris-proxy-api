@@ -1,12 +1,7 @@
 "use client";
 
-/**
- * Session detail page — single-column conversation reading view inspired by
- * the claude.ai chat layout. Tools list lives in a collapsible right panel.
- */
-
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Braces,
@@ -32,13 +27,6 @@ import {
   buildToolResultsByID,
 } from "@/components/chat/chat-message";
 
-// ─── Tool definition card (right sidebar) ───────────────────────────────────
-
-/**
- * Collapsible text — shows up to `previewChars` characters by default, with
- * an inline "show more / show less" toggle when the content exceeds the limit.
- * Short text (under the threshold) is rendered as-is without any toggle.
- */
 function CollapsibleText({
   text,
   previewChars = 140,
@@ -179,13 +167,8 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   );
 }
 
-// ─── Page ───────────────────────────────────────────────────────────────────
-
-export default function SessionDetailPage() {
-  const searchParams = useSearchParams();
+export default function SessionDetailClient({ sessionId }: { sessionId: number }) {
   const router = useRouter();
-  const sessionId = Number(searchParams.get("id"));
-
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -215,8 +198,6 @@ export default function SessionDetailPage() {
     () => buildToolResultsByID(messages),
     [messages],
   );
-
-  // ─── Edge cases ────────────────────────────────────────────────────────────
 
   if (!sessionId || Number.isNaN(sessionId)) {
     return (
@@ -262,17 +243,13 @@ export default function SessionDetailPage() {
     );
   }
 
-  // ─── Main layout ───────────────────────────────────────────────────────────
-
   const messageCount = messages.filter(
     (m) => m.message.role !== "tool" && !m.message.tool_call_id,
   ).length;
 
   return (
     <div className="flex h-[calc(100vh-6rem)] gap-0 overflow-hidden">
-      {/* ── Conversation column ── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Header */}
         <div className="flex items-center gap-3 border-b border-border/70 pb-4">
           <Button
             variant="ghost"
@@ -320,7 +297,6 @@ export default function SessionDetailPage() {
           </div>
         </div>
 
-        {/* Messages stream */}
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
             {messages.length === 0 ? (
@@ -338,6 +314,7 @@ export default function SessionDetailPage() {
                     message={msg}
                     index={idx}
                     toolResultsByID={toolResultsByID}
+                    messages={messages}
                   />
                 ))}
                 <div className="pt-4 pb-2 text-center">
@@ -351,7 +328,6 @@ export default function SessionDetailPage() {
         </div>
       </div>
 
-      {/* ── Right sidebar: Tools panel ── */}
       {sidebarOpen && tools.length > 0 && (
         <>
           <Separator orientation="vertical" className="mx-0 h-auto" />
