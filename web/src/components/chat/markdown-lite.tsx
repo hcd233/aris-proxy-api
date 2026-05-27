@@ -1,233 +1,120 @@
 "use client";
 
 /**
- * MarkdownLite — a tiny, dependency-free Markdown renderer for chat content.
+ * Markdown — full GFM rendering for chat content.
  *
- * Supports:
- *  - Fenced code blocks  ```lang\n...\n```
- *  - Inline code         `code`
- *  - Bold                **text**
- *  - Italic              *text*
- *  - Links               [text](url)
- *  - Headings            #, ##, ###
- *  - Unordered lists     - item / * item
- *  - Ordered lists       1. item
- *  - Blockquotes         > text
- *  - Horizontal rule     ---
+ * Engine: react-markdown + remark-gfm + remark-breaks + rehype-highlight + rehype-raw.
+ * Component overrides preserve the existing visual style (warm code blocks
+ * with copy button, primary-coloured links, muted blockquotes, etc.).
  *
- * Anything not matched falls back to plain paragraphs with preserved newlines.
- * This is enough for LLM transcripts; if a more complete Markdown experience
- * is needed later, swap the implementation for `react-markdown`.
+ * Special block: ` ```mermaid ` fences are rendered with mermaid.js (lazy-loaded).
+ *
+ * The exported component is named `MarkdownLite` for backward compatibility
+ * with existing call sites; despite the name it now supports the full GFM
+ * surface (tables, task lists, strikethrough, autolinks) plus syntax-highlighted
+ * code blocks and mermaid diagrams.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
+import rehypeHighlight from "rehype-highlight";
+import rehypeRaw from "rehype-raw";
 
 import { cn } from "@/lib/utils";
 
-// ─── Inline tokens ────────────────────────────────────────────────────────────
+import "highlight.js/styles/atom-one-dark.css";
 
-type InlineNode =
-  | { kind: "text"; value: string }
-  | { kind: "code"; value: string }
-  | { kind: "bold"; children: InlineNode[] }
-  | { kind: "italic"; children: InlineNode[] }
-  | { kind: "link"; href: string; children: InlineNode[] };
+// ─── Mermaid block ───────────────────────────────────────────────────────────
 
-// Order matters: code first (don't tokenize markers inside backticks), then
-// links, then bold (`**`), then italic (`*` or `_`).
-const INLINE_RE =
-  /(`[^`\n]+`)|(\[[^\]\n]+\]\([^)\s]+\))|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*)|(_[^_\n]+_)/;
+let mermaidLoadPromise: Promise<typeof import("mermaid").default> | null = null;
 
-function parseInline(text: string): InlineNode[] {
-  const nodes: InlineNode[] = [];
-  let rest = text;
-
-  while (rest.length > 0) {
-    const m = rest.match(INLINE_RE);
-    if (!m || m.index === undefined) {
-      nodes.push({ kind: "text", value: rest });
-      break;
-    }
-    if (m.index > 0) {
-      nodes.push({ kind: "text", value: rest.slice(0, m.index) });
-    }
-    const token = m[0];
-    if (token.startsWith("`")) {
-      nodes.push({ kind: "code", value: token.slice(1, -1) });
-    } else if (token.startsWith("[")) {
-      const close = token.indexOf("](");
-      const label = token.slice(1, close);
-      const href = token.slice(close + 2, -1);
-      nodes.push({ kind: "link", href, children: parseInline(label) });
-    } else if (token.startsWith("**")) {
-      nodes.push({ kind: "bold", children: parseInline(token.slice(2, -2)) });
-    } else {
-      // *italic* or _italic_
-      nodes.push({ kind: "italic", children: parseInline(token.slice(1, -1)) });
-    }
-    rest = rest.slice(m.index + token.length);
+function loadMermaid() {
+  if (!mermaidLoadPromise) {
+    mermaidLoadPromise = import("mermaid").then((m) => {
+      m.default.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: "default",
+        fontFamily: "var(--font-sans)",
+      });
+      return m.default;
+    });
   }
-  return nodes;
+  return mermaidLoadPromise;
 }
 
-function renderInline(nodes: InlineNode[], keyPrefix = ""): React.ReactNode {
-  return nodes.map((n, i) => {
-    const k = `${keyPrefix}${i}`;
-    switch (n.kind) {
-      case "text":
-        return <span key={k}>{n.value}</span>;
-      case "code":
-        return (
-          <code
-            key={k}
-            className="rounded-[5px] border border-border/60 bg-muted/70 px-1.5 py-[1px] font-mono text-[0.9em] text-foreground/90"
-          >
-            {n.value}
-          </code>
-        );
-      case "bold":
-        return (
-          <strong key={k} className="font-semibold text-foreground">
-            {renderInline(n.children, `${k}-`)}
-          </strong>
-        );
-      case "italic":
-        return (
-          <em key={k} className="italic">
-            {renderInline(n.children, `${k}-`)}
-          </em>
-        );
-      case "link":
-        return (
-          <a
-            key={k}
-            href={n.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:decoration-primary"
-          >
-            {renderInline(n.children, `${k}-`)}
-          </a>
-        );
-    }
-  });
-}
+let mermaidIDCounter = 0;
 
-// ─── Block parser ─────────────────────────────────────────────────────────────
+function MermaidBlock({ code }: { code: string }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [svg, setSvg] = useState<string | null>(null);
 
-type Block =
-  | { kind: "code"; lang: string; value: string }
-  | { kind: "heading"; level: 1 | 2 | 3; text: string }
-  | { kind: "list"; ordered: boolean; items: string[] }
-  | { kind: "quote"; text: string }
-  | { kind: "hr" }
-  | { kind: "paragraph"; text: string };
+  useEffect(() => {
+    let cancelled = false;
+    mermaidIDCounter += 1;
+    const id = `mermaid-${mermaidIDCounter}`;
+    loadMermaid()
+      .then((mermaid) => mermaid.render(id, code))
+      .then((rsp) => {
+        if (cancelled) return;
+        setSvg(rsp.svg);
+        setError(null);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
 
-function parseBlocks(src: string): Block[] {
-  const lines = src.replace(/\r\n/g, "\n").split("\n");
-  const blocks: Block[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // Fenced code block
-    const fence = line.match(/^```(\w+)?\s*$/);
-    if (fence) {
-      const lang = fence[1] ?? "";
-      const buf: string[] = [];
-      i += 1;
-      while (i < lines.length && !/^```\s*$/.test(lines[i])) {
-        buf.push(lines[i]);
-        i += 1;
-      }
-      i += 1; // skip closing ``` (or EOF)
-      blocks.push({ kind: "code", lang, value: buf.join("\n") });
-      continue;
-    }
-
-    // Horizontal rule
-    if (/^---+\s*$/.test(line)) {
-      blocks.push({ kind: "hr" });
-      i += 1;
-      continue;
-    }
-
-    // Heading
-    const heading = line.match(/^(#{1,3})\s+(.*)$/);
-    if (heading) {
-      const level = heading[1].length as 1 | 2 | 3;
-      blocks.push({ kind: "heading", level, text: heading[2] });
-      i += 1;
-      continue;
-    }
-
-    // Blockquote (consecutive `> ` lines)
-    if (/^>\s?/.test(line)) {
-      const buf: string[] = [];
-      while (i < lines.length && /^>\s?/.test(lines[i])) {
-        buf.push(lines[i].replace(/^>\s?/, ""));
-        i += 1;
-      }
-      blocks.push({ kind: "quote", text: buf.join("\n") });
-      continue;
-    }
-
-    // Unordered list
-    if (/^[-*]\s+/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^[-*]\s+/.test(lines[i])) {
-        items.push(lines[i].replace(/^[-*]\s+/, ""));
-        i += 1;
-      }
-      blocks.push({ kind: "list", ordered: false, items });
-      continue;
-    }
-
-    // Ordered list
-    if (/^\d+\.\s+/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
-        items.push(lines[i].replace(/^\d+\.\s+/, ""));
-        i += 1;
-      }
-      blocks.push({ kind: "list", ordered: true, items });
-      continue;
-    }
-
-    // Blank line — skip
-    if (line.trim() === "") {
-      i += 1;
-      continue;
-    }
-
-    // Paragraph (consecutive non-blank, non-block lines)
-    const buf: string[] = [];
-    while (
-      i < lines.length &&
-      lines[i].trim() !== "" &&
-      !/^```/.test(lines[i]) &&
-      !/^#{1,3}\s+/.test(lines[i]) &&
-      !/^>\s?/.test(lines[i]) &&
-      !/^[-*]\s+/.test(lines[i]) &&
-      !/^\d+\.\s+/.test(lines[i]) &&
-      !/^---+\s*$/.test(lines[i])
-    ) {
-      buf.push(lines[i]);
-      i += 1;
-    }
-    if (buf.length > 0) {
-      blocks.push({ kind: "paragraph", text: buf.join("\n") });
-    }
+  if (error) {
+    return (
+      <div className="my-3 overflow-hidden rounded-lg border border-destructive/40 bg-destructive/5">
+        <div className="border-b border-destructive/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-destructive">
+          mermaid · render error
+        </div>
+        <pre className="overflow-x-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-destructive">
+          {error}
+        </pre>
+        <pre className="overflow-x-auto border-t border-destructive/20 bg-background/50 px-4 py-3 font-mono text-[12px] leading-relaxed text-muted-foreground">
+          {code}
+        </pre>
+      </div>
+    );
   }
 
-  return blocks;
+  return (
+    <div className="my-3 overflow-hidden rounded-lg border border-border/60 bg-card">
+      <div className="border-b border-border/60 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        mermaid
+      </div>
+      <div
+        ref={ref}
+        className="flex justify-center overflow-x-auto px-4 py-4 [&>svg]:max-w-full [&>svg]:h-auto"
+        dangerouslySetInnerHTML={svg ? { __html: svg } : undefined}
+      />
+    </div>
+  );
 }
 
-// ─── Code block component ─────────────────────────────────────────────────────
+// ─── Code block (with language label + copy button) ─────────────────────────
 
-function CodeBlock({ lang, value }: { lang: string; value: string }) {
+function CodeBlock({
+  lang,
+  value,
+  highlightedClassName,
+}: {
+  lang: string;
+  value: string;
+  /** className from rehype-highlight, applied to <code>. */
+  highlightedClassName?: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   const onCopy = () => {
@@ -263,22 +150,198 @@ function CodeBlock({ lang, value }: { lang: string; value: string }) {
         </button>
       </div>
       <pre className="overflow-x-auto px-4 py-3 font-mono text-[12.5px] leading-relaxed text-[#E8DDD3]">
-        <code>{value}</code>
+        <code className={cn("hljs bg-transparent !p-0", highlightedClassName)}>
+          {value}
+        </code>
       </pre>
     </div>
   );
 }
 
-// ─── Public component ─────────────────────────────────────────────────────────
+// ─── Component overrides for react-markdown ─────────────────────────────────
 
-interface MarkdownLiteProps {
+const markdownComponents: Components = {
+  // Headings — use display serif font for h1/h2/h3
+  h1: ({ children }) => (
+    <h1 className="mt-5 mb-2 font-display text-2xl font-semibold tracking-tight text-foreground">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mt-5 mb-2 font-display text-xl font-semibold tracking-tight text-foreground">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mt-4 mb-1.5 font-display text-lg font-semibold tracking-tight text-foreground">
+      {children}
+    </h3>
+  ),
+  h4: ({ children }) => (
+    <h4 className="mt-3 mb-1 font-display text-base font-semibold text-foreground">
+      {children}
+    </h4>
+  ),
+
+  // Paragraphs
+  p: ({ children }) => (
+    <p className="my-2 whitespace-pre-wrap break-words leading-[1.7]">
+      {children}
+    </p>
+  ),
+
+  // Inline elements
+  strong: ({ children }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+  em: ({ children }) => <em className="italic">{children}</em>,
+  del: ({ children }) => (
+    <del className="text-muted-foreground line-through decoration-muted-foreground/60">
+      {children}
+    </del>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:decoration-primary"
+    >
+      {children}
+    </a>
+  ),
+
+  // Lists
+  ul: ({ children }) => (
+    <ul className="my-2 ml-5 list-disc space-y-1 marker:text-muted-foreground/60">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="my-2 ml-5 list-decimal space-y-1 marker:text-muted-foreground/60">
+      {children}
+    </ol>
+  ),
+  li: ({ children, ...props }) => {
+    // GFM task list: react-markdown injects a checkbox <input type="checkbox" disabled>
+    // as the first child. Detect it via className.
+    const className = (props as { className?: string }).className ?? "";
+    if (className.includes("task-list-item")) {
+      return (
+        <li className="-ml-5 flex list-none items-start gap-2 break-words">
+          {children}
+        </li>
+      );
+    }
+    return <li className="break-words">{children}</li>;
+  },
+  input: ({ type, checked, disabled }) => {
+    if (type === "checkbox") {
+      return (
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          readOnly
+          className="mt-[0.45em] size-3.5 shrink-0 rounded border-border accent-primary"
+        />
+      );
+    }
+    return null;
+  },
+
+  // Blockquote
+  blockquote: ({ children }) => (
+    <blockquote className="my-3 border-l-2 border-primary/40 pl-4 text-muted-foreground italic [&>p]:my-1">
+      {children}
+    </blockquote>
+  ),
+
+  // Horizontal rule
+  hr: () => <hr className="my-4 border-border/60" />,
+
+  // GFM table
+  table: ({ children }) => (
+    <div className="my-3 overflow-x-auto rounded-lg border border-border/60">
+      <table className="w-full border-collapse text-[13px]">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-muted/50 text-foreground">{children}</thead>
+  ),
+  tbody: ({ children }) => <tbody>{children}</tbody>,
+  tr: ({ children }) => (
+    <tr className="border-b border-border/60 last:border-0">{children}</tr>
+  ),
+  th: ({ children, style }) => (
+    <th
+      style={style}
+      className="px-3 py-2 text-left text-[12px] font-semibold uppercase tracking-wide text-foreground"
+    >
+      {children}
+    </th>
+  ),
+  td: ({ children, style }) => (
+    <td
+      style={style}
+      className="px-3 py-2 align-top text-foreground/90 [&>p]:my-0"
+    >
+      {children}
+    </td>
+  ),
+
+  // Image
+  img: ({ src, alt }) => {
+    if (typeof src !== "string") return null;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={alt ?? ""}
+        className="my-2 inline-block max-h-80 max-w-full rounded-lg border border-border/60 bg-muted/40 object-contain"
+      />
+    );
+  },
+
+  // Code: inline + block + mermaid
+  code: ({ className, children, ...props }) => {
+    const inline = !(props as { node?: { tagName?: string } }).node;
+    // react-markdown sets className like `language-xxx` only on block code.
+    const langMatch = /language-([\w+-]+)/.exec(className ?? "");
+    const lang = langMatch?.[1] ?? "";
+    const value = String(children ?? "").replace(/\n$/, "");
+
+    // Inline code (no language class set by markdown parser)
+    if (!lang && (inline || !value.includes("\n"))) {
+      return (
+        <code className="rounded-[5px] border border-border/60 bg-muted/70 px-1.5 py-[1px] font-mono text-[0.9em] text-foreground/90">
+          {children}
+        </code>
+      );
+    }
+
+    if (lang === "mermaid") {
+      return <MermaidBlock code={value} />;
+    }
+
+    return <CodeBlock lang={lang} value={value} highlightedClassName={className} />;
+  },
+
+  // `pre` is rendered by our CodeBlock; suppress react-markdown's wrapper for
+  // block code so we don't get a double <pre>.
+  pre: ({ children }) => <>{children}</>,
+};
+
+// ─── Public component ────────────────────────────────────────────────────────
+
+interface MarkdownProps {
   text: string;
-  /** When true, paragraphs preserve raw whitespace (used for system / refusal). */
+  /** Render text verbatim (no markdown), used for system / refusal blocks. */
   raw?: boolean;
   className?: string;
 }
 
-export function MarkdownLite({ text, raw = false, className }: MarkdownLiteProps) {
+export function MarkdownLite({ text, raw = false, className }: MarkdownProps) {
   if (!text) {
     return <span className="text-muted-foreground/60">—</span>;
   }
@@ -288,74 +351,15 @@ export function MarkdownLite({ text, raw = false, className }: MarkdownLiteProps
     );
   }
 
-  const blocks = parseBlocks(text);
-
   return (
-    <div className={cn("space-y-3 text-[15px] leading-[1.7]", className)}>
-      {blocks.map((b, i) => {
-        switch (b.kind) {
-          case "code":
-            return <CodeBlock key={i} lang={b.lang} value={b.value} />;
-          case "hr":
-            return <hr key={i} className="my-4 border-border/60" />;
-          case "heading": {
-            const cls =
-              b.level === 1
-                ? "font-display text-xl font-semibold tracking-tight"
-                : b.level === 2
-                  ? "font-display text-lg font-semibold tracking-tight"
-                  : "font-display text-base font-semibold";
-            return (
-              <h3 key={i} className={cn("mt-4 mb-1 text-foreground", cls)}>
-                {renderInline(parseInline(b.text))}
-              </h3>
-            );
-          }
-          case "quote":
-            return (
-              <blockquote
-                key={i}
-                className="border-l-2 border-primary/40 pl-4 text-muted-foreground italic"
-              >
-                {b.text.split("\n").map((ln, j) => (
-                  <p key={j} className="whitespace-pre-wrap break-words">
-                    {renderInline(parseInline(ln))}
-                  </p>
-                ))}
-              </blockquote>
-            );
-          case "list":
-            return b.ordered ? (
-              <ol
-                key={i}
-                className="ml-5 list-decimal space-y-1 marker:text-muted-foreground/60"
-              >
-                {b.items.map((it, j) => (
-                  <li key={j} className="break-words">
-                    {renderInline(parseInline(it))}
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <ul
-                key={i}
-                className="ml-5 list-disc space-y-1 marker:text-muted-foreground/60"
-              >
-                {b.items.map((it, j) => (
-                  <li key={j} className="break-words">
-                    {renderInline(parseInline(it))}
-                  </li>
-                ))}
-              </ul>
-            );
-          case "paragraph":
-            return (
-              <p key={i} className="whitespace-pre-wrap break-words">
-                {renderInline(parseInline(b.text))}
-              </p>
-            );
-        }
-      })}
+    <div className={cn("text-[15px] leading-[1.7]", className)}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        rehypePlugins={[rehypeRaw, [rehypeHighlight, { ignoreMissing: true, detect: true }]]}
+        components={markdownComponents}
+      >
+        {text}
+      </ReactMarkdown>
     </div>
   );
 }

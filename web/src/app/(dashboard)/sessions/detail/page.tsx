@@ -34,6 +34,49 @@ import {
 
 // ─── Tool definition card (right sidebar) ───────────────────────────────────
 
+/**
+ * Collapsible text — shows up to `previewChars` characters by default, with
+ * an inline "show more / show less" toggle when the content exceeds the limit.
+ * Short text (under the threshold) is rendered as-is without any toggle.
+ */
+function CollapsibleText({
+  text,
+  previewChars = 140,
+  className,
+}: {
+  text: string;
+  previewChars?: number;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const trimmed = text.trim();
+  const isLong = trimmed.length > previewChars;
+  const display = !isLong || open ? trimmed : `${trimmed.slice(0, previewChars).trimEnd()}…`;
+
+  return (
+    <div className={className}>
+      <p className="whitespace-pre-wrap break-words">{display}</p>
+      {isLong && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
+          className="mt-1 inline-flex items-center gap-0.5 font-medium text-primary/90 transition-colors hover:text-primary"
+        >
+          {open ? "Show less" : "Show more"}
+          {open ? (
+            <ChevronDown className="size-3" />
+          ) : (
+            <ChevronRight className="size-3" />
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   const [expanded, setExpanded] = useState(false);
   const toolData: UnifiedTool = tool.tool;
@@ -75,9 +118,11 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
                 <FileText className="size-3" />
                 Description
               </p>
-              <p className="text-[12.5px] leading-relaxed text-foreground/85 whitespace-pre-wrap">
-                {toolData.description}
-              </p>
+              <CollapsibleText
+                text={toolData.description}
+                previewChars={140}
+                className="text-[12.5px] leading-relaxed text-foreground/85"
+              />
             </div>
           )}
           {Object.keys(paramProperties).length > 0 && (
@@ -111,9 +156,11 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
                       )}
                     </div>
                     {schema.description !== undefined && (
-                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                        {schema.description as string}
-                      </p>
+                      <CollapsibleText
+                        text={schema.description as string}
+                        previewChars={100}
+                        className="mt-1 text-[11px] leading-relaxed text-muted-foreground"
+                      />
                     )}
                   </div>
                 ))}
@@ -217,7 +264,9 @@ export default function SessionDetailPage() {
 
   // ─── Main layout ───────────────────────────────────────────────────────────
 
-  const messageCount = messages.filter((m) => m.message.role !== "tool").length;
+  const messageCount = messages.filter(
+    (m) => m.message.role !== "tool" && !m.message.tool_call_id,
+  ).length;
 
   return (
     <div className="flex h-[calc(100vh-6rem)] gap-0 overflow-hidden">
