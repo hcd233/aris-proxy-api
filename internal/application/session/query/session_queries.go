@@ -59,5 +59,3 @@ type SessionDetailView struct {
 	Messages   []*MessageView
 	Tools      []*ToolView
 }
-
-

@@ -3,15 +3,78 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
-import type { SessionDetail, MessageItem, ToolItem } from "@/lib/types";
+import type { SessionDetail, MessageItem, ToolItem, UnifiedToolCall, UnifiedTool } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ChevronDown, ChevronRight, Wrench, User, Bot, Clock } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronRight,
+  Wrench,
+  User,
+  Bot,
+  Clock,
+  PanelRightOpen,
+  PanelRightClose,
+  Hash,
+  Braces,
+  FileText,
+} from "lucide-react";
+
+// ─── Inline Tool Call (inside assistant message) ────────────────────────────────
+
+function ToolCallInline({ call }: { call: UnifiedToolCall }) {
+  const [expanded, setExpanded] = useState(false);
+
+  let argsDisplay: string;
+  try {
+    argsDisplay = JSON.stringify(JSON.parse(call.arguments), null, 2);
+  } catch {
+    argsDisplay = call.arguments;
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-amber-100/50 dark:hover:bg-amber-900/20"
+      >
+        <div className="flex size-5 items-center justify-center rounded bg-amber-200/80 dark:bg-amber-800/40">
+          <Wrench className="size-3 text-amber-700 dark:text-amber-400" />
+        </div>
+        <span className="font-mono font-medium text-amber-800 dark:text-amber-300">
+          {call.name}
+        </span>
+        {call.id && (
+          <span className="ml-1 font-mono text-[10px] text-muted-foreground/50">
+            {call.id}
+          </span>
+        )}
+        <span className="ml-auto text-muted-foreground/60">
+          {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+        </span>
+      </button>
+      {expanded && (
+        <div className="border-t border-amber-200/60 dark:border-amber-800/40 px-3 py-2.5">
+          <p className="mb-1.5 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <Braces className="size-3" />
+            Arguments
+          </p>
+          <pre className="overflow-x-auto rounded-md bg-background/60 p-2.5 text-[11px] leading-relaxed font-mono">
+            {argsDisplay}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Chat Bubble ────────────────────────────────────────────────────────────────
 
 function ChatBubble({ message }: { message: MessageItem }) {
-  const role = (message.message as Record<string, unknown>)?.role as string ?? "unknown";
-  const content = (message.message as Record<string, unknown>)?.content;
+  const { role, content, tool_calls } = message.message;
   const isUser = role === "user";
   const isAssistant = role === "assistant";
 
@@ -26,8 +89,14 @@ function ChatBubble({ message }: { message: MessageItem }) {
   }
 
   const time = message.createdAt
-    ? new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    ? new Date(message.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
     : "";
+
+  const hasToolCalls = isAssistant && tool_calls && tool_calls.length > 0;
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} group`}>
@@ -38,7 +107,9 @@ function ChatBubble({ message }: { message: MessageItem }) {
           ) : isAssistant ? (
             <Bot className="size-3 text-muted-foreground/60" />
           ) : (
-            <Badge variant="outline" className="text-[10px] px-1 py-0">{role}</Badge>
+            <Badge variant="outline" className="px-1 py-0 text-[10px]">
+              {role}
+            </Badge>
           )}
           {message.model && (
             <span className="text-[10px] text-muted-foreground/60">{message.model}</span>
@@ -47,13 +118,20 @@ function ChatBubble({ message }: { message: MessageItem }) {
         <div
           className={`rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm ${
             isUser
-              ? "bg-primary text-primary-foreground rounded-br-md"
+              ? "rounded-br-md bg-primary text-primary-foreground"
               : isAssistant
-                ? "border bg-card text-foreground rounded-bl-md"
+                ? "rounded-bl-md border bg-card text-foreground"
                 : "bg-secondary text-secondary-foreground"
           }`}
         >
-          <div className="whitespace-pre-wrap break-words">{textContent || "—"}</div>
+          <div className="whitespace-pre-wrap break-words">{textContent || "\u2014"}</div>
+          {hasToolCalls && (
+            <div className="mt-3 space-y-1.5">
+              {tool_calls!.map((call, i) => (
+                <ToolCallInline key={call.id ?? i} call={call} />
+              ))}
+            </div>
+          )}
         </div>
         {time && (
           <div className="mt-1 flex items-center gap-0.5 px-1 text-[10px] text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100">
@@ -66,63 +144,87 @@ function ChatBubble({ message }: { message: MessageItem }) {
   );
 }
 
-function ToolCallBlock({ tool }: { tool: ToolItem }) {
-  const [expanded, setExpanded] = useState(false);
-  const toolData = tool.tool as Record<string, unknown>;
-  const name = (toolData?.name as string) ?? (toolData?.type as string) ?? "Tool";
-  const input = toolData?.input ?? toolData?.arguments ?? toolData?.params;
-  const output = toolData?.output ?? toolData?.result;
+// ─── Tool Sidebar Item ──────────────────────────────────────────────────────────
 
-  const renderValue = (val: unknown): string => {
-    if (typeof val === "string") return val;
-    try {
-      return JSON.stringify(val, null, 2);
-    } catch {
-      return String(val);
-    }
-  };
+function ToolSidebarItem({ tool }: { tool: ToolItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const toolData: UnifiedTool = tool.tool;
+
+  const params = toolData.parameters;
+  const paramProperties = (params?.properties as Record<string, Record<string, unknown>>) ?? {};
+  const requiredParams = (params?.required as string[]) ?? [];
 
   return (
-    <div className="mx-auto max-w-[85%] rounded-xl border border-border bg-card/50 shadow-sm">
+    <div className="rounded-lg border bg-card/50 shadow-xs">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-sm transition-colors hover:bg-accent/50"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent/50"
       >
-        <div className="flex size-6 items-center justify-center rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+        <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
           <Wrench className="size-3.5" />
         </div>
-        <span className="font-medium">{name}</span>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {expanded ? "Hide details" : "Show details"}
-        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium text-foreground">{toolData.name}</p>
+          <p className="truncate text-[11px] text-muted-foreground/70">
+            {toolData.description || "No description"}
+          </p>
+        </div>
         {expanded ? (
-          <ChevronDown className="size-3.5 text-muted-foreground" />
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
         ) : (
-          <ChevronRight className="size-3.5 text-muted-foreground" />
+          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
         )}
       </button>
       {expanded && (
-        <div className="border-t px-4 py-3 space-y-3">
-          {input != null && (
+        <div className="space-y-3 border-t px-3 py-3">
+          {toolData.description && (
             <div>
-              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
-                Input
+              <p className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <FileText className="size-3" />
+                Description
               </p>
-              <pre className="overflow-x-auto rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs dark:border-blue-900/30 dark:bg-blue-950/20">
-                {renderValue(input)}
-              </pre>
+              <p className="text-xs leading-relaxed text-foreground/80">
+                {toolData.description}
+              </p>
             </div>
           )}
-          {output != null && (
+          {Object.keys(paramProperties).length > 0 && (
             <div>
-              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Output
+              <p className="mb-1.5 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <Braces className="size-3" />
+                Parameters
               </p>
-              <pre className="overflow-x-auto rounded-lg border border-emerald-100 bg-emerald-50/50 p-3 text-xs dark:border-emerald-900/30 dark:bg-emerald-950/20">
-                {renderValue(output)}
-              </pre>
+              <div className="space-y-1.5">
+                {Object.entries(paramProperties).map(([name, schema]) => (
+                  <div
+                    key={name}
+                    className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-medium text-foreground">{name}</span>
+                      {requiredParams.includes(name) && (
+                        <span className="text-[9px] text-rose-500">required</span>
+                      )}
+                      {schema.type && (
+                        <Badge variant="secondary" className="ml-auto px-1 py-0 text-[9px]">
+                          {schema.type as string}
+                        </Badge>
+                      )}
+                    </div>
+                    {schema.description && (
+                      <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                        {schema.description as string}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {params?.type && (
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
+              <Hash className="size-3" />
+              Schema type: {params.type as string}
             </div>
           )}
         </div>
@@ -131,6 +233,8 @@ function ToolCallBlock({ tool }: { tool: ToolItem }) {
   );
 }
 
+// ─── Main Page ──────────────────────────────────────────────────────────────────
+
 export default function SessionDetailPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -138,6 +242,7 @@ export default function SessionDetailPage() {
 
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId || Number.isNaN(sessionId)) return;
@@ -193,64 +298,89 @@ export default function SessionDetailPage() {
     );
   }
 
-  const allItems: Array<{ type: "message" | "tool"; data: MessageItem | ToolItem; createdAt: string }> = [
-    ...(session.messages ?? []).map((m) => ({ type: "message" as const, data: m, createdAt: m.createdAt })),
-    ...(session.tools ?? []).map((t) => ({ type: "tool" as const, data: t, createdAt: t.createdAt })),
-  ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const messages = session.messages ?? [];
+  const tools = session.tools ?? [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 border-b pb-4">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => router.push("/sessions/")}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div className="flex items-center gap-3">
-          <h1 className="font-display text-xl font-semibold tracking-tight text-foreground">
-            Session #{session.id}
-          </h1>
-          {session.apiKeyName && (
-            <Badge variant="secondary" className="text-xs">
-              {session.apiKeyName}
-            </Badge>
+    <div className="flex h-[calc(100vh-6rem)] gap-0 overflow-hidden">
+      {/* ── Main content area ── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b pb-4">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => router.push("/sessions/")}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-xl font-semibold tracking-tight text-foreground">
+              Session #{session.id}
+            </h1>
+            {session.apiKeyName && (
+              <Badge variant="secondary" className="text-xs">
+                {session.apiKeyName}
+              </Badge>
+            )}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="size-3.5" />
+              <span>{new Date(session.createdAt).toLocaleString()}</span>
+            </div>
+            {tools.length > 0 && (
+              <Button
+                variant={sidebarOpen ? "secondary" : "ghost"}
+                size="icon-sm"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                title={sidebarOpen ? "Hide tools panel" : "Show tools panel"}
+              >
+                {sidebarOpen ? (
+                  <PanelRightClose className="size-4" />
+                ) : (
+                  <PanelRightOpen className="size-4" />
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Messages stream */}
+        <div className="flex-1 space-y-4 overflow-y-auto py-4 pr-2">
+          {messages.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              No messages in this session
+            </p>
+          ) : (
+            messages.map((msg) => (
+              <ChatBubble key={msg.id} message={msg} />
+            ))
           )}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <Clock className="size-3.5" />
-          <span>Created {new Date(session.createdAt).toLocaleString()}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground/40">·</span>
-          <span>Updated {new Date(session.updatedAt).toLocaleString()}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground/40">·</span>
-          <span>{allItems.length} item{allItems.length !== 1 ? "s" : ""}</span>
-        </div>
-      </div>
-
-      <div className="space-y-6 pb-8">
-        {allItems.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            No messages in this session
-          </p>
-        ) : (
-          allItems.map((item, idx) =>
-            item.type === "message" ? (
-              <ChatBubble key={`msg-${idx}`} message={item.data as MessageItem} />
-            ) : (
-              <ToolCallBlock key={`tool-${idx}`} tool={item.data as ToolItem} />
-            )
-          )
-        )}
-      </div>
+      {/* ── Right sidebar: Tools panel ── */}
+      {sidebarOpen && tools.length > 0 && (
+        <>
+          <Separator orientation="vertical" className="mx-0 h-auto" />
+          <aside className="flex w-80 shrink-0 flex-col overflow-hidden">
+            <div className="flex items-center gap-2 border-b px-4 py-3">
+              <Wrench className="size-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Tools</h2>
+              <Badge variant="secondary" className="ml-auto text-[10px]">
+                {tools.length}
+              </Badge>
+            </div>
+            <div className="flex-1 space-y-2 overflow-y-auto p-3">
+              {tools.map((t) => (
+                <ToolSidebarItem key={t.id} tool={t} />
+              ))}
+            </div>
+          </aside>
+        </>
+      )}
     </div>
   );
 }

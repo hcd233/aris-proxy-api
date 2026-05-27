@@ -97,16 +97,38 @@ export interface SessionDetail {
   tools: ToolItem[];
 }
 
+export interface UnifiedToolCall {
+  id?: string;
+  name: string;
+  arguments: string; // JSON string
+}
+
+export interface UnifiedMessage {
+  role: string;
+  content?: string | Array<Record<string, unknown>>;
+  name?: string;
+  reasoning_content?: string;
+  refusal?: string;
+  tool_call_id?: string;
+  tool_calls?: UnifiedToolCall[];
+}
+
 export interface MessageItem {
   id: number;
   model: string;
-  message: Record<string, unknown>; // UnifiedMessage — complex, keep as generic
+  message: UnifiedMessage;
   createdAt: string;
+}
+
+export interface UnifiedTool {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>; // JSON Schema
 }
 
 export interface ToolItem {
   id: number;
-  tool: Record<string, unknown>; // UnifiedTool — complex, keep as generic
+  tool: UnifiedTool;
   createdAt: string;
 }
 
