@@ -39,7 +39,20 @@ type GetShareContentReq struct {
 //	@update 2026-05-28 10:00:00
 type GetShareContentRsp struct {
 	CommonRsp
-	Session *SessionDetail `json:"session,omitempty" doc:"Session详情"`
+	Session *ShareContentSessionDetail `json:"session,omitempty" doc:"Session详情（不含APIKeyName等敏感字段）"`
+}
+
+// ShareContentSessionDetail 分享内容中的Session详情（去除敏感字段）
+//
+//	@author centonhuang
+//	@update 2026-05-28 10:00:00
+type ShareContentSessionDetail struct {
+	ID        uint              `json:"id" doc:"Session ID"`
+	CreatedAt time.Time         `json:"createdAt" doc:"创建时间"`
+	UpdatedAt time.Time         `json:"updatedAt" doc:"更新时间"`
+	Metadata  map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	Messages  []*MessageItem    `json:"messages" doc:"消息列表"`
+	Tools     []*ToolItem       `json:"tools" doc:"工具列表"`
 }
 
 // ListSharesReq 获取分享列表请求

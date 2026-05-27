@@ -235,9 +235,10 @@ func (h *sessionHandler) HandleGetShareContent(ctx context.Context, req *dto.Get
 	}
 
 	view, viewErr := h.getByUser.Handle(ctx, sessionquery.GetSessionByUserQuery{
-		UserID:    0,
-		IsAdmin:   true,
-		SessionID: sessionID,
+		UserID:             0,
+		IsAdmin:            true,
+		SkipOwnershipCheck: true,
+		SessionID:          sessionID,
 	})
 	if viewErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Get share content: fetch session failed",
@@ -266,14 +267,13 @@ func (h *sessionHandler) HandleGetShareContent(ctx context.Context, req *dto.Get
 		}
 	})
 
-	rsp.Session = &dto.SessionDetail{
-		ID:         view.ID,
-		APIKeyName: view.APIKeyName,
-		CreatedAt:  view.CreatedAt,
-		UpdatedAt:  view.UpdatedAt,
-		Metadata:   view.Metadata,
-		Messages:   messageItems,
-		Tools:      toolItems,
+	rsp.Session = &dto.ShareContentSessionDetail{
+		ID:        view.ID,
+		CreatedAt: view.CreatedAt,
+		UpdatedAt: view.UpdatedAt,
+		Metadata:  view.Metadata,
+		Messages:  messageItems,
+		Tools:     toolItems,
 	}
 
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -315,8 +315,9 @@ func (h *sessionHandler) HandleListShares(ctx context.Context, req *dto.ListShar
 //	@update 2026-05-28 10:00:00
 func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteShareReq) (*dto.HTTPResponse[*dto.CommonRsp], error) {
 	rsp := &dto.CommonRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
-	err := h.shareCache.DeleteShare(ctx, req.ShareID)
+	err := h.shareCache.DeleteShare(ctx, userID, req.ShareID)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Delete share failed",
 			zap.String("shareID", req.ShareID), zap.Error(err))
