@@ -24,9 +24,10 @@ type ListSessionsByUserHandler interface {
 }
 
 type GetSessionByUserQuery struct {
-	UserID    uint
-	IsAdmin   bool
-	SessionID uint
+	UserID             uint
+	IsAdmin            bool
+	SkipOwnershipCheck bool
+	SessionID          uint
 }
 
 type GetSessionByUserHandler interface {
@@ -108,7 +109,7 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUser
 		return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
 	}
 
-	if !q.IsAdmin {
+	if !q.IsAdmin && !q.SkipOwnershipCheck {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
 			log.Error("[SessionQuery] Failed to lookup owner names", zap.Error(lookupErr), zap.Uint("userID", q.UserID))

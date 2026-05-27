@@ -37,35 +37,34 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getSession", enum.PermissionUser)},
 	}, sessionHandler.HandleGetSessionByUser)
 
-	shareGroup := huma.NewGroup(sessionGroup, "/share")
-	initSessionShareRouter(shareGroup, sessionHandler)
+	initSessionShareRouter(sessionGroup, sessionHandler)
 }
 
-func initSessionShareRouter(shareGroup huma.API, sessionHandler handler.SessionHandler) {
-	huma.Register(shareGroup, huma.Operation{
+func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler) {
+	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "createShare",
 		Method:      http.MethodPost,
-		Path:        "/",
+		Path:        "/share",
 		Summary:     "CreateShare",
 		Description: "Create a share link for a session",
 		Tags:        []string{"Session"},
 		Security:    []map[string][]string{{"jwtAuth": {}}},
 	}, sessionHandler.HandleCreateShare)
 
-	huma.Register(shareGroup, huma.Operation{
+	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listShares",
 		Method:      http.MethodGet,
-		Path:        "/list",
+		Path:        "/share/list",
 		Summary:     "ListShares",
 		Description: "List all share links for current user",
 		Tags:        []string{"Session"},
 		Security:    []map[string][]string{{"jwtAuth": {}}},
 	}, sessionHandler.HandleListShares)
 
-	huma.Register(shareGroup, huma.Operation{
+	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "deleteShare",
 		Method:      http.MethodDelete,
-		Path:        "/{id}",
+		Path:        "/share/{id}",
 		Summary:     "DeleteShare",
 		Description: "Delete a share link",
 		Tags:        []string{"Session"},
