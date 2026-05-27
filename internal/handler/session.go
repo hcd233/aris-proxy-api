@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -24,6 +25,10 @@ import (
 type SessionHandler interface {
 	HandleListSessionsByUser(ctx context.Context, req *dto.ListSessionsByUserReq) (*dto.HTTPResponse[*dto.ListSessionsRsp], error)
 	HandleGetSessionByUser(ctx context.Context, req *dto.GetSessionByUserReq) (*dto.HTTPResponse[*dto.GetSessionRsp], error)
+	HandleCreateShare(ctx context.Context, req *dto.CreateShareReq) (*dto.HTTPResponse[*dto.CreateShareRsp], error)
+	HandleGetShareContent(ctx context.Context, req *dto.GetShareContentReq) (*dto.HTTPResponse[*dto.GetShareContentRsp], error)
+	HandleListShares(ctx context.Context, req *dto.ListSharesReq) (*dto.HTTPResponse[*dto.ListSharesRsp], error)
+	HandleDeleteShare(ctx context.Context, req *dto.DeleteShareReq) (*dto.HTTPResponse[*dto.CommonRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
@@ -33,11 +38,13 @@ type SessionHandler interface {
 type SessionDependencies struct {
 	ListByUser sessionquery.ListSessionsByUserHandler
 	GetByUser  sessionquery.GetSessionByUserHandler
+	ShareCache cache.ShareCache
 }
 
 type sessionHandler struct {
 	listByUser sessionquery.ListSessionsByUserHandler
 	getByUser  sessionquery.GetSessionByUserHandler
+	shareCache cache.ShareCache
 }
 
 // NewSessionHandler 创建Session处理器
@@ -50,6 +57,7 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 	return &sessionHandler{
 		listByUser: deps.ListByUser,
 		getByUser:  deps.GetByUser,
+		shareCache: deps.ShareCache,
 	}
 }
 
@@ -152,6 +160,172 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		zap.Uint("userID", userID),
 		zap.Int("messageCount", len(messageItems)),
 		zap.Int("toolCount", len(toolItems)))
+
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleCreateShare 创建分享链接（JWT认证）
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param req *dto.CreateShareReq
+//	@return *dto.HTTPResponse[*dto.CreateShareRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-28 10:00:00
+func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateShareReq) (*dto.HTTPResponse[*dto.CreateShareRsp], error) {
+	rsp := &dto.CreateShareRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	view, err := h.getByUser.Handle(ctx, sessionquery.GetSessionByUserQuery{
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		SessionID: req.SessionID,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Create share: verify session failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	if view == nil {
+		rsp.Error = ierr.ErrDataNotExists.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	shareID, expiresAt, shareErr := h.shareCache.CreateShare(ctx, userID, req.SessionID)
+	if shareErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Create share failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(shareErr))
+		rsp.Error = ierr.ToBizError(shareErr, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.ShareID = shareID
+	rsp.ExpiresAt = expiresAt
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Share created",
+		zap.String("shareID", shareID),
+		zap.Uint("sessionID", req.SessionID),
+		zap.Uint("userID", userID))
+
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleGetShareContent 获取分享内容（公开接口，IP限流）
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param req *dto.GetShareContentReq
+//	@return *dto.HTTPResponse[*dto.GetShareContentRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-28 10:00:00
+func (h *sessionHandler) HandleGetShareContent(ctx context.Context, req *dto.GetShareContentReq) (*dto.HTTPResponse[*dto.GetShareContentRsp], error) {
+	rsp := &dto.GetShareContentRsp{}
+
+	sessionID, err := h.shareCache.GetShareSessionID(ctx, req.ShareID)
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Get share content: share not found",
+			zap.String("shareID", req.ShareID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrDataNotExists.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	view, viewErr := h.getByUser.Handle(ctx, sessionquery.GetSessionByUserQuery{
+		UserID:    0,
+		IsAdmin:   true,
+		SessionID: sessionID,
+	})
+	if viewErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Get share content: fetch session failed",
+			zap.Uint("sessionID", sessionID), zap.Error(viewErr))
+		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	if view == nil {
+		rsp.Error = ierr.ErrDataNotExists.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	messageItems := lo.Map(view.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
+		return &dto.MessageItem{
+			ID:        m.ID,
+			Model:     m.Model,
+			Message:   m.Message,
+			CreatedAt: m.CreatedAt,
+		}
+	})
+	toolItems := lo.Map(view.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
+		return &dto.ToolItem{
+			ID:        t.ID,
+			Tool:      t.Tool,
+			CreatedAt: t.CreatedAt,
+		}
+	})
+
+	rsp.Session = &dto.SessionDetail{
+		ID:         view.ID,
+		APIKeyName: view.APIKeyName,
+		CreatedAt:  view.CreatedAt,
+		UpdatedAt:  view.UpdatedAt,
+		Metadata:   view.Metadata,
+		Messages:   messageItems,
+		Tools:      toolItems,
+	}
+
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleListShares 获取当前用户的分享列表（JWT认证）
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param req *dto.ListSharesReq
+//	@return *dto.HTTPResponse[*dto.ListSharesRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-28 10:00:00
+func (h *sessionHandler) HandleListShares(ctx context.Context, req *dto.ListSharesReq) (*dto.HTTPResponse[*dto.ListSharesRsp], error) {
+	rsp := &dto.ListSharesRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+
+	shares, pageInfo, err := h.shareCache.ListUserShares(ctx, userID, req.Page, req.PageSize)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] List shares failed", zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Shares = shares
+	rsp.PageInfo = pageInfo
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleDeleteShare 取消分享（JWT认证）
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param req *dto.DeleteShareReq
+//	@return *dto.HTTPResponse[*dto.CommonRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-28 10:00:00
+func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteShareReq) (*dto.HTTPResponse[*dto.CommonRsp], error) {
+	rsp := &dto.CommonRsp{}
+
+	err := h.shareCache.DeleteShare(ctx, req.ShareID)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Delete share failed",
+			zap.String("shareID", req.ShareID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Share deleted",
+		zap.String("shareID", req.ShareID))
 
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
