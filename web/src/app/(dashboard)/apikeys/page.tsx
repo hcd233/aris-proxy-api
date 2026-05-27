@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { APIKeyItem, APIKeyDetail } from "@/lib/types";
+import type { APIKeyItem, APIKeyDetail, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Key, Plus, Trash2, Copy, Check, AlertTriangle } from "lucide-react";
+import { Key, Plus, Trash2, Copy, Check, AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -40,7 +40,9 @@ import {
 
 export default function APIKeysPage() {
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -50,11 +52,12 @@ export default function APIKeysPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
-  const fetchKeys = useCallback(async () => {
+  const fetchKeys = useCallback(async (page: number, pageSize: number, query?: string) => {
     setLoading(true);
     try {
-      const rsp = await api.listAPIKeys();
+      const rsp = await api.listAPIKeys(page, pageSize, query);
       setKeys(rsp.keys ?? []);
+      if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
     } catch {
       toast.error("Failed to load API keys");
     } finally {
@@ -64,7 +67,7 @@ export default function APIKeysPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchKeys();
+    fetchKeys(1, 20);
   }, [fetchKeys]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -81,7 +84,7 @@ export default function APIKeysPage() {
         setCreatedKey(rsp.key);
         setNewKeyName("");
         toast.success("API key created");
-        fetchKeys();
+        fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create key");
@@ -101,7 +104,7 @@ export default function APIKeysPage() {
     try {
       await api.deleteAPIKey(deleteTarget.id);
       toast.success("API key deleted");
-      fetchKeys();
+      fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete key");
     } finally {
@@ -208,6 +211,20 @@ export default function APIKeysPage() {
           <CardTitle className="font-display">Your Keys</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search keys..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") fetchKeys(1, pageInfo.pageSize, searchQuery || undefined);
+                }}
+                className="pl-9"
+              />
+            </div>
+          </div>
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -222,40 +239,71 @@ export default function APIKeysPage() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {keys.map((key) => (
-                  <TableRow key={key.id}>
-                    <TableCell className="font-medium">{key.name}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {key.key}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(key.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="destructive"
-                        size="xs"
-                        disabled={deleting === key.id}
-                        onClick={() => openDeleteConfirm(key)}
-                      >
-                        <Trash2 className="mr-1 size-3" />
-                        Delete
-                      </Button>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Key</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {keys.map((key) => (
+                    <TableRow key={key.id}>
+                      <TableCell className="font-medium">{key.name}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {key.key}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(key.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="destructive"
+                          size="xs"
+                          disabled={deleting === key.id}
+                          onClick={() => openDeleteConfirm(key)}
+                        >
+                          <Trash2 className="mr-1 size-3" />
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {pageInfo.total > 0 && (
+                <div className="mt-4 flex items-center justify-between gap-4">
+                  <p className="text-sm text-muted-foreground">
+                    {pageInfo.total} key{pageInfo.total !== 1 ? "s" : ""} total
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pageInfo.page <= 1}
+                      onClick={() => fetchKeys(pageInfo.page - 1, pageInfo.pageSize, searchQuery || undefined)}
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {pageInfo.page} / {Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize))}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pageInfo.page >= Math.ceil(pageInfo.total / pageInfo.pageSize)}
+                      onClick={() => fetchKeys(pageInfo.page + 1, pageInfo.pageSize, searchQuery || undefined)}
+                    >
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
