@@ -167,6 +167,7 @@ export interface CreateAPIKeyRsp extends CommonRsp {
 
 export interface ListAPIKeysRsp extends CommonRsp {
   keys?: APIKeyItem[];
+  pageInfo?: PageInfo;
 }
 
 // ─── Endpoint ──────────────────────────────────────────────────────────────────
@@ -206,6 +207,7 @@ export interface UpdateEndpointReqBody {
 
 export interface ListEndpointsRsp extends CommonRsp {
   endpoints?: EndpointItem[];
+  pageInfo?: PageInfo;
 }
 
 // ─── Model ─────────────────────────────────────────────────────────────────────
@@ -233,4 +235,5 @@ export interface UpdateModelReqBody {
 
 export interface ListModelsRsp extends CommonRsp {
   models?: ModelItem[];
+  pageInfo?: PageInfo;
 }

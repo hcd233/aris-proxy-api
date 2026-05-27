@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { EndpointItem } from "@/lib/types";
+import type { EndpointItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, Server, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Pencil, Server, AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -61,7 +61,9 @@ const emptyForm: EndpointForm = {
 
 export default function EndpointsPage() {
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<EndpointForm>(emptyForm);
@@ -70,11 +72,12 @@ export default function EndpointsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
-  const fetchEndpoints = useCallback(async () => {
+  const fetchEndpoints = useCallback(async (page: number, pageSize: number, query?: string) => {
     setLoading(true);
     try {
-      const rsp = await api.listEndpoints();
+      const rsp = await api.listEndpoints(page, pageSize, query);
       setEndpoints(rsp.endpoints ?? []);
+      if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
     } catch {
       toast.error("Failed to load endpoints");
     } finally {
@@ -84,7 +87,7 @@ export default function EndpointsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchEndpoints();
+    fetchEndpoints(1, 20);
   }, [fetchEndpoints]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -139,7 +142,7 @@ export default function EndpointsPage() {
         toast.success("Endpoint created");
       }
       setDialogOpen(false);
-      fetchEndpoints();
+      fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save endpoint");
     } finally {
@@ -158,7 +161,7 @@ export default function EndpointsPage() {
     try {
       await api.deleteEndpoint(deleteTarget.id);
       toast.success("Endpoint deleted");
-      fetchEndpoints();
+      fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete endpoint");
     } finally {
@@ -189,6 +192,20 @@ export default function EndpointsPage() {
             <CardTitle className="font-display">All Endpoints</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search endpoints..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") fetchEndpoints(1, pageInfo.pageSize, searchQuery || undefined);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+            </div>
             {loading ? (
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
@@ -203,65 +220,96 @@ export default function EndpointsPage() {
                 </p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>OpenAI Base URL</TableHead>
-                    <TableHead>Supported APIs</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {endpoints.map((ep) => (
-                    <TableRow key={ep.id}>
-                      <TableCell className="font-medium">{ep.name}</TableCell>
-                      <TableCell className="max-w-[200px] truncate font-mono text-xs">
-                        {ep.openaiBaseURL || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ep.supportOpenAIChatCompletion && (
-                            <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
-                              OpenAI / Chat Completions
-                            </Badge>
-                          )}
-                          {ep.supportOpenAIResponse && (
-                            <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
-                              OpenAI / Response
-                            </Badge>
-                          )}
-                          {ep.supportAnthropicMessage && (
-                            <Badge variant="outline" className="text-[10px] border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-400">
-                              Anthropic / Messages
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(ep.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="xs"
-                            disabled={deleting === ep.id}
-                            onClick={() => openDeleteConfirm(ep)}
-                          >
-                            <Trash2 className="mr-1 size-3" />
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>OpenAI Base URL</TableHead>
+                      <TableHead>Supported APIs</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {endpoints.map((ep) => (
+                      <TableRow key={ep.id}>
+                        <TableCell className="font-medium">{ep.name}</TableCell>
+                        <TableCell className="max-w-[200px] truncate font-mono text-xs">
+                          {ep.openaiBaseURL || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1.5">
+                            {ep.supportOpenAIChatCompletion && (
+                              <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                                OpenAI / Chat Completions
+                              </Badge>
+                            )}
+                            {ep.supportOpenAIResponse && (
+                              <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                                OpenAI / Response
+                              </Badge>
+                            )}
+                            {ep.supportAnthropicMessage && (
+                              <Badge variant="outline" className="text-[10px] border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-400">
+                                Anthropic / Messages
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(ep.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="xs"
+                              disabled={deleting === ep.id}
+                              onClick={() => openDeleteConfirm(ep)}
+                            >
+                              <Trash2 className="mr-1 size-3" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {pageInfo.total > 0 && (
+                  <div className="mt-4 flex items-center justify-between gap-4">
+                    <p className="text-sm text-muted-foreground">
+                      {pageInfo.total} endpoint{pageInfo.total !== 1 ? "s" : ""} total
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pageInfo.page <= 1}
+                        onClick={() => fetchEndpoints(pageInfo.page - 1, pageInfo.pageSize, searchQuery || undefined)}
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {pageInfo.page} / {Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize))}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pageInfo.page >= Math.ceil(pageInfo.total / pageInfo.pageSize)}
+                        onClick={() => fetchEndpoints(pageInfo.page + 1, pageInfo.pageSize, searchQuery || undefined)}
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

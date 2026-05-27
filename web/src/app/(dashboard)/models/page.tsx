@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { ModelItem, EndpointItem } from "@/lib/types";
+import type { ModelItem, EndpointItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -43,7 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Pencil, Cpu, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Pencil, Cpu, AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 
 interface ModelForm {
@@ -62,7 +62,9 @@ export default function ModelsPage() {
   const router = useRouter();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ModelForm>(emptyForm);
@@ -71,14 +73,15 @@ export default function ModelsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (page: number, pageSize: number, query?: string) => {
     setLoading(true);
     try {
       const [modelsRsp, endpointsRsp] = await Promise.all([
-        api.listModels(),
+        api.listModels(page, pageSize, query),
         api.listEndpoints(),
       ]);
       setModels(modelsRsp.models ?? []);
+      if (modelsRsp.pageInfo) setPageInfo(modelsRsp.pageInfo);
       setEndpoints(endpointsRsp.endpoints ?? []);
     } catch {
       toast.error("Failed to load models");
@@ -89,7 +92,7 @@ export default function ModelsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchData();
+    fetchData(1, 20);
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -132,7 +135,7 @@ export default function ModelsPage() {
         toast.success("Model created");
       }
       setDialogOpen(false);
-      fetchData();
+      fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save model");
     } finally {
@@ -151,7 +154,7 @@ export default function ModelsPage() {
     try {
       await api.deleteModel(deleteTarget.id);
       toast.success("Model deleted");
-      fetchData();
+      fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete model");
     } finally {
@@ -187,6 +190,20 @@ export default function ModelsPage() {
             <CardTitle className="font-display">All Models</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search models..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") fetchData(1, pageInfo.pageSize, searchQuery || undefined);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+            </div>
             {loading ? (
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
@@ -201,52 +218,83 @@ export default function ModelsPage() {
                 </p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Model ID</TableHead>
-                    <TableHead>Alias</TableHead>
-                    <TableHead>Endpoint</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {models.map((model) => (
-                    <TableRow key={model.id}>
-                      <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
-                      <TableCell className="font-medium">{model.alias}</TableCell>
-                      <TableCell>
-                        <button
-                          onClick={() => router.push("/endpoints")}
-                          className="text-primary underline-offset-2 hover:underline"
-                        >
-                          {getEndpointName(model.endpointID)}
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(model.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="xs"
-                            disabled={deleting === model.id}
-                            onClick={() => openDeleteConfirm(model)}
-                          >
-                            <Trash2 className="mr-1 size-3" />
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Model ID</TableHead>
+                      <TableHead>Alias</TableHead>
+                      <TableHead>Endpoint</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {models.map((model) => (
+                      <TableRow key={model.id}>
+                        <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
+                        <TableCell className="font-medium">{model.alias}</TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => router.push("/endpoints")}
+                            className="text-primary underline-offset-2 hover:underline"
+                          >
+                            {getEndpointName(model.endpointID)}
+                          </button>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(model.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="xs"
+                              disabled={deleting === model.id}
+                              onClick={() => openDeleteConfirm(model)}
+                            >
+                              <Trash2 className="mr-1 size-3" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {pageInfo.total > 0 && (
+                  <div className="mt-4 flex items-center justify-between gap-4">
+                    <p className="text-sm text-muted-foreground">
+                      {pageInfo.total} model{pageInfo.total !== 1 ? "s" : ""} total
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pageInfo.page <= 1}
+                        onClick={() => fetchData(pageInfo.page - 1, pageInfo.pageSize, searchQuery || undefined)}
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {pageInfo.page} / {Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize))}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pageInfo.page >= Math.ceil(pageInfo.total / pageInfo.pageSize)}
+                        onClick={() => fetchData(pageInfo.page + 1, pageInfo.pageSize, searchQuery || undefined)}
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

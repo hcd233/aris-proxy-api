@@ -167,8 +167,14 @@ class ApiClient {
 
   // ─── API Keys ──────────────────────────────────────────────────────────────
 
-  async listAPIKeys(): Promise<ListAPIKeysRsp> {
-    return this.request<ListAPIKeysRsp>("/api/v1/apikey/list");
+  async listAPIKeys(
+    page: number = 1,
+    pageSize: number = 20,
+    query?: string
+  ): Promise<ListAPIKeysRsp> {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (query) params.set("query", query);
+    return this.request<ListAPIKeysRsp>(`/api/v1/apikey/list?${params}`);
   }
 
   async createAPIKey(
@@ -188,8 +194,14 @@ class ApiClient {
 
   // ─── Endpoints (admin) ─────────────────────────────────────────────────────
 
-  async listEndpoints(): Promise<ListEndpointsRsp> {
-    return this.request<ListEndpointsRsp>("/api/v1/endpoint/list");
+  async listEndpoints(
+    page: number = 1,
+    pageSize: number = 20,
+    query?: string
+  ): Promise<ListEndpointsRsp> {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (query) params.set("query", query);
+    return this.request<ListEndpointsRsp>(`/api/v1/endpoint/list?${params}`);
   }
 
   async createEndpoint(
@@ -219,8 +231,14 @@ class ApiClient {
 
   // ─── Models (admin) ────────────────────────────────────────────────────────
 
-  async listModels(): Promise<ListModelsRsp> {
-    return this.request<ListModelsRsp>("/api/v1/model/list");
+  async listModels(
+    page: number = 1,
+    pageSize: number = 20,
+    query?: string
+  ): Promise<ListModelsRsp> {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (query) params.set("query", query);
+    return this.request<ListModelsRsp>(`/api/v1/model/list?${params}`);
   }
 
   async createModel(body: CreateModelReqBody): Promise<ListModelsRsp> {
