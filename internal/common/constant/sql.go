@@ -89,7 +89,8 @@ var (
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
 	EndpointRepoFieldsFull = []string{FieldID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey,
-		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage}
+		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage,
+		FieldCreatedAt, FieldUpdatedAt}
 
 	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModel, FieldEndpointID}
 	ModelRepoFieldsAlias = []string{FieldAlias}
