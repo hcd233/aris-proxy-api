@@ -363,8 +363,13 @@ export function ChatMessage({
   // Stagger fade-in
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
 
-  // Skip rendering tool messages here — they are inlined into the assistant's tool call cards.
-  if (role === "tool") return null;
+  // Tool results may arrive either as role="tool" (Anthropic / unified) or as
+  // role="user" with a tool_call_id (OpenAI chat completion convention).
+  // Both cases are inlined into the matched tool-call card above, so skip them here.
+  const isToolResult =
+    role === "tool" ||
+    (role === "user" && !!message.message.tool_call_id);
+  if (isToolResult) return null;
 
   if (role === "user") {
     return (
@@ -410,7 +415,7 @@ export function ChatMessage({
       <Avatar kind={isAssistant ? "assistant" : "system"} />
       <div className="min-w-0 flex-1">
         <MetaLine
-          label={isAssistant ? "Claude" : role}
+          label={isAssistant ? "AI" : role}
           model={message.model}
           time={time}
         />
@@ -446,14 +451,23 @@ export function ChatMessage({
 
 // ─── Build tool-result map from a flat message list ──────────────────────────
 
+/**
+ * Tool-result messages may appear in two shapes depending on the upstream
+ * provider:
+ *   1. Anthropic / unified: role="tool" with tool_call_id
+ *   2. OpenAI chat completion: role="user" with tool_call_id
+ *
+ * Both are matched here — the presence of tool_call_id is the authoritative
+ * signal, regardless of role.
+ */
 export function buildToolResultsByID(
   messages: MessageItem[],
 ): Record<string, string> {
   const map: Record<string, string> = {};
   for (const m of messages) {
-    if (m.message.role !== "tool") continue;
     const id = m.message.tool_call_id;
     if (!id) continue;
+    if (m.message.role !== "tool" && m.message.role !== "user") continue;
     const { text } = extractContent(m.message.content);
     map[id] = text;
   }
