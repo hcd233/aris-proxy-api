@@ -18,7 +18,7 @@ type PageInfo struct {
 //	update 2024-09-21 09:00:57
 type PageParam struct {
 	Page     int `query:"page" required:"true" minimum:"1"`
-	PageSize int `query:"pageSize" required:"true" minimum:"1" maximum:"50"`
+	PageSize int `query:"pageSize" required:"true" minimum:"1" maximum:"200"`
 }
 
 // QueryParam 查询参数
@@ -34,7 +34,8 @@ type QueryParam struct {
 //	@author centonhuang
 //	@update 2025-11-07 01:41:47
 type SortParam struct {
-	Sort enum.Sort `query:"sort" enum:"asc,desc"`
+	Sort      enum.Sort `query:"sort" enum:"asc,desc"`
+	SortField string    `json:"sortField"`
 }
 
 // CommonParam 分页查询参数
