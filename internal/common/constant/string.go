@@ -144,7 +144,7 @@ const (
 	FieldEndpointSupportOpenAIResponse       = "support_openai_response"
 	FieldEndpointSupportAnthropicMessage     = "support_anthropic_message"
 	FieldModelAlias                          = "alias"
-	FieldModelModelName                      = "model_name"
+	FieldModelModelName                      = "model"
 	FieldModelEndpointID                     = "endpoint_id"
 
 	// Router path/query/field constants
