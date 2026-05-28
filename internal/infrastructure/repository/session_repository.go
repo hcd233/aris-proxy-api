@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"
@@ -245,91 +246,72 @@ func NewSessionReadRepository(db *gorm.DB) session.SessionReadRepository {
 	}
 }
 
-// ListSessions 分页查询 Session 列表投影
+type sessionSummaryRow struct {
+	ID           uint      `gorm:"column:id"`
+	CreatedAt    time.Time `gorm:"column:created_at"`
+	UpdatedAt    time.Time `gorm:"column:updated_at"`
+	Summary      string    `gorm:"column:summary"`
+	MessageCount int       `gorm:"column:message_count"`
+	ToolCount    int       `gorm:"column:tool_count"`
+}
+
+func (r *sessionReadRepository) listSessionsRaw(ctx context.Context, where string, args []any, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+
+	countSQL := "SELECT COUNT(*) FROM sessions WHERE deleted_at = 0"
+	querySQL := `SELECT id, created_at, updated_at, summary,
+		COALESCE(array_length(message_ids, 1), 0) AS message_count,
+		COALESCE(array_length(tool_ids, 1), 0) AS tool_count
+		FROM sessions WHERE deleted_at = 0`
+
+	if where != "" {
+		countSQL += " AND " + where
+		querySQL += " AND " + where
+	}
+	querySQL += " ORDER BY id ASC LIMIT ? OFFSET ?"
+
+	var total int64
+	if err := db.Raw(countSQL, args...).Scan(&total).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count sessions")
+	}
+
+	queryArgs := append(args, pageSize, offset)
+	var rows []sessionSummaryRow
+	if err := db.Raw(querySQL, queryArgs...).Scan(&rows).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "list sessions raw")
+	}
+
+	out := make([]*session.SessionSummaryProjection, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, &session.SessionSummaryProjection{
+			ID:           row.ID,
+			CreatedAt:    row.CreatedAt,
+			UpdatedAt:    row.UpdatedAt,
+			Summary:      row.Summary,
+			MessageCount: row.MessageCount,
+			ToolCount:    row.ToolCount,
+		})
+	}
+	return out, &model.PageInfo{Page: page, PageSize: pageSize, Total: total}, nil
+}
+
 func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	db := r.db.WithContext(ctx)
-	records, pageInfo, err := r.sessionDAO.Paginate(
-		db,
-		&dbmodel.Session{APIKeyName: owner},
-		constant.SessionRepoFieldsReadList,
-		&dao.CommonParam{
-			PageParam: dao.PageParam{Page: page, PageSize: pageSize},
-			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
-		},
-	)
-	if err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate session read")
-	}
-	out := make([]*session.SessionSummaryProjection, 0, len(records))
-	for _, s := range records {
-		out = append(out, &session.SessionSummaryProjection{
-			ID:         s.ID,
-			CreatedAt:  s.CreatedAt,
-			UpdatedAt:  s.UpdatedAt,
-			Summary:    s.Summary,
-			MessageIDs: s.MessageIDs,
-			ToolIDs:    s.ToolIDs,
-		})
-	}
-	return out, pageInfo, nil
+	return r.listSessionsRaw(ctx, "api_key_name = ?", []any{owner}, page, pageSize)
 }
 
-// ListAllSessions 分页查询所有 Session 列表投影
 func (r *sessionReadRepository) ListAllSessions(ctx context.Context, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	db := r.db.WithContext(ctx)
-	records, pageInfo, err := r.sessionDAO.Paginate(
-		db,
-		&dbmodel.Session{},
-		constant.SessionRepoFieldsReadList,
-		&dao.CommonParam{
-			PageParam: dao.PageParam{Page: page, PageSize: pageSize},
-			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
-		},
-	)
-	if err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate all sessions")
-	}
-	out := make([]*session.SessionSummaryProjection, 0, len(records))
-	for _, s := range records {
-		out = append(out, &session.SessionSummaryProjection{
-			ID:         s.ID,
-			CreatedAt:  s.CreatedAt,
-			UpdatedAt:  s.UpdatedAt,
-			Summary:    s.Summary,
-			MessageIDs: s.MessageIDs,
-			ToolIDs:    s.ToolIDs,
-		})
-	}
-	return out, pageInfo, nil
+	return r.listSessionsRaw(ctx, "", nil, page, pageSize)
 }
 
-// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影
 func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	db := r.db.WithContext(ctx)
-	records, pageInfo, err := r.sessionDAO.Paginate(
-		db.Where(constant.FieldAPIKeyName+" IN ?", ownerNames),
-		&dbmodel.Session{},
-		constant.SessionRepoFieldsReadList,
-		&dao.CommonParam{
-			PageParam: dao.PageParam{Page: page, PageSize: pageSize},
-			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
-		},
-	)
-	if err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions by owner names")
-	}
-	out := make([]*session.SessionSummaryProjection, 0, len(records))
-	for _, s := range records {
-		out = append(out, &session.SessionSummaryProjection{
-			ID:         s.ID,
-			CreatedAt:  s.CreatedAt,
-			UpdatedAt:  s.UpdatedAt,
-			Summary:    s.Summary,
-			MessageIDs: s.MessageIDs,
-			ToolIDs:    s.ToolIDs,
-		})
-	}
-	return out, pageInfo, nil
+	return r.listSessionsRaw(ctx, "api_key_name IN ?", []any{ownerNames}, page, pageSize)
 }
 
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
@@ -391,6 +373,22 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 		})
 	}
 	return out, nil
+}
+
+func (r *sessionReadRepository) FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error) {
+	if len(ids) == 0 {
+		return map[uint][]uint{}, nil
+	}
+	db := r.db.WithContext(ctx)
+	records, err := r.sessionDAO.BatchGetByField(db, constant.WhereFieldID, ids, constant.SessionRepoFieldsSummarize)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get session message ids")
+	}
+	result := make(map[uint][]uint, len(records))
+	for _, s := range records {
+		result[s.ID] = s.MessageIDs
+	}
+	return result, nil
 }
 
 // BuildOrderedMessageProjections 按 ids 顺序投影消息列表，跳过缺失 ID。

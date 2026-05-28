@@ -80,36 +80,51 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 
 	views := make([]*SessionSummaryView, 0, len(projections))
 
-	var emptySummaryMsgIDs []uint
+	var emptySummaryIDs []uint
 	for _, p := range projections {
 		if p.Summary == "" {
-			emptySummaryMsgIDs = append(emptySummaryMsgIDs, p.MessageIDs...)
+			emptySummaryIDs = append(emptySummaryIDs, p.ID)
 		}
 	}
 
+	var sessionMsgIDs map[uint][]uint
 	var msgByID map[uint]*session.MessageDetailProjection
-	if len(emptySummaryMsgIDs) > 0 {
-		messages, batchErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(emptySummaryMsgIDs))
+	if len(emptySummaryIDs) > 0 {
+		var batchErr error
+		sessionMsgIDs, batchErr = h.readRepo.FindSessionMessageIDsByIDs(ctx, emptySummaryIDs)
 		if batchErr != nil {
-			log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(batchErr))
+			log.Error("[SessionQuery] Failed to batch load message IDs for empty summary", zap.Error(batchErr))
 		} else {
-			msgByID = lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
-				return m.ID, m
-			})
+			var allMsgIDs []uint
+			for _, ids := range sessionMsgIDs {
+				allMsgIDs = append(allMsgIDs, ids...)
+			}
+			if len(allMsgIDs) > 0 {
+				messages, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(allMsgIDs))
+				if msgErr != nil {
+					log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(msgErr))
+				} else {
+					msgByID = lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
+						return m.ID, m
+					})
+				}
+			}
 		}
 	}
 
 	for _, p := range projections {
 		summary := p.Summary
 		if summary == "" {
-			summary = firstUserMessageContent(p.MessageIDs, msgByID)
+			summary = firstUserMessageContent(sessionMsgIDs[p.ID], msgByID)
 		}
 
 		views = append(views, &SessionSummaryView{
-			ID:        p.ID,
-			CreatedAt: p.CreatedAt,
-			UpdatedAt: p.UpdatedAt,
-			Summary:   summary,
+			ID:           p.ID,
+			CreatedAt:    p.CreatedAt,
+			UpdatedAt:    p.UpdatedAt,
+			Summary:      summary,
+			MessageCount: p.MessageCount,
+			ToolCount:    p.ToolCount,
 		})
 	}
 	return views, pageInfo, nil

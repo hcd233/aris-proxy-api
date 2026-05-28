@@ -175,7 +175,9 @@ export default function DashboardPage() {
                           {new Date(s.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-
+                      <Badge variant="secondary" className="ml-2 shrink-0 text-xs">
+                        {s.messageCount ?? 0} msgs
+                      </Badge>
                     </Link>
                   ))}
                 </div>
