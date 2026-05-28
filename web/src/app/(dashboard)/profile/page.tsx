@@ -73,7 +73,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Profile</h1>
+        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Profile</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Manage your account settings
         </p>
