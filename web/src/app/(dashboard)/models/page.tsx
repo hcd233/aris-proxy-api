@@ -372,7 +372,9 @@ export default function ModelsPage() {
                   }
                 >
                   <SelectTrigger id="model-endpoint">
-                    <SelectValue placeholder="Select endpoint" />
+                    <SelectValue placeholder="Select endpoint">
+                      {endpoints.find((ep) => ep.id === form.endpointID)?.name ?? ""}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {endpoints.map((ep) => (
