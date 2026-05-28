@@ -145,15 +145,11 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		}
 	})
 
-	isShared, sharedErr := h.shareCache.IsSessionShared(ctx, req.SessionID)
+	shareID, sharedErr := h.shareCache.GetSessionShareID(ctx, req.SessionID)
 	if sharedErr != nil {
 		logger.WithCtx(ctx).Warn("[SessionHandler] Check session shared status failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(sharedErr))
-	}
-
-	var shareID string
-	if isShared {
-		shareID, _ = h.shareCache.GetSessionShareID(ctx, req.SessionID)
+		shareID = ""
 	}
 
 	rsp.Session = &dto.SessionDetail{
@@ -164,7 +160,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		Metadata:   view.Metadata,
 		Messages:   messageItems,
 		Tools:      toolItems,
-		IsShared:   isShared,
+		IsShared:   shareID != "",
 		ShareID:    shareID,
 	}
 
