@@ -114,15 +114,15 @@ if command -v codegraph >/dev/null 2>&1; then
         if echo "$SYNC_OUTPUT" | grep -q "database is locked"; then
             printf "$INFO codegraph database locked by MCP server — skipping (index stays fresh after next MCP query)\n"
         else
-            printf "$FAIL codegraph sync failed:\n"
+            printf "$FAIL codegraph index failed:\n"
             echo "$SYNC_OUTPUT" | sed 's/^/       /'
-            fail "codegraph sync failed. Ensure .codegraph/ exists and is healthy."
+            fail "codegraph index failed. Ensure .codegraph/ exists and is healthy."
         fi
     fi
 else
     printf "$INFO codegraph CLI not found — skipping\n"
 fi
-printf "$PASS codegraph sync\n"
+printf "$PASS codegraph index\n"
 
 # --------------------------------------------------------------------------
 echo ""
