@@ -88,6 +88,7 @@ export default function SessionsPage() {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Summary</TableHead>
+                    <TableHead>Messages</TableHead>
                     <TableHead>Created</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -106,6 +107,7 @@ export default function SessionsPage() {
                       <TableCell className="max-w-[300px] truncate">
                         {s.summary || "—"}
                       </TableCell>
+                      <TableCell>{s.messageCount ?? 0}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(s.createdAt).toLocaleDateString()}
                       </TableCell>

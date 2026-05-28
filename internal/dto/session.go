@@ -13,11 +13,13 @@ import (
 //	@author centonhuang
 //	@update 2026-04-25 15:00:00
 type SessionSummary struct {
-	ID        uint              `json:"id" doc:"Session ID"`
-	CreatedAt time.Time         `json:"createdAt" doc:"创建时间"`
-	UpdatedAt time.Time         `json:"updatedAt" doc:"更新时间"`
-	Summary   string            `json:"summary" doc:"会话总结"`
-	Metadata  map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	ID           uint              `json:"id" doc:"Session ID"`
+	CreatedAt    time.Time         `json:"createdAt" doc:"创建时间"`
+	UpdatedAt    time.Time         `json:"updatedAt" doc:"更新时间"`
+	Summary      string            `json:"summary" doc:"会话总结"`
+	MessageCount int               `json:"messageCount" doc:"消息数量"`
+	ToolCount    int               `json:"toolCount" doc:"工具数量"`
+	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
 }
 
 // SessionDetail Session详情
