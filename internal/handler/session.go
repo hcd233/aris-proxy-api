@@ -145,6 +145,12 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		}
 	})
 
+	isShared, sharedErr := h.shareCache.IsSessionShared(ctx, req.SessionID)
+	if sharedErr != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Check session shared status failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(sharedErr))
+	}
+
 	rsp.Session = &dto.SessionDetail{
 		ID:         view.ID,
 		APIKeyName: view.APIKeyName,
@@ -153,6 +159,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		Metadata:   view.Metadata,
 		Messages:   messageItems,
 		Tools:      toolItems,
+		IsShared:   isShared,
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Get session detail by user",

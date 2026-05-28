@@ -68,7 +68,11 @@ export function ShareDialog({ sessionId, open, onOpenChange }: ShareDialogProps)
     try {
       const rsp = await api.createShare({ sessionId });
       if (rsp.error) {
-        toast.error(rsp.error.message || "Failed to create share link");
+        if (rsp.error.code === 10004) {
+          toast.error("This session is already shared. Revoke the existing link first.");
+        } else {
+          toast.error(rsp.error.message || "Failed to create share link");
+        }
         return;
       }
       if (!rsp.shareId) {

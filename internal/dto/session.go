@@ -34,6 +34,7 @@ type SessionDetail struct {
 	Metadata   map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
 	Messages   []*MessageItem    `json:"messages" doc:"消息列表"`
 	Tools      []*ToolItem       `json:"tools" doc:"工具列表"`
+	IsShared   bool              `json:"isShared" doc:"是否已分享"`
 }
 
 // MessageItem 消息列表项
