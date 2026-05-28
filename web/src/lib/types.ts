@@ -82,6 +82,8 @@ export interface SessionSummary {
   createdAt: string;
   updatedAt: string;
   summary: string;
+  messageCount: number;
+  toolCount: number;
   metadata?: Record<string, string>;
 }
 
