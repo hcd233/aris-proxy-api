@@ -14,12 +14,12 @@
  *  - Multimodal parts (image/audio/file/refusal) get dedicated renderers.
  */
 
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
-  ArrowDownToLine,
   Brain,
   ChevronDown,
   ChevronRight,
+  Clock,
   FileText,
   Music2,
   ShieldAlert,
@@ -203,6 +203,49 @@ function ReasoningBlock({ text }: { text: string }) {
   );
 }
 
+// ─── System message (collapsible) ──────────────────────────────────────────
+
+function SystemMessage({
+  style,
+  time,
+  text,
+  isLong,
+}: {
+  style: React.CSSProperties;
+  time?: string;
+  text: string;
+  isLong: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const display = !isLong || open ? text : `${text.slice(0, SYSTEM_MSG_PREVIEW_CHARS).trimEnd()}…`;
+
+  return (
+    <div
+      style={style}
+      className="animate-in fade-in slide-in-from-bottom-1 duration-300"
+    >
+      <MetaLine label="System" time={time} />
+      <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-[13.5px] leading-relaxed text-muted-foreground">
+        <MarkdownLite text={display} />
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="mt-2 inline-flex items-center gap-1 font-medium text-primary/90 transition-colors hover:text-primary"
+          >
+            {open ? "Show less" : "Show more"}
+            {open ? (
+              <ChevronDown className="size-3" />
+            ) : (
+              <ChevronRight className="size-3" />
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Tool call card (with optional matched result) ──────────────────────────
 
 function prettyJSON(s: string): string {
@@ -218,9 +261,11 @@ interface ToolCallCardProps {
   call: UnifiedToolCall;
   /** Tool result text matched by tool_call_id, if any. */
   result?: string;
+  /** Tool execution duration in seconds, from function_call to tool response. */
+  durationSeconds?: number;
 }
 
-function ToolCallCard({ call, result }: ToolCallCardProps) {
+function ToolCallCard({ call, result, durationSeconds }: ToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const args = prettyJSON(call.arguments);
   const out = result ? prettyJSON(result) : undefined;
@@ -245,10 +290,12 @@ function ToolCallCard({ call, result }: ToolCallCardProps) {
             <span className="font-mono text-[13px] font-medium text-foreground">
               {call.name || "tool"}
             </span>
-            {result !== undefined && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-[1px] font-mono text-[10px] text-emerald-700 dark:text-emerald-400">
-                <ArrowDownToLine className="size-2.5" />
-                result
+            {durationSeconds !== undefined && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/80 px-1.5 py-[1px] font-mono text-[10px] text-muted-foreground">
+                <Clock className="size-2.5" />
+                {durationSeconds < 0.1
+                  ? `${Math.round(durationSeconds * 1000)}ms`
+                  : `${durationSeconds.toFixed(1)}s`}
               </span>
             )}
           </div>
@@ -341,12 +388,18 @@ interface RenderedMessageProps {
   message: MessageItem;
   /** map: tool_call_id -> result text, harvested from sibling tool messages */
   toolResultsByID: Record<string, string>;
+  /** Full message list for computing tool execution durations */
+  messages: MessageItem[];
   index: number;
 }
+
+/** System message preview character threshold */
+const SYSTEM_MSG_PREVIEW_CHARS = 200;
 
 export function ChatMessage({
   message,
   toolResultsByID,
+  messages,
   index,
 }: RenderedMessageProps) {
   const { role, content, tool_calls, reasoning_content, refusal } =
@@ -362,6 +415,11 @@ export function ChatMessage({
 
   // Stagger fade-in
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
+
+  const toolDurations = useMemo(() => {
+    if (!tool_calls?.length) return {};
+    return buildToolDurationsByID(messages);
+  }, [messages, tool_calls]);
 
   // Tool results may arrive either as role="tool" (Anthropic / unified) or as
   // role="user" with a tool_call_id (OpenAI chat completion convention).
@@ -392,21 +450,21 @@ export function ChatMessage({
   }
 
   if (role === "system") {
+    const trimmed = text.trim();
+    const isLong = trimmed.length > SYSTEM_MSG_PREVIEW_CHARS;
     return (
-      <div
+      <SystemMessage
         style={style}
-        className="animate-in fade-in slide-in-from-bottom-1 duration-300"
-      >
-        <MetaLine label="System" time={time} />
-        <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-[13.5px] leading-relaxed text-muted-foreground">
-          <MarkdownLite text={text} />
-        </div>
-      </div>
+        time={time}
+        text={trimmed}
+        isLong={isLong}
+      />
     );
   }
 
   // assistant (and any other unhandled role via fallback)
   const isAssistant = role === "assistant";
+
   return (
     <div
       style={style}
@@ -436,10 +494,11 @@ export function ChatMessage({
           <div>
             {tool_calls.map((call, i) => (
               <Fragment key={call.id ?? i}>
-                <ToolCallCard
-                  call={call}
-                  result={call.id ? lookupToolResult(toolResultsByID, call.id) : undefined}
-                />
+<ToolCallCard
+                    call={call}
+                    result={call.id ? lookupToolResult(toolResultsByID, call.id) : undefined}
+                    durationSeconds={call.id ? toolDurations[call.id] : undefined}
+                  />
               </Fragment>
             ))}
           </div>
@@ -503,4 +562,39 @@ export function buildToolResultsByID(
     map[id] = text;
   }
   return map;
+}
+
+/**
+ * Build a map of tool_call_id -> execution duration in seconds.
+ * Computes the time delta between the assistant message containing the
+ * function_call and the corresponding tool result message.
+ */
+export function buildToolDurationsByID(
+  messages: MessageItem[],
+): Record<string, number> {
+  const callTimestamps: Record<string, string> = {};
+  const resultTimestamps: Record<string, string> = {};
+
+  for (const m of messages) {
+    if (m.message.role === "assistant" && m.message.tool_calls) {
+      for (const call of m.message.tool_calls) {
+        if (call.id) callTimestamps[call.id] = m.createdAt;
+      }
+    }
+    const toolCallId = m.message.tool_call_id;
+    if (toolCallId && (m.message.role === "tool" || m.message.role === "user")) {
+      resultTimestamps[toolCallId] = m.createdAt;
+    }
+  }
+
+  const durations: Record<string, number> = {};
+  for (const id of Object.keys(callTimestamps)) {
+    const start = callTimestamps[id];
+    const end = resultTimestamps[id];
+    if (start && end) {
+      const diffMs = new Date(end).getTime() - new Date(start).getTime();
+      durations[id] = diffMs / 1000;
+    }
+  }
+  return durations;
 }
