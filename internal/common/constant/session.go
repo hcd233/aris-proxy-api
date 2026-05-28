@@ -16,5 +16,5 @@ const (
 
 	CronSpecSessionSummarize   = "0 2 * * *"
 	CronSpecSessionScore       = "0 3 * * *"
-	CronSpecSessionDeduplicate = "0 1 * * *"
+	CronSpecSessionDeduplicate = "0 * * * *"
 )
