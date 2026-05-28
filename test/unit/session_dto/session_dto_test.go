@@ -80,12 +80,6 @@ func TestSessionSummary_JSONSerialization(t *testing.T) {
 	if got.UpdatedAt != tc.SessionSummary.UpdatedAt {
 		t.Errorf("UpdatedAt = %q, want %q", got.UpdatedAt, tc.SessionSummary.UpdatedAt)
 	}
-	if len(got.MessageIDs) != len(tc.SessionSummary.MessageIDs) {
-		t.Errorf("MessageIDs length = %d, want %d", len(got.MessageIDs), len(tc.SessionSummary.MessageIDs))
-	}
-	if len(got.ToolIDs) != len(tc.SessionSummary.ToolIDs) {
-		t.Errorf("ToolIDs length = %d, want %d", len(got.ToolIDs), len(tc.SessionSummary.ToolIDs))
-	}
 }
 
 func TestSessionDetail_JSONSerialization(t *testing.T) {

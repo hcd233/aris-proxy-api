@@ -90,12 +90,10 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 
 	rsp.Sessions = lo.Map(views, func(v *sessionquery.SessionSummaryView, _ int) *dto.SessionSummary {
 		return &dto.SessionSummary{
-			ID:         v.ID,
-			CreatedAt:  v.CreatedAt,
-			UpdatedAt:  v.UpdatedAt,
-			Summary:    v.Summary,
-			MessageIDs: v.MessageIDs,
-			ToolIDs:    v.ToolIDs,
+			ID:        v.ID,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
+			Summary:   v.Summary,
 		}
 	})
 	rsp.PageInfo = pageInfo
