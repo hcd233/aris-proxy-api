@@ -272,6 +272,11 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                 {session.apiKeyName}
               </Badge>
             )}
+            {session.isShared && (
+              <Badge variant="outline" className="text-xs">
+                Shared
+              </Badge>
+            )}
             <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
               <MessagesSquare className="size-3.5" />
               {messageCount} message{messageCount === 1 ? "" : "s"}

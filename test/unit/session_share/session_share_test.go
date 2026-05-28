@@ -26,24 +26,29 @@ type mockShareEntry struct {
 }
 
 type mockShareCache struct {
-	shares     map[string]*mockShareEntry
-	userShares map[uint][]string
-	createErr  error
-	getErr     error
-	deleteErr  error
-	listErr    error
+	shares         map[string]*mockShareEntry
+	userShares     map[uint][]string
+	sharedSessions map[uint]bool
+	createErr      error
+	getErr         error
+	deleteErr      error
+	listErr        error
 }
 
 func newMockShareCache() *mockShareCache {
 	return &mockShareCache{
-		shares:     make(map[string]*mockShareEntry),
-		userShares: make(map[uint][]string),
+		shares:         make(map[string]*mockShareEntry),
+		userShares:     make(map[uint][]string),
+		sharedSessions: make(map[uint]bool),
 	}
 }
 
 func (m *mockShareCache) CreateShare(_ context.Context, userID, sessionID uint) (string, time.Time, error) {
 	if m.createErr != nil {
 		return "", time.Time{}, m.createErr
+	}
+	if m.sharedSessions[sessionID] {
+		return "", time.Time{}, ierr.New(ierr.ErrDataExists, "session already has an active share")
 	}
 	shareID := "test-share-id-" + time.Now().Format("150405")
 	now := time.Now()
@@ -54,6 +59,7 @@ func (m *mockShareCache) CreateShare(_ context.Context, userID, sessionID uint) 
 		expiresAt: now.Add(constant.ShareTTL),
 	}
 	m.userShares[userID] = append(m.userShares[userID], shareID)
+	m.sharedSessions[sessionID] = true
 	return shareID, now.Add(constant.ShareTTL), nil
 }
 
@@ -84,6 +90,17 @@ func (m *mockShareCache) DeleteShare(_ context.Context, userID uint, shareID str
 		}
 	}
 	m.userShares[userID] = filtered
+
+	remainingForSession := false
+	for _, otherID := range m.userShares[userID] {
+		if e, exists := m.shares[otherID]; exists && e.sessionID == entry.sessionID {
+			remainingForSession = true
+			break
+		}
+	}
+	if !remainingForSession {
+		delete(m.sharedSessions, entry.sessionID)
+	}
 	return nil
 }
 
@@ -106,6 +123,10 @@ func (m *mockShareCache) ListUserShares(_ context.Context, userID uint, page, pa
 		})
 	}
 	return items, &model.PageInfo{Page: page, PageSize: pageSize, Total: int64(len(items))}, nil
+}
+
+func (m *mockShareCache) IsSessionShared(_ context.Context, sessionID uint) (bool, error) {
+	return m.sharedSessions[sessionID], nil
 }
 
 type mockGetSessionByUserHandler struct {
@@ -363,6 +384,53 @@ func TestDeleteShare_Nonexistent(t *testing.T) {
 	rsp, _ := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: "nonexistent"})
 	if rsp.Body.Error == nil {
 		t.Error("expected error when deleting non-existent share")
+	}
+}
+
+func TestCreateShare_AlreadyShared(t *testing.T) {
+	sc := newMockShareCache()
+	sc.sharedSessions[1] = true
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
+	h := newTestHandler(sc, getByUser)
+	ctx := ctxWithUser(42, enum.PermissionUser)
+
+	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
+	if rsp.Body.Error == nil {
+		t.Error("expected DataExists error for already-shared session")
+	}
+	if rsp.Body.Error.Code != ierr.ErrDataExists.BizError().Code {
+		t.Errorf("error code = %d, want %d (DataExists)", rsp.Body.Error.Code, ierr.ErrDataExists.BizError().Code)
+	}
+}
+
+func TestHandleGetSessionByUser_IsShared(t *testing.T) {
+	sc := newMockShareCache()
+	sc.sharedSessions[1] = true
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
+	h := newTestHandler(sc, getByUser)
+	ctx := ctxWithUser(42, enum.PermissionUser)
+
+	rsp, _ := h.HandleGetSessionByUser(ctx, &dto.GetSessionByUserReq{SessionID: 1})
+	if rsp.Body.Session == nil {
+		t.Fatal("expected non-nil session")
+	}
+	if !rsp.Body.Session.IsShared {
+		t.Error("expected IsShared = true for shared session")
+	}
+}
+
+func TestHandleGetSessionByUser_NotShared(t *testing.T) {
+	sc := newMockShareCache()
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
+	h := newTestHandler(sc, getByUser)
+	ctx := ctxWithUser(42, enum.PermissionUser)
+
+	rsp, _ := h.HandleGetSessionByUser(ctx, &dto.GetSessionByUserReq{SessionID: 1})
+	if rsp.Body.Session == nil {
+		t.Fatal("expected non-nil session")
+	}
+	if rsp.Body.Session.IsShared {
+		t.Error("expected IsShared = false for non-shared session")
 	}
 }
 
