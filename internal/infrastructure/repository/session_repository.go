@@ -371,6 +371,28 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (
 	return detail, nil
 }
 
+// FindMessagesByIDs 批量查询消息投影
+func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uint) ([]*session.MessageDetailProjection, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	db := r.db.WithContext(ctx)
+	records, err := r.messageDAO.BatchGetByField(db, constant.WhereFieldID, ids, constant.MessageRepoFieldsDetail)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by ids")
+	}
+	out := make([]*session.MessageDetailProjection, 0, len(records))
+	for _, m := range records {
+		out = append(out, &session.MessageDetailProjection{
+			ID:        m.ID,
+			Model:     m.Model,
+			Message:   m.Message,
+			CreatedAt: m.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
 // BuildOrderedMessageProjections 按 ids 顺序投影消息列表，跳过缺失 ID。
 //
 // 导出供测试断言内部排序逻辑（通过 GetSessionDetail 间接覆盖）。

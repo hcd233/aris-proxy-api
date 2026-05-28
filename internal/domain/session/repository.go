@@ -105,4 +105,6 @@ type SessionReadRepository interface {
 	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
+	// FindMessagesByIDs 批量查询消息投影
+	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 }

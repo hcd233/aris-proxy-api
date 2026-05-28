@@ -2,13 +2,18 @@ package query
 
 import (
 	"context"
+	"unicode/utf8"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -74,12 +79,37 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 	}
 
 	views := make([]*SessionSummaryView, 0, len(projections))
+
+	var emptySummaryMsgIDs []uint
 	for _, p := range projections {
+		if p.Summary == "" {
+			emptySummaryMsgIDs = append(emptySummaryMsgIDs, p.MessageIDs...)
+		}
+	}
+
+	var msgByID map[uint]*session.MessageDetailProjection
+	if len(emptySummaryMsgIDs) > 0 {
+		messages, batchErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(emptySummaryMsgIDs))
+		if batchErr != nil {
+			log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(batchErr))
+		} else {
+			msgByID = lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
+				return m.ID, m
+			})
+		}
+	}
+
+	for _, p := range projections {
+		summary := p.Summary
+		if summary == "" {
+			summary = firstUserMessageContent(p.MessageIDs, msgByID)
+		}
+
 		views = append(views, &SessionSummaryView{
 			ID:         p.ID,
 			CreatedAt:  p.CreatedAt,
 			UpdatedAt:  p.UpdatedAt,
-			Summary:    p.Summary,
+			Summary:    summary,
 			MessageIDs: p.MessageIDs,
 			ToolIDs:    p.ToolIDs,
 		})
@@ -94,6 +124,42 @@ type getSessionByUserHandler struct {
 
 func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) GetSessionByUserHandler {
 	return &getSessionByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
+}
+
+// firstUserMessageContent 从消息 ID 列表中提取第一个用户消息的文本内容作为 summary
+func firstUserMessageContent(msgIDs []uint, msgByID map[uint]*session.MessageDetailProjection) string {
+	for _, id := range msgIDs {
+		m, ok := msgByID[id]
+		if !ok || m.Message == nil || m.Message.Role != enum.RoleUser {
+			continue
+		}
+		return truncateSummary(extractTextContent(m.Message.Content))
+	}
+	return ""
+}
+
+// extractTextContent 从 UnifiedContent 中提取纯文本内容
+func extractTextContent(c *vo.UnifiedContent) string {
+	if c == nil {
+		return ""
+	}
+	if c.Text != "" {
+		return c.Text
+	}
+	for _, p := range c.Parts {
+		if p.Type == enum.ContentPartTypeText && p.Text != "" {
+			return p.Text
+		}
+	}
+	return ""
+}
+
+// truncateSummary 截断 summary 到最大 rune 数
+func truncateSummary(s string) string {
+	if utf8.RuneCountInString(s) <= constant.MaxSummaryRunes {
+		return s
+	}
+	return string([]rune(s)[:constant.MaxSummaryRunes])
 }
 
 func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUserQuery) (*SessionDetailView, error) {
