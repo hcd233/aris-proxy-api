@@ -238,6 +238,7 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - **API 调用 / curl 示例 / 生产验证**：使用 `call-api`；它只负责交互式调用示例，不替代 E2E 回归。
 - **发布 / 部署**：使用 `deploy-to-production`；提交、推送、CI、SSH 部署和线上 E2E 都在该 skill 中维护。
 - **会话开始/初次接触项目 / 需要历史上下文 / 沉淀经验教训**：使用 `agentmemory`；检查并启动 agentmemory 服务器，召回历史经验，保存新的洞察和偏好。
+- **写或改 `internal/dto/**` / 新增 huma 路由 / 排查 "field 总是零值" 类问题**：使用 `huma-dto-conventions`；它沉淀了 huma 的 path/query/body 绑定规则、Body 包装模板、响应 unwrap 行为和反模式速查。
 - 专项流程细节放在对应 skill，主文档只保留触发条件和项目级硬约束。
 
 ## 3. 项目模型
