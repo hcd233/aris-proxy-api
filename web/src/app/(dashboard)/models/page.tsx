@@ -76,17 +76,22 @@ export default function ModelsPage() {
   const fetchData = useCallback(async (page: number, pageSize: number, query?: string) => {
     setLoading(true);
     try {
-      const [modelsRsp, endpointsRsp] = await Promise.all([
-        api.listModels(page, pageSize, query),
-        api.listEndpoints(),
-      ]);
+      const modelsRsp = await api.listModels(page, pageSize, query);
       setModels(modelsRsp.models ?? []);
       if (modelsRsp.pageInfo) setPageInfo(modelsRsp.pageInfo);
-      setEndpoints(endpointsRsp.endpoints ?? []);
     } catch {
       toast.error("Failed to load models");
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchEndpoints = useCallback(async () => {
+    try {
+      const endpointsRsp = await api.listEndpoints();
+      setEndpoints(endpointsRsp.endpoints ?? []);
+    } catch {
+      toast.error("Failed to load endpoints");
     }
   }, []);
 
@@ -96,18 +101,20 @@ export default function ModelsPage() {
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const openCreate = () => {
+  const openCreate = async () => {
+    await fetchEndpoints();
     setEditingId(null);
     setForm({ ...emptyForm, endpointID: endpoints[0]?.id ?? 0 });
     setDialogOpen(true);
   };
 
-  const openEdit = (model: ModelItem) => {
+  const openEdit = async (model: ModelItem) => {
+    await fetchEndpoints();
     setEditingId(model.id);
     setForm({
       alias: model.alias,
       modelName: model.modelName,
-      endpointID: model.endpointID,
+      endpointID: model.endpoint.id,
     });
     setDialogOpen(true);
   };
@@ -164,9 +171,8 @@ export default function ModelsPage() {
     }
   };
 
-  const getEndpointName = (endpointID: number) => {
-    const ep = endpoints.find((e) => e.id === endpointID);
-    return ep?.name ?? `Endpoint #${endpointID}`;
+  const getEndpointName = (model: ModelItem) => {
+    return model.endpoint?.name ?? `Endpoint #${model.endpoint?.id}`;
   };
 
   return (
@@ -239,7 +245,7 @@ export default function ModelsPage() {
                             onClick={() => router.push("/endpoints")}
                             className="text-primary underline-offset-2 hover:underline"
                           >
-                            {getEndpointName(model.endpointID)}
+                            {getEndpointName(model)}
                           </button>
                         </TableCell>
                         <TableCell className="text-muted-foreground">

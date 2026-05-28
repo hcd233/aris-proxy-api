@@ -256,7 +256,7 @@ export interface ModelItem {
   id: number;
   alias: string;
   modelName: string;
-  endpointID: number;
+  endpoint: EndpointItem;
   createdAt: string;
   updatedAt: string;
 }
