@@ -27,6 +27,13 @@ import {
   buildToolResultsByID,
 } from "@/components/chat/chat-message";
 import { ShareDialog } from "@/components/share/share-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 function CollapsibleText({
   text,
@@ -170,6 +177,7 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
 
 export default function SessionDetailClient({ sessionId }: { sessionId: number }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -263,7 +271,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             <ArrowLeft className="size-4" />
           </Button>
           <div className="flex min-w-0 items-center gap-3">
-            <h1 className="font-display text-xl font-semibold tracking-tight text-foreground">
+            <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight text-foreground">
               Session #{session.id}
             </h1>
             {session.apiKeyName && (
@@ -340,7 +348,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         </div>
       </div>
 
-      {sidebarOpen && tools.length > 0 && (
+      {!isMobile && sidebarOpen && tools.length > 0 && (
         <>
           <Separator orientation="vertical" className="mx-0 h-auto" />
           <aside className="flex w-80 shrink-0 flex-col overflow-hidden bg-sidebar/40">
@@ -360,6 +368,25 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             </div>
           </aside>
         </>
+      )}
+
+      {isMobile && sidebarOpen && tools.length > 0 && (
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent side="bottom" className="h-[60vh] rounded-t-xl border-border p-0">
+            <SheetHeader className="border-b border-border/70 px-4 py-3.5">
+              <SheetTitle className="flex items-center gap-2 font-display text-sm font-semibold">
+                <Wrench className="size-4 text-muted-foreground" />
+                Available Tools
+                <Badge variant="secondary" className="text-[10px]">{tools.length}</Badge>
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 space-y-2 overflow-y-auto p-3">
+              {tools.map((t) => (
+                <ToolSidebarItem key={t.id} tool={t} />
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
       )}
 
       <ShareDialog

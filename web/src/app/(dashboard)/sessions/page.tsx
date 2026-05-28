@@ -14,7 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, MessageSquare, ListFilter, Check } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function SessionsPage() {
+  const isMobile = useIsMobile();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: 1,
@@ -59,7 +62,7 @@ export default function SessionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Sessions</h1>
+        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Sessions</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           View and browse your conversation sessions
         </p>
@@ -83,6 +86,35 @@ export default function SessionsPage() {
             </div>
           ) : (
             <>
+              {isMobile ? (
+              <div className="space-y-3">
+                {sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:bg-secondary/50"
+                    onClick={() => {
+                      window.location.href = `/web/sessions/detail/?id=${s.id}`;
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {s.summary || `Session #${s.id}`}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0 text-xs">
+                        {s.messageCount ?? 0} msgs
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>ID: {s.id}</span>
+                      <span>{s.toolCount ?? 0} tools</span>
+                      <span>{new Date(s.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -117,10 +149,11 @@ export default function SessionsPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
 
               {/* Pagination */}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
+                <div className="hidden items-center gap-3 md:flex">
                   <DropdownMenu>
                     <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
                       <ListFilter className="size-3.5" />
@@ -142,9 +175,9 @@ export default function SessionsPage() {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <p className="text-sm text-muted-foreground">
-                    {pageInfo.total} session{pageInfo.total !== 1 ? "s" : ""} total
-                  </p>
+<p className="hidden text-sm text-muted-foreground md:block">
+                      {pageInfo.total} session{pageInfo.total !== 1 ? "s" : ""} total
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2">
