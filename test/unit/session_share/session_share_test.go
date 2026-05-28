@@ -125,10 +125,6 @@ func (m *mockShareCache) ListUserShares(_ context.Context, userID uint, page, pa
 	return items, &model.PageInfo{Page: page, PageSize: pageSize, Total: int64(len(items))}, nil
 }
 
-func (m *mockShareCache) IsSessionShared(_ context.Context, sessionID uint) (bool, error) {
-	return m.sharedSessions[sessionID], nil
-}
-
 func (m *mockShareCache) GetSessionShareID(_ context.Context, sessionID uint) (string, error) {
 	if !m.sharedSessions[sessionID] {
 		return "", nil
