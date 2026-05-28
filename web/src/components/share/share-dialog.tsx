@@ -25,6 +25,7 @@ import {
 
 export interface ShareDialogProps {
   sessionId: number;
+  existingShareID?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -43,17 +44,19 @@ export function buildShareURL(shareID: string): string {
   return `${window.location.origin}/web/share/?id=${encodeURIComponent(shareID)}`;
 }
 
-export function ShareDialog({ sessionId, open, onOpenChange }: ShareDialogProps) {
+export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: ShareDialogProps) {
   const [creating, setCreating] = useState(false);
-  const [shareURL, setShareURL] = useState<string | null>(null);
+  const [shareURL, setShareURL] = useState<string | null>(
+    existingShareID ? buildShareURL(existingShareID) : null,
+  );
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const reset = useCallback(() => {
-    setShareURL(null);
+    setShareURL(existingShareID ? buildShareURL(existingShareID) : null);
     setExpiresAt(null);
     setCopied(false);
-  }, []);
+  }, [existingShareID]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -68,7 +71,11 @@ export function ShareDialog({ sessionId, open, onOpenChange }: ShareDialogProps)
     try {
       const rsp = await api.createShare({ sessionId });
       if (rsp.error) {
-        toast.error(rsp.error.message || "Failed to create share link");
+        if (rsp.error.code === 10004) {
+          toast.error("This session is already shared. Revoke the existing link first.");
+        } else {
+          toast.error(rsp.error.message || "Failed to create share link");
+        }
         return;
       }
       if (!rsp.shareId) {
@@ -111,8 +118,9 @@ export function ShareDialog({ sessionId, open, onOpenChange }: ShareDialogProps)
             Share session
           </DialogTitle>
           <DialogDescription>
-            Generate a public link to this conversation. The link expires after
-            24 hours and can be revoked anytime from the Shares page.
+            {shareURL
+              ? "Copy the public link below to share this conversation. The link can be revoked anytime from the Shares page."
+              : "Generate a public link to this conversation. The link expires after 24 hours and can be revoked anytime from the Shares page."}
           </DialogDescription>
         </DialogHeader>
 

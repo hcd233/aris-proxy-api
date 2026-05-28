@@ -33,6 +33,7 @@ type ShareCache interface {
 	GetShareSessionID(ctx context.Context, shareID string) (uint, error)
 	DeleteShare(ctx context.Context, userID uint, shareID string) error
 	ListUserShares(ctx context.Context, userID uint, page, pageSize int) ([]*dto.ShareItem, *model.PageInfo, error)
+	GetSessionShareID(ctx context.Context, sessionID uint) (string, error)
 }
 
 type shareCache struct {
@@ -64,10 +65,20 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 	if sessionID == 0 {
 		return "", time.Time{}, ierr.New(ierr.ErrValidation, "sessionID must be greater than 0")
 	}
+
+	existingShareID, checkErr := s.GetSessionShareID(ctx, sessionID)
+	if checkErr != nil {
+		return "", time.Time{}, ierr.Wrap(ierr.ErrInternal, checkErr, "failed to check existing share")
+	}
+	if existingShareID != "" {
+		return "", time.Time{}, ierr.New(ierr.ErrDataExists, "session already has an active share")
+	}
+
 	now := time.Now()
 	shareID := uuid.New().String()
 	key := fmt.Sprintf(constant.ShareKeyTemplate, shareID)
 	userSharesKey := fmt.Sprintf(constant.UserSharesKeyTemplate, userID)
+	sessionSharesKey := fmt.Sprintf(constant.SessionSharesKeyTemplate, sessionID)
 	expiresAt := now.Add(constant.ShareTTL)
 
 	record := &shareRecord{
@@ -86,8 +97,8 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 		Score:  float64(record.CreatedAt),
 		Member: string(recordJSON),
 	})
-	// 不设置 userSharesKey 的全局 TTL：避免后续创建的分享重置 TTL 导致早期分享的索引提前过期。
-	// 已过期的 share:{uuid} 会自然失效，ListUserShares 会惰性过滤。
+	pipe.SAdd(ctx, sessionSharesKey, shareID)
+	pipe.Expire(ctx, sessionSharesKey, constant.ShareTTL)
 
 	if _, execErr := pipe.Exec(ctx); execErr != nil {
 		return "", time.Time{}, ierr.Wrap(ierr.ErrInternal, execErr, "failed to create share")
@@ -147,6 +158,7 @@ func (s *shareCache) DeleteShare(ctx context.Context, userID uint, shareID strin
 
 	found := false
 	var targetMember string
+	var targetRecord shareRecord
 	for _, m := range members {
 		var record shareRecord
 		if unmarshalErr := sonic.Unmarshal([]byte(m), &record); unmarshalErr != nil {
@@ -155,6 +167,7 @@ func (s *shareCache) DeleteShare(ctx context.Context, userID uint, shareID strin
 		if record.ShareID == shareID {
 			found = true
 			targetMember = m
+			targetRecord = record
 			break
 		}
 	}
@@ -163,10 +176,12 @@ func (s *shareCache) DeleteShare(ctx context.Context, userID uint, shareID strin
 		return ierr.New(ierr.ErrDataNotExists, "share link not found or not owned by user")
 	}
 
-	// 原子删除 share key 和 sorted set member
+	sessionSharesKey := fmt.Sprintf(constant.SessionSharesKeyTemplate, targetRecord.SessionID)
+
 	pipe := s.cache.Pipeline()
 	pipe.Del(ctx, fmt.Sprintf(constant.ShareKeyTemplate, shareID))
 	pipe.ZRem(ctx, userSharesKey, targetMember)
+	pipe.SRem(ctx, sessionSharesKey, shareID)
 
 	if _, execErr := pipe.Exec(ctx); execErr != nil {
 		return ierr.Wrap(ierr.ErrInternal, execErr, "failed to delete share")
@@ -254,4 +269,16 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 	}
 
 	return items, pageInfo, nil
+}
+
+func (s *shareCache) GetSessionShareID(ctx context.Context, sessionID uint) (string, error) {
+	key := fmt.Sprintf(constant.SessionSharesKeyTemplate, sessionID)
+	members, err := s.cache.SMembers(ctx, key).Result()
+	if err != nil {
+		return "", ierr.Wrap(ierr.ErrInternal, err, "failed to get session share ID")
+	}
+	if len(members) == 0 {
+		return "", nil
+	}
+	return members[0], nil
 }
