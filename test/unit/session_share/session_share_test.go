@@ -129,6 +129,18 @@ func (m *mockShareCache) IsSessionShared(_ context.Context, sessionID uint) (boo
 	return m.sharedSessions[sessionID], nil
 }
 
+func (m *mockShareCache) GetSessionShareID(_ context.Context, sessionID uint) (string, error) {
+	if !m.sharedSessions[sessionID] {
+		return "", nil
+	}
+	for shareID, entry := range m.shares {
+		if entry.sessionID == sessionID {
+			return shareID, nil
+		}
+	}
+	return "mock-share-id", nil
+}
+
 type mockGetSessionByUserHandler struct {
 	view map[uint]*sessionquery.SessionDetailView
 	err  error
@@ -417,6 +429,9 @@ func TestHandleGetSessionByUser_IsShared(t *testing.T) {
 	if !rsp.Body.Session.IsShared {
 		t.Error("expected IsShared = true for shared session")
 	}
+	if rsp.Body.Session.ShareID == "" {
+		t.Error("expected non-empty ShareID for shared session")
+	}
 }
 
 func TestHandleGetSessionByUser_NotShared(t *testing.T) {
@@ -431,6 +446,9 @@ func TestHandleGetSessionByUser_NotShared(t *testing.T) {
 	}
 	if rsp.Body.Session.IsShared {
 		t.Error("expected IsShared = false for non-shared session")
+	}
+	if rsp.Body.Session.ShareID != "" {
+		t.Error("expected empty ShareID for non-shared session")
 	}
 }
 

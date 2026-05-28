@@ -35,6 +35,7 @@ type SessionDetail struct {
 	Messages   []*MessageItem    `json:"messages" doc:"消息列表"`
 	Tools      []*ToolItem       `json:"tools" doc:"工具列表"`
 	IsShared   bool              `json:"isShared" doc:"是否已分享"`
+	ShareID    string            `json:"shareID" doc:"分享ID（已分享时非空）"`
 }
 
 // MessageItem 消息列表项
