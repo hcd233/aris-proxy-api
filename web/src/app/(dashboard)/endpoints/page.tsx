@@ -38,6 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EndpointForm {
   name: string;
@@ -60,6 +61,7 @@ const emptyForm: EndpointForm = {
 };
 
 export default function EndpointsPage() {
+  const isMobile = useIsMobile();
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -174,9 +176,9 @@ export default function EndpointsPage() {
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Endpoints</h1>
+            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Endpoints</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Manage LLM provider endpoints
             </p>
@@ -193,7 +195,7 @@ export default function EndpointsPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <div className="relative max-w-sm">
+              <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search endpoints..."
@@ -221,6 +223,55 @@ export default function EndpointsPage() {
               </div>
             ) : (
               <>
+                {isMobile ? (
+                  <div className="space-y-3">
+                    {endpoints.map((ep) => (
+                      <div
+                        key={ep.id}
+                        className="rounded-lg border border-border bg-card p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{ep.name}</p>
+                            {ep.openaiBaseURL && (
+                              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                                {ep.openaiBaseURL}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="xs"
+                              disabled={deleting === ep.id}
+                              onClick={() => openDeleteConfirm(ep)}
+                            >
+                              <Trash2 className="mr-1 size-3" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {ep.supportOpenAIChatCompletion && (
+                            <Badge variant="secondary" className="text-[11px] font-normal">OpenAI / Chat</Badge>
+                          )}
+                          {ep.supportOpenAIResponse && (
+                            <Badge variant="secondary" className="text-[11px] font-normal">OpenAI / Response</Badge>
+                          )}
+                          {ep.supportAnthropicMessage && (
+                            <Badge variant="secondary" className="text-[11px] font-normal">Anthropic / Messages</Badge>
+                          )}
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Created {new Date(ep.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -280,10 +331,11 @@ export default function EndpointsPage() {
                     ))}
                   </TableBody>
                 </Table>
+                )}
 
                 {pageInfo.total > 0 && (
                   <div className="mt-4 flex items-center justify-between gap-4">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="hidden text-sm text-muted-foreground md:block">
                       {pageInfo.total} endpoint{pageInfo.total !== 1 ? "s" : ""} total
                     </p>
                     <div className="flex items-center gap-2">

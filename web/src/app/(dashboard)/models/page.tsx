@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Pencil, Cpu, AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ModelForm {
   alias: string;
@@ -60,6 +61,7 @@ const emptyForm: ModelForm = {
 
 export default function ModelsPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
@@ -185,9 +187,9 @@ export default function ModelsPage() {
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Models</h1>
+            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Models</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Manage model aliases and routing
             </p>
@@ -204,7 +206,7 @@ export default function ModelsPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <div className="relative max-w-sm">
+              <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search models..."
@@ -232,34 +234,21 @@ export default function ModelsPage() {
               </div>
             ) : (
               <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Model ID</TableHead>
-                      <TableHead>Alias</TableHead>
-                      <TableHead>Endpoint</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                {isMobile ? (
+                  <div className="space-y-3">
                     {models.map((model) => (
-                      <TableRow key={model.id}>
-                        <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
-                        <TableCell className="font-medium">{model.alias}</TableCell>
-                        <TableCell>
-                          <button
-                            onClick={() => router.push("/endpoints")}
-                            className="text-primary underline-offset-2 hover:underline"
-                          >
-                            {getEndpointName(model)}
-                          </button>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(model.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
+                      <div
+                        key={model.id}
+                        className="rounded-lg border border-border bg-card p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{model.alias}</p>
+                            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                              {model.modelName}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
                               <Pencil className="size-3.5" />
                             </Button>
@@ -273,15 +262,68 @@ export default function ModelsPage() {
                               Delete
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Endpoint: {getEndpointName(model)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Created {new Date(model.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Model ID</TableHead>
+                        <TableHead>Alias</TableHead>
+                        <TableHead>Endpoint</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {models.map((model) => (
+                        <TableRow key={model.id}>
+                          <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
+                          <TableCell className="font-medium">{model.alias}</TableCell>
+                          <TableCell>
+                            <button
+                              onClick={() => router.push("/endpoints")}
+                              className="text-primary underline-offset-2 hover:underline"
+                            >
+                              {getEndpointName(model)}
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(model.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
+                                <Pencil className="size-3.5" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="xs"
+                                disabled={deleting === model.id}
+                                onClick={() => openDeleteConfirm(model)}
+                              >
+                                <Trash2 className="mr-1 size-3" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
 
                 {pageInfo.total > 0 && (
                   <div className="mt-4 flex items-center justify-between gap-4">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="hidden text-sm text-muted-foreground md:block">
                       {pageInfo.total} model{pageInfo.total !== 1 ? "s" : ""} total
                     </p>
                     <div className="flex items-center gap-2">
