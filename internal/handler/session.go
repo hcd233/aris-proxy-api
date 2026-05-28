@@ -160,7 +160,6 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		Metadata:   view.Metadata,
 		Messages:   messageItems,
 		Tools:      toolItems,
-		IsShared:   shareID != "",
 		ShareID:    shareID,
 	}
 

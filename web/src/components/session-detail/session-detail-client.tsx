@@ -274,26 +274,24 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                 {session.apiKeyName}
               </Badge>
             )}
-            {session.isShared && (
+            {session.shareID && (
               <Badge variant="outline" className="gap-1 text-xs">
                 Shared
-                {session.shareID && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(buildShareURL(session.shareID!));
-                        toast.success("Share link copied");
-                      } catch {
-                        toast.error("Failed to copy link");
-                      }
-                    }}
-                    className="ml-0.5 text-primary hover:text-primary/80"
-                    title="Copy share link"
-                  >
-                    <Copy className="size-3" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(buildShareURL(session.shareID!));
+                      toast.success("Share link copied");
+                    } catch {
+                      toast.error("Failed to copy link");
+                    }
+                  }}
+                  className="ml-0.5 text-primary hover:text-primary/80"
+                  title="Copy share link"
+                >
+                  <Copy className="size-3" />
+                </button>
               </Badge>
             )}
             <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
