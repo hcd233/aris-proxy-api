@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -75,11 +75,18 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 	}
 
 	now := time.Now()
-	shareID := uuid.New().String()
-	key := fmt.Sprintf(constant.ShareKeyTemplate, shareID)
+	expiresAt := now.Add(constant.ShareTTL)
+
+	// 防撞：用 SET NX 原子占位 share key，碰撞则重试。
+	// 长度从 constant.ShareIDMinLen 起逐级提升到 constant.ShareIDMaxLen，
+	// 每个长度尝试 constant.ShareIDMaxAttemptsPerLen 次。
+	shareID, key, reserveErr := s.reserveShareID(ctx, sessionID)
+	if reserveErr != nil {
+		return "", time.Time{}, reserveErr
+	}
+
 	userSharesKey := fmt.Sprintf(constant.UserSharesKeyTemplate, userID)
 	sessionSharesKey := fmt.Sprintf(constant.SessionSharesKeyTemplate, sessionID)
-	expiresAt := now.Add(constant.ShareTTL)
 
 	record := &shareRecord{
 		ShareID:   shareID,
@@ -88,11 +95,12 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 	}
 	recordJSON, err := sonic.Marshal(record)
 	if err != nil {
+		// 回滚已占位的 share key，避免长期残留
+		s.cache.Del(ctx, key)
 		return "", time.Time{}, ierr.Wrap(ierr.ErrInternal, err, "failed to marshal share record")
 	}
 
 	pipe := s.cache.Pipeline()
-	pipe.Set(ctx, key, sessionID, constant.ShareTTL)
 	pipe.ZAdd(ctx, userSharesKey, redis.Z{
 		Score:  float64(record.CreatedAt),
 		Member: string(recordJSON),
@@ -101,10 +109,44 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 	pipe.Expire(ctx, sessionSharesKey, constant.ShareTTL)
 
 	if _, execErr := pipe.Exec(ctx); execErr != nil {
+		// 回滚已占位的 share key，避免索引/key 出现孤儿
+		s.cache.Del(ctx, key)
 		return "", time.Time{}, ierr.Wrap(ierr.ErrInternal, execErr, "failed to create share")
 	}
 
 	return shareID, expiresAt, nil
+}
+
+// reserveShareID 通过 Redis SET NX 原子占位完成 shareID 防撞，
+// 冲突时先在当前长度内重试，超过尝试次数再增加 1 位长度，最长不超过 constant.ShareIDMaxLen。
+//
+//	@receiver s *shareCache
+//	@param ctx context.Context
+//	@param sessionID uint
+//	@return string shareID 已成功占位的短码
+//	@return string key 已写入的 Redis share key（用于失败回滚）
+//	@return error
+//	@author centonhuang
+//	@update 2026-05-28 20:10:00
+func (s *shareCache) reserveShareID(ctx context.Context, sessionID uint) (string, string, error) {
+	for length := constant.ShareIDMinLen; length <= constant.ShareIDMaxLen; length++ {
+		for attempt := 0; attempt < constant.ShareIDMaxAttemptsPerLen; attempt++ {
+			shareID, genErr := util.GenerateShareID(sessionID, length)
+			if genErr != nil {
+				return "", "", genErr
+			}
+			key := fmt.Sprintf(constant.ShareKeyTemplate, shareID)
+			ok, setErr := s.cache.SetNX(ctx, key, sessionID, constant.ShareTTL).Result()
+			if setErr != nil {
+				return "", "", ierr.Wrap(ierr.ErrInternal, setErr, "failed to reserve share key")
+			}
+			if ok {
+				return shareID, key, nil
+			}
+			// 冲突：换一个 nonce 再来
+		}
+	}
+	return "", "", ierr.New(ierr.ErrInternal, "failed to reserve unique shareID after retries")
 }
 
 // GetShareSessionID 获取分享链接对应的 sessionID
