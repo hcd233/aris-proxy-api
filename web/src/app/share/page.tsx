@@ -401,6 +401,7 @@ function SharedSessionView() {
                       message={msg}
                       index={idx}
                       toolResultsByID={toolResultsByID}
+                      messages={messages}
                     />
                   ))}
                   <div className="pt-4 pb-2 text-center">
