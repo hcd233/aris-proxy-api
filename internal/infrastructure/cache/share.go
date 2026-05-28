@@ -33,7 +33,6 @@ type ShareCache interface {
 	GetShareSessionID(ctx context.Context, shareID string) (uint, error)
 	DeleteShare(ctx context.Context, userID uint, shareID string) error
 	ListUserShares(ctx context.Context, userID uint, page, pageSize int) ([]*dto.ShareItem, *model.PageInfo, error)
-	IsSessionShared(ctx context.Context, sessionID uint) (bool, error)
 	GetSessionShareID(ctx context.Context, sessionID uint) (string, error)
 }
 
@@ -67,11 +66,11 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 		return "", time.Time{}, ierr.New(ierr.ErrValidation, "sessionID must be greater than 0")
 	}
 
-	shared, checkErr := s.IsSessionShared(ctx, sessionID)
+	existingShareID, checkErr := s.GetSessionShareID(ctx, sessionID)
 	if checkErr != nil {
 		return "", time.Time{}, ierr.Wrap(ierr.ErrInternal, checkErr, "failed to check existing share")
 	}
-	if shared {
+	if existingShareID != "" {
 		return "", time.Time{}, ierr.New(ierr.ErrDataExists, "session already has an active share")
 	}
 
@@ -270,14 +269,6 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 	}
 
 	return items, pageInfo, nil
-}
-
-func (s *shareCache) IsSessionShared(ctx context.Context, sessionID uint) (bool, error) {
-	shareID, err := s.GetSessionShareID(ctx, sessionID)
-	if err != nil {
-		return false, err
-	}
-	return shareID != "", nil
 }
 
 func (s *shareCache) GetSessionShareID(ctx context.Context, sessionID uint) (string, error) {
