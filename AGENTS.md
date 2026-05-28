@@ -327,12 +327,9 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 
 ### Git 分支规范
 
-- **feature/\***：新功能开发，如 `feature/web-management-frontend`、`feature/add-audit-log`
-- **hotfix/\***：线上紧急修复，如 `hotfix/fix-token-expiry`、`hotfix/fix-sse-panic`
-- **refactor/\***：重构，如 `refactor/split-endpoint-model`
-- **chore/\***：杂项（依赖升级、工具链配置等），如 `chore/upgrade-go-version`
-- 分支名使用小写 kebab-case，简短描述意图
-- 禁止使用 `feat/`、`fix/` 等缩写前缀
+- 任何开发任务都必须先在 `.worktrees/` 下创建或切换 git worktree，并在该 worktree 上 checkout 分支进行开发，禁止直接在主工作区开发。开发完成后询问用户是否需要提mr或者直接合并到master，禁止擅自操作
+- 分支命名规范：`{feature|bugfix|refactor|chore|docs|test|hotfix}/{5个以内小写英文单词描述功能或修复，使用连字符}-{当前 datetime，例如 2026-05-28}`。
+- 分支示例：`feature/session-share-2026-05-28`、`bugfix/token-expiry-2026-05-28`、`refactor/split-endpoint-model-2026-05-28`。
 
 ## 11. API 路由命名规范
 

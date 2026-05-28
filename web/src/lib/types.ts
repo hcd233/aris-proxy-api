@@ -141,6 +141,46 @@ export interface GetSessionRsp extends CommonRsp {
   session?: SessionDetail;
 }
 
+// ─── Session Share ─────────────────────────────────────────────────────────────
+
+/**
+ * Public-facing session detail returned by the share-content endpoint.
+ * Sensitive fields (apiKeyName, ...) are stripped on the backend.
+ */
+export interface ShareContentSessionDetail {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, string>;
+  messages: MessageItem[];
+  tools: ToolItem[];
+}
+
+export interface CreateShareReqBody {
+  sessionId: number;
+}
+
+export interface CreateShareRsp extends CommonRsp {
+  shareId?: string;
+  expiresAt?: string;
+}
+
+export interface GetShareContentRsp extends CommonRsp {
+  session?: ShareContentSessionDetail;
+}
+
+export interface ShareItem {
+  shareId: string;
+  sessionId: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface ListSharesRsp extends CommonRsp {
+  shares?: ShareItem[];
+  pageInfo?: PageInfo;
+}
+
 // ─── API Key ───────────────────────────────────────────────────────────────────
 
 export interface APIKeyItem {

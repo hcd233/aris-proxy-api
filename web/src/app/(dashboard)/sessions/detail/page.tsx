@@ -18,6 +18,7 @@ import {
   MessagesSquare,
   PanelRightClose,
   PanelRightOpen,
+  Share2,
   Wrench,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ import {
   ChatMessage,
   buildToolResultsByID,
 } from "@/components/chat/chat-message";
+import { ShareDialog } from "@/components/share/share-dialog";
 
 // ─── Tool definition card (right sidebar) ───────────────────────────────────
 
@@ -189,6 +191,7 @@ export default function SessionDetailPage() {
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId || Number.isNaN(sessionId)) return;
@@ -302,6 +305,16 @@ export default function SessionDetailPage() {
               <Clock className="size-3.5" />
               <span>{new Date(session.createdAt).toLocaleString()}</span>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShareOpen(true)}
+              className="gap-1.5"
+              title="Create a public share link"
+            >
+              <Share2 className="size-3.5" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
             {tools.length > 0 && (
               <Button
                 variant={sidebarOpen ? "secondary" : "ghost"}
@@ -373,6 +386,12 @@ export default function SessionDetailPage() {
           </aside>
         </>
       )}
+
+      <ShareDialog
+        sessionId={session.id}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+      />
     </div>
   );
 }

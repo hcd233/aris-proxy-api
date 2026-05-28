@@ -18,6 +18,11 @@ import type {
   CreateModelReqBody,
   UpdateModelReqBody,
   OAuth2Provider,
+  CreateShareReqBody,
+  CreateShareRsp,
+  GetShareContentRsp,
+  ListSharesRsp,
+  CommonRsp,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -163,6 +168,50 @@ class ApiClient {
     return this.request<GetSessionRsp>(
       `/api/v1/session/?sessionId=${sessionId}`
     );
+  }
+
+  // ─── Session Share ─────────────────────────────────────────────────────────
+
+  async createShare(body: CreateShareReqBody): Promise<CreateShareRsp> {
+    return this.request<CreateShareRsp>("/api/v1/session/share", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async listShares(
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<ListSharesRsp> {
+    return this.request<ListSharesRsp>(
+      `/api/v1/session/share/list?page=${page}&pageSize=${pageSize}`
+    );
+  }
+
+  async deleteShare(shareId: string): Promise<CommonRsp> {
+    return this.request<CommonRsp>(
+      `/api/v1/session/share/${encodeURIComponent(shareId)}`,
+      { method: "DELETE" }
+    );
+  }
+
+  /**
+   * Public endpoint — must NOT include Authorization header so the request
+   * works for unauthenticated viewers, and must NOT trigger the 401 →
+   * refresh-token redirect flow on expiry / invalid links.
+   */
+  async getShareContent(shareId: string): Promise<GetShareContentRsp> {
+    const res = await fetch(
+      `${API_BASE}/api/v1/session/share/${encodeURIComponent(shareId)}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!res.ok) {
+      throw new ApiError(res.status, await res.text());
+    }
+    return res.json();
   }
 
   // ─── API Keys ──────────────────────────────────────────────────────────────
