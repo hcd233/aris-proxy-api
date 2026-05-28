@@ -196,8 +196,16 @@ export default function SharesPage() {
                       new Date(share.expiresAt).getTime() < refreshedAt;
                     return (
                       <TableRow key={share.shareId}>
-                        <TableCell className="max-w-[220px] truncate font-mono text-xs text-muted-foreground">
-                          {share.shareId}
+                        <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                          <a
+                            href={buildShareURL(share.shareId)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                          >
+                            {share.shareId}
+                            <ExternalLink className="size-3" />
+                          </a>
                         </TableCell>
                         <TableCell>
                           <a

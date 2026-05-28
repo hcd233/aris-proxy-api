@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Copy,
   FileText,
   Hash,
   MessagesSquare,
@@ -16,6 +17,7 @@ import {
   Share2,
   Wrench,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { api } from "@/lib/api-client";
 import type { SessionDetail, ToolItem, UnifiedTool } from "@/lib/types";
@@ -27,7 +29,7 @@ import {
   ChatMessage,
   buildToolResultsByID,
 } from "@/components/chat/chat-message";
-import { ShareDialog } from "@/components/share/share-dialog";
+import { ShareDialog, buildShareURL } from "@/components/share/share-dialog";
 
 function CollapsibleText({
   text,
@@ -272,6 +274,26 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                 {session.apiKeyName}
               </Badge>
             )}
+            {session.shareID && (
+              <Badge variant="outline" className="gap-1 text-xs">
+                Shared
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(buildShareURL(session.shareID!));
+                      toast.success("Share link copied");
+                    } catch {
+                      toast.error("Failed to copy link");
+                    }
+                  }}
+                  className="ml-0.5 text-primary hover:text-primary/80"
+                  title="Copy share link"
+                >
+                  <Copy className="size-3" />
+                </button>
+              </Badge>
+            )}
             <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
               <MessagesSquare className="size-3.5" />
               {messageCount} message{messageCount === 1 ? "" : "s"}
@@ -365,6 +387,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
 
       <ShareDialog
         sessionId={session.id}
+        existingShareID={session.shareID}
         open={shareOpen}
         onOpenChange={setShareOpen}
       />

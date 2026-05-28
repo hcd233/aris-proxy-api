@@ -8,4 +8,5 @@ const (
 	ScannerStrikeKeyTemplate  = "scanner:strike:%s"
 	ShareKeyTemplate          = "share:%s"
 	UserSharesKeyTemplate     = "user_shares:%d"
+	SessionSharesKeyTemplate  = "session_shares:%d"
 )
