@@ -426,9 +426,6 @@ func TestHandleGetSessionByUser_IsShared(t *testing.T) {
 	if rsp.Body.Session == nil {
 		t.Fatal("expected non-nil session")
 	}
-	if !rsp.Body.Session.IsShared {
-		t.Error("expected IsShared = true for shared session")
-	}
 	if rsp.Body.Session.ShareID == "" {
 		t.Error("expected non-empty ShareID for shared session")
 	}
@@ -443,9 +440,6 @@ func TestHandleGetSessionByUser_NotShared(t *testing.T) {
 	rsp, _ := h.HandleGetSessionByUser(ctx, &dto.GetSessionByUserReq{SessionID: 1})
 	if rsp.Body.Session == nil {
 		t.Fatal("expected non-nil session")
-	}
-	if rsp.Body.Session.IsShared {
-		t.Error("expected IsShared = false for non-shared session")
 	}
 	if rsp.Body.Session.ShareID != "" {
 		t.Error("expected empty ShareID for non-shared session")

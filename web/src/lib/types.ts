@@ -95,7 +95,6 @@ export interface SessionDetail {
   metadata?: Record<string, string>;
   messages: MessageItem[];
   tools: ToolItem[];
-  isShared?: boolean;
   shareID?: string;
 }
 
