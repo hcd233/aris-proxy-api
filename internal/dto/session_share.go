@@ -12,6 +12,14 @@ import (
 //	@author centonhuang
 //	@update 2026-05-28 10:00:00
 type CreateShareReq struct {
+	Body *CreateShareReqBody `json:"body" doc:"Request body containing session ID"`
+}
+
+// CreateShareReqBody 创建分享请求体
+//
+//	@author centonhuang
+//	@update 2026-05-28 10:00:00
+type CreateShareReqBody struct {
 	SessionID uint `json:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
 }
 

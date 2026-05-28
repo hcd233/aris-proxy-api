@@ -2,6 +2,7 @@ package session_share
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -166,7 +167,7 @@ func TestCreateShare_Success(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
-	rsp, err := h.HandleCreateShare(ctx, &dto.CreateShareReq{SessionID: 1})
+	rsp, err := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -187,7 +188,7 @@ func TestCreateShare_SessionNotFound(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
-	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{SessionID: 999})
+	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 999}})
 	if rsp.Body.Error == nil {
 		t.Error("expected error in response for non-existent session")
 	}
@@ -203,9 +204,33 @@ func TestCreateShare_CacheError(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
-	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{SessionID: 1})
+	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
 	if rsp.Body.Error == nil {
 		t.Error("expected error in response for cache failure")
+	}
+}
+
+// TestCreateShare_NilBodyRejected 回归用例：huma 在 body 缺失时会传入空 Body 或 nil Body，
+// handler 必须显式校验，而不是当作 SessionID=0 处理。
+//
+//	@author centonhuang
+//	@update 2026-05-28 14:35:00
+func TestCreateShare_NilBodyRejected(t *testing.T) {
+	sc := newMockShareCache()
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
+	h := newTestHandler(sc, getByUser)
+	ctx := ctxWithUser(42, enum.PermissionUser)
+
+	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: nil})
+	if rsp.Body.Error == nil {
+		t.Fatal("expected validation error when body is nil")
+	}
+	if rsp.Body.Error.Code != ierr.ErrValidation.BizError().Code {
+		t.Errorf("error code = %d, want Validation (%d)", rsp.Body.Error.Code, ierr.ErrValidation.BizError().Code)
+	}
+	// 必须没有写入任何 share 记录
+	if len(sc.shares) != 0 {
+		t.Errorf("expected no shares to be created on nil body, got %d", len(sc.shares))
 	}
 }
 
@@ -358,4 +383,37 @@ func containsJSONKey(data []byte, key string) bool {
 		}
 	}
 	return false
+}
+
+// TestCreateShareReq_DTOFollowsHumaBodyConvention 防回归：CreateShareReq 必须按 huma 框架的
+// "包装结构 + Body 字段" 模式定义，否则 POST body 反序列化会被 huma 忽略，导致 SessionID
+// 始终是零值（线上曾因此返回错位 session）。
+//
+//	@author centonhuang
+//	@update 2026-05-28 14:35:00
+func TestCreateShareReq_DTOFollowsHumaBodyConvention(t *testing.T) {
+	reqType := reflect.TypeOf(dto.CreateShareReq{})
+	bodyField, ok := reqType.FieldByName("Body")
+	if !ok {
+		t.Fatal("CreateShareReq must have a Body field for huma JSON body binding")
+	}
+	if bodyField.Tag.Get("json") != "body" {
+		t.Errorf(`CreateShareReq.Body json tag = %q, want "body"`, bodyField.Tag.Get("json"))
+	}
+	// SessionID 必须落在 Body 子结构里，不能直接挂在顶层
+	if _, exists := reqType.FieldByName("SessionID"); exists {
+		t.Error("CreateShareReq must NOT have top-level SessionID field; it belongs in CreateShareReqBody")
+	}
+
+	bodyType := reflect.TypeOf(dto.CreateShareReqBody{})
+	sessionIDField, ok := bodyType.FieldByName("SessionID")
+	if !ok {
+		t.Fatal("CreateShareReqBody must have SessionID field")
+	}
+	if sessionIDField.Tag.Get("json") != "sessionId" {
+		t.Errorf(`CreateShareReqBody.SessionID json tag = %q, want "sessionId"`, sessionIDField.Tag.Get("json"))
+	}
+	if sessionIDField.Tag.Get("minimum") != "1" {
+		t.Errorf(`CreateShareReqBody.SessionID minimum tag = %q, want "1" (reject zero values)`, sessionIDField.Tag.Get("minimum"))
+	}
 }

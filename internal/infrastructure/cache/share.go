@@ -61,6 +61,9 @@ func NewShareCache(cache *redis.Client) ShareCache {
 //	@author centonhuang
 //	@update 2026-05-28 10:00:00
 func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (string, time.Time, error) {
+	if sessionID == 0 {
+		return "", time.Time{}, ierr.New(ierr.ErrValidation, "sessionID must be greater than 0")
+	}
 	now := time.Now()
 	shareID := uuid.New().String()
 	key := fmt.Sprintf(constant.ShareKeyTemplate, shareID)
@@ -115,6 +118,10 @@ func (s *shareCache) GetShareSessionID(ctx context.Context, shareID string) (uin
 	sessionID, parseErr := strconv.ParseUint(val, constant.DecimalBase, constant.ParseFloat64BitSize)
 	if parseErr != nil {
 		return 0, ierr.Wrap(ierr.ErrInternal, parseErr, "failed to parse session ID from share")
+	}
+	if sessionID == 0 {
+		// 兜底：防御 GORM 零值 where 条件被忽略导致返回错位 session
+		return 0, ierr.New(ierr.ErrInternal, "share record has invalid session id")
 	}
 
 	return uint(sessionID), nil

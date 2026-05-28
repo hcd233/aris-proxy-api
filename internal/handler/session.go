@@ -179,14 +179,21 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
+	if req.Body == nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Create share: empty request body")
+		rsp.Error = ierr.ErrValidation.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	sessionID := req.Body.SessionID
+
 	view, err := h.getByUser.Handle(ctx, sessionquery.GetSessionByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
-		SessionID: req.SessionID,
+		SessionID: sessionID,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Create share: verify session failed",
-			zap.Uint("sessionID", req.SessionID), zap.Error(err))
+			zap.Uint("sessionID", sessionID), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
@@ -195,10 +202,10 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	shareID, expiresAt, shareErr := h.shareCache.CreateShare(ctx, userID, req.SessionID)
+	shareID, expiresAt, shareErr := h.shareCache.CreateShare(ctx, userID, sessionID)
 	if shareErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Create share failed",
-			zap.Uint("sessionID", req.SessionID), zap.Error(shareErr))
+			zap.Uint("sessionID", sessionID), zap.Error(shareErr))
 		rsp.Error = ierr.ToBizError(shareErr, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
@@ -208,7 +215,7 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Share created",
 		zap.String("shareID", shareID),
-		zap.Uint("sessionID", req.SessionID),
+		zap.Uint("sessionID", sessionID),
 		zap.Uint("userID", userID))
 
 	return apiutil.WrapHTTPResponse(rsp, nil)
