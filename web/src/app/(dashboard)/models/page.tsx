@@ -89,27 +89,29 @@ export default function ModelsPage() {
   const fetchEndpoints = useCallback(async () => {
     try {
       const endpointsRsp = await api.listEndpoints();
-      setEndpoints(endpointsRsp.endpoints ?? []);
+      const list = endpointsRsp.endpoints ?? [];
+      setEndpoints(list);
+      return list;
     } catch {
       toast.error("Failed to load endpoints");
+      return [];
     }
   }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
     fetchData(1, 20);
-  }, [fetchData]);
+    fetchEndpoints();
+  }, [fetchData, fetchEndpoints]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const openCreate = async () => {
-    await fetchEndpoints();
+  const openCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm, endpointID: endpoints[0]?.id ?? 0 });
     setDialogOpen(true);
   };
 
-  const openEdit = async (model: ModelItem) => {
-    await fetchEndpoints();
+  const openEdit = (model: ModelItem) => {
     setEditingId(model.id);
     setForm({
       alias: model.alias,
