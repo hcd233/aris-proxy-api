@@ -118,6 +118,11 @@ export default function ModelsPage() {
       modelName: model.modelName,
       endpointID: model.endpoint.id,
     });
+    // Ensure the model's current endpoint is present in the select options,
+    // even if it falls outside the first page of endpoints.
+    if (model.endpoint && !endpoints.some((ep) => ep.id === model.endpoint.id)) {
+      setEndpoints((prev) => [...prev, model.endpoint]);
+    }
     setDialogOpen(true);
   };
 
