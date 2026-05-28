@@ -34,6 +34,7 @@ type ShareCache interface {
 	DeleteShare(ctx context.Context, userID uint, shareID string) error
 	ListUserShares(ctx context.Context, userID uint, page, pageSize int) ([]*dto.ShareItem, *model.PageInfo, error)
 	IsSessionShared(ctx context.Context, sessionID uint) (bool, error)
+	GetSessionShareID(ctx context.Context, sessionID uint) (string, error)
 }
 
 type shareCache struct {
@@ -272,10 +273,21 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 }
 
 func (s *shareCache) IsSessionShared(ctx context.Context, sessionID uint) (bool, error) {
-	key := fmt.Sprintf(constant.SessionSharesKeyTemplate, sessionID)
-	exists, err := s.cache.Exists(ctx, key).Result()
+	shareID, err := s.GetSessionShareID(ctx, sessionID)
 	if err != nil {
-		return false, ierr.Wrap(ierr.ErrInternal, err, "failed to check session share status")
+		return false, err
 	}
-	return exists > 0, nil
+	return shareID != "", nil
+}
+
+func (s *shareCache) GetSessionShareID(ctx context.Context, sessionID uint) (string, error) {
+	key := fmt.Sprintf(constant.SessionSharesKeyTemplate, sessionID)
+	members, err := s.cache.SMembers(ctx, key).Result()
+	if err != nil {
+		return "", ierr.Wrap(ierr.ErrInternal, err, "failed to get session share ID")
+	}
+	if len(members) == 0 {
+		return "", nil
+	}
+	return members[0], nil
 }

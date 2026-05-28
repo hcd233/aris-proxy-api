@@ -96,6 +96,7 @@ export interface SessionDetail {
   messages: MessageItem[];
   tools: ToolItem[];
   isShared?: boolean;
+  shareID?: string;
 }
 
 export interface UnifiedToolCall {
