@@ -45,12 +45,12 @@ type PageParam struct {
 //	@author centonhuang
 //	@update 2026-04-24 20:00:00
 type SessionSummaryProjection struct {
-	ID         uint
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	Summary    string
-	MessageIDs []uint
-	ToolIDs    []uint
+	ID           uint
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Summary      string
+	MessageCount int
+	ToolCount    int
 }
 
 // MessageDetailProjection 消息详情只读投影
@@ -107,4 +107,6 @@ type SessionReadRepository interface {
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
 	// FindMessagesByIDs 批量查询消息投影
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
+	// FindSessionMessageIDsByIDs 按 session ID 列表批量查询 message_ids（用于空摘要回退）
+	FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error)
 }
