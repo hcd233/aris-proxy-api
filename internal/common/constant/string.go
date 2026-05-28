@@ -16,6 +16,9 @@ const (
 	TruncateSuffixPrefix  = "...(truncated, total "
 	TruncateSuffixPostfix = " chars)"
 
+	// MaxSummaryRunes 自动摘要最大 rune 数
+	MaxSummaryRunes = 100
+
 	// ── 运行时字符串字面量（无格式化占位符）──
 	NewlineString          = "\n"
 	NewlineCRLF            = "\r\n"

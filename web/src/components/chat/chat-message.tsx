@@ -439,7 +439,7 @@ export function ChatMessage({
           <MetaLine label="You" time={time} />
           <div className="rounded-2xl rounded-tr-md border border-border/60 bg-secondary/70 px-5 py-3.5">
             {parts.length > 0 && <MultimodalParts parts={parts} />}
-            {text && <MarkdownLite text={text} />}
+            {text && <MarkdownLite text={text} raw />}
             {!text && parts.length === 0 && (
               <span className="text-muted-foreground/60">—</span>
             )}
