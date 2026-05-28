@@ -52,28 +52,24 @@ func newE2EClient() *http.Client {
 	return &http.Client{Timeout: e2eHTTPTimeout}
 }
 
-// createShareResp 与服务端 dto.HTTPResponse[*dto.CreateShareRsp] 对齐
+// createShareResp 与服务端 dto.CreateShareRsp 对齐（huma 会 unwrap Body 作为响应体）
 type createShareResp struct {
-	Data struct {
-		ShareID   string    `json:"shareId"`
-		ExpiresAt time.Time `json:"expiresAt"`
-		Error     *struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-		} `json:"error,omitempty"`
-	} `json:"data"`
+	ShareID   string    `json:"shareId"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Error     *struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
 }
 
 type getShareContentResp struct {
-	Data struct {
-		Session *struct {
-			ID uint `json:"id"`
-		} `json:"session,omitempty"`
-		Error *struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-		} `json:"error,omitempty"`
-	} `json:"data"`
+	Session *struct {
+		ID uint `json:"id"`
+	} `json:"session,omitempty"`
+	Error *struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
 }
 
 // TestSessionShare_CreateAndAccess_SessionIDConsistency 验证创建与访问的 sessionID 一致。
@@ -120,19 +116,19 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	if unmarshalErr := sonic.Unmarshal(createBodyBytes, &created); unmarshalErr != nil {
 		t.Fatalf("unmarshal create response failed: %v; body=%s", unmarshalErr, string(createBodyBytes))
 	}
-	if created.Data.Error != nil {
+	if created.Error != nil {
 		t.Fatalf("create share returned error: code=%s, msg=%s (traceID=%s)",
-			created.Data.Error.Code, created.Data.Error.Message, createTraceID)
+			created.Error.Code, created.Error.Message, createTraceID)
 	}
-	if created.Data.ShareID == "" {
+	if created.ShareID == "" {
 		t.Fatalf("create share returned empty shareId; body=%s", string(createBodyBytes))
 	}
-	if created.Data.ExpiresAt.Before(time.Now()) {
-		t.Fatalf("create share returned expired expiresAt=%s", created.Data.ExpiresAt)
+	if created.ExpiresAt.Before(time.Now()) {
+		t.Fatalf("create share returned expired expiresAt=%s", created.ExpiresAt)
 	}
 
 	// Step 2: 公开访问分享内容
-	getReq, err := http.NewRequest(http.MethodGet, baseURL+"/api/v1/session/share/"+created.Data.ShareID, nil)
+	getReq, err := http.NewRequest(http.MethodGet, baseURL+"/api/v1/session/share/"+created.ShareID, nil)
 	if err != nil {
 		t.Fatalf("build get request failed: %v", err)
 	}
@@ -160,18 +156,18 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	if unmarshalErr := sonic.Unmarshal(getBodyBytes, &got); unmarshalErr != nil {
 		t.Fatalf("unmarshal get response failed: %v; body=%s", unmarshalErr, string(getBodyBytes))
 	}
-	if got.Data.Error != nil {
+	if got.Error != nil {
 		t.Fatalf("get share returned error: code=%s, msg=%s (traceID=%s)",
-			got.Data.Error.Code, got.Data.Error.Message, getTraceID)
+			got.Error.Code, got.Error.Message, getTraceID)
 	}
-	if got.Data.Session == nil {
+	if got.Session == nil {
 		t.Fatalf("get share returned empty session; body=%s", string(getBodyBytes))
 	}
 
 	// Step 3: 核心断言——回归点
-	if got.Data.Session.ID != sessionID {
+	if got.Session.ID != sessionID {
 		t.Fatalf("session id mismatch: created with sessionId=%d but accessed session.id=%d (createTraceID=%s, getTraceID=%s)",
-			sessionID, got.Data.Session.ID, createTraceID, getTraceID)
+			sessionID, got.Session.ID, createTraceID, getTraceID)
 	}
 	t.Logf("session id consistency verified: sessionId=%d", sessionID)
 }
@@ -210,7 +206,7 @@ func TestSessionShare_Create_RejectsZeroSessionID(t *testing.T) {
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		var rsp getShareContentResp
-		if unmarshalErr := sonic.Unmarshal(bodyBytes, &rsp); unmarshalErr == nil && rsp.Data.Error == nil {
+		if unmarshalErr := sonic.Unmarshal(bodyBytes, &rsp); unmarshalErr == nil && rsp.Error == nil {
 			t.Fatalf("expected error for sessionId=0 but got success; body=%s", string(bodyBytes))
 		}
 	}
