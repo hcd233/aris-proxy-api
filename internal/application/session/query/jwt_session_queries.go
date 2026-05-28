@@ -106,12 +106,10 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 		}
 
 		views = append(views, &SessionSummaryView{
-			ID:         p.ID,
-			CreatedAt:  p.CreatedAt,
-			UpdatedAt:  p.UpdatedAt,
-			Summary:    summary,
-			MessageIDs: p.MessageIDs,
-			ToolIDs:    p.ToolIDs,
+			ID:        p.ID,
+			CreatedAt: p.CreatedAt,
+			UpdatedAt: p.UpdatedAt,
+			Summary:   summary,
 		})
 	}
 	return views, pageInfo, nil

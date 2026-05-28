@@ -15,12 +15,10 @@ import (
 //	@author centonhuang
 //	@update 2026-04-23 11:00:00
 type SessionSummaryView struct {
-	ID         uint
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	Summary    string
-	MessageIDs []uint
-	ToolIDs    []uint
+	ID        uint
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Summary   string
 }
 
 // MessageView 消息视图
