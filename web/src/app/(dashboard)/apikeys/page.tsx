@@ -37,8 +37,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function APIKeysPage() {
+  const isMobile = useIsMobile();
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -129,9 +131,9 @@ export default function APIKeysPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">API Keys</h1>
+          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">API Keys</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Manage your API keys for authentication
           </p>
@@ -212,7 +214,7 @@ export default function APIKeysPage() {
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <div className="relative max-w-sm">
+            <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search keys..."
@@ -240,6 +242,37 @@ export default function APIKeysPage() {
             </div>
           ) : (
             <>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {keys.map((key) => (
+                    <div
+                      key={key.id}
+                      className="rounded-lg border border-border bg-card p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{key.name}</p>
+                          <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                            {key.key}
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="xs"
+                          disabled={deleting === key.id}
+                          onClick={() => openDeleteConfirm(key)}
+                        >
+                          <Trash2 className="mr-1 size-3" />
+                          Delete
+                        </Button>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Created {new Date(key.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -274,10 +307,11 @@ export default function APIKeysPage() {
                   ))}
                 </TableBody>
               </Table>
+              )}
 
               {pageInfo.total > 0 && (
                 <div className="mt-4 flex items-center justify-between gap-4">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="hidden text-sm text-muted-foreground md:block">
                     {pageInfo.total} key{pageInfo.total !== 1 ? "s" : ""} total
                   </p>
                   <div className="flex items-center gap-2">
