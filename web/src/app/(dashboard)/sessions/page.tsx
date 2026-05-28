@@ -99,7 +99,7 @@ export default function SessionsPage() {
                       key={s.id}
                       className="cursor-pointer"
                       onClick={() => {
-                        window.location.href = `/web/sessions/detail/${s.id}`;
+                        window.location.href = `/web/sessions/detail/?id=${s.id}`;
                       }}
                     >
                       <TableCell className="font-mono text-xs">
