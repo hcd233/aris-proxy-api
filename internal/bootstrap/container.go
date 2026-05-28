@@ -168,6 +168,9 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 	if err := container.Provide(newAudioDirCreator); err != nil {
 		return err
 	}
+	if err := container.Provide(newShareCache); err != nil {
+		return err
+	}
 	if err := container.Provide(transport.NewOpenAIProxy); err != nil {
 		return err
 	}
@@ -463,8 +466,8 @@ func newAPIKeyDependencies(issue apikeycommand.IssueAPIKeyHandler, revoke apikey
 	}
 }
 
-func newSessionDependencies(listByUser sessionquery.ListSessionsByUserHandler, getByUser sessionquery.GetSessionByUserHandler) handler.SessionDependencies {
-	return handler.SessionDependencies{ListByUser: listByUser, GetByUser: getByUser}
+func newSessionDependencies(listByUser sessionquery.ListSessionsByUserHandler, getByUser sessionquery.GetSessionByUserHandler, shareCache cache.ShareCache) handler.SessionDependencies {
+	return handler.SessionDependencies{ListByUser: listByUser, GetByUser: getByUser, ShareCache: shareCache}
 }
 
 func newOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependencies {
@@ -501,4 +504,8 @@ func newListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKey
 
 func newGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionquery.GetSessionByUserHandler {
 	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo)
+}
+
+func newShareCache(redisClient *redis.Client) cache.ShareCache {
+	return cache.NewShareCache(redisClient)
 }

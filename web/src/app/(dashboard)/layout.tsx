@@ -25,6 +25,7 @@ import {
   User,
   LogOut,
   Menu,
+  Share2,
 } from "lucide-react";
 
 interface NavItem {
@@ -44,6 +45,11 @@ const navItems: NavItem[] = [
     label: "Sessions",
     href: "/sessions/",
     icon: <MessageSquare className="size-4" />,
+  },
+  {
+    label: "Shares",
+    href: "/shares/",
+    icon: <Share2 className="size-4" />,
   },
   {
     label: "API Keys",
