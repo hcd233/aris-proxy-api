@@ -10,4 +10,7 @@ const (
 	LimitRefreshToken  = 10
 
 	RateLimitKeyByIP = "ip"
+
+	PeriodGetShareContent = 1 * time.Minute
+	LimitGetShareContent  = 30
 )

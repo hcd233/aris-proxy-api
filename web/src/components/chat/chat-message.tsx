@@ -416,6 +416,11 @@ export function ChatMessage({
   // Stagger fade-in
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
 
+  const toolDurations = useMemo(() => {
+    if (!tool_calls?.length) return {};
+    return buildToolDurationsByID(messages);
+  }, [messages, tool_calls]);
+
   // Tool results may arrive either as role="tool" (Anthropic / unified) or as
   // role="user" with a tool_call_id (OpenAI chat completion convention).
   // Both cases are inlined into the matched tool-call card above, so skip them here.
@@ -459,11 +464,6 @@ export function ChatMessage({
 
   // assistant (and any other unhandled role via fallback)
   const isAssistant = role === "assistant";
-
-  const toolDurations = useMemo(() => {
-    if (!tool_calls?.length) return {};
-    return buildToolDurationsByID(messages);
-  }, [messages, tool_calls]);
 
   return (
     <div

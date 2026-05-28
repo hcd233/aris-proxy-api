@@ -32,16 +32,15 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(true);
   const [pageInputValue, setPageInputValue] = useState("1");
 
-  useEffect(() => {
-    setPageInputValue(String(pageInfo.page));
-  }, [pageInfo.page]);
-
   const fetchSessions = useCallback(async (page: number, pageSize: number) => {
     setLoading(true);
     try {
       const rsp = await api.listSessions(page, pageSize);
       setSessions(rsp.sessions ?? []);
-      if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
+      if (rsp.pageInfo) {
+        setPageInfo(rsp.pageInfo);
+        setPageInputValue(String(rsp.pageInfo.page));
+      }
     } catch {
       // handled silently
     } finally {
