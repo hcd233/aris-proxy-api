@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -13,7 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -25,7 +23,27 @@ var validSortFields = map[string]bool{
 	constant.FieldStreamDurationMs:    true,
 }
 
-// ─── 共享：参数清洗 ─────────────────────────────────────────
+// AuditLogView 审计日志列表视图。
+type AuditLogView struct {
+	ID                       uint
+	CreatedAt                time.Time
+	Model                    string
+	UpstreamProvider         string
+	APIProvider              string
+	InputTokens              int
+	OutputTokens             int
+	CacheCreationInputTokens int
+	CacheReadInputTokens     int
+	FirstTokenLatencyMs      int64
+	StreamDurationMs         int64
+	UserAgent                string
+	UpstreamStatusCode       int
+	ErrorMessage             string
+	TraceID                  string
+	APIKeyName               string
+	UserName                 string
+	UserEmail                string
+}
 
 type listAuditLogsParam struct {
 	Page      int
@@ -63,12 +81,7 @@ func sanitizeListParam(ctx context.Context, in listAuditLogsParam) (model.Common
 	}, nil
 }
 
-// ─── ListAllAuditLogsHandler（admin） ─────────────────────────
-
 // ListAllAuditLogsQuery admin 全量审计列表查询
-//
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
 type ListAllAuditLogsQuery struct {
 	Page      int
 	PageSize  int
@@ -80,11 +93,8 @@ type ListAllAuditLogsQuery struct {
 }
 
 // ListAllAuditLogsHandler 全量审计列表查询处理器
-//
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
 type ListAllAuditLogsHandler interface {
-	Handle(ctx context.Context, q ListAllAuditLogsQuery) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	Handle(ctx context.Context, q ListAllAuditLogsQuery) ([]*AuditLogView, *model.PageInfo, error)
 }
 
 type listAllAuditLogsHandler struct {
@@ -92,32 +102,30 @@ type listAllAuditLogsHandler struct {
 }
 
 // NewListAllAuditLogsHandler 构造 admin 全量审计查询处理器
-//
-//	@param repo modelcall.AuditRepository
-//	@return ListAllAuditLogsHandler
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
 func NewListAllAuditLogsHandler(repo modelcall.AuditRepository) ListAllAuditLogsHandler {
 	return &listAllAuditLogsHandler{repo: repo}
 }
 
 // Handle 执行全量审计分页查询
-func (h *listAllAuditLogsHandler) Handle(ctx context.Context, q ListAllAuditLogsQuery) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (h *listAllAuditLogsHandler) Handle(ctx context.Context, q ListAllAuditLogsQuery) ([]*AuditLogView, *model.PageInfo, error) {
 	param, err := sanitizeListParam(ctx, listAuditLogsParam{
 		Page: q.Page, PageSize: q.PageSize, Query: q.Query, Sort: q.Sort, SortField: q.SortField,
 	})
 	if err != nil {
 		return nil, nil, err
 	}
-	return h.repo.ListAll(ctx, param, q.StartTime, q.EndTime)
+	audits, pageInfo, err := h.repo.ListAll(ctx, param, q.StartTime, q.EndTime)
+	if err != nil {
+		return nil, nil, err
+	}
+	views, err := buildAuditViews(ctx, h.repo, audits)
+	if err != nil {
+		return nil, nil, err
+	}
+	return views, pageInfo, nil
 }
 
-// ─── ListAuditLogsByUserHandler（普通 user） ─────────────────
-
 // ListAuditLogsByUserQuery 按 user 维度审计列表查询
-//
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
 type ListAuditLogsByUserQuery struct {
 	UserID    uint
 	Page      int
@@ -130,37 +138,26 @@ type ListAuditLogsByUserQuery struct {
 }
 
 // ListAuditLogsByUserHandler user 自己名下所有 key 的审计列表查询处理器
-//
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
 type ListAuditLogsByUserHandler interface {
-	Handle(ctx context.Context, q ListAuditLogsByUserQuery) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	Handle(ctx context.Context, q ListAuditLogsByUserQuery) ([]*AuditLogView, *model.PageInfo, error)
+}
+
+type apiKeyIDLookup interface {
+	LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error)
 }
 
 type listAuditLogsByUserHandler struct {
 	repo      modelcall.AuditRepository
-	apiKeyDAO *dao.ProxyAPIKeyDAO
-	db        *gorm.DB
+	apiKeyIDs apiKeyIDLookup
 }
 
 // NewListAuditLogsByUserHandler 构造 user 维度审计查询处理器
-//
-//	@param repo modelcall.AuditRepository
-//	@param apiKeyDAO *dao.ProxyAPIKeyDAO
-//	@param db *gorm.DB
-//	@return ListAuditLogsByUserHandler
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
-func NewListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyDAO *dao.ProxyAPIKeyDAO, db *gorm.DB) ListAuditLogsByUserHandler {
-	return &listAuditLogsByUserHandler{repo: repo, apiKeyDAO: apiKeyDAO, db: db}
+func NewListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyIDs apiKeyIDLookup) ListAuditLogsByUserHandler {
+	return &listAuditLogsByUserHandler{repo: repo, apiKeyIDs: apiKeyIDs}
 }
 
 // Handle 执行 user 维度审计分页查询
-//
-// 内部两步：
-//  1. 用 ProxyAPIKeyDAO.BatchGetByField 按 user_id 查 user 名下所有 key 的 ID 列表
-//  2. 调 repo.ListByAPIKeyIDs(keyIDs, ...)；空 keyIDs 时不打 SQL 直接返回空
-func (h *listAuditLogsByUserHandler) Handle(ctx context.Context, q ListAuditLogsByUserQuery) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (h *listAuditLogsByUserHandler) Handle(ctx context.Context, q ListAuditLogsByUserQuery) ([]*AuditLogView, *model.PageInfo, error) {
 	param, err := sanitizeListParam(ctx, listAuditLogsParam{
 		Page: q.Page, PageSize: q.PageSize, Query: q.Query, Sort: q.Sort, SortField: q.SortField,
 	})
@@ -168,14 +165,62 @@ func (h *listAuditLogsByUserHandler) Handle(ctx context.Context, q ListAuditLogs
 		return nil, nil, err
 	}
 
-	db := h.db.WithContext(ctx)
-	keys, err := h.apiKeyDAO.BatchGetByField(db, constant.FieldUserID, []uint{q.UserID}, []string{constant.FieldID})
+	keyIDs, err := h.apiKeyIDs.LookupIDsByUserID(ctx, q.UserID)
 	if err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "list api keys by user id")
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key ids by user id")
 	}
-	keyIDs := make([]uint, 0, len(keys))
-	for _, k := range keys {
-		keyIDs = append(keyIDs, k.ID)
+	audits, pageInfo, err := h.repo.ListByAPIKeyIDs(ctx, keyIDs, param, q.StartTime, q.EndTime)
+	if err != nil {
+		return nil, nil, err
 	}
-	return h.repo.ListByAPIKeyIDs(ctx, keyIDs, param, q.StartTime, q.EndTime)
+	views, err := buildAuditViews(ctx, h.repo, audits)
+	if err != nil {
+		return nil, nil, err
+	}
+	return views, pageInfo, nil
+}
+
+func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits []*aggregate.ModelCallAudit) ([]*AuditLogView, error) {
+	apiKeyIDs := make([]uint, 0, len(audits))
+	seen := make(map[uint]bool, len(audits))
+	for _, audit := range audits {
+		id := audit.APIKeyID()
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		apiKeyIDs = append(apiKeyIDs, id)
+	}
+	relations, err := repo.BatchGetRelations(ctx, apiKeyIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	views := make([]*AuditLogView, 0, len(audits))
+	for _, audit := range audits {
+		view := &AuditLogView{
+			ID:                       audit.AggregateID(),
+			CreatedAt:                audit.CreatedAt(),
+			Model:                    audit.Model(),
+			UpstreamProvider:         audit.UpstreamProvider(),
+			APIProvider:              audit.APIProvider(),
+			InputTokens:              audit.Tokens().Input(),
+			OutputTokens:             audit.Tokens().Output(),
+			CacheCreationInputTokens: audit.Tokens().CacheCreation(),
+			CacheReadInputTokens:     audit.Tokens().CacheRead(),
+			FirstTokenLatencyMs:      audit.Latency().FirstTokenMs(),
+			StreamDurationMs:         audit.Latency().StreamMs(),
+			UserAgent:                audit.UserAgent(),
+			UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
+			ErrorMessage:             audit.Status().ErrorMessage(),
+			TraceID:                  audit.TraceID(),
+		}
+		if relation, ok := relations[audit.APIKeyID()]; ok {
+			view.APIKeyName = relation.APIKeyName
+			view.UserName = relation.UserName
+			view.UserEmail = relation.UserEmail
+		}
+		views = append(views, view)
+	}
+	return views, nil
 }

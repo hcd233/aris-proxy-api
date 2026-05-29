@@ -98,6 +98,50 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 	return r.paginate(db, param, startTime, endTime)
 }
 
+// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
+func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error) {
+	relations := make(map[uint]*modelcall.AuditRelation, len(apiKeyIDs))
+	if len(apiKeyIDs) == 0 {
+		return relations, nil
+	}
+
+	db := r.db.WithContext(ctx)
+	keys, err := dao.GetProxyAPIKeyDAO().BatchGetByField(db, constant.FieldID, apiKeyIDs, []string{constant.FieldID, constant.FieldName, constant.FieldUserID})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get proxy api keys")
+	}
+
+	userIDs := make([]uint, 0, len(keys))
+	seenUserIDs := make(map[uint]bool, len(keys))
+	for _, key := range keys {
+		relations[key.ID] = &modelcall.AuditRelation{APIKeyID: key.ID, APIKeyName: key.Name, UserID: key.UserID}
+		if seenUserIDs[key.UserID] {
+			continue
+		}
+		seenUserIDs[key.UserID] = true
+		userIDs = append(userIDs, key.UserID)
+	}
+	if len(userIDs) == 0 {
+		return relations, nil
+	}
+
+	users, err := dao.GetUserDAO().BatchGetByField(db, constant.FieldID, userIDs, []string{constant.FieldID, constant.FieldName, constant.FieldEmail})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get users")
+	}
+	userByID := make(map[uint]*dbmodel.User, len(users))
+	for _, user := range users {
+		userByID[user.ID] = user
+	}
+	for _, relation := range relations {
+		if user, ok := userByID[relation.UserID]; ok {
+			relation.UserName = user.Name
+			relation.UserEmail = user.Email
+		}
+	}
+	return relations, nil
+}
+
 // paginate 通用分页：在调用方已附加范围过滤的 db 上做时间范围、模糊搜索、排序、count、limit/offset。
 //
 // 不复用 baseDAO.Paginate，因为后者只接受 *ModelT 等值 where 不支持 IN 条件。

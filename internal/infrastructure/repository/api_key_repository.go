@@ -234,6 +234,20 @@ func (r *apiKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID 
 	return names, nil
 }
 
+// LookupIDsByUserID 查询指定用户的所有 API Key ID
+func (r *apiKeyRepository) LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
+	db := r.db.WithContext(ctx)
+	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, []string{constant.FieldID})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key ids by user id")
+	}
+	ids := make([]uint, 0, len(records))
+	for _, rec := range records {
+		ids = append(ids, rec.ID)
+	}
+	return ids, nil
+}
+
 // toAPIKeyAggregate 将 GORM 模型映射为聚合根
 func toAPIKeyAggregate(m *dbmodel.ProxyAPIKey) (*aggregate.ProxyAPIKey, error) {
 	secret, err := vo.NewAPIKeySecret(m.Key)
