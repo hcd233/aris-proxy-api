@@ -27,7 +27,6 @@ type SessionHandler interface {
 	HandleListSessionsByUser(ctx context.Context, req *dto.ListSessionsByUserReq) (*dto.HTTPResponse[*dto.ListSessionsRsp], error)
 	HandleGetSessionByUser(ctx context.Context, req *dto.GetSessionByUserReq) (*dto.HTTPResponse[*dto.GetSessionRsp], error)
 	HandleCreateShare(ctx context.Context, req *dto.CreateShareReq) (*dto.HTTPResponse[*dto.CreateShareRsp], error)
-	HandleGetShareContent(ctx context.Context, req *dto.GetShareContentReq) (*dto.HTTPResponse[*dto.GetShareContentRsp], error)
 	HandleListShares(ctx context.Context, req *dto.ListSharesReq) (*dto.HTTPResponse[*dto.ListSharesRsp], error)
 	HandleDeleteShare(ctx context.Context, req *dto.DeleteShareReq) (*dto.HTTPResponse[*dto.CommonRsp], error)
 	// 新增（详情接口性能优化）
@@ -247,71 +246,6 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-// HandleGetShareContent 获取分享内容（公开接口，IP限流）
-//
-//	@receiver h *sessionHandler
-//	@param ctx context.Context
-//	@param req *dto.GetShareContentReq
-//	@return *dto.HTTPResponse[*dto.GetShareContentRsp]
-//	@return error
-//	@author centonhuang
-//	@update 2026-05-28 10:00:00
-func (h *sessionHandler) HandleGetShareContent(ctx context.Context, req *dto.GetShareContentReq) (*dto.HTTPResponse[*dto.GetShareContentRsp], error) {
-	rsp := &dto.GetShareContentRsp{}
-
-	sessionID, err := h.shareCache.GetShareSessionID(ctx, req.ShareID)
-	if err != nil {
-		logger.WithCtx(ctx).Warn("[SessionHandler] Get share content: share not found",
-			zap.String("shareID", req.ShareID), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrDataNotExists.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
-	view, viewErr := h.getByUser.Handle(ctx, sessionquery.GetSessionByUserQuery{
-		UserID:             0,
-		IsAdmin:            true,
-		SkipOwnershipCheck: true,
-		SessionID:          sessionID,
-	})
-	if viewErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Get share content: fetch session failed",
-			zap.Uint("sessionID", sessionID), zap.Error(viewErr))
-		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-	if view == nil {
-		rsp.Error = ierr.ErrDataNotExists.BizError()
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
-	messageItems := lo.Map(view.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
-		return &dto.MessageItem{
-			ID:        m.ID,
-			Model:     m.Model,
-			Message:   m.Message,
-			CreatedAt: m.CreatedAt,
-		}
-	})
-	toolItems := lo.Map(view.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
-		return &dto.ToolItem{
-			ID:        t.ID,
-			Tool:      t.Tool,
-			CreatedAt: t.CreatedAt,
-		}
-	})
-
-	rsp.Session = &dto.ShareContentSessionDetail{
-		ID:        view.ID,
-		CreatedAt: view.CreatedAt,
-		UpdatedAt: view.UpdatedAt,
-		Metadata:  view.Metadata,
-		Messages:  messageItems,
-		Tools:     toolItems,
-	}
-
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
 // HandleListShares 获取当前用户的分享列表（JWT认证）
 //
 //	@receiver h *sessionHandler
@@ -521,7 +455,7 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Session = &dto.ShareMetadata{
+	rsp.Session = &dto.ShareSessionMetadata{
 		ID:           view.ID,
 		CreatedAt:    view.CreatedAt,
 		UpdatedAt:    view.UpdatedAt,
