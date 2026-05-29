@@ -14,7 +14,7 @@
  *  - Multimodal parts (image/audio/file/refusal) get dedicated renderers.
  */
 
-import { Fragment, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Brain,
   ChevronDown,
@@ -476,13 +476,11 @@ export function ChatMessage({
         {tool_calls && tool_calls.length > 0 && (
           <div>
             {tool_calls.map((call, i) => (
-              <Fragment key={call.id ?? i}>
-<ToolCallCard
-                    call={call}
-                    result={call.id ? lookupToolResult(toolResultsByID, call.id) : undefined}
-                    durationSeconds={call.id ? toolDurations[call.id] : undefined}
-                  />
-              </Fragment>
+              <ToolCallCard
+                  key={call.id ?? i}
+                  call={call}
+                  result={call.id ? lookupToolResult(toolResultsByID, call.id) : undefined}
+                />
             ))}
           </div>
         )}
@@ -547,37 +545,4 @@ export function buildToolResultsByID(
   return map;
 }
 
-/**
- * Build a map of tool_call_id -> execution duration in seconds.
- * Computes the time delta between the assistant message containing the
- * function_call and the corresponding tool result message.
- */
-export function buildToolDurationsByID(
-  messages: MessageItem[],
-): Record<string, number> {
-  const callTimestamps: Record<string, string> = {};
-  const resultTimestamps: Record<string, string> = {};
 
-  for (const m of messages) {
-    if (m.message.role === "assistant" && m.message.tool_calls) {
-      for (const call of m.message.tool_calls) {
-        if (call.id) callTimestamps[call.id] = m.createdAt;
-      }
-    }
-    const toolCallId = m.message.tool_call_id;
-    if (toolCallId && (m.message.role === "tool" || m.message.role === "user")) {
-      resultTimestamps[toolCallId] = m.createdAt;
-    }
-  }
-
-  const durations: Record<string, number> = {};
-  for (const id of Object.keys(callTimestamps)) {
-    const start = callTimestamps[id];
-    const end = resultTimestamps[id];
-    if (start && end) {
-      const diffMs = new Date(end).getTime() - new Date(start).getTime();
-      durations[id] = diffMs / 1000;
-    }
-  }
-  return durations;
-}
