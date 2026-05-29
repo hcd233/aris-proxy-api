@@ -19,7 +19,6 @@ import {
   Brain,
   ChevronDown,
   ChevronRight,
-  Clock,
   FileText,
   Music2,
   ShieldAlert,
@@ -261,11 +260,9 @@ interface ToolCallCardProps {
   call: UnifiedToolCall;
   /** Tool result text matched by tool_call_id, if any. */
   result?: string;
-  /** Tool execution duration in seconds, from function_call to tool response. */
-  durationSeconds?: number;
 }
 
-function ToolCallCard({ call, result, durationSeconds }: ToolCallCardProps) {
+function ToolCallCard({ call, result }: ToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const args = prettyJSON(call.arguments);
   const out = result ? prettyJSON(result) : undefined;
@@ -290,14 +287,6 @@ function ToolCallCard({ call, result, durationSeconds }: ToolCallCardProps) {
             <span className="font-mono text-[13px] font-medium text-foreground">
               {call.name || "tool"}
             </span>
-            {durationSeconds !== undefined && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted/80 px-1.5 py-[1px] font-mono text-[10px] text-muted-foreground">
-                <Clock className="size-2.5" />
-                {durationSeconds < 0.1
-                  ? `${Math.round(durationSeconds * 1000)}ms`
-                  : `${durationSeconds.toFixed(1)}s`}
-              </span>
-            )}
           </div>
           {call.id && (
             <span className="font-mono text-[10px] text-muted-foreground/60">
@@ -388,8 +377,6 @@ interface RenderedMessageProps {
   message: MessageItem;
   /** map: tool_call_id -> result text, harvested from sibling tool messages */
   toolResultsByID: Record<string, string>;
-  /** Full message list for computing tool execution durations */
-  messages: MessageItem[];
   index: number;
 }
 
@@ -399,7 +386,6 @@ const SYSTEM_MSG_PREVIEW_CHARS = 200;
 export function ChatMessage({
   message,
   toolResultsByID,
-  messages,
   index,
 }: RenderedMessageProps) {
   const { role, content, tool_calls, reasoning_content, refusal } =
@@ -416,11 +402,6 @@ export function ChatMessage({
   // Stagger fade-in
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
 
-  const toolDurations = useMemo(() => {
-    if (!tool_calls?.length) return {};
-    return buildToolDurationsByID(messages);
-  }, [messages, tool_calls]);
-
   // Tool results may arrive either as role="tool" (Anthropic / unified) or as
   // role="user" with a tool_call_id (OpenAI chat completion convention).
   // Both cases are inlined into the matched tool-call card above, so skip them here.
@@ -430,14 +411,16 @@ export function ChatMessage({
   if (isToolResult) return null;
 
   if (role === "user") {
+    // claude.ai iOS user bubble: right-aligned, evenly rounded (no sharpened
+    // corner), borderless tinted surface; slightly tighter on mobile.
     return (
       <div
         style={style}
         className="animate-in fade-in slide-in-from-bottom-1 flex justify-end duration-300"
       >
-        <div className="w-full max-w-[88%]">
+        <div className="w-full max-w-[85%] md:max-w-[88%]">
           <MetaLine label="You" time={time} />
-          <div className="rounded-2xl rounded-tr-md border border-border/60 bg-secondary/70 px-5 py-3.5">
+          <div className="rounded-3xl bg-secondary/80 px-4 py-3 text-[15px] leading-relaxed md:rounded-2xl md:rounded-tr-md md:border md:border-border/60 md:bg-secondary/70 md:px-5 md:py-3.5 md:text-base">
             {parts.length > 0 && <MultimodalParts parts={parts} />}
             {text && <MarkdownLite text={text} raw />}
             {!text && parts.length === 0 && (
@@ -480,7 +463,7 @@ export function ChatMessage({
 
         {reasoning_content && <ReasoningBlock text={reasoning_content} />}
 
-        <div className="text-foreground">
+        <div className="text-[15px] leading-relaxed text-foreground md:text-base">
           {parts.length > 0 && <MultimodalParts parts={parts} />}
           {text && <MarkdownLite text={text} />}
           {!text && parts.length === 0 && !tool_calls?.length && !refusal && (

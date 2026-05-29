@@ -126,9 +126,14 @@
   }
   html {
     @apply font-sans;
+    /* Prevent iOS auto text-size bump on orientation change. */
+    -webkit-text-size-adjust: 100%;
   }
   body {
     @apply bg-background text-foreground;
+    /* Disable rubber-band scroll chaining on mobile so bottom sheets feel
+     * native and the conversation column doesn't bounce the whole page. */
+    overscroll-behavior-y: contain;
   }
   ::selection {
     background: rgba(217, 119, 87, 0.2);
