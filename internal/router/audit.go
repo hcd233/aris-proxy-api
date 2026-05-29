@@ -18,7 +18,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 	huma.Register(auditGroup, huma.Operation{
 		OperationID: "listAuditLogs",
 		Method:      http.MethodGet,
-		Path:        "/logs",
+		Path:        "/log/list",
 		Summary:     "ListAuditLogs",
 		Description: "Paginate audit logs scoped by current JWT user. Admin sees all records; regular user sees records under their own API keys.",
 		Tags:        []string{"Audit"},

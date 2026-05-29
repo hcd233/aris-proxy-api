@@ -44,6 +44,23 @@ func (f *fakeAuditRepo) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, p
 	return nil, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
 }
 
+func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error) {
+	return map[uint]*modelcall.AuditRelation{}, nil
+}
+
+type fakeAPIKeyIDLookup struct {
+	lookupFunc func(ctx context.Context, userID uint) ([]uint, error)
+	calls      int
+}
+
+func (f *fakeAPIKeyIDLookup) LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
+	f.calls++
+	if f.lookupFunc != nil {
+		return f.lookupFunc(ctx, userID)
+	}
+	return nil, nil
+}
+
 var _ modelcall.AuditRepository = (*fakeAuditRepo)(nil)
 
 // ─── ListAllAuditLogsHandler 测试 ───────────────────────────
@@ -113,16 +130,41 @@ func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
 
 // ─── ListAuditLogsByUserHandler 测试 ────────────────────────
 
-// 注：ListAuditLogsByUserHandler 还需要 *dao.ProxyAPIKeyDAO 与 *gorm.DB 依赖。
-// 单元测试无法替换 *dao.ProxyAPIKeyDAO（具体类型，无法 mock），因此 ByUser handler 的
-// SQL 执行路径无法在纯单元测试中覆盖。这里只覆盖：
-//   - 参数清洗（SortField 非法时返回 ErrValidation 且不调任何 IO）
-// SQL 路径正确性留给 plan 后的本地手工冒烟测试验证。
+func TestListAuditLogsByUser_LoadsUserAPIKeyIDs(t *testing.T) {
+	repo := &fakeAuditRepo{
+		listByAPIKeyIDsFn: func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+			if len(apiKeyIDs) != 2 || apiKeyIDs[0] != 10 || apiKeyIDs[1] != 20 {
+				t.Errorf("apiKeyIDs = %v, want [10 20]", apiKeyIDs)
+			}
+			return nil, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
+		},
+	}
+	apiKeyLookup := &fakeAPIKeyIDLookup{
+		lookupFunc: func(ctx context.Context, userID uint) ([]uint, error) {
+			if userID != 7 {
+				t.Errorf("userID = %d, want 7", userID)
+			}
+			return []uint{10, 20}, nil
+		},
+	}
+	h := auditquery.NewListAuditLogsByUserHandler(repo, apiKeyLookup)
+	_, _, err := h.Handle(context.Background(), auditquery.ListAuditLogsByUserQuery{
+		UserID: 7, Page: 1, PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if apiKeyLookup.calls != 1 {
+		t.Errorf("LookupIDsByUserID calls = %d, want 1", apiKeyLookup.calls)
+	}
+	if repo.listByAPIKeyIDsCnt != 1 {
+		t.Errorf("ListByAPIKeyIDs calls = %d, want 1", repo.listByAPIKeyIDsCnt)
+	}
+}
 
 func TestListAuditLogsByUser_InvalidSortField(t *testing.T) {
 	repo := &fakeAuditRepo{}
-	// db / apiKeyDAO 在 SortField 非法时不会被调用，可以传 nil
-	h := auditquery.NewListAuditLogsByUserHandler(repo, nil, nil)
+	h := auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{})
 	_, _, err := h.Handle(context.Background(), auditquery.ListAuditLogsByUserQuery{
 		UserID: 1, Page: 1, PageSize: 20, SortField: "drop_table",
 	})

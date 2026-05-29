@@ -330,7 +330,7 @@ class ApiClient {
     if (params.query) sp.set("query", params.query);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<ListAuditLogsRsp>(`/api/v1/audit/logs?${sp}`);
+    return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
   }
 }
 

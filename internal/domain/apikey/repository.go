@@ -33,4 +33,6 @@ type APIKeyRepository interface {
 	Delete(ctx context.Context, id uint) error
 	// LookupOwnerNamesByUserID 查询指定用户的所有 API Key 名称
 	LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error)
+	// LookupIDsByUserID 查询指定用户的所有 API Key ID
+	LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error)
 }

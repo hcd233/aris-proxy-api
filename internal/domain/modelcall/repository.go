@@ -12,6 +12,15 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 )
 
+// AuditRelation 审计列表关联展示信息。
+type AuditRelation struct {
+	APIKeyID   uint
+	APIKeyName string
+	UserID     uint
+	UserName   string
+	UserEmail  string
+}
+
 // AuditRepository ModelCallAudit 聚合仓储接口
 //
 //	@author centonhuang
@@ -25,4 +34,7 @@ type AuditRepository interface {
 
 	// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+
+	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
+	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)
 }
