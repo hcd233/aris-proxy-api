@@ -197,6 +197,31 @@ export interface GetShareContentRsp extends CommonRsp {
   session?: ShareContentSessionDetail;
 }
 
+// ─── Share 分页接口（公开，与 session detail 优化模式对齐） ───────────────────
+
+export interface ShareMetadata {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, string>;
+  messageCount: number;
+  toolCount: number;
+}
+
+export interface GetShareMetadataRsp extends CommonRsp {
+  session?: ShareMetadata;
+}
+
+export interface ListShareMessagesRsp extends CommonRsp {
+  messages?: MessageItem[];
+  pageInfo?: PageInfo;
+}
+
+export interface ListShareToolsRsp extends CommonRsp {
+  tools?: ToolItem[];
+  pageInfo?: PageInfo;
+}
+
 export interface ShareItem {
   shareId: string;
   sessionId: number;

@@ -117,4 +117,40 @@ func initSessionPublicRouter(sessionGroup huma.API, sessionHandler handler.Sessi
 			middleware.TokenBucketRateLimiterMiddleware(cache, "getShareContent", "", constant.PeriodGetShareContent, constant.LimitGetShareContent),
 		},
 	}, sessionHandler.HandleGetShareContent)
+
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "getShareMetadata",
+		Method:      http.MethodGet,
+		Path:        "/share/metadata",
+		Summary:     "GetShareMetadata",
+		Description: "Get shared session metadata (public, rate limited)",
+		Tags:        []string{"Session"},
+		Middlewares: huma.Middlewares{
+			middleware.TokenBucketRateLimiterMiddleware(cache, "getShareMetadata", "", constant.PeriodGetShareContent, constant.LimitGetShareContent),
+		},
+	}, sessionHandler.HandleGetShareMetadata)
+
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "listShareMessages",
+		Method:      http.MethodGet,
+		Path:        "/share/message/list",
+		Summary:     "ListShareMessages",
+		Description: "Paginate shared session messages (public, rate limited)",
+		Tags:        []string{"Session"},
+		Middlewares: huma.Middlewares{
+			middleware.TokenBucketRateLimiterMiddleware(cache, "listShareMessages", "", constant.PeriodGetShareContent, constant.LimitGetShareContent),
+		},
+	}, sessionHandler.HandleListShareMessages)
+
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "listShareTools",
+		Method:      http.MethodGet,
+		Path:        "/share/tool/list",
+		Summary:     "ListShareTools",
+		Description: "Paginate shared session tools (public, rate limited)",
+		Tags:        []string{"Session"},
+		Middlewares: huma.Middlewares{
+			middleware.TokenBucketRateLimiterMiddleware(cache, "listShareTools", "", constant.PeriodGetShareContent, constant.LimitGetShareContent),
+		},
+	}, sessionHandler.HandleListShareTools)
 }

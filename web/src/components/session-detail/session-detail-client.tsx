@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/sheet";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 
-function CollapsibleText({
+export function CollapsibleText({
   text,
   previewChars = 140,
   className,
@@ -89,7 +89,7 @@ function CollapsibleText({
   );
 }
 
-function ToolSidebarItem({ tool }: { tool: ToolItem }) {
+export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   const [expanded, setExpanded] = useState(false);
   const toolData: UnifiedTool = tool.tool;
 
