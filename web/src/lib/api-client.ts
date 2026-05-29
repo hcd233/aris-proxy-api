@@ -181,21 +181,21 @@ class ApiClient {
 
   async listSessionMessages(
     sessionId: number,
-    offset: number = 0,
-    limit: number = 20
+    page: number = 1,
+    pageSize: number = 50
   ): Promise<ListSessionMessagesRsp> {
     return this.request<ListSessionMessagesRsp>(
-      `/api/v1/session/message/list?sessionId=${sessionId}&offset=${offset}&limit=${limit}`
+      `/api/v1/session/message/list?sessionId=${sessionId}&page=${page}&pageSize=${pageSize}`
     );
   }
 
   async listSessionTools(
     sessionId: number,
-    offset: number = 0,
-    limit: number = 50
+    page: number = 1,
+    pageSize: number = 20
   ): Promise<ListSessionToolsRsp> {
     return this.request<ListSessionToolsRsp>(
-      `/api/v1/session/tool/list?sessionId=${sessionId}&offset=${offset}&limit=${limit}`
+      `/api/v1/session/tool/list?sessionId=${sessionId}&page=${page}&pageSize=${pageSize}`
     );
   }
 
