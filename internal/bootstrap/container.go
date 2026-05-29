@@ -15,6 +15,7 @@ import (
 	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
 	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
 	applicationoauth2 "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
@@ -171,6 +172,9 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 	if err := container.Provide(newShareCache); err != nil {
 		return err
 	}
+	if err := container.Provide(newSessionDetailCache); err != nil {
+		return err
+	}
 	if err := container.Provide(transport.NewOpenAIProxy); err != nil {
 		return err
 	}
@@ -254,6 +258,15 @@ func provideApplication(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(newGetSessionByUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newGetSessionMetaByUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newListSessionMessagesHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newListSessionToolsHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
@@ -466,8 +479,22 @@ func newAPIKeyDependencies(issue apikeycommand.IssueAPIKeyHandler, revoke apikey
 	}
 }
 
-func newSessionDependencies(listByUser sessionquery.ListSessionsByUserHandler, getByUser sessionquery.GetSessionByUserHandler, shareCache cache.ShareCache) handler.SessionDependencies {
-	return handler.SessionDependencies{ListByUser: listByUser, GetByUser: getByUser, ShareCache: shareCache}
+func newSessionDependencies(
+	listByUser sessionquery.ListSessionsByUserHandler,
+	getByUser sessionquery.GetSessionByUserHandler,
+	shareCache cache.ShareCache,
+	getMetaByUser sessionquery.GetSessionMetaByUserHandler,
+	listMessages sessionquery.ListSessionMessagesHandler,
+	listTools sessionquery.ListSessionToolsHandler,
+) handler.SessionDependencies {
+	return handler.SessionDependencies{
+		ListByUser:    listByUser,
+		GetByUser:     getByUser,
+		ShareCache:    shareCache,
+		GetMetaByUser: getMetaByUser,
+		ListMessages:  listMessages,
+		ListTools:     listTools,
+	}
 }
 
 func newOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependencies {
@@ -508,4 +535,20 @@ func newGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRe
 
 func newShareCache(redisClient *redis.Client) cache.ShareCache {
 	return cache.NewShareCache(redisClient)
+}
+
+func newSessionDetailCache(redisClient *redis.Client) sessionport.SessionDetailCache {
+	return cache.NewSessionDetailCache(redisClient)
+}
+
+func newGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionquery.GetSessionMetaByUserHandler {
+	return sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache)
+}
+
+func newListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionquery.ListSessionMessagesHandler {
+	return sessionquery.NewListSessionMessagesHandler(readRepo, metaQuery, detailCache)
+}
+
+func newListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionquery.ListSessionToolsHandler {
+	return sessionquery.NewListSessionToolsHandler(readRepo, metaQuery, detailCache)
 }

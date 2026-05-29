@@ -29,6 +29,10 @@ type SessionHandler interface {
 	HandleGetShareContent(ctx context.Context, req *dto.GetShareContentReq) (*dto.HTTPResponse[*dto.GetShareContentRsp], error)
 	HandleListShares(ctx context.Context, req *dto.ListSharesReq) (*dto.HTTPResponse[*dto.ListSharesRsp], error)
 	HandleDeleteShare(ctx context.Context, req *dto.DeleteShareReq) (*dto.HTTPResponse[*dto.CommonRsp], error)
+	// 新增（详情接口性能优化）
+	HandleGetSessionMetadata(ctx context.Context, req *dto.GetSessionMetadataReq) (*dto.HTTPResponse[*dto.GetSessionMetadataRsp], error)
+	HandleListSessionMessages(ctx context.Context, req *dto.ListSessionMessagesReq) (*dto.HTTPResponse[*dto.ListSessionMessagesRsp], error)
+	HandleListSessionTools(ctx context.Context, req *dto.ListSessionToolsReq) (*dto.HTTPResponse[*dto.ListSessionToolsRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
@@ -39,12 +43,19 @@ type SessionDependencies struct {
 	ListByUser sessionquery.ListSessionsByUserHandler
 	GetByUser  sessionquery.GetSessionByUserHandler
 	ShareCache cache.ShareCache
+	// 新增（详情接口性能优化）
+	GetMetaByUser sessionquery.GetSessionMetaByUserHandler
+	ListMessages  sessionquery.ListSessionMessagesHandler
+	ListTools     sessionquery.ListSessionToolsHandler
 }
 
 type sessionHandler struct {
-	listByUser sessionquery.ListSessionsByUserHandler
-	getByUser  sessionquery.GetSessionByUserHandler
-	shareCache cache.ShareCache
+	listByUser    sessionquery.ListSessionsByUserHandler
+	getByUser     sessionquery.GetSessionByUserHandler
+	shareCache    cache.ShareCache
+	getMetaByUser sessionquery.GetSessionMetaByUserHandler
+	listMessages  sessionquery.ListSessionMessagesHandler
+	listTools     sessionquery.ListSessionToolsHandler
 }
 
 // NewSessionHandler 创建Session处理器
@@ -55,9 +66,12 @@ type sessionHandler struct {
 //	@update 2026-04-26 10:00:00
 func NewSessionHandler(deps SessionDependencies) SessionHandler {
 	return &sessionHandler{
-		listByUser: deps.ListByUser,
-		getByUser:  deps.GetByUser,
-		shareCache: deps.ShareCache,
+		listByUser:    deps.ListByUser,
+		getByUser:     deps.GetByUser,
+		shareCache:    deps.ShareCache,
+		getMetaByUser: deps.GetMetaByUser,
+		listMessages:  deps.ListMessages,
+		listTools:     deps.ListTools,
 	}
 }
 
@@ -343,5 +357,135 @@ func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteS
 	logger.WithCtx(ctx).Info("[SessionHandler] Share deleted",
 		zap.String("shareID", req.ShareID))
 
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleGetSessionMetadata 获取 Session 元数据（不含 messages/tools 内容）
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.GetSessionMetadataReq) (*dto.HTTPResponse[*dto.GetSessionMetadataRsp], error) {
+	rsp := &dto.GetSessionMetadataRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	view, err := h.getMetaByUser.Handle(ctx, sessionquery.GetSessionMetaByUserQuery{
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		SessionID: req.SessionID,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Get session metadata failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	shareID, sharedErr := h.shareCache.GetSessionShareID(ctx, req.SessionID)
+	if sharedErr != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Check session shared status failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(sharedErr))
+		shareID = ""
+	}
+
+	rsp.Session = &dto.SessionMetadata{
+		ID:           view.ID,
+		APIKeyName:   view.APIKeyName,
+		CreatedAt:    view.CreatedAt,
+		UpdatedAt:    view.UpdatedAt,
+		Metadata:     view.Metadata,
+		MessageCount: view.MessageCount,
+		ToolCount:    view.ToolCount,
+		ShareID:      shareID,
+	}
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Get session metadata",
+		zap.Uint("sessionID", req.SessionID),
+		zap.Uint("userID", userID),
+		zap.Int("messageCount", view.MessageCount),
+		zap.Int("toolCount", view.ToolCount))
+
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleListSessionMessages 分页获取 Session 消息
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto.ListSessionMessagesReq) (*dto.HTTPResponse[*dto.ListSessionMessagesRsp], error) {
+	rsp := &dto.ListSessionMessagesRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	result, err := h.listMessages.Handle(ctx, sessionquery.ListSessionMessagesQuery{
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		SessionID: req.SessionID,
+		Offset:    req.Offset,
+		Limit:     req.Limit,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] List session messages failed",
+			zap.Uint("sessionID", req.SessionID),
+			zap.Int("offset", req.Offset), zap.Int("limit", req.Limit), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Messages = lo.Map(result.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
+		return &dto.MessageItem{
+			ID:        m.ID,
+			Model:     m.Model,
+			Message:   m.Message,
+			CreatedAt: m.CreatedAt,
+		}
+	})
+	rsp.PageInfo = &dto.OffsetPageInfo{
+		Offset: req.Offset,
+		Limit:  req.Limit,
+		Total:  result.Total,
+	}
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleListSessionTools 分页获取 Session 工具
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.ListSessionToolsReq) (*dto.HTTPResponse[*dto.ListSessionToolsRsp], error) {
+	rsp := &dto.ListSessionToolsRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	result, err := h.listTools.Handle(ctx, sessionquery.ListSessionToolsQuery{
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		SessionID: req.SessionID,
+		Offset:    req.Offset,
+		Limit:     req.Limit,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] List session tools failed",
+			zap.Uint("sessionID", req.SessionID),
+			zap.Int("offset", req.Offset), zap.Int("limit", req.Limit), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Tools = lo.Map(result.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
+		return &dto.ToolItem{
+			ID:        t.ID,
+			Tool:      t.Tool,
+			CreatedAt: t.CreatedAt,
+		}
+	})
+	rsp.PageInfo = &dto.OffsetPageInfo{
+		Offset: req.Offset,
+		Limit:  req.Limit,
+		Total:  result.Total,
+	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

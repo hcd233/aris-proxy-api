@@ -74,6 +74,20 @@ type ToolDetailProjection struct {
 	CreatedAt time.Time
 }
 
+// SessionMetaProjection Session 元数据只读投影（不含 messages/tools 内容）
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type SessionMetaProjection struct {
+	ID         uint
+	APIKeyName string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Metadata   map[string]string
+	MessageIDs []uint
+	ToolIDs    []uint
+}
+
 // SessionDetailProjection Session 详情只读投影
 //
 //	@author centonhuang
@@ -105,8 +119,12 @@ type SessionReadRepository interface {
 	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
+	// GetSessionMeta 查询 Session 元数据（不含 Message/Tool 内容，仅含 IDs 数组）；未找到返回 (nil, nil)
+	GetSessionMeta(ctx context.Context, id uint) (*SessionMetaProjection, error)
 	// FindMessagesByIDs 批量查询消息投影
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
+	// FindToolsByIDs 批量查询工具投影
+	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
 	// FindSessionMessageIDsByIDs 按 session ID 列表批量查询 message_ids（用于空摘要回退）
 	FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error)
 }

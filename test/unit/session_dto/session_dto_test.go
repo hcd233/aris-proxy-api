@@ -2,7 +2,9 @@ package session_dto
 
 import (
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytedance/sonic"
 	model "github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -164,5 +166,78 @@ func TestGetSessionRsp_WithError(t *testing.T) {
 	}
 	if got.Session != nil {
 		t.Errorf("Session should be nil when error is present")
+	}
+}
+
+func TestSessionMetadata_JSONSerialization(t *testing.T) {
+	now := time.Date(2026, 5, 29, 10, 0, 0, 0, time.UTC)
+	meta := &dto.SessionMetadata{
+		ID:           42,
+		APIKeyName:   "user-key-1",
+		CreatedAt:    now,
+		UpdatedAt:    now.Add(time.Minute),
+		Metadata:     map[string]string{"source": "openai"},
+		MessageCount: 156,
+		ToolCount:    8,
+		ShareID:      "abc123",
+	}
+
+	payload, err := sonic.MarshalString(meta)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	if !strings.Contains(payload, `"messageCount":156`) {
+		t.Errorf("payload should contain messageCount: %s", payload)
+	}
+	if !strings.Contains(payload, `"toolCount":8`) {
+		t.Errorf("payload should contain toolCount: %s", payload)
+	}
+	if strings.Contains(payload, "messageIds") || strings.Contains(payload, "toolIds") {
+		t.Errorf("metadata response must NOT expose IDs arrays: %s", payload)
+	}
+
+	var decoded dto.SessionMetadata
+	if err := sonic.UnmarshalString(payload, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if decoded.MessageCount != 156 || decoded.ToolCount != 8 {
+		t.Errorf("count fields not preserved")
+	}
+	if decoded.ShareID != "abc123" {
+		t.Errorf("ShareID mismatch")
+	}
+}
+
+func TestListSessionMessagesRsp_PageInfoFields(t *testing.T) {
+	rsp := &dto.ListSessionMessagesRsp{
+		Messages: []*dto.MessageItem{},
+		PageInfo: &dto.OffsetPageInfo{Offset: 20, Limit: 20, Total: 156},
+	}
+	payload, err := sonic.MarshalString(rsp)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(payload, `"offset":20`) ||
+		!strings.Contains(payload, `"limit":20`) ||
+		!strings.Contains(payload, `"total":156`) {
+		t.Errorf("OffsetPageInfo fields missing in payload: %s", payload)
+	}
+	if strings.Contains(payload, `"page"`) || strings.Contains(payload, `"pageSize"`) {
+		t.Errorf("OffsetPageInfo must NOT use page/pageSize naming: %s", payload)
+	}
+}
+
+func TestListSessionToolsRsp_EmptyTools(t *testing.T) {
+	rsp := &dto.ListSessionToolsRsp{
+		Tools:    nil,
+		PageInfo: &dto.OffsetPageInfo{Offset: 0, Limit: 50, Total: 0},
+	}
+	payload, err := sonic.MarshalString(rsp)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(payload, `"tools"`) {
+		t.Errorf("nil tools should be omitted, got: %s", payload)
 	}
 }

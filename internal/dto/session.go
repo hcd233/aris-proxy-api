@@ -92,3 +92,85 @@ type GetSessionRsp struct {
 	CommonRsp
 	Session *SessionDetail `json:"session,omitempty" doc:"Session详情"`
 }
+
+// SessionMetadata Session 元数据（不含 messages/tools 内容）
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type SessionMetadata struct {
+	ID           uint              `json:"id" doc:"Session ID"`
+	APIKeyName   string            `json:"apiKeyName" doc:"API密钥名称"`
+	CreatedAt    time.Time         `json:"createdAt" doc:"创建时间"`
+	UpdatedAt    time.Time         `json:"updatedAt" doc:"更新时间"`
+	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	MessageCount int               `json:"messageCount" doc:"消息总数"`
+	ToolCount    int               `json:"toolCount" doc:"工具总数"`
+	ShareID      string            `json:"shareID" doc:"分享ID（已分享时非空）"`
+}
+
+// GetSessionMetadataReq 获取 Session 元数据请求（JWT 认证）
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type GetSessionMetadataReq struct {
+	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+}
+
+// GetSessionMetadataRsp 获取 Session 元数据响应
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type GetSessionMetadataRsp struct {
+	CommonRsp
+	Session *SessionMetadata `json:"session,omitempty" doc:"Session 元数据"`
+}
+
+// OffsetPageInfo 基于 offset+limit 的分页信息（用于滚动加载）
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type OffsetPageInfo struct {
+	Offset int   `json:"offset" doc:"偏移量"`
+	Limit  int   `json:"limit" doc:"页大小"`
+	Total  int64 `json:"total" doc:"总数"`
+}
+
+// ListSessionMessagesReq 分页获取 Session 消息请求
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type ListSessionMessagesReq struct {
+	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	Offset    int  `query:"offset" minimum:"0" default:"0" doc:"偏移量"`
+	Limit     int  `query:"limit" minimum:"1" maximum:"100" default:"20" doc:"页大小"`
+}
+
+// ListSessionMessagesRsp 分页获取 Session 消息响应
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type ListSessionMessagesRsp struct {
+	CommonRsp
+	Messages []*MessageItem  `json:"messages,omitempty" doc:"消息列表"`
+	PageInfo *OffsetPageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
+}
+
+// ListSessionToolsReq 分页获取 Session 工具请求
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type ListSessionToolsReq struct {
+	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	Offset    int  `query:"offset" minimum:"0" default:"0" doc:"偏移量"`
+	Limit     int  `query:"limit" minimum:"1" maximum:"100" default:"50" doc:"页大小"`
+}
+
+// ListSessionToolsRsp 分页获取 Session 工具响应
+//
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+type ListSessionToolsRsp struct {
+	CommonRsp
+	Tools    []*ToolItem     `json:"tools,omitempty" doc:"工具列表"`
+	PageInfo *OffsetPageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
+}

@@ -516,5 +516,17 @@
     "want": [
       {"rule": "architecture.db_root_context", "severity": "error"}
     ]
+  },
+  {
+    "name": "application infrastructure cache import is rejected",
+    "files": [
+      {
+        "path": "internal/application/session/query/cache.go",
+        "content": "package query\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.application_dependency", "severity": "error"}
+    ]
   }
 ]

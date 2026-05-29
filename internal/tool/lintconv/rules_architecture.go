@@ -32,6 +32,9 @@ func (c *checker) checkArchitectureImports(file SourceFile) {
 		if isUnder(file.Path, constant.ConvCheckPathDomain) && path == constant.ConvCheckImportUtil {
 			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainUtil)
 		}
+		if isUnder(file.Path, constant.ConvCheckPathApp) && isInfrastructureCacheImport(path) {
+			c.report(file, imp, enum.SeverityError, constant.RuleApplicationDependency, constant.ConvCheckMsgAppInfraCache)
+		}
 		if isUnder(file.Path, constant.ConvCheckPathApp) && isDeprecatedApplicationImport(path) {
 			c.report(file, imp, enum.SeverityError, constant.RuleDeprecatedApplicationImport, constant.ConvCheckMsgDeprecatedAppImport)
 		}
@@ -95,6 +98,10 @@ func hasRootContextArg(call *ast.CallExpr) bool {
 	}
 	receiver, method, ok := selectorName(argCall.Fun)
 	return ok && receiver == constant.ConvCheckRecvContext && (method == constant.ConvCheckMethodBackground || method == constant.ConvCheckMethodTODO)
+}
+
+func isInfrastructureCacheImport(path string) bool {
+	return path == constant.ConvCheckImportInfraCache || strings.HasPrefix(path, constant.ConvCheckImportInfraCache+"/")
 }
 
 func isDeprecatedApplicationImport(path string) bool {
