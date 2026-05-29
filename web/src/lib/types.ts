@@ -142,6 +142,39 @@ export interface GetSessionRsp extends CommonRsp {
   session?: SessionDetail;
 }
 
+// ─── Session Detail Perf (新增：metadata + 分页接口) ────────────────────────────
+
+export interface SessionMetadata {
+  id: number;
+  apiKeyName: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, string>;
+  messageCount: number;
+  toolCount: number;
+  shareID?: string;
+}
+
+export interface GetSessionMetadataRsp extends CommonRsp {
+  session?: SessionMetadata;
+}
+
+export interface OffsetPageInfo {
+  offset: number;
+  limit: number;
+  total: number;
+}
+
+export interface ListSessionMessagesRsp extends CommonRsp {
+  messages?: MessageItem[];
+  pageInfo?: OffsetPageInfo;
+}
+
+export interface ListSessionToolsRsp extends CommonRsp {
+  tools?: ToolItem[];
+  pageInfo?: OffsetPageInfo;
+}
+
 // ─── Session Share ─────────────────────────────────────────────────────────────
 
 /**

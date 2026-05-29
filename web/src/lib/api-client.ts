@@ -8,6 +8,9 @@ import type {
   UpdateUserReqBody,
   ListSessionsRsp,
   GetSessionRsp,
+  GetSessionMetadataRsp,
+  ListSessionMessagesRsp,
+  ListSessionToolsRsp,
   ListAPIKeysRsp,
   CreateAPIKeyRsp,
   CreateAPIKeyReqBody,
@@ -167,6 +170,32 @@ class ApiClient {
   async getSession(sessionId: number): Promise<GetSessionRsp> {
     return this.request<GetSessionRsp>(
       `/api/v1/session/?sessionId=${sessionId}`
+    );
+  }
+
+  async getSessionMetadata(sessionId: number): Promise<GetSessionMetadataRsp> {
+    return this.request<GetSessionMetadataRsp>(
+      `/api/v1/session/metadata?sessionId=${sessionId}`
+    );
+  }
+
+  async listSessionMessages(
+    sessionId: number,
+    offset: number = 0,
+    limit: number = 20
+  ): Promise<ListSessionMessagesRsp> {
+    return this.request<ListSessionMessagesRsp>(
+      `/api/v1/session/message/list?sessionId=${sessionId}&offset=${offset}&limit=${limit}`
+    );
+  }
+
+  async listSessionTools(
+    sessionId: number,
+    offset: number = 0,
+    limit: number = 50
+  ): Promise<ListSessionToolsRsp> {
+    return this.request<ListSessionToolsRsp>(
+      `/api/v1/session/tool/list?sessionId=${sessionId}&offset=${offset}&limit=${limit}`
     );
   }
 
