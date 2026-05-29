@@ -132,6 +132,48 @@ func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
 	}
 }
 
+func TestHeaderPassthroughMiddleware_ExcludesReverseProxyHeaders(t *testing.T) {
+	var got map[string]string
+	mux := http.NewServeMux()
+	api := humago.New(mux, huma.DefaultConfig("Aris Test", "1.0"))
+	api.UseMiddleware(middleware.HeaderPassthroughMiddleware())
+	huma.Register(api, huma.Operation{
+		OperationID: "captureHeaders",
+		Method:      http.MethodPost,
+		Path:        "/capture",
+	}, func(ctx context.Context, _ *struct{}) (*struct {
+		Body string
+	}, error) {
+		got = util.GetPassthroughHeaders(ctx)
+		return &struct{ Body string }{Body: "ok"}, nil
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/capture", nil)
+	req.Header.Set("X-Forwarded-For", "1.2.3.4")
+	req.Header.Set("X-Real-IP", "1.2.3.4")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("X-Forwarded-Port", "443")
+	req.Header.Set("REMOTE-HOST", "1.2.3.4")
+	req.Header.Set("X-Custom-Header", "keep-me")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if got == nil {
+		t.Fatal("expected passthrough headers")
+	}
+	if got["X-Custom-Header"] != "keep-me" {
+		t.Errorf("X-Custom-Header = %q, want keep-me", got["X-Custom-Header"])
+	}
+	for _, h := range []string{"X-Forwarded-For", "X-Real-IP", "X-Forwarded-Proto", "X-Forwarded-Port", "REMOTE-HOST"} {
+		if _, ok := got[h]; ok {
+			t.Fatalf("%s should not be passthrough headers: %v", h, got)
+		}
+	}
+}
+
 func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))

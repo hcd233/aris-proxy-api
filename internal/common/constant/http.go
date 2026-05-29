@@ -26,6 +26,11 @@ const (
 	HTTPLowerHeaderProxyAuthorization = "proxy-authorization"
 	HTTPLowerHeaderProxyAuthenticate  = "proxy-authenticate"
 	HTTPLowerHeaderAuthorization      = "authorization"
+	HTTPLowerHeaderXForwardedFor      = "x-forwarded-for"
+	HTTPLowerHeaderXForwardedProto    = "x-forwarded-proto"
+	HTTPLowerHeaderXForwardedPort     = "x-forwarded-port"
+	HTTPLowerHeaderXRealIP            = "x-real-ip"
+	HTTPLowerHeaderRemoteHost         = "remote-host"
 
 	// HTTPTitleHeader Title-Case格式的HTTP头部（用于响应/标准头部）
 	HTTPTitleHeaderContentType         = "Content-Type"
