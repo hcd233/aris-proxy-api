@@ -51,4 +51,7 @@ type AuditLogItem struct {
 	UpstreamStatusCode       int       `json:"upstreamStatusCode" doc:"上游状态码"`
 	ErrorMessage             string    `json:"errorMessage" doc:"错误信息"`
 	TraceID                  string    `json:"traceId" doc:"Trace ID"`
+	APIKeyName               string    `json:"apiKeyName" doc:"调用所用 API Key 名称"`
+	UserName                 string    `json:"userName" doc:"调用方用户名"`
+	UserEmail                string    `json:"userEmail" doc:"调用方邮箱"`
 }

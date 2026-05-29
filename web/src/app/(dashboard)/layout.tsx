@@ -26,6 +26,7 @@ import {
   LogOut,
   Menu,
   Share2,
+  ScrollText,
 } from "lucide-react";
 
 interface NavItem {
@@ -67,6 +68,11 @@ const navItems: NavItem[] = [
     href: "/models/",
     icon: <Cpu className="size-4" />,
     adminOnly: true,
+  },
+  {
+    label: "Audit",
+    href: "/audit/",
+    icon: <ScrollText className="size-4" />,
   },
   {
     label: "Profile",

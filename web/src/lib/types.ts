@@ -305,3 +305,31 @@ export interface ListModelsRsp extends CommonRsp {
   models?: ModelItem[];
   pageInfo?: PageInfo;
 }
+
+// ─── Audit ─────────────────────────────────────────────────────────────────────
+
+export interface AuditLogItem {
+  id: number;
+  createdAt: string;
+  model: string;
+  upstreamProvider: string;
+  apiProvider: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationInputTokens: number;
+  cacheReadInputTokens: number;
+  firstTokenLatencyMs: number;
+  streamDurationMs: number;
+  userAgent: string;
+  upstreamStatusCode: number;
+  errorMessage: string;
+  traceId: string;
+  apiKeyName: string;
+  userName: string;
+  userEmail: string;
+}
+
+export interface ListAuditLogsRsp extends CommonRsp {
+  logs?: AuditLogItem[];
+  pageInfo?: PageInfo;
+}

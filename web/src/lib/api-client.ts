@@ -25,6 +25,7 @@ import type {
   CreateShareRsp,
   GetShareContentRsp,
   ListSharesRsp,
+  ListAuditLogsRsp,
   CommonRsp,
 } from "./types";
 
@@ -340,6 +341,25 @@ class ApiClient {
     await this.request(`/api/v1/model/?id=${id}`, {
       method: "DELETE",
     });
+  }
+
+  // ─── Audit (admin / user) ──────────────────────────────────────────────────
+
+  async listAuditLogs(params: {
+    page: number;
+    pageSize: number;
+    query?: string;
+    startTime?: string;
+    endTime?: string;
+  }): Promise<ListAuditLogsRsp> {
+    const sp = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
+    if (params.query) sp.set("query", params.query);
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
   }
 }
 

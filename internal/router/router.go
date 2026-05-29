@@ -90,7 +90,7 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache)
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
-	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB)
+	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB, deps.Cache)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)
