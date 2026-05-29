@@ -1,5 +1,19 @@
 "use client";
 
+/**
+ * Session detail view.
+ *
+ * Mobile layout is tuned to match the claude.ai iOS reading experience:
+ *  - A slim sticky chrome bar (back / centered title / actions) with hairline
+ *    border + backdrop blur, instead of a horizontally crowded toolbar.
+ *  - The conversation column escapes the dashboard's outer padding via
+ *    negative margins so the column itself sets the comfortable reading
+ *    gutters (16px on phones, expanding on tablets).
+ *  - Vertical sizing uses 100dvh and respects the iOS safe-area inset so
+ *    the last assistant turn is never trapped under the home indicator.
+ *  - The available-tools panel becomes a tall iOS-style bottom sheet with a
+ *    grabber, sticky header, and safe-area aware scroll region.
+ */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -7,12 +21,9 @@ import {
   Braces,
   ChevronDown,
   ChevronRight,
-  Clock,
   FileText,
   Hash,
   MessagesSquare,
-  PanelRightClose,
-  PanelRightOpen,
   Share2,
   Wrench,
 } from "lucide-react";
@@ -31,8 +42,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet";
 
 function CollapsibleText({
@@ -83,20 +92,20 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   const requiredParams = (params?.required as string[]) ?? [];
 
   return (
-    <div className="rounded-lg border border-border/70 bg-card/60">
+    <div className="rounded-xl border border-border/70 bg-card/60">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/40"
+        className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors active:bg-accent/50 md:hover:bg-accent/40"
       >
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
-          <Wrench className="size-3.5" />
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <Wrench className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-[13px] font-medium text-foreground">
+          <p className="truncate font-mono text-[13.5px] font-medium text-foreground">
             {toolData.name}
           </p>
-          <p className="truncate text-[11px] leading-snug text-muted-foreground">
+          <p className="truncate text-[12px] leading-snug text-muted-foreground">
             {toolData.description || "No description"}
           </p>
         </div>
@@ -107,7 +116,7 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
         )}
       </button>
       {expanded && (
-        <div className="space-y-3 border-t border-border/60 px-3 py-3">
+        <div className="space-y-3 border-t border-border/60 px-3.5 py-3">
           {toolData.description && (
             <div>
               <p className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -117,7 +126,7 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
               <CollapsibleText
                 text={toolData.description}
                 previewChars={140}
-                className="text-[12.5px] leading-relaxed text-foreground/85"
+                className="text-[13px] leading-relaxed text-foreground/85"
               />
             </div>
           )}
@@ -155,7 +164,7 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
                       <CollapsibleText
                         text={schema.description as string}
                         previewChars={100}
-                        className="mt-1 text-[11px] leading-relaxed text-muted-foreground"
+                        className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground"
                       />
                     )}
                   </div>
@@ -180,7 +189,10 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const isMobile = useIsMobile();
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Desktop: tools panel docked open by default. Mobile: closed; user opens
+  // the bottom sheet on demand.
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
+  const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
   const fetchSession = useCallback(async () => {
@@ -257,6 +269,180 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     (m) => m.message.role !== "tool" && !m.message.tool_call_id,
   ).length;
 
+  // ── Mobile layout (claude.ai iOS-style) ─────────────────────────────────
+  // Escape the dashboard's outer padding so the column itself owns the
+  // gutters. Use 100dvh minus the dashboard mobile top bar (h-14 = 3.5rem)
+  // so the conversation reaches the home indicator with a safe-area pad.
+  if (isMobile) {
+    return (
+      <div className="-mx-4 -my-4 flex min-h-[calc(100dvh-3.5rem)] flex-col bg-background">
+        {/* iOS-style sticky chrome */}
+        <header
+          className={[
+            "sticky top-0 z-30 flex items-center gap-1 px-2 py-2",
+            "border-b border-border/60",
+            "bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70",
+          ].join(" ")}
+        >
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => router.push("/sessions/")}
+            className="size-10 text-foreground/70 hover:text-foreground"
+            aria-label="Back to sessions"
+          >
+            <ArrowLeft className="size-5" />
+          </Button>
+
+          <div className="flex min-w-0 flex-1 flex-col items-center px-1 leading-tight">
+            <h1 className="truncate font-display text-[15px] font-semibold tracking-tight text-foreground">
+              Session #{session.id}
+            </h1>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {messageCount} message{messageCount === 1 ? "" : "s"}
+              {session.apiKeyName ? ` · ${session.apiKeyName}` : ""}
+            </p>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setShareOpen(true)}
+            className={[
+              "size-10",
+              session.shareID
+                ? "text-primary"
+                : "text-foreground/70 hover:text-foreground",
+            ].join(" ")}
+            aria-label={session.shareID ? "Manage share link" : "Share session"}
+            title={session.shareID ? "Shared" : "Share"}
+          >
+            <Share2 className="size-5" />
+          </Button>
+
+          {tools.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setToolsSheetOpen(true)}
+              className="relative size-10 text-foreground/70 hover:text-foreground"
+              aria-label="Show available tools"
+              title="Available tools"
+            >
+              <Wrench className="size-5" />
+              <span
+                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
+                aria-hidden
+              >
+                {tools.length}
+              </span>
+            </Button>
+          )}
+        </header>
+
+        {/* Conversation column */}
+        <div
+          className={[
+            "flex-1",
+            "px-4",
+            // Generous bottom padding + iOS home-indicator safe area so the
+            // last assistant message never gets trapped under the OS chrome.
+            "pt-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]",
+            // Smoother native scroll on iOS, no rubber-band at edges.
+            "[-webkit-overflow-scrolling:touch] overscroll-contain",
+          ].join(" ")}
+        >
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <MessagesSquare className="mb-3 size-10 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">
+                No messages in this session
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {messages.map((msg, idx) => (
+                <ChatMessage
+                  key={msg.id}
+                  message={msg}
+                  index={idx}
+                  toolResultsByID={toolResultsByID}
+                  messages={messages}
+                />
+              ))}
+              <div className="pt-3 pb-1 text-center">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
+                  end of conversation
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* iOS-style bottom sheet for available tools */}
+        {tools.length > 0 && (
+          <Sheet open={toolsSheetOpen} onOpenChange={setToolsSheetOpen}>
+            <SheetContent
+              side="bottom"
+              showCloseButton={false}
+              className={[
+                "h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
+                "shadow-[0_-8px_24px_rgba(0,0,0,0.10)]",
+                "flex flex-col",
+              ].join(" ")}
+            >
+              {/* grabber */}
+              <div className="flex justify-center pt-2.5 pb-1">
+                <span
+                  className="block h-1 w-9 rounded-full bg-foreground/20"
+                  aria-hidden
+                />
+              </div>
+
+              {/* sticky title row */}
+              <div className="flex items-center gap-2 border-b border-border/60 px-4 pb-3">
+                <Wrench className="size-4 text-muted-foreground" />
+                <h2 className="font-display text-[15px] font-semibold text-foreground">
+                  Available Tools
+                </h2>
+                <Badge variant="secondary" className="ml-1 text-[10px]">
+                  {tools.length}
+                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setToolsSheetOpen(false)}
+                  className="ml-auto -mr-1 inline-flex h-9 items-center px-2 text-[14px] font-medium text-primary"
+                >
+                  Done
+                </button>
+              </div>
+
+              <div
+                className={[
+                  "flex-1 space-y-2 overflow-y-auto px-3 pt-3",
+                  "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]",
+                  "[-webkit-overflow-scrolling:touch] overscroll-contain",
+                ].join(" ")}
+              >
+                {tools.map((t) => (
+                  <ToolSidebarItem key={t.id} tool={t} />
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+
+        <ShareDialog
+          sessionId={session.id}
+          existingShareID={session.shareID}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+        />
+      </div>
+    );
+  }
+
+  // ── Desktop layout (unchanged behaviour) ────────────────────────────────
   return (
     <div className="flex h-[calc(100vh-6rem)] gap-0 overflow-hidden">
       <div className="flex min-w-0 flex-1 flex-col">
@@ -286,7 +472,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
-              <Clock className="size-3.5" />
               <span>{new Date(session.createdAt).toLocaleString()}</span>
             </div>
             <Button
@@ -301,17 +486,13 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             </Button>
             {tools.length > 0 && (
               <Button
-                variant={sidebarOpen ? "secondary" : "ghost"}
+                variant={toolsPanelOpen ? "secondary" : "ghost"}
                 size="icon-sm"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                title={sidebarOpen ? "Hide tools panel" : "Show tools panel"}
-                aria-label={sidebarOpen ? "Hide tools panel" : "Show tools panel"}
+                onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
+                title={toolsPanelOpen ? "Hide tools panel" : "Show tools panel"}
+                aria-label={toolsPanelOpen ? "Hide tools panel" : "Show tools panel"}
               >
-                {sidebarOpen ? (
-                  <PanelRightClose className="size-4" />
-                ) : (
-                  <PanelRightOpen className="size-4" />
-                )}
+                <Wrench className="size-4" />
               </Button>
             )}
           </div>
@@ -348,7 +529,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         </div>
       </div>
 
-      {!isMobile && sidebarOpen && tools.length > 0 && (
+      {toolsPanelOpen && tools.length > 0 && (
         <>
           <Separator orientation="vertical" className="mx-0 h-auto" />
           <aside className="flex w-80 shrink-0 flex-col overflow-hidden bg-sidebar/40">
@@ -368,25 +549,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             </div>
           </aside>
         </>
-      )}
-
-      {isMobile && sidebarOpen && tools.length > 0 && (
-        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetContent side="bottom" className="h-[60vh] rounded-t-xl border-border p-0">
-            <SheetHeader className="border-b border-border/70 px-4 py-3.5">
-              <SheetTitle className="flex items-center gap-2 font-display text-sm font-semibold">
-                <Wrench className="size-4 text-muted-foreground" />
-                Available Tools
-                <Badge variant="secondary" className="text-[10px]">{tools.length}</Badge>
-              </SheetTitle>
-            </SheetHeader>
-            <div className="flex-1 space-y-2 overflow-y-auto p-3">
-              {tools.map((t) => (
-                <ToolSidebarItem key={t.id} tool={t} />
-              ))}
-            </div>
-          </SheetContent>
-        </Sheet>
       )}
 
       <ShareDialog
