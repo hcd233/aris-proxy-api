@@ -43,6 +43,9 @@ func TestAuditLogItem_JSONTags(t *testing.T) {
 		StreamDurationMs:    1500,
 		UpstreamStatusCode:  200,
 		TraceID:             "abc123",
+		APIKeyName:          "my-key",
+		UserName:            "alice",
+		UserEmail:           "alice@example.com",
 	}
 	data, err := sonic.Marshal(item)
 	if err != nil {
@@ -69,5 +72,20 @@ func TestAuditLogItem_JSONTags(t *testing.T) {
 		if !ok || int(n) != 100 {
 			t.Errorf("inputTokens = %v, want 100", v)
 		}
+	}
+	if v, ok := obj["apiKeyName"]; !ok {
+		t.Errorf("apiKeyName field missing")
+	} else if v != "my-key" {
+		t.Errorf("apiKeyName = %v, want my-key", v)
+	}
+	if v, ok := obj["userName"]; !ok {
+		t.Errorf("userName field missing")
+	} else if v != "alice" {
+		t.Errorf("userName = %v, want alice", v)
+	}
+	if v, ok := obj["userEmail"]; !ok {
+		t.Errorf("userEmail field missing")
+	} else if v != "alice@example.com" {
+		t.Errorf("userEmail = %v, want alice@example.com", v)
 	}
 }
