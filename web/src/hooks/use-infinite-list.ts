@@ -32,50 +32,56 @@ export function useInfiniteList<T>(
   const { fetcher, pageSize, enabled } = opts;
   const [items, setItems] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
+  // inFlightRef 仅用于并发去重（写入和读取都在 loadMore 中，不参与 render）
   const inFlightRef = useRef(false);
-  const offsetRef = useRef(0);
-  const totalLoadedRef = useRef(false);
 
   const loadMore = useCallback(async () => {
     if (!enabled) return;
     if (inFlightRef.current) return;
-    if (totalLoadedRef.current && offsetRef.current >= total) return;
 
     inFlightRef.current = true;
     setLoading(true);
     try {
+      // 用闭包读取最新 offset 不可靠，loadMore 已经被 setOffset 触发的 deps 重算
       const { items: newItems, total: newTotal } = await fetcher(
-        offsetRef.current,
-        pageSize
+        offset,
+        pageSize,
       );
-      setItems((prev) => [...prev, ...newItems]);
+      // 已 loaded 且没有新条目 → 不再触发 setItems 以避免新引用
+      if (newItems.length > 0) {
+        setItems((prev) => [...prev, ...newItems]);
+        setOffset((prev) => prev + newItems.length);
+      }
       setTotal(newTotal);
-      totalLoadedRef.current = true;
-      offsetRef.current += newItems.length;
+      setLoaded(true);
     } catch (e) {
       console.warn("[useInfiniteList] load failed", e);
     } finally {
       setLoading(false);
       inFlightRef.current = false;
     }
-  }, [enabled, fetcher, pageSize, total]);
+  }, [enabled, fetcher, offset, pageSize]);
 
   const reset = useCallback(() => {
     setItems([]);
     setTotal(0);
-    offsetRef.current = 0;
-    totalLoadedRef.current = false;
+    setOffset(0);
+    setLoaded(false);
   }, []);
 
   // enabled 切换为 true 或刚 reset 后自动拉首页
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: trigger first-page fetch on enable; loadMore awaits then setState */
   useEffect(() => {
-    if (enabled && !totalLoadedRef.current && !inFlightRef.current) {
+    if (enabled && !loaded) {
       void loadMore();
     }
-  }, [enabled, loadMore]);
+  }, [enabled, loaded, loadMore]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const hasMore = !totalLoadedRef.current ? enabled : offsetRef.current < total;
+  const hasMore = !loaded ? enabled : offset < total;
 
   return { items, total, loading, hasMore, loadMore, reset };
 }
