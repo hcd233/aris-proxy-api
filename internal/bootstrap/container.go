@@ -251,7 +251,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newHandleCallbackHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(auditquery.NewListAuditLogsHandler); err != nil {
+	if err := container.Provide(auditquery.NewListAllAuditLogsHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newListAuditLogsByUserHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
@@ -509,8 +512,18 @@ func newAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 	return repository.NewAuditRepository(db)
 }
 
-func newAuditDependencies(list auditquery.ListAuditLogsHandler) handler.AuditDependencies {
-	return handler.AuditDependencies{List: list}
+func newAuditDependencies(
+	listAll auditquery.ListAllAuditLogsHandler,
+	listByUser auditquery.ListAuditLogsByUserHandler,
+) handler.AuditDependencies {
+	return handler.AuditDependencies{
+		ListAll:    listAll,
+		ListByUser: listByUser,
+	}
+}
+
+func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
+	return auditquery.NewListAuditLogsByUserHandler(repo, apiKeyRepo)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {

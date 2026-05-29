@@ -71,6 +71,10 @@ func (m *mockAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, use
 	return nil, nil
 }
 
+func (m *mockAPIKeyRepository) LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
+	return nil, nil
+}
+
 func (m *mockAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
 	return nil, nil, nil
 }
@@ -429,6 +433,10 @@ func (m *mockRevokeAPIKeyRepository) Delete(ctx context.Context, id uint) error 
 }
 
 func (m *mockRevokeAPIKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
+	return nil, nil
+}
+
+func (m *mockRevokeAPIKeyRepository) LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
 	return nil, nil
 }
 
