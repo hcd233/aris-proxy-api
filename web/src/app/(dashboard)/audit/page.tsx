@@ -24,6 +24,12 @@ import {
   ListFilter,
   Check,
   Clock,
+  Server,
+  Globe,
+  Database,
+  AlertCircle,
+  MessageSquare,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -62,9 +68,15 @@ function computeRange(
   return { startTime: start.toISOString(), endTime: now.toISOString() };
 }
 
-function formatTokens(input: number, output: number): string {
-  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  return `${fmt(input)} / ${fmt(output)}`;
+function fmtNum(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
+function formatTokensWithCache(input: number, output: number, cacheRead: number, cacheCreation: number): string {
+  let s = `${fmtNum(input)} / ${fmtNum(output)}`;
+  if (cacheRead > 0) s += ` +${fmtNum(cacheRead)}r`;
+  if (cacheCreation > 0) s += ` +${fmtNum(cacheCreation)}w`;
+  return s;
 }
 
 export default function AuditPage() {
@@ -236,6 +248,7 @@ export default function AuditPage() {
             <div className="space-y-3">
               {logs.map((log) => {
                 const ok = log.upstreamStatusCode === 200;
+                const hasCache = log.cacheReadInputTokens > 0 || log.cacheCreationInputTokens > 0;
                 return (
                   <div key={log.id} className="rounded-lg border border-border bg-card p-4">
                     <div className="flex items-start justify-between gap-3">
@@ -244,18 +257,39 @@ export default function AuditPage() {
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {log.userName || "—"} · {log.apiKeyName || "—"}
                         </p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {log.upstreamProvider && (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              <Server className="size-2.5" />
+                              {log.upstreamProvider}
+                            </span>
+                          )}
+                          {log.apiProvider && (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-secondary/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              <Globe className="size-2.5" />
+                              {log.apiProvider}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <Badge
                         variant={ok ? "secondary" : "destructive"}
                         className="shrink-0 text-xs"
-                        title={ok ? undefined : log.errorMessage}
                       >
                         {log.upstreamStatusCode}
                       </Badge>
                     </div>
+                    {!ok && log.errorMessage && (
+                      <div className="mt-1.5 flex items-start gap-1.5 rounded-md bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
+                        <AlertCircle className="mt-0.5 size-3 shrink-0" />
+                        <span className="line-clamp-2">{log.errorMessage}</span>
+                      </div>
+                    )}
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <span>{new Date(log.createdAt).toLocaleString()}</span>
-                      <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
+                      <span title={`Input: ${log.inputTokens}, Output: ${log.outputTokens}${hasCache ? `, Cache read: ${log.cacheReadInputTokens}, Cache write: ${log.cacheCreationInputTokens}` : ""}`}>
+                        {formatTokensWithCache(log.inputTokens, log.outputTokens, log.cacheReadInputTokens, log.cacheCreationInputTokens)}
+                      </span>
                       <span>{log.firstTokenLatencyMs}ms</span>
                       <span
                         className="cursor-pointer font-mono underline-offset-2 hover:underline"
@@ -274,9 +308,8 @@ export default function AuditPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Time</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>API Key</TableHead>
+                  <TableHead>Model / Provider</TableHead>
+                  <TableHead>User / API Key</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
                   <TableHead>Latency</TableHead>
@@ -286,41 +319,84 @@ export default function AuditPage() {
               <TableBody>
                 {logs.map((log) => {
                   const ok = log.upstreamStatusCode === 200;
+                  const hasCache = log.cacheReadInputTokens > 0 || log.cacheCreationInputTokens > 0;
                   return (
                     <TableRow key={log.id}>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {new Date(log.createdAt).toLocaleString()}
+                        <span title={new Date(log.createdAt).toLocaleString()}>
+                          {new Date(log.createdAt).toLocaleString()}
+                        </span>
                       </TableCell>
-                      <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
+                      <TableCell>
+                        <div className="max-w-[180px] truncate text-sm font-medium">
+                          {log.model || "—"}
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap gap-1">
+                          {log.upstreamProvider && (
+                            <span className="inline-flex items-center gap-0.5 rounded-sm border border-border/40 bg-secondary/30 px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              <Server className="size-2.5" />
+                              {log.upstreamProvider}
+                            </span>
+                          )}
+                          {log.apiProvider && (
+                            <span className="inline-flex items-center gap-0.5 rounded-sm border border-border/40 bg-secondary/30 px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {log.apiProvider === "openai" ? (
+                                <MessageSquare className="size-2.5" />
+                              ) : (
+                                <Globe className="size-2.5" />
+                              )}
+                              {log.apiProvider}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="text-sm">{log.userName || "—"}</div>
                         <div className="text-xs text-muted-foreground">{log.userEmail || ""}</div>
-                      </TableCell>
-                      <TableCell className="max-w-[140px] truncate">
-                        {log.apiKeyName || "—"}
+                        {log.apiKeyName && (
+                          <div className="mt-0.5 inline-flex items-center gap-1 rounded-sm bg-secondary/30 px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            <KeyRound className="size-2.5" />
+                            {log.apiKeyName}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={ok ? "secondary" : "destructive"}
-                          className="text-xs"
-                          title={ok ? undefined : log.errorMessage}
-                        >
-                          {log.upstreamStatusCode}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge
+                            variant={ok ? "secondary" : "destructive"}
+                            className="w-fit text-xs"
+                          >
+                            {log.upstreamStatusCode}
+                          </Badge>
+                          {!ok && log.errorMessage && (
+                            <span className="max-w-[200px] truncate text-xs text-destructive" title={log.errorMessage}>
+                              {log.errorMessage}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {formatTokens(log.inputTokens, log.outputTokens)}
+                        <span title={hasCache ? `Input: ${log.inputTokens} | Output: ${log.outputTokens} | Cache read: ${log.cacheReadInputTokens} | Cache write: ${log.cacheCreationInputTokens}` : undefined}>
+                          {formatTokensWithCache(log.inputTokens, log.outputTokens, log.cacheReadInputTokens, log.cacheCreationInputTokens)}
+                        </span>
+                        {hasCache && (
+                          <Database className="ml-1 inline size-3 text-muted-foreground/60" />
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {log.firstTokenLatencyMs}ms
-                        {log.streamDurationMs > 0 && (
-                          <span className="ml-1 text-xs">/ {log.streamDurationMs}ms</span>
-                        )}
+                        <span
+                          title={`First token: ${log.firstTokenLatencyMs}ms${log.streamDurationMs > 0 ? ` | Stream: ${log.streamDurationMs}ms` : ""}`}
+                        >
+                          {log.firstTokenLatencyMs}ms
+                          {log.streamDurationMs > 0 && (
+                            <span className="ml-1 text-xs">/ {fmtNum(log.streamDurationMs)}ms</span>
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                         onClick={() => handleCopyTrace(log.traceId)}
-                        title="Click to copy full traceID"
+                        title={log.traceId}
                       >
                         {log.traceId.slice(-6) || "—"}
                       </TableCell>
