@@ -20,6 +20,11 @@ var passthroughExcludedHeaders = map[string]struct{}{
 	constant.HTTPLowerHeaderProxyAuthenticate:  {},
 	constant.HTTPLowerHeaderTE:                 {},
 	constant.HTTPLowerHeaderTrailer:            {},
+	constant.HTTPLowerHeaderXForwardedFor:      {},
+	constant.HTTPLowerHeaderXForwardedProto:    {},
+	constant.HTTPLowerHeaderXForwardedPort:     {},
+	constant.HTTPLowerHeaderXRealIP:            {},
+	constant.HTTPLowerHeaderRemoteHost:         {},
 }
 
 // HeaderPassthroughMiddleware 透传请求头到上游的中间件
