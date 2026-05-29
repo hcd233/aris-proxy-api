@@ -29,7 +29,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "getSession",
 		Method:      http.MethodGet,
-		Path:        "/",
+		Path:        "",
 		Summary:     "GetSession",
 		Description: "Get session detail by session ID (JWT auth)",
 		Tags:        []string{"Session"},

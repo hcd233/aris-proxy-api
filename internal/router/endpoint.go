@@ -21,7 +21,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 	huma.Register(endpointGroup, huma.Operation{
 		OperationID: "createEndpoint",
 		Method:      http.MethodPost,
-		Path:        "/",
+		Path:        "",
 		Summary:     "CreateEndpoint",
 		Description: "Create a new endpoint configuration",
 		Tags:        []string{"Endpoint"},
@@ -51,7 +51,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 	huma.Register(endpointGroup, huma.Operation{
 		OperationID: "updateEndpoint",
 		Method:      http.MethodPatch,
-		Path:        "/",
+		Path:        "",
 		Summary:     "UpdateEndpoint",
 		Description: "Update an endpoint configuration",
 		Tags:        []string{"Endpoint"},
@@ -66,7 +66,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 	huma.Register(endpointGroup, huma.Operation{
 		OperationID: "deleteEndpoint",
 		Method:      http.MethodDelete,
-		Path:        "/",
+		Path:        "",
 		Summary:     "DeleteEndpoint",
 		Description: "Delete an endpoint configuration",
 		Tags:        []string{"Endpoint"},
