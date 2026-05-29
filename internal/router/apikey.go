@@ -57,7 +57,7 @@ func initAPIKeyRouter(apikeyGroup huma.API, apiKeyHandler handler.APIKeyHandler,
 	huma.Register(apikeyGroup, huma.Operation{
 		OperationID: "deleteAPIKey",
 		Method:      http.MethodDelete,
-		Path:        "/{id}",
+		Path:        "/",
 		Summary:     "DeleteAPIKey",
 		Description: "Delete an API key by ID (owner or admin)",
 		Tags:        []string{"APIKey"},

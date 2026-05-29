@@ -227,9 +227,9 @@ type rsp struct {
 | POST + Body | `POST /api/v1/token/refresh` | `internal/dto/token.go` `RefreshTokenReq` |
 | POST + Body | `POST /api/v1/oauth2/{provider}/callback` | `internal/dto/oauth2.go` `CallbackReq` |
 | POST + Body | `POST /api/v1/model/` | `internal/dto/model.go` `CreateModelReq` |
-| PATCH + path + Body | `PATCH /api/v1/model/{id}` | `internal/dto/model.go` `UpdateModelReq` |
+| PATCH + query + Body | `PATCH /api/v1/model/?id=X` | `internal/dto/model.go` `UpdateModelReq` |
 | POST + Body | `POST /api/v1/endpoint/` | `internal/dto/endpoint.go` `CreateEndpointReq` |
-| PATCH + path + Body | `PATCH /api/v1/endpoint/{id}` | `internal/dto/endpoint.go` `UpdateEndpointReq` |
+| PATCH + query + Body | `PATCH /api/v1/endpoint/?id=X` | `internal/dto/endpoint.go` `UpdateEndpointReq` |
 | PATCH + Body | `PATCH /api/v1/user/` | `internal/dto/user.go` `UpdateUserReq` |
 | POST + Body | `POST /api/v1/session/share` | `internal/dto/session_share.go` `CreateShareReq`（已修复，可作为模板） |
 | POST + Body（LLM 代理） | `POST /api/openai/v1/chat/completions` | `internal/dto/openai/chat.go` `OpenAIChatCompletionRequest` |
@@ -237,8 +237,8 @@ type rsp struct {
 | POST + Body（LLM 代理） | `POST /api/anthropic/v1/messages` | `internal/dto/anthropic/anthropic.go` `AnthropicCreateMessageRequest` |
 | POST + Body（LLM 代理） | `POST /api/anthropic/v1/messages/count_tokens` | `internal/dto/anthropic/anthropic.go` `AnthropicCountTokensRequest` |
 | GET + query | `GET /api/v1/session/list` 等 | `internal/dto/session.go` `ListSessionsByUserReq` |
-| GET + path | `GET /api/v1/session/share/{id}` | `internal/dto/session_share.go` `GetShareContentReq` |
-| DELETE + path | `DELETE /api/v1/apikey/{id}` 等 | `internal/dto/apikey.go` `DeleteAPIKeyReq` |
+| GET + query | `GET /api/v1/session/share/?id=X` | `internal/dto/session_share.go` `GetShareContentReq` |
+| DELETE + query | `DELETE /api/v1/apikey/?id=X` 等 | `internal/dto/apikey.go` `DeleteAPIKeyReq` |
 
 ## 与其他 skill 的边界
 

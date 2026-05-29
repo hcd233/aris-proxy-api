@@ -13,7 +13,7 @@ const (
 	RoutePathAnthropicMessages            = "/messages"
 	RoutePathAnthropicMessagesCountTokens = "/messages/count_tokens"
 	RoutePathOpenAIChatCompletions        = "/chat/completions"
-	RoutePathAPIKeyByID                   = "/{id}"
+	RoutePathAPIKeyByID                   = "/"
 	RoutePathFavicon                      = "/favicon.ico"
 	RoutePathRobots                       = "/robots.txt"
 	RoutePathAppleTouchIcon               = "/apple-touch-icon.png"

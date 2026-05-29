@@ -38,7 +38,7 @@ type CreateShareRsp struct {
 //	@author centonhuang
 //	@update 2026-05-28 10:00:00
 type GetShareContentReq struct {
-	ShareID string `path:"id" required:"true" doc:"分享ID (6-8 位大小写字母+数字短码)"`
+	ShareID string `query:"id" required:"true" doc:"分享ID (6-8 位大小写字母+数字短码)"`
 }
 
 // GetShareContentRsp 获取分享内容响应
@@ -97,5 +97,5 @@ type ShareItem struct {
 //	@author centonhuang
 //	@update 2026-05-28 10:00:00
 type DeleteShareReq struct {
-	ShareID string `path:"id" required:"true" doc:"分享ID (6-8 位大小写字母+数字短码)"`
+	ShareID string `query:"id" required:"true" doc:"分享ID (6-8 位大小写字母+数字短码)"`
 }

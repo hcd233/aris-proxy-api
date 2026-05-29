@@ -21,7 +21,7 @@ type CreateModelReqBody struct {
 
 // UpdateModelReq 更新 Model 请求
 type UpdateModelReq struct {
-	ID   uint                `path:"id" required:"true" minimum:"1" doc:"Model ID"`
+	ID   uint                `query:"id" required:"true" minimum:"1" doc:"Model ID"`
 	Body *UpdateModelReqBody `json:"body" doc:"Request body"`
 }
 
@@ -34,7 +34,7 @@ type UpdateModelReqBody struct {
 
 // DeleteModelReq 删除 Model 请求
 type DeleteModelReq struct {
-	ID uint `path:"id" required:"true" minimum:"1" doc:"Model ID"`
+	ID uint `query:"id" required:"true" minimum:"1" doc:"Model ID"`
 }
 
 // ListModelsReq 列出 Model 请求

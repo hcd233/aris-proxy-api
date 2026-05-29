@@ -25,7 +25,7 @@ type CreateEndpointReqBody struct {
 
 // UpdateEndpointReq 更新 Endpoint 请求
 type UpdateEndpointReq struct {
-	ID   uint                   `path:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
+	ID   uint                   `query:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
 	Body *UpdateEndpointReqBody `json:"body" doc:"Request body"`
 }
 
@@ -42,7 +42,7 @@ type UpdateEndpointReqBody struct {
 
 // DeleteEndpointReq 删除 Endpoint 请求
 type DeleteEndpointReq struct {
-	ID uint `path:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
+	ID uint `query:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
 }
 
 // ListEndpointsReq 列出 Endpoint 请求
