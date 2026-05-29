@@ -367,7 +367,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                   message={msg}
                   index={idx}
                   toolResultsByID={toolResultsByID}
-                  messages={messages}
                 />
               ))}
               <div className="pt-3 pb-1 text-center">
