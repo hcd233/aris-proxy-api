@@ -1,6 +1,11 @@
 package constant
 
+import "time"
+
 const (
+	// SessionDetailCacheTTL session 详情相关缓存（meta / message / tool）的统一 TTL
+	SessionDetailCacheTTL = time.Hour
+
 	SummarizeMaxRetries = 3
 	SummarizeMaxTokens  = 20
 
