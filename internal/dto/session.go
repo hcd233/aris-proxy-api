@@ -125,24 +125,14 @@ type GetSessionMetadataRsp struct {
 	Session *SessionMetadata `json:"session,omitempty" doc:"Session 元数据"`
 }
 
-// OffsetPageInfo 基于 offset+limit 的分页信息（用于滚动加载）
-//
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
-type OffsetPageInfo struct {
-	Offset int   `json:"offset" doc:"偏移量"`
-	Limit  int   `json:"limit" doc:"页大小"`
-	Total  int64 `json:"total" doc:"总数"`
-}
-
 // ListSessionMessagesReq 分页获取 Session 消息请求
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
 type ListSessionMessagesReq struct {
 	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
-	Offset    int  `query:"offset" minimum:"0" default:"0" doc:"偏移量"`
-	Limit     int  `query:"limit" minimum:"1" maximum:"100" default:"20" doc:"页大小"`
+	Page      int  `query:"page" required:"true" minimum:"1" doc:"页码"`
+	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"200" default:"50" doc:"每页条数"`
 }
 
 // ListSessionMessagesRsp 分页获取 Session 消息响应
@@ -152,7 +142,7 @@ type ListSessionMessagesReq struct {
 type ListSessionMessagesRsp struct {
 	CommonRsp
 	Messages []*MessageItem  `json:"messages,omitempty" doc:"消息列表"`
-	PageInfo *OffsetPageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
+	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }
 
 // ListSessionToolsReq 分页获取 Session 工具请求
@@ -161,8 +151,8 @@ type ListSessionMessagesRsp struct {
 //	@update 2026-05-29 14:00:00
 type ListSessionToolsReq struct {
 	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
-	Offset    int  `query:"offset" minimum:"0" default:"0" doc:"偏移量"`
-	Limit     int  `query:"limit" minimum:"1" maximum:"100" default:"50" doc:"页大小"`
+	Page      int  `query:"page" required:"true" minimum:"1" doc:"页码"`
+	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"200" default:"20" doc:"每页条数"`
 }
 
 // ListSessionToolsRsp 分页获取 Session 工具响应
@@ -172,5 +162,5 @@ type ListSessionToolsReq struct {
 type ListSessionToolsRsp struct {
 	CommonRsp
 	Tools    []*ToolItem     `json:"tools,omitempty" doc:"工具列表"`
-	PageInfo *OffsetPageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
+	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }

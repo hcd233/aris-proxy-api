@@ -212,26 +212,26 @@ func TestSessionMetadata_JSONSerialization(t *testing.T) {
 func TestListSessionMessagesRsp_PageInfoFields(t *testing.T) {
 	rsp := &dto.ListSessionMessagesRsp{
 		Messages: []*dto.MessageItem{},
-		PageInfo: &dto.OffsetPageInfo{Offset: 20, Limit: 20, Total: 156},
+		PageInfo: &model.PageInfo{Page: 1, PageSize: 50, Total: 156},
 	}
 	payload, err := sonic.MarshalString(rsp)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	if !strings.Contains(payload, `"offset":20`) ||
-		!strings.Contains(payload, `"limit":20`) ||
+	if !strings.Contains(payload, `"page":1`) ||
+		!strings.Contains(payload, `"pageSize":50`) ||
 		!strings.Contains(payload, `"total":156`) {
-		t.Errorf("OffsetPageInfo fields missing in payload: %s", payload)
+		t.Errorf("PageInfo fields missing in payload: %s", payload)
 	}
-	if strings.Contains(payload, `"page"`) || strings.Contains(payload, `"pageSize"`) {
-		t.Errorf("OffsetPageInfo must NOT use page/pageSize naming: %s", payload)
+	if strings.Contains(payload, `"offset"`) || strings.Contains(payload, `"limit"`) {
+		t.Errorf("must NOT use offset/limit naming: %s", payload)
 	}
 }
 
 func TestListSessionToolsRsp_EmptyTools(t *testing.T) {
 	rsp := &dto.ListSessionToolsRsp{
 		Tools:    nil,
-		PageInfo: &dto.OffsetPageInfo{Offset: 0, Limit: 50, Total: 0},
+		PageInfo: &model.PageInfo{Page: 1, PageSize: 20, Total: 0},
 	}
 	payload, err := sonic.MarshalString(rsp)
 	if err != nil {

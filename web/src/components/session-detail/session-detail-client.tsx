@@ -255,7 +255,8 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const messagesList = useInfiniteList<MessageItem>({
     fetcher: useCallback(
       async (offset, limit) => {
-        const rsp = await api.listSessionMessages(sessionId, offset, limit);
+        const page = Math.floor(offset / limit) + 1;
+        const rsp = await api.listSessionMessages(sessionId, page, limit);
         return {
           items: rsp.messages ?? [],
           total: Number(rsp.pageInfo?.total ?? 0),
@@ -263,14 +264,15 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
       },
       [sessionId],
     ),
-    pageSize: 20,
+    pageSize: 50,
     enabled: listEnabled,
   });
 
   const toolsList = useInfiniteList<ToolItem>({
     fetcher: useCallback(
       async (offset, limit) => {
-        const rsp = await api.listSessionTools(sessionId, offset, limit);
+        const page = Math.floor(offset / limit) + 1;
+        const rsp = await api.listSessionTools(sessionId, page, limit);
         return {
           items: rsp.tools ?? [],
           total: Number(rsp.pageInfo?.total ?? 0),
@@ -278,7 +280,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
       },
       [sessionId],
     ),
-    pageSize: 50,
+    pageSize: 20,
     enabled: toolsListEnabled,
   });
 

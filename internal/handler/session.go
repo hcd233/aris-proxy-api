@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -423,13 +424,13 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
-		Offset:    req.Offset,
-		Limit:     req.Limit,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session messages failed",
 			zap.Uint("sessionID", req.SessionID),
-			zap.Int("offset", req.Offset), zap.Int("limit", req.Limit), zap.Error(err))
+			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
@@ -442,10 +443,10 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 			CreatedAt: m.CreatedAt,
 		}
 	})
-	rsp.PageInfo = &dto.OffsetPageInfo{
-		Offset: req.Offset,
-		Limit:  req.Limit,
-		Total:  result.Total,
+	rsp.PageInfo = &model.PageInfo{
+		Page:     req.Page,
+		PageSize: req.PageSize,
+		Total:    result.Total,
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
@@ -464,13 +465,13 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
-		Offset:    req.Offset,
-		Limit:     req.Limit,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session tools failed",
 			zap.Uint("sessionID", req.SessionID),
-			zap.Int("offset", req.Offset), zap.Int("limit", req.Limit), zap.Error(err))
+			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
@@ -482,10 +483,10 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 			CreatedAt: t.CreatedAt,
 		}
 	})
-	rsp.PageInfo = &dto.OffsetPageInfo{
-		Offset: req.Offset,
-		Limit:  req.Limit,
-		Total:  result.Total,
+	rsp.PageInfo = &model.PageInfo{
+		Page:     req.Page,
+		PageSize: req.PageSize,
+		Total:    result.Total,
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
