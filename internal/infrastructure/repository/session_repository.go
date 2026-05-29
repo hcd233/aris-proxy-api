@@ -265,17 +265,14 @@ func (r *sessionReadRepository) listSessionsRaw(ctx context.Context, where strin
 	}
 	offset := (page - 1) * pageSize
 
-	countSQL := "SELECT COUNT(*) FROM sessions WHERE deleted_at = 0"
-	querySQL := `SELECT id, created_at, updated_at, summary,
-		COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count,
-		COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count
-		FROM sessions WHERE deleted_at = 0`
+	countSQL := constant.DBQueryCountActiveSessions
+	querySQL := constant.DBQueryListActiveSessionRows
 
 	if where != "" {
 		countSQL += " AND " + where
 		querySQL += " AND " + where
 	}
-	querySQL += " ORDER BY id ASC LIMIT ? OFFSET ?"
+	querySQL += constant.DBOrderByIDAscLimitOffset
 
 	var total int64
 	if err := db.Raw(countSQL, args...).Scan(&total).Error; err != nil {
@@ -303,7 +300,7 @@ func (r *sessionReadRepository) listSessionsRaw(ctx context.Context, where strin
 }
 
 func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.listSessionsRaw(ctx, "api_key_name = ?", []any{owner}, page, pageSize)
+	return r.listSessionsRaw(ctx, constant.DBConditionAPIKeyNameEqual, []any{owner}, page, pageSize)
 }
 
 func (r *sessionReadRepository) ListAllSessions(ctx context.Context, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
@@ -311,7 +308,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, page, pageS
 }
 
 func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.listSessionsRaw(ctx, "api_key_name IN ?", []any{ownerNames}, page, pageSize)
+	return r.listSessionsRaw(ctx, constant.DBConditionAPIKeyNameIn, []any{ownerNames}, page, pageSize)
 }
 
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）

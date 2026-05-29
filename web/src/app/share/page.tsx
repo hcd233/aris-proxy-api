@@ -14,7 +14,15 @@
  *  - Desktop: original docked layout with a right-side tools sidebar.
  */
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type UIEvent,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Clock,
@@ -161,6 +169,11 @@ function SharedSessionView() {
   const headerSentinelRef = useRef<HTMLDivElement | null>(null);
   const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
   const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
+  const messagesScrollRootRef = useRef<HTMLDivElement | null>(null);
+  const toolsScrollRootRef = useRef<HTMLDivElement | null>(null);
+  const setToolsScrollRoot = useCallback((node: HTMLDivElement | null) => {
+    toolsScrollRootRef.current = node;
+  }, []);
 
   const fetchMetadata = useCallback(async () => {
     if (!shareID) {
@@ -250,6 +263,37 @@ function SharedSessionView() {
     enabled: toolsListEnabled,
   });
 
+  const messagesHasMore = messagesList.hasMore;
+  const messagesLoading = messagesList.loading;
+  const loadMoreMessages = messagesList.loadMore;
+  const toolsHasMore = toolsList.hasMore;
+  const toolsLoading = toolsList.loading;
+  const loadMoreTools = toolsList.loadMore;
+
+  const isNearScrollBottom = useCallback((el: HTMLDivElement) => {
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= 240;
+  }, []);
+
+  const handleMessagesScroll = useCallback(
+    (e: UIEvent<HTMLDivElement>) => {
+      if (!messagesHasMore || messagesLoading) return;
+      if (isNearScrollBottom(e.currentTarget)) {
+        void loadMoreMessages();
+      }
+    },
+    [isNearScrollBottom, loadMoreMessages, messagesHasMore, messagesLoading],
+  );
+
+  const handleToolsScroll = useCallback(
+    (e: UIEvent<HTMLDivElement>) => {
+      if (!toolsHasMore || toolsLoading) return;
+      if (isNearScrollBottom(e.currentTarget)) {
+        void loadMoreTools();
+      }
+    },
+    [isNearScrollBottom, loadMoreTools, toolsHasMore, toolsLoading],
+  );
+
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
     if (!isMobile) {
@@ -277,12 +321,15 @@ function SharedSessionView() {
           void messagesList.loadMore();
         }
       },
-      { rootMargin: "200px" },
+      {
+        root: isMobile ? null : messagesScrollRootRef.current,
+        rootMargin: "200px",
+      },
     );
     io.observe(sentinel);
     return () => io.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-bind IO when hasMore/loadMore identity changes
-  }, [messagesList.hasMore, messagesList.loadMore]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are read at bind time; re-bind when layout mode or loader changes
+  }, [isMobile, messagesList.hasMore, messagesList.loadMore]);
 
   // tools 滚动加载 sentinel
   useEffect(() => {
@@ -294,12 +341,15 @@ function SharedSessionView() {
           void toolsList.loadMore();
         }
       },
-      { rootMargin: "200px" },
+      {
+        root: toolsScrollRootRef.current,
+        rootMargin: "200px",
+      },
     );
     io.observe(sentinel);
     return () => io.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-bind IO when hasMore/loadMore identity changes
-  }, [toolsList.hasMore, toolsList.loadMore]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are read at bind time; re-bind when panel/sheet or loader changes
+  }, [isMobile, sidebarOpen, toolsSheetOpen, toolsList.hasMore, toolsList.loadMore]);
 
   const messages = messagesList.items;
   const tools = toolsList.items;
@@ -386,6 +436,8 @@ function SharedSessionView() {
 
         {/* Conversation column */}
         <div
+          ref={messagesScrollRootRef}
+          onScroll={handleMessagesScroll}
           className={[
             "flex-1 px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]",
             "[-webkit-overflow-scrolling:touch] overscroll-contain",
@@ -447,6 +499,8 @@ function SharedSessionView() {
                 onDismiss={() => setToolsSheetOpen(false)}
                 title="Available Tools"
                 count={metadata.toolCount}
+                onScroll={handleToolsScroll}
+                onScrollRootChange={setToolsScrollRoot}
               >
                 {tools.map((t) => (
                   <ToolSidebarItem key={t.id} tool={t} />
@@ -513,7 +567,11 @@ function SharedSessionView() {
       {/* ── Main content ── */}
       <div className="flex min-h-0 flex-1 gap-0 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
+          <div
+            ref={messagesScrollRootRef}
+            onScroll={handleMessagesScroll}
+            className="flex-1 overflow-y-auto"
+          >
             <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -566,7 +624,11 @@ function SharedSessionView() {
                   {metadata.toolCount}
                 </Badge>
               </div>
-              <div className="flex-1 space-y-2 overflow-y-auto p-3">
+              <div
+                ref={toolsScrollRootRef}
+                onScroll={handleToolsScroll}
+                className="flex-1 space-y-2 overflow-y-auto p-3"
+              >
                 {tools.map((t) => (
                   <ToolSidebarItem key={t.id} tool={t} />
                 ))}

@@ -37,11 +37,15 @@ export function SwipeDismissSheetBody({
   title,
   count,
   children,
+  onScroll,
+  onScrollRootChange,
 }: {
   onDismiss: () => void;
   title: string;
   count: number;
   children: React.ReactNode;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  onScrollRootChange?: (node: HTMLDivElement | null) => void;
 }) {
   const popupRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -143,6 +147,14 @@ export function SwipeDismissSheetBody({
     [beginDrag],
   );
 
+  const setScrollRoot = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollRef.current = node;
+      onScrollRootChange?.(node);
+    },
+    [onScrollRootChange],
+  );
+
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
       const s = dragStateRef.current;
@@ -203,7 +215,8 @@ export function SwipeDismissSheetBody({
       </div>
 
       <div
-        ref={scrollRef}
+        ref={setScrollRoot}
+        onScroll={onScroll}
         onTouchStart={handleScrollTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={endDrag}
