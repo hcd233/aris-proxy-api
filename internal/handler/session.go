@@ -34,6 +34,9 @@ type SessionHandler interface {
 	HandleGetSessionMetadata(ctx context.Context, req *dto.GetSessionMetadataReq) (*dto.HTTPResponse[*dto.GetSessionMetadataRsp], error)
 	HandleListSessionMessages(ctx context.Context, req *dto.ListSessionMessagesReq) (*dto.HTTPResponse[*dto.ListSessionMessagesRsp], error)
 	HandleListSessionTools(ctx context.Context, req *dto.ListSessionToolsReq) (*dto.HTTPResponse[*dto.ListSessionToolsRsp], error)
+	HandleGetShareMetadata(ctx context.Context, req *dto.GetShareMetadataReq) (*dto.HTTPResponse[*dto.GetShareMetadataRsp], error)
+	HandleListShareMessages(ctx context.Context, req *dto.ListShareMessagesReq) (*dto.HTTPResponse[*dto.ListShareMessagesRsp], error)
+	HandleListShareTools(ctx context.Context, req *dto.ListShareToolsReq) (*dto.HTTPResponse[*dto.ListShareToolsRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
@@ -473,6 +476,135 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 			zap.Uint("sessionID", req.SessionID),
 			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Tools = lo.Map(result.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
+		return &dto.ToolItem{
+			ID:        t.ID,
+			Tool:      t.Tool,
+			CreatedAt: t.CreatedAt,
+		}
+	})
+	rsp.PageInfo = &model.PageInfo{
+		Page:     req.Page,
+		PageSize: req.PageSize,
+		Total:    result.Total,
+	}
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleGetShareMetadata 获取分享 Session 元数据（公开，IP 限流）
+//
+//	@author centonhuang
+//	@update 2026-05-29 16:00:00
+func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.GetShareMetadataReq) (*dto.HTTPResponse[*dto.GetShareMetadataRsp], error) {
+	rsp := &dto.GetShareMetadataRsp{}
+
+	sessionID, err := h.shareCache.GetShareSessionID(ctx, req.ShareID)
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Get share metadata: share not found",
+			zap.String("shareID", req.ShareID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrDataNotExists.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	view, viewErr := h.getMetaByUser.Handle(ctx, sessionquery.GetSessionMetaByUserQuery{
+		UserID:    0,
+		IsAdmin:   true,
+		SessionID: sessionID,
+	})
+	if viewErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Get share metadata: fetch meta failed",
+			zap.Uint("sessionID", sessionID), zap.Error(viewErr))
+		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Session = &dto.ShareMetadata{
+		ID:           view.ID,
+		CreatedAt:    view.CreatedAt,
+		UpdatedAt:    view.UpdatedAt,
+		Metadata:     view.Metadata,
+		MessageCount: view.MessageCount,
+		ToolCount:    view.ToolCount,
+	}
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleListShareMessages 分页获取分享 Session 消息（公开，IP 限流）
+//
+//	@author centonhuang
+//	@update 2026-05-29 16:00:00
+func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.ListShareMessagesReq) (*dto.HTTPResponse[*dto.ListShareMessagesRsp], error) {
+	rsp := &dto.ListShareMessagesRsp{}
+
+	sessionID, err := h.shareCache.GetShareSessionID(ctx, req.ShareID)
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] List share messages: share not found",
+			zap.String("shareID", req.ShareID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrDataNotExists.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	result, resultErr := h.listMessages.Handle(ctx, sessionquery.ListSessionMessagesQuery{
+		UserID:    0,
+		IsAdmin:   true,
+		SessionID: sessionID,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+	})
+	if resultErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] List share messages failed",
+			zap.Uint("sessionID", sessionID),
+			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(resultErr))
+		rsp.Error = ierr.ToBizError(resultErr, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Messages = lo.Map(result.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
+		return &dto.MessageItem{
+			ID:        m.ID,
+			Model:     m.Model,
+			Message:   m.Message,
+			CreatedAt: m.CreatedAt,
+		}
+	})
+	rsp.PageInfo = &model.PageInfo{
+		Page:     req.Page,
+		PageSize: req.PageSize,
+		Total:    result.Total,
+	}
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleListShareTools 分页获取分享 Session 工具（公开，IP 限流）
+//
+//	@author centonhuang
+//	@update 2026-05-29 16:00:00
+func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.ListShareToolsReq) (*dto.HTTPResponse[*dto.ListShareToolsRsp], error) {
+	rsp := &dto.ListShareToolsRsp{}
+
+	sessionID, err := h.shareCache.GetShareSessionID(ctx, req.ShareID)
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] List share tools: share not found",
+			zap.String("shareID", req.ShareID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrDataNotExists.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	result, resultErr := h.listTools.Handle(ctx, sessionquery.ListSessionToolsQuery{
+		UserID:    0,
+		IsAdmin:   true,
+		SessionID: sessionID,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+	})
+	if resultErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] List share tools failed",
+			zap.Uint("sessionID", sessionID),
+			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(resultErr))
+		rsp.Error = ierr.ToBizError(resultErr, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
