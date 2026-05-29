@@ -16,6 +16,7 @@ const (
 	RuleConstantForwarding      = "constant.forwarding"
 
 	RuleDomainDependency            = "architecture.domain_dependency"
+	RuleApplicationDependency       = "architecture.application_dependency"
 	RuleDeprecatedApplicationImport = "architecture.deprecated_application_import"
 	RuleHandlerDB                   = "architecture.handler_db"
 	RuleRootContext                 = "architecture.root_context"

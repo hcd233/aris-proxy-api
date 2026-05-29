@@ -6,10 +6,10 @@ import (
 
 	"go.uber.org/zap"
 
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -41,14 +41,14 @@ type GetSessionMetaByUserHandler interface {
 type getSessionMetaByUserHandler struct {
 	readRepo   session.SessionReadRepository
 	apiKeyRepo apikey.APIKeyRepository
-	cache      cache.SessionDetailCache
+	cache      sessionport.SessionDetailCache
 }
 
 // NewGetSessionMetaByUserHandler 构造 handler
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache cache.SessionDetailCache) GetSessionMetaByUserHandler {
+func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) GetSessionMetaByUserHandler {
 	return &getSessionMetaByUserHandler{
 		readRepo:   readRepo,
 		apiKeyRepo: apiKeyRepo,
@@ -98,7 +98,7 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q GetSessionMe
 			return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
 		}
 
-		record = &cache.SessionMetaCacheRecord{
+		record = &sessionport.SessionMetaCacheRecord{
 			ID:         projection.ID,
 			APIKeyName: projection.APIKeyName,
 			CreatedAt:  projection.CreatedAt,

@@ -244,9 +244,13 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   }, [fetchMetadata]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // 只有 metadata 加载完成（且权限通过）后才开始拉 messages/tools，避免越权请求多打两次。
+  // 只有 metadata 加载完成（且权限通过）后才开始拉 messages，避免越权请求多打一次。
   const listEnabled =
     !!sessionId && !Number.isNaN(sessionId) && metadata !== null;
+  const toolsListEnabled =
+    listEnabled &&
+    (metadata?.toolCount ?? 0) > 0 &&
+    ((!isMobile && toolsPanelOpen) || (isMobile && toolsSheetOpen));
 
   const messagesList = useInfiniteList<MessageItem>({
     fetcher: useCallback(
@@ -275,7 +279,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
       [sessionId],
     ),
     pageSize: 50,
-    enabled: listEnabled,
+    enabled: toolsListEnabled,
   });
 
   // messages 滚动加载 sentinel

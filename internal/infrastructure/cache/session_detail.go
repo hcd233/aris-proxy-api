@@ -5,68 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
 
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
-
-// SessionMetaCacheRecord 是 session 元数据的缓存载荷。
-//
-// MessageIDs/ToolIDs 是 cache 内部字段，不直接透出给 API 响应：
-// metadata 接口只透出 messageCount = len(MessageIDs)；
-// message/tool 分页接口在内部读它们做 offset+limit 切片。
-type SessionMetaCacheRecord struct {
-	ID         uint              `json:"id"`
-	APIKeyName string            `json:"apiKeyName"`
-	CreatedAt  time.Time         `json:"createdAt"`
-	UpdatedAt  time.Time         `json:"updatedAt"`
-	Metadata   map[string]string `json:"metadata,omitempty"`
-	MessageIDs []uint            `json:"messageIds"`
-	ToolIDs    []uint            `json:"toolIds"`
-}
-
-// MessageCacheRecord 单条 message 缓存载荷
-type MessageCacheRecord struct {
-	ID        uint               `json:"id"`
-	Model     string             `json:"model"`
-	Message   *vo.UnifiedMessage `json:"message"`
-	CreatedAt time.Time          `json:"createdAt"`
-}
-
-// ToolCacheRecord 单条 tool 缓存载荷
-type ToolCacheRecord struct {
-	ID        uint            `json:"id"`
-	Tool      *vo.UnifiedTool `json:"tool"`
-	CreatedAt time.Time       `json:"createdAt"`
-}
-
-// SessionDetailCache session 详情相关的缓存接口
-//
-// 设计原则：
-//
-//   - Get* 系列：cache miss 不算 error；error 仅代表 Redis 通信故障，调用方应当 fallback 到 DB
-//
-//   - Set* 系列：用 Pipeline 批量写入；Redis 故障不阻断主流程
-//
-//   - message / tool 是不可变的，缓存内容一旦写入 TTL 内永远有效
-//
-//     @author centonhuang
-//     @update 2026-05-29 14:00:00
-type SessionDetailCache interface {
-	GetSessionMeta(ctx context.Context, sessionID uint) (*SessionMetaCacheRecord, error)
-	SetSessionMeta(ctx context.Context, record *SessionMetaCacheRecord) error
-
-	GetMessages(ctx context.Context, ids []uint) (hits map[uint]*MessageCacheRecord, missing []uint, err error)
-	SetMessages(ctx context.Context, records []*MessageCacheRecord) error
-
-	GetTools(ctx context.Context, ids []uint) (hits map[uint]*ToolCacheRecord, missing []uint, err error)
-	SetTools(ctx context.Context, records []*ToolCacheRecord) error
-}
 
 type sessionDetailCache struct {
 	cache *redis.Client
@@ -78,11 +24,11 @@ type sessionDetailCache struct {
 //	@return SessionDetailCache
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewSessionDetailCache(cache *redis.Client) SessionDetailCache {
+func NewSessionDetailCache(cache *redis.Client) sessionport.SessionDetailCache {
 	return &sessionDetailCache{cache: cache}
 }
 
-func (s *sessionDetailCache) GetSessionMeta(ctx context.Context, sessionID uint) (*SessionMetaCacheRecord, error) {
+func (s *sessionDetailCache) GetSessionMeta(ctx context.Context, sessionID uint) (*sessionport.SessionMetaCacheRecord, error) {
 	key := fmt.Sprintf(constant.SessionMetaKeyTemplate, sessionID)
 	val, err := s.cache.Get(ctx, key).Result()
 	if err != nil {
@@ -91,14 +37,14 @@ func (s *sessionDetailCache) GetSessionMeta(ctx context.Context, sessionID uint)
 		}
 		return nil, ierr.Wrap(ierr.ErrInternal, err, "failed to get session meta cache")
 	}
-	var record SessionMetaCacheRecord
+	var record sessionport.SessionMetaCacheRecord
 	if unmarshalErr := sonic.UnmarshalString(val, &record); unmarshalErr != nil {
 		return nil, ierr.Wrap(ierr.ErrInternal, unmarshalErr, "failed to unmarshal session meta cache")
 	}
 	return &record, nil
 }
 
-func (s *sessionDetailCache) SetSessionMeta(ctx context.Context, record *SessionMetaCacheRecord) error {
+func (s *sessionDetailCache) SetSessionMeta(ctx context.Context, record *sessionport.SessionMetaCacheRecord) error {
 	if record == nil {
 		return ierr.New(ierr.ErrValidation, "session meta record cannot be nil")
 	}
@@ -113,9 +59,9 @@ func (s *sessionDetailCache) SetSessionMeta(ctx context.Context, record *Session
 	return nil
 }
 
-func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (map[uint]*MessageCacheRecord, []uint, error) {
+func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (map[uint]*sessionport.MessageCacheRecord, []uint, error) {
 	if len(ids) == 0 {
-		return map[uint]*MessageCacheRecord{}, nil, nil
+		return map[uint]*sessionport.MessageCacheRecord{}, nil, nil
 	}
 	keys := make([]string, len(ids))
 	for i, id := range ids {
@@ -125,7 +71,7 @@ func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (map[u
 	if err != nil {
 		return nil, ids, ierr.Wrap(ierr.ErrInternal, err, "failed to mget messages cache")
 	}
-	hits := make(map[uint]*MessageCacheRecord, len(values))
+	hits := make(map[uint]*sessionport.MessageCacheRecord, len(values))
 	missing := make([]uint, 0, len(ids))
 	for i, v := range values {
 		if v == nil {
@@ -137,7 +83,7 @@ func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (map[u
 			missing = append(missing, ids[i])
 			continue
 		}
-		var record MessageCacheRecord
+		var record sessionport.MessageCacheRecord
 		if unmarshalErr := sonic.UnmarshalString(raw, &record); unmarshalErr != nil {
 			missing = append(missing, ids[i])
 			continue
@@ -147,7 +93,7 @@ func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (map[u
 	return hits, missing, nil
 }
 
-func (s *sessionDetailCache) SetMessages(ctx context.Context, records []*MessageCacheRecord) error {
+func (s *sessionDetailCache) SetMessages(ctx context.Context, records []*sessionport.MessageCacheRecord) error {
 	if len(records) == 0 {
 		return nil
 	}
@@ -169,9 +115,9 @@ func (s *sessionDetailCache) SetMessages(ctx context.Context, records []*Message
 	return nil
 }
 
-func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (map[uint]*ToolCacheRecord, []uint, error) {
+func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (map[uint]*sessionport.ToolCacheRecord, []uint, error) {
 	if len(ids) == 0 {
-		return map[uint]*ToolCacheRecord{}, nil, nil
+		return map[uint]*sessionport.ToolCacheRecord{}, nil, nil
 	}
 	keys := make([]string, len(ids))
 	for i, id := range ids {
@@ -181,7 +127,7 @@ func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (map[uint
 	if err != nil {
 		return nil, ids, ierr.Wrap(ierr.ErrInternal, err, "failed to mget tools cache")
 	}
-	hits := make(map[uint]*ToolCacheRecord, len(values))
+	hits := make(map[uint]*sessionport.ToolCacheRecord, len(values))
 	missing := make([]uint, 0, len(ids))
 	for i, v := range values {
 		if v == nil {
@@ -193,7 +139,7 @@ func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (map[uint
 			missing = append(missing, ids[i])
 			continue
 		}
-		var record ToolCacheRecord
+		var record sessionport.ToolCacheRecord
 		if unmarshalErr := sonic.UnmarshalString(raw, &record); unmarshalErr != nil {
 			missing = append(missing, ids[i])
 			continue
@@ -203,7 +149,7 @@ func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (map[uint
 	return hits, missing, nil
 }
 
-func (s *sessionDetailCache) SetTools(ctx context.Context, records []*ToolCacheRecord) error {
+func (s *sessionDetailCache) SetTools(ctx context.Context, records []*sessionport.ToolCacheRecord) error {
 	if len(records) == 0 {
 		return nil
 	}

@@ -6,9 +6,9 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -35,14 +35,14 @@ type ListSessionMessagesHandler interface {
 type listSessionMessagesHandler struct {
 	readRepo  session.SessionReadRepository
 	metaQuery GetSessionMetaByUserHandler
-	cache     cache.SessionDetailCache
+	cache     sessionport.SessionDetailCache
 }
 
 // NewListSessionMessagesHandler 构造
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery GetSessionMetaByUserHandler, detailCache cache.SessionDetailCache) ListSessionMessagesHandler {
+func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) ListSessionMessagesHandler {
 	return &listSessionMessagesHandler{
 		readRepo:  readRepo,
 		metaQuery: metaQuery,
@@ -85,7 +85,7 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q ListSessionMe
 	if cacheErr != nil {
 		log.Warn("[SessionQuery] GetMessages cache failed, fallback to DB",
 			zap.Error(cacheErr), zap.Int("idsLen", len(pageIDs)))
-		hits = map[uint]*cache.MessageCacheRecord{}
+		hits = map[uint]*sessionport.MessageCacheRecord{}
 		missing = pageIDs
 	}
 
@@ -96,9 +96,9 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q ListSessionMe
 			return nil, ierr.Wrap(ierr.ErrDBQuery, repoErr, "find messages by ids")
 		}
 
-		fetched := make([]*cache.MessageCacheRecord, 0, len(records))
+		fetched := make([]*sessionport.MessageCacheRecord, 0, len(records))
 		for _, m := range records {
-			rec := &cache.MessageCacheRecord{
+			rec := &sessionport.MessageCacheRecord{
 				ID:        m.ID,
 				Model:     m.Model,
 				Message:   m.Message,
