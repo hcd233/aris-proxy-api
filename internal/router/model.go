@@ -51,7 +51,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 	huma.Register(modelGroup, huma.Operation{
 		OperationID: "updateModel",
 		Method:      http.MethodPatch,
-		Path:        "/{id}",
+		Path:        "/",
 		Summary:     "UpdateModel",
 		Description: "Update a model mapping",
 		Tags:        []string{"Model"},
@@ -66,7 +66,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 	huma.Register(modelGroup, huma.Operation{
 		OperationID: "deleteModel",
 		Method:      http.MethodDelete,
-		Path:        "/{id}",
+		Path:        "/",
 		Summary:     "DeleteModel",
 		Description: "Delete a model mapping",
 		Tags:        []string{"Model"},

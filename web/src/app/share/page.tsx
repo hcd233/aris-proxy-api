@@ -5,7 +5,7 @@
  *
  * Lives outside the `(dashboard)` route group so the `PermissionGuard` does
  * not redirect anonymous viewers to /login. Calls the public, IP-rate-limited
- * `GET /api/v1/session/share/{id}` endpoint and renders the conversation with
+ * `GET /api/v1/session/share/?id=xxx` endpoint and renders the conversation with
  * the same `ChatMessage` component used by the authenticated detail page.
  *
  * Layout has two variants:

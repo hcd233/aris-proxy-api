@@ -3,12 +3,12 @@
 // 回归背景（bugfix/session-share-body-2026-05-28）：
 //   - CreateShareReq DTO 没有遵循 huma 的 Body 包装规范，
 //     导致 POST /api/v1/session/share 时 sessionId 始终是零值 0；
-//   - 0 写入 redis 后，GET /api/v1/session/share/{id} 拿到 0，
+//   - 0 写入 redis 后，GET /api/v1/session/share/?id=xxx 拿到 0，
 //     再传给 GORM 由于零值 where 条件被忽略，返回了别人的 session。
 //
 // 本测试覆盖：
 //  1. 用 JWT 调用 POST /api/v1/session/share 携带 sessionId
-//  2. 用返回的 shareId 公开访问 GET /api/v1/session/share/{id}
+//  2. 用返回的 shareId 公开访问 GET /api/v1/session/share/?id=xxx
 //  3. 断言 response.session.id == 请求传入的 sessionId
 //
 // 环境变量：
@@ -128,7 +128,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	}
 
 	// Step 2: 公开访问分享内容
-	getReq, err := http.NewRequest(http.MethodGet, baseURL+"/api/v1/session/share/"+created.ShareID, nil)
+	getReq, err := http.NewRequest(http.MethodGet, baseURL+"/api/v1/session/share/?id="+created.ShareID, nil)
 	if err != nil {
 		t.Fatalf("build get request failed: %v", err)
 	}

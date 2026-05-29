@@ -77,5 +77,5 @@ type APIKeyDetail struct {
 //	@author centonhuang
 //	@update 2026-04-08 10:00:00
 type DeleteAPIKeyReq struct {
-	ID uint `path:"id" required:"true" minimum:"1" doc:"API Key ID"`
+	ID uint `query:"id" required:"true" minimum:"1" doc:"API Key ID"`
 }

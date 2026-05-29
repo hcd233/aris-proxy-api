@@ -219,7 +219,7 @@ class ApiClient {
 
   async deleteShare(shareId: string): Promise<CommonRsp> {
     return this.request<CommonRsp>(
-      `/api/v1/session/share/${encodeURIComponent(shareId)}`,
+      `/api/v1/session/share/?id=${encodeURIComponent(shareId)}`,
       { method: "DELETE" }
     );
   }
@@ -231,7 +231,7 @@ class ApiClient {
    */
   async getShareContent(shareId: string): Promise<GetShareContentRsp> {
     const res = await fetch(
-      `${API_BASE}/api/v1/session/share/${encodeURIComponent(shareId)}`,
+      `${API_BASE}/api/v1/session/share/?id=${encodeURIComponent(shareId)}`,
       {
         method: "GET",
         headers: { "Content-Type": "application/json" },
@@ -265,7 +265,7 @@ class ApiClient {
   }
 
   async deleteAPIKey(id: number): Promise<void> {
-    await this.request(`/api/v1/apikey/${id}`, {
+    await this.request(`/api/v1/apikey/?id=${id}`, {
       method: "DELETE",
     });
   }
@@ -295,14 +295,14 @@ class ApiClient {
     id: number,
     body: UpdateEndpointReqBody
   ): Promise<ListEndpointsRsp> {
-    return this.request<ListEndpointsRsp>(`/api/v1/endpoint/${id}`, {
+    return this.request<ListEndpointsRsp>(`/api/v1/endpoint/?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
   }
 
   async deleteEndpoint(id: number): Promise<void> {
-    await this.request(`/api/v1/endpoint/${id}`, {
+    await this.request(`/api/v1/endpoint/?id=${id}`, {
       method: "DELETE",
     });
   }
@@ -330,14 +330,14 @@ class ApiClient {
     id: number,
     body: UpdateModelReqBody
   ): Promise<ListModelsRsp> {
-    return this.request<ListModelsRsp>(`/api/v1/model/${id}`, {
+    return this.request<ListModelsRsp>(`/api/v1/model/?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
   }
 
   async deleteModel(id: number): Promise<void> {
-    await this.request(`/api/v1/model/${id}`, {
+    await this.request(`/api/v1/model/?id=${id}`, {
       method: "DELETE",
     });
   }

@@ -97,7 +97,7 @@ func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.Sessio
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "deleteShare",
 		Method:      http.MethodDelete,
-		Path:        "/share/{id}",
+		Path:        "/share",
 		Summary:     "DeleteShare",
 		Description: "Delete a share link",
 		Tags:        []string{"Session"},
@@ -109,7 +109,7 @@ func initSessionPublicRouter(sessionGroup huma.API, sessionHandler handler.Sessi
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "getShareContent",
 		Method:      http.MethodGet,
-		Path:        "/share/{id}",
+		Path:        "/share",
 		Summary:     "GetShareContent",
 		Description: "Get shared session content (public, rate limited)",
 		Tags:        []string{"Session"},
