@@ -322,7 +322,7 @@ function SharedSessionView() {
         }
       },
       {
-        root: isMobile ? null : messagesScrollRootRef.current,
+        root: messagesScrollRootRef.current,
         rootMargin: "200px",
       },
     );
@@ -369,8 +369,8 @@ function SharedSessionView() {
   // ── Mobile layout ──────────────────────────────────────────────────────
   if (isMobile) {
     return (
-      <div className="flex min-h-[100dvh] flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-        <div ref={headerSentinelRef} aria-hidden className="h-px w-full" />
+      <div className="flex h-dvh flex-col bg-background overflow-hidden">
+        <div ref={headerSentinelRef} aria-hidden className="h-px w-full shrink-0" />
 
         <header
           className={[
@@ -439,8 +439,8 @@ function SharedSessionView() {
           ref={messagesScrollRootRef}
           onScroll={handleMessagesScroll}
           className={[
-            "flex-1 px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]",
-            "[-webkit-overflow-scrolling:touch] overscroll-contain",
+            "flex-1 overflow-y-auto px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]",
+            "overscroll-contain",
           ].join(" ")}
         >
           {messages.length === 0 ? (
