@@ -4,26 +4,20 @@
  * Public session share view — accessed via `/web/share/?id={uuid}`.
  *
  * Lives outside the `(dashboard)` route group so the `PermissionGuard` does
- * not redirect anonymous viewers to /login. Calls the public, IP-rate-limited
- * `GET /api/v1/session/share/?id=xxx` endpoint and renders the conversation with
- * the same `ChatMessage` component used by the authenticated detail page.
+ * not redirect anonymous viewers to /login. Uses three public, IP-rate-limited
+ * endpoints (metadata + paginated messages + paginated tools) with incremental
+ * loading, matching the pattern used by the authenticated session detail page.
  *
  * Layout has two variants:
  *  - Mobile: claude.ai iOS-style sticky header + bottom-sheet tools panel,
- *    safe-area aware, full-bleed. Mirrors the authenticated session detail
- *    page so shared links feel like the real product on phones.
+ *    safe-area aware, full-bleed.
  *  - Desktop: original docked layout with a right-side tools sidebar.
  */
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Braces,
-  ChevronDown,
-  ChevronRight,
   Clock,
-  FileText,
-  Hash,
   MessagesSquare,
   PanelRightClose,
   PanelRightOpen,
@@ -32,11 +26,7 @@ import {
 } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api-client";
-import type {
-  ShareContentSessionDetail,
-  ToolItem,
-  UnifiedTool,
-} from "@/lib/types";
+import type { ShareSessionMetadata } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,151 +36,10 @@ import {
   ChatMessage,
   buildToolResultsByID,
 } from "@/components/chat/chat-message";
+import { ToolSidebarItem } from "@/components/session-detail/session-detail-client";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-// ─── Tool sidebar item (kept local to avoid import cycles) ──────────────────
-
-function CollapsibleText({
-  text,
-  previewChars = 140,
-  className,
-}: {
-  text: string;
-  previewChars?: number;
-  className?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const trimmed = text.trim();
-  const isLong = trimmed.length > previewChars;
-  const display =
-    !isLong || open ? trimmed : `${trimmed.slice(0, previewChars).trimEnd()}…`;
-
-  return (
-    <div className={className}>
-      <p className="whitespace-pre-wrap break-words">{display}</p>
-      {isLong && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen((v) => !v);
-          }}
-          className="mt-1 inline-flex items-center gap-0.5 font-medium text-primary/90 transition-colors hover:text-primary"
-        >
-          {open ? "Show less" : "Show more"}
-          {open ? (
-            <ChevronDown className="size-3" />
-          ) : (
-            <ChevronRight className="size-3" />
-          )}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function ToolSidebarItem({ tool }: { tool: ToolItem }) {
-  const [expanded, setExpanded] = useState(false);
-  const toolData: UnifiedTool = tool.tool;
-
-  const params = toolData.parameters;
-  const paramProperties =
-    (params?.properties as Record<string, Record<string, unknown>>) ?? {};
-  const requiredParams = (params?.required as string[]) ?? [];
-
-  return (
-    <div className="rounded-xl border border-border/70 bg-card/60">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors active:bg-accent/50 md:hover:bg-accent/40"
-      >
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <Wrench className="size-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-[13.5px] font-medium text-foreground">
-            {toolData.name}
-          </p>
-          <p className="truncate text-[12px] leading-snug text-muted-foreground">
-            {toolData.description || "No description"}
-          </p>
-        </div>
-        {expanded ? (
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        )}
-      </button>
-      {expanded && (
-        <div className="space-y-3 border-t border-border/60 px-3.5 py-3">
-          {toolData.description && (
-            <div>
-              <p className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                <FileText className="size-3" />
-                Description
-              </p>
-              <CollapsibleText
-                text={toolData.description}
-                previewChars={140}
-                className="text-[13px] leading-relaxed text-foreground/85"
-              />
-            </div>
-          )}
-          {Object.keys(paramProperties).length > 0 && (
-            <div>
-              <p className="mb-1.5 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                <Braces className="size-3" />
-                Parameters
-              </p>
-              <div className="space-y-1.5">
-                {Object.entries(paramProperties).map(([name, schema]) => (
-                  <div
-                    key={name}
-                    className="rounded-md bg-muted/50 px-2.5 py-1.5"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[12px] font-medium text-foreground">
-                        {name}
-                      </span>
-                      {requiredParams.includes(name) && (
-                        <span className="text-[9px] font-medium uppercase tracking-wider text-rose-500">
-                          required
-                        </span>
-                      )}
-                      {schema.type !== undefined && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-auto px-1.5 py-0 font-mono text-[9px]"
-                        >
-                          {schema.type as string}
-                        </Badge>
-                      )}
-                    </div>
-                    {schema.description !== undefined && (
-                      <CollapsibleText
-                        text={schema.description as string}
-                        previewChars={100}
-                        className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {params?.type !== undefined && (
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
-              <Hash className="size-3" />
-              Schema type: {params.type as string}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+import { useInfiniteList } from "@/hooks/use-infinite-list";
 
 // ─── Empty / error states ──────────────────────────────────────────────────
 
@@ -246,7 +95,7 @@ function ShareErrorView({ error }: { error: ShareError }) {
   );
 }
 
-// ─── Page ──────────────────────────────────────────────────────────────────
+// ─── Loading skeleton ──────────────────────────────────────────────────────
 
 function ShareLoading({ mobile }: { mobile?: boolean }) {
   if (mobile) {
@@ -296,20 +145,24 @@ function ShareLoading({ mobile }: { mobile?: boolean }) {
   );
 }
 
+// ─── Main view ─────────────────────────────────────────────────────────────
+
 function SharedSessionView() {
   const searchParams = useSearchParams();
   const shareID = searchParams.get("id") ?? "";
   const isMobile = useIsMobile();
 
-  const [session, setSession] = useState<ShareContentSessionDetail | null>(null);
+  const [metadata, setMetadata] = useState<ShareSessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ShareError | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [headerCompact, setHeaderCompact] = useState(false);
   const headerSentinelRef = useRef<HTMLDivElement | null>(null);
+  const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
+  const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchSession = useCallback(async () => {
+  const fetchMetadata = useCallback(async () => {
     if (!shareID) {
       setError({ kind: "missing-id" });
       setLoading(false);
@@ -317,7 +170,7 @@ function SharedSessionView() {
     }
     setLoading(true);
     try {
-      const rsp = await api.getShareContent(shareID);
+      const rsp = await api.getShareMetadata(shareID);
       if (rsp.error) {
         setError({ kind: "not-found" });
         return;
@@ -326,7 +179,7 @@ function SharedSessionView() {
         setError({ kind: "not-found" });
         return;
       }
-      setSession(rsp.session);
+      setMetadata(rsp.session);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 404) {
@@ -353,9 +206,49 @@ function SharedSessionView() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+    void fetchMetadata();
+  }, [fetchMetadata]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // 只有 metadata 加载完成（shareID 有效）后才开始拉 messages/tools
+  const listEnabled =
+    !!shareID && metadata !== null;
+  const toolsListEnabled =
+    listEnabled &&
+    (metadata?.toolCount ?? 0) > 0 &&
+    ((!isMobile && sidebarOpen) || (isMobile && toolsSheetOpen));
+
+  const messagesList = useInfiniteList({
+    fetcher: useCallback(
+      async (offset, limit) => {
+        const page = Math.floor(offset / limit) + 1;
+        const rsp = await api.listShareMessages(shareID, page, limit);
+        return {
+          items: rsp.messages ?? [],
+          total: Number(rsp.pageInfo?.total ?? 0),
+        };
+      },
+      [shareID],
+    ),
+    pageSize: 50,
+    enabled: listEnabled,
+  });
+
+  const toolsList = useInfiniteList({
+    fetcher: useCallback(
+      async (offset, limit) => {
+        const page = Math.floor(offset / limit) + 1;
+        const rsp = await api.listShareTools(shareID, page, limit);
+        return {
+          items: rsp.tools ?? [],
+          total: Number(rsp.pageInfo?.total ?? 0),
+        };
+      },
+      [shareID],
+    ),
+    pageSize: 20,
+    enabled: toolsListEnabled,
+  });
 
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
@@ -371,11 +264,45 @@ function SharedSessionView() {
     );
     io.observe(sentinel);
     return () => io.disconnect();
-  }, [isMobile, loading, session]);
+  }, [isMobile, loading, metadata]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const messages = useMemo(() => session?.messages ?? [], [session]);
-  const tools = useMemo(() => session?.tools ?? [], [session]);
+  // messages 滚动加载 sentinel
+  useEffect(() => {
+    const sentinel = messagesSentinelRef.current;
+    if (!sentinel || !messagesList.hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void messagesList.loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-bind IO when hasMore/loadMore identity changes
+  }, [messagesList.hasMore, messagesList.loadMore]);
+
+  // tools 滚动加载 sentinel
+  useEffect(() => {
+    const sentinel = toolsSentinelRef.current;
+    if (!sentinel || !toolsList.hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void toolsList.loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-bind IO when hasMore/loadMore identity changes
+  }, [toolsList.hasMore, toolsList.loadMore]);
+
+  const messages = messagesList.items;
+  const tools = toolsList.items;
   const toolResultsByID = useMemo(
     () => buildToolResultsByID(messages),
     [messages],
@@ -387,11 +314,7 @@ function SharedSessionView() {
     return <ShareLoading mobile={isMobile} />;
   }
 
-  if (!session) return <ShareErrorView error={{ kind: "not-found" }} />;
-
-  const messageCount = messages.filter(
-    (m) => m.message.role !== "tool" && !m.message.tool_call_id,
-  ).length;
+  if (!metadata) return <ShareErrorView error={{ kind: "not-found" }} />;
 
   // ── Mobile layout ──────────────────────────────────────────────────────
   if (isMobile) {
@@ -399,8 +322,6 @@ function SharedSessionView() {
       <div className="flex min-h-[100dvh] flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <div ref={headerSentinelRef} aria-hidden className="h-px w-full" />
 
-        {/* Sticky chrome — uses iOS-style status-bar safe-area top padding so
-            the share badge docks against the device bezel. */}
         <header
           className={[
             "sticky top-0 z-30",
@@ -430,7 +351,7 @@ function SharedSessionView() {
                   headerCompact ? "text-[14px]" : "text-[15px]",
                 ].join(" ")}
               >
-                Shared session #{session.id}
+                Shared session #{metadata.id}
               </h1>
               <p
                 className={[
@@ -439,10 +360,10 @@ function SharedSessionView() {
                   headerCompact ? "max-h-0 opacity-0" : "max-h-4 opacity-100",
                 ].join(" ")}
               >
-                Read-only · {messageCount} message{messageCount === 1 ? "" : "s"}
+                Read-only · {metadata.messageCount} message{metadata.messageCount === 1 ? "" : "s"}
               </p>
             </div>
-            {tools.length > 0 && (
+            {metadata.toolCount > 0 && (
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -456,7 +377,7 @@ function SharedSessionView() {
                   className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
                   aria-hidden
                 >
-                  {tools.length}
+                  {metadata.toolCount}
                 </span>
               </Button>
             )}
@@ -487,17 +408,27 @@ function SharedSessionView() {
                   toolResultsByID={toolResultsByID}
                 />
               ))}
-              <div className="pt-3 pb-1 text-center">
-                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                  end of conversation
-                </span>
-              </div>
+              {messagesList.hasMore && (
+                <div
+                  ref={messagesSentinelRef}
+                  className="flex justify-center py-3"
+                >
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              )}
+              {!messagesList.hasMore && messages.length > 0 && (
+                <div className="pt-3 pb-1 text-center">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
+                    end of conversation
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* iOS-style bottom sheet for available tools */}
-        {tools.length > 0 && (
+        {metadata.toolCount > 0 && (
           <Sheet open={toolsSheetOpen} onOpenChange={setToolsSheetOpen}>
             <SheetContent
               side="bottom"
@@ -515,11 +446,19 @@ function SharedSessionView() {
               <SwipeDismissSheetBody
                 onDismiss={() => setToolsSheetOpen(false)}
                 title="Available Tools"
-                count={tools.length}
+                count={metadata.toolCount}
               >
                 {tools.map((t) => (
                   <ToolSidebarItem key={t.id} tool={t} />
                 ))}
+                {toolsList.hasMore && (
+                  <div
+                    ref={toolsSentinelRef}
+                    className="flex justify-center py-3"
+                  >
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                )}
               </SwipeDismissSheetBody>
             </SheetContent>
           </Sheet>
@@ -528,10 +467,10 @@ function SharedSessionView() {
     );
   }
 
-  // ── Desktop layout (unchanged) ─────────────────────────────────────────
+  // ── Desktop layout ─────────────────────────────────────────────────────
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      {/* ── Top banner: shared session badge ── */}
+      {/* ── Top banner ── */}
       <div className="border-b border-border/70 bg-sidebar/40">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -539,7 +478,7 @@ function SharedSessionView() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-base font-semibold tracking-tight text-foreground sm:text-lg">
-              Shared session #{session.id}
+              Shared session #{metadata.id}
             </h1>
             <p className="text-[11px] text-muted-foreground">
               Read-only view · Generated by Aris Proxy
@@ -547,13 +486,13 @@ function SharedSessionView() {
           </div>
           <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
             <Clock className="size-3.5" />
-            <span>{new Date(session.createdAt).toLocaleString()}</span>
+            <span>{new Date(metadata.createdAt).toLocaleString()}</span>
           </div>
           <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
             <MessagesSquare className="size-3.5" />
-            {messageCount} message{messageCount === 1 ? "" : "s"}
+            {metadata.messageCount} message{metadata.messageCount === 1 ? "" : "s"}
           </span>
-          {tools.length > 0 && (
+          {metadata.toolCount > 0 && (
             <Button
               variant={sidebarOpen ? "secondary" : "ghost"}
               size="icon-sm"
@@ -593,18 +532,28 @@ function SharedSessionView() {
                       toolResultsByID={toolResultsByID}
                     />
                   ))}
-                  <div className="pt-4 pb-2 text-center">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                      end of conversation
-                    </span>
-                  </div>
+                  {messagesList.hasMore && (
+                    <div
+                      ref={messagesSentinelRef}
+                      className="flex justify-center py-4"
+                    >
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  )}
+                  {!messagesList.hasMore && messages.length > 0 && (
+                    <div className="pt-4 pb-2 text-center">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
+                        end of conversation
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {sidebarOpen && tools.length > 0 && (
+        {sidebarOpen && metadata.toolCount > 0 && (
           <>
             <Separator orientation="vertical" className="mx-0 h-auto" />
             <aside className="flex w-80 shrink-0 flex-col overflow-hidden bg-sidebar/40">
@@ -614,13 +563,21 @@ function SharedSessionView() {
                   Available Tools
                 </h2>
                 <Badge variant="secondary" className="ml-auto text-[10px]">
-                  {tools.length}
+                  {metadata.toolCount}
                 </Badge>
               </div>
               <div className="flex-1 space-y-2 overflow-y-auto p-3">
                 {tools.map((t) => (
                   <ToolSidebarItem key={t.id} tool={t} />
                 ))}
+                {toolsList.hasMore && (
+                  <div
+                    ref={toolsSentinelRef}
+                    className="flex justify-center py-3"
+                  >
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                )}
               </div>
             </aside>
           </>

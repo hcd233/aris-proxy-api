@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/sonic"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -263,56 +262,6 @@ func TestCreateShare_NilBodyRejected(t *testing.T) {
 	}
 }
 
-func TestGetShareContent_Success(t *testing.T) {
-	sc := newMockShareCache()
-	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1)
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
-	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(0, enum.PermissionPending)
-
-	rsp, err := h.HandleGetShareContent(ctx, &dto.GetShareContentReq{ShareID: shareID})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if rsp.Body.Session == nil {
-		t.Fatal("expected non-nil session in response")
-	}
-	if rsp.Body.Session.ID != 1 {
-		t.Errorf("session ID = %d, want 1", rsp.Body.Session.ID)
-	}
-}
-
-func TestGetShareContent_ShareNotFound(t *testing.T) {
-	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{}}
-	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(0, enum.PermissionPending)
-
-	rsp, _ := h.HandleGetShareContent(ctx, &dto.GetShareContentReq{ShareID: "nonexistent"})
-	if rsp.Body.Error == nil {
-		t.Error("expected error for share not found")
-	}
-}
-
-func TestGetShareContent_NoAPIKeyNameLeaked(t *testing.T) {
-	sc := newMockShareCache()
-	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1)
-	view := testSessionView(1)
-	view.APIKeyName = "sensitive-key-name"
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: view}}
-	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(0, enum.PermissionPending)
-
-	rsp, _ := h.HandleGetShareContent(ctx, &dto.GetShareContentReq{ShareID: shareID})
-	if rsp.Body.Session == nil {
-		t.Fatal("expected non-nil session")
-	}
-	data, _ := sonic.Marshal(rsp.Body.Session)
-	if containsJSONKey(data, "apiKeyName") {
-		t.Error("ShareContentSessionDetail must not contain apiKeyName field")
-	}
-}
-
 func TestListShares_Success(t *testing.T) {
 	sc := newMockShareCache()
 	sc.CreateShare(context.Background(), 42, 1)
@@ -440,25 +389,6 @@ func TestHandleGetSessionByUser_NotShared(t *testing.T) {
 	if rsp.Body.Session.ShareID != "" {
 		t.Error("expected empty ShareID for non-shared session")
 	}
-}
-
-func containsJSONKey(data []byte, key string) bool {
-	needle := []byte(`"` + key + `"`)
-	for i := 0; i <= len(data)-len(needle); i++ {
-		if data[i] == needle[0] {
-			match := true
-			for j := 1; j < len(needle); j++ {
-				if data[i+j] != needle[j] {
-					match = false
-					break
-				}
-			}
-			if match {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // TestCreateShareReq_DTOFollowsHumaBodyConvention 防回归：CreateShareReq 必须按 huma 框架的

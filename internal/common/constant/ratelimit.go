@@ -11,6 +11,12 @@ const (
 
 	RateLimitKeyByIP = "ip"
 
-	PeriodGetShareContent = 1 * time.Minute
-	LimitGetShareContent  = 30
+	PeriodGetShareMetadata = 1 * time.Minute
+	LimitGetShareMetadata  = 60
+
+	PeriodListShareMessages = 1 * time.Minute
+	LimitListShareMessages  = 60
+
+	PeriodListShareTools = 1 * time.Minute
+	LimitListShareTools  = 60
 )
