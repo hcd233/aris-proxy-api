@@ -6,9 +6,9 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -35,14 +35,14 @@ type ListSessionToolsHandler interface {
 type listSessionToolsHandler struct {
 	readRepo  session.SessionReadRepository
 	metaQuery GetSessionMetaByUserHandler
-	cache     cache.SessionDetailCache
+	cache     sessionport.SessionDetailCache
 }
 
 // NewListSessionToolsHandler 构造
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery GetSessionMetaByUserHandler, detailCache cache.SessionDetailCache) ListSessionToolsHandler {
+func NewListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) ListSessionToolsHandler {
 	return &listSessionToolsHandler{
 		readRepo:  readRepo,
 		metaQuery: metaQuery,
@@ -85,7 +85,7 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q ListSessionTools
 	if cacheErr != nil {
 		log.Warn("[SessionQuery] GetTools cache failed, fallback to DB",
 			zap.Error(cacheErr), zap.Int("idsLen", len(pageIDs)))
-		hits = map[uint]*cache.ToolCacheRecord{}
+		hits = map[uint]*sessionport.ToolCacheRecord{}
 		missing = pageIDs
 	}
 
@@ -96,9 +96,9 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q ListSessionTools
 			return nil, ierr.Wrap(ierr.ErrDBQuery, repoErr, "find tools by ids")
 		}
 
-		fetched := make([]*cache.ToolCacheRecord, 0, len(records))
+		fetched := make([]*sessionport.ToolCacheRecord, 0, len(records))
 		for _, t := range records {
-			rec := &cache.ToolCacheRecord{
+			rec := &sessionport.ToolCacheRecord{
 				ID:        t.ID,
 				Tool:      t.Tool,
 				CreatedAt: t.CreatedAt,

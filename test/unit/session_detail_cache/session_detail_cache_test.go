@@ -1,4 +1,4 @@
-// Package session_detail_cache_test 测试 cache.SessionDetailCache 的载荷类型
+// Package session_detail_cache_test 测试 sessionport.SessionDetailCache 的载荷类型
 //
 // 由于 go-redis 无官方 mock，Redis 实际通信由 E2E 覆盖。
 // 本单元测试聚焦"载荷类型的序列化往返一致性"。
@@ -10,14 +10,14 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 )
 
 func TestSessionMetaCacheRecord_RoundTrip(t *testing.T) {
 	now := time.Date(2026, 5, 29, 10, 0, 0, 0, time.UTC)
-	original := &cache.SessionMetaCacheRecord{
+	original := &sessionport.SessionMetaCacheRecord{
 		ID:         42,
 		APIKeyName: "user-key-1",
 		CreatedAt:  now,
@@ -32,7 +32,7 @@ func TestSessionMetaCacheRecord_RoundTrip(t *testing.T) {
 		t.Fatalf("marshal failed: %v", err)
 	}
 
-	var decoded cache.SessionMetaCacheRecord
+	var decoded sessionport.SessionMetaCacheRecord
 	if err := sonic.UnmarshalString(payload, &decoded); err != nil {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestSessionMetaCacheRecord_RoundTrip(t *testing.T) {
 }
 
 func TestSessionMetaCacheRecord_EmptyIDs(t *testing.T) {
-	original := &cache.SessionMetaCacheRecord{
+	original := &sessionport.SessionMetaCacheRecord{
 		ID:         1,
 		APIKeyName: "k",
 		MessageIDs: []uint{},
@@ -70,7 +70,7 @@ func TestSessionMetaCacheRecord_EmptyIDs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	var decoded cache.SessionMetaCacheRecord
+	var decoded sessionport.SessionMetaCacheRecord
 	if err := sonic.UnmarshalString(payload, &decoded); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestSessionMetaCacheRecord_EmptyIDs(t *testing.T) {
 
 func TestMessageCacheRecord_RoundTrip(t *testing.T) {
 	now := time.Date(2026, 5, 29, 11, 0, 0, 0, time.UTC)
-	original := &cache.MessageCacheRecord{
+	original := &sessionport.MessageCacheRecord{
 		ID:    100,
 		Model: "gpt-4",
 		Message: &vo.UnifiedMessage{
@@ -96,7 +96,7 @@ func TestMessageCacheRecord_RoundTrip(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	var decoded cache.MessageCacheRecord
+	var decoded sessionport.MessageCacheRecord
 	if err := sonic.UnmarshalString(payload, &decoded); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestMessageCacheRecord_RoundTrip(t *testing.T) {
 
 func TestToolCacheRecord_RoundTrip(t *testing.T) {
 	now := time.Date(2026, 5, 29, 12, 0, 0, 0, time.UTC)
-	original := &cache.ToolCacheRecord{
+	original := &sessionport.ToolCacheRecord{
 		ID: 7,
 		Tool: &vo.UnifiedTool{
 			Name:        "search",
@@ -131,7 +131,7 @@ func TestToolCacheRecord_RoundTrip(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	var decoded cache.ToolCacheRecord
+	var decoded sessionport.ToolCacheRecord
 	if err := sonic.UnmarshalString(payload, &decoded); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

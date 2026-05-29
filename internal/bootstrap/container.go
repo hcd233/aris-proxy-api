@@ -15,6 +15,7 @@ import (
 	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
 	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
 	applicationoauth2 "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
@@ -536,18 +537,18 @@ func newShareCache(redisClient *redis.Client) cache.ShareCache {
 	return cache.NewShareCache(redisClient)
 }
 
-func newSessionDetailCache(redisClient *redis.Client) cache.SessionDetailCache {
+func newSessionDetailCache(redisClient *redis.Client) sessionport.SessionDetailCache {
 	return cache.NewSessionDetailCache(redisClient)
 }
 
-func newGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache cache.SessionDetailCache) sessionquery.GetSessionMetaByUserHandler {
+func newGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionquery.GetSessionMetaByUserHandler {
 	return sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache)
 }
 
-func newListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache cache.SessionDetailCache) sessionquery.ListSessionMessagesHandler {
+func newListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionquery.ListSessionMessagesHandler {
 	return sessionquery.NewListSessionMessagesHandler(readRepo, metaQuery, detailCache)
 }
 
-func newListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache cache.SessionDetailCache) sessionquery.ListSessionToolsHandler {
+func newListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionquery.ListSessionToolsHandler {
 	return sessionquery.NewListSessionToolsHandler(readRepo, metaQuery, detailCache)
 }
