@@ -3,12 +3,12 @@
 // 回归背景（bugfix/session-share-body-2026-05-28）：
 //   - CreateShareReq DTO 没有遵循 huma 的 Body 包装规范，
 //     导致 POST /api/v1/session/share 时 sessionId 始终是零值 0；
-//   - 0 写入 redis 后，GET /api/v1/session/share?id=xxx 拿到 0，
+//   - 0 写入 redis 后，GET /api/v1/session/share/metadata?id=xxx 拿到 0，
 //     再传给 GORM 由于零值 where 条件被忽略，返回了别人的 session。
 //
 // 本测试覆盖：
 //  1. 用 JWT 调用 POST /api/v1/session/share 携带 sessionId
-//  2. 用返回的 shareId 公开访问 GET /api/v1/session/share?id=xxx
+//  2. 用返回的 shareId 公开访问 GET /api/v1/session/share/metadata?id=xxx
 //  3. 断言 response.session.id == 请求传入的 sessionId
 //
 // 环境变量：
@@ -62,7 +62,7 @@ type createShareResp struct {
 	} `json:"error,omitempty"`
 }
 
-type getShareContentResp struct {
+type getShareMetadataResp struct {
 	Session *struct {
 		ID uint `json:"id"`
 	} `json:"session,omitempty"`
@@ -127,8 +127,8 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 		t.Fatalf("create share returned expired expiresAt=%s", created.ExpiresAt)
 	}
 
-	// Step 2: 公开访问分享内容
-	getReq, err := http.NewRequest(http.MethodGet, baseURL+"/api/v1/session/share?id="+created.ShareID, nil)
+	// Step 2: 公开访问分享元数据
+	getReq, err := http.NewRequest(http.MethodGet, baseURL+"/api/v1/session/share/metadata?id="+created.ShareID, nil)
 	if err != nil {
 		t.Fatalf("build get request failed: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read get response body failed: %v", err)
 	}
-	var got getShareContentResp
+	var got getShareMetadataResp
 	if unmarshalErr := sonic.Unmarshal(getBodyBytes, &got); unmarshalErr != nil {
 		t.Fatalf("unmarshal get response failed: %v; body=%s", unmarshalErr, string(getBodyBytes))
 	}
@@ -161,7 +161,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 			got.Error.Code, got.Error.Message, getTraceID)
 	}
 	if got.Session == nil {
-		t.Fatalf("get share returned empty session; body=%s", string(getBodyBytes))
+		t.Fatalf("get share metadata returned empty session; body=%s", string(getBodyBytes))
 	}
 
 	// Step 3: 核心断言——回归点
@@ -205,7 +205,7 @@ func TestSessionShare_Create_RejectsZeroSessionID(t *testing.T) {
 	// 即便框架层放行，业务层也应返回非 200 或带 error 字段
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		var rsp getShareContentResp
+		var rsp getShareMetadataResp
 		if unmarshalErr := sonic.Unmarshal(bodyBytes, &rsp); unmarshalErr == nil && rsp.Error == nil {
 			t.Fatalf("expected error for sessionId=0 but got success; body=%s", string(bodyBytes))
 		}

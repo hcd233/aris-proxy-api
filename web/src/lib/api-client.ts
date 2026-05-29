@@ -23,10 +23,12 @@ import type {
   OAuth2Provider,
   CreateShareReqBody,
   CreateShareRsp,
-  GetShareContentRsp,
+  GetShareMetadataRsp,
+  ListShareMessagesRsp,
+  ListShareToolsRsp,
   ListSharesRsp,
-  ListAuditLogsRsp,
   CommonRsp,
+  ListAuditLogsRsp,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -226,13 +228,53 @@ class ApiClient {
   }
 
   /**
-   * Public endpoint — must NOT include Authorization header so the request
-   * works for unauthenticated viewers, and must NOT trigger the 401 →
-   * refresh-token redirect flow on expiry / invalid links.
+   * Get shared session metadata (public, no auth).
    */
-  async getShareContent(shareId: string): Promise<GetShareContentRsp> {
+  async getShareMetadata(shareId: string): Promise<GetShareMetadataRsp> {
     const res = await fetch(
-      `${API_BASE}/api/v1/session/share?id=${encodeURIComponent(shareId)}`,
+      `${API_BASE}/api/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!res.ok) {
+      throw new ApiError(res.status, await res.text());
+    }
+    return res.json();
+  }
+
+  /**
+   * List shared session messages with pagination (public, no auth).
+   */
+  async listShareMessages(
+    shareId: string,
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<ListShareMessagesRsp> {
+    const res = await fetch(
+      `${API_BASE}/api/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!res.ok) {
+      throw new ApiError(res.status, await res.text());
+    }
+    return res.json();
+  }
+
+  /**
+   * List shared session tools with pagination (public, no auth).
+   */
+  async listShareTools(
+    shareId: string,
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<ListShareToolsRsp> {
+    const res = await fetch(
+      `${API_BASE}/api/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
       {
         method: "GET",
         headers: { "Content-Type": "application/json" },
