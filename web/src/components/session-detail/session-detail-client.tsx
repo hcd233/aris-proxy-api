@@ -14,7 +14,7 @@
  *  - The available-tools panel becomes a tall iOS-style bottom sheet with a
  *    grabber, sticky header, and safe-area aware scroll region.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -43,6 +43,219 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
+
+/**
+ * Body of the iOS-style tools bottom sheet.
+ *
+ * Layered behaviour, top to bottom:
+ *  1. Grabber row at the top — always drags the sheet.
+ *  2. Sticky title row — also drags.
+ *  3. Scroll region — only initiates a drag when scrollTop === 0 AND the
+ *     gesture is going down. Otherwise the touch is consumed by the inner
+ *     scroll, matching native iOS sheet semantics.
+ *
+ * Drag math:
+ *  - We only translate by max(0, dy) so users can't drag the sheet upward.
+ *  - On release, dismiss if dy > DISMISS_DISTANCE OR velocity > DISMISS_VELOCITY.
+ *  - Otherwise spring back to 0 with a transition.
+ */
+const SHEET_DISMISS_DISTANCE = 96;
+const SHEET_DISMISS_VELOCITY = 0.55; // px per ms
+
+function SwipeDismissSheetBody({
+  onDismiss,
+  title,
+  count,
+  children,
+}: {
+  onDismiss: () => void;
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<{
+    startY: number;
+    lastY: number;
+    lastT: number;
+    velocity: number;
+    active: boolean;
+    fromScroll: boolean;
+  } | null>(null);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+
+  // Apply the transform directly on the parent SheetContent popup so the
+  // backdrop stays in place while only the sheet panel slides.
+  useEffect(() => {
+    const popup = popupRef.current?.parentElement;
+    if (!popup) return;
+    if (dragging) {
+      popup.style.transition = "none";
+      popup.style.transform = `translate3d(0, ${dragY}px, 0)`;
+    } else {
+      popup.style.transition = "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
+      popup.style.transform = "";
+      // Clear inline styles after the transition so future opens animate
+      // from the library's default starting style.
+      const handle = window.setTimeout(() => {
+        popup.style.transition = "";
+      }, 240);
+      return () => window.clearTimeout(handle);
+    }
+  }, [dragY, dragging]);
+
+  const beginDrag = useCallback(
+    (clientY: number, fromScroll: boolean) => {
+      dragStateRef.current = {
+        startY: clientY,
+        lastY: clientY,
+        lastT: performance.now(),
+        velocity: 0,
+        active: true,
+        fromScroll,
+      };
+      setDragging(true);
+    },
+    [],
+  );
+
+  const updateDrag = useCallback((clientY: number) => {
+    const s = dragStateRef.current;
+    if (!s?.active) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - s.lastT);
+    s.velocity = (clientY - s.lastY) / dt;
+    s.lastY = clientY;
+    s.lastT = now;
+    setDragY(Math.max(0, clientY - s.startY));
+  }, []);
+
+  const endDrag = useCallback(() => {
+    const s = dragStateRef.current;
+    if (!s?.active) return;
+    s.active = false;
+    const dy = Math.max(0, s.lastY - s.startY);
+    const shouldDismiss =
+      dy > SHEET_DISMISS_DISTANCE ||
+      (dy > 24 && s.velocity > SHEET_DISMISS_VELOCITY);
+    if (shouldDismiss) {
+      // Snap to ~viewport height and dismiss after the animation.
+      setDragY(window.innerHeight);
+      setDragging(false);
+      window.setTimeout(() => {
+        onDismiss();
+        setDragY(0);
+      }, 200);
+    } else {
+      setDragY(0);
+      setDragging(false);
+    }
+  }, [onDismiss]);
+
+  const handleHeaderTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      beginDrag(e.touches[0].clientY, false);
+    },
+    [beginDrag],
+  );
+
+  const handleScrollTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      // Only allow drag-to-dismiss when the scroll region is at the very top.
+      // Otherwise let the inner scroll consume the gesture.
+      if (el.scrollTop > 0) return;
+      beginDrag(e.touches[0].clientY, true);
+    },
+    [beginDrag],
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      const s = dragStateRef.current;
+      if (!s?.active) return;
+      const clientY = e.touches[0].clientY;
+      const dy = clientY - s.startY;
+      // If a drag started inside the scroll region but the user is now
+      // pulling upward, hand control back to the inner scroll.
+      if (s.fromScroll && dy < 0) {
+        s.active = false;
+        setDragging(false);
+        setDragY(0);
+        return;
+      }
+      // Once we're definitely dragging the sheet, prevent the page from
+      // scroll-chaining and the browser from triggering pull-to-refresh.
+      if (dy > 0 && e.cancelable) e.preventDefault();
+      updateDrag(clientY);
+    },
+    [updateDrag],
+  );
+
+  return (
+    <div ref={popupRef} className="flex h-full flex-col">
+      {/* grabber row — always draggable */}
+      <div
+        onTouchStart={handleHeaderTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={endDrag}
+        onTouchCancel={endDrag}
+        className="flex cursor-grab justify-center pt-2.5 pb-1 active:cursor-grabbing"
+      >
+        <span
+          className={[
+            "block h-1 w-9 rounded-full transition-colors",
+            dragging ? "bg-foreground/45" : "bg-foreground/20",
+          ].join(" ")}
+          aria-hidden
+        />
+      </div>
+
+      {/* sticky title row — also draggable */}
+      <div
+        onTouchStart={handleHeaderTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={endDrag}
+        onTouchCancel={endDrag}
+        className="flex items-center gap-2 border-b border-border/60 px-4 pb-3"
+      >
+        <Wrench className="size-4 text-muted-foreground" />
+        <h2 className="font-display text-[15px] font-semibold text-foreground">
+          {title}
+        </h2>
+        <Badge variant="secondary" className="ml-1 text-[10px]">
+          {count}
+        </Badge>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="ml-auto -mr-1 inline-flex h-9 items-center px-2 text-[14px] font-medium text-primary"
+        >
+          Done
+        </button>
+      </div>
+
+      {/* scroll region */}
+      <div
+        ref={scrollRef}
+        onTouchStart={handleScrollTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={endDrag}
+        onTouchCancel={endDrag}
+        className={[
+          "flex-1 space-y-2 overflow-y-auto px-3 pt-3",
+          "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]",
+          "[-webkit-overflow-scrolling:touch] overscroll-contain",
+        ].join(" ")}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function CollapsibleText({
   text,
@@ -194,6 +407,27 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // Mobile only: tracks whether the sticky header has been "pushed" — i.e. the
+  // top sentinel has scrolled out of view. Drives the compact header variant.
+  const [headerCompact, setHeaderCompact] = useState(false);
+  const headerSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
+  useEffect(() => {
+    if (!isMobile) {
+      setHeaderCompact(false);
+      return;
+    }
+    const sentinel = headerSentinelRef.current;
+    if (!sentinel) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setHeaderCompact(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "0px" },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, [isMobile, loading, session]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchSession = useCallback(async () => {
     if (!sessionId || Number.isNaN(sessionId)) return;
@@ -237,6 +471,41 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   }
 
   if (loading) {
+    if (isMobile) {
+      // Mobile skeleton mirrors the real iOS layout: chrome bar with title
+      // placeholder, then alternating user-bubble + assistant-prose blocks.
+      return (
+        <div className="-mx-4 -my-4 flex min-h-[calc(100dvh-3.5rem)] flex-col bg-background">
+          <div className="flex items-center gap-2 border-b border-border/60 px-2 py-2">
+            <Skeleton className="size-10 rounded-full" />
+            <div className="flex flex-1 flex-col items-center gap-1">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-2.5 w-32" />
+            </div>
+            <Skeleton className="size-10 rounded-full" />
+            <Skeleton className="size-10 rounded-full" />
+          </div>
+          <div className="space-y-6 px-4 pt-5">
+            <div className="flex justify-end">
+              <Skeleton className="h-16 w-3/4 rounded-3xl" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-10/12" />
+              <Skeleton className="h-4 w-8/12" />
+            </div>
+            <div className="flex justify-end">
+              <Skeleton className="h-12 w-2/3 rounded-3xl" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-9/12" />
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="mx-auto w-full max-w-3xl space-y-6 py-6">
         <Skeleton className="h-8 w-48" />
@@ -276,12 +545,23 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   if (isMobile) {
     return (
       <div className="-mx-4 -my-4 flex min-h-[calc(100dvh-3.5rem)] flex-col bg-background">
-        {/* iOS-style sticky chrome */}
+        {/*
+          Sentinel sits above the sticky header. When it scrolls out of view
+          (stuck = true), we switch the header to its compact variant. The
+          IntersectionObserver runs on the dashboard <main> scroll container
+          implicitly because the sentinel is a viewport descendant.
+        */}
+        <div ref={headerSentinelRef} aria-hidden className="h-px w-full" />
+
+        {/* iOS-style sticky chrome — collapses on scroll */}
         <header
           className={[
-            "sticky top-0 z-30 flex items-center gap-1 px-2 py-2",
-            "border-b border-border/60",
-            "bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70",
+            "sticky top-0 z-30 flex items-center gap-1 px-2",
+            "transition-[padding,border-color,background-color] duration-200 ease-out",
+            "supports-[backdrop-filter]:backdrop-blur",
+            headerCompact
+              ? "py-1.5 border-b border-border bg-background/92 supports-[backdrop-filter]:bg-background/75 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+              : "py-2 border-b border-border/60 bg-background/85 supports-[backdrop-filter]:bg-background/70",
           ].join(" ")}
         >
           <Button
@@ -295,10 +575,24 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           </Button>
 
           <div className="flex min-w-0 flex-1 flex-col items-center px-1 leading-tight">
-            <h1 className="truncate font-display text-[15px] font-semibold tracking-tight text-foreground">
+            <h1
+              className={[
+                "truncate font-display font-semibold tracking-tight text-foreground",
+                "transition-[font-size] duration-200 ease-out",
+                headerCompact ? "text-[14px]" : "text-[15px]",
+              ].join(" ")}
+            >
               Session #{session.id}
             </h1>
-            <p className="truncate text-[11px] text-muted-foreground">
+            <p
+              className={[
+                "truncate text-[11px] text-muted-foreground",
+                "transition-[max-height,opacity,margin] duration-200 ease-out overflow-hidden",
+                headerCompact
+                  ? "max-h-0 opacity-0"
+                  : "max-h-4 opacity-100",
+              ].join(" ")}
+            >
               {messageCount} message{messageCount === 1 ? "" : "s"}
               {session.apiKeyName ? ` · ${session.apiKeyName}` : ""}
             </p>
@@ -388,45 +682,20 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                 "h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
                 "shadow-[0_-8px_24px_rgba(0,0,0,0.10)]",
                 "flex flex-col",
+                // touch-action: pan-y so vertical drags reach our handlers
+                // before the browser starts its own scroll on parent layers.
+                "touch-pan-y",
               ].join(" ")}
             >
-              {/* grabber */}
-              <div className="flex justify-center pt-2.5 pb-1">
-                <span
-                  className="block h-1 w-9 rounded-full bg-foreground/20"
-                  aria-hidden
-                />
-              </div>
-
-              {/* sticky title row */}
-              <div className="flex items-center gap-2 border-b border-border/60 px-4 pb-3">
-                <Wrench className="size-4 text-muted-foreground" />
-                <h2 className="font-display text-[15px] font-semibold text-foreground">
-                  Available Tools
-                </h2>
-                <Badge variant="secondary" className="ml-1 text-[10px]">
-                  {tools.length}
-                </Badge>
-                <button
-                  type="button"
-                  onClick={() => setToolsSheetOpen(false)}
-                  className="ml-auto -mr-1 inline-flex h-9 items-center px-2 text-[14px] font-medium text-primary"
-                >
-                  Done
-                </button>
-              </div>
-
-              <div
-                className={[
-                  "flex-1 space-y-2 overflow-y-auto px-3 pt-3",
-                  "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]",
-                  "[-webkit-overflow-scrolling:touch] overscroll-contain",
-                ].join(" ")}
+              <SwipeDismissSheetBody
+                onDismiss={() => setToolsSheetOpen(false)}
+                title="Available Tools"
+                count={tools.length}
               >
                 {tools.map((t) => (
                   <ToolSidebarItem key={t.id} tool={t} />
                 ))}
-              </div>
+              </SwipeDismissSheetBody>
             </SheetContent>
           </Sheet>
         )}
@@ -514,7 +783,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                     message={msg}
                     index={idx}
                     toolResultsByID={toolResultsByID}
-                    messages={messages}
                   />
                 ))}
                 <div className="pt-4 pb-2 text-center">
