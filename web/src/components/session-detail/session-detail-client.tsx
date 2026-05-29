@@ -28,7 +28,12 @@ import {
   Wrench,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
-import type { SessionDetail, ToolItem, UnifiedTool } from "@/lib/types";
+import type {
+  SessionMetadata,
+  MessageItem,
+  ToolItem,
+  UnifiedTool,
+} from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +44,7 @@ import {
 } from "@/components/chat/chat-message";
 import { ShareDialog } from "@/components/share/share-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
 import {
   Sheet,
   SheetContent,
@@ -188,7 +194,7 @@ function ToolSidebarItem({ tool }: { tool: ToolItem }) {
 export default function SessionDetailClient({ sessionId }: { sessionId: number }) {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [session, setSession] = useState<SessionDetail | null>(null);
+  const [metadata, setMetadata] = useState<SessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   // Desktop: tools panel docked open by default. Mobile: closed; user opens
   // the bottom sheet on demand.
@@ -199,6 +205,8 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   // top sentinel has scrolled out of view. Drives the compact header variant.
   const [headerCompact, setHeaderCompact] = useState(false);
   const headerSentinelRef = useRef<HTMLDivElement | null>(null);
+  const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
+  const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
@@ -214,15 +222,15 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     );
     io.observe(sentinel);
     return () => io.disconnect();
-  }, [isMobile, loading, session]);
+  }, [isMobile, loading, metadata]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const fetchSession = useCallback(async () => {
+  const fetchMetadata = useCallback(async () => {
     if (!sessionId || Number.isNaN(sessionId)) return;
     setLoading(true);
     try {
-      const rsp = await api.getSession(sessionId);
-      if (rsp.session) setSession(rsp.session);
+      const rsp = await api.getSessionMetadata(sessionId);
+      if (rsp.session) setMetadata(rsp.session);
     } catch {
       // handled silently
     } finally {
@@ -232,12 +240,84 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+    void fetchMetadata();
+  }, [fetchMetadata]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const messages = useMemo(() => session?.messages ?? [], [session]);
-  const tools = useMemo(() => session?.tools ?? [], [session]);
+  // 只有 metadata 加载完成（且权限通过）后才开始拉 messages，避免越权请求多打一次。
+  const listEnabled =
+    !!sessionId && !Number.isNaN(sessionId) && metadata !== null;
+  const toolsListEnabled =
+    listEnabled &&
+    (metadata?.toolCount ?? 0) > 0 &&
+    ((!isMobile && toolsPanelOpen) || (isMobile && toolsSheetOpen));
+
+  const messagesList = useInfiniteList<MessageItem>({
+    fetcher: useCallback(
+      async (offset, limit) => {
+        const rsp = await api.listSessionMessages(sessionId, offset, limit);
+        return {
+          items: rsp.messages ?? [],
+          total: Number(rsp.pageInfo?.total ?? 0),
+        };
+      },
+      [sessionId],
+    ),
+    pageSize: 20,
+    enabled: listEnabled,
+  });
+
+  const toolsList = useInfiniteList<ToolItem>({
+    fetcher: useCallback(
+      async (offset, limit) => {
+        const rsp = await api.listSessionTools(sessionId, offset, limit);
+        return {
+          items: rsp.tools ?? [],
+          total: Number(rsp.pageInfo?.total ?? 0),
+        };
+      },
+      [sessionId],
+    ),
+    pageSize: 50,
+    enabled: toolsListEnabled,
+  });
+
+  // messages 滚动加载 sentinel
+  useEffect(() => {
+    const sentinel = messagesSentinelRef.current;
+    if (!sentinel || !messagesList.hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void messagesList.loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-bind IO when hasMore/loadMore identity changes
+  }, [messagesList.hasMore, messagesList.loadMore]);
+
+  // tools 滚动加载 sentinel
+  useEffect(() => {
+    const sentinel = toolsSentinelRef.current;
+    if (!sentinel || !toolsList.hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void toolsList.loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-bind IO when hasMore/loadMore identity changes
+  }, [toolsList.hasMore, toolsList.loadMore]);
+
+  const messages = messagesList.items;
+  const tools = toolsList.items;
   const toolResultsByID = useMemo(
     () => buildToolResultsByID(messages),
     [messages],
@@ -309,7 +389,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     );
   }
 
-  if (!session) {
+  if (!metadata) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-muted-foreground">Session not found</p>
@@ -324,9 +404,9 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     );
   }
 
-  const messageCount = messages.filter(
-    (m) => m.message.role !== "tool" && !m.message.tool_call_id,
-  ).length;
+  // metadata.messageCount 直接来自后端（含 tool messages），与 SessionSummary 字段一致。
+  // 若产品对"非 tool 消息数"敏感可后续扩字段。
+  const messageCount = metadata.messageCount;
 
   // ── Mobile layout (claude.ai iOS-style) ─────────────────────────────────
   // Escape the dashboard's outer padding so the column itself owns the
@@ -385,7 +465,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                   headerCompact ? "text-[14px]" : "text-[15px]",
                 ].join(" ")}
               >
-                Session #{session.id}
+                Session #{metadata.id}
               </h1>
               <p
                 className={[
@@ -395,7 +475,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                 ].join(" ")}
               >
                 {messageCount} message{messageCount === 1 ? "" : "s"}
-                {session.apiKeyName ? ` · ${session.apiKeyName}` : ""}
+                {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
               </p>
             </div>
 
@@ -405,17 +485,17 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               onClick={() => setShareOpen(true)}
               className={[
                 "size-10",
-                session.shareID
+                metadata.shareID
                   ? "text-primary"
                   : "text-foreground/70 hover:text-foreground",
               ].join(" ")}
-              aria-label={session.shareID ? "Manage share link" : "Share session"}
-              title={session.shareID ? "Shared" : "Share"}
+              aria-label={metadata.shareID ? "Manage share link" : "Share session"}
+              title={metadata.shareID ? "Shared" : "Share"}
             >
               <Share2 className="size-5" />
             </Button>
 
-            {tools.length > 0 && (
+            {metadata.toolCount > 0 && (
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -429,7 +509,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                   className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
                   aria-hidden
                 >
-                  {tools.length}
+                  {metadata.toolCount}
                 </span>
               </Button>
             )}
@@ -465,17 +545,27 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                   toolResultsByID={toolResultsByID}
                 />
               ))}
-              <div className="pt-3 pb-1 text-center">
-                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                  end of conversation
-                </span>
-              </div>
+              {messagesList.hasMore && (
+                <div
+                  ref={messagesSentinelRef}
+                  className="flex justify-center py-3"
+                >
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              )}
+              {!messagesList.hasMore && messages.length > 0 && (
+                <div className="pt-3 pb-1 text-center">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
+                    end of conversation
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* iOS-style bottom sheet for available tools */}
-        {tools.length > 0 && (
+        {metadata.toolCount > 0 && (
           <Sheet open={toolsSheetOpen} onOpenChange={setToolsSheetOpen}>
             <SheetContent
               side="bottom"
@@ -502,19 +592,27 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               <SwipeDismissSheetBody
                 onDismiss={() => setToolsSheetOpen(false)}
                 title="Available Tools"
-                count={tools.length}
+                count={metadata.toolCount}
               >
                 {tools.map((t) => (
                   <ToolSidebarItem key={t.id} tool={t} />
                 ))}
+                {toolsList.hasMore && (
+                  <div
+                    ref={toolsSentinelRef}
+                    className="flex justify-center py-3"
+                  >
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                )}
               </SwipeDismissSheetBody>
             </SheetContent>
           </Sheet>
         )}
 
         <ShareDialog
-          sessionId={session.id}
-          existingShareID={session.shareID}
+          sessionId={metadata.id}
+          existingShareID={metadata.shareID}
           open={shareOpen}
           onOpenChange={setShareOpen}
         />
@@ -538,11 +636,11 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           </Button>
           <div className="flex min-w-0 items-center gap-3">
             <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight text-foreground">
-              Session #{session.id}
+              Session #{metadata.id}
             </h1>
-            {session.apiKeyName && (
+            {metadata.apiKeyName && (
               <Badge variant="secondary" className="text-xs">
-                {session.apiKeyName}
+                {metadata.apiKeyName}
               </Badge>
             )}
             <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
@@ -552,19 +650,19 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
-              <span>{new Date(session.createdAt).toLocaleString()}</span>
+              <span>{new Date(metadata.createdAt).toLocaleString()}</span>
             </div>
             <Button
-              variant={session.shareID ? "secondary" : "outline"}
+              variant={metadata.shareID ? "secondary" : "outline"}
               size="sm"
               onClick={() => setShareOpen(true)}
               className="gap-1.5"
-              title={session.shareID ? "Manage share link" : "Create a public share link"}
+              title={metadata.shareID ? "Manage share link" : "Create a public share link"}
             >
               <Share2 className="size-3.5" />
-              <span className="hidden sm:inline">{session.shareID ? "Shared" : "Share"}</span>
+              <span className="hidden sm:inline">{metadata.shareID ? "Shared" : "Share"}</span>
             </Button>
-            {tools.length > 0 && (
+            {metadata.toolCount > 0 && (
               <Button
                 variant={toolsPanelOpen ? "secondary" : "ghost"}
                 size="icon-sm"
@@ -597,18 +695,28 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                     toolResultsByID={toolResultsByID}
                   />
                 ))}
-                <div className="pt-4 pb-2 text-center">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                    end of conversation
-                  </span>
-                </div>
+                {messagesList.hasMore && (
+                  <div
+                    ref={messagesSentinelRef}
+                    className="flex justify-center py-4"
+                  >
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                )}
+                {!messagesList.hasMore && messages.length > 0 && (
+                  <div className="pt-4 pb-2 text-center">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
+                      end of conversation
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {toolsPanelOpen && tools.length > 0 && (
+      {toolsPanelOpen && metadata.toolCount > 0 && (
         <>
           <Separator orientation="vertical" className="mx-0 h-auto" />
           <aside className="flex w-80 shrink-0 flex-col overflow-hidden bg-sidebar/40">
@@ -618,21 +726,29 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                 Available Tools
               </h2>
               <Badge variant="secondary" className="ml-auto text-[10px]">
-                {tools.length}
+                {metadata.toolCount}
               </Badge>
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto p-3">
               {tools.map((t) => (
                 <ToolSidebarItem key={t.id} tool={t} />
               ))}
+              {toolsList.hasMore && (
+                <div
+                  ref={toolsSentinelRef}
+                  className="flex justify-center py-3"
+                >
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              )}
             </div>
           </aside>
         </>
       )}
 
       <ShareDialog
-        sessionId={session.id}
-        existingShareID={session.shareID}
+        sessionId={metadata.id}
+        existingShareID={metadata.shareID}
         open={shareOpen}
         onOpenChange={setShareOpen}
       />

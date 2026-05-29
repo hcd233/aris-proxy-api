@@ -184,10 +184,11 @@ const (
 	ConvCheckMethodSave   = "Save"
 	ConvCheckFuncInit     = "init"
 
-	ConvCheckImportInfra = "github.com/hcd233/aris-proxy-api/internal/infrastructure/"
-	ConvCheckImportDTO   = "github.com/hcd233/aris-proxy-api/internal/dto"
-	ConvCheckImportUtil  = "github.com/hcd233/aris-proxy-api/internal/util"
-	ConvCheckImportZap   = "go.uber.org/zap"
+	ConvCheckImportInfra      = "github.com/hcd233/aris-proxy-api/internal/infrastructure/"
+	ConvCheckImportInfraCache = "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	ConvCheckImportDTO        = "github.com/hcd233/aris-proxy-api/internal/dto"
+	ConvCheckImportUtil       = "github.com/hcd233/aris-proxy-api/internal/util"
+	ConvCheckImportZap        = "go.uber.org/zap"
 
 	ConvCheckDeprecatedImportService   = "github.com/hcd233/aris-proxy-api/internal/service"
 	ConvCheckDeprecatedImportConverter = "github.com/hcd233/aris-proxy-api/internal/converter"
@@ -199,6 +200,7 @@ const (
 	ConvCheckMsgDomainInfra         = "Domain layer must not depend on Infrastructure layer"
 	ConvCheckMsgDomainDTO           = "Domain layer must not depend on DTO layer"
 	ConvCheckMsgDomainUtil          = "Domain layer must not depend on internal/util, use internal/common/util instead"
+	ConvCheckMsgAppInfraCache       = "Application layer must not depend on infrastructure/cache; define a port in application layer instead"
 	ConvCheckMsgDeprecatedAppImport = "Application layer must not import deprecated internal/service/converter/proxy/agent/jwt/oauth2 packages"
 	ConvCheckMsgHandlerDB           = "Handler layer must not operate DAO/DB directly; business logic should be in Service layer"
 	ConvCheckMsgRootContext         = "context.Background()/context.TODO() is prohibited in interface layer, pass context from the caller"

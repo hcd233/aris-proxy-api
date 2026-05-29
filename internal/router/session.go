@@ -37,6 +37,39 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getSession", enum.PermissionUser)},
 	}, sessionHandler.HandleGetSessionByUser)
 
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "getSessionMetadata",
+		Method:      http.MethodGet,
+		Path:        "/metadata",
+		Summary:     "GetSessionMetadata",
+		Description: "Get session metadata (without messages/tools content)",
+		Tags:        []string{"Session"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getSessionMetadata", enum.PermissionUser)},
+	}, sessionHandler.HandleGetSessionMetadata)
+
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "listSessionMessages",
+		Method:      http.MethodGet,
+		Path:        "/message/list",
+		Summary:     "ListSessionMessages",
+		Description: "Paginate session messages by offset+limit",
+		Tags:        []string{"Session"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionMessages", enum.PermissionUser)},
+	}, sessionHandler.HandleListSessionMessages)
+
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "listSessionTools",
+		Method:      http.MethodGet,
+		Path:        "/tool/list",
+		Summary:     "ListSessionTools",
+		Description: "Paginate session tools by offset+limit",
+		Tags:        []string{"Session"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionTools", enum.PermissionUser)},
+	}, sessionHandler.HandleListSessionTools)
+
 	initSessionShareRouter(sessionGroup, sessionHandler)
 }
 

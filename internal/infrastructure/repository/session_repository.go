@@ -375,6 +375,46 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 	return out, nil
 }
 
+func (r *sessionReadRepository) FindToolsByIDs(ctx context.Context, ids []uint) ([]*session.ToolDetailProjection, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	db := r.db.WithContext(ctx)
+	records, err := r.toolDAO.BatchGetByField(db, constant.WhereFieldID, ids, constant.ToolRepoFieldsDetail)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by ids")
+	}
+	out := make([]*session.ToolDetailProjection, 0, len(records))
+	for _, t := range records {
+		out = append(out, &session.ToolDetailProjection{
+			ID:        t.ID,
+			Tool:      t.Tool,
+			CreatedAt: t.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
+func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*session.SessionMetaProjection, error) {
+	db := r.db.WithContext(ctx)
+	sessionRecord, err := r.sessionDAO.Get(db, &dbmodel.Session{ID: id}, constant.SessionRepoFieldsReadDetail)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get session meta")
+	}
+	return &session.SessionMetaProjection{
+		ID:         sessionRecord.ID,
+		APIKeyName: sessionRecord.APIKeyName,
+		CreatedAt:  sessionRecord.CreatedAt,
+		UpdatedAt:  sessionRecord.UpdatedAt,
+		Metadata:   sessionRecord.Metadata,
+		MessageIDs: sessionRecord.MessageIDs,
+		ToolIDs:    sessionRecord.ToolIDs,
+	}, nil
+}
+
 func (r *sessionReadRepository) FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error) {
 	if len(ids) == 0 {
 		return map[uint][]uint{}, nil
