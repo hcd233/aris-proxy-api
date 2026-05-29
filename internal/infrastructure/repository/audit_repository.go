@@ -2,11 +2,14 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -26,7 +29,7 @@ type auditRepository struct {
 //
 //	@return modelcall.AuditRepository
 //	@author centonhuang
-//	@update 2026-04-22 17:00:00
+//	@update 2026-05-29 14:00:00
 func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 	return &auditRepository{dao: dao.GetModelCallAuditDAO(), db: db}
 }
@@ -65,60 +68,105 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 	return nil
 }
 
-// ListByAPIKeyID 按 APIKeyID 分页查询审计记录
+// ListAll 全量分页查询审计记录（admin 用）
 //
 //	@receiver r *auditRepository
-//	@param ctx context.Context
-//	@param apiKeyID uint
-//	@param param model.CommonParam
-//	@param startTime time.Time
-//	@param endTime time.Time
-//	@return []*aggregate.ModelCallAudit
-//	@return *model.PageInfo
-//	@return error
 //	@author centonhuang
-//	@update 2026-05-11 10:00:00
-func (r *auditRepository) ListByAPIKeyID(ctx context.Context, apiKeyID uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+//	@update 2026-05-29 14:00:00
+func (r *auditRepository) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
+	return r.paginate(db, param, startTime, endTime)
+}
+
+// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
+//
+//	@receiver r *auditRepository
+//	@author centonhuang
+//	@update 2026-05-29 14:00:00
+func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+	if len(apiKeyIDs) == 0 {
+		page, pageSize := param.Page, param.PageSize
+		if page < 1 {
+			page = 1
+		}
+		if pageSize < 1 {
+			pageSize = 20
+		}
+		return nil, &model.PageInfo{Page: page, PageSize: pageSize, Total: 0}, nil
+	}
+	db := r.db.WithContext(ctx).Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), apiKeyIDs)
+	return r.paginate(db, param, startTime, endTime)
+}
+
+// paginate 通用分页：在调用方已附加范围过滤的 db 上做时间范围、模糊搜索、排序、count、limit/offset。
+//
+// 不复用 baseDAO.Paginate，因为后者只接受 *ModelT 等值 where 不支持 IN 条件。
+func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+	if param.Page < 1 {
+		param.Page = 1
+	}
+	if param.PageSize < 1 {
+		param.PageSize = 20
+	}
+
+	sql := db.Model(&dbmodel.ModelCallAudit{}).Select(constant.AuditRepoFields).Where(constant.DBConditionDeletedAtZero)
 
 	if !startTime.IsZero() {
-		db = db.Where(constant.FieldCreatedAt+" >= ?", startTime)
+		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
 	}
 	if !endTime.IsZero() {
-		db = db.Where(constant.FieldCreatedAt+" <= ?", endTime)
+		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
 
-	where := &dbmodel.ModelCallAudit{APIKeyID: apiKeyID}
-	records, pageInfo, err := r.dao.Paginate(
-		db,
-		where,
-		constant.AuditRepoFields,
-		&dao.CommonParam{
-			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
-			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: constant.AuditQueryFields},
-			SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
-		},
-	)
-	if err != nil {
+	if param.Query != "" && len(constant.AuditQueryFields) > 0 {
+		like := "%" + param.Query + "%"
+		expressions := make([]clause.Expression, 0, len(constant.AuditQueryFields))
+		for _, field := range constant.AuditQueryFields {
+			if field == "" {
+				continue
+			}
+			expressions = append(expressions, clause.Like{Column: clause.Column{Name: field}, Value: like})
+		}
+		if len(expressions) > 0 {
+			sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])
+			for _, expr := range expressions[1:] {
+				sub = sub.Or(expr)
+			}
+			sql = sql.Where(sub)
+		}
+	}
+
+	if param.Sort != "" && param.SortField != "" {
+		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
+
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if err := sql.Count(&pageInfo.Total).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count audit logs")
+	}
+
+	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
+	var records []*dbmodel.ModelCallAudit
+	if err := sql.Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate audit logs")
 	}
 
 	audits := make([]*aggregate.ModelCallAudit, 0, len(records))
-	for _, r := range records {
+	for _, rec := range records {
 		a := aggregate.ReconstructAudit(aggregate.ReconstructAuditInput{
-			APIKeyID:         r.APIKeyID,
-			ModelID:          r.ModelID,
-			Model:            r.Model,
-			UpstreamProvider: r.UpstreamProvider,
-			APIProvider:      r.APIProvider,
-			Tokens:           vo.NewTokenBreakdown(r.InputTokens, r.OutputTokens, r.CacheCreationInputTokens, r.CacheReadInputTokens),
-			Latency:          vo.NewCallLatency(time.Duration(r.FirstTokenLatencyMs)*time.Millisecond, time.Duration(r.StreamDurationMs)*time.Millisecond),
-			Status:           vo.NewCallStatus(r.UpstreamStatusCode, r.ErrorMessage),
-			UserAgent:        r.UserAgent,
-			TraceID:          r.TraceID,
-			CreatedAt:        r.CreatedAt,
+			APIKeyID:         rec.APIKeyID,
+			ModelID:          rec.ModelID,
+			Model:            rec.Model,
+			UpstreamProvider: rec.UpstreamProvider,
+			APIProvider:      rec.APIProvider,
+			Tokens:           vo.NewTokenBreakdown(rec.InputTokens, rec.OutputTokens, rec.CacheCreationInputTokens, rec.CacheReadInputTokens),
+			Latency:          vo.NewCallLatency(time.Duration(rec.FirstTokenLatencyMs)*time.Millisecond, time.Duration(rec.StreamDurationMs)*time.Millisecond),
+			Status:           vo.NewCallStatus(rec.UpstreamStatusCode, rec.ErrorMessage),
+			UserAgent:        rec.UserAgent,
+			TraceID:          rec.TraceID,
+			CreatedAt:        rec.CreatedAt,
 		})
-		a.SetID(r.ID)
+		a.SetID(rec.ID)
 		audits = append(audits, a)
 	}
 	return audits, pageInfo, nil

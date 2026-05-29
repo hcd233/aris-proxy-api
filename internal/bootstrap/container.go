@@ -31,6 +31,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
@@ -247,7 +248,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newHandleCallbackHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(auditquery.NewListAuditLogsHandler); err != nil {
+	if err := container.Provide(auditquery.NewListAllAuditLogsHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newListAuditLogsByUserHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
@@ -482,8 +486,24 @@ func newAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 	return repository.NewAuditRepository(db)
 }
 
-func newAuditDependencies(list auditquery.ListAuditLogsHandler) handler.AuditDependencies {
-	return handler.AuditDependencies{List: list}
+func newAuditDependencies(
+	listAll auditquery.ListAllAuditLogsHandler,
+	listByUser auditquery.ListAuditLogsByUserHandler,
+	db *gorm.DB,
+) handler.AuditDependencies {
+	return handler.AuditDependencies{
+		ListAll:    listAll,
+		ListByUser: listByUser,
+		APIKeyDAO:  dao.GetProxyAPIKeyDAO(),
+		UserDAO:    dao.GetUserDAO(),
+		DB:         db,
+	}
+}
+
+// newListAuditLogsByUserHandler 包装 query.NewListAuditLogsByUserHandler，
+// 通过 dao 单例提供 *ProxyAPIKeyDAO（dig 容器中未注册具体 DAO 类型）。
+func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, db *gorm.DB) auditquery.ListAuditLogsByUserHandler {
+	return auditquery.NewListAuditLogsByUserHandler(repo, dao.GetProxyAPIKeyDAO(), db)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {
