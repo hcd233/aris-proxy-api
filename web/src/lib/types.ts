@@ -159,20 +159,14 @@ export interface GetSessionMetadataRsp extends CommonRsp {
   session?: SessionMetadata;
 }
 
-export interface OffsetPageInfo {
-  offset: number;
-  limit: number;
-  total: number;
-}
-
 export interface ListSessionMessagesRsp extends CommonRsp {
   messages?: MessageItem[];
-  pageInfo?: OffsetPageInfo;
+  pageInfo?: PageInfo;
 }
 
 export interface ListSessionToolsRsp extends CommonRsp {
   tools?: ToolItem[];
-  pageInfo?: OffsetPageInfo;
+  pageInfo?: PageInfo;
 }
 
 // ─── Session Share ─────────────────────────────────────────────────────────────

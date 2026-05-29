@@ -17,8 +17,8 @@ type ListSessionToolsQuery struct {
 	UserID    uint
 	IsAdmin   bool
 	SessionID uint
-	Offset    int
-	Limit     int
+	Page      int
+	PageSize  int
 }
 
 // ListSessionToolsResult 分页结果
@@ -68,15 +68,15 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q ListSessionTools
 		return &ListSessionToolsResult{Tools: []*ToolView{}, Total: 0}, nil
 	}
 
-	offset := q.Offset
-	if offset > len(meta.ToolIDs) {
-		offset = len(meta.ToolIDs)
+	start := (q.Page - 1) * q.PageSize
+	if start > len(meta.ToolIDs) {
+		start = len(meta.ToolIDs)
 	}
-	end := offset + q.Limit
+	end := start + q.PageSize
 	if end > len(meta.ToolIDs) {
 		end = len(meta.ToolIDs)
 	}
-	pageIDs := meta.ToolIDs[offset:end]
+	pageIDs := meta.ToolIDs[start:end]
 	if len(pageIDs) == 0 {
 		return &ListSessionToolsResult{Tools: []*ToolView{}, Total: total}, nil
 	}
