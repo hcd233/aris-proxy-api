@@ -29,7 +29,7 @@ func initUserRouter(userGroup huma.API, userHandler handler.UserHandler, db *gor
 	huma.Register(userGroup, huma.Operation{
 		OperationID: "updateUser",
 		Method:      http.MethodPatch,
-		Path:        "/",
+		Path:        "",
 		Summary:     "UpdateUser",
 		Description: "Update the current user's information, including the username and other fields",
 		Tags:        []string{"User"},
