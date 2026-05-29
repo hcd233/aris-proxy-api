@@ -24,6 +24,7 @@ import {
   ListFilter,
   Check,
   Clock,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -62,9 +63,24 @@ function computeRange(
   return { startTime: start.toISOString(), endTime: now.toISOString() };
 }
 
-function formatTokens(input: number, output: number): string {
+function formatTokens(
+  input: number,
+  output: number,
+  cacheCreation?: number,
+  cacheRead?: number,
+): string {
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  return `${fmt(input)} / ${fmt(output)}`;
+  const base = `${fmt(input)} / ${fmt(output)}`;
+  if (cacheCreation && cacheCreation > 0 && cacheRead && cacheRead > 0) {
+    return `${base} (cache ${fmt(cacheCreation)}↑ / ${fmt(cacheRead)}↓)`;
+  }
+  if (cacheCreation && cacheCreation > 0) {
+    return `${base} (cache ${fmt(cacheCreation)}↑)`;
+  }
+  if (cacheRead && cacheRead > 0) {
+    return `${base} (cache ${fmt(cacheRead)}↓)`;
+  }
+  return base;
 }
 
 export default function AuditPage() {
@@ -236,13 +252,15 @@ export default function AuditPage() {
             <div className="space-y-3">
               {logs.map((log) => {
                 const ok = log.upstreamStatusCode === 200;
+                const hasCache =
+                  (log.cacheCreationInputTokens > 0) || (log.cacheReadInputTokens > 0);
                 return (
                   <div key={log.id} className="rounded-lg border border-border bg-card p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{log.model || "—"}</p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {log.userName || "—"} · {log.apiKeyName || "—"}
+                          {log.apiProvider || "—"} · {log.upstreamProvider || ""}
                         </p>
                       </div>
                       <Badge
@@ -253,9 +271,19 @@ export default function AuditPage() {
                         {log.upstreamStatusCode}
                       </Badge>
                     </div>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {log.userName || "—"} · {log.apiKeyName || "—"}
+                    </p>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <span>{new Date(log.createdAt).toLocaleString()}</span>
-                      <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
+                      <span>
+                        {formatTokens(
+                          log.inputTokens,
+                          log.outputTokens,
+                          log.cacheCreationInputTokens,
+                          log.cacheReadInputTokens,
+                        )}
+                      </span>
                       <span>{log.firstTokenLatencyMs}ms</span>
                       <span
                         className="cursor-pointer font-mono underline-offset-2 hover:underline"
@@ -265,6 +293,25 @@ export default function AuditPage() {
                         {log.traceId.slice(-6) || "—"}
                       </span>
                     </div>
+                    {(hasCache || log.userAgent) && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground/70">
+                        {hasCache && (
+                          <span>
+                            cache: {(log.cacheCreationInputTokens || 0) > 0
+                              ? `${log.cacheCreationInputTokens}↑`
+                              : ""}
+                            {(log.cacheReadInputTokens || 0) > 0
+                              ? ` ${log.cacheReadInputTokens}↓`
+                              : ""}
+                          </span>
+                        )}
+                        {log.userAgent && (
+                          <span className="truncate" title={log.userAgent}>
+                            UA: {log.userAgent}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -275,6 +322,7 @@ export default function AuditPage() {
                 <TableRow>
                   <TableHead>Time</TableHead>
                   <TableHead>Model</TableHead>
+                  <TableHead>Provider</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>API Key</TableHead>
                   <TableHead>Status</TableHead>
@@ -291,7 +339,20 @@ export default function AuditPage() {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {new Date(log.createdAt).toLocaleString()}
                       </TableCell>
-                      <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        <div className="flex items-center gap-1">
+                          <span className="truncate">{log.model || "—"}</span>
+                          {log.userAgent && (
+                            <span title={log.userAgent}>
+                              <Info className="size-3 shrink-0 text-muted-foreground/50" />
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{log.apiProvider || "—"}</div>
+                        <div className="text-xs text-muted-foreground">{log.upstreamProvider || ""}</div>
+                      </TableCell>
                       <TableCell>
                         <div className="text-sm">{log.userName || "—"}</div>
                         <div className="text-xs text-muted-foreground">{log.userEmail || ""}</div>
@@ -309,7 +370,12 @@ export default function AuditPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {formatTokens(log.inputTokens, log.outputTokens)}
+                        {formatTokens(
+                          log.inputTokens,
+                          log.outputTokens,
+                          log.cacheCreationInputTokens,
+                          log.cacheReadInputTokens,
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {log.firstTokenLatencyMs}ms
