@@ -17,8 +17,8 @@ type ListSessionMessagesQuery struct {
 	UserID    uint
 	IsAdmin   bool
 	SessionID uint
-	Offset    int
-	Limit     int
+	Page      int
+	PageSize  int
 }
 
 // ListSessionMessagesResult 分页结果
@@ -68,15 +68,15 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q ListSessionMe
 		return &ListSessionMessagesResult{Messages: []*MessageView{}, Total: 0}, nil
 	}
 
-	offset := q.Offset
-	if offset > len(meta.MessageIDs) {
-		offset = len(meta.MessageIDs)
+	start := (q.Page - 1) * q.PageSize
+	if start > len(meta.MessageIDs) {
+		start = len(meta.MessageIDs)
 	}
-	end := offset + q.Limit
+	end := start + q.PageSize
 	if end > len(meta.MessageIDs) {
 		end = len(meta.MessageIDs)
 	}
-	pageIDs := meta.MessageIDs[offset:end]
+	pageIDs := meta.MessageIDs[start:end]
 	if len(pageIDs) == 0 {
 		return &ListSessionMessagesResult{Messages: []*MessageView{}, Total: total}, nil
 	}

@@ -1,6 +1,6 @@
 // Package session_detail_perf 验证 Session 详情接口性能优化的端到端行为：
 //   - GET /api/v1/session/metadata：返回 messageCount/toolCount，不含 IDs 数组
-//   - GET /api/v1/session/message/list：offset+limit 分页，返回 OffsetPageInfo
+//   - GET /api/v1/session/message/list：page+pageSize 分页，返回 PageInfo
 //   - GET /api/v1/session/tool/list：同上
 //
 // 环境变量：
@@ -101,14 +101,14 @@ func TestSessionDetailPerf_ListMessages_Pagination(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/message/list?sessionId=%d&offset=0&limit=10", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/v1/session/message/list?sessionId=%d&page=1&pageSize=10", baseURL, sessID)
 	var rsp struct {
 		Error    *struct{ Code int } `json:"error"`
 		Messages []map[string]any    `json:"messages"`
 		PageInfo *struct {
-			Offset int   `json:"offset"`
-			Limit  int   `json:"limit"`
-			Total  int64 `json:"total"`
+			Page     int   `json:"page"`
+			PageSize int   `json:"pageSize"`
+			Total    int64 `json:"total"`
 		} `json:"pageInfo"`
 	}
 	status := doGetJSON(t, client, url, jwt, &rsp)
@@ -121,22 +121,22 @@ func TestSessionDetailPerf_ListMessages_Pagination(t *testing.T) {
 	if rsp.PageInfo == nil {
 		t.Fatalf("pageInfo is nil")
 	}
-	if rsp.PageInfo.Offset != 0 || rsp.PageInfo.Limit != 10 {
-		t.Errorf("pageInfo.offset=%d limit=%d, want 0/10", rsp.PageInfo.Offset, rsp.PageInfo.Limit)
+	if rsp.PageInfo.Page != 1 || rsp.PageInfo.PageSize != 10 {
+		t.Errorf("pageInfo.page=%d pageSize=%d, want 1/10", rsp.PageInfo.Page, rsp.PageInfo.PageSize)
 	}
 	if int64(len(rsp.Messages)) > rsp.PageInfo.Total {
 		t.Errorf("messages len %d > total %d", len(rsp.Messages), rsp.PageInfo.Total)
 	}
 }
 
-func TestSessionDetailPerf_ListMessages_LimitRejected(t *testing.T) {
+func TestSessionDetailPerf_ListMessages_PageSizeRejected(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/message/list?sessionId=%d&offset=0&limit=999", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/v1/session/message/list?sessionId=%d&page=1&pageSize=999", baseURL, sessID)
 	status := doGetJSON(t, client, url, jwt, nil)
 	if status == http.StatusOK {
-		t.Errorf("expected 4xx for limit=999, got 200")
+		t.Errorf("expected 4xx for pageSize=999, got 200")
 	}
 }
 
@@ -144,14 +144,14 @@ func TestSessionDetailPerf_ListTools_Pagination(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/tool/list?sessionId=%d&offset=0&limit=10", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/v1/session/tool/list?sessionId=%d&page=1&pageSize=10", baseURL, sessID)
 	var rsp struct {
 		Error    *struct{ Code int } `json:"error"`
 		Tools    []map[string]any    `json:"tools"`
 		PageInfo *struct {
-			Offset int   `json:"offset"`
-			Limit  int   `json:"limit"`
-			Total  int64 `json:"total"`
+			Page     int   `json:"page"`
+			PageSize int   `json:"pageSize"`
+			Total    int64 `json:"total"`
 		} `json:"pageInfo"`
 	}
 	status := doGetJSON(t, client, url, jwt, &rsp)
