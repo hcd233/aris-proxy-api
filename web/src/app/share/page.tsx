@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api-client";
-import type { ShareMetadata as ShareMetadataType } from "@/lib/types";
+import type { ShareSessionMetadata } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,7 +36,7 @@ import {
   ChatMessage,
   buildToolResultsByID,
 } from "@/components/chat/chat-message";
-import { CollapsibleText, ToolSidebarItem } from "@/components/session-detail/session-detail-client";
+import { ToolSidebarItem } from "@/components/session-detail/session-detail-client";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
@@ -152,7 +152,7 @@ function SharedSessionView() {
   const shareID = searchParams.get("id") ?? "";
   const isMobile = useIsMobile();
 
-  const [metadata, setMetadata] = useState<ShareMetadataType | null>(null);
+  const [metadata, setMetadata] = useState<ShareSessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ShareError | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -315,10 +315,6 @@ function SharedSessionView() {
   }
 
   if (!metadata) return <ShareErrorView error={{ kind: "not-found" }} />;
-
-  const messageCount = messages.filter(
-    (m) => m.message.role !== "tool" && !m.message.tool_call_id,
-  ).length;
 
   // ── Mobile layout ──────────────────────────────────────────────────────
   if (isMobile) {

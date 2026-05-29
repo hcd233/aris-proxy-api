@@ -23,7 +23,6 @@ import type {
   OAuth2Provider,
   CreateShareReqBody,
   CreateShareRsp,
-  GetShareContentRsp,
   GetShareMetadataRsp,
   ListShareMessagesRsp,
   ListShareToolsRsp,
@@ -226,25 +225,6 @@ class ApiClient {
       `/api/v1/session/share?id=${encodeURIComponent(shareId)}`,
       { method: "DELETE" }
     );
-  }
-
-  /**
-   * Public endpoint — must NOT include Authorization header so the request
-   * works for unauthenticated viewers, and must NOT trigger the 401 →
-   * refresh-token redirect flow on expiry / invalid links.
-   */
-  async getShareContent(shareId: string): Promise<GetShareContentRsp> {
-    const res = await fetch(
-      `${API_BASE}/api/v1/session/share?id=${encodeURIComponent(shareId)}`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    if (!res.ok) {
-      throw new ApiError(res.status, await res.text());
-    }
-    return res.json();
   }
 
   /**
