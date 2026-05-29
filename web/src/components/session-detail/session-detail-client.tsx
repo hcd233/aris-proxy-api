@@ -205,8 +205,13 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   // top sentinel has scrolled out of view. Drives the compact header variant.
   const [headerCompact, setHeaderCompact] = useState(false);
   const headerSentinelRef = useRef<HTMLDivElement | null>(null);
+  const messagesScrollRootRef = useRef<HTMLDivElement | null>(null);
   const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
+  const toolsScrollRootRef = useRef<HTMLDivElement | null>(null);
   const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
+  const setToolsScrollRoot = useCallback((node: HTMLDivElement | null) => {
+    toolsScrollRootRef.current = node;
+  }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
@@ -286,6 +291,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
 
   // messages 滚动加载 sentinel
   useEffect(() => {
+    const root = isMobile ? messagesScrollRootRef.current : null;
     const sentinel = messagesSentinelRef.current;
     if (!sentinel || !messagesList.hasMore) return;
     const io = new IntersectionObserver(
@@ -294,12 +300,12 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           void messagesList.loadMore();
         }
       },
-      { rootMargin: "200px" },
+      { root, rootMargin: "200px" },
     );
     io.observe(sentinel);
     return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-bind IO when hasMore/loadMore identity changes
-  }, [messagesList.hasMore, messagesList.loadMore]);
+  }, [isMobile, messagesList.hasMore, messagesList.loadMore]);
 
   // tools 滚动加载 sentinel
   useEffect(() => {
