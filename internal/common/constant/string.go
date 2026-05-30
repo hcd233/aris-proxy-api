@@ -29,16 +29,6 @@ const (
 	DefaultFormatJSON      = "application/json"
 	DataURLPrefix          = "data:"
 	DataURLBase64Separator = ";base64,"
-	Base64SourceType       = "base64"
-	URLSourceType          = "url"
-
-	// ── JSON Schema 类型字面量 ──
-	JSONSchemaTypeString  = "string"
-	JSONSchemaTypeNumber  = "number"
-	JSONSchemaTypeBoolean = "boolean"
-	JSONSchemaTypeArray   = "array"
-	JSONSchemaTypeObject  = "object"
-
 	// ── dig 容器命名 ──
 	DigNameAccessSigner  = "accessSigner"
 	DigNameRefreshSigner = "refreshSigner"
@@ -83,10 +73,6 @@ const (
 	APIKeyDescription    = "API Key Authentication, Please pass the API Key as Bearer token in the Authorization header."
 
 	// OpenAI protocol object types
-	OpenAICompletionObject      = "chat.completion"
-	OpenAICompletionChunkObject = "chat.completion.chunk"
-	OpenAIResponseObject        = "response"
-
 	// OpenAI list models response fields
 	OpenAIListObject   = "list"
 	OpenAIModelObject  = "model"
@@ -112,9 +98,6 @@ const (
 
 	FieldNameID    = "id"
 	FieldNameModel = "model"
-
-	MCPApprovalAlways = "always"
-	MCPApprovalNever  = "never"
 
 	GithubScopeUserEmail = "user:email"
 	GithubScopeRepo      = "repo"

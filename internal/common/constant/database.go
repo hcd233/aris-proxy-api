@@ -20,14 +20,4 @@ const (
 		COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count,
 		COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count
 		FROM sessions WHERE deleted_at = 0`
-
-	AggregateTypeEndpoint       = "llmproxy.endpoint"
-	AggregateTypeModel          = "llmproxy.model"
-	AggregateTypeAPIKey         = "apikey.proxy_api_key"
-	AggregateTypeUser           = "identity.user"
-	AggregateTypeOAuthIdentity  = "oauth2.identity"
-	AggregateTypeModelCallAudit = "modelcall.audit"
-	AggregateTypeMessage        = "conversation.message"
-	AggregateTypeTool           = "conversation.tool"
-	AggregateTypeSession        = "session.session"
 )

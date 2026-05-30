@@ -18,6 +18,7 @@ import (
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -414,8 +415,8 @@ func newRefreshTokenSigner() identityservice.TokenSigner {
 
 func newOauth2Platforms() map[string]oauth2service.Platform {
 	return map[string]oauth2service.Platform{
-		constant.OAuthProviderGithub: infraoauth2.NewGithubPlatform(),
-		constant.OAuthProviderGoogle: infraoauth2.NewGooglePlatform(),
+		enum.Oauth2PlatformGithub: infraoauth2.NewGithubPlatform(),
+		enum.Oauth2PlatformGoogle: infraoauth2.NewGooglePlatform(),
 	}
 }
 

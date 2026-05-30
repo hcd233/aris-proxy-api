@@ -3,7 +3,7 @@ package schema
 
 import (
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/vo"
 )
 
@@ -30,7 +30,7 @@ type JSONSchemaProperty struct {
 
 // Schema 实现 huma.SchemaProvider 接口
 func (JSONSchemaProperty) Schema(_ huma.Registry) *huma.Schema {
-	return &huma.Schema{Type: constant.JSONSchemaTypeObject}
+	return &huma.Schema{Type: enum.JSONSchemaTypeObject}
 }
 
 // HasType 判断 JSON Schema 的 type 是否包含给定类型

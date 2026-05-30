@@ -53,7 +53,7 @@ func (*ResponseProtocolConverter) ToResponseResponse(completion *dto.OpenAIChatC
 	}
 	rsp := &dto.OpenAICreateResponseRsp{
 		ID:        completion.ID,
-		Object:    constant.OpenAIResponseObject,
+		Object:    enum.CompletionObjectResponse,
 		CreatedAt: completion.Created,
 		Status:    enum.ResponseStatusCompleted,
 		Model:     completion.Model,

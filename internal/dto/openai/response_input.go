@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
@@ -110,8 +111,8 @@ func (c ResponseInputMessageContent) Schema(r huma.Registry) *huma.Schema {
 	contentSchema := r.Schema(reflect.TypeFor[ResponseInputContent](), true, "ResponseInputContent")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
-			{Type: constant.JSONSchemaTypeArray, Items: contentSchema},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeArray, Items: contentSchema},
 		},
 	}
 }
@@ -340,9 +341,9 @@ func (a ResponseFileSearchResultAttribute) MarshalJSON() ([]byte, error) {
 func (ResponseFileSearchResultAttribute) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
-			{Type: constant.JSONSchemaTypeNumber},
-			{Type: constant.JSONSchemaTypeBoolean},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeNumber},
+			{Type: enum.JSONSchemaTypeBoolean},
 		},
 	}
 }
@@ -379,8 +380,8 @@ func (ResponseFunctionCallOutputContent) Schema(r huma.Registry) *huma.Schema {
 	itemSchema := r.Schema(reflect.TypeFor[ResponseInputContent](), true, "ResponseInputContent")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
-			{Type: constant.JSONSchemaTypeArray, Items: itemSchema},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeArray, Items: itemSchema},
 		},
 	}
 }
@@ -605,9 +606,9 @@ func (o ResponseInputItemOutput) MarshalJSON() ([]byte, error) {
 func (ResponseInputItemOutput) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
-			{Type: constant.JSONSchemaTypeObject, AdditionalProperties: true},
-			{Type: constant.JSONSchemaTypeArray, Items: &huma.Schema{Type: constant.JSONSchemaTypeObject, AdditionalProperties: true}},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeObject, AdditionalProperties: true},
+			{Type: enum.JSONSchemaTypeArray, Items: &huma.Schema{Type: enum.JSONSchemaTypeObject, AdditionalProperties: true}},
 		},
 	}
 }
@@ -643,8 +644,8 @@ func (ResponseInput) Schema(reg huma.Registry) *huma.Schema {
 	itemSchema := reg.Schema(reflect.TypeFor[ResponseInputItem](), true, "ResponseInputItem")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
-			{Type: constant.JSONSchemaTypeArray, Items: itemSchema},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeArray, Items: itemSchema},
 		},
 	}
 }

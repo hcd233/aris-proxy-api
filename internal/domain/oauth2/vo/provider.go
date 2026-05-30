@@ -1,7 +1,7 @@
 // Package vo OAuth2 域值对象
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/common/constant"
+import "github.com/hcd233/aris-proxy-api/internal/common/enum"
 
 // OAuthProvider OAuth2 平台类型值对象
 //
@@ -9,13 +9,13 @@ import "github.com/hcd233/aris-proxy-api/internal/common/constant"
 //	@update 2026-04-22 17:00:00
 type OAuthProvider string
 
-// 平台常量 — 使用 var 以便从 constant 包做类型强转；变量语义实际上只读。
+// 平台常量
 //
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
 var (
-	OAuthProviderGithub = OAuthProvider(constant.OAuthProviderGithub)
-	OAuthProviderGoogle = OAuthProvider(constant.OAuthProviderGoogle)
+	OAuthProviderGithub = OAuthProvider(enum.Oauth2PlatformGithub)
+	OAuthProviderGoogle = OAuthProvider(enum.Oauth2PlatformGoogle)
 )
 
 // String 返回字符串形态

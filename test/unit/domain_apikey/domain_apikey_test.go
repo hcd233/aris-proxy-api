@@ -9,7 +9,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
@@ -88,8 +88,8 @@ func TestIssueProxyAPIKey(t *testing.T) {
 				if key.Name().String() != tc.KeyName {
 					t.Errorf("Name = %q, want %q", key.Name().String(), tc.KeyName)
 				}
-				if key.AggregateType() != constant.AggregateTypeAPIKey {
-					t.Errorf("AggregateType = %q, want %q", key.AggregateType(), constant.AggregateTypeAPIKey)
+				if key.AggregateType() != enum.AggregateTypeAPIKey {
+					t.Errorf("AggregateType = %q, want %q", key.AggregateType(), enum.AggregateTypeAPIKey)
 				}
 			case "quota_exceeded":
 				if !errors.Is(err, ierr.ErrQuotaExceeded) {

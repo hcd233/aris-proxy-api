@@ -13,6 +13,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -81,7 +82,7 @@ func (*AnthropicProtocolConverter) FromOpenAIRequest(req *dto.OpenAIChatCompleti
 func (*AnthropicProtocolConverter) ToOpenAIResponse(msg *dto.AnthropicMessage) (*dto.OpenAIChatCompletion, error) {
 	completion := &dto.OpenAIChatCompletion{
 		ID:      msg.ID,
-		Object:  constant.OpenAICompletionObject,
+		Object:  enum.CompletionObjectChatCompletion,
 		Created: time.Now().Unix(),
 		Model:   msg.Model,
 	}
@@ -287,7 +288,7 @@ func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL
 			mt := mediaType
 			d := parts[1]
 			block.Source = &dto.AnthropicContentSource{
-				Type:      constant.Base64SourceType,
+				Type:      commonenum.SourceTypeBase64,
 				MediaType: &mt,
 				Data:      &d,
 			}
@@ -298,7 +299,7 @@ func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL
 	// URL 形式
 	u := img.URL
 	block.Source = &dto.AnthropicContentSource{
-		Type: constant.URLSourceType,
+		Type: commonenum.SourceTypeURL,
 		URL:  &u,
 	}
 	return block
