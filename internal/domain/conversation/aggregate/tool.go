@@ -1,7 +1,7 @@
 package aggregate
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
@@ -51,7 +51,7 @@ func RestoreTool(id uint, content *vo.UnifiedTool, checksum string) *Tool {
 }
 
 // AggregateType 实现 aggregate.Root 接口
-func (*Tool) AggregateType() string { return constant.AggregateTypeTool }
+func (*Tool) AggregateType() string { return enum.AggregateTypeTool }
 
 // Content 返回工具内容的防御性副本
 func (t *Tool) Content() *vo.UnifiedTool {

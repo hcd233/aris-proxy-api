@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
@@ -133,8 +134,8 @@ func (c AnthropicMessageContent) Schema(r huma.Registry) *huma.Schema {
 	contentBlockSchema := r.Schema(reflect.TypeFor[AnthropicContentBlock](), true, "AnthropicContentBlock")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
-			{Type: constant.JSONSchemaTypeArray, Items: contentBlockSchema},
+			{Type: commonenum.JSONSchemaTypeString},
+			{Type: commonenum.JSONSchemaTypeArray, Items: contentBlockSchema},
 		},
 	}
 }
@@ -171,8 +172,8 @@ func (c AnthropicToolResultContent) Schema(r huma.Registry) *huma.Schema {
 	contentBlockSchema := r.Schema(reflect.TypeFor[AnthropicContentBlock](), true, "AnthropicContentBlock")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
-			{Type: constant.JSONSchemaTypeArray, Items: contentBlockSchema},
+			{Type: commonenum.JSONSchemaTypeString},
+			{Type: commonenum.JSONSchemaTypeArray, Items: contentBlockSchema},
 		},
 	}
 }

@@ -1,6 +1,6 @@
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/common/constant"
+import "github.com/hcd233/aris-proxy-api/internal/enum"
 
 // CallStatus 模型调用状态值对象
 //
@@ -55,5 +55,5 @@ func (s CallStatus) ErrorMessage() string { return s.errorMessage }
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func (s CallStatus) IsSuccess() bool {
-	return s.upstreamStatusCode == constant.CallStatusSuccess && s.errorMessage == ""
+	return s.upstreamStatusCode == enum.CallStatusSuccess && s.errorMessage == ""
 }

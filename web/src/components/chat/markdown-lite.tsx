@@ -23,9 +23,21 @@ import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 
+import type { ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 
 import "highlight.js/styles/atom-one-dark.css";
+
+function reactChildrenToText(children: ReactNode): string {
+  if (typeof children === "string") return children;
+  if (typeof children === "number") return String(children);
+  if (Array.isArray(children)) return children.map(reactChildrenToText).join("");
+  if (children && typeof children === "object" && "props" in (children as object)) {
+    return reactChildrenToText((children as { props: { children?: ReactNode } }).props.children);
+  }
+  return "";
+}
 
 // ─── Mermaid block ───────────────────────────────────────────────────────────
 
@@ -108,11 +120,12 @@ function MermaidBlock({ code }: { code: string }) {
 function CodeBlock({
   lang,
   value,
+  children,
   highlightedClassName,
 }: {
   lang: string;
   value: string;
-  /** className from rehype-highlight, applied to <code>. */
+  children?: ReactNode;
   highlightedClassName?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -151,7 +164,7 @@ function CodeBlock({
       </div>
       <pre className="overflow-x-auto px-4 py-3 font-mono text-[12.5px] leading-relaxed text-[#E8DDD3]">
         <code className={cn("hljs bg-transparent !p-0", highlightedClassName)}>
-          {value}
+          {children ?? value}
         </code>
       </pre>
     </div>
@@ -309,7 +322,7 @@ const markdownComponents: Components = {
     // react-markdown sets className like `language-xxx` only on block code.
     const langMatch = /language-([\w+-]+)/.exec(className ?? "");
     const lang = langMatch?.[1] ?? "";
-    const value = String(children ?? "").replace(/\n$/, "");
+    const value = reactChildrenToText(children).replace(/\n$/, "");
 
     // Inline code (no language class set by markdown parser)
     if (!lang && (inline || !value.includes("\n"))) {
@@ -324,7 +337,7 @@ const markdownComponents: Components = {
       return <MermaidBlock code={value} />;
     }
 
-    return <CodeBlock lang={lang} value={value} highlightedClassName={className} />;
+    return <CodeBlock lang={lang} value={value} highlightedClassName={className}>{children}</CodeBlock>;
   },
 
   // `pre` is rendered by our CodeBlock; suppress react-markdown's wrapper for

@@ -218,20 +218,20 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 
 func dateTruncSQL(granularity string) string {
 	switch granularity {
-	case constant.GranularityMinute:
+	case enum.GranularityMinute:
 		return constant.DateTruncMinute
-	case constant.GranularityHour:
+	case enum.GranularityHour:
 		return constant.DateTruncHour
-	case constant.GranularityDay:
+	case enum.GranularityDay:
 		return constant.DateTruncDay
-	case constant.GranularityWeek:
+	case enum.GranularityWeek:
 		return constant.DateTruncWeek
 	default:
 		return constant.DateTruncDay
 	}
 }
 
-func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.ModelTrendPoint, error) {
+func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.SQLConditionDeletedAtZero)

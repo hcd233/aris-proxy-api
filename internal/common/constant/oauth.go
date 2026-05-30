@@ -3,9 +3,6 @@ package constant
 import "time"
 
 const (
-	OAuthProviderGithub = "github"
-	OAuthProviderGoogle = "google"
-
 	GithubUserURL      = "https://api.github.com/user"
 	GithubUserEmailURL = "https://api.github.com/user/emails"
 	GoogleUserInfoURL  = "https://www.googleapis.com/oauth2/v2/userinfo"

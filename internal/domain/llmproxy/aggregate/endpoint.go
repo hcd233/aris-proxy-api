@@ -3,7 +3,7 @@ package aggregate
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonagg "github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 )
@@ -57,7 +57,7 @@ func CreateEndpoint(
 	return ep, nil
 }
 
-func (*Endpoint) AggregateType() string { return constant.AggregateTypeEndpoint }
+func (*Endpoint) AggregateType() string { return enum.AggregateTypeEndpoint }
 
 func (e *Endpoint) Name() string                      { return e.name }
 func (e *Endpoint) OpenaiBaseURL() string             { return e.openaiBaseURL }

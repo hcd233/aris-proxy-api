@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/samber/lo"
 	tencentcloud_cls_sdk_go "github.com/tencentcloud/tencentcloud-cls-sdk-go"
@@ -57,11 +58,11 @@ func newCLSCore() *clsCore {
 
 	level := zapcore.InfoLevel
 	switch config.CLSLevel {
-	case constant.CLSLevelDebug:
+	case enum.CLSLevelDebug:
 		level = zapcore.DebugLevel
-	case constant.CLSLevelWarn:
+	case enum.CLSLevelWarn:
 		level = zapcore.WarnLevel
-	case constant.CLSLevelError:
+	case enum.CLSLevelError:
 		level = zapcore.ErrorLevel
 	}
 

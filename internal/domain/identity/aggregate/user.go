@@ -4,7 +4,6 @@ package aggregate
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
@@ -55,9 +54,9 @@ func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvid
 		createdAt:  now,
 	}
 	switch authProvider {
-	case constant.OAuthProviderGithub:
+	case string(commonenum.Oauth2PlatformGithub):
 		u.githubBindID = bindID
-	case constant.OAuthProviderGoogle:
+	case string(commonenum.Oauth2PlatformGoogle):
 		u.googleBindID = bindID
 	}
 	return u, nil
@@ -138,7 +137,7 @@ func (u *User) ChangePermission(newPerm commonenum.Permission) {
 }
 
 // AggregateType 实现 aggregate.Root 接口
-func (*User) AggregateType() string { return constant.AggregateTypeUser }
+func (*User) AggregateType() string { return commonenum.AggregateTypeUser }
 
 // Name 返回用户名
 func (u *User) Name() vo.UserName { return u.name }

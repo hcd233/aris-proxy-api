@@ -6,6 +6,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
@@ -92,7 +93,7 @@ func (ResponsePromptVariable) Schema(reg huma.Registry) *huma.Schema {
 	contentSchema := reg.Schema(reflect.TypeFor[ResponseInputContent](), true, "ResponseInputContent")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeString},
 			contentSchema,
 		},
 	}
@@ -142,7 +143,7 @@ func (ResponseConversationParam) Schema(reg huma.Registry) *huma.Schema {
 	valueSchema := reg.Schema(reflect.TypeFor[ResponseConversationValue](), true, "ResponseConversationValue")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: constant.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeString},
 			valueSchema,
 		},
 	}

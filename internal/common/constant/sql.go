@@ -104,11 +104,6 @@ var (
 
 	AuditMaxPageSize = 100
 
-	GranularityMinute = "minute"
-	GranularityHour   = "hour"
-	GranularityDay    = "day"
-	GranularityWeek   = "week"
-
 	DateTruncMinute = "date_trunc('minute', created_at)"
 	DateTruncHour   = "date_trunc('hour', created_at)"
 	DateTruncDay    = "date_trunc('day', created_at)"

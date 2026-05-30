@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
@@ -117,7 +118,7 @@ func ExtractUpstreamStatusAndError(err error) (statusCode int, errorMessage stri
 	}
 	var connErr *model.UpstreamConnectionError
 	if errors.As(err, &connErr) {
-		return constant.CallStatusConnectionError, connErr.Error()
+		return enum.CallStatusConnectionError, connErr.Error()
 	}
-	return constant.CallStatusUnknownError, err.Error()
+	return enum.CallStatusUnknownError, err.Error()
 }

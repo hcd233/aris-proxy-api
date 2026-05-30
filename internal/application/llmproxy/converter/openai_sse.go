@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/enum"
@@ -19,7 +18,7 @@ func convertContentBlockDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkI
 
 	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      chunkID,
-		Object:  constant.OpenAICompletionChunkObject,
+		Object:  enum.CompletionObjectChatCompletionChunk,
 		Created: time.Now().Unix(),
 		Model:   model,
 	}
@@ -59,7 +58,7 @@ func convertMessageDeltaToChunks(data sonic.NoCopyRawMessage, model, chunkID str
 
 	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      chunkID,
-		Object:  constant.OpenAICompletionChunkObject,
+		Object:  enum.CompletionObjectChatCompletionChunk,
 		Created: time.Now().Unix(),
 		Model:   model,
 	}
@@ -98,7 +97,7 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 		name := lo.FromPtr(payload.ContentBlock.Name)
 		chunk := &dto.OpenAIChatCompletionChunk{
 			ID:      chunkID,
-			Object:  constant.OpenAICompletionChunkObject,
+			Object:  enum.CompletionObjectChatCompletionChunk,
 			Created: time.Now().Unix(),
 			Model:   model,
 			Choices: []*dto.OpenAIChatCompletionChunkChoice{{
@@ -123,7 +122,7 @@ func convertContentBlockStartToChunks(data sonic.NoCopyRawMessage, model, chunkI
 		payload.ContentBlock.Type == enum.AnthropicContentBlockTypeThinking {
 		chunk := &dto.OpenAIChatCompletionChunk{
 			ID:      chunkID,
-			Object:  constant.OpenAICompletionChunkObject,
+			Object:  enum.CompletionObjectChatCompletionChunk,
 			Created: time.Now().Unix(),
 			Model:   model,
 			Choices: []*dto.OpenAIChatCompletionChunkChoice{{

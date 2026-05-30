@@ -14,6 +14,7 @@ import (
 	xoauth2 "golang.org/x/oauth2"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
@@ -391,9 +392,9 @@ func (h *handleCallbackHandler) signTokenPair(ctx context.Context, userID uint) 
 //	@update 2026-04-22 20:30:00
 func (h *handleCallbackHandler) findByBindID(ctx context.Context, platform, bindID string) (*identityaggregate.User, error) {
 	switch platform {
-	case constant.OAuthProviderGithub:
+	case enum.Oauth2PlatformGithub:
 		return h.userRepo.FindByGithubBindID(ctx, bindID)
-	case constant.OAuthProviderGoogle:
+	case enum.Oauth2PlatformGoogle:
 		return h.userRepo.FindByGoogleBindID(ctx, bindID)
 	default:
 		return nil, ierr.New(ierr.ErrBadRequest, "invalid oauth platform")

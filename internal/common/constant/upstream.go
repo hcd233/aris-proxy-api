@@ -54,10 +54,6 @@ const (
 	UpstreamErrorType             = "upstream_error"
 	UpstreamStatusMessageTemplate = "Upstream returned status %d"
 
-	CallStatusSuccess         = 200
-	CallStatusConnectionError = -1
-	CallStatusUnknownError    = 0
-
 	ReasoningContentPlaceholder = " "
 
 	ResponseFailedAuditReason             = "response.failed"

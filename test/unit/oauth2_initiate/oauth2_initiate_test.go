@@ -15,7 +15,7 @@ import (
 	xoauth2 "golang.org/x/oauth2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
@@ -83,11 +83,11 @@ func (p *stubPlatform) GetUserInfo(_ context.Context, _ *xoauth2.Token) (vo.OAut
 func TestInitiateLogin(t *testing.T) {
 	ctx := context.Background()
 
-	githubStub := newStubPlatform(constant.OAuthProviderGithub)
-	googleStub := newStubPlatform(constant.OAuthProviderGoogle)
+	githubStub := newStubPlatform(enum.Oauth2PlatformGithub)
+	googleStub := newStubPlatform(enum.Oauth2PlatformGoogle)
 	platforms := map[string]service.Platform{
-		constant.OAuthProviderGithub: githubStub,
-		constant.OAuthProviderGoogle: googleStub,
+		enum.Oauth2PlatformGithub: githubStub,
+		enum.Oauth2PlatformGoogle: googleStub,
 	}
 	stateManager := newStubStateManager()
 	handler := command.NewInitiateLoginHandler(platforms, stateManager)
