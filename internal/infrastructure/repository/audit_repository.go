@@ -215,3 +215,58 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 	}
 	return audits, pageInfo, nil
 }
+
+func dateTruncSQL(granularity string) string {
+	switch granularity {
+	case constant.GranularityMinute:
+		return constant.DateTruncMinute
+	case constant.GranularityHour:
+		return constant.DateTruncHour
+	case constant.GranularityDay:
+		return constant.DateTruncDay
+	case constant.GranularityWeek:
+		return constant.DateTruncWeek
+	default:
+		return constant.DateTruncDay
+	}
+}
+
+func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.ModelTrendPoint, error) {
+	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
+		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
+		Where(constant.SQLConditionDeletedAtZero)
+
+	if len(apiKeyIDs) > 0 {
+		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
+	}
+
+	timeBucketExpr := dateTruncSQL(granularity)
+	var results []*modelcall.ModelTrendPoint
+	if err := db.Select(constant.FieldModel + ", " + timeBucketExpr + " AS time, COUNT(*) AS count").
+		Group(constant.FieldModel + ", time").
+		Order(constant.FieldModel + ", time").
+		Scan(&results).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query model trend")
+	}
+	return results, nil
+}
+
+func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.RequestRatePoint, error) {
+	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
+		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
+		Where(constant.SQLConditionDeletedAtZero)
+
+	if len(apiKeyIDs) > 0 {
+		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
+	}
+
+	timeBucketExpr := dateTruncSQL(granularity)
+	var results []*modelcall.RequestRatePoint
+	if err := db.Select(constant.FieldModel + ", " + timeBucketExpr + " AS time, COUNT(*) AS total, COUNT(*) FILTER (WHERE " + constant.SQLConditionUpstreamSuccess + ") AS success").
+		Group(constant.FieldModel + ", time").
+		Order(constant.FieldModel + ", time").
+		Scan(&results).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query request rate")
+	}
+	return results, nil
+}
