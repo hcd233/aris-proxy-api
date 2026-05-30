@@ -174,7 +174,7 @@ export function SwipeDismissSheetBody({
   );
 
   return (
-    <div ref={popupRef} className="flex h-full flex-col">
+    <div ref={popupRef} className="flex min-h-0 h-full flex-col">
       <div
         onTouchStart={handleHeaderTouchStart}
         onTouchMove={handleTouchMove}

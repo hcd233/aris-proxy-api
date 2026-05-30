@@ -486,7 +486,7 @@ function SharedSessionView() {
               side="bottom"
               showCloseButton={false}
               className={[
-                "h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
+                "!h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
                 "shadow-[0_-8px_32px_rgba(0,0,0,0.16)]",
                 "flex flex-col",
                 "!duration-[320ms] !ease-[cubic-bezier(0.32,0.72,0,1)]",

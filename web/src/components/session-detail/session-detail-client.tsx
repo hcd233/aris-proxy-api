@@ -579,7 +579,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               side="bottom"
               showCloseButton={false}
               className={[
-                "h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
+                "!h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
                 "shadow-[0_-8px_32px_rgba(0,0,0,0.16)]",
                 "flex flex-col",
                 // Override base-ui's default 200ms ease-in-out enter/exit:
