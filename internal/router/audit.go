@@ -25,4 +25,26 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Security:    []map[string][]string{{"jwtAuth": {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listAuditLogs", enum.PermissionUser)},
 	}, auditHandler.HandleListAuditLogs)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryModelTrend",
+		Method:      http.MethodGet,
+		Path:        "/stats/model/trend",
+		Summary:     "QueryModelTrend",
+		Description: "Query model call count trend grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Tags:        []string{"Audit"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryModelTrend", enum.PermissionUser)},
+	}, auditHandler.HandleModelTrend)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryRequestRate",
+		Method:      http.MethodGet,
+		Path:        "/stats/request/rate",
+		Summary:     "QueryRequestRate",
+		Description: "Query request success rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Tags:        []string{"Audit"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryRequestRate", enum.PermissionUser)},
+	}, auditHandler.HandleRequestRate)
 }

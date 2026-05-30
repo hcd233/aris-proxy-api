@@ -29,6 +29,9 @@ import type {
   ListSharesRsp,
   CommonRsp,
   ListAuditLogsRsp,
+  ModelTrendRsp,
+  RequestRateRsp,
+  Granularity,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -402,6 +405,24 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
+  }
+
+  async fetchModelTrend(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<ModelTrendRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<ModelTrendRsp>(`/api/v1/audit/stats/model/trend?${sp}`);
+  }
+
+  async fetchRequestRate(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<RequestRateRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<RequestRateRsp>(`/api/v1/audit/stats/request/rate?${sp}`);
   }
 }
 
