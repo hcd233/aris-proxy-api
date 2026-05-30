@@ -110,5 +110,4 @@ var (
 	DateTruncWeek   = "date_trunc('week', created_at)"
 
 	SQLConditionUpstreamSuccess = "upstream_status_code = 200"
-	SQLConditionDeletedAtZero   = "deleted_at IS NULL"
 )
