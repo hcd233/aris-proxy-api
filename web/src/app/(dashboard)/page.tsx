@@ -1,21 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
-import type { SessionSummary } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Key,
   MessageSquare,
   Server,
   Cpu,
-  Plus,
-  ArrowRight,
 } from "lucide-react";
 
 interface DashboardStats {
@@ -63,7 +57,6 @@ export default function DashboardPage() {
     endpoints: 0,
     models: 0,
   });
-  const [recentSessions, setRecentSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboard = useCallback(async () => {
@@ -83,7 +76,6 @@ export default function DashboardPage() {
         endpoints: endpointsCount,
         models: modelsCount,
       });
-      setRecentSessions(sessionsRsp.sessions ?? []);
     } catch {
       // Errors handled silently — dashboard shows zeros
     } finally {
@@ -135,92 +127,6 @@ export default function DashboardPage() {
               loading={loading}
             />
           )}
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* Recent Sessions */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="font-display">Recent Sessions</CardTitle>
-              <Link href="/sessions/">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                  View all <ArrowRight className="ml-1 size-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : recentSessions.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  No sessions yet
-                </p>
-              ) : (
-                <div className="space-y-1">
-                  {recentSessions.map((s) => (
-                    <Link
-                      key={s.id}
-                      href={`/sessions/detail/?id=${s.id}`}
-                      className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-all duration-150 hover:bg-secondary"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {s.summary || `Session #${s.id}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(s.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="ml-2 shrink-0 text-xs">
-                        {s.messageCount ?? 0} msgs
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Link href="/apikeys/" className="block">
-                <Button variant="outline" className="w-full justify-start gap-3 h-10">
-                  <Plus className="size-4 text-muted-foreground" />
-                  Create API Key
-                </Button>
-              </Link>
-              <Link href="/sessions/" className="block">
-                <Button variant="outline" className="w-full justify-start gap-3 h-10">
-                  <MessageSquare className="size-4 text-muted-foreground" />
-                  View Sessions
-                </Button>
-              </Link>
-              {isAdmin() && (
-                <>
-                  <Link href="/endpoints/" className="block">
-                    <Button variant="outline" className="w-full justify-start gap-3 h-10">
-                      <Server className="size-4 text-muted-foreground" />
-                      Manage Endpoints
-                    </Button>
-                  </Link>
-                  <Link href="/models/" className="block">
-                    <Button variant="outline" className="w-full justify-start gap-3 h-10">
-                      <Cpu className="size-4 text-muted-foreground" />
-                      Manage Models
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
   );
