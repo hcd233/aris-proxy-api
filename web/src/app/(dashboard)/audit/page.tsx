@@ -63,24 +63,17 @@ function computeRange(
   return { startTime: start.toISOString(), endTime: now.toISOString() };
 }
 
-function formatTokens(
-  input: number,
-  output: number,
-  cacheCreation?: number,
-  cacheRead?: number,
-): string {
+function formatTokens(input: number, output: number): string {
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  const base = `${fmt(input)} / ${fmt(output)}`;
-  if (cacheCreation && cacheCreation > 0 && cacheRead && cacheRead > 0) {
-    return `${base} (cache ${fmt(cacheCreation)}↑ / ${fmt(cacheRead)}↓)`;
-  }
-  if (cacheCreation && cacheCreation > 0) {
-    return `${base} (cache ${fmt(cacheCreation)}↑)`;
-  }
-  if (cacheRead && cacheRead > 0) {
-    return `${base} (cache ${fmt(cacheRead)}↓)`;
-  }
-  return base;
+  return `${fmt(input)} / ${fmt(output)}`;
+}
+
+function formatCache(creation: number, read: number): string {
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+  const parts: string[] = [];
+  if (creation > 0) parts.push(`${fmt(creation)}↑`);
+  if (read > 0) parts.push(`${fmt(read)}↓`);
+  return parts.join(" / ") || "—";
 }
 
 export default function AuditPage() {
@@ -276,14 +269,8 @@ export default function AuditPage() {
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <span>{new Date(log.createdAt).toLocaleString()}</span>
-                      <span>
-                        {formatTokens(
-                          log.inputTokens,
-                          log.outputTokens,
-                          log.cacheCreationInputTokens,
-                          log.cacheReadInputTokens,
-                        )}
-                      </span>
+                      <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
+                      {hasCache && <span>cache {formatCache(log.cacheCreationInputTokens, log.cacheReadInputTokens)}</span>}
                       <span>{log.firstTokenLatencyMs}ms</span>
                       <span
                         className="cursor-pointer font-mono underline-offset-2 hover:underline"
@@ -293,23 +280,11 @@ export default function AuditPage() {
                         {log.traceId.slice(-6) || "—"}
                       </span>
                     </div>
-                    {(hasCache || log.userAgent) && (
+                    {(log.userAgent) && (
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground/70">
-                        {hasCache && (
-                          <span>
-                            cache: {(log.cacheCreationInputTokens || 0) > 0
-                              ? `${log.cacheCreationInputTokens}↑`
-                              : ""}
-                            {(log.cacheReadInputTokens || 0) > 0
-                              ? ` ${log.cacheReadInputTokens}↓`
-                              : ""}
-                          </span>
-                        )}
-                        {log.userAgent && (
                           <span className="truncate" title={log.userAgent}>
                             UA: {log.userAgent}
                           </span>
-                        )}
                       </div>
                     )}
                   </div>
@@ -327,6 +302,7 @@ export default function AuditPage() {
                   <TableHead>API Key</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
+                  <TableHead>Cache</TableHead>
                   <TableHead>Latency</TableHead>
                   <TableHead>TraceID</TableHead>
                 </TableRow>
@@ -370,12 +346,10 @@ export default function AuditPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {formatTokens(
-                          log.inputTokens,
-                          log.outputTokens,
-                          log.cacheCreationInputTokens,
-                          log.cacheReadInputTokens,
-                        )}
+                        {formatTokens(log.inputTokens, log.outputTokens)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {formatCache(log.cacheCreationInputTokens, log.cacheReadInputTokens)}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {log.firstTokenLatencyMs}ms
