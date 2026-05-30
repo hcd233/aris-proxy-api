@@ -489,7 +489,6 @@ function SharedSessionView() {
                 "h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
                 "shadow-[0_-8px_32px_rgba(0,0,0,0.16)]",
                 "flex flex-col",
-                "touch-pan-y",
                 "!duration-[320ms] !ease-[cubic-bezier(0.32,0.72,0,1)]",
                 "data-[side=bottom]:data-starting-style:!translate-y-[100%]",
                 "data-[side=bottom]:data-ending-style:!translate-y-[100%]",
