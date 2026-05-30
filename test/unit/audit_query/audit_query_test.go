@@ -48,6 +48,14 @@ func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint)
 	return map[uint]*modelcall.AuditRelation{}, nil
 }
 
+func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.ModelTrendPoint, error) {
+	return nil, nil
+}
+
+func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.RequestRatePoint, error) {
+	return nil, nil
+}
+
 type fakeAPIKeyIDLookup struct {
 	lookupFunc func(ctx context.Context, userID uint) ([]uint, error)
 	calls      int

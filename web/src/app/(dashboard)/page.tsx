@@ -11,6 +11,8 @@ import {
   Server,
   Cpu,
 } from "lucide-react";
+import { ModelTrendChart } from "@/components/charts/model-trend-chart";
+import { RequestRateChart } from "@/components/charts/request-rate-chart";
 
 interface DashboardStats {
   apiKeys: number;
@@ -127,6 +129,11 @@ export default function DashboardPage() {
               loading={loading}
             />
           )}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ModelTrendChart />
+          <RequestRateChart />
         </div>
       </div>
   );

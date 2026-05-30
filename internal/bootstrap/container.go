@@ -257,6 +257,18 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newListAuditLogsByUserHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(auditquery.NewModelTrendHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newModelTrendByUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(auditquery.NewRequestRateHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newRequestRateByUserHandler); err != nil {
+		return err
+	}
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
 		return err
 	}
@@ -515,15 +527,31 @@ func newAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 func newAuditDependencies(
 	listAll auditquery.ListAllAuditLogsHandler,
 	listByUser auditquery.ListAuditLogsByUserHandler,
+	modelTrend auditquery.ModelTrendHandler,
+	modelTrendByUser auditquery.ModelTrendByUserHandler,
+	requestRate auditquery.RequestRateHandler,
+	requestRateByUser auditquery.RequestRateByUserHandler,
 ) handler.AuditDependencies {
 	return handler.AuditDependencies{
-		ListAll:    listAll,
-		ListByUser: listByUser,
+		ListAll:           listAll,
+		ListByUser:        listByUser,
+		ModelTrend:        modelTrend,
+		ModelTrendByUser:  modelTrendByUser,
+		RequestRate:       requestRate,
+		RequestRateByUser: requestRateByUser,
 	}
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
 	return auditquery.NewListAuditLogsByUserHandler(repo, apiKeyRepo)
+}
+
+func newModelTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelTrendByUserHandler {
+	return auditquery.NewModelTrendByUserHandler(repo, apiKeyRepo)
+}
+
+func newRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.RequestRateByUserHandler {
+	return auditquery.NewRequestRateByUserHandler(repo, apiKeyRepo)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {

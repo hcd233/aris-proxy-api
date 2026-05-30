@@ -103,4 +103,17 @@ var (
 	AuditQueryFields = []string{FieldTraceID, FieldModel}
 
 	AuditMaxPageSize = 100
+
+	GranularityMinute = "minute"
+	GranularityHour   = "hour"
+	GranularityDay    = "day"
+	GranularityWeek   = "week"
+
+	DateTruncMinute = "date_trunc('minute', created_at)"
+	DateTruncHour   = "date_trunc('hour', created_at)"
+	DateTruncDay    = "date_trunc('day', created_at)"
+	DateTruncWeek   = "date_trunc('week', created_at)"
+
+	SQLConditionUpstreamSuccess = "upstream_status_code = 200"
+	SQLConditionDeletedAtZero   = "deleted_at IS NULL"
 )

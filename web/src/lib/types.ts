@@ -341,3 +341,38 @@ export interface ListAuditLogsRsp extends CommonRsp {
   logs?: AuditLogItem[];
   pageInfo?: PageInfo;
 }
+
+// ─── Dashboard Stats ──────────────────────────────────────────
+
+export type Granularity = "minute" | "hour" | "day" | "week";
+
+export interface TrendPoint {
+  time: string;
+  count: number;
+}
+
+export interface ModelTrendItem {
+  model: string;
+  points: TrendPoint[];
+}
+
+export interface ModelTrendRsp extends CommonRsp {
+  data?: ModelTrendItem[];
+}
+
+export interface RatePoint {
+  time: string;
+  total: number;
+  success: number;
+  failed: number;
+  successRate: number;
+}
+
+export interface RequestRateItem {
+  model: string;
+  points: RatePoint[];
+}
+
+export interface RequestRateRsp extends CommonRsp {
+  data?: RequestRateItem[];
+}
