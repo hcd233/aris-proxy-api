@@ -37,4 +37,25 @@ type AuditRepository interface {
 
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)
+
+	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*ModelTrendPoint, error)
+
+	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*RequestRatePoint, error)
+}
+
+// ModelTrendPoint 模型调用趋势的数据点
+type ModelTrendPoint struct {
+	Model string
+	Time  time.Time
+	Count int
+}
+
+// RequestRatePoint 请求成功率的数据点
+type RequestRatePoint struct {
+	Model   string
+	Time    time.Time
+	Total   int
+	Success int
 }
