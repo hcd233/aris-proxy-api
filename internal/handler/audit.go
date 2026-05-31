@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"sort"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -198,52 +200,98 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 }
 
 func groupTrendPoints(points []*modelcall.ModelTrendPoint) []*dto.ModelTrendItem {
-	modelMap := make(map[string][]*dto.TrendPoint)
-	modelOrder := make([]string, 0)
-	for _, p := range points {
-		if _, ok := modelMap[p.Model]; !ok {
-			modelOrder = append(modelOrder, p.Model)
-		}
-		modelMap[p.Model] = append(modelMap[p.Model], &dto.TrendPoint{
-			Time:  p.Time,
-			Count: p.Count,
-		})
+	type timeSlot struct {
+		time  time.Time
+		count int
 	}
+
+	modelSet := make(map[string]struct{})
+	modelOrder := make([]string, 0)
+	allTimes := make(map[time.Time]struct{})
+	byModel := make(map[string]map[time.Time]int)
+
+	for _, p := range points {
+		if _, ok := modelSet[p.Model]; !ok {
+			modelSet[p.Model] = struct{}{}
+			modelOrder = append(modelOrder, p.Model)
+			byModel[p.Model] = make(map[time.Time]int)
+		}
+		byModel[p.Model][p.Time] = p.Count
+		allTimes[p.Time] = struct{}{}
+	}
+
+	sortedTimes := make([]time.Time, 0, len(allTimes))
+	for t := range allTimes {
+		sortedTimes = append(sortedTimes, t)
+	}
+	sort.Slice(sortedTimes, func(i, j int) bool { return sortedTimes[i].Before(sortedTimes[j]) })
+
 	items := make([]*dto.ModelTrendItem, 0, len(modelOrder))
 	for _, m := range modelOrder {
+		pts := make([]*dto.TrendPoint, 0, len(sortedTimes))
+		for _, t := range sortedTimes {
+			pts = append(pts, &dto.TrendPoint{
+				Time:  t,
+				Count: byModel[m][t],
+			})
+		}
 		items = append(items, &dto.ModelTrendItem{
 			Model:  m,
-			Points: modelMap[m],
+			Points: pts,
 		})
 	}
 	return items
 }
 
 func groupRatePoints(points []*modelcall.RequestRatePoint) []*dto.RequestRateItem {
-	modelMap := make(map[string][]*dto.RatePoint)
-	modelOrder := make([]string, 0)
-	for _, p := range points {
-		if _, ok := modelMap[p.Model]; !ok {
-			modelOrder = append(modelOrder, p.Model)
-		}
-		failed := p.Total - p.Success
-		var rate float64
-		if p.Total > 0 {
-			rate = float64(p.Success) / float64(p.Total)
-		}
-		modelMap[p.Model] = append(modelMap[p.Model], &dto.RatePoint{
-			Time:        p.Time,
-			Total:       p.Total,
-			Success:     p.Success,
-			Failed:      failed,
-			SuccessRate: rate,
-		})
+	type timeSlot struct {
+		time    time.Time
+		total   int
+		success int
 	}
+
+	modelSet := make(map[string]struct{})
+	modelOrder := make([]string, 0)
+	allTimes := make(map[time.Time]struct{})
+	byModel := make(map[string]map[time.Time]timeSlot)
+
+	for _, p := range points {
+		if _, ok := modelSet[p.Model]; !ok {
+			modelSet[p.Model] = struct{}{}
+			modelOrder = append(modelOrder, p.Model)
+			byModel[p.Model] = make(map[time.Time]timeSlot)
+		}
+		byModel[p.Model][p.Time] = timeSlot{time: p.Time, total: p.Total, success: p.Success}
+		allTimes[p.Time] = struct{}{}
+	}
+
+	sortedTimes := make([]time.Time, 0, len(allTimes))
+	for t := range allTimes {
+		sortedTimes = append(sortedTimes, t)
+	}
+	sort.Slice(sortedTimes, func(i, j int) bool { return sortedTimes[i].Before(sortedTimes[j]) })
+
 	items := make([]*dto.RequestRateItem, 0, len(modelOrder))
 	for _, m := range modelOrder {
+		pts := make([]*dto.RatePoint, 0, len(sortedTimes))
+		for _, t := range sortedTimes {
+			s := byModel[m][t]
+			failed := s.total - s.success
+			var rate float64
+			if s.total > 0 {
+				rate = float64(s.success) / float64(s.total)
+			}
+			pts = append(pts, &dto.RatePoint{
+				Time:        t,
+				Total:       s.total,
+				Success:     s.success,
+				Failed:      failed,
+				SuccessRate: rate,
+			})
+		}
 		items = append(items, &dto.RequestRateItem{
 			Model:  m,
-			Points: modelMap[m],
+			Points: pts,
 		})
 	}
 	return items
