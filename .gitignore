@@ -51,3 +51,6 @@ logs/
 
 # OMO
 .omo/
+
+# K8s local secrets
+k8s/secret.yaml.local
