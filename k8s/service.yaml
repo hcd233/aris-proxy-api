@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aris-proxy-api
+  namespace: aris-proxy-api
+spec:
+  selector:
+    app: aris-proxy-api
+  ports:
+  - port: 7070
+    targetPort: 8080
+  type: LoadBalancer
