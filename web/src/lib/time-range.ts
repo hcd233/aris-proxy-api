@@ -23,6 +23,15 @@ export function deriveGranularity(rangeMs: number): Granularity {
   return "week";
 }
 
+export function formatChartTime(time: string, key: TimeRangeKey, customStart?: string, customEnd?: string): string {
+  const { granularity } = computeRange(key, customStart, customEnd);
+  const d = new Date(time);
+  if (granularity === "minute" || granularity === "hour") {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString([], { month: "2-digit", day: "2-digit" });
+}
+
 export function computeRange(
   key: TimeRangeKey,
   customStart?: string,
