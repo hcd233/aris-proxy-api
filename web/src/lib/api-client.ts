@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import type {
   CallbackRsp,
   CallbackReqBody,
@@ -95,6 +96,33 @@ class ApiClient {
     return this.refreshing;
   }
 
+  private async handleAuthFailure<T>(path: string, options?: RequestInit): Promise<T> {
+    const refreshed = await this.tryRefreshToken();
+    if (refreshed) {
+      const retryRes = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: { ...this.getHeaders(), ...options?.headers },
+      });
+      if (!retryRes.ok) {
+        throw new ApiError(retryRes.status, await retryRes.text());
+      }
+      return retryRes.json();
+    }
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    toast.error("Session expired", {
+      description: "Please log in again to continue",
+      duration: Infinity,
+      action: {
+        label: "Login",
+        onClick: () => {
+          window.location.href = "/web/login";
+        },
+      },
+    });
+    throw new ApiError(401, "Authentication required");
+  }
+
   private async request<T>(
     path: string,
     options?: RequestInit
@@ -105,28 +133,21 @@ class ApiClient {
     });
 
     if (res.status === 401) {
-      const refreshed = await this.tryRefreshToken();
-      if (refreshed) {
-        const retryRes = await fetch(`${API_BASE}${path}`, {
-          ...options,
-          headers: { ...this.getHeaders(), ...options?.headers },
-        });
-        if (!retryRes.ok) {
-          throw new ApiError(retryRes.status, await retryRes.text());
-        }
-        return retryRes.json();
-      }
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      window.location.href = "/web/login";
-      throw new ApiError(401, "Authentication required");
+      return this.handleAuthFailure<T>(path, options);
     }
 
     if (!res.ok) {
       throw new ApiError(res.status, await res.text());
     }
 
-    return res.json();
+    const body = await res.json();
+
+    // Unified response: business-level auth error returned with HTTP 200
+    if (body && typeof body === "object" && body.error?.code === 10001) {
+      return this.handleAuthFailure<T>(path, options);
+    }
+
+    return body as T;
   }
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
