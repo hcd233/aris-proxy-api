@@ -62,7 +62,7 @@ export function RequestRateChart() {
   const chartConfig = Object.fromEntries(
     models.map((m, i) => [
       m,
-      { label: m, color: `hsl(var(--chart-${(i % 5) + 1}))` },
+      { label: m, color: `var(--chart-${(i % 5) + 1})` },
     ])
   );
 
