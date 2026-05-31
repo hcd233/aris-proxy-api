@@ -15,10 +15,9 @@ export const TIME_RANGE_PRESETS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
 export function deriveGranularity(rangeMs: number): Granularity {
   const oneHour = 60 * 60 * 1000;
   const oneDay = 24 * oneHour;
-  const sevenDays = 7 * oneDay;
   const thirtyDays = 30 * oneDay;
   if (rangeMs <= oneHour) return "minute";
-  if (rangeMs <= sevenDays) return "hour";
+  if (rangeMs <= oneDay) return "hour";
   if (rangeMs <= thirtyDays) return "day";
   return "week";
 }
