@@ -125,6 +125,7 @@ export function RequestRateChart() {
               <YAxis
                 fontSize={12}
                 domain={[0, 100]}
+                allowDataOverflow={false}
                 tickFormatter={(v) => `${v}%`}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
@@ -132,7 +133,7 @@ export function RequestRateChart() {
               {models.map((m) => (
                 <Line
                   key={m}
-                  type="natural"
+                  type="monotone"
                   dataKey={m}
                   stroke={chartConfig[m]?.color ?? "#888"}
                   strokeWidth={2}
