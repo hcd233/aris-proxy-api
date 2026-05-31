@@ -132,7 +132,7 @@ export function RequestRateChart() {
                   key={m}
                   type="natural"
                   dataKey={m}
-                  stroke={`var(--color-${m})`}
+                  stroke={chartConfig[m]?.color ?? "#888"}
                   strokeWidth={2}
                   dot={false}
                 />
