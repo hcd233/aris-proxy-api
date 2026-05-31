@@ -278,9 +278,13 @@ function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
+  activeLegend,
+  onLegendHover,
 }: React.ComponentProps<"div"> & {
   hideIcon?: boolean
   nameKey?: string
+  activeLegend?: string | null
+  onLegendHover?: (dataKey: string | null) => void
 } & RechartsPrimitive.DefaultLegendContentProps) {
   const { config } = useChart()
 
@@ -301,13 +305,17 @@ function ChartLegendContent({
         .map((item, index) => {
           const key = `${nameKey ?? item.dataKey ?? "value"}`
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
+          const isDimmed = activeLegend != null && item.dataKey !== activeLegend
 
           return (
             <div
               key={index}
               className={cn(
-                "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
+                "flex cursor-pointer items-center gap-1.5 transition-opacity [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground",
+                isDimmed && "opacity-20"
               )}
+              onMouseEnter={() => onLegendHover?.(item.dataKey as string ?? null)}
+              onMouseLeave={() => onLegendHover?.(null)}
             >
               {itemConfig?.icon && !hideIcon ? (
                 <itemConfig.icon />

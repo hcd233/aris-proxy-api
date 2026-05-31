@@ -15,6 +15,7 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 
 const granularityOptions: { value: Granularity; label: string }[] = [
   { value: "hour", label: "Hour" },
@@ -31,6 +32,7 @@ export function RequestRateChart() {
   const [data, setData] = useState<RequestRateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -126,7 +128,7 @@ export function RequestRateChart() {
                 tickFormatter={(v) => `${v}%`}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <ChartLegend content={<ChartLegendContent />} />
+              <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {models.map((m) => (
                 <Line
                   key={m}
@@ -134,6 +136,7 @@ export function RequestRateChart() {
                   dataKey={m}
                   stroke={chartConfig[m]?.color ?? "#888"}
                   strokeWidth={2}
+                  strokeOpacity={getStrokeOpacity(m)}
                   dot={false}
                 />
               ))}
