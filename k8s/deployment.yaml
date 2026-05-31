@@ -6,7 +6,7 @@ metadata:
   labels:
     app: aris-proxy-api
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: aris-proxy-api

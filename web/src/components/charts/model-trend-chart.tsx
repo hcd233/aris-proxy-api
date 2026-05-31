@@ -122,13 +122,13 @@ export function ModelTrendChart() {
                 tickFormatter={(v) => new Date(v).toLocaleDateString()}
                 fontSize={12}
               />
-              <YAxis fontSize={12} />
+              <YAxis fontSize={12} domain={[0, "auto"]} allowDataOverflow={false} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {models.map((m) => (
                 <Line
                   key={m}
-                  type="natural"
+                  type="monotone"
                   dataKey={m}
                   stroke={chartConfig[m]?.color ?? "#888"}
                   strokeWidth={2}
