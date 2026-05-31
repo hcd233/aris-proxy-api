@@ -17,7 +17,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
-import { computeRange } from "@/lib/time-range";
+import { computeRange, formatChartTime } from "@/lib/time-range";
 
 export function ModelTrendChart() {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
@@ -110,7 +110,7 @@ export function ModelTrendChart() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="time"
-                tickFormatter={(v) => new Date(v).toLocaleDateString()}
+                tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
                 fontSize={12}
               />
               <YAxis fontSize={12} domain={[0, "auto"]} allowDataOverflow={false} />
