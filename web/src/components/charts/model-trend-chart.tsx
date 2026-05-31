@@ -59,10 +59,11 @@ export function ModelTrendChart() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const models = [...new Set(data.map((d) => d.model))];
+  const CHART_COLORS = ["#D97757", "#B8654A", "#E8A87C", "#8C7E72", "#F5E6E0"];
   const chartConfig = Object.fromEntries(
     models.map((m, i) => [
       m,
-      { label: m, color: `var(--chart-${(i % 5) + 1})` },
+      { label: m, color: CHART_COLORS[i % CHART_COLORS.length] },
     ])
   );
 
