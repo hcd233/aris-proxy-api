@@ -125,7 +125,7 @@ export function ModelTrendChart() {
               {models.map((m) => (
                 <Line
                   key={m}
-                  type="monotone"
+                  type="natural"
                   dataKey={m}
                   stroke={`var(--color-${m})`}
                   strokeWidth={2}
