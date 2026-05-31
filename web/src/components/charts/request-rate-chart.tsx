@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { RequestRateItem, Granularity } from "@/lib/types";
+import type { RequestRateItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,19 +15,14 @@ import {
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
-
-const granularityOptions: { value: Granularity; label: string }[] = [
-  { value: "hour", label: "Hour" },
-  { value: "day", label: "Day" },
-  { value: "week", label: "Week" },
-];
-
-function toISODate(d: Date): string {
-  return d.toISOString().replace(/\.\d+Z$/, "Z");
-}
+import { TimeRangePicker } from "@/components/ui/time-range-picker";
+import type { TimeRangeKey } from "@/lib/time-range";
+import { computeRange } from "@/lib/time-range";
 
 export function RequestRateChart() {
-  const [granularity, setGranularity] = useState<Granularity>("hour");
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [data, setData] = useState<RequestRateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -38,12 +32,10 @@ export function RequestRateChart() {
     setLoading(true);
     setError(false);
     try {
-      const end = new Date();
-      const start = new Date();
-      start.setHours(start.getHours() - 24);
+      const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
       const rsp = await api.fetchRequestRate({
-        startTime: toISODate(start),
-        endTime: toISODate(end),
+        startTime,
+        endTime,
         granularity,
       });
       setData(rsp.data ?? []);
@@ -52,7 +44,7 @@ export function RequestRateChart() {
     } finally {
       setLoading(false);
     }
-  }, [granularity]);
+  }, [timeRange, customStart, customEnd]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects */
   useEffect(() => {
@@ -87,17 +79,16 @@ export function RequestRateChart() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="font-display">Request Success Rate</CardTitle>
-        <ToggleGroup
-          value={[granularity]}
-          onValueChange={(v) => v.length > 0 && setGranularity(v[0] as Granularity)}
-          size="sm"
-        >
-          {granularityOptions.map((opt) => (
-            <ToggleGroupItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <TimeRangePicker
+          value={timeRange}
+          customStart={customStart}
+          customEnd={customEnd}
+          onChange={(key, cs, ce) => {
+            setTimeRange(key);
+            setCustomStart(cs);
+            setCustomEnd(ce);
+          }}
+        />
       </CardHeader>
       <CardContent>
         {loading ? (
