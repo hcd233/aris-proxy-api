@@ -173,6 +173,8 @@ export interface ListSessionToolsRsp extends CommonRsp {
 
 export interface CreateShareReqBody {
   sessionId: number;
+  expiresIn?: string;
+  expiresAt?: number;
 }
 
 export interface CreateShareRsp extends CommonRsp {
