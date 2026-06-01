@@ -9,8 +9,6 @@ ENV_FILE="${REPO_DIR}/env/api.env"
 SERVICE_PORT="18080"
 
 BRANCH_NAME=$(git -C "${REPO_DIR}" rev-parse --abbrev-ref HEAD)
-IMAGE_TAG=$(echo "${BRANCH_NAME}" | tr '/' '-')
-IMAGE="ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}"
 DEPLOY_ID=$(date +%Y%m%d%H%M%S)
 MIGRATION_JOB="${APP_NAME}-db-migrate-${DEPLOY_ID}"
 
@@ -184,10 +182,15 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   exit 1
 fi
 
-log "Deploying to k3s (branch: ${BRANCH_NAME}, image: ${IMAGE})"
+log "Preparing k3s deployment from branch ${BRANCH_NAME}"
 
 git -C "${REPO_DIR}" fetch --prune origin
 git -C "${REPO_DIR}" pull --ff-only origin "${BRANCH_NAME}"
+
+COMMIT_SHA=$(git -C "${REPO_DIR}" rev-parse --short=7 HEAD)
+IMAGE_TAG="${DEPLOY_IMAGE_TAG:-sha-${COMMIT_SHA}}"
+IMAGE="ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}"
+log "Deploying to k3s (branch: ${BRANCH_NAME}, commit: ${COMMIT_SHA}, image: ${IMAGE})"
 
 kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${NAMESPACE}"
 

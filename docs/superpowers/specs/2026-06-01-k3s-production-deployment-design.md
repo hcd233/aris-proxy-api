@@ -122,8 +122,9 @@ LOG_DIR=./logs
 `.github/workflows/docker-publish.yml` 的流程：
 
 1. `build`：按 `linux/amd64` 和 `linux/arm64` 分别构建并推送 digest。
-2. `merge`：合并多架构 manifest，并推送 `master`、semver、sha 和分支标签。
+2. `merge`：合并多架构 manifest，并推送 `master`、semver、`sha-<shortsha>` 和分支标签。
 3. `deploy-k8s`：仅在 `master` push 时运行，通过 SSH 执行服务器上的 `script/deploy-k8s.sh`。
+4. 部署脚本在服务器 `git pull` 后用当前提交生成镜像标签 `sha-<shortsha>`；禁止用 `master` 浮动标签部署正式 Pod，否则 Pod template 不变化，Kubernetes 不会触发滚动更新。
 
 触发路径包含：
 
