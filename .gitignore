@@ -54,3 +54,7 @@ logs/
 
 # K8s local secrets
 k8s/secret.yaml.local
+
+# Understand Anything cache/temp
+.understand-anything/intermediate/
+.understand-anything/tmp/
