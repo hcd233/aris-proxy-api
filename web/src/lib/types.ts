@@ -376,3 +376,21 @@ export interface RequestRateItem {
 export interface RequestRateRsp extends CommonRsp {
   data?: RequestRateItem[];
 }
+
+export interface TokenThroughputPoint {
+  time: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  outputTokensPerSecond: number;
+}
+
+export interface TokenThroughputItem {
+  model: string;
+  points: TokenThroughputPoint[];
+}
+
+export interface TokenThroughputRsp extends CommonRsp {
+  data?: TokenThroughputItem[];
+}
