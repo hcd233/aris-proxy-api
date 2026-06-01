@@ -211,5 +211,7 @@ jobs:
           script: |
             set -euo pipefail
             cd ${{ secrets.PRODUCTION_REPO_PATH }}
+            git fetch --prune origin
+            git reset --hard origin/master
             bash script/deploy-k8s.sh
             curl -kfsS --max-time 10 https://api.lvlvko.top/health
