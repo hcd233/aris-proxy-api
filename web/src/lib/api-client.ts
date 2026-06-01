@@ -32,6 +32,7 @@ import type {
   ListAuditLogsRsp,
   ModelTrendRsp,
   RequestRateRsp,
+  TokenThroughputRsp,
   Granularity,
 } from "./types";
 
@@ -458,6 +459,15 @@ class ApiClient {
   }): Promise<RequestRateRsp> {
     const sp = new URLSearchParams(params);
     return this.request<RequestRateRsp>(`/api/v1/audit/stats/request/rate?${sp}`);
+  }
+
+  async fetchTokenThroughput(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<TokenThroughputRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<TokenThroughputRsp>(`/api/v1/audit/stats/token/throughput?${sp}`);
   }
 }
 

@@ -44,6 +44,9 @@ type AuditRepository interface {
 
 	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
 	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*RequestRatePoint, error)
+
+	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*TokenThroughputPoint, error)
 }
 
 // ModelTrendPoint 模型调用趋势的数据点
@@ -59,4 +62,15 @@ type RequestRatePoint struct {
 	Time    time.Time
 	Total   int
 	Success int
+}
+
+// TokenThroughputPoint Token 吞吐量的数据点
+type TokenThroughputPoint struct {
+	Model                 string
+	Time                  time.Time
+	InputTokens           int
+	OutputTokens          int
+	CacheCreationTokens   int
+	CacheReadTokens       int
+	OutputTokensPerSecond float64
 }

@@ -20,6 +20,7 @@ type AuditHandler interface {
 	HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error)
 	HandleModelTrend(ctx context.Context, req *dto.ModelTrendReq) (*dto.HTTPResponse[*dto.ModelTrendRsp], error)
 	HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error)
+	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
 }
 
 type AuditDependencies struct {
@@ -107,6 +108,22 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = auditquery.FillRateSeries(points)
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error) {
+	rsp := &dto.TokenThroughputRsp{}
+	points, err := h.svc.TokenThroughput(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] Token throughput failed", zap.Error(err))
+		rsp.Error = bizErrorFrom(err)
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	rsp.Data = auditquery.FillTokenThroughputSeries(points)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
