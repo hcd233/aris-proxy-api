@@ -5,11 +5,15 @@
 package pool
 
 import (
+	"time"
+
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -65,7 +69,19 @@ func GetPoolManager() *PoolManager {
 //	@update 2026-04-05 10:00:00
 func StopPoolManager() {
 	if poolManager != nil {
-		poolManager.Stop()
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			poolManager.Stop()
+		}()
+
+		select {
+		case <-done:
+			logger.Logger().Info("[Pool] Pool manager stopped")
+		case <-time.After(constant.PoolStopTimeout):
+			logger.Logger().Warn("[Pool] Pool stop timed out, some tasks may not have completed",
+				zap.Duration("timeout", constant.PoolStopTimeout))
+		}
 	}
 }
 
