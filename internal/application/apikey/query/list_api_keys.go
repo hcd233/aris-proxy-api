@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
@@ -31,7 +31,7 @@ type APIKeyView struct {
 //	@update 2026-05-27 10:00:00
 type ListAPIKeysQuery struct {
 	RequesterID         uint
-	RequesterPermission commonenum.Permission
+	RequesterPermission enum.Permission
 	model.CommonParam
 }
 
@@ -75,7 +75,7 @@ func (h *listAPIKeysHandler) Handle(ctx context.Context, q ListAPIKeysQuery) ([]
 		pageInfo *model.PageInfo
 		err      error
 	)
-	if q.RequesterPermission == commonenum.PermissionAdmin {
+	if q.RequesterPermission == enum.PermissionAdmin {
 		keys, pageInfo, err = h.repo.PaginateAll(ctx, q.CommonParam)
 	} else {
 		keys, pageInfo, err = h.repo.PaginateByUser(ctx, q.RequesterID, q.CommonParam)
@@ -97,7 +97,7 @@ func (h *listAPIKeysHandler) Handle(ctx context.Context, q ListAPIKeysQuery) ([]
 
 	log.Info("[APIKeyQuery] List api keys",
 		zap.Uint("requesterID", q.RequesterID),
-		zap.Bool("isAdmin", q.RequesterPermission == commonenum.PermissionAdmin),
+		zap.Bool("isAdmin", q.RequesterPermission == enum.PermissionAdmin),
 		zap.Int("count", len(views)))
 	return views, pageInfo, nil
 }

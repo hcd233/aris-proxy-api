@@ -251,7 +251,7 @@ func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint,
 	return results, nil
 }
 
-func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.RequestRatePoint, error) {
+func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)

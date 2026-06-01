@@ -11,6 +11,7 @@ import (
 // EndpointRepository Endpoint 聚合根仓储接口
 type EndpointRepository interface {
 	FindByID(ctx context.Context, id uint) (*aggregate.Endpoint, error)
+	BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.Endpoint, error)
 	Create(ctx context.Context, endpoint *aggregate.Endpoint) (uint, error)
 	Update(ctx context.Context, endpoint *aggregate.Endpoint) error
 	Delete(ctx context.Context, id uint) error

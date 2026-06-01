@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -21,7 +21,7 @@ type RevokeAPIKeyCommand struct {
 	// RequesterID 执行吊销操作的用户 ID（来自 ctx）
 	RequesterID uint
 	// RequesterPermission 执行者权限（判定是否可跨用户吊销）
-	RequesterPermission commonenum.Permission
+	RequesterPermission enum.Permission
 }
 
 // RevokeAPIKeyHandler 吊销命令处理器
@@ -76,7 +76,7 @@ func (h *revokeAPIKeyHandler) Handle(ctx context.Context, cmd RevokeAPIKeyComman
 		return ierr.New(ierr.ErrDataNotExists, "api key not found")
 	}
 
-	if cmd.RequesterPermission != commonenum.PermissionAdmin && !key.IsOwnedBy(cmd.RequesterID) {
+	if cmd.RequesterPermission != enum.PermissionAdmin && !key.IsOwnedBy(cmd.RequesterID) {
 		log.Warn("[APIKeyCommand] No permission to revoke api key",
 			zap.Uint("keyID", cmd.KeyID),
 			zap.Uint("keyOwnerID", key.UserID()),
