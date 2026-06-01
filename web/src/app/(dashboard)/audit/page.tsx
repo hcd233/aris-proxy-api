@@ -24,6 +24,8 @@ import {
   ListFilter,
   Check,
   Info,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -36,6 +38,21 @@ import {
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
+
+type SortDir = "asc" | "desc";
+
+interface SortState {
+  field: string;
+  dir: SortDir;
+}
+
+const SORTABLE_COLUMNS: Record<string, string> = {
+  createdAt: "created_at",
+  inputTokens: "input_tokens",
+  outputTokens: "output_tokens",
+  firstTokenLatencyMs: "first_token_latency_ms",
+  streamDurationMs: "stream_duration_ms",
+};
 
 function formatTokens(input: number, output: number): string {
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
@@ -60,6 +77,7 @@ export default function AuditPage() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [pageInputValue, setPageInputValue] = useState("1");
+  const [sort, setSort] = useState<SortState>({ field: "created_at", dir: "desc" });
 
   const fetchLogs = useCallback(
     async (
@@ -69,6 +87,7 @@ export default function AuditPage() {
       range: TimeRangeKey,
       cs: string,
       ce: string,
+      sortState: SortState,
     ) => {
       setLoading(true);
       try {
@@ -77,6 +96,8 @@ export default function AuditPage() {
           page,
           pageSize,
           query: query || undefined,
+          sort: sortState.dir,
+          sortField: sortState.field,
           startTime,
           endTime,
         });
@@ -100,7 +121,7 @@ export default function AuditPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchLogs(1, 20, "", "24h", "", "");
+    fetchLogs(1, 20, "", "24h", "", "", { field: "created_at", dir: "desc" });
   }, [fetchLogs]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -110,7 +131,7 @@ export default function AuditPage() {
   );
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd);
+    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, sort);
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
@@ -118,6 +139,20 @@ export default function AuditPage() {
       () => toast.success("TraceID copied"),
       () => toast.error("Copy failed"),
     );
+  };
+
+  const handleSort = (field: string) => {
+    const newSort: SortState =
+      sort.field === field
+        ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: "desc" };
+    setSort(newSort);
+    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, newSort);
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sort.field !== field) return null;
+    return sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />;
   };
 
   return (
@@ -148,7 +183,7 @@ export default function AuditPage() {
                   setCustomStart(cs);
                   setCustomEnd(ce);
                   if (key !== "custom") {
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce);
+                    fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce, sort);
                   }
                 }}
               />
@@ -233,15 +268,30 @@ export default function AuditPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Time</TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none whitespace-nowrap"
+                    onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
+                  >
+                    <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
+                  </TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead>Provider</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>API Key</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Tokens</TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none whitespace-nowrap"
+                    onClick={() => handleSort(SORTABLE_COLUMNS.inputTokens)}
+                  >
+                    <span className="inline-flex items-center gap-1">Tokens {renderSortIcon(SORTABLE_COLUMNS.inputTokens)}</span>
+                  </TableHead>
                   <TableHead>Cache</TableHead>
-                  <TableHead>Latency</TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none whitespace-nowrap"
+                    onClick={() => handleSort(SORTABLE_COLUMNS.firstTokenLatencyMs)}
+                  >
+                    <span className="inline-flex items-center gap-1">Latency {renderSortIcon(SORTABLE_COLUMNS.firstTokenLatencyMs)}</span>
+                  </TableHead>
                   <TableHead>TraceID</TableHead>
                 </TableRow>
               </TableHeader>
