@@ -7,12 +7,15 @@
  */
 
 import { useCallback, useState } from "react";
-import { Check, Copy, Loader2, Share2 } from "lucide-react";
+import { CalendarIcon, Check, Copy, Loader2, Share2 } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
-import { api } from "@/lib/api-client";
-import { ApiError } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
+import type { CreateShareReqBody } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogClose,
@@ -22,6 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export interface ShareDialogProps {
   sessionId: number;
@@ -44,6 +50,8 @@ export function buildShareURL(shareID: string): string {
   return `${window.location.origin}/web/share/?id=${encodeURIComponent(shareID)}`;
 }
 
+type ExpireOption = "1d" | "7d" | "30d" | "never" | "custom";
+
 export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: ShareDialogProps) {
   const [creating, setCreating] = useState(false);
   const [shareURL, setShareURL] = useState<string | null>(
@@ -51,6 +59,8 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
   );
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [expireOption, setExpireOption] = useState<ExpireOption>("1d");
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
 
   const reset = useCallback(() => {
     setShareURL(existingShareID ? buildShareURL(existingShareID) : null);
@@ -69,7 +79,14 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
   const createShare = useCallback(async () => {
     setCreating(true);
     try {
-      const rsp = await api.createShare({ sessionId });
+      const body: CreateShareReqBody = { sessionId };
+      if (expireOption !== "1d") {
+        body.expiresIn = expireOption;
+      }
+      if (expireOption === "custom" && customDate) {
+        body.expiresAt = Math.floor(customDate.getTime() / 1000);
+      }
+      const rsp = await api.createShare(body);
       if (rsp.error) {
         if (rsp.error.code === 10004) {
           toast.error("This session is already shared. Revoke the existing link first.");
@@ -95,7 +112,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
     } finally {
       setCreating(false);
     }
-  }, [sessionId]);
+  }, [sessionId, expireOption, customDate]);
 
   const handleCopy = useCallback(async () => {
     if (!shareURL) return;
@@ -120,7 +137,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
           <DialogDescription>
             {shareURL
               ? "Copy the public link below to share this conversation. The link can be revoked anytime from the Shares page."
-              : "Generate a public link to this conversation. The link expires after 24 hours and can be revoked anytime from the Shares page."}
+              : "Generate a public link to this conversation. Choose how long the link stays valid."}
           </DialogDescription>
         </DialogHeader>
 
@@ -163,9 +180,60 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
             )}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-5 text-center text-sm text-muted-foreground">
-            Anyone with the generated link will be able to read this session
-            until it expires.
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Link expiration</Label>
+              <RadioGroup
+                value={expireOption}
+                onValueChange={(v) => setExpireOption(v as ExpireOption)}
+                className="flex flex-wrap gap-2"
+              >
+                {[
+                  { value: "1d", label: "1 day" },
+                  { value: "7d", label: "1 week" },
+                  { value: "30d", label: "1 month" },
+                  { value: "never", label: "Never" },
+                  { value: "custom", label: "Custom" },
+                ].map((opt) => (
+                  <div key={opt.value} className="flex items-center gap-1.5">
+                    <RadioGroupItem value={opt.value} id={`expire-${opt.value}`} />
+                    <Label htmlFor={`expire-${opt.value}`} className="text-sm font-normal cursor-pointer">
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {expireOption === "custom" && (
+              <Popover>
+                <PopoverTrigger>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
+                      !customDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 size-4" />
+                    {customDate ? format(customDate, "PPP") : "Pick a date"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customDate}
+                    onSelect={setCustomDate}
+                    disabled={(date) => date < new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+
+            <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-5 text-center text-sm text-muted-foreground">
+              Anyone with the generated link will be able to read this session
+              until it expires.
+            </div>
           </div>
         )}
 
