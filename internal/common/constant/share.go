@@ -5,6 +5,8 @@ import "time"
 const (
 	// ShareTTL 分享链接有效期
 	ShareTTL = 24 * time.Hour
+	// ShareExpiredRetention 分享链接过期后在用户列表中保留的时间
+	ShareExpiredRetention = 72 * time.Hour
 
 	// ShareIDAlphabet shareID 字符集：大小写字母+数字 (62 个字符)
 	ShareIDAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"

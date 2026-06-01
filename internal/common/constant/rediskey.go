@@ -17,3 +17,5 @@ const (
 	// ToolKeyTemplate 缓存单条 tool 详情（不可变，TTL 内永远有效）
 	ToolKeyTemplate = "tool:%d"
 )
+
+const RedisZRangePositiveInfinity = "+inf"

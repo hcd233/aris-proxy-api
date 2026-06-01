@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -150,14 +151,14 @@ export default function SharesPage() {
           Shares
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Manage public links to your conversations. Links expire automatically
-          after 24 hours.
+          Manage public links to your conversations. Expired links remain visible
+          for 3 days after they stop working.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">Active share links</CardTitle>
+          <CardTitle className="font-display">Share links</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -186,6 +187,7 @@ export default function SharesPage() {
                     <TableHead>Session</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Expires</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -195,17 +197,24 @@ export default function SharesPage() {
                       refreshedAt > 0 &&
                       new Date(share.expiresAt).getTime() < refreshedAt;
                     return (
-                      <TableRow key={share.shareId}>
+                      <TableRow
+                        key={share.shareId}
+                        className={expired ? "bg-muted/30 text-muted-foreground" : undefined}
+                      >
                         <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                          <a
-                            href={buildShareURL(share.shareId)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
-                          >
-                            {share.shareId}
-                            <ExternalLink className="size-3" />
-                          </a>
+                          {expired ? (
+                            <span>{share.shareId}</span>
+                          ) : (
+                            <a
+                              href={buildShareURL(share.shareId)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                            >
+                              {share.shareId}
+                              <ExternalLink className="size-3" />
+                            </a>
+                          )}
                         </TableCell>
                         <TableCell>
                           <a
@@ -222,14 +231,16 @@ export default function SharesPage() {
                         <TableCell
                           className={
                             expired
-                              ? "text-xs text-rose-500"
+                              ? "text-xs font-medium text-rose-500"
                               : "text-xs text-muted-foreground"
                           }
                         >
                           {new Date(share.expiresAt).toLocaleString()}
-                          {expired && (
-                            <span className="ml-1 font-medium">(expired)</span>
-                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={expired ? "destructive" : "secondary"}>
+                            {expired ? "Expired" : "Active"}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
@@ -238,6 +249,7 @@ export default function SharesPage() {
                               size="xs"
                               onClick={() => handleCopy(share)}
                               className="gap-1"
+                              disabled={expired}
                             >
                               {copiedID === share.shareId ? (
                                 <>
