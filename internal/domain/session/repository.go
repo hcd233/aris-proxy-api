@@ -109,14 +109,14 @@ type SessionDetailProjection struct {
 // 与 SessionRepository 分离，避免写仓储受读模型查询的字段/投影需求污染。
 //
 //	@author centonhuang
-//	@update 2026-04-24 20:00:00
+//	@update 2026-06-01 10:00:00
 type SessionReadRepository interface {
 	// ListSessions 分页查询 Session 列表投影
-	ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	ListSessions(ctx context.Context, owner string, param model.CommonParam, startTime, endTime time.Time) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListAllSessions 分页查询所有 Session 列表投影（admin 用）
-	ListAllSessions(ctx context.Context, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影
-	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
 	// GetSessionMeta 查询 Session 元数据（不含 Message/Tool 内容，仅含 IDs 数组）；未找到返回 (nil, nil)
