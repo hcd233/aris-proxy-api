@@ -56,7 +56,7 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 		toolCallIDs := make(map[int]string)
 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
-			if firstTokenTime.IsZero() && len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil && chunk.Choices[0].Delta.Content != nil && *chunk.Choices[0].Delta.Content != "" {
+			if firstTokenTime.IsZero() && proxyutil.HasNonEmptyDelta(chunk) {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
 			}
