@@ -30,6 +30,23 @@ require_cmd() {
   fi
 }
 
+wait_for_service_health() {
+  local url="http://127.0.0.1:${SERVICE_PORT}/health"
+
+  for i in $(seq 1 60); do
+    if curl -fsS --max-time 3 "${url}"; then
+      echo
+      return 0
+    fi
+
+    echo "waiting for ${url} (${i}/60)" >&2
+    sleep 1
+  done
+
+  kubectl get deployment,pod,service,endpoints -n "${NAMESPACE}" -o wide >&2 || true
+  return 1
+}
+
 mask_sensitive_keys_to_secret() {
   : > "${CONFIG_ENV}"
   : > "${SECRET_ENV}"
@@ -222,8 +239,7 @@ log "Waiting for rollout"
 kubectl rollout status "deployment/${APP_NAME}" -n "${NAMESPACE}" --timeout=120s
 
 log "Verifying k3s service health"
-curl -fsS --max-time 10 "http://127.0.0.1:${SERVICE_PORT}/health"
-echo
+wait_for_service_health
 
 log "Removing legacy canary resources after formal deployment is healthy"
 kubectl delete deployment,service,configmap,secret -n "${NAMESPACE}" -l app=aris-proxy-api-k3s-canary --ignore-not-found=true >/dev/null 2>&1 || true
