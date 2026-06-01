@@ -35,8 +35,9 @@ func TestTracker_TrackReturnsFalseDuringDraining(t *testing.T) {
 
 	tracker.Track()
 
+	untrackCh := make(chan struct{})
 	go func() {
-		time.Sleep(50 * time.Millisecond)
+		<-untrackCh
 		tracker.Untrack()
 	}()
 
@@ -45,13 +46,16 @@ func TestTracker_TrackReturnsFalseDuringDraining(t *testing.T) {
 		drained <- tracker.Drain(2 * time.Second)
 	}()
 
-	time.Sleep(100 * time.Millisecond)
+	untrackCh <- struct{}{}
+
+	drainResult := <-drained
+	if !drainResult {
+		t.Fatal("Drain should complete after Untrack")
+	}
 
 	if tracker.Track() {
 		t.Fatal("Track should return false during draining")
 	}
-
-	<-drained
 }
 
 func TestTracker_DrainTimeout(t *testing.T) {

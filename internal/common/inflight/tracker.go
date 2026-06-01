@@ -5,13 +5,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
-)
-
-const (
-	stateRunning  int32 = 0
-	stateDraining int32 = 1
 )
 
 type Tracker struct {
@@ -23,7 +19,7 @@ var globalTracker *Tracker
 
 func InitTracker() *Tracker {
 	t := &Tracker{}
-	t.state.Store(stateRunning)
+	t.state.Store(constant.InflightStateRunning)
 	globalTracker = t
 	return t
 }
@@ -33,11 +29,11 @@ func GetTracker() *Tracker {
 }
 
 func (t *Tracker) Track() bool {
-	if t.state.Load() == stateDraining {
+	if t.state.Load() == constant.InflightStateDraining {
 		return false
 	}
 	t.wg.Add(1)
-	if t.state.Load() == stateDraining {
+	if t.state.Load() == constant.InflightStateDraining {
 		t.wg.Done()
 		return false
 	}
@@ -49,7 +45,7 @@ func (t *Tracker) Untrack() {
 }
 
 func (t *Tracker) Drain(timeout time.Duration) bool {
-	t.state.Store(stateDraining)
+	t.state.Store(constant.InflightStateDraining)
 
 	done := make(chan struct{})
 	go func() {
@@ -69,5 +65,5 @@ func (t *Tracker) Drain(timeout time.Duration) bool {
 }
 
 func (t *Tracker) IsDraining() bool {
-	return t.state.Load() == stateDraining
+	return t.state.Load() == constant.InflightStateDraining
 }

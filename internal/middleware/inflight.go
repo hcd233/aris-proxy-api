@@ -28,12 +28,12 @@ func InflightMiddleware() fiber.Handler {
 
 		tracker := inflight.GetTracker()
 		if !tracker.Track() {
-			c.Set("Content-Type", "application/json")
+			c.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
 			c.Status(fiber.StatusServiceUnavailable)
 
 			resp := serviceUnavailableResponse{}
-			resp.Error.Message = "server is shutting down"
-			resp.Error.Type = "server_error"
+			resp.Error.Message = constant.ServerShuttingDownMsg
+			resp.Error.Type = constant.ServerErrorType
 
 			body, _ := sonic.Marshal(resp)
 			return c.Send(body)
