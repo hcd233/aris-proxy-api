@@ -2,8 +2,8 @@ package bootstrap
 
 import (
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	appenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
-	appenum "github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/router"
 	"github.com/hcd233/aris-proxy-api/internal/web"

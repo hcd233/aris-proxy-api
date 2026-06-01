@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
 )
 

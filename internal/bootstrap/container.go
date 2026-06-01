@@ -270,6 +270,9 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newRequestRateByUserHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(newAuditService); err != nil {
+		return err
+	}
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
 		return err
 	}
@@ -525,22 +528,19 @@ func newAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 	return repository.NewAuditRepository(db)
 }
 
-func newAuditDependencies(
+func newAuditDependencies(svc auditquery.AuditService) handler.AuditDependencies {
+	return handler.AuditDependencies{Service: svc}
+}
+
+func newAuditService(
 	listAll auditquery.ListAllAuditLogsHandler,
 	listByUser auditquery.ListAuditLogsByUserHandler,
 	modelTrend auditquery.ModelTrendHandler,
 	modelTrendByUser auditquery.ModelTrendByUserHandler,
 	requestRate auditquery.RequestRateHandler,
 	requestRateByUser auditquery.RequestRateByUserHandler,
-) handler.AuditDependencies {
-	return handler.AuditDependencies{
-		ListAll:           listAll,
-		ListByUser:        listByUser,
-		ModelTrend:        modelTrend,
-		ModelTrendByUser:  modelTrendByUser,
-		RequestRate:       requestRate,
-		RequestRateByUser: requestRateByUser,
-	}
+) auditquery.AuditService {
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {

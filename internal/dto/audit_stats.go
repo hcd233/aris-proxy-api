@@ -1,13 +1,15 @@
 package dto
 
-import "time"
+import (
+	"time"
 
-type Granularity string
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+)
 
 type ModelTrendReq struct {
-	StartTime   time.Time   `query:"startTime" required:"true"`
-	EndTime     time.Time   `query:"endTime" required:"true"`
-	Granularity Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
+	StartTime   time.Time        `query:"startTime" required:"true"`
+	EndTime     time.Time        `query:"endTime" required:"true"`
+	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
 }
 
 type ModelTrendRsp struct {
@@ -26,9 +28,9 @@ type TrendPoint struct {
 }
 
 type RequestRateReq struct {
-	StartTime   time.Time   `query:"startTime" required:"true"`
-	EndTime     time.Time   `query:"endTime" required:"true"`
-	Granularity Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
+	StartTime   time.Time        `query:"startTime" required:"true"`
+	EndTime     time.Time        `query:"endTime" required:"true"`
+	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
 }
 
 type RequestRateRsp struct {

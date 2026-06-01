@@ -4,10 +4,9 @@ package aggregate
 import (
 	"time"
 
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 // ModelCallAudit 模型调用审计聚合根
@@ -82,7 +81,7 @@ func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 }
 
 // AggregateType 实现 aggregate.Root 接口
-func (*ModelCallAudit) AggregateType() string { return commonenum.AggregateTypeModelCallAudit }
+func (*ModelCallAudit) AggregateType() string { return enum.AggregateTypeModelCallAudit }
 
 // APIKeyID 返回 API Key ID
 func (a *ModelCallAudit) APIKeyID() uint { return a.apiKeyID }
