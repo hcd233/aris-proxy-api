@@ -198,6 +198,10 @@ var (
 	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
 	//	@update 2026-05-01 10:00:00
 	CronSoftDeletePurgeEnabled bool
+
+	// DebugRequestBodyEnabled bool 是否在 Huma DTO unmarshal 之前打印原始请求体
+	//	@update 2026-06-02 10:00:00
+	DebugRequestBodyEnabled bool
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -252,6 +256,8 @@ func initEnvironment() {
 	config.SetDefault("cron.session.summarize.enabled", false)
 	config.SetDefault("cron.session.score.enabled", false)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
+
+	config.SetDefault("debug.request.body.enabled", false)
 
 	config.AutomaticEnv()
 
@@ -318,6 +324,8 @@ func initEnvironment() {
 	CronSessionSummarizeEnabled = config.GetBool("cron.session.summarize.enabled")
 	CronSessionScoreEnabled = config.GetBool("cron.session.score.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
+
+	DebugRequestBodyEnabled = config.GetBool("debug.request.body.enabled")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{
