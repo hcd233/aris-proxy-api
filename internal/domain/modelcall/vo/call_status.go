@@ -1,6 +1,6 @@
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/enum"
+import "github.com/hcd233/aris-proxy-api/internal/common/enum"
 
 // CallStatus 模型调用状态值对象
 //

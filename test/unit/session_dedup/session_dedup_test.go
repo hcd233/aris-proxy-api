@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	vo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
 

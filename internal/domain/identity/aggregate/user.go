@@ -4,7 +4,7 @@ package aggregate
 import (
 	"time"
 
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
@@ -23,7 +23,7 @@ type User struct {
 	name         vo.UserName
 	email        vo.Email
 	avatar       vo.Avatar
-	permission   commonenum.Permission
+	permission   enum.Permission
 	lastLogin    time.Time
 	githubBindID string
 	googleBindID string
@@ -49,14 +49,14 @@ func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvid
 		name:       name,
 		email:      email,
 		avatar:     avatar,
-		permission: commonenum.PermissionPending,
+		permission: enum.PermissionPending,
 		lastLogin:  now,
 		createdAt:  now,
 	}
 	switch authProvider {
-	case string(commonenum.Oauth2PlatformGithub):
+	case string(enum.Oauth2PlatformGithub):
 		u.githubBindID = bindID
-	case string(commonenum.Oauth2PlatformGoogle):
+	case string(enum.Oauth2PlatformGoogle):
 		u.googleBindID = bindID
 	}
 	return u, nil
@@ -68,7 +68,7 @@ func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvid
 //	@param name vo.UserName
 //	@param email vo.Email
 //	@param avatar vo.Avatar
-//	@param permission commonenum.Permission
+//	@param permission enum.Permission
 //	@param lastLogin time.Time
 //	@param createdAt time.Time
 //	@param githubBindID string
@@ -77,7 +77,7 @@ func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvid
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
 func RestoreUser(id uint, name vo.UserName, email vo.Email, avatar vo.Avatar,
-	permission commonenum.Permission, lastLogin, createdAt time.Time,
+	permission enum.Permission, lastLogin, createdAt time.Time,
 	githubBindID, googleBindID string) *User {
 	u := &User{
 		name:         name,
@@ -126,10 +126,10 @@ func (u *User) RecordLogin(now time.Time) {
 // ChangePermission 变更权限
 //
 //	@receiver u *User
-//	@param newPerm commonenum.Permission
+//	@param newPerm enum.Permission
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func (u *User) ChangePermission(newPerm commonenum.Permission) {
+func (u *User) ChangePermission(newPerm enum.Permission) {
 	if u.permission == newPerm {
 		return
 	}
@@ -137,7 +137,7 @@ func (u *User) ChangePermission(newPerm commonenum.Permission) {
 }
 
 // AggregateType 实现 aggregate.Root 接口
-func (*User) AggregateType() string { return commonenum.AggregateTypeUser }
+func (*User) AggregateType() string { return enum.AggregateTypeUser }
 
 // Name 返回用户名
 func (u *User) Name() vo.UserName { return u.name }
@@ -149,7 +149,7 @@ func (u *User) Email() vo.Email { return u.email }
 func (u *User) Avatar() vo.Avatar { return u.avatar }
 
 // Permission 返回权限
-func (u *User) Permission() commonenum.Permission { return u.permission }
+func (u *User) Permission() enum.Permission { return u.permission }
 
 // LastLogin 返回最近登录时间
 func (u *User) LastLogin() time.Time { return u.lastLogin }

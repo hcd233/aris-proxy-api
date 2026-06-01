@@ -5,8 +5,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 )
 
 // ==================== Unified Content Types ====================
@@ -61,8 +60,8 @@ func (c UnifiedContent) MarshalJSON() ([]byte, error) {
 //	@update 2026-04-22 14:10:00
 func (UnifiedContent) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{OneOf: []*huma.Schema{
-		{Type: commonenum.JSONSchemaTypeString},
-		{Type: commonenum.JSONSchemaTypeArray, Items: &huma.Schema{Type: commonenum.JSONSchemaTypeObject}},
+		{Type: enum.JSONSchemaTypeString},
+		{Type: enum.JSONSchemaTypeArray, Items: &huma.Schema{Type: enum.JSONSchemaTypeObject}},
 	}}
 }
 
