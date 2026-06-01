@@ -8,7 +8,9 @@ const (
 	ScannerStrikeKeyTemplate  = "scanner:strike:%s"
 	ShareKeyTemplate          = "share:%s"
 	UserSharesKeyTemplate     = "user_shares:%d"
-	SessionSharesKeyTemplate  = "session_shares:%d"
+	// CronLockKeyTemplate cron 任务互斥锁的 Redis key 模板（%s = CronModule*）
+	CronLockKeyTemplate      = "cron:lock:%s"
+	SessionSharesKeyTemplate = "session_shares:%d"
 
 	// SessionMetaKeyTemplate 缓存 session 元数据（含 messageIDs/toolIDs，仅内部使用）
 	SessionMetaKeyTemplate = "session:meta:%d"
