@@ -19,6 +19,7 @@ import (
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -73,6 +74,7 @@ func InitInfrastructure() *Infrastructure {
 	db := database.InitDatabase()
 	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
+	inflight.InitTracker()
 	poolManager := pool.InitPoolManager(db)
 	cron.InitCronJobs(db, poolManager, cache)
 	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
