@@ -80,8 +80,10 @@ k3s Pod
 
 关键策略：
 
-- `replicas: 1`：当前服务器只有 2C / 4GiB，不做双副本常驻。
-- `strategy.type: Recreate`：升级时先停旧 Pod 再起新 Pod，避免短时间双 Pod 叠加导致内存压力。
+- `replicas: 2`：常驻两个应用 Pod，Service 始终至少有一个 ready endpoint 承接请求。
+- `strategy.type: RollingUpdate`：使用滚动更新避免发布中断。
+- `rollingUpdate.maxUnavailable: 0`：发布期间不允许减少可用 Pod 数量。
+- `rollingUpdate.maxSurge: 1`：发布期间最多临时增加 1 个 Pod；按当前单 Pod 约 60-80Mi 内存估算，3 Pod 峰值仍在服务器可用内存范围内。
 - `requests.cpu: 50m`，`requests.memory: 128Mi`：给调度器保守基线。
 - `limits.cpu: 300m`，`limits.memory: 512Mi`：防止异常流量或泄漏拖垮整机。
 - `emptyDir.sizeLimit: 512Mi` 挂载 `/app/logs`：限制文件日志占用。
