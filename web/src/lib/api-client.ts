@@ -71,7 +71,7 @@ class ApiClient {
       if (!refreshToken) return false;
 
       try {
-        const res = await fetch(`${API_BASE}/api/v1/token`, {
+        const res = await fetch(`${API_BASE}/api/v1/token/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -164,7 +164,7 @@ class ApiClient {
   }
 
   async refreshToken(body: RefreshTokenReqBody): Promise<RefreshTokenRsp> {
-    return this.request<RefreshTokenRsp>("/api/v1/token", {
+    return this.request<RefreshTokenRsp>("/api/v1/token/refresh", {
       method: "POST",
       body: JSON.stringify(body),
     });
