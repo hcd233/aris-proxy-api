@@ -65,6 +65,9 @@ const (
 	CORSPreflightMaxAge = 12 * time.Hour
 
 	IdleTimeout          = 2 * time.Minute
-	ShutdownTimeout      = 60 * time.Second
+	ShutdownTimeout      = 10 * time.Minute
+	CronStopTimeout      = 3 * time.Minute
+	PoolStopTimeout      = 3 * time.Minute
+	InflightDrainTimeout = 5 * time.Minute
 	FiberShutdownTimeout = 30 * time.Second
 )
