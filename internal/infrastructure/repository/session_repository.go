@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -255,34 +257,39 @@ type sessionSummaryRow struct {
 	ToolCount    int       `gorm:"column:tool_count"`
 }
 
-func (r *sessionReadRepository) listSessionsRaw(ctx context.Context, where string, args []any, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) paginate(ctx context.Context, baseWhere func(*gorm.DB) *gorm.DB, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
-	if page < 1 {
-		page = 1
+	if param.Page < 1 {
+		param.Page = 1
 	}
-	if pageSize < 1 {
-		pageSize = 10
+	if param.PageSize < 1 {
+		param.PageSize = 20
 	}
-	offset := (page - 1) * pageSize
 
-	countSQL := constant.DBQueryCountActiveSessions
-	querySQL := constant.DBQueryListActiveSessionRows
+	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
 
-	if where != "" {
-		countSQL += " AND " + where
-		querySQL += " AND " + where
+	if baseWhere != nil {
+		sql = baseWhere(sql)
 	}
-	querySQL += constant.DBOrderByIDAscLimitOffset
+	if !startTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
+	}
+	if !endTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
+	}
+	if param.Sort != "" && param.SortField != "" {
+		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
 
-	var total int64
-	if err := db.Raw(countSQL, args...).Scan(&total).Error; err != nil {
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if err := sql.Count(&pageInfo.Total).Error; err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count sessions")
 	}
 
-	queryArgs := append(args, pageSize, offset)
+	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 	var rows []sessionSummaryRow
-	if err := db.Raw(querySQL, queryArgs...).Scan(&rows).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "list sessions raw")
+	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
 	}
 
 	out := make([]*session.SessionSummaryProjection, 0, len(rows))
@@ -296,19 +303,23 @@ func (r *sessionReadRepository) listSessionsRaw(ctx context.Context, where strin
 			ToolCount:    row.ToolCount,
 		})
 	}
-	return out, &model.PageInfo{Page: page, PageSize: pageSize, Total: total}, nil
+	return out, pageInfo, nil
 }
 
-func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.listSessionsRaw(ctx, constant.DBConditionAPIKeyNameEqual, []any{owner}, page, pageSize)
+func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	return r.paginate(ctx, func(db *gorm.DB) *gorm.DB {
+		return db.Where(constant.DBConditionAPIKeyNameEqual, owner)
+	}, param, startTime, endTime)
 }
 
-func (r *sessionReadRepository) ListAllSessions(ctx context.Context, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.listSessionsRaw(ctx, "", nil, page, pageSize)
+func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	return r.paginate(ctx, nil, param, startTime, endTime)
 }
 
-func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, page, pageSize int) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.listSessionsRaw(ctx, constant.DBConditionAPIKeyNameIn, []any{ownerNames}, page, pageSize)
+func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	return r.paginate(ctx, func(db *gorm.DB) *gorm.DB {
+		return db.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+	}, param, startTime, endTime)
 }
 
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
