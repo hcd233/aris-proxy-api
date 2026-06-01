@@ -276,8 +276,8 @@ export default function ModelsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Model ID</TableHead>
                         <TableHead>Alias</TableHead>
+                        <TableHead>Model Name</TableHead>
                         <TableHead>Endpoint</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -286,8 +286,8 @@ export default function ModelsPage() {
                     <TableBody>
                       {models.map((model) => (
                         <TableRow key={model.id}>
-                          <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
                           <TableCell className="font-medium">{model.alias}</TableCell>
+                          <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
                           <TableCell>
                             <button
                               onClick={() => router.push("/endpoints")}

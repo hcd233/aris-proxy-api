@@ -6,11 +6,13 @@ package cron
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
+	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -19,10 +21,11 @@ import (
 // SoftDeletePurgeCron 软删除数据清理定时任务，每周硬删除所有已软删除的Message、Session、Tool记录
 //
 //	@author centonhuang
-//	@update 2026-03-29 10:00:00
+//	@update 2026-06-01 10:00:00
 type SoftDeletePurgeCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
+	locker     lock.Locker
 	messageDAO *dao.MessageDAO
 	sessionDAO *dao.SessionDAO
 	toolDAO    *dao.ToolDAO
@@ -32,13 +35,14 @@ type SoftDeletePurgeCron struct {
 //
 //	@return Cron
 //	@author centonhuang
-//	@update 2026-03-29 10:00:00
-func NewSoftDeletePurgeCron(db *gorm.DB) Cron {
+//	@update 2026-06-01 10:00:00
+func NewSoftDeletePurgeCron(db *gorm.DB, cache *redis.Client) Cron {
 	return &SoftDeletePurgeCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSoftDeletePurge)),
 		),
 		db:         db,
+		locker:     lock.NewLocker(cache),
 		messageDAO: dao.GetMessageDAO(),
 		sessionDAO: dao.GetSessionDAO(),
 		toolDAO:    dao.GetToolDAO(),
@@ -62,10 +66,11 @@ func (c *SoftDeletePurgeCron) Stop() {
 //	@receiver c *SoftDeletePurgeCron
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-03 10:00:00
+//	@update 2026-06-01 10:00:00
 func (c *SoftDeletePurgeCron) Start() error {
 	// 每周日凌晨4:00执行，确保所有任务完成后再清理
-	entryID, err := c.cron.AddFunc(constant.CronSpecSoftDeletePurge, c.purge)
+	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSoftDeletePurge)
+	entryID, err := c.cron.AddFunc(constant.CronSpecSoftDeletePurge, wrapCronFunc(c.locker, key, LockOptions{}, c.purge))
 	if err != nil {
 		logger.Logger().Error("[SoftDeletePurgeCron] Add func error", zap.Error(err))
 		return err
@@ -82,9 +87,8 @@ func (c *SoftDeletePurgeCron) Start() error {
 //
 //	@receiver c *SoftDeletePurgeCron
 //	@author centonhuang
-//	@update 2026-03-29 10:00:00
-func (c *SoftDeletePurgeCron) purge() {
-	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
+//	@update 2026-06-01 10:00:00
+func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 

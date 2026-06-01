@@ -1,8 +1,8 @@
 package usecase
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 func SelectCompatRoute(requestAPI enum.ProxyAPI, ep *aggregate.Endpoint) enum.CompatRoute {

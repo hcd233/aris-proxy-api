@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 type mockAnthropicProxyForAnthropic struct {

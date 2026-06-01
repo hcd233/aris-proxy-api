@@ -9,13 +9,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -31,7 +30,7 @@ type ListSessionsByUserQuery struct {
 	IsAdmin   bool
 	Page      int
 	PageSize  int
-	Sort      commonenum.Sort
+	Sort      enum.Sort
 	SortField string
 	StartTime time.Time
 	EndTime   time.Time
@@ -166,7 +165,7 @@ func sanitizeSessionListParam(ctx context.Context, q ListSessionsByUserQuery) (m
 	sort := q.Sort
 	sortField := q.SortField
 	if sort == "" {
-		sort = commonenum.SortDesc
+		sort = enum.SortDesc
 	}
 	if sortField == "" {
 		sortField = constant.FieldCreatedAt
