@@ -270,3 +270,30 @@ func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint
 	}
 	return results, nil
 }
+
+func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
+		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
+		Where(constant.DBConditionDeletedAtZero)
+
+	if len(apiKeyIDs) > 0 {
+		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
+	}
+
+	timeBucketExpr := dateTruncSQL(granularity)
+	selectFields := constant.FieldModel + ", " + timeBucketExpr + " AS time, " +
+		"SUM(" + constant.FieldInputTokens + ") AS input_tokens, " +
+		"SUM(" + constant.FieldOutputTokens + ") AS output_tokens, " +
+		"SUM(" + constant.FieldCacheCreationInputTokens + ") AS cache_creation_tokens, " +
+		"SUM(" + constant.FieldCacheReadInputTokens + ") AS cache_read_tokens, " +
+		"SUM(" + constant.FieldOutputTokens + ") * 1000.0 / NULLIF(SUM(" + constant.FieldStreamDurationMs + "), 0) AS output_tokens_per_second"
+
+	var results []*modelcall.TokenThroughputPoint
+	if err := db.Select(selectFields).
+		Group(constant.FieldModel + ", time").
+		Order(constant.FieldModel + ", time").
+		Scan(&results).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query token throughput")
+	}
+	return results, nil
+}

@@ -272,6 +272,12 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newRequestRateByUserHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(auditquery.NewTokenThroughputHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newTokenThroughputByUserHandler); err != nil {
+		return err
+	}
 	if err := container.Provide(newAuditService); err != nil {
 		return err
 	}
@@ -541,8 +547,10 @@ func newAuditService(
 	modelTrendByUser auditquery.ModelTrendByUserHandler,
 	requestRate auditquery.RequestRateHandler,
 	requestRateByUser auditquery.RequestRateByUserHandler,
+	tokenThroughput auditquery.TokenThroughputHandler,
+	tokenThroughputByUser auditquery.TokenThroughputByUserHandler,
 ) auditquery.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser)
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
@@ -555,6 +563,10 @@ func newModelTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apike
 
 func newRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.RequestRateByUserHandler {
 	return auditquery.NewRequestRateByUserHandler(repo, apiKeyRepo)
+}
+
+func newTokenThroughputByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenThroughputByUserHandler {
+	return auditquery.NewTokenThroughputByUserHandler(repo, apiKeyRepo)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {

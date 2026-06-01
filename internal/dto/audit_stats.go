@@ -50,3 +50,28 @@ type RatePoint struct {
 	Failed      int       `json:"failed" doc:"失败数"`
 	SuccessRate float64   `json:"successRate" doc:"成功率 0-1"`
 }
+
+type TokenThroughputReq struct {
+	StartTime   time.Time        `query:"startTime" required:"true"`
+	EndTime     time.Time        `query:"endTime" required:"true"`
+	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
+}
+
+type TokenThroughputRsp struct {
+	CommonRsp
+	Data []*TokenThroughputItem `json:"data,omitempty" doc:"各模型的 Token 吞吐量"`
+}
+
+type TokenThroughputItem struct {
+	Model  string                  `json:"model" doc:"模型名"`
+	Points []*TokenThroughputPoint `json:"points" doc:"时间序列点"`
+}
+
+type TokenThroughputPoint struct {
+	Time                  time.Time `json:"time" doc:"时间桶"`
+	InputTokens           int       `json:"inputTokens" doc:"输入 Token 数"`
+	OutputTokens          int       `json:"outputTokens" doc:"输出 Token 数"`
+	CacheCreationTokens   int       `json:"cacheCreationTokens" doc:"缓存创建 Token 数"`
+	CacheReadTokens       int       `json:"cacheReadTokens" doc:"缓存读取 Token 数"`
+	OutputTokensPerSecond float64   `json:"outputTokensPerSecond" doc:"输出 Token 速率 (tokens/s)"`
+}
