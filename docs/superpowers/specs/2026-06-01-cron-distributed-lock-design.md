@@ -79,23 +79,33 @@ end
 
 ### 3.2 `internal/cron/lock_runner.go` 新文件
 
+常量放 `internal/common/constant/cron.go`：
 ```go
 const (
-    DefaultCronLockTTL             = 5 * time.Minute
-    DefaultCronLockRenewInterval   = 1 * time.Minute
-    DefaultCronLockRenewDivisor    = 3 // 当 LockOptions.RenewInterval=0 时回退到 TTL/Divisor
-    MaxConsecutiveRenewFailures    = 3
-    CronLockKeyFormat              = "cron:lock:%s"
+    CronLockDefaultTTL             = 5 * time.Minute
+    CronLockDefaultRenewInterval   = 1 * time.Minute
+    CronLockDefaultRenewDivisor    = 3 // 当 LockOptions.RenewInterval=0 时回退到 TTL/Divisor
+    CronLockMaxConsecutiveRenewFailures = 3
 )
+```
 
-type LockOptions struct {
-    TTL           time.Duration
-    RenewInterval time.Duration
-}
+Redis key 模板放 `internal/common/constant/rediskey.go`：
+```go
+CronLockKeyTemplate = "cron:lock:%s"
+```
 
+Lua 脚本放 `internal/common/constant/lock.go`：
+```go
+const (
+    LuaRefreshLock = `...`  // 仅持有者可 PEXPIRE
+    LuaUnlockLock  = `...`  // 仅持有者可 DEL
+)
+```
+
+`RunWithLock` 签名（不含 `*zap.Logger` 参数，从 ctx 派生）：
+```go
 func RunWithLock(
     parentCtx context.Context,
-    log *zap.Logger,
     locker lock.Locker,
     key string,
     opts LockOptions,
@@ -103,11 +113,11 @@ func RunWithLock(
 ) {
     ttl := opts.TTL
     if ttl <= 0 {
-        ttl = DefaultCronLockTTL
+        ttl = constant.CronLockDefaultTTL
     }
     renew := opts.RenewInterval
     if renew <= 0 {
-        renew = ttl / DefaultCronLockRenewDivisor
+        renew = ttl / constant.CronLockDefaultRenewDivisor
     }
 
     childCtx, cancel := context.WithCancel(parentCtx)
@@ -133,7 +143,8 @@ func RunWithLock(
     fn(childCtx)
 }
 
-func renewLoop(ctx context.Context, log *zap.Logger, locker lock.Locker, key, value string, ttl, renew time.Duration) {
+func renewLoop(ctx context.Context, locker lock.Locker, key, value string, ttl, renew time.Duration) {
+    log := logger.WithCtx(ctx)
     t := time.NewTicker(renew)
     defer t.Stop()
     failCount := 0
@@ -150,7 +161,7 @@ func renewLoop(ctx context.Context, log *zap.Logger, locker lock.Locker, key, va
                     zap.String("key", key),
                     zap.Int("consecutiveFailures", failCount),
                     zap.Error(err))
-                if failCount >= MaxConsecutiveRenewFailures {
+                if failCount >= constant.CronLockMaxConsecutiveRenewFailures {
                     log.Warn("[CronLock] Too many refresh failures, stop renewing",
                         zap.String("key", key), zap.Int("failures", failCount))
                     return
@@ -170,7 +181,7 @@ func renewLoop(ctx context.Context, log *zap.Logger, locker lock.Locker, key, va
 - **`childCtx` 派生自 `parentCtx`**：cron 触发时的 ctx 来自 robfig（无 traceID），fn 内部原本用 `context.WithValue(background, traceID, ...)` 自行注入。这部分保持不变——`RunWithLock` 不污染 traceID。
 - **续期失败不 cancel childCtx**：fn 继续跑，让它自然完成 defer 释放。这避免了网络抖动打断长任务。
 - **失败计数清零**：只要一次成功就重置 `failCount`，避免偶发抖动累积。
-- **常量放 `lock_runner.go` 顶部**：`DefaultCronLockTTL`、`DefaultCronLockRenewInterval` 属于 cron 内部行为，不是跨包共享。
+- **常量放 `internal/common/constant/cron.go`**：`CronLockDefaultTTL`、`CronLockDefaultRenewInterval` 遵循项目"业务包禁止本地 const"规则。
 
 ### 3.3 `internal/cron/cron.go` 注册表
 
@@ -179,8 +190,8 @@ type CronRegistryEntry struct {
     Name              string
     Enabled           func() bool
     Factory           func(db *gorm.DB, poolManager *pool.PoolManager) Cron
-    LockTTL           time.Duration // 新增，0 → DefaultCronLockTTL
-    LockRenewInterval time.Duration // 新增，0 → DefaultCronLockRenewInterval
+    LockTTL           time.Duration // 新增，0 → constant.CronLockDefaultTTL
+    LockRenewInterval time.Duration // 新增，0 → constant.CronLockDefaultRenewInterval
 }
 ```
 
