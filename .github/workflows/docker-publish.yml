@@ -9,7 +9,7 @@ on:
   schedule:
     - cron: '26 21 * * *'
   push:
-    branches: [ "master" ]
+    branches: [ "**" ]
     tags: [ 'v*.*.*' ]
     paths:
       - 'internal/**'
