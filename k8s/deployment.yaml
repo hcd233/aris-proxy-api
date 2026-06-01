@@ -21,7 +21,7 @@ spec:
       labels:
         app: aris-proxy-api
     spec:
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: 660
       containers:
       - name: app
         image: ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER
@@ -38,6 +38,10 @@ spec:
         volumeMounts:
         - name: logs
           mountPath: /app/logs
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 10"]
         livenessProbe:
           httpGet:
             path: /health
@@ -48,7 +52,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health
+            path: /ready
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
