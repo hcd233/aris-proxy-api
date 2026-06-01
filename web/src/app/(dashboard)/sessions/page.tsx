@@ -39,7 +39,6 @@ type SortDir = "asc" | "desc";
 
 const SORTABLE_COLUMNS: Record<string, string> = {
   createdAt: "created_at",
-  updatedAt: "updated_at",
   messageCount: "message_count",
   toolCount: "tool_count",
 };
@@ -225,13 +224,7 @@ export default function SessionsPage() {
                       className="cursor-pointer select-none whitespace-nowrap"
                       onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
                     >
-                      <span className="inline-flex items-center gap-1">Created {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none whitespace-nowrap"
-                      onClick={() => handleSort(SORTABLE_COLUMNS.updatedAt)}
-                    >
-                      <span className="inline-flex items-center gap-1">Updated {renderSortIcon(SORTABLE_COLUMNS.updatedAt)}</span>
+                      <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -254,9 +247,6 @@ export default function SessionsPage() {
                       <TableCell>{s.toolCount ?? 0}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatDateTime(s.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(s.updatedAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
                   ))}
