@@ -14,6 +14,7 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
 )
@@ -24,6 +25,7 @@ import (
 //	update 2025-01-04 15:52:48
 type PingHandler interface {
 	HandlePing(ctx context.Context, req *dto.EmptyReq) (rsp *dto.HTTPResponse[*dto.PingRsp], err error)
+	HandleReady(ctx context.Context, req *dto.EmptyReq) (rsp *dto.HTTPResponse[*dto.PingRsp], err error)
 	HandleSSEPing(ctx context.Context, req *dto.EmptyReq) (rsp *huma.StreamResponse, err error)
 }
 
@@ -44,6 +46,17 @@ func (h *pingHandler) HandlePing(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPR
 		Status: constant.PingStatusOK,
 	}
 
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *pingHandler) HandleReady(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.PingRsp], error) {
+	tracker := inflight.GetTracker()
+	if tracker.IsDraining() {
+		return nil, huma.Error503ServiceUnavailable("server is shutting down")
+	}
+	rsp := &dto.PingRsp{
+		Status: constant.PingStatusOK,
+	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
