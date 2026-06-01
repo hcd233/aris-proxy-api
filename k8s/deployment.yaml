@@ -6,7 +6,10 @@ metadata:
   labels:
     app: aris-proxy-api
 spec:
-  replicas: 2
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: aris-proxy-api
@@ -15,21 +18,15 @@ spec:
       labels:
         app: aris-proxy-api
     spec:
-      initContainers:
-      - name: db-migrate
-        image: ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER
-        command: ["/app/aris-proxy-api", "database", "migrate"]
-        envFrom:
-        - configMapRef:
-            name: aris-proxy-api-config
-        - secretRef:
-            name: aris-proxy-api-secret
+      terminationGracePeriodSeconds: 30
       containers:
       - name: app
         image: ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER
+        imagePullPolicy: IfNotPresent
         command: ["/app/aris-proxy-api", "server", "start", "--host", "0.0.0.0", "--port", "8080"]
         ports:
-        - containerPort: 8080
+        - name: http
+          containerPort: 8080
         envFrom:
         - configMapRef:
             name: aris-proxy-api-config
@@ -42,23 +39,26 @@ spec:
           httpGet:
             path: /health
             port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 15
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
         resources:
           requests:
-            cpu: 100m
+            cpu: 50m
             memory: 128Mi
           limits:
-            cpu: 500m
+            cpu: 300m
             memory: 512Mi
       volumes:
       - name: logs
-        hostPath:
-          path: /opt/aris-proxy-api/logs
-          type: DirectoryOrCreate
+        emptyDir:
+          sizeLimit: 512Mi
