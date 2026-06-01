@@ -245,16 +245,19 @@ func (s *shareCache) DeleteShare(ctx context.Context, userID uint, shareID strin
 //	@update 2026-05-28 10:00:00
 func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, pageSize int) ([]*dto.ShareItem, *model.PageInfo, error) {
 	userSharesKey := fmt.Sprintf(constant.UserSharesKeyTemplate, userID)
-
-	total, err := s.cache.ZCard(ctx, userSharesKey).Result()
-	if err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrInternal, err, "failed to count user shares")
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
 	}
 
-	start := int64((page - 1) * pageSize)
-	stop := int64(page*pageSize - 1)
-
-	results, zErr := s.cache.ZRevRange(ctx, userSharesKey, start, stop).Result()
+	now := time.Now()
+	minCreatedAt := now.Add(-constant.ShareTTL - constant.ShareExpiredRetention).Unix()
+	results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, &redis.ZRangeBy{
+		Max: constant.RedisZRangePositiveInfinity,
+		Min: strconv.FormatInt(minCreatedAt, constant.DecimalBase),
+	}).Result()
 	if zErr != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrInternal, zErr, "failed to list user shares")
 	}
@@ -269,39 +272,48 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 		records = append(records, record)
 	}
 
-	// 批量查询所有 share key 的存在性和 TTL（Pipeline 消除 N+1）
+	// 批量查询所有 share key 的存在性（Pipeline 消除 N+1）
 	pipe := s.cache.Pipeline()
 	existsCmds := make([]*redis.IntCmd, len(records))
-	ttlCmds := make([]*redis.DurationCmd, len(records))
 	for i, r := range records {
 		shareKey := fmt.Sprintf(constant.ShareKeyTemplate, r.ShareID)
 		existsCmds[i] = pipe.Exists(ctx, shareKey)
-		ttlCmds[i] = pipe.TTL(ctx, shareKey)
 	}
 
 	if _, pipeErr := pipe.Exec(ctx); pipeErr != nil && !errors.Is(pipeErr, redis.Nil) {
 		return nil, nil, ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
 	}
 
-	now := time.Now()
+	retentionStart := now.Add(-constant.ShareExpiredRetention)
 	items := make([]*dto.ShareItem, 0, len(records))
 	for i, r := range records {
-		if existsCmds[i].Val() == 0 {
-			// share key 已过期，惰性过滤
+		createdAt := time.Unix(r.CreatedAt, 0)
+		expiresAt := createdAt.Add(constant.ShareTTL)
+		if expiresAt.Before(retentionStart) {
 			continue
 		}
-
-		expiresAt := time.Time{}
-		if ttl := ttlCmds[i].Val(); ttl > 0 {
-			expiresAt = now.Add(ttl)
+		if existsCmds[i].Val() == 0 && !expiresAt.Before(now) {
+			continue
 		}
 
 		items = append(items, &dto.ShareItem{
 			ShareID:   r.ShareID,
 			SessionID: r.SessionID,
-			CreatedAt: time.Unix(r.CreatedAt, 0),
+			CreatedAt: createdAt,
 			ExpiresAt: expiresAt,
 		})
+	}
+
+	total := int64(len(items))
+	start := (page - 1) * pageSize
+	if start >= len(items) {
+		items = []*dto.ShareItem{}
+	} else {
+		end := start + pageSize
+		if end > len(items) {
+			end = len(items)
+		}
+		items = items[start:end]
 	}
 
 	pageInfo := &model.PageInfo{
