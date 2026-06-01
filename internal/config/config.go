@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/spf13/viper"
 )
 

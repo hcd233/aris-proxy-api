@@ -41,6 +41,27 @@ func (r *endpointRepository) FindByID(ctx context.Context, id uint) (*aggregate.
 	return toEndpointAggregate(ep)
 }
 
+// BatchFindByIDs 按 ID 集合一次性查询端点，返回以 ID 索引的 map；ids 为空时返回空 map 且不打 SQL。
+func (r *endpointRepository) BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.Endpoint, error) {
+	out := make(map[uint]*aggregate.Endpoint, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	db := r.db.WithContext(ctx)
+	records, err := r.endpointDAO.BatchGetByField(db, constant.FieldID, ids, constant.EndpointRepoFieldsFull)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch find endpoints by ids")
+	}
+	for _, rec := range records {
+		ep, convErr := toEndpointAggregate(rec)
+		if convErr != nil {
+			return nil, convErr
+		}
+		out[rec.ID] = ep
+	}
+	return out, nil
+}
+
 func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
 	ep, err := aggregate.CreateEndpoint(
 		m.ID,

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 )
 
 type SourceFile struct {

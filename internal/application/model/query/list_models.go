@@ -9,6 +9,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
@@ -54,19 +55,19 @@ func (h *listModelsHandler) Handle(ctx context.Context, q ListModelsQuery) ([]*M
 		return nil, nil, err
 	}
 
+	endpointsByID, err := h.loadEndpoints(ctx, models)
+	if err != nil {
+		log.Error("[ModelQuery] Load endpoints failed", zap.Error(err))
+		return nil, nil, err
+	}
+
 	views := make([]*ModelView, 0, len(models))
 	for _, m := range models {
-		endpointView, err := h.getEndpointView(ctx, m.EndpointID())
-		if err != nil {
-			log.Error("[ModelQuery] Get endpoint failed", zap.Error(err))
-			return nil, nil, err
-		}
-
 		views = append(views, &ModelView{
 			ID:        m.AggregateID(),
 			Alias:     m.Alias().String(),
 			ModelName: m.ModelName(),
-			Endpoint:  endpointView,
+			Endpoint:  toEndpointView(endpointsByID[m.EndpointID()]),
 			CreatedAt: m.CreatedAt(),
 			UpdatedAt: m.UpdatedAt(),
 		})
@@ -76,15 +77,24 @@ func (h *listModelsHandler) Handle(ctx context.Context, q ListModelsQuery) ([]*M
 	return views, pageInfo, nil
 }
 
-func (h *listModelsHandler) getEndpointView(ctx context.Context, endpointID uint) (*endpointquery.EndpointView, error) {
-	ep, err := h.endpointRepo.FindByID(ctx, endpointID)
-	if err != nil {
-		return nil, err
+// loadEndpoints 一次性拉取本页所有 model 关联的 endpoint，避免 N+1。
+func (h *listModelsHandler) loadEndpoints(ctx context.Context, models []*aggregate.Model) (map[uint]*aggregate.Endpoint, error) {
+	seen := make(map[uint]struct{}, len(models))
+	ids := make([]uint, 0, len(models))
+	for _, m := range models {
+		if _, ok := seen[m.EndpointID()]; ok {
+			continue
+		}
+		seen[m.EndpointID()] = struct{}{}
+		ids = append(ids, m.EndpointID())
 	}
-	if ep == nil {
-		return nil, nil
-	}
+	return h.endpointRepo.BatchFindByIDs(ctx, ids)
+}
 
+func toEndpointView(ep *aggregate.Endpoint) *endpointquery.EndpointView {
+	if ep == nil {
+		return nil
+	}
 	return &endpointquery.EndpointView{
 		ID:                          ep.AggregateID(),
 		Name:                        ep.Name(),
@@ -96,5 +106,5 @@ func (h *listModelsHandler) getEndpointView(ctx context.Context, endpointID uint
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 		CreatedAt:                   ep.CreatedAt(),
 		UpdatedAt:                   ep.UpdatedAt(),
-	}, nil
+	}
 }

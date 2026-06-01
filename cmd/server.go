@@ -10,16 +10,17 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/bootstrap"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"go.uber.org/zap"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
@@ -65,6 +66,7 @@ var startServerCmd = &cobra.Command{
 
 		app.Use(
 			middleware.RecoverMiddleware(),
+			middleware.InflightMiddleware(),
 			middleware.GuardMiddleware(infra.Cache, middleware.GuardConfig{
 				StrikeThreshold: constant.GuardStrikeThreshold,
 				StrikeWindow:    constant.GuardStrikeWindow,
@@ -119,14 +121,6 @@ var startServerCmd = &cobra.Command{
 	},
 }
 
-// gracefulShutdown 按序执行优雅关闭流程
-//
-// 关闭顺序：HTTP 服务 → 日志同步 → 协程池 → 定时任务 → 数据库 → Redis
-//
-//	@param app *fiber.App
-//	@param infra *bootstrap.Infrastructure
-//	@author centonhuang
-//	@update 2026-04-04 10:00:00
 func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
 	ctx, cancel := context.WithTimeout(context.Background(), constant.ShutdownTimeout)
 	defer cancel()
@@ -135,36 +129,44 @@ func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
 	go func() {
 		defer close(done)
 
-		// Step 1: 停止接受新 HTTP 请求，等待现有请求完成
-		logger.Logger().Info("[Server] Step 1/6: Shutting down HTTP server...")
+		// Step 1: 停止定时任务（等待当前 job 完成）
+		logger.Logger().Info("[Server] Step 1/8: Stopping cron jobs...")
+		cron.StopCronJobs()
+
+		// Step 2: 停止协程池（等待排队任务完成）
+		logger.Logger().Info("[Server] Step 2/8: Stopping pool manager...")
+		pool.StopPoolManager()
+
+		// Step 3: 进入 draining 状态，拒绝新请求
+		logger.Logger().Info("[Server] Step 3/8: Entering draining state...")
+		tracker := inflight.GetTracker()
+
+		// Step 4: 等待进行中请求完成（含 SSE 流）
+		logger.Logger().Info("[Server] Step 4/8: Waiting for inflight requests to complete...")
+		tracker.Drain(constant.InflightDrainTimeout)
+
+		// Step 5: 关闭 HTTP Server
+		logger.Logger().Info("[Server] Step 5/8: Shutting down HTTP server...")
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), constant.FiberShutdownTimeout)
 		defer shutdownCancel()
 		if err := app.ShutdownWithContext(shutdownCtx); err != nil {
 			logger.Logger().Error("[Server] HTTP server shutdown error", zap.Error(err))
 		}
 
-		// Step 2: 同步日志（flush CLS 等外部日志缓冲）
-		logger.Logger().Info("[Server] Step 2/6: Syncing logger...")
+		// Step 6: 同步日志（flush CLS 等外部日志缓冲）
+		logger.Logger().Info("[Server] Step 6/8: Syncing logger...")
 		if err := logger.Logger().Sync(); err != nil {
 			logger.Logger().Error("[Server] Logger sync error", zap.Error(err))
 		}
 
-		// Step 3: 停止协程池（等待所有排队的消息存储任务完成）
-		logger.Logger().Info("[Server] Step 3/6: Stopping pool manager...")
-		pool.StopPoolManager()
-
-		// Step 4: 停止定时任务
-		logger.Logger().Info("[Server] Step 4/6: Stopping cron jobs...")
-		cron.StopCronJobs()
-
-		// Step 5: 关闭数据库连接池
-		logger.Logger().Info("[Server] Step 5/6: Closing database connection...")
+		// Step 7: 关闭数据库连接池
+		logger.Logger().Info("[Server] Step 7/8: Closing database connection...")
 		if err := database.CloseDatabase(infra.DB); err != nil {
 			logger.Logger().Error("[Server] Database close error", zap.Error(err))
 		}
 
-		// Step 6: 关闭 Redis 连接
-		logger.Logger().Info("[Server] Step 6/6: Closing Redis connection...")
+		// Step 8: 关闭 Redis 连接
+		logger.Logger().Info("[Server] Step 8/8: Closing Redis connection...")
 		if err := cache.CloseCache(infra.Cache); err != nil {
 			logger.Logger().Error("[Server] Redis close error", zap.Error(err))
 		}
@@ -174,7 +176,6 @@ func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
 
 	select {
 	case <-done:
-		// 正常关闭完成
 	case <-ctx.Done():
 		logger.Logger().Error("[Server] Graceful shutdown timed out, forcing exit", zap.Duration("timeout", constant.ShutdownTimeout))
 	}

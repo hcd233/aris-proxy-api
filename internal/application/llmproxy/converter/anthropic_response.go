@@ -5,10 +5,9 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 	"github.com/samber/lo"
 )
 
@@ -221,7 +220,7 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 					mt := strings.TrimPrefix(dataURLParts[0], constant.DataURLPrefix)
 					d := dataURLParts[1]
 					block.Source = &dto.AnthropicContentSource{
-						Type:      commonenum.SourceTypeBase64,
+						Type:      enum.SourceTypeBase64,
 						MediaType: &mt,
 						Data:      &d,
 					}
@@ -229,7 +228,7 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 			} else if p.ImageURL != nil {
 				u := *p.ImageURL
 				block.Source = &dto.AnthropicContentSource{
-					Type: commonenum.SourceTypeURL,
+					Type: enum.SourceTypeURL,
 					URL:  &u,
 				}
 			}

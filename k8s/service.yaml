@@ -3,10 +3,13 @@ kind: Service
 metadata:
   name: aris-proxy-api
   namespace: aris-proxy-api
+  labels:
+    app: aris-proxy-api
 spec:
   selector:
     app: aris-proxy-api
   ports:
-  - port: 7070
+  - name: http
+    port: 18080
     targetPort: 8080
   type: LoadBalancer

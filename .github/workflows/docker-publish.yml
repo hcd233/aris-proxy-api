@@ -1,17 +1,24 @@
 name: Docker-Publish
 
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
   schedule:
     - cron: '26 21 * * *'
   push:
-    branches: [ "master" ]
+    branches: [ "**" ]
     tags: [ 'v*.*.*' ]
     paths:
       - 'internal/**'
       - 'docker/**'
       - 'cmd/**'
       - 'web/**'
+      - 'k8s/**'
+      - 'script/**'
+      - '.github/workflows/docker-publish.yml'
       - 'main.go'
       - 'go.mod'
       - 'go.sum'
@@ -22,6 +29,9 @@ on:
       - 'docker/**'
       - 'cmd/**'
       - 'web/**'
+      - 'k8s/**'
+      - 'script/**'
+      - '.github/workflows/docker-publish.yml'
       - 'main.go'
       - 'go.mod'
       - 'go.sum'
@@ -191,12 +201,24 @@ jobs:
       - merge
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
-      - name: Deploy to K8s via SSH
+      - name: Deploy to k3s via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USERNAME }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          command_timeout: 10m
           script: |
+            set -euo pipefail
             cd ${{ secrets.PRODUCTION_REPO_PATH }}
+            git fetch --prune origin
+            git reset --hard origin/master
             bash script/deploy-k8s.sh
+            for i in $(seq 1 60); do
+              if curl -kfsS --max-time 5 https://api.lvlvko.top/health; then
+                exit 0
+              fi
+              echo "waiting for production domain health (${i}/60)" >&2
+              sleep 1
+            done
+            exit 1
