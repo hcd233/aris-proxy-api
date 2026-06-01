@@ -6,6 +6,7 @@ package cron
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -30,47 +32,35 @@ type Cron interface {
 // CronRegistryEntry 单个定时任务注册项
 //
 //	@author centonhuang
-//	@update 2026-05-01 10:00:00
+//	@update 2026-06-01 10:00:00
 type CronRegistryEntry struct {
-	Name    string
-	Enabled func() bool
-	Factory func(db *gorm.DB, poolManager *pool.PoolManager) Cron
+	Name              string
+	Enabled           func() bool
+	Factory           func(db *gorm.DB, poolManager *pool.PoolManager) Cron
+	LockTTL           time.Duration // 0 → constant.CronLockDefaultTTL
+	LockRenewInterval time.Duration // 0 → constant.CronLockDefaultRenewInterval
 }
 
 var cronInstances []Cron
 
-// DefaultCronRegistry 默认定时任务注册表，用于测试注入
+// DefaultCronRegistry 默认定时任务注册表，保留用于测试覆盖。生产由 buildRegistryEntries 构造
+// （需要 cache 注入锁依赖，registry Factory 签名不接受 cache 故退化）。
 //
-//	@update 2026-05-01 10:00:00
-var DefaultCronRegistry = []CronRegistryEntry{
-	{
-		Name:    constant.CronModuleSessionDeduplicate,
-		Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
-		Factory: func(db *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionDeduplicateCron(db) },
-	},
-	{
-		Name:    constant.CronModuleSessionSummarize,
-		Enabled: func() bool { return config.CronSessionSummarizeEnabled },
-		Factory: NewSessionSummarizeCron,
-	},
-	{
-		Name:    constant.CronModuleSessionScore,
-		Enabled: func() bool { return config.CronSessionScoreEnabled },
-		Factory: NewSessionScoreCron,
-	},
-	{
-		Name:    constant.CronModuleSoftDeletePurge,
-		Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
-		Factory: func(db *gorm.DB, _ *pool.PoolManager) Cron { return NewSoftDeletePurgeCron(db) },
-	},
-}
+//	@update 2026-06-01 10:00:00
+var DefaultCronRegistry []CronRegistryEntry
 
-// InitCronJobs 初始化定时任务
+// InitCronJobs 初始化定时任务（每个 cron 自带分布式锁）
 //
-//	author centonhuang
-//	update 2026-04-02 10:00:00
-func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager) {
-	for _, entry := range DefaultCronRegistry {
+//	@author centonhuang
+//	@update 2026-06-01 10:00:00
+func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) {
+	var entries []CronRegistryEntry
+	if len(DefaultCronRegistry) > 0 {
+		entries = DefaultCronRegistry
+	} else {
+		entries = buildRegistryEntries(db, poolManager, cache)
+	}
+	for _, entry := range entries {
 		if !entry.Enabled() {
 			logger.Logger().Info("[Cron] Cron job is disabled by configuration", zap.String("name", entry.Name))
 			continue
@@ -83,6 +73,31 @@ func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager) {
 	}
 
 	logger.Logger().Info("[Cron] Init cron jobs", zap.Int("count", len(cronInstances)))
+}
+
+func buildRegistryEntries(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) []CronRegistryEntry {
+	return []CronRegistryEntry{
+		{
+			Name:    constant.CronModuleSessionDeduplicate,
+			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionDeduplicateCron(db, cache) },
+		},
+		{
+			Name:    constant.CronModuleSessionSummarize,
+			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionSummarizeCron(db, poolManager, cache) },
+		},
+		{
+			Name:    constant.CronModuleSessionScore,
+			Enabled: func() bool { return config.CronSessionScoreEnabled },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionScoreCron(db, poolManager, cache) },
+		},
+		{
+			Name:    constant.CronModuleSoftDeletePurge,
+			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSoftDeletePurgeCron(db, cache) },
+		},
+	}
 }
 
 // StopCronJobs 停止所有定时任务，用于优雅关闭

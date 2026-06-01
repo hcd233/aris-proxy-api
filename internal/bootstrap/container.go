@@ -74,7 +74,7 @@ func InitInfrastructure() *Infrastructure {
 	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
 	poolManager := pool.InitPoolManager(db)
-	cron.InitCronJobs(db, poolManager)
+	cron.InitCronJobs(db, poolManager, cache)
 	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
 }
 

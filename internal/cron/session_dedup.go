@@ -6,15 +6,17 @@ package cron
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/bytedance/sonic"
-	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -24,10 +26,11 @@ import (
 // SessionDeduplicateCron Session去重定时任务，清理MessageIDs被其他Session包含的冗余Session
 //
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-06-01 10:00:00
 type SessionDeduplicateCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
+	locker     lock.Locker
 	sessionDAO *dao.SessionDAO
 	messageDAO *dao.MessageDAO
 }
@@ -36,13 +39,14 @@ type SessionDeduplicateCron struct {
 //
 //	@return Cron
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
-func NewSessionDeduplicateCron(db *gorm.DB) Cron {
+//	@update 2026-06-01 10:00:00
+func NewSessionDeduplicateCron(db *gorm.DB, cache *redis.Client) Cron {
 	return &SessionDeduplicateCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionDeduplicate)),
 		),
 		db:         db,
+		locker:     lock.NewLocker(cache),
 		sessionDAO: dao.GetSessionDAO(),
 		messageDAO: dao.GetMessageDAO(),
 	}
@@ -65,10 +69,11 @@ func (c *SessionDeduplicateCron) Stop() {
 //	@receiver c *SessionDeduplicateCron
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-03 10:00:00
+//	@update 2026-06-01 10:00:00
 func (c *SessionDeduplicateCron) Start() error {
 	// 每小时执行一次，定期清理冗余Session
-	entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, c.deduplicate)
+	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSessionDeduplicate)
+	entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, wrapCronFunc(c.locker, key, LockOptions{}, c.deduplicate))
 	if err != nil {
 		logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
 		return err
@@ -85,9 +90,8 @@ func (c *SessionDeduplicateCron) Start() error {
 //
 //	@receiver c *SessionDeduplicateCron
 //	@author centonhuang
-//	@update 2026-03-30 10:00:00
-func (c *SessionDeduplicateCron) deduplicate() {
-	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
+//	@update 2026-06-01 10:00:00
+func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
