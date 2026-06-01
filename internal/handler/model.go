@@ -80,9 +80,15 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 
 	rsp.Models = make([]*dto.ModelItem, 0, len(views))
 	for _, v := range views {
-		var endpointItem *dto.EndpointItem
+		item := &dto.ModelItem{
+			ID:        v.ID,
+			Alias:     v.Alias,
+			ModelName: v.ModelName,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
+		}
 		if v.Endpoint != nil {
-			endpointItem = &dto.EndpointItem{
+			item.Endpoint = &dto.EndpointItem{
 				ID:                          v.Endpoint.ID,
 				Name:                        v.Endpoint.Name,
 				OpenaiBaseURL:               v.Endpoint.OpenaiBaseURL,
@@ -95,14 +101,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 				UpdatedAt:                   v.Endpoint.UpdatedAt,
 			}
 		}
-		rsp.Models = append(rsp.Models, &dto.ModelItem{
-			ID:        v.ID,
-			Alias:     v.Alias,
-			ModelName: v.ModelName,
-			Endpoint:  endpointItem,
-			CreatedAt: v.CreatedAt,
-			UpdatedAt: v.UpdatedAt,
-		})
+		rsp.Models = append(rsp.Models, item)
 	}
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
