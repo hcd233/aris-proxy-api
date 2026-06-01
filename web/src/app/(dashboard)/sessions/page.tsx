@@ -15,7 +15,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, MessageSquare, ListFilter, Check } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  ListFilter,
+  Check,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -23,6 +31,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TimeRangePicker } from "@/components/ui/time-range-picker";
+import type { TimeRangeKey } from "@/lib/time-range";
+import { computeRange } from "@/lib/time-range";
+
+type SortDir = "asc" | "desc";
+
+const SORTABLE_COLUMNS: Record<string, string> = {
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  messageCount: "message_count",
+  toolCount: "tool_count",
+};
 
 export default function SessionsPage() {
   const isMobile = useIsMobile();
@@ -34,30 +54,69 @@ export default function SessionsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [pageInputValue, setPageInputValue] = useState("1");
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("30d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [sort, setSort] = useState<{ field: string; dir: SortDir }>({ field: "created_at", dir: "desc" });
 
-  const fetchSessions = useCallback(async (page: number, pageSize: number) => {
-    setLoading(true);
-    try {
-      const rsp = await api.listSessions(page, pageSize);
-      setSessions(rsp.sessions ?? []);
-      if (rsp.pageInfo) {
-        setPageInfo(rsp.pageInfo);
-        setPageInputValue(String(rsp.pageInfo.page));
+  const fetchSessions = useCallback(
+    async (
+      page: number,
+      pageSize: number,
+      range: TimeRangeKey,
+      cs: string,
+      ce: string,
+      sortState: { field: string; dir: SortDir },
+    ) => {
+      setLoading(true);
+      try {
+        const { startTime, endTime } = computeRange(range, cs, ce);
+        const rsp = await api.listSessions({
+          page,
+          pageSize,
+          sort: sortState.dir,
+          sortField: sortState.field,
+          startTime,
+          endTime,
+        });
+        setSessions(rsp.sessions ?? []);
+        if (rsp.pageInfo) {
+          setPageInfo(rsp.pageInfo);
+          setPageInputValue(String(rsp.pageInfo.page));
+        }
+      } catch {
+        // handled silently
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      // handled silently
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
+  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchSessions(1, 20);
+    fetchSessions(1, 20, "30d", "", "", { field: "created_at", dir: "desc" });
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
+
+  const refresh = (page: number, pageSize?: number) =>
+    fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort);
+
+  const handleSort = (field: string) => {
+    const newSort: { field: string; dir: SortDir } =
+      sort.field === field
+        ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: "desc" };
+    setSort(newSort);
+    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, newSort);
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sort.field !== field) return null;
+    return sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />;
+  };
 
   return (
     <div className="space-y-8">
@@ -86,6 +145,25 @@ export default function SessionsPage() {
             </div>
           ) : (
             <>
+              {/* Filters */}
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <TimeRangePicker
+                    value={timeRange}
+                    customStart={customStart}
+                    customEnd={customEnd}
+                    onChange={(key, cs, ce) => {
+                      setTimeRange(key);
+                      setCustomStart(cs);
+                      setCustomEnd(ce);
+                      if (key !== "custom") {
+                        fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
               {isMobile ? (
               <div className="space-y-3">
                 {sessions.map((s) => (
@@ -120,9 +198,30 @@ export default function SessionsPage() {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Summary</TableHead>
-                    <TableHead>Messages</TableHead>
-                    <TableHead>Tools</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
+                    >
+                      <span className="inline-flex items-center gap-1">Messages {renderSortIcon(SORTABLE_COLUMNS.messageCount)}</span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.toolCount)}
+                    >
+                      <span className="inline-flex items-center gap-1">Tools {renderSortIcon(SORTABLE_COLUMNS.toolCount)}</span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
+                    >
+                      <span className="inline-flex items-center gap-1">Created {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.updatedAt)}
+                    >
+                      <span className="inline-flex items-center gap-1">Updated {renderSortIcon(SORTABLE_COLUMNS.updatedAt)}</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -145,6 +244,9 @@ export default function SessionsPage() {
                       <TableCell className="text-muted-foreground">
                         {new Date(s.createdAt).toLocaleDateString()}
                       </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(s.updatedAt).toLocaleDateString()}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -163,7 +265,7 @@ export default function SessionsPage() {
                       {[20, 50, 100, 200].map((size) => (
                         <DropdownMenuItem
                           key={size}
-                          onClick={() => fetchSessions(1, size)}
+                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort)}
                         >
                           {size === pageInfo.pageSize && (
                             <Check className="size-4" />
@@ -185,7 +287,7 @@ export default function SessionsPage() {
                     variant="outline"
                     size="sm"
                     disabled={pageInfo.page <= 1}
-                    onClick={() => fetchSessions(pageInfo.page - 1, pageInfo.pageSize)}
+                    onClick={() => refresh(pageInfo.page - 1)}
                   >
                     <ChevronLeft className="size-4" />
                   </Button>
@@ -203,14 +305,14 @@ export default function SessionsPage() {
                           let page = parseInt(pageInputValue, 10);
                           if (Number.isNaN(page)) page = 1;
                           page = Math.max(1, Math.min(page, totalPages));
-                          fetchSessions(page, pageInfo.pageSize);
+                          refresh(page);
                         }
                       }}
                       onBlur={() => {
                         let page = parseInt(pageInputValue, 10);
                         if (Number.isNaN(page)) page = 1;
                         page = Math.max(1, Math.min(page, totalPages));
-                        fetchSessions(page, pageInfo.pageSize);
+                        refresh(page);
                       }}
                     />
                     <span className="text-muted-foreground">/ {totalPages}</span>
@@ -219,7 +321,7 @@ export default function SessionsPage() {
                     variant="outline"
                     size="sm"
                     disabled={pageInfo.page >= totalPages}
-                    onClick={() => fetchSessions(pageInfo.page + 1, pageInfo.pageSize)}
+                    onClick={() => refresh(pageInfo.page + 1)}
                   >
                     <ChevronRight className="size-4" />
                   </Button>

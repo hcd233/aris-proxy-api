@@ -94,10 +94,14 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
 	views, pageInfo, err := h.listByUser.Handle(ctx, sessionquery.ListSessionsByUserQuery{
-		UserID:   userID,
-		IsAdmin:  isAdmin,
-		Page:     req.Page,
-		PageSize: req.PageSize,
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+		Sort:      req.Sort,
+		SortField: req.SortField,
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List sessions by user failed", zap.Error(err))

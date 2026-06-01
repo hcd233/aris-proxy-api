@@ -2,12 +2,14 @@ package query
 
 import (
 	"context"
+	"time"
 	"unicode/utf8"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -17,11 +19,22 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
+var validSessionSortFields = map[string]bool{
+	constant.FieldCreatedAt:    true,
+	constant.FieldUpdatedAt:    true,
+	constant.FieldMessageCount: true,
+	constant.FieldToolCount:    true,
+}
+
 type ListSessionsByUserQuery struct {
-	UserID   uint
-	IsAdmin  bool
-	Page     int
-	PageSize int
+	UserID    uint
+	IsAdmin   bool
+	Page      int
+	PageSize  int
+	Sort      commonenum.Sort
+	SortField string
+	StartTime time.Time
+	EndTime   time.Time
 }
 
 type ListSessionsByUserHandler interface {
@@ -55,12 +68,16 @@ func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKey
 func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsByUserQuery) ([]*SessionSummaryView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
+	param, err := sanitizeSessionListParam(ctx, q)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var projections []*session.SessionSummaryProjection
 	var pageInfo *model.PageInfo
-	var err error
 
 	if q.IsAdmin {
-		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, q.Page, q.PageSize)
+		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime)
 	} else {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
@@ -70,7 +87,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 		if len(ownerNames) == 0 {
 			return []*SessionSummaryView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize, Total: 0}, nil
 		}
-		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, q.Page, q.PageSize)
+		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, param, q.StartTime, q.EndTime)
 	}
 
 	if err != nil {
@@ -128,6 +145,36 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 		})
 	}
 	return views, pageInfo, nil
+}
+
+func sanitizeSessionListParam(ctx context.Context, q ListSessionsByUserQuery) (model.CommonParam, error) {
+	page := q.Page
+	pageSize := q.PageSize
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if pageSize > constant.SessionMaxPageSize {
+		pageSize = constant.SessionMaxPageSize
+	}
+	if page < 1 {
+		page = 1
+	}
+	if q.SortField != "" && !validSessionSortFields[q.SortField] {
+		logger.WithCtx(ctx).Warn("[SessionQuery] Invalid sort field", zap.String("sortField", q.SortField))
+		return model.CommonParam{}, ierr.New(ierr.ErrValidation, "invalid sort field: "+q.SortField)
+	}
+	sort := q.Sort
+	sortField := q.SortField
+	if sort == "" {
+		sort = commonenum.SortDesc
+	}
+	if sortField == "" {
+		sortField = constant.FieldCreatedAt
+	}
+	return model.CommonParam{
+		PageParam: model.PageParam{Page: page, PageSize: pageSize},
+		SortParam: model.SortParam{Sort: sort, SortField: sortField},
+	}, nil
 }
 
 type getSessionByUserHandler struct {
