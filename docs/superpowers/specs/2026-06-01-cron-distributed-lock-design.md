@@ -189,36 +189,39 @@ type CronRegistryEntry struct {
 func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client)
 ```
 
-内部统一构造一个 `lock.NewLocker(cache)` 注入到每个 Factory 闭包不再合适（因为不同任务有不同锁选项）——改为将 `*redis.Client` 透传给每个 cron 实例，由各 cron 自行 `lock.NewLocker(cache)` 并保留 `locker` 字段。
+改法：将 `*redis.Client` 透传给每个 cron 实例，由各 cron 自行 `lock.NewLocker(cache)` 构造并持有 `locker` 字段。
 
-为此扩展 `Cron` 接口（轻微破坏但仅影响内部注册表）：
+为减少 4 个 cron 文件重复样板，在 `lock_runner.go` 暴露同包辅助函数：
 
 ```go
-type Cron interface {
-    Start() error
-    Stop()
+// wrapCronFunc 把 cron 实际 fn 包成"注入 traceID + RunWithLock"的整体
+func wrapCronFunc(locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context)) func() {
+    return func() {
+        ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
+        log := logger.WithCtx(ctx)
+        RunWithLock(ctx, log, locker, key, opts, fn)
+    }
 }
 ```
 
-各 cron struct 增加 `locker lock.Locker` 字段；`Start()` 内部根据 `LockTTL`/`LockRenewInterval` 决定 options，然后：
+各 cron struct 增加 `locker lock.Locker` 字段，`Start()` 模板：
 
 ```go
 func (c *SessionDeduplicateCron) Start() error {
     opts := LockOptions{TTL: c.lockTTL, RenewInterval: c.lockRenewInterval}
     key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSessionDeduplicate)
-    entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, func() {
-        ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
-        log := logger.WithCtx(ctx)
-        RunWithLock(ctx, log, c.locker, key, opts, c.deduplicate)
-    })
-    // ... 余下不变
+    entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, wrapCronFunc(c.locker, key, opts, c.deduplicate))
+    if err != nil {
+        logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
+        return err
+    }
+    logger.Logger().Info("[SessionDeduplicateCron] Add func success", zap.Int("entryID", int(entryID)))
+    c.cron.Start()
     return nil
 }
 ```
 
-注：traceID 仍由 cron fn 内部注入到 `parentCtx`；`RunWithLock` 的 `parentCtx` 已带 traceID。
-
-为减少 4 个 cron 文件重复样板，提取小辅助函数 `wrapCronFunc(locker, key, opts, fn)` 在 `lock_runner.go` 暴露（公开同包），集中逻辑。
+注：traceID 由 `wrapCronFunc` 注入到 `parentCtx`；`RunWithLock` 内部 `childCtx` 派生自 `parentCtx`，链路上 `logger.WithCtx` 与 `c.db.WithContext(childCtx)` 都能取到同一 traceID。
 
 ### 3.4 4 个 cron fn 的 ctx 改造
 
