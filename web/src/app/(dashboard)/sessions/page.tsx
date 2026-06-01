@@ -24,6 +24,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+function formatDateTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const seconds = String(d.getSeconds()).padStart(2, "0");
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+}
+
 export default function SessionsPage() {
   const isMobile = useIsMobile();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -109,7 +120,7 @@ export default function SessionsPage() {
                     <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                       <span>ID: {s.id}</span>
                       <span>{s.toolCount ?? 0} tools</span>
-                      <span>{new Date(s.createdAt).toLocaleDateString()}</span>
+                      <span>{formatDateTime(s.createdAt)}</span>
                     </div>
                   </div>
                 ))}
@@ -122,7 +133,7 @@ export default function SessionsPage() {
                     <TableHead>Summary</TableHead>
                     <TableHead>Messages</TableHead>
                     <TableHead>Tools</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -143,7 +154,7 @@ export default function SessionsPage() {
                       <TableCell>{s.messageCount ?? 0}</TableCell>
                       <TableCell>{s.toolCount ?? 0}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(s.createdAt).toLocaleDateString()}
+                        {formatDateTime(s.createdAt)}
                       </TableCell>
                     </TableRow>
                   ))}

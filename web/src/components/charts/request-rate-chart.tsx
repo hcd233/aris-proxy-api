@@ -62,12 +62,12 @@ export function RequestRateChart() {
   );
 
   const timeSet = new Set<string>();
-  const pointMap = new Map<string, Record<string, number>>();
+  const pointMap = new Map<string, Record<string, number | null>>();
   for (const item of data) {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.successRate * 100;
+      pointMap.get(p.time)![item.model] = p.total === 0 ? null : p.successRate * 100;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({
