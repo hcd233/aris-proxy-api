@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -30,28 +31,12 @@ type redisLocker struct {
 	cache *redis.Client
 }
 
-const luaRefresh = `
-if redis.call("GET", KEYS[1]) == ARGV[1] then
-    return redis.call("PEXPIRE", KEYS[1], ARGV[2])
-else
-    return 0
-end
-`
-
-const luaUnlock = `
-if redis.call("GET", KEYS[1]) == ARGV[1] then
-    return redis.call("DEL", KEYS[1])
-else
-    return 0
-end
-`
-
 func (l *redisLocker) Lock(ctx context.Context, key, value string, expire time.Duration) (success bool, err error) {
 	return l.cache.SetNX(ctx, key, value, expire).Result()
 }
 
 func (l *redisLocker) Refresh(ctx context.Context, key, value string, expire time.Duration) (success bool, err error) {
-	res, err := l.cache.Eval(ctx, luaRefresh, []string{key}, value, expire.Milliseconds()).Int64()
+	res, err := l.cache.Eval(ctx, constant.LuaRefreshLock, []string{key}, value, expire.Milliseconds()).Int64()
 	if err != nil {
 		return false, err
 	}
@@ -59,5 +44,5 @@ func (l *redisLocker) Refresh(ctx context.Context, key, value string, expire tim
 }
 
 func (l *redisLocker) Unlock(ctx context.Context, key, value string) (err error) {
-	return l.cache.Eval(ctx, luaUnlock, []string{key}, value).Err()
+	return l.cache.Eval(ctx, constant.LuaUnlockLock, []string{key}, value).Err()
 }
