@@ -84,6 +84,7 @@ var startServerCmd = &cobra.Command{
 			middleware.CORSMiddleware(),
 			middleware.CompressMiddleware(),
 			middleware.TraceMiddleware(),
+			middleware.DebugBodyMiddleware(),
 			middleware.LogMiddleware(middleware.LogMiddlewareConfig{
 				SamplingRules: []middleware.LogSamplingRule{
 					{Path: constant.RoutePathHealth, Interval: constant.LogMiddlewareSamplingInterval},
