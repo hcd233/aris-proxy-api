@@ -47,4 +47,15 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Security:    []map[string][]string{{"jwtAuth": {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryRequestRate", enum.PermissionUser)},
 	}, auditHandler.HandleRequestRate)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryTokenThroughput",
+		Method:      http.MethodGet,
+		Path:        "/stats/token/throughput",
+		Summary:     "QueryTokenThroughput",
+		Description: "Query token throughput (volume + output rate) grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Tags:        []string{"Audit"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryTokenThroughput", enum.PermissionUser)},
+	}, auditHandler.HandleTokenThroughput)
 }
