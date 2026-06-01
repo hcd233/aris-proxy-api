@@ -105,11 +105,22 @@ func buildRegistryEntries(db *gorm.DB, poolManager *pool.PoolManager, cache *red
 //	@author centonhuang
 //	@update 2026-03-20 10:00:00
 func StopCronJobs() {
-	for _, c := range cronInstances {
-		c.Stop()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for _, c := range cronInstances {
+			c.Stop()
+		}
+	}()
+
+	select {
+	case <-done:
+		logger.Logger().Info("[Cron] All cron jobs stopped")
+	case <-time.After(constant.CronStopTimeout):
+		logger.Logger().Warn("[Cron] Cron stop timed out, some jobs may not have completed",
+			zap.Duration("timeout", constant.CronStopTimeout))
 	}
 	cronInstances = nil
-	logger.Logger().Info("[Cron] All cron jobs stopped")
 }
 
 // CronInstanceCount 返回当前已注册的定时任务实例数量，供测试使用
