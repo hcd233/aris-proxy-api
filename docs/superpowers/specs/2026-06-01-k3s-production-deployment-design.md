@@ -153,7 +153,7 @@ LOG_DIR=./logs
 - SSH 动作先执行 `git fetch --prune origin && git reset --hard origin/master`，再运行 `script/deploy-k8s.sh`，确保部署脚本本身的变更在同一次发布生效。
 - `command_timeout: 10m`：防止 SSH 长时间挂死。
 - 部署脚本在 rollout 后最多轮询 60 秒 `http://127.0.0.1:18080/health`，避免 k3s LoadBalancer 本机转发表短暂滞后导致误判失败。
-- 部署后访问 `https://api.lvlvko.top/health` 做线上健康验证。
+- 部署后最多轮询 60 秒 `https://api.lvlvko.top/health` 做线上健康验证，避免 OpenResty/k3s 刚更新后的瞬时 502 误报失败。
 
 ## 手工切流与回滚
 
