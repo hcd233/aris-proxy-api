@@ -2,9 +2,14 @@ package session_share
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/alicebob/miniredis/v2"
+	"github.com/bytedance/sonic"
+	"github.com/redis/go-redis/v9"
 
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -421,5 +426,74 @@ func TestCreateShareReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	}
 	if sessionIDField.Tag.Get("minimum") != "1" {
 		t.Errorf(`CreateShareReqBody.SessionID minimum tag = %q, want "1" (reject zero values)`, sessionIDField.Tag.Get("minimum"))
+	}
+}
+
+func TestRedisShareCacheListUserShares_IncludesRecentlyExpiredOnly(t *testing.T) {
+	ctx := context.Background()
+	server := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: server.Addr()})
+	defer func() { _ = rdb.Close() }()
+
+	shareCache := cache.NewShareCache(rdb)
+	now := time.Now()
+	userID := uint(42)
+
+	seedRedisShare(t, rdb, userID, "active-share", 1, now.Add(-time.Hour), true)
+	seedRedisShare(t, rdb, userID, "recent-expired-share", 2, now.Add(-constant.ShareTTL-time.Hour), false)
+	seedRedisShare(t, rdb, userID, "old-expired-share", 3, now.Add(-constant.ShareTTL-72*time.Hour-time.Hour), false)
+
+	shares, pageInfo, err := shareCache.ListUserShares(ctx, userID, 1, 10)
+	if err != nil {
+		t.Fatalf("ListUserShares returned error: %v", err)
+	}
+	if pageInfo.Total != 2 {
+		t.Fatalf("pageInfo.Total = %d, want 2", pageInfo.Total)
+	}
+	if len(shares) != 2 {
+		t.Fatalf("shares count = %d, want 2", len(shares))
+	}
+	if shares[0].ShareID != "active-share" || shares[1].ShareID != "recent-expired-share" {
+		t.Fatalf("share order = [%s, %s], want [active-share, recent-expired-share]", shares[0].ShareID, shares[1].ShareID)
+	}
+	if shares[0].ExpiresAt.Before(now) {
+		t.Fatalf("active share expiresAt=%s should be in the future", shares[0].ExpiresAt)
+	}
+	if !shares[1].ExpiresAt.Before(now) {
+		t.Fatalf("recent expired share expiresAt=%s should be in the past", shares[1].ExpiresAt)
+	}
+}
+
+func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string, sessionID uint, createdAt time.Time, active bool) {
+	t.Helper()
+	ctx := context.Background()
+	record := struct {
+		ShareID   string `json:"shareId"`
+		SessionID uint   `json:"sessionId"`
+		CreatedAt int64  `json:"createdAt"`
+	}{
+		ShareID:   shareID,
+		SessionID: sessionID,
+		CreatedAt: createdAt.Unix(),
+	}
+	recordJSON, err := sonic.Marshal(record)
+	if err != nil {
+		t.Fatalf("marshal share record failed: %v", err)
+	}
+	if err := rdb.ZAdd(ctx, fmt.Sprintf(constant.UserSharesKeyTemplate, userID), redis.Z{
+		Score:  float64(record.CreatedAt),
+		Member: string(recordJSON),
+	}).Err(); err != nil {
+		t.Fatalf("seed user share failed: %v", err)
+	}
+	if !active {
+		return
+	}
+	ttl := time.Until(createdAt.Add(constant.ShareTTL))
+	if ttl <= 0 {
+		t.Fatalf("active share %s has non-positive ttl %s", shareID, ttl)
+	}
+	if err := rdb.Set(ctx, fmt.Sprintf(constant.ShareKeyTemplate, shareID), sessionID, ttl).Err(); err != nil {
+		t.Fatalf("seed active share key failed: %v", err)
 	}
 }

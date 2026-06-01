@@ -4,20 +4,22 @@ import (
 	"context"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 )
 
 type RequestRateQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
-	Granularity string
+	Granularity enum.Granularity
 }
 
 type RequestRateByUserQuery struct {
 	UserID      uint
 	StartTime   time.Time
 	EndTime     time.Time
-	Granularity string
+	Granularity enum.Granularity
 }
 
 type RequestRateHandler interface {
@@ -34,14 +36,14 @@ type requestRateHandler struct {
 
 type requestRateByUserHandler struct {
 	repo      modelcall.AuditRepository
-	apiKeyIDs apiKeyIDLookup
+	apiKeyIDs port.APIKeyIDLookup
 }
 
 func NewRequestRateHandler(repo modelcall.AuditRepository) RequestRateHandler {
 	return &requestRateHandler{repo: repo}
 }
 
-func NewRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyIDs apiKeyIDLookup) RequestRateByUserHandler {
+func NewRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.APIKeyIDLookup) RequestRateByUserHandler {
 	return &requestRateByUserHandler{repo: repo, apiKeyIDs: apiKeyIDs}
 }
 

@@ -48,11 +48,11 @@ func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint)
 	return map[uint]*modelcall.AuditRelation{}, nil
 }
 
-func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.ModelTrendPoint, error) {
+func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity string) ([]*modelcall.RequestRatePoint, error) {
+func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
 	return nil, nil
 }
 
@@ -184,5 +184,110 @@ func TestListAuditLogsByUser_InvalidSortField(t *testing.T) {
 	}
 	if repo.listByAPIKeyIDsCnt != 0 {
 		t.Errorf("repo should NOT be called on validation error, but called %d times", repo.listByAPIKeyIDsCnt)
+	}
+}
+
+// ─── FillTrendSeries / FillRateSeries 测试 ────────────────────────
+
+func TestFillTrendSeries_FillsMissingSlots(t *testing.T) {
+	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+	t2 := t1.Add(time.Hour)
+	t3 := t1.Add(2 * time.Hour)
+	points := []*modelcall.ModelTrendPoint{
+		{Model: "gpt-4", Time: t1, Count: 3},
+		{Model: "gpt-4", Time: t3, Count: 5},
+		{Model: "claude", Time: t2, Count: 1},
+	}
+	items := auditquery.FillTrendSeries(points)
+	if len(items) != 2 {
+		t.Fatalf("len(items) = %d, want 2", len(items))
+	}
+	for _, it := range items {
+		if len(it.Points) != 3 {
+			t.Errorf("model %s: points len = %d, want 3 (filled)", it.Model, len(it.Points))
+		}
+	}
+	byModel := map[string]map[time.Time]int{}
+	for _, it := range items {
+		byModel[it.Model] = map[time.Time]int{}
+		for _, p := range it.Points {
+			byModel[it.Model][p.Time] = p.Count
+		}
+	}
+	if byModel["gpt-4"][t2] != 0 {
+		t.Errorf("gpt-4 missing slot at t2 should be 0, got %d", byModel["gpt-4"][t2])
+	}
+	if byModel["claude"][t1] != 0 || byModel["claude"][t3] != 0 {
+		t.Errorf("claude missing slots should be 0, got t1=%d t3=%d", byModel["claude"][t1], byModel["claude"][t3])
+	}
+}
+
+func TestFillTrendSeries_Empty(t *testing.T) {
+	items := auditquery.FillTrendSeries(nil)
+	if len(items) != 0 {
+		t.Errorf("empty input should return empty, got %d items", len(items))
+	}
+}
+
+func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
+	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+	t2 := t1.Add(time.Hour)
+	points := []*modelcall.RequestRatePoint{
+		{Model: "gpt-4", Time: t1, Total: 10, Success: 8},
+		{Model: "gpt-4", Time: t2, Total: 5, Success: 5},
+	}
+	items := auditquery.FillRateSeries(points)
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	pts := items[0].Points
+	if len(pts) != 2 {
+		t.Fatalf("pts len = %d, want 2", len(pts))
+	}
+	// Sorted by time: t1, t2
+	if pts[0].Total != 10 || pts[0].Success != 8 || pts[0].Failed != 2 || pts[0].SuccessRate != 0.8 {
+		t.Errorf("pts[0] mismatch: %+v", pts[0])
+	}
+	if pts[1].Total != 5 || pts[1].Success != 5 || pts[1].Failed != 0 || pts[1].SuccessRate != 1.0 {
+		t.Errorf("pts[1] mismatch: %+v", pts[1])
+	}
+}
+
+// ─── AuditService 派发测试 ────────────────────────
+
+func TestAuditService_DispatchesByPermission(t *testing.T) {
+	repo := &fakeAuditRepo{
+		listAllFunc: func(ctx context.Context, _ model.CommonParam, _, _ time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+			return nil, &model.PageInfo{Page: 1, PageSize: 20}, nil
+		},
+		listByAPIKeyIDsFn: func(ctx context.Context, _ []uint, _ model.CommonParam, _, _ time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+			return nil, &model.PageInfo{Page: 1, PageSize: 20}, nil
+		},
+	}
+	svc := auditquery.NewAuditService(
+		auditquery.NewListAllAuditLogsHandler(repo),
+		auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewModelTrendHandler(repo),
+		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewRequestRateHandler(repo),
+		auditquery.NewRequestRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+	)
+
+	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
+		t.Fatalf("admin ListLogs err: %v", err)
+	}
+	if repo.listAllCalls != 1 {
+		t.Errorf("admin should call listAll, calls = %d", repo.listAllCalls)
+	}
+
+	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionUser, 7, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
+		t.Fatalf("user ListLogs err: %v", err)
+	}
+	if repo.listByAPIKeyIDsCnt != 1 {
+		t.Errorf("user should call listByAPIKeyIDs, calls = %d", repo.listByAPIKeyIDsCnt)
+	}
+
+	if _, _, err := svc.ListLogs(context.Background(), enum.Permission("nope"), 7, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); !errors.Is(err, ierr.ErrUnauthorized) {
+		t.Errorf("unknown permission should return ErrUnauthorized, got %v", err)
 	}
 }

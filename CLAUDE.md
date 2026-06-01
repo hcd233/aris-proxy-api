@@ -301,7 +301,7 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - 日志使用 `logger.WithCtx(ctx)` 或 `logger.WithFCtx(c)`；消息前缀为 `[PascalCaseModule]`；key/token/secret/password 必须用 `util.MaskSecret()`。
 - 业务包禁止建 `common.go` 工具堆场；导出公共 helper 放 `internal/util/` 或 `internal/common/`。
 - Redis key、存储路径、ID 格式、Data URL 模板等字符串模板放 `internal/common/constant/string.go`。
-- 业务包禁止定义本地 `const` 块；使用 `internal/common/constant/`、`internal/common/enum/`、`internal/enum/`。
+- 业务包禁止定义本地 `const` 块；使用 `internal/common/constant/`、`internal/common/enum/`。
 - HTTP 状态码使用 `fiber.StatusXxx`，禁止裸数字。
 - DTO 时间字段用 `time.Time`；禁止 Service 层提前格式化为字符串。
 - DTO 包禁止导入 `internal/infrastructure/database/model`；需要数据库字段时将具体字段作为参数传入。

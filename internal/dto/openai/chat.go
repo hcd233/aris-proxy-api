@@ -6,9 +6,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 // ==================== Union Type Structs for Strong Typing ====================
@@ -48,8 +47,8 @@ func (c OpenAIMessageContent) Schema(r huma.Registry) *huma.Schema {
 	contentPartSchema := r.Schema(reflect.TypeFor[OpenAIChatCompletionContentPart](), true, "OpenAIChatCompletionContentPart")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString},
-			{Type: commonenum.JSONSchemaTypeArray, Items: contentPartSchema},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeArray, Items: contentPartSchema},
 		},
 	}
 }
@@ -98,8 +97,8 @@ func (s OpenAIStopSequence) MarshalJSON() ([]byte, error) {
 func (s OpenAIStopSequence) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString},
-			{Type: commonenum.JSONSchemaTypeArray, Items: &huma.Schema{Type: commonenum.JSONSchemaTypeString}},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeArray, Items: &huma.Schema{Type: enum.JSONSchemaTypeString}},
 		},
 	}
 }
@@ -137,7 +136,7 @@ func (tc OpenAIChatCompletionToolChoiceParam) Schema(r huma.Registry) *huma.Sche
 	toolChoiceSchema := r.Schema(reflect.TypeFor[OpenAIChatCompletionToolChoice](), true, "OpenAIChatCompletionToolChoice")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString, Enum: []any{enum.ToolChoiceNone, enum.ToolChoiceAuto, enum.ToolChoiceRequired}},
+			{Type: enum.JSONSchemaTypeString, Enum: []any{enum.ToolChoiceNone, enum.ToolChoiceAuto, enum.ToolChoiceRequired}},
 			toolChoiceSchema,
 		},
 	}
@@ -184,11 +183,11 @@ func (v OpenAIVoiceParam) MarshalJSON() ([]byte, error) {
 func (v OpenAIVoiceParam) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeString},
 			{
-				Type: commonenum.JSONSchemaTypeObject,
+				Type: enum.JSONSchemaTypeObject,
 				Properties: map[string]*huma.Schema{
-					constant.FieldNameID: {Type: commonenum.JSONSchemaTypeString},
+					constant.FieldNameID: {Type: enum.JSONSchemaTypeString},
 				},
 				Required: []string{constant.FieldNameID},
 			},

@@ -107,6 +107,10 @@ func (s *stubEndpointRepo) FindByID(_ context.Context, id uint) (*aggregate.Endp
 	return aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true)
 }
 
+func (s *stubEndpointRepo) BatchFindByIDs(_ context.Context, _ []uint) (map[uint]*aggregate.Endpoint, error) {
+	return map[uint]*aggregate.Endpoint{}, nil
+}
+
 func (s *stubEndpointRepo) Create(_ context.Context, _ *aggregate.Endpoint) (uint, error) {
 	return 0, nil
 }
@@ -165,6 +169,16 @@ type endpointByIDRepo struct {
 
 func (s *endpointByIDRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
 	return s.endpoints[id], nil
+}
+
+func (s *endpointByIDRepo) BatchFindByIDs(_ context.Context, ids []uint) (map[uint]*aggregate.Endpoint, error) {
+	out := make(map[uint]*aggregate.Endpoint, len(ids))
+	for _, id := range ids {
+		if ep, ok := s.endpoints[id]; ok {
+			out[id] = ep
+		}
+	}
+	return out, nil
 }
 
 func (s *endpointByIDRepo) Create(_ context.Context, _ *aggregate.Endpoint) (uint, error) {

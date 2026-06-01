@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -22,7 +22,7 @@ type UserView struct {
 	Name       string
 	Email      string
 	Avatar     string
-	Permission commonenum.Permission
+	Permission enum.Permission
 	CreatedAt  time.Time
 	LastLogin  time.Time
 }
