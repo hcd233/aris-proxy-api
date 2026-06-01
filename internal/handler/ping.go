@@ -52,7 +52,7 @@ func (h *pingHandler) HandlePing(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPR
 func (h *pingHandler) HandleReady(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.PingRsp], error) {
 	tracker := inflight.GetTracker()
 	if tracker.IsDraining() {
-		return nil, huma.Error503ServiceUnavailable("server is shutting down")
+		return nil, huma.Error503ServiceUnavailable(constant.ServerShuttingDownMsg)
 	}
 	rsp := &dto.PingRsp{
 		Status: constant.PingStatusOK,
