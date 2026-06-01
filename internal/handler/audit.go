@@ -2,18 +2,15 @@ package handler
 
 import (
 	"context"
-	"sort"
-	"time"
+	"errors"
 
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -26,75 +23,31 @@ type AuditHandler interface {
 }
 
 type AuditDependencies struct {
-	ListAll           auditquery.ListAllAuditLogsHandler
-	ListByUser        auditquery.ListAuditLogsByUserHandler
-	ModelTrend        auditquery.ModelTrendHandler
-	ModelTrendByUser  auditquery.ModelTrendByUserHandler
-	RequestRate       auditquery.RequestRateHandler
-	RequestRateByUser auditquery.RequestRateByUserHandler
+	Service auditquery.AuditService
 }
 
 type auditHandler struct {
-	listAll           auditquery.ListAllAuditLogsHandler
-	listByUser        auditquery.ListAuditLogsByUserHandler
-	modelTrend        auditquery.ModelTrendHandler
-	modelTrendByUser  auditquery.ModelTrendByUserHandler
-	requestRate       auditquery.RequestRateHandler
-	requestRateByUser auditquery.RequestRateByUserHandler
+	svc auditquery.AuditService
 }
 
 func NewAuditHandler(deps AuditDependencies) AuditHandler {
-	return &auditHandler{
-		listAll:           deps.ListAll,
-		listByUser:        deps.ListByUser,
-		modelTrend:        deps.ModelTrend,
-		modelTrendByUser:  deps.ModelTrendByUser,
-		requestRate:       deps.RequestRate,
-		requestRateByUser: deps.RequestRateByUser,
-	}
+	return &auditHandler{svc: deps.Service}
 }
 
 func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error) {
 	rsp := &dto.ListAuditLogsRsp{}
-	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	permission := util.CtxValuePermission(ctx)
-
-	var (
-		logs     []*auditquery.AuditLogView
-		pageInfo *model.PageInfo
-		err      error
+	logs, pageInfo, err := h.svc.ListLogs(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		auditquery.ListAuditLogsParams{
+			Page: req.Page, PageSize: req.PageSize, Query: req.Query,
+			Sort: req.Sort, SortField: req.SortField,
+			StartTime: req.StartTime, EndTime: req.EndTime,
+		},
 	)
-
-	switch permission {
-	case enum.PermissionAdmin:
-		logs, pageInfo, err = h.listAll.Handle(ctx, auditquery.ListAllAuditLogsQuery{
-			Page:      req.Page,
-			PageSize:  req.PageSize,
-			Query:     req.Query,
-			Sort:      req.Sort,
-			SortField: req.SortField,
-			StartTime: req.StartTime,
-			EndTime:   req.EndTime,
-		})
-	case enum.PermissionUser:
-		logs, pageInfo, err = h.listByUser.Handle(ctx, auditquery.ListAuditLogsByUserQuery{
-			UserID:    userID,
-			Page:      req.Page,
-			PageSize:  req.PageSize,
-			Query:     req.Query,
-			Sort:      req.Sort,
-			SortField: req.SortField,
-			StartTime: req.StartTime,
-			EndTime:   req.EndTime,
-		})
-	default:
-		rsp.Error = ierr.ErrUnauthorized.BizError()
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] List audit logs failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = bizErrorFrom(err)
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -127,172 +80,40 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 
 func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrendReq) (*dto.HTTPResponse[*dto.ModelTrendRsp], error) {
 	rsp := &dto.ModelTrendRsp{}
-	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	permission := util.CtxValuePermission(ctx)
-
-	var points []*modelcall.ModelTrendPoint
-	var err error
-
-	switch permission {
-	case enum.PermissionAdmin:
-		points, err = h.modelTrend.Handle(ctx, auditquery.ModelTrendQuery{
-			StartTime:   req.StartTime,
-			EndTime:     req.EndTime,
-			Granularity: string(req.Granularity),
-		})
-	case enum.PermissionUser:
-		points, err = h.modelTrendByUser.Handle(ctx, auditquery.ModelTrendByUserQuery{
-			UserID:      userID,
-			StartTime:   req.StartTime,
-			EndTime:     req.EndTime,
-			Granularity: string(req.Granularity),
-		})
-	default:
-		rsp.Error = ierr.ErrUnauthorized.BizError()
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
+	points, err := h.svc.ModelTrend(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Model trend failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = bizErrorFrom(err)
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-
-	rsp.Data = groupTrendPoints(points)
+	rsp.Data = auditquery.FillTrendSeries(points)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error) {
 	rsp := &dto.RequestRateRsp{}
-	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	permission := util.CtxValuePermission(ctx)
-
-	var points []*modelcall.RequestRatePoint
-	var err error
-
-	switch permission {
-	case enum.PermissionAdmin:
-		points, err = h.requestRate.Handle(ctx, auditquery.RequestRateQuery{
-			StartTime:   req.StartTime,
-			EndTime:     req.EndTime,
-			Granularity: string(req.Granularity),
-		})
-	case enum.PermissionUser:
-		points, err = h.requestRateByUser.Handle(ctx, auditquery.RequestRateByUserQuery{
-			UserID:      userID,
-			StartTime:   req.StartTime,
-			EndTime:     req.EndTime,
-			Granularity: string(req.Granularity),
-		})
-	default:
-		rsp.Error = ierr.ErrUnauthorized.BizError()
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
+	points, err := h.svc.RequestRate(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Request rate failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = bizErrorFrom(err)
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-
-	rsp.Data = groupRatePoints(points)
+	rsp.Data = auditquery.FillRateSeries(points)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-func groupTrendPoints(points []*modelcall.ModelTrendPoint) []*dto.ModelTrendItem {
-	type timeSlot struct {
-		time  time.Time
-		count int
+// bizErrorFrom 把 ierr error 转换为可挂在 rsp.Error 上的业务错误。
+func bizErrorFrom(err error) *model.Error {
+	if errors.Is(err, ierr.ErrUnauthorized) {
+		return ierr.ErrUnauthorized.BizError()
 	}
-
-	modelSet := make(map[string]struct{})
-	modelOrder := make([]string, 0)
-	allTimes := make(map[time.Time]struct{})
-	byModel := make(map[string]map[time.Time]int)
-
-	for _, p := range points {
-		if _, ok := modelSet[p.Model]; !ok {
-			modelSet[p.Model] = struct{}{}
-			modelOrder = append(modelOrder, p.Model)
-			byModel[p.Model] = make(map[time.Time]int)
-		}
-		byModel[p.Model][p.Time] = p.Count
-		allTimes[p.Time] = struct{}{}
-	}
-
-	sortedTimes := make([]time.Time, 0, len(allTimes))
-	for t := range allTimes {
-		sortedTimes = append(sortedTimes, t)
-	}
-	sort.Slice(sortedTimes, func(i, j int) bool { return sortedTimes[i].Before(sortedTimes[j]) })
-
-	items := make([]*dto.ModelTrendItem, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		pts := make([]*dto.TrendPoint, 0, len(sortedTimes))
-		for _, t := range sortedTimes {
-			pts = append(pts, &dto.TrendPoint{
-				Time:  t,
-				Count: byModel[m][t],
-			})
-		}
-		items = append(items, &dto.ModelTrendItem{
-			Model:  m,
-			Points: pts,
-		})
-	}
-	return items
-}
-
-func groupRatePoints(points []*modelcall.RequestRatePoint) []*dto.RequestRateItem {
-	type timeSlot struct {
-		time    time.Time
-		total   int
-		success int
-	}
-
-	modelSet := make(map[string]struct{})
-	modelOrder := make([]string, 0)
-	allTimes := make(map[time.Time]struct{})
-	byModel := make(map[string]map[time.Time]timeSlot)
-
-	for _, p := range points {
-		if _, ok := modelSet[p.Model]; !ok {
-			modelSet[p.Model] = struct{}{}
-			modelOrder = append(modelOrder, p.Model)
-			byModel[p.Model] = make(map[time.Time]timeSlot)
-		}
-		byModel[p.Model][p.Time] = timeSlot{time: p.Time, total: p.Total, success: p.Success}
-		allTimes[p.Time] = struct{}{}
-	}
-
-	sortedTimes := make([]time.Time, 0, len(allTimes))
-	for t := range allTimes {
-		sortedTimes = append(sortedTimes, t)
-	}
-	sort.Slice(sortedTimes, func(i, j int) bool { return sortedTimes[i].Before(sortedTimes[j]) })
-
-	items := make([]*dto.RequestRateItem, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		pts := make([]*dto.RatePoint, 0, len(sortedTimes))
-		for _, t := range sortedTimes {
-			s := byModel[m][t]
-			failed := s.total - s.success
-			var rate float64
-			if s.total > 0 {
-				rate = float64(s.success) / float64(s.total)
-			}
-			pts = append(pts, &dto.RatePoint{
-				Time:        t,
-				Total:       s.total,
-				Success:     s.success,
-				Failed:      failed,
-				SuccessRate: rate,
-			})
-		}
-		items = append(items, &dto.RequestRateItem{
-			Model:  m,
-			Points: pts,
-		})
-	}
-	return items
+	return ierr.ToBizError(err, ierr.ErrInternal.BizError())
 }

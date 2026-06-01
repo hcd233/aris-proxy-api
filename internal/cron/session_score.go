@@ -6,15 +6,17 @@ package cron
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
+	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -24,11 +26,12 @@ import (
 // SessionScoreCron Session评分定时任务
 //
 //	@author centonhuang
-//	@update 2026-04-02 10:00:00
+//	@update 2026-06-01 10:00:00
 type SessionScoreCron struct {
 	cron        *cron.Cron
 	db          *gorm.DB
 	poolManager *pool.PoolManager
+	locker      lock.Locker
 	sessionDAO  *dao.SessionDAO
 	messageDAO  *dao.MessageDAO
 }
@@ -37,14 +40,15 @@ type SessionScoreCron struct {
 //
 //	@return Cron
 //	@author centonhuang
-//	@update 2026-04-02 10:00:00
-func NewSessionScoreCron(db *gorm.DB, poolManager *pool.PoolManager) Cron {
+//	@update 2026-06-01 10:00:00
+func NewSessionScoreCron(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) Cron {
 	return &SessionScoreCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSessionScore)),
 		),
 		db:          db,
 		poolManager: poolManager,
+		locker:      lock.NewLocker(cache),
 		sessionDAO:  dao.GetSessionDAO(),
 		messageDAO:  dao.GetMessageDAO(),
 	}
@@ -67,10 +71,11 @@ func (c *SessionScoreCron) Stop() {
 //	@receiver c *SessionScoreCron
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-03 10:00:00
+//	@update 2026-06-01 10:00:00
 func (c *SessionScoreCron) Start() error {
 	// 每天凌晨3:00执行，在摘要任务完成后执行
-	entryID, err := c.cron.AddFunc(constant.CronSpecSessionScore, c.score)
+	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSessionScore)
+	entryID, err := c.cron.AddFunc(constant.CronSpecSessionScore, wrapCronFunc(c.locker, key, LockOptions{}, c.score))
 	if err != nil {
 		logger.Logger().Error("[SessionScoreCron] Add func error", zap.Error(err))
 		return err
@@ -86,10 +91,8 @@ func (c *SessionScoreCron) Start() error {
 // score 执行Session评分逻辑
 //
 //	@receiver c *SessionScoreCron
-//	@author centonhuang
-//	@update 2026-04-02 10:00:00
-func (c *SessionScoreCron) score() {
-	ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
+//	@update 2026-06-01 10:00:00
+func (c *SessionScoreCron) score(ctx context.Context) {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 	poolManager := c.poolManager

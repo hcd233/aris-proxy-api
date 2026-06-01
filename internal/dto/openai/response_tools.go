@@ -6,9 +6,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
-	"github.com/hcd233/aris-proxy-api/internal/enum"
 )
 
 // ==================== Response API Tools ====================
@@ -90,10 +89,10 @@ func (v ResponseFileSearchFilterValue) MarshalJSON() ([]byte, error) {
 func (ResponseFileSearchFilterValue) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString},
-			{Type: commonenum.JSONSchemaTypeNumber},
-			{Type: commonenum.JSONSchemaTypeBoolean},
-			{Type: commonenum.JSONSchemaTypeArray, Items: &huma.Schema{OneOf: []*huma.Schema{{Type: commonenum.JSONSchemaTypeString}, {Type: commonenum.JSONSchemaTypeNumber}}}},
+			{Type: enum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeNumber},
+			{Type: enum.JSONSchemaTypeBoolean},
+			{Type: enum.JSONSchemaTypeArray, Items: &huma.Schema{OneOf: []*huma.Schema{{Type: enum.JSONSchemaTypeString}, {Type: enum.JSONSchemaTypeNumber}}}},
 		},
 	}
 }
@@ -157,7 +156,7 @@ func (ResponseMcpAllowedTools) Schema(reg huma.Registry) *huma.Schema {
 	filterSchema := reg.Schema(reflect.TypeFor[ResponseMcpToolFilter](), true, "ResponseMcpToolFilter")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeArray, Items: &huma.Schema{Type: commonenum.JSONSchemaTypeString}},
+			{Type: enum.JSONSchemaTypeArray, Items: &huma.Schema{Type: enum.JSONSchemaTypeString}},
 			filterSchema,
 		},
 	}
@@ -199,7 +198,7 @@ func (ResponseMcpRequireApproval) Schema(reg huma.Registry) *huma.Schema {
 	filterSchema := reg.Schema(reflect.TypeFor[ResponseMcpToolApprovalFilter](), true, "ResponseMcpToolApprovalFilter")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString, Enum: []any{string(enum.MCPApprovalAlways), string(enum.MCPApprovalNever)}},
+			{Type: enum.JSONSchemaTypeString, Enum: []any{string(enum.MCPApprovalAlways), string(enum.MCPApprovalNever)}},
 			filterSchema,
 		},
 	}
@@ -243,7 +242,7 @@ func (ResponseCodeInterpreterContainer) Schema(reg huma.Registry) *huma.Schema {
 	autoSchema := reg.Schema(reflect.TypeFor[ResponseCodeInterpreterContainerAuto](), true, "ResponseCodeInterpreterContainerAuto")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString},
+			{Type: enum.JSONSchemaTypeString},
 			autoSchema,
 		},
 	}
@@ -598,7 +597,7 @@ func (ResponseToolChoiceParam) Schema(reg huma.Registry) *huma.Schema {
 	objSchema := reg.Schema(reflect.TypeFor[ResponseToolChoiceObject](), true, "ResponseToolChoiceObject")
 	return &huma.Schema{
 		OneOf: []*huma.Schema{
-			{Type: commonenum.JSONSchemaTypeString, Enum: []any{enum.ToolChoiceNone, enum.ToolChoiceAuto, enum.ToolChoiceRequired}},
+			{Type: enum.JSONSchemaTypeString, Enum: []any{enum.ToolChoiceNone, enum.ToolChoiceAuto, enum.ToolChoiceRequired}},
 			objSchema,
 		},
 	}

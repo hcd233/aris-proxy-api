@@ -42,7 +42,7 @@ func TestInitCronJobs_AllDisabled(t *testing.T) {
 	config.CronSoftDeletePurgeEnabled = false
 
 	cron.StopCronJobs()
-	cron.InitCronJobs(nil, nil)
+	cron.InitCronJobs(nil, nil, nil)
 
 	if cron.CronInstanceCount() != 0 {
 		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount())
@@ -94,7 +94,7 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 		},
 	}
 
-	cron.InitCronJobs(nil, nil)
+	cron.InitCronJobs(nil, nil, nil)
 
 	if cron.CronInstanceCount() != 2 {
 		t.Fatalf("expected 2 cron instances, got %d", cron.CronInstanceCount())
@@ -132,7 +132,7 @@ func TestInitCronJobs_AllEnabled(t *testing.T) {
 		},
 	}
 
-	cron.InitCronJobs(nil, nil)
+	cron.InitCronJobs(nil, nil, nil)
 
 	if cron.CronInstanceCount() != 1 {
 		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount())

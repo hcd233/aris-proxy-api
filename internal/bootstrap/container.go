@@ -19,6 +19,7 @@ import (
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -73,8 +74,9 @@ func InitInfrastructure() *Infrastructure {
 	db := database.InitDatabase()
 	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
+	inflight.InitTracker()
 	poolManager := pool.InitPoolManager(db)
-	cron.InitCronJobs(db, poolManager)
+	cron.InitCronJobs(db, poolManager, cache)
 	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
 }
 
@@ -268,6 +270,9 @@ func provideApplication(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(newRequestRateByUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newAuditService); err != nil {
 		return err
 	}
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
@@ -525,22 +530,19 @@ func newAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 	return repository.NewAuditRepository(db)
 }
 
-func newAuditDependencies(
+func newAuditDependencies(svc auditquery.AuditService) handler.AuditDependencies {
+	return handler.AuditDependencies{Service: svc}
+}
+
+func newAuditService(
 	listAll auditquery.ListAllAuditLogsHandler,
 	listByUser auditquery.ListAuditLogsByUserHandler,
 	modelTrend auditquery.ModelTrendHandler,
 	modelTrendByUser auditquery.ModelTrendByUserHandler,
 	requestRate auditquery.RequestRateHandler,
 	requestRateByUser auditquery.RequestRateByUserHandler,
-) handler.AuditDependencies {
-	return handler.AuditDependencies{
-		ListAll:           listAll,
-		ListByUser:        listByUser,
-		ModelTrend:        modelTrend,
-		ModelTrendByUser:  modelTrendByUser,
-		RequestRate:       requestRate,
-		RequestRateByUser: requestRateByUser,
-	}
+) auditquery.AuditService {
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {

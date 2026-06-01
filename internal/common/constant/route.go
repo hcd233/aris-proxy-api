@@ -3,6 +3,7 @@ package constant
 const (
 	RoutePathRoot                         = "/"
 	RoutePathHealth                       = "/health"
+	RoutePathReady                        = "/ready"
 	RoutePathSSEHealth                    = "/ssehealth"
 	RoutePathTokenRefresh                 = "/refresh"
 	RoutePathUserCurrent                  = "/current"
@@ -13,7 +14,6 @@ const (
 	RoutePathAnthropicMessages            = "/messages"
 	RoutePathAnthropicMessagesCountTokens = "/messages/count_tokens"
 	RoutePathOpenAIChatCompletions        = "/chat/completions"
-	RoutePathAPIKeyByID                   = "/"
 	RoutePathFavicon                      = "/favicon.ico"
 	RoutePathRobots                       = "/robots.txt"
 	RoutePathAppleTouchIcon               = "/apple-touch-icon.png"

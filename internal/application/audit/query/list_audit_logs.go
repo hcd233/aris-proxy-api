@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -142,17 +143,13 @@ type ListAuditLogsByUserHandler interface {
 	Handle(ctx context.Context, q ListAuditLogsByUserQuery) ([]*AuditLogView, *model.PageInfo, error)
 }
 
-type apiKeyIDLookup interface {
-	LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error)
-}
-
 type listAuditLogsByUserHandler struct {
 	repo      modelcall.AuditRepository
-	apiKeyIDs apiKeyIDLookup
+	apiKeyIDs port.APIKeyIDLookup
 }
 
 // NewListAuditLogsByUserHandler 构造 user 维度审计查询处理器
-func NewListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyIDs apiKeyIDLookup) ListAuditLogsByUserHandler {
+func NewListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.APIKeyIDLookup) ListAuditLogsByUserHandler {
 	return &listAuditLogsByUserHandler{repo: repo, apiKeyIDs: apiKeyIDs}
 }
 
