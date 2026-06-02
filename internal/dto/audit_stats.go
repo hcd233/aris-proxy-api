@@ -75,3 +75,47 @@ type TokenThroughputPoint struct {
 	CacheReadTokens       int       `json:"cacheReadTokens" doc:"缓存读取 Token 数"`
 	OutputTokensPerSecond float64   `json:"outputTokensPerSecond" doc:"输出 Token 速率 (tokens/s)"`
 }
+
+// — Token Rate —
+
+type TokenRateReq struct {
+	StartTime   time.Time        `query:"startTime" required:"true"`
+	EndTime     time.Time        `query:"endTime" required:"true"`
+	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
+}
+
+type TokenRateRsp struct {
+	CommonRsp
+	Data []*TokenRateItem `json:"data,omitempty" doc:"各模型的输出 Token 速率"`
+}
+
+type TokenRateItem struct {
+	Model  string            `json:"model" doc:"模型名"`
+	Points []*TokenRatePoint `json:"points" doc:"时间序列点"`
+}
+
+type TokenRatePoint struct {
+	Time                  time.Time `json:"time" doc:"时间桶"`
+	OutputTokensPerSecond float64   `json:"outputTokensPerSecond" doc:"输出 Token 速率 (tokens/s)"`
+}
+
+// — Token Usage —
+
+type TokenUsageReq struct {
+	StartTime   time.Time        `query:"startTime" required:"true"`
+	EndTime     time.Time        `query:"endTime" required:"true"`
+	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
+}
+
+type TokenUsageRsp struct {
+	CommonRsp
+	Data []*TokenUsageItem `json:"data,omitempty" doc:"各模型的 Token 聚合用量"`
+}
+
+type TokenUsageItem struct {
+	Model               string `json:"model" doc:"模型名"`
+	InputTokens         int    `json:"inputTokens" doc:"输入 Token 总数"`
+	OutputTokens        int    `json:"outputTokens" doc:"输出 Token 总数"`
+	CacheReadTokens     int    `json:"cacheReadTokens" doc:"缓存读取 Token 总数"`
+	CacheCreationTokens int    `json:"cacheCreationTokens" doc:"缓存创建 Token 总数"`
+}
