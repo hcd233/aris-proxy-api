@@ -8,6 +8,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
 // AuditService 统一按当前 JWT 权限派发审计查询，handler 只负责 DTO 映射。
@@ -16,6 +17,8 @@ type AuditService interface {
 	ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error)
 	RequestRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error)
 	TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
+	TokenRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenRateItem, error)
+	TokenUsage(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenUsageItem, error)
 }
 
 // ListAuditLogsParams 列表查询的通用参数（不带权限相关字段）。
@@ -57,6 +60,10 @@ type auditService struct {
 	requestRateByUser     RequestRateByUserHandler
 	tokenThroughput       TokenThroughputHandler
 	tokenThroughputByUser TokenThroughputByUserHandler
+	tokenRate             TokenRateHandler
+	tokenRateByUser       TokenRateByUserHandler
+	tokenUsage            TokenUsageHandler
+	tokenUsageByUser      TokenUsageByUserHandler
 }
 
 // NewAuditService 构造权限派发服务。
@@ -69,6 +76,10 @@ func NewAuditService(
 	requestRateByUser RequestRateByUserHandler,
 	tokenThroughput TokenThroughputHandler,
 	tokenThroughputByUser TokenThroughputByUserHandler,
+	tokenRate TokenRateHandler,
+	tokenRateByUser TokenRateByUserHandler,
+	tokenUsage TokenUsageHandler,
+	tokenUsageByUser TokenUsageByUserHandler,
 ) AuditService {
 	return &auditService{
 		listAll:               listAll,
@@ -79,6 +90,10 @@ func NewAuditService(
 		requestRateByUser:     requestRateByUser,
 		tokenThroughput:       tokenThroughput,
 		tokenThroughputByUser: tokenThroughputByUser,
+		tokenRate:             tokenRate,
+		tokenRateByUser:       tokenRateByUser,
+		tokenUsage:            tokenUsage,
+		tokenUsageByUser:      tokenUsageByUser,
 	}
 }
 
@@ -121,6 +136,28 @@ func (s *auditService) TokenThroughput(ctx context.Context, permission enum.Perm
 		return s.tokenThroughput.Handle(ctx, TokenThroughputQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
 	case enum.PermissionUser:
 		return s.tokenThroughputByUser.Handle(ctx, TokenThroughputByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	default:
+		return nil, ierr.ErrUnauthorized
+	}
+}
+
+func (s *auditService) TokenRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenRateItem, error) {
+	switch permission {
+	case enum.PermissionAdmin:
+		return s.tokenRate.Handle(ctx, TokenRateQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	case enum.PermissionUser:
+		return s.tokenRateByUser.Handle(ctx, TokenRateByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	default:
+		return nil, ierr.ErrUnauthorized
+	}
+}
+
+func (s *auditService) TokenUsage(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenUsageItem, error) {
+	switch permission {
+	case enum.PermissionAdmin:
+		return s.tokenUsage.Handle(ctx, TokenUsageQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	case enum.PermissionUser:
+		return s.tokenUsageByUser.Handle(ctx, TokenUsageByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
 	default:
 		return nil, ierr.ErrUnauthorized
 	}

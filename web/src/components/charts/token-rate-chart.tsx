@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { TokenThroughputItem } from "@/lib/types";
+import type { TokenRateItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ export function TokenRateChart() {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [data, setData] = useState<TokenThroughputItem[]>([]);
+  const [data, setData] = useState<TokenRateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
@@ -35,7 +35,7 @@ export function TokenRateChart() {
     setError(false);
     try {
       const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
-      const rsp = await api.fetchTokenThroughput({ startTime, endTime, granularity });
+      const rsp = await api.fetchTokenRate({ startTime, endTime, granularity });
       setData(rsp.data ?? []);
     } catch {
       setError(true);

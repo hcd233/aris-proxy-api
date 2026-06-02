@@ -86,7 +86,7 @@ export function TokenVolumeChart() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Token Volume</CardTitle>
+        <CardTitle className="font-display">Token Throughput</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}
