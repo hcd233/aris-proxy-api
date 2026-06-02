@@ -1,9 +1,12 @@
 package proxyutil
 
 import (
+	"bytes"
+
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
@@ -14,6 +17,23 @@ func MarshalOpenAIChatCompletionBodyForModel(req *dto.OpenAIChatCompletionReq, m
 	body := *req
 	body.Model = modelName
 	return lo.Must1(sonic.Marshal(&body))
+}
+
+// MarshalRawOpenAIChatCompletionBodyForModel 基于原始 JSON 请求体替换顶层 model 字段。
+// 除 model 外的字段由 raw body 决定，避免 DTO round-trip 丢弃未知字段。
+func MarshalRawOpenAIChatCompletionBodyForModel(raw []byte, req *dto.OpenAIChatCompletionReq, modelName string) []byte {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return MarshalOpenAIChatCompletionBodyForModel(req, modelName)
+	}
+
+	var body map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(trimmed, &body); err != nil || body == nil {
+		return MarshalOpenAIChatCompletionBodyForModel(req, modelName)
+	}
+
+	body[constant.FieldNameModel] = sonic.NoCopyRawMessage(lo.Must1(sonic.Marshal(modelName)))
+	return lo.Must1(sonic.Marshal(body))
 }
 
 // MarshalOpenAIResponseBodyForModel 使用上游模型名序列化 Response API 请求体，且不修改原请求。
