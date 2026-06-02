@@ -17,8 +17,9 @@ import (
 // ─── fake repository ─────────────────────────────────────
 
 type fakeAuditRepo struct {
-	listAllFunc       func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
-	listByAPIKeyIDsFn func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	listAllFunc            func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	listByAPIKeyIDsFn      func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	queryTokenThroughputFn func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
 
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
@@ -57,6 +58,9 @@ func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, 
 }
 
 func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+	if f.queryTokenThroughputFn != nil {
+		return f.queryTokenThroughputFn(ctx, apiKeyIDs, startTime, endTime, granularity)
+	}
 	return nil, nil
 }
 
@@ -349,6 +353,10 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewRequestRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewTokenThroughputHandler(repo),
 		auditquery.NewTokenThroughputByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewTokenRateHandler(repo),
+		auditquery.NewTokenRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewTokenUsageHandler(repo),
+		auditquery.NewTokenUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 	)
 
 	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
@@ -367,5 +375,39 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 
 	if _, _, err := svc.ListLogs(context.Background(), enum.Permission("nope"), 7, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); !errors.Is(err, ierr.ErrUnauthorized) {
 		t.Errorf("unknown permission should return ErrUnauthorized, got %v", err)
+	}
+}
+
+// ─── TokenUsage 聚合测试 ────────────────────────
+
+func TestAggregateTokenUsage_SumsPerModel(t *testing.T) {
+	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+	t2 := t1.Add(time.Hour)
+	repo := &fakeAuditRepo{
+		queryTokenThroughputFn: func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+			return []*modelcall.TokenThroughputPoint{
+				{Model: "gpt-4", Time: t1, InputTokens: 100, OutputTokens: 50, CacheReadTokens: 30, CacheCreationTokens: 10},
+				{Model: "gpt-4", Time: t2, InputTokens: 200, OutputTokens: 150, CacheReadTokens: 20, CacheCreationTokens: 5},
+				{Model: "claude", Time: t1, InputTokens: 300, OutputTokens: 250, CacheReadTokens: 50, CacheCreationTokens: 15},
+			}, nil
+		},
+	}
+	h := auditquery.NewTokenUsageHandler(repo)
+	items, err := h.Handle(context.Background(), auditquery.TokenUsageQuery{
+		StartTime: t1, EndTime: t2, Granularity: enum.GranularityHour,
+	})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("len(items) = %d, want 2", len(items))
+	}
+	gpt := items[0]
+	if gpt.InputTokens != 300 || gpt.OutputTokens != 200 || gpt.CacheReadTokens != 50 || gpt.CacheCreationTokens != 15 {
+		t.Errorf("gpt-4 totals mismatch: %+v", gpt)
+	}
+	claude := items[1]
+	if claude.InputTokens != 300 || claude.OutputTokens != 250 || claude.CacheReadTokens != 50 || claude.CacheCreationTokens != 15 {
+		t.Errorf("claude totals mismatch: %+v", claude)
 	}
 }
