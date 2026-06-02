@@ -3,6 +3,7 @@ package constant
 const (
 	RoutePathRoot                         = "/"
 	RoutePathHealth                       = "/health"
+	RoutePathReady                        = "/ready"
 	RoutePathSSEHealth                    = "/ssehealth"
 	RoutePathTokenRefresh                 = "/refresh"
 	RoutePathUserCurrent                  = "/current"

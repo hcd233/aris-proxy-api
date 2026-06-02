@@ -9,6 +9,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 )
@@ -24,7 +25,7 @@ func TestRedisShareCacheListUserShares_PaginatesAtRedisLevel(t *testing.T) {
 	userID := uint(7)
 
 	for i := 0; i < 5; i++ {
-		seedRedisShare(t, rdb, userID, fmt.Sprintf("share-%d", i), uint(i+1), now.Add(-time.Duration(i)*time.Hour), true)
+		seedRedisShare(t, rdb, userID, fmt.Sprintf("share-%d", i), uint(i+1), now.Add(-time.Duration(i)*time.Hour), true, constant.ShareTTLDefault)
 	}
 
 	page1, pageInfo1, err := shareCache.ListUserShares(ctx, userID, 1, 2)

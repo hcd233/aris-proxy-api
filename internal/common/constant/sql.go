@@ -56,6 +56,8 @@ const (
 	FieldUserAgent                = "user_agent"
 	FieldUpstreamStatusCode       = "upstream_status_code"
 	FieldErrorMessage             = "error_message"
+	FieldMessageCount             = "message_count"
+	FieldToolCount                = "tool_count"
 )
 
 const (
@@ -103,6 +105,10 @@ var (
 	AuditQueryFields = []string{FieldTraceID, FieldModel}
 
 	AuditMaxPageSize = 100
+
+	SessionMaxPageSize = 200
+
+	SessionSummarySelect = "id, created_at, updated_at, summary, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
 
 	DateTruncMinute = "date_trunc('minute', created_at)"
 	DateTruncHour   = "date_trunc('hour', created_at)"

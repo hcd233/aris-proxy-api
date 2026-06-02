@@ -22,6 +22,7 @@ type shareRecord struct {
 	ShareID   string `json:"shareId"`
 	SessionID uint   `json:"sessionId"`
 	CreatedAt int64  `json:"createdAt"`
+	TTL       int64  `json:"ttl"`
 }
 
 // ShareCache 分享缓存操作接口
@@ -29,7 +30,7 @@ type shareRecord struct {
 //	@author centonhuang
 //	@update 2026-05-28 10:00:00
 type ShareCache interface {
-	CreateShare(ctx context.Context, userID, sessionID uint) (string, time.Time, error)
+	CreateShare(ctx context.Context, userID, sessionID uint, ttl time.Duration) (string, time.Time, error)
 	GetShareSessionID(ctx context.Context, shareID string) (uint, error)
 	DeleteShare(ctx context.Context, userID uint, shareID string) error
 	ListUserShares(ctx context.Context, userID uint, page, pageSize int) ([]*dto.ShareItem, *model.PageInfo, error)
@@ -61,9 +62,12 @@ func NewShareCache(cache *redis.Client) ShareCache {
 //	@return error
 //	@author centonhuang
 //	@update 2026-05-28 10:00:00
-func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (string, time.Time, error) {
+func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint, ttl time.Duration) (string, time.Time, error) {
 	if sessionID == 0 {
 		return "", time.Time{}, ierr.New(ierr.ErrValidation, "sessionID must be greater than 0")
+	}
+	if ttl <= 0 {
+		return "", time.Time{}, ierr.New(ierr.ErrValidation, "ttl must be greater than 0")
 	}
 
 	existingShareID, checkErr := s.GetSessionShareID(ctx, sessionID)
@@ -75,12 +79,12 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 	}
 
 	now := time.Now()
-	expiresAt := now.Add(constant.ShareTTL)
+	expiresAt := now.Add(ttl)
 
 	// 防撞：用 SET NX 原子占位 share key，碰撞则重试。
 	// 长度从 constant.ShareIDMinLen 起逐级提升到 constant.ShareIDMaxLen，
 	// 每个长度尝试 constant.ShareIDMaxAttemptsPerLen 次。
-	shareID, key, reserveErr := s.reserveShareID(ctx, sessionID)
+	shareID, key, reserveErr := s.reserveShareID(ctx, sessionID, ttl)
 	if reserveErr != nil {
 		return "", time.Time{}, reserveErr
 	}
@@ -92,6 +96,7 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 		ShareID:   shareID,
 		SessionID: sessionID,
 		CreatedAt: now.Unix(),
+		TTL:       int64(ttl.Seconds()),
 	}
 	recordJSON, err := sonic.Marshal(record)
 	if err != nil {
@@ -106,7 +111,7 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 		Member: string(recordJSON),
 	})
 	pipe.SAdd(ctx, sessionSharesKey, shareID)
-	pipe.Expire(ctx, sessionSharesKey, constant.ShareTTL)
+	pipe.Expire(ctx, sessionSharesKey, ttl)
 
 	if _, execErr := pipe.Exec(ctx); execErr != nil {
 		// 回滚已占位的 share key，避免索引/key 出现孤儿
@@ -128,7 +133,7 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint) (s
 //	@return error
 //	@author centonhuang
 //	@update 2026-05-28 20:10:00
-func (s *shareCache) reserveShareID(ctx context.Context, sessionID uint) (string, string, error) {
+func (s *shareCache) reserveShareID(ctx context.Context, sessionID uint, ttl time.Duration) (string, string, error) {
 	for length := constant.ShareIDMinLen; length <= constant.ShareIDMaxLen; length++ {
 		for attempt := 0; attempt < constant.ShareIDMaxAttemptsPerLen; attempt++ {
 			shareID, genErr := util.GenerateShareID(sessionID, length)
@@ -136,7 +141,7 @@ func (s *shareCache) reserveShareID(ctx context.Context, sessionID uint) (string
 				return "", "", genErr
 			}
 			key := fmt.Sprintf(constant.ShareKeyTemplate, shareID)
-			ok, setErr := s.cache.SetNX(ctx, key, sessionID, constant.ShareTTL).Result()
+			ok, setErr := s.cache.SetNX(ctx, key, sessionID, ttl).Result()
 			if setErr != nil {
 				return "", "", ierr.Wrap(ierr.ErrInternal, setErr, "failed to reserve share key")
 			}
@@ -253,22 +258,16 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 	}
 
 	now := time.Now()
-	minCreatedAt := now.Add(-constant.ShareTTL - constant.ShareExpiredRetention).Unix()
+	retentionStart := now.Add(-constant.ShareExpiredRetention)
+	minCreatedAt := now.Add(-constant.ShareTTLNeverExpire - constant.ShareExpiredRetention).Unix()
 	scoreRange := &redis.ZRangeBy{
-		Max:    constant.RedisZRangePositiveInfinity,
-		Min:    strconv.FormatInt(minCreatedAt, constant.DecimalBase),
-		Offset: int64((page - 1) * pageSize),
-		Count:  int64(pageSize),
+		Max: constant.RedisZRangePositiveInfinity,
+		Min: strconv.FormatInt(minCreatedAt, constant.DecimalBase),
 	}
 
 	results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, scoreRange).Result()
 	if zErr != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrInternal, zErr, "failed to list user shares")
-	}
-
-	total, countErr := s.cache.ZCount(ctx, userSharesKey, scoreRange.Min, scoreRange.Max).Result()
-	if countErr != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrInternal, countErr, "failed to count user shares")
 	}
 
 	// 解析当前页 member 为 shareRecord
@@ -293,11 +292,18 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 		return nil, nil, ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
 	}
 
-	// 仅过滤"被手动删除但尚未 TTL 过期"的边界记录；远过期项已由 score 范围在 Redis 层过滤。
+	// 仅过滤"被手动删除但尚未 TTL 过期"的边界记录；远过期项按各记录 TTL + retention 窗口过滤。
 	items := make([]*dto.ShareItem, 0, len(records))
 	for i, r := range records {
 		createdAt := time.Unix(r.CreatedAt, 0)
-		expiresAt := createdAt.Add(constant.ShareTTL)
+		ttl := time.Duration(r.TTL) * time.Second
+		if ttl <= 0 {
+			ttl = constant.ShareTTLDefault
+		}
+		expiresAt := createdAt.Add(ttl)
+		if expiresAt.Before(retentionStart) {
+			continue
+		}
 		if existsCmds[i].Val() == 0 && !expiresAt.Before(now) {
 			continue
 		}
@@ -308,6 +314,18 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 			CreatedAt: createdAt,
 			ExpiresAt: expiresAt,
 		})
+	}
+
+	total := int64(len(items))
+	start := (page - 1) * pageSize
+	if start >= len(items) {
+		items = []*dto.ShareItem{}
+	} else {
+		end := start + pageSize
+		if end > len(items) {
+			end = len(items)
+		}
+		items = items[start:end]
 	}
 
 	pageInfo := &model.PageInfo{

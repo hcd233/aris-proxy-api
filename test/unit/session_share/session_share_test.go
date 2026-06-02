@@ -20,6 +20,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/samber/lo"
 )
 
 type mockShareEntry struct {
@@ -47,7 +48,7 @@ func newMockShareCache() *mockShareCache {
 	}
 }
 
-func (m *mockShareCache) CreateShare(_ context.Context, userID, sessionID uint) (string, time.Time, error) {
+func (m *mockShareCache) CreateShare(_ context.Context, userID, sessionID uint, ttl time.Duration) (string, time.Time, error) {
 	if m.createErr != nil {
 		return "", time.Time{}, m.createErr
 	}
@@ -60,11 +61,11 @@ func (m *mockShareCache) CreateShare(_ context.Context, userID, sessionID uint) 
 		userID:    userID,
 		sessionID: sessionID,
 		createdAt: now,
-		expiresAt: now.Add(constant.ShareTTL),
+		expiresAt: now.Add(ttl),
 	}
 	m.userShares[userID] = append(m.userShares[userID], shareID)
 	m.sharedSessions[sessionID] = true
-	return shareID, now.Add(constant.ShareTTL), nil
+	return shareID, now.Add(ttl), nil
 }
 
 func (m *mockShareCache) GetShareSessionID(_ context.Context, shareID string) (uint, error) {
@@ -269,8 +270,8 @@ func TestCreateShare_NilBodyRejected(t *testing.T) {
 
 func TestListShares_Success(t *testing.T) {
 	sc := newMockShareCache()
-	sc.CreateShare(context.Background(), 42, 1)
-	sc.CreateShare(context.Background(), 42, 2)
+	sc.CreateShare(context.Background(), 42, 1, constant.ShareTTLDefault)
+	sc.CreateShare(context.Background(), 42, 2, constant.ShareTTLDefault)
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
@@ -301,7 +302,7 @@ func TestListShares_Empty(t *testing.T) {
 
 func TestDeleteShare_Success(t *testing.T) {
 	sc := newMockShareCache()
-	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1)
+	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1, constant.ShareTTLDefault)
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
@@ -320,7 +321,7 @@ func TestDeleteShare_Success(t *testing.T) {
 
 func TestDeleteShare_NotOwner(t *testing.T) {
 	sc := newMockShareCache()
-	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1)
+	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1, constant.ShareTTLDefault)
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(99, enum.PermissionUser)
@@ -396,6 +397,66 @@ func TestHandleGetSessionByUser_NotShared(t *testing.T) {
 	}
 }
 
+func TestParseExpiresIn(t *testing.T) {
+	past := time.Now().Add(-time.Hour).Unix()
+
+	tests := []struct {
+		name      string
+		expiresIn string
+		customAt  *int64
+		want      time.Duration
+		wantErr   bool
+	}{
+		{"default (empty)", "", nil, constant.ShareTTL1Day, false},
+		{"1 day", "1d", nil, constant.ShareTTL1Day, false},
+		{"1 week", "7d", nil, constant.ShareTTL1Week, false},
+		{"1 week alt", "1w", nil, constant.ShareTTL1Week, false},
+		{"1 month", "30d", nil, constant.ShareTTL1Month, false},
+		{"1 month alt", "1M", nil, constant.ShareTTL1Month, false},
+		{"never", "never", nil, constant.ShareTTLNeverExpire, false},
+		{"unknown defaults", "something", nil, constant.ShareTTLDefault, false},
+		{"custom missing at", "custom", nil, 0, true},
+		{"custom past time", "custom", &past, 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := handler.ParseExpiresIn(tt.expiresIn, tt.customAt)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error but got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("ParseExpiresIn(%q) = %v, want %v", tt.expiresIn, got, tt.want)
+			}
+		})
+	}
+
+	// custom valid: use approximate match
+	t.Run("custom valid", func(t *testing.T) {
+		now := time.Now()
+		target := now.Add(48 * time.Hour)
+		customAt := lo.ToPtr(target.Unix())
+		got, err := handler.ParseExpiresIn("custom", customAt)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		expectedTTL := time.Until(target)
+		diff := got - expectedTTL
+		if diff < 0 {
+			diff = -diff
+		}
+		if diff > time.Second {
+			t.Errorf("ttl = %v, want ~%v (diff %v)", got, expectedTTL, diff)
+		}
+	})
+}
+
 // TestCreateShareReq_DTOFollowsHumaBodyConvention 防回归：CreateShareReq 必须按 huma 框架的
 // "包装结构 + Body 字段" 模式定义，否则 POST body 反序列化会被 huma 忽略，导致 SessionID
 // 始终是零值（线上曾因此返回错位 session）。
@@ -427,6 +488,22 @@ func TestCreateShareReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	if sessionIDField.Tag.Get("minimum") != "1" {
 		t.Errorf(`CreateShareReqBody.SessionID minimum tag = %q, want "1" (reject zero values)`, sessionIDField.Tag.Get("minimum"))
 	}
+
+	expiresInField, ok := bodyType.FieldByName("ExpiresIn")
+	if !ok {
+		t.Fatal("CreateShareReqBody must have ExpiresIn field")
+	}
+	if expiresInField.Tag.Get("json") != "expiresIn" {
+		t.Errorf(`CreateShareReqBody.ExpiresIn json tag = %q, want "expiresIn"`, expiresInField.Tag.Get("json"))
+	}
+
+	expiresAtField, ok := bodyType.FieldByName("ExpiresAt")
+	if !ok {
+		t.Fatal("CreateShareReqBody must have ExpiresAt field")
+	}
+	if expiresAtField.Tag.Get("json") != "expiresAt,omitempty" {
+		t.Errorf(`CreateShareReqBody.ExpiresAt json tag = %q, want "expiresAt,omitempty"`, expiresAtField.Tag.Get("json"))
+	}
 }
 
 func TestRedisShareCacheListUserShares_IncludesRecentlyExpiredOnly(t *testing.T) {
@@ -439,9 +516,9 @@ func TestRedisShareCacheListUserShares_IncludesRecentlyExpiredOnly(t *testing.T)
 	now := time.Now()
 	userID := uint(42)
 
-	seedRedisShare(t, rdb, userID, "active-share", 1, now.Add(-time.Hour), true)
-	seedRedisShare(t, rdb, userID, "recent-expired-share", 2, now.Add(-constant.ShareTTL-time.Hour), false)
-	seedRedisShare(t, rdb, userID, "old-expired-share", 3, now.Add(-constant.ShareTTL-72*time.Hour-time.Hour), false)
+	seedRedisShare(t, rdb, userID, "active-share", 1, now.Add(-time.Hour), true, constant.ShareTTLDefault)
+	seedRedisShare(t, rdb, userID, "recent-expired-share", 2, now.Add(-constant.ShareTTLDefault-time.Hour), false, constant.ShareTTLDefault)
+	seedRedisShare(t, rdb, userID, "old-expired-share", 3, now.Add(-constant.ShareTTLDefault-72*time.Hour-time.Hour), false, constant.ShareTTLDefault)
 
 	shares, pageInfo, err := shareCache.ListUserShares(ctx, userID, 1, 10)
 	if err != nil {
@@ -464,17 +541,69 @@ func TestRedisShareCacheListUserShares_IncludesRecentlyExpiredOnly(t *testing.T)
 	}
 }
 
-func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string, sessionID uint, createdAt time.Time, active bool) {
+func TestRedisShareCache_CreateShare_WithCustomTTL(t *testing.T) {
+	ctx := context.Background()
+	server := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: server.Addr()})
+	defer func() { _ = rdb.Close() }()
+
+	shareCache := cache.NewShareCache(rdb)
+	userID := uint(42)
+	sessionID := uint(1)
+
+	shareID, expiresAt, err := shareCache.CreateShare(ctx, userID, sessionID, constant.ShareTTL1Week)
+	if err != nil {
+		t.Fatalf("CreateShare failed: %v", err)
+	}
+	if shareID == "" {
+		t.Fatal("expected non-empty shareID")
+	}
+
+	expectedExpiry := time.Now().Add(constant.ShareTTL1Week)
+	diff := expiresAt.Sub(expectedExpiry)
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > time.Second {
+		t.Errorf("expiresAt = %v, want ~%v", expiresAt, expectedExpiry)
+	}
+
+	gotSessionID, err := shareCache.GetShareSessionID(ctx, shareID)
+	if err != nil {
+		t.Fatalf("GetShareSessionID failed: %v", err)
+	}
+	if gotSessionID != sessionID {
+		t.Errorf("GetShareSessionID = %d, want %d", gotSessionID, sessionID)
+	}
+
+	items, _, listErr := shareCache.ListUserShares(ctx, userID, 1, 10)
+	if listErr != nil {
+		t.Fatalf("ListUserShares failed: %v", listErr)
+	}
+	if len(items) != 1 {
+		t.Fatalf("shares count = %d, want 1", len(items))
+	}
+	if items[0].ShareID != shareID {
+		t.Errorf("shareID = %s, want %s", items[0].ShareID, shareID)
+	}
+	if items[0].ExpiresAt.Before(time.Now()) {
+		t.Error("expiresAt should be in the future for 1-week share")
+	}
+}
+
+func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string, sessionID uint, createdAt time.Time, active bool, ttl time.Duration) {
 	t.Helper()
 	ctx := context.Background()
 	record := struct {
 		ShareID   string `json:"shareId"`
 		SessionID uint   `json:"sessionId"`
 		CreatedAt int64  `json:"createdAt"`
+		TTL       int64  `json:"ttl"`
 	}{
 		ShareID:   shareID,
 		SessionID: sessionID,
 		CreatedAt: createdAt.Unix(),
+		TTL:       int64(ttl.Seconds()),
 	}
 	recordJSON, err := sonic.Marshal(record)
 	if err != nil {
@@ -489,11 +618,11 @@ func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string
 	if !active {
 		return
 	}
-	ttl := time.Until(createdAt.Add(constant.ShareTTL))
-	if ttl <= 0 {
-		t.Fatalf("active share %s has non-positive ttl %s", shareID, ttl)
+	remaining := time.Until(createdAt.Add(ttl))
+	if remaining <= 0 {
+		t.Fatalf("active share %s has non-positive ttl %s", shareID, remaining)
 	}
-	if err := rdb.Set(ctx, fmt.Sprintf(constant.ShareKeyTemplate, shareID), sessionID, ttl).Err(); err != nil {
+	if err := rdb.Set(ctx, fmt.Sprintf(constant.ShareKeyTemplate, shareID), sessionID, remaining).Err(); err != nil {
 		t.Fatalf("seed active share key failed: %v", err)
 	}
 }

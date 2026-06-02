@@ -32,6 +32,7 @@ import type {
   ListAuditLogsRsp,
   ModelTrendRsp,
   RequestRateRsp,
+  TokenThroughputRsp,
   Granularity,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
@@ -198,13 +199,23 @@ class ApiClient {
 
   // ─── Session (JWT auth) ────────────────────────────────────────────────────
 
-  async listSessions(
-    page: number = 1,
-    pageSize: number = 20
-  ): Promise<ListSessionsRsp> {
-    return this.request<ListSessionsRsp>(
-      `/api/v1/session/list?page=${page}&pageSize=${pageSize}`
-    );
+  async listSessions(params: {
+    page: number;
+    pageSize: number;
+    sort?: string;
+    sortField?: string;
+    startTime?: string;
+    endTime?: string;
+  }): Promise<ListSessionsRsp> {
+    const sp = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
+    if (params.sort) sp.set("sort", params.sort);
+    if (params.sortField) sp.set("sortField", params.sortField);
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    return this.request<ListSessionsRsp>(`/api/v1/session/list?${sp}`);
   }
 
   async getSession(sessionId: number): Promise<GetSessionRsp> {
@@ -428,6 +439,8 @@ class ApiClient {
     page: number;
     pageSize: number;
     query?: string;
+    sort?: string;
+    sortField?: string;
     startTime?: string;
     endTime?: string;
   }): Promise<ListAuditLogsRsp> {
@@ -436,6 +449,8 @@ class ApiClient {
       pageSize: String(params.pageSize),
     });
     if (params.query) sp.set("query", params.query);
+    if (params.sort) sp.set("sort", params.sort);
+    if (params.sortField) sp.set("sortField", params.sortField);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
@@ -457,6 +472,15 @@ class ApiClient {
   }): Promise<RequestRateRsp> {
     const sp = new URLSearchParams(params);
     return this.request<RequestRateRsp>(`/api/v1/audit/stats/request/rate?${sp}`);
+  }
+
+  async fetchTokenThroughput(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<TokenThroughputRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<TokenThroughputRsp>(`/api/v1/audit/stats/token/throughput?${sp}`);
   }
 }
 

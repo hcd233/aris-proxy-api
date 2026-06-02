@@ -88,3 +88,45 @@ func indexSeries[P any, V any](
 	sort.Slice(buckets, func(i, j int) bool { return buckets[i].Before(buckets[j]) })
 	return modelOrder, byModel, buckets
 }
+
+type throughputSlot struct {
+	inputTokens         int
+	outputTokens        int
+	cacheCreationTokens int
+	cacheReadTokens     int
+	outputTokensPerSec  float64
+}
+
+func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint) []*dto.TokenThroughputItem {
+	modelOrder, byModel, buckets := indexSeries(points,
+		func(p *modelcall.TokenThroughputPoint) string { return p.Model },
+		func(p *modelcall.TokenThroughputPoint) time.Time { return p.Time },
+		func(p *modelcall.TokenThroughputPoint) throughputSlot {
+			return throughputSlot{
+				inputTokens:         p.InputTokens,
+				outputTokens:        p.OutputTokens,
+				cacheCreationTokens: p.CacheCreationTokens,
+				cacheReadTokens:     p.CacheReadTokens,
+				outputTokensPerSec:  p.OutputTokensPerSecond,
+			}
+		},
+	)
+	items := make([]*dto.TokenThroughputItem, 0, len(modelOrder))
+	for _, m := range modelOrder {
+		pts := make([]*dto.TokenThroughputPoint, 0, len(buckets))
+		for _, t := range buckets {
+			s, ok := byModel[m][t]
+			tp := &dto.TokenThroughputPoint{Time: t}
+			if ok {
+				tp.InputTokens = s.inputTokens
+				tp.OutputTokens = s.outputTokens
+				tp.CacheCreationTokens = s.cacheCreationTokens
+				tp.CacheReadTokens = s.cacheReadTokens
+				tp.OutputTokensPerSecond = s.outputTokensPerSec
+			}
+			pts = append(pts, tp)
+		}
+		items = append(items, &dto.TokenThroughputItem{Model: m, Points: pts})
+	}
+	return items
+}

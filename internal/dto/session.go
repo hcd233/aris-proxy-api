@@ -4,6 +4,7 @@ package dto
 import (
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
@@ -71,9 +72,13 @@ type ListSessionsRsp struct {
 // ListSessionsByUserReq 分页获取当前用户Session列表请求（JWT认证）
 //
 //	@author centonhuang
-//	@update 2026-05-24 10:00:00
+//	@update 2026-06-01 10:00:00
 type ListSessionsByUserReq struct {
 	model.PageParam
+	Sort      enum.Sort `query:"sort" enum:"asc,desc"`
+	SortField string    `query:"sortField" maxLength:"50"`
+	StartTime time.Time `query:"startTime"`
+	EndTime   time.Time `query:"endTime"`
 }
 
 // GetSessionByUserReq 获取当前用户Session详情请求（JWT认证）

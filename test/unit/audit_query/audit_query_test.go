@@ -56,6 +56,10 @@ func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, 
 	return nil, nil
 }
 
+func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+	return nil, nil
+}
+
 type fakeAPIKeyIDLookup struct {
 	lookupFunc func(ctx context.Context, userID uint) ([]uint, error)
 	calls      int
@@ -271,6 +275,8 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewRequestRateHandler(repo),
 		auditquery.NewRequestRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewTokenThroughputHandler(repo),
+		auditquery.NewTokenThroughputByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 	)
 
 	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
