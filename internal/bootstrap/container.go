@@ -21,6 +21,7 @@ import (
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -75,6 +76,7 @@ func InitInfrastructure() *Infrastructure {
 	db := database.InitDatabase()
 	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
+	inflight.InitTracker()
 	poolManager := pool.InitPoolManager(db)
 	cron.InitCronJobs(context.Background(), db, poolManager, cache)
 	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
@@ -270,6 +272,12 @@ func provideApplication(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(newRequestRateByUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(auditquery.NewTokenThroughputHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newTokenThroughputByUserHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newAuditService); err != nil {
@@ -541,8 +549,10 @@ func newAuditService(
 	modelTrendByUser auditquery.ModelTrendByUserHandler,
 	requestRate auditquery.RequestRateHandler,
 	requestRateByUser auditquery.RequestRateByUserHandler,
+	tokenThroughput auditquery.TokenThroughputHandler,
+	tokenThroughputByUser auditquery.TokenThroughputByUserHandler,
 ) auditquery.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser)
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
@@ -555,6 +565,10 @@ func newModelTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apike
 
 func newRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.RequestRateByUserHandler {
 	return auditquery.NewRequestRateByUserHandler(repo, apiKeyRepo)
+}
+
+func newTokenThroughputByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenThroughputByUserHandler {
+	return auditquery.NewTokenThroughputByUserHandler(repo, apiKeyRepo)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {

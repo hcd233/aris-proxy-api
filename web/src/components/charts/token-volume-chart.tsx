@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { RequestRateItem } from "@/lib/types";
+import type { TokenThroughputItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,30 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
-export function RequestRateChart() {
-  const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
+const TOKEN_LAYERS = [
+  { key: "inputTokens", label: "Input", color: "#D97757" },
+  { key: "outputTokens", label: "Output", color: "#5B8DB8" },
+  { key: "cacheReadTokens", label: "Cache Read", color: "#7C6BA5" },
+  { key: "cacheCreationTokens", label: "Cache Creation", color: "#4A9E7D" },
+] as const;
+
+function formatTokenCount(v: number): string {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+  return String(v);
+}
+
+export function TokenVolumeChart() {
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [data, setData] = useState<RequestRateItem[]>([]);
+  const [data, setData] = useState<TokenThroughputItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
@@ -33,11 +46,7 @@ export function RequestRateChart() {
     setError(false);
     try {
       const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
-      const rsp = await api.fetchRequestRate({
-        startTime,
-        endTime,
-        granularity,
-      });
+      const rsp = await api.fetchTokenThroughput({ startTime, endTime, granularity });
       setData(rsp.data ?? []);
     } catch {
       setError(true);
@@ -46,28 +55,27 @@ export function RequestRateChart() {
     }
   }, [timeRange, customStart, customEnd]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchData();
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const models = [...new Set(data.map((d) => d.model))];
-  const CHART_COLORS = ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355", "#6B8BA4", "#A0522D"];
   const chartConfig = Object.fromEntries(
-    models.map((m, i) => [
-      m,
-      { label: m, color: CHART_COLORS[i % CHART_COLORS.length] },
-    ])
+    TOKEN_LAYERS.map((l) => [l.key, { label: l.label, color: l.color }])
   );
 
   const timeSet = new Set<string>();
-  const pointMap = new Map<string, Record<string, number | null>>();
+  const pointMap = new Map<string, Record<string, number>>();
   for (const item of data) {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.total === 0 ? null : p.successRate * 100;
+      const entry = pointMap.get(p.time)!;
+      entry.inputTokens = (entry.inputTokens ?? 0) + p.inputTokens;
+      entry.outputTokens = (entry.outputTokens ?? 0) + p.outputTokens;
+      entry.cacheReadTokens = (entry.cacheReadTokens ?? 0) + p.cacheReadTokens;
+      entry.cacheCreationTokens = (entry.cacheCreationTokens ?? 0) + p.cacheCreationTokens;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({
@@ -78,7 +86,7 @@ export function RequestRateChart() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Request Success Rate</CardTitle>
+        <CardTitle className="font-display">Token Volume</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}
@@ -106,33 +114,29 @@ export function RequestRateChart() {
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-64 w-full">
-            <LineChart data={flatData}>
+            <AreaChart data={flatData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="time"
                 tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
                 fontSize={12}
               />
-              <YAxis
-                fontSize={12}
-                domain={[0, 100]}
-                allowDataOverflow={false}
-                tickFormatter={(v) => `${v}%`}
-              />
+              <YAxis fontSize={12} tickFormatter={formatTokenCount} domain={[0, "auto"]} allowDataOverflow={false} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
-              {models.map((m) => (
-                <Line
-                  key={m}
+              {TOKEN_LAYERS.map((layer) => (
+                <Area
+                  key={layer.key}
                   type="monotone"
-                  dataKey={m}
-                  stroke={chartConfig[m]?.color ?? "#888"}
-                  strokeWidth={2}
-                  strokeOpacity={getStrokeOpacity(m)}
-                  dot={false}
+                  dataKey={layer.key}
+                  stackId="1"
+                  stroke={layer.color}
+                  fill={layer.color}
+                  strokeOpacity={getStrokeOpacity(layer.key)}
+                  fillOpacity={0.6}
                 />
               ))}
-            </LineChart>
+            </AreaChart>
           </ChartContainer>
         )}
       </CardContent>

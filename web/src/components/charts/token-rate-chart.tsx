@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { RequestRateItem } from "@/lib/types";
+import type { TokenThroughputItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,13 @@ import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
-export function RequestRateChart() {
-  const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
+const CHART_COLORS = ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355", "#6B8BA4", "#A0522D"];
+
+export function TokenRateChart() {
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [data, setData] = useState<RequestRateItem[]>([]);
+  const [data, setData] = useState<TokenThroughputItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
@@ -33,11 +35,7 @@ export function RequestRateChart() {
     setError(false);
     try {
       const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
-      const rsp = await api.fetchRequestRate({
-        startTime,
-        endTime,
-        granularity,
-      });
+      const rsp = await api.fetchTokenThroughput({ startTime, endTime, granularity });
       setData(rsp.data ?? []);
     } catch {
       setError(true);
@@ -46,19 +44,15 @@ export function RequestRateChart() {
     }
   }, [timeRange, customStart, customEnd]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchData();
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const models = [...new Set(data.map((d) => d.model))];
-  const CHART_COLORS = ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355", "#6B8BA4", "#A0522D"];
   const chartConfig = Object.fromEntries(
-    models.map((m, i) => [
-      m,
-      { label: m, color: CHART_COLORS[i % CHART_COLORS.length] },
-    ])
+    models.map((m, i) => [m, { label: m, color: CHART_COLORS[i % CHART_COLORS.length] }])
   );
 
   const timeSet = new Set<string>();
@@ -67,7 +61,7 @@ export function RequestRateChart() {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.total === 0 ? null : p.successRate * 100;
+      pointMap.get(p.time)![item.model] = p.outputTokensPerSecond || null;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({
@@ -78,7 +72,7 @@ export function RequestRateChart() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Request Success Rate</CardTitle>
+        <CardTitle className="font-display">Output Token Rate</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}
@@ -113,12 +107,7 @@ export function RequestRateChart() {
                 tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
                 fontSize={12}
               />
-              <YAxis
-                fontSize={12}
-                domain={[0, 100]}
-                allowDataOverflow={false}
-                tickFormatter={(v) => `${v}%`}
-              />
+              <YAxis fontSize={12} domain={[0, "auto"]} allowDataOverflow={false} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {models.map((m) => (

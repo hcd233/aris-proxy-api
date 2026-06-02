@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -94,10 +95,14 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
 	views, pageInfo, err := h.listByUser.Handle(ctx, sessionquery.ListSessionsByUserQuery{
-		UserID:   userID,
-		IsAdmin:  isAdmin,
-		Page:     req.Page,
-		PageSize: req.PageSize,
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+		Sort:      req.Sort,
+		SortField: req.SortField,
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List sessions by user failed", zap.Error(err))
@@ -227,7 +232,15 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	shareID, expiresAt, shareErr := h.shareCache.CreateShare(ctx, userID, sessionID)
+	ttl, parseErr := ParseExpiresIn(req.Body.ExpiresIn, req.Body.ExpiresAt)
+	if parseErr != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Create share: invalid expiration",
+			zap.String("expiresIn", req.Body.ExpiresIn), zap.Error(parseErr))
+		rsp.Error = ierr.ToBizError(parseErr, ierr.ErrValidation.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	shareID, expiresAt, shareErr := h.shareCache.CreateShare(ctx, userID, sessionID, ttl)
 	if shareErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Create share failed",
 			zap.Uint("sessionID", sessionID), zap.Error(shareErr))
@@ -555,4 +568,37 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		Total:    result.Total,
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// ParseExpiresIn 解析过期选项字符串为 time.Duration
+//
+//	@param expiresIn string 过期选项: 1d | 7d | 30d | never | custom
+//	@param customAt *int64 自定义过期时间戳（秒），expiresIn=custom 时使用
+//	@return time.Duration
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-02 10:00:00
+func ParseExpiresIn(expiresIn string, customAt *int64) (time.Duration, error) {
+	switch expiresIn {
+	case constant.ShareExpireOption1Day, "":
+		return constant.ShareTTL1Day, nil
+	case constant.ShareExpireOption1Week, constant.ShareExpireOption1WeekAlt:
+		return constant.ShareTTL1Week, nil
+	case constant.ShareExpireOption1Month, constant.ShareExpireOption1MonthAlt:
+		return constant.ShareTTL1Month, nil
+	case constant.ShareExpireOptionNever:
+		return constant.ShareTTLNeverExpire, nil
+	case constant.ShareExpireOptionCustom:
+		if customAt == nil {
+			return 0, ierr.New(ierr.ErrValidation, "expiresAt is required when expiresIn is custom")
+		}
+		t := time.Unix(*customAt, 0)
+		remaining := time.Until(t)
+		if remaining <= 0 {
+			return 0, ierr.New(ierr.ErrValidation, "expiresAt must be in the future")
+		}
+		return remaining, nil
+	default:
+		return constant.ShareTTLDefault, nil
+	}
 }

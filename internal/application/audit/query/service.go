@@ -15,6 +15,7 @@ type AuditService interface {
 	ListLogs(ctx context.Context, permission enum.Permission, userID uint, q ListAuditLogsParams) ([]*AuditLogView, *model.PageInfo, error)
 	ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error)
 	RequestRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error)
+	TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
 }
 
 // ListAuditLogsParams 列表查询的通用参数（不带权限相关字段）。
@@ -48,12 +49,14 @@ func (p ListAuditLogsParams) toByUserQuery(userID uint) ListAuditLogsByUserQuery
 }
 
 type auditService struct {
-	listAll           ListAllAuditLogsHandler
-	listByUser        ListAuditLogsByUserHandler
-	modelTrend        ModelTrendHandler
-	modelTrendByUser  ModelTrendByUserHandler
-	requestRate       RequestRateHandler
-	requestRateByUser RequestRateByUserHandler
+	listAll               ListAllAuditLogsHandler
+	listByUser            ListAuditLogsByUserHandler
+	modelTrend            ModelTrendHandler
+	modelTrendByUser      ModelTrendByUserHandler
+	requestRate           RequestRateHandler
+	requestRateByUser     RequestRateByUserHandler
+	tokenThroughput       TokenThroughputHandler
+	tokenThroughputByUser TokenThroughputByUserHandler
 }
 
 // NewAuditService 构造权限派发服务。
@@ -64,14 +67,18 @@ func NewAuditService(
 	modelTrendByUser ModelTrendByUserHandler,
 	requestRate RequestRateHandler,
 	requestRateByUser RequestRateByUserHandler,
+	tokenThroughput TokenThroughputHandler,
+	tokenThroughputByUser TokenThroughputByUserHandler,
 ) AuditService {
 	return &auditService{
-		listAll:           listAll,
-		listByUser:        listByUser,
-		modelTrend:        modelTrend,
-		modelTrendByUser:  modelTrendByUser,
-		requestRate:       requestRate,
-		requestRateByUser: requestRateByUser,
+		listAll:               listAll,
+		listByUser:            listByUser,
+		modelTrend:            modelTrend,
+		modelTrendByUser:      modelTrendByUser,
+		requestRate:           requestRate,
+		requestRateByUser:     requestRateByUser,
+		tokenThroughput:       tokenThroughput,
+		tokenThroughputByUser: tokenThroughputByUser,
 	}
 }
 
@@ -103,6 +110,17 @@ func (s *auditService) RequestRate(ctx context.Context, permission enum.Permissi
 		return s.requestRate.Handle(ctx, RequestRateQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
 	case enum.PermissionUser:
 		return s.requestRateByUser.Handle(ctx, RequestRateByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	default:
+		return nil, ierr.ErrUnauthorized
+	}
+}
+
+func (s *auditService) TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+	switch permission {
+	case enum.PermissionAdmin:
+		return s.tokenThroughput.Handle(ctx, TokenThroughputQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	case enum.PermissionUser:
+		return s.tokenThroughputByUser.Handle(ctx, TokenThroughputByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
 	default:
 		return nil, ierr.ErrUnauthorized
 	}
