@@ -42,7 +42,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export default function APIKeysPage() {
   const isMobile = useIsMobile();
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
