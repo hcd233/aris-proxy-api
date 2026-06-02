@@ -51,26 +51,26 @@ type AuditRepository interface {
 
 // ModelTrendPoint 模型调用趋势的数据点
 type ModelTrendPoint struct {
-	Model string
-	Time  time.Time
-	Count int
+	Model string    `gorm:"column:model"`
+	Time  time.Time `gorm:"column:time"`
+	Count int       `gorm:"column:count"`
 }
 
 // RequestRatePoint 请求成功率的数据点
 type RequestRatePoint struct {
-	Model   string
-	Time    time.Time
-	Total   int
-	Success int
+	Model   string    `gorm:"column:model"`
+	Time    time.Time `gorm:"column:time"`
+	Total   int       `gorm:"column:total"`
+	Success int       `gorm:"column:success"`
 }
 
 // TokenThroughputPoint Token 吞吐量的数据点
 type TokenThroughputPoint struct {
-	Model                 string
-	Time                  time.Time
-	InputTokens           int
-	OutputTokens          int
-	CacheCreationTokens   int
-	CacheReadTokens       int
-	OutputTokensPerSecond float64
+	Model                 string    `gorm:"column:model"`
+	Time                  time.Time `gorm:"column:time"`
+	InputTokens           int       `gorm:"column:input_tokens"`
+	OutputTokens          int       `gorm:"column:output_tokens"`
+	CacheCreationTokens   int       `gorm:"column:cache_creation_tokens"`
+	CacheReadTokens       int       `gorm:"column:cache_read_tokens"`
+	OutputTokensPerSecond float64   `gorm:"column:output_tokens_per_second"`
 }
