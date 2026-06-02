@@ -69,7 +69,7 @@ export default function DashboardPage() {
     try {
       const [keysRsp, sessionsRsp] = await Promise.all([
         api.listAPIKeys(),
-        api.listSessions({ page: 1, pageSize: 5 }),
+        api.listSessions({ page: 1, pageSize: 1 }),
       ]);
 
       const endpointsCount = isAdmin() ? (await api.listEndpoints().catch(() => ({ endpoints: [] }))).endpoints?.length ?? 0 : 0;

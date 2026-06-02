@@ -59,7 +59,7 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: 1,
-    pageSize: 20,
+    pageSize: 1,
     total: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,7 @@ export default function SessionsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchSessions(1, 20, "30d", "", "", { field: "created_at", dir: "desc" });
+    fetchSessions(1, 1, "30d", "", "", { field: "created_at", dir: "desc" });
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect */
 

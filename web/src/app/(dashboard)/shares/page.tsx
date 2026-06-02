@@ -60,7 +60,7 @@ export default function SharesPage() {
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: 1,
-    pageSize: 20,
+    pageSize: 1,
     total: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,7 @@ export default function SharesPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchShares(1, 20);
+    fetchShares(1, 1);
   }, [fetchShares]);
   /* eslint-enable react-hooks/set-state-in-effect */
 

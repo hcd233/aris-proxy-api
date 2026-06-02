@@ -70,7 +70,7 @@ function formatCache(creation: number, read: number): string {
 export default function AuditPage() {
   const isMobile = useIsMobile();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
@@ -121,7 +121,7 @@ export default function AuditPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchLogs(1, 20, "", "24h", "", "", { field: "created_at", dir: "desc" });
+    fetchLogs(1, 1, "", "24h", "", "", { field: "created_at", dir: "desc" });
   }, [fetchLogs]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
