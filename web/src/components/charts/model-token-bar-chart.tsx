@@ -9,13 +9,9 @@ import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type SortField = "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
 
-const PAGE_SIZE = 8;
-
-// warm-toned palette (claude.ai inspired)
 const CACHE_READ_COLOR = "#F2D0B8";
 const INPUT_COLOR = "#E6733F";
 const CACHE_CREATED_COLOR = "#F2D5BE";
@@ -40,7 +36,6 @@ export function ModelTokenBarChart() {
   const [error, setError] = useState(false);
   const [sortField, setSortField] = useState<SortField>("total");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(0);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -49,7 +44,6 @@ export function ModelTokenBarChart() {
       const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
       const rsp = await api.fetchModelUsage({ startTime, endTime, granularity });
       setData(rsp.data ?? []);
-      setPage(0);
     } catch {
       setError(true);
     } finally {
@@ -78,9 +72,6 @@ export function ModelTokenBarChart() {
     return arr;
   }, [data, sortField, sortDir]);
 
-  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
-  const pageItems = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
   function handleSort(field: SortField) {
     if (sortField === field) {
       setSortDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -88,7 +79,6 @@ export function ModelTokenBarChart() {
       setSortField(field);
       setSortDir("desc");
     }
-    setPage(0);
   }
 
   function sortIndicator(field: SortField) {
@@ -104,7 +94,6 @@ export function ModelTokenBarChart() {
     mainValue: number,
     mainColor: string,
   ) {
-    // ratio: Cache : (Main - Cache), bar total = Main, so left = cache/Main, right = (Main-cache)/Main
     const denom = mainValue > 0 ? mainValue : 1;
     const cachePct = Math.min((cacheValue / denom) * 100, 100);
     const freshPct = Math.max(100 - cachePct, 0);
@@ -150,110 +139,77 @@ export function ModelTokenBarChart() {
           }}
         />
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {loading ? (
-          <Skeleton className="h-64 w-full" />
+          <div className="px-6 pb-6">
+            <Skeleton className="h-64 w-full" />
+          </div>
         ) : error ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="flex h-64 flex-col items-center justify-center gap-2 px-6 pb-6 text-sm text-muted-foreground">
             <p>Failed to load</p>
             <Button variant="outline" size="sm" onClick={fetchData}>
               Retry
             </Button>
           </div>
         ) : sorted.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-64 items-center justify-center px-6 pb-6 text-sm text-muted-foreground">
             No data for this period
           </div>
         ) : (
-          <div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm tabular-nums">
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground">
-                    <th className="w-8 py-2 text-left font-medium">#</th>
-                    <th className="py-2 text-left font-medium">Model</th>
-                    <th
-                      className="cursor-pointer py-2 text-right font-medium hover:text-foreground"
-                      onClick={() => handleSort("total")}
+          <div className="h-64 overflow-y-auto">
+            <table className="w-full text-sm tabular-nums">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="w-8 py-2 pl-6 text-left font-medium">#</th>
+                  <th className="py-2 text-left font-medium">Model</th>
+                  <th
+                    className="cursor-pointer py-2 text-right font-medium hover:text-foreground"
+                    onClick={() => handleSort("total")}
+                  >
+                    Total{sortIndicator("total")}
+                  </th>
+                  <th className="w-[220px] py-2 text-left font-medium">Input</th>
+                  <th className="w-[220px] py-2 pr-6 text-left font-medium">Output</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((item, i) => {
+                  const total = tokenTotal(item);
+                  return (
+                    <tr
+                      key={item.model}
+                      className="border-b border-border transition-colors hover:bg-muted/50"
                     >
-                      Total{sortIndicator("total")}
-                    </th>
-                    <th className="w-[240px] py-2 text-left font-medium">Input</th>
-                    <th className="w-[240px] py-2 text-left font-medium">Output</th>
-                  </tr>
-                </thead>
-              </table>
-            </div>
-            <div className="max-h-[400px] overflow-y-auto">
-              <table className="w-full text-sm tabular-nums">
-                <tbody>
-                  {pageItems.map((item, i) => {
-                    const total = tokenTotal(item);
-                    const realIdx = page * PAGE_SIZE + i;
-                    return (
-                      <tr
-                        key={item.model}
-                        className="border-b border-border transition-colors hover:bg-muted/50"
-                      >
-                        <td className="w-8 py-3 pr-2 text-muted-foreground">{realIdx + 1}</td>
-                        <td className="py-3 pr-4 font-medium">{item.model}</td>
-                        <td className="py-3 pr-4 text-right font-semibold">
-                          {formatTokenCount(total)}
-                        </td>
-                        <td className="w-[240px] py-3 pr-4">
-                          {renderStackedBar(
-                            "Cache Read",
-                            item.cacheReadTokens,
-                            CACHE_READ_COLOR,
-                            "Input",
-                            item.inputTokens,
-                            INPUT_COLOR,
-                          )}
-                        </td>
-                        <td className="w-[240px] py-3">
-                          {renderStackedBar(
-                            "Cache Write",
-                            item.cacheCreationTokens,
-                            CACHE_CREATED_COLOR,
-                            "Output",
-                            item.outputTokens,
-                            OUTPUT_COLOR,
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-border pt-3">
-                <span className="text-xs text-muted-foreground">
-                  {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of {sorted.length} models
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    disabled={page === 0}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <span className="px-2 text-xs text-muted-foreground">{page + 1} / {totalPages}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    disabled={page >= totalPages - 1}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+                      <td className="py-3 pl-6 pr-2 text-muted-foreground">{i + 1}</td>
+                      <td className="py-3 pr-4 font-medium">{item.model}</td>
+                      <td className="py-3 pr-4 text-right font-semibold">
+                        {formatTokenCount(total)}
+                      </td>
+                      <td className="w-[220px] py-3 pr-4">
+                        {renderStackedBar(
+                          "Cache Read",
+                          item.cacheReadTokens,
+                          CACHE_READ_COLOR,
+                          "Input",
+                          item.inputTokens,
+                          INPUT_COLOR,
+                        )}
+                      </td>
+                      <td className="w-[220px] py-3 pr-6">
+                        {renderStackedBar(
+                          "Cache Write",
+                          item.cacheCreationTokens,
+                          CACHE_CREATED_COLOR,
+                          "Output",
+                          item.outputTokens,
+                          OUTPUT_COLOR,
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>
