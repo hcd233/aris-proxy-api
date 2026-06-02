@@ -369,7 +369,7 @@ func TestOpenAICreateResponseReq_ToolsFunctionTypeArray(t *testing.T) {
 	if len(req.Tools) != 1 || req.Tools[0].Function == nil || req.Tools[0].Function.Parameters == nil {
 		t.Fatalf("expected function tool parameters, got %+v", req.Tools)
 	}
-	property := req.Tools[0].Function.Parameters.Properties["localEnvironmentConfigPath"]
+	property := (*req.Tools[0].Function.Parameters.Properties)["localEnvironmentConfigPath"]
 	if property == nil || property.Type == nil {
 		t.Fatalf("expected localEnvironmentConfigPath.type to be populated, got %+v", property)
 	}

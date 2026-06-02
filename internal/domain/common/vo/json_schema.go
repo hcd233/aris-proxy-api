@@ -95,20 +95,20 @@ func (t *JSONSchemaTypeValue) HasType(typeName string) bool {
 //	@author centonhuang
 //	@update 2026-04-22 14:00:00
 type JSONSchemaProperty struct {
-	Type                 *JSONSchemaTypeValue           `json:"type,omitempty" doc:"数据类型(string/number/integer/boolean/array/object/null，支持 string 或 string[])"`
-	Description          string                         `json:"description,omitempty" doc:"属性描述"`
-	Properties           map[string]*JSONSchemaProperty `json:"properties,omitempty" doc:"对象属性定义(递归)"`
-	Items                *JSONSchemaProperty            `json:"items,omitempty" doc:"数组元素定义(递归)"`
-	Required             []string                       `json:"required,omitempty" doc:"必填字段列表"`
-	Enum                 []sonic.NoCopyRawMessage       `json:"enum,omitempty" doc:"枚举值列表"`
-	Const                sonic.NoCopyRawMessage         `json:"const,omitempty" doc:"常量值"`
-	Default              sonic.NoCopyRawMessage         `json:"default,omitempty" doc:"默认值"`
-	AnyOf                []*JSONSchemaProperty          `json:"anyOf,omitempty" doc:"任意匹配"`
-	OneOf                []*JSONSchemaProperty          `json:"oneOf,omitempty" doc:"唯一匹配"`
-	AllOf                []*JSONSchemaProperty          `json:"allOf,omitempty" doc:"全部匹配"`
-	Not                  *JSONSchemaProperty            `json:"not,omitempty" doc:"取反"`
-	AdditionalProperties sonic.NoCopyRawMessage         `json:"additionalProperties,omitempty" doc:"额外属性(bool或JSONSchemaProperty)"`
-	Strict               *bool                          `json:"strict,omitempty" doc:"是否启用严格模式"`
+	Type                 *JSONSchemaTypeValue            `json:"type,omitempty" doc:"数据类型(string/number/integer/boolean/array/object/null，支持 string 或 string[])"`
+	Description          string                          `json:"description,omitempty" doc:"属性描述"`
+	Properties           *map[string]*JSONSchemaProperty `json:"properties,omitempty" doc:"对象属性定义(递归)"`
+	Items                *JSONSchemaProperty             `json:"items,omitempty" doc:"数组元素定义(递归)"`
+	Required             []string                        `json:"required,omitempty" doc:"必填字段列表"`
+	Enum                 []sonic.NoCopyRawMessage        `json:"enum,omitempty" doc:"枚举值列表"`
+	Const                sonic.NoCopyRawMessage          `json:"const,omitempty" doc:"常量值"`
+	Default              sonic.NoCopyRawMessage          `json:"default,omitempty" doc:"默认值"`
+	AnyOf                []*JSONSchemaProperty           `json:"anyOf,omitempty" doc:"任意匹配"`
+	OneOf                []*JSONSchemaProperty           `json:"oneOf,omitempty" doc:"唯一匹配"`
+	AllOf                []*JSONSchemaProperty           `json:"allOf,omitempty" doc:"全部匹配"`
+	Not                  *JSONSchemaProperty             `json:"not,omitempty" doc:"取反"`
+	AdditionalProperties sonic.NoCopyRawMessage          `json:"additionalProperties,omitempty" doc:"额外属性(bool或JSONSchemaProperty)"`
+	Strict               *bool                           `json:"strict,omitempty" doc:"是否启用严格模式"`
 
 	// 数值验证
 	Minimum          *float64 `json:"minimum,omitempty" doc:"最小值"`
