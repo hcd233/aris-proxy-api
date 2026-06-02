@@ -396,3 +396,29 @@ export interface TokenThroughputItem {
 export interface TokenThroughputRsp extends CommonRsp {
   data?: TokenThroughputItem[];
 }
+
+export interface TokenRatePoint {
+  time: string;
+  outputTokensPerSecond: number;
+}
+
+export interface TokenRateItem {
+  model: string;
+  points: TokenRatePoint[];
+}
+
+export interface TokenRateRsp extends CommonRsp {
+  data?: TokenRateItem[];
+}
+
+export interface TokenUsageItem {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+}
+
+export interface TokenUsageRsp extends CommonRsp {
+  data?: TokenUsageItem[];
+}
