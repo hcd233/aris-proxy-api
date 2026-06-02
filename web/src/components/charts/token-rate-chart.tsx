@@ -61,7 +61,7 @@ export function TokenRateChart() {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.outputTokensPerSecond;
+      pointMap.get(p.time)![item.model] = p.outputTokensPerSecond === 0 ? null : p.outputTokensPerSecond;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({
