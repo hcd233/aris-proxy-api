@@ -42,7 +42,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export default function APIKeysPage() {
   const isMobile = useIsMobile();
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 1, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -69,7 +69,7 @@ export default function APIKeysPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchKeys(1, 1);
+    fetchKeys(1, 20);
   }, [fetchKeys]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
