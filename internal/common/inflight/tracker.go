@@ -15,17 +15,32 @@ type Tracker struct {
 	state atomic.Int32
 }
 
-var globalTracker *Tracker
+var (
+	globalTracker   *Tracker
+	globalTrackerMu sync.Mutex
+)
 
 func InitTracker() *Tracker {
-	t := &Tracker{}
-	t.state.Store(constant.InflightStateRunning)
+	t := newRunningTracker()
+	globalTrackerMu.Lock()
 	globalTracker = t
+	globalTrackerMu.Unlock()
 	return t
 }
 
 func GetTracker() *Tracker {
+	globalTrackerMu.Lock()
+	defer globalTrackerMu.Unlock()
+	if globalTracker == nil {
+		globalTracker = newRunningTracker()
+	}
 	return globalTracker
+}
+
+func newRunningTracker() *Tracker {
+	t := &Tracker{}
+	t.state.Store(constant.InflightStateRunning)
+	return t
 }
 
 func (t *Tracker) Track() bool {

@@ -278,6 +278,9 @@ func (r *sessionReadRepository) paginate(ctx context.Context, baseWhere func(*go
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
 	if param.Sort != "" && param.SortField != "" {
+		param.SortField = safeSortField(param.SortField)
+	}
+	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 

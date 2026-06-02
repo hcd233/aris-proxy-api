@@ -13,6 +13,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -37,7 +38,7 @@ type Cron interface {
 type CronRegistryEntry struct {
 	Name              string
 	Enabled           func() bool
-	Factory           func(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) Cron
+	Factory           func(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) Cron
 	LockTTL           time.Duration // 0 → constant.CronLockDefaultTTL
 	LockRenewInterval time.Duration // 0 → ttl / constant.CronLockDefaultRenewDivisor
 }
@@ -56,7 +57,7 @@ var DefaultCronRegistry []CronRegistryEntry
 //
 //	@author centonhuang
 //	@update 2026-06-01 10:00:00
-func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) {
+func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) {
 	SetBootstrapContext(parentCtx)
 	var entries []CronRegistryEntry
 	if len(DefaultCronRegistry) > 0 {
@@ -70,7 +71,7 @@ func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.Pool
 			continue
 		}
 
-		c := entry.Factory(db, poolManager, cache)
+		c := entry.Factory(db, poolManager, cache, thinkRepo)
 		lo.Must0(c.Start())
 		cronInstances = append(cronInstances, c)
 		logger.Logger().Info("[Cron] Cron job started", zap.String("name", entry.Name))
@@ -84,32 +85,36 @@ func buildRegistryEntries() []CronRegistryEntry {
 		{
 			Name:    constant.CronModuleSessionDeduplicate,
 			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
-			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client) Cron {
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
 				return NewSessionDeduplicateCron(db, cache)
 			},
 		},
 		{
 			Name:    constant.CronModuleSessionSummarize,
 			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
-			Factory: NewSessionSummarizeCron,
+			Factory: func(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
+				return NewSessionSummarizeCron(db, poolManager, cache)
+			},
 		},
 		{
 			Name:    constant.CronModuleSessionScore,
 			Enabled: func() bool { return config.CronSessionScoreEnabled },
-			Factory: NewSessionScoreCron,
+			Factory: func(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
+				return NewSessionScoreCron(db, poolManager, cache)
+			},
 		},
 		{
 			Name:    constant.CronModuleSoftDeletePurge,
 			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
-			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client) Cron {
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
 				return NewSoftDeletePurgeCron(db, cache)
 			},
 		},
 		{
 			Name:    constant.CronModuleThinkExtract,
 			Enabled: func() bool { return config.CronThinkExtractEnabled },
-			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client) Cron {
-				return NewThinkExtractCron(db, cache)
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) Cron {
+				return NewThinkExtractCron(thinkRepo, cache)
 			},
 		},
 	}

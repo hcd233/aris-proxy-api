@@ -14,19 +14,16 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
-var thinkTagOpen = "<think>"
-
-var thinkRegexp = regexp.MustCompile(`(?s)<think>(.*?)</think>`)
+var thinkRegexp = regexp.MustCompile(constant.ThinkTagRegexpPattern)
 
 // ThinkExtractCron 消息推理内容提取定时任务
 //
@@ -34,7 +31,7 @@ var thinkRegexp = regexp.MustCompile(`(?s)<think>(.*?)</think>`)
 //	@update 2026-06-02 10:00:00
 type ThinkExtractCron struct {
 	cron   *cron.Cron
-	db     *gorm.DB
+	repo   conversation.ThinkExtractRepository
 	locker lock.Locker
 }
 
@@ -43,12 +40,12 @@ type ThinkExtractCron struct {
 //	@return Cron
 //	@author centonhuang
 //	@update 2026-06-02 10:00:00
-func NewThinkExtractCron(db *gorm.DB, cache *redis.Client) Cron {
+func NewThinkExtractCron(repo conversation.ThinkExtractRepository, cache *redis.Client) Cron {
 	return &ThinkExtractCron{
 		cron: cron.New(
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleThinkExtract)),
 		),
-		db:     db,
+		repo:   repo,
 		locker: lock.NewLocker(cache),
 	}
 }
@@ -94,22 +91,13 @@ func (c *ThinkExtractCron) Start() error {
 //	@update 2026-06-02 10:00:00
 func (c *ThinkExtractCron) extract(ctx context.Context) {
 	log := logger.WithCtx(ctx)
-	db := c.db.WithContext(ctx)
+	startTime, endTime := currentDayRange(time.Now().UTC())
 
 	var lastID uint
 	totalProcessed := 0
 
 	for {
-		var messages []*dbmodel.Message
-		err := db.Model(&dbmodel.Message{}).
-			Where(constant.DBConditionIDGreaterThan, lastID).
-			Where(constant.DBConditionDeletedAtZero).
-			Where(constant.DBJSONConditionAssistantRole).
-			Where(constant.DBJSONConditionHasThinkTag).
-			Where(constant.DBJSONConditionReasoningEmpty).
-			Order(constant.DBOrderByID).
-			Limit(config.SQLBatchSize).
-			Find(&messages).Error
+		messages, err := c.repo.FindThinkExtractCandidates(ctx, lastID, startTime, endTime, config.SQLBatchSize)
 		if err != nil {
 			log.Error("[ThinkExtractCron] Query error", zap.Error(err))
 			return
@@ -132,10 +120,7 @@ func (c *ThinkExtractCron) extract(ctx context.Context) {
 			}
 
 			msg.Message.ReasoningContent = extracted
-			if err := db.Model(&dbmodel.Message{ID: msg.ID}).Select([]string{constant.FieldMessage, constant.FieldUpdatedAt}).Updates(map[string]any{
-				constant.FieldMessage:   msg.Message,
-				constant.FieldUpdatedAt: time.Now().UTC(),
-			}).Error; err != nil {
+			if err := c.repo.UpdateMessageContent(ctx, msg.ID, msg.Message); err != nil {
 				log.Error("[ThinkExtractCron] Update error", zap.Uint("id", msg.ID), zap.Error(err))
 				continue
 			}
@@ -152,6 +137,11 @@ func (c *ThinkExtractCron) extract(ctx context.Context) {
 	}
 
 	log.Info("[ThinkExtractCron] Extract completed", zap.Int("totalProcessed", totalProcessed))
+}
+
+func currentDayRange(now time.Time) (time.Time, time.Time) {
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	return start, start.AddDate(0, 0, 1)
 }
 
 // extractThinkFromContent 从消息内容中提取 <think> 标签内容并移除标签
@@ -175,7 +165,7 @@ func extractThinkFromContent(msg *vo.UnifiedMessage) string {
 	}
 
 	for i, p := range msg.Content.Parts {
-		if p.Type != enum.ContentPartTypeText || !strings.Contains(p.Text, thinkTagOpen) {
+		if p.Type != enum.ContentPartTypeText || !strings.Contains(p.Text, constant.ThinkTagOpen) {
 			continue
 		}
 		if extracted, modified := extractAndRemoveThinkTags(p.Text); extracted != "" {

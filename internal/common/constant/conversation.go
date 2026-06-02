@@ -1,6 +1,9 @@
 package constant
 
 const (
+	ThinkTagOpen          = "<think>"
+	ThinkTagRegexpPattern = `(?s)<think>(.*?)</think>`
+
 	MessageFormatRole           = "Role: %s"
 	MessageFormatName           = "Name: %s"
 	MessageFormatContent        = "Content: %s"
