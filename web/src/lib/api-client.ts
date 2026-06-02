@@ -34,7 +34,7 @@ import type {
   RequestRateRsp,
   TokenThroughputRsp,
   TokenRateRsp,
-  TokenUsageRsp,
+  ModelUsageRsp,
   Granularity,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
@@ -494,13 +494,13 @@ class ApiClient {
     return this.request<TokenRateRsp>(`/api/v1/audit/stats/token/rate?${sp}`);
   }
 
-  async fetchTokenUsage(params: {
+  async fetchModelUsage(params: {
     startTime: string;
     endTime: string;
     granularity: Granularity;
-  }): Promise<TokenUsageRsp> {
+  }): Promise<ModelUsageRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<TokenUsageRsp>(`/api/v1/audit/stats/token/usage?${sp}`);
+    return this.request<ModelUsageRsp>(`/api/v1/audit/stats/model/usage?${sp}`);
   }
 }
 

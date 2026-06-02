@@ -411,7 +411,7 @@ export interface TokenRateRsp extends CommonRsp {
   data?: TokenRateItem[];
 }
 
-export interface TokenUsageItem {
+export interface ModelUsageItem {
   model: string;
   inputTokens: number;
   outputTokens: number;
@@ -419,6 +419,6 @@ export interface TokenUsageItem {
   cacheCreationTokens: number;
 }
 
-export interface TokenUsageRsp extends CommonRsp {
-  data?: TokenUsageItem[];
+export interface ModelUsageRsp extends CommonRsp {
+  data?: ModelUsageItem[];
 }

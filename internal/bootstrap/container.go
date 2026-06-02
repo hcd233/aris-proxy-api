@@ -287,10 +287,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newTokenRateByUserHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(auditquery.NewTokenUsageHandler); err != nil {
+	if err := container.Provide(auditquery.NewModelUsageHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newTokenUsageByUserHandler); err != nil {
+	if err := container.Provide(newModelUsageByUserHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newAuditService); err != nil {
@@ -566,10 +566,10 @@ func newAuditService(
 	tokenThroughputByUser auditquery.TokenThroughputByUserHandler,
 	tokenRate auditquery.TokenRateHandler,
 	tokenRateByUser auditquery.TokenRateByUserHandler,
-	tokenUsage auditquery.TokenUsageHandler,
-	tokenUsageByUser auditquery.TokenUsageByUserHandler,
+	modelUsage auditquery.ModelUsageHandler,
+	modelUsageByUser auditquery.ModelUsageByUserHandler,
 ) auditquery.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, tokenUsage, tokenUsageByUser)
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
@@ -592,8 +592,8 @@ func newTokenRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey
 	return auditquery.NewTokenRateByUserHandler(repo, apiKeyRepo)
 }
 
-func newTokenUsageByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenUsageByUserHandler {
-	return auditquery.NewTokenUsageByUserHandler(repo, apiKeyRepo)
+func newModelUsageByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelUsageByUserHandler {
+	return auditquery.NewModelUsageByUserHandler(repo, apiKeyRepo)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {

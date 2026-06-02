@@ -10,53 +10,53 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-type TokenUsageQuery struct {
+type ModelUsageQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
 }
 
-type TokenUsageByUserQuery struct {
+type ModelUsageByUserQuery struct {
 	UserID      uint
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
 }
 
-type TokenUsageHandler interface {
-	Handle(ctx context.Context, q TokenUsageQuery) ([]*dto.TokenUsageItem, error)
+type ModelUsageHandler interface {
+	Handle(ctx context.Context, q ModelUsageQuery) ([]*dto.ModelUsageItem, error)
 }
 
-type TokenUsageByUserHandler interface {
-	Handle(ctx context.Context, q TokenUsageByUserQuery) ([]*dto.TokenUsageItem, error)
+type ModelUsageByUserHandler interface {
+	Handle(ctx context.Context, q ModelUsageByUserQuery) ([]*dto.ModelUsageItem, error)
 }
 
-type tokenUsageHandler struct {
+type modelUsageHandler struct {
 	repo modelcall.AuditRepository
 }
 
-type tokenUsageByUserHandler struct {
+type modelUsageByUserHandler struct {
 	repo      modelcall.AuditRepository
 	apiKeyIDs port.APIKeyIDLookup
 }
 
-func NewTokenUsageHandler(repo modelcall.AuditRepository) TokenUsageHandler {
-	return &tokenUsageHandler{repo: repo}
+func NewModelUsageHandler(repo modelcall.AuditRepository) ModelUsageHandler {
+	return &modelUsageHandler{repo: repo}
 }
 
-func NewTokenUsageByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.APIKeyIDLookup) TokenUsageByUserHandler {
-	return &tokenUsageByUserHandler{repo: repo, apiKeyIDs: apiKeyIDs}
+func NewModelUsageByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.APIKeyIDLookup) ModelUsageByUserHandler {
+	return &modelUsageByUserHandler{repo: repo, apiKeyIDs: apiKeyIDs}
 }
 
-func (h *tokenUsageHandler) Handle(ctx context.Context, q TokenUsageQuery) ([]*dto.TokenUsageItem, error) {
+func (h *modelUsageHandler) Handle(ctx context.Context, q ModelUsageQuery) ([]*dto.ModelUsageItem, error) {
 	points, err := h.repo.QueryTokenThroughput(ctx, nil, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err
 	}
-	return aggregateTokenUsage(points), nil
+	return aggregateModelUsage(points), nil
 }
 
-func (h *tokenUsageByUserHandler) Handle(ctx context.Context, q TokenUsageByUserQuery) ([]*dto.TokenUsageItem, error) {
+func (h *modelUsageByUserHandler) Handle(ctx context.Context, q ModelUsageByUserQuery) ([]*dto.ModelUsageItem, error) {
 	keyIDs, err := h.apiKeyIDs.LookupIDsByUserID(ctx, q.UserID)
 	if err != nil {
 		return nil, err
@@ -65,16 +65,16 @@ func (h *tokenUsageByUserHandler) Handle(ctx context.Context, q TokenUsageByUser
 	if err != nil {
 		return nil, err
 	}
-	return aggregateTokenUsage(points), nil
+	return aggregateModelUsage(points), nil
 }
 
-func aggregateTokenUsage(points []*modelcall.TokenThroughputPoint) []*dto.TokenUsageItem {
-	totals := make(map[string]*dto.TokenUsageItem)
+func aggregateModelUsage(points []*modelcall.TokenThroughputPoint) []*dto.ModelUsageItem {
+	totals := make(map[string]*dto.ModelUsageItem)
 	order := make([]string, 0)
 	for _, p := range points {
 		if _, ok := totals[p.Model]; !ok {
 			order = append(order, p.Model)
-			totals[p.Model] = &dto.TokenUsageItem{Model: p.Model}
+			totals[p.Model] = &dto.ModelUsageItem{Model: p.Model}
 		}
 		t := totals[p.Model]
 		t.InputTokens += p.InputTokens
@@ -82,7 +82,7 @@ func aggregateTokenUsage(points []*modelcall.TokenThroughputPoint) []*dto.TokenU
 		t.CacheReadTokens += p.CacheReadTokens
 		t.CacheCreationTokens += p.CacheCreationTokens
 	}
-	items := make([]*dto.TokenUsageItem, 0, len(order))
+	items := make([]*dto.ModelUsageItem, 0, len(order))
 	for _, m := range order {
 		items = append(items, totals[m])
 	}
