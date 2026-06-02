@@ -478,7 +478,7 @@ func isEmptyObjectSchema(schema *vo.JSONSchemaProperty) bool {
 		return true
 	}
 	// 如果 type 是 object 且没有定义任何 properties，认为是空对象
-	if schema.HasType(enum.JSONSchemaObjectType) && len(schema.Properties) == 0 {
+	if schema.HasType(enum.JSONSchemaObjectType) && (schema.Properties == nil || len(*schema.Properties) == 0) {
 		return true
 	}
 	return false
