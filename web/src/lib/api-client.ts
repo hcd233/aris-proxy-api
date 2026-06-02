@@ -33,6 +33,8 @@ import type {
   ModelTrendRsp,
   RequestRateRsp,
   TokenThroughputRsp,
+  TokenRateRsp,
+  TokenUsageRsp,
   Granularity,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
@@ -481,6 +483,24 @@ class ApiClient {
   }): Promise<TokenThroughputRsp> {
     const sp = new URLSearchParams(params);
     return this.request<TokenThroughputRsp>(`/api/v1/audit/stats/token/throughput?${sp}`);
+  }
+
+  async fetchTokenRate(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<TokenRateRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<TokenRateRsp>(`/api/v1/audit/stats/token/rate?${sp}`);
+  }
+
+  async fetchTokenUsage(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<TokenUsageRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<TokenUsageRsp>(`/api/v1/audit/stats/token/usage?${sp}`);
   }
 }
 
