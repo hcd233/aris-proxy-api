@@ -2,6 +2,7 @@ package cron
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,6 +11,32 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
 )
+
+var (
+	bootstrapCtx   context.Context
+	bootstrapCtxMu sync.RWMutex
+)
+
+// SetBootstrapContext 设置 cron 任务的父 context（通常是 shutdown context）。
+//
+// InitCronJobs 会自动注入；测试代码可以手动调用以注入自定义 context。
+//
+//	@author centonhuang
+//	@update 2026-06-01 10:00:00
+func SetBootstrapContext(ctx context.Context) {
+	bootstrapCtxMu.Lock()
+	bootstrapCtx = ctx
+	bootstrapCtxMu.Unlock()
+}
+
+func getBootstrapContext() context.Context {
+	bootstrapCtxMu.RLock()
+	defer bootstrapCtxMu.RUnlock()
+	if bootstrapCtx == nil {
+		return context.Background()
+	}
+	return bootstrapCtx
+}
 
 // LockOptions cron 锁的可选参数（0 → 走默认值）
 //
@@ -99,13 +126,24 @@ func renewLoop(ctx context.Context, locker lock.Locker, key, value string, ttl, 
 	}
 }
 
-// wrapCronFunc 把 cron fn 包成"注入 traceID + RunWithLock"的整体，供 AddFunc 使用。
+// wrapCronFunc 把 cron fn 包成"注入 traceID + panic 恢复 + RunWithLock"的整体，供 AddFunc 使用。
+//
+// parentCtx 取自 SetBootstrapContext；未设置时退化为 context.Background()。
 //
 //	@author centonhuang
 //	@update 2026-06-01 10:00:00
 func wrapCronFunc(locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context)) func() {
 	return func() {
-		ctx := context.WithValue(context.Background(), constant.CtxKeyTraceID, uuid.New().String())
+		ctx := context.WithValue(getBootstrapContext(), constant.CtxKeyTraceID, uuid.New().String())
+		defer func() {
+			if r := recover(); r != nil {
+				logger.WithCtx(ctx).Error("[Cron] panic recovered",
+					zap.String("key", key),
+					zap.Any("panic", r),
+					zap.Stack("stack"),
+				)
+			}
+		}()
 		RunWithLock(ctx, locker, key, opts, fn)
 	}
 }

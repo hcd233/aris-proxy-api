@@ -231,7 +231,7 @@ func (s *shareCache) DeleteShare(ctx context.Context, userID uint, shareID strin
 	return nil
 }
 
-// ListUserShares 获取用户的所有分享链接
+// ListUserShares 获取用户的所有分享链接（含 retention 窗口内已过期条目）
 //
 //	@receiver s *shareCache
 //	@param ctx context.Context
@@ -254,16 +254,25 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 
 	now := time.Now()
 	minCreatedAt := now.Add(-constant.ShareTTL - constant.ShareExpiredRetention).Unix()
-	results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, &redis.ZRangeBy{
-		Max: constant.RedisZRangePositiveInfinity,
-		Min: strconv.FormatInt(minCreatedAt, constant.DecimalBase),
-	}).Result()
+	scoreRange := &redis.ZRangeBy{
+		Max:    constant.RedisZRangePositiveInfinity,
+		Min:    strconv.FormatInt(minCreatedAt, constant.DecimalBase),
+		Offset: int64((page - 1) * pageSize),
+		Count:  int64(pageSize),
+	}
+
+	results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, scoreRange).Result()
 	if zErr != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrInternal, zErr, "failed to list user shares")
 	}
 
-	// 解析所有 member 为 shareRecord
-	var records []shareRecord
+	total, countErr := s.cache.ZCount(ctx, userSharesKey, scoreRange.Min, scoreRange.Max).Result()
+	if countErr != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrInternal, countErr, "failed to count user shares")
+	}
+
+	// 解析当前页 member 为 shareRecord
+	records := make([]shareRecord, 0, len(results))
 	for _, result := range results {
 		var record shareRecord
 		if unmarshalErr := sonic.Unmarshal([]byte(result), &record); unmarshalErr != nil {
@@ -272,7 +281,7 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 		records = append(records, record)
 	}
 
-	// 批量查询所有 share key 的存在性（Pipeline 消除 N+1）
+	// 批量查询当前页 share key 的存在性（Pipeline 消除 N+1）
 	pipe := s.cache.Pipeline()
 	existsCmds := make([]*redis.IntCmd, len(records))
 	for i, r := range records {
@@ -284,14 +293,11 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 		return nil, nil, ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
 	}
 
-	retentionStart := now.Add(-constant.ShareExpiredRetention)
+	// 仅过滤"被手动删除但尚未 TTL 过期"的边界记录；远过期项已由 score 范围在 Redis 层过滤。
 	items := make([]*dto.ShareItem, 0, len(records))
 	for i, r := range records {
 		createdAt := time.Unix(r.CreatedAt, 0)
 		expiresAt := createdAt.Add(constant.ShareTTL)
-		if expiresAt.Before(retentionStart) {
-			continue
-		}
 		if existsCmds[i].Val() == 0 && !expiresAt.Before(now) {
 			continue
 		}
@@ -302,18 +308,6 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 			CreatedAt: createdAt,
 			ExpiresAt: expiresAt,
 		})
-	}
-
-	total := int64(len(items))
-	start := (page - 1) * pageSize
-	if start >= len(items) {
-		items = []*dto.ShareItem{}
-	} else {
-		end := start + pageSize
-		if end > len(items) {
-			end = len(items)
-		}
-		items = items[start:end]
 	}
 
 	pageInfo := &model.PageInfo{

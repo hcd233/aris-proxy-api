@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 
 	"go.uber.org/zap"
 
@@ -10,7 +9,6 @@ import (
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -47,7 +45,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] List audit logs failed", zap.Error(err))
-		rsp.Error = bizErrorFrom(err)
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -87,7 +85,7 @@ func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrend
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Model trend failed", zap.Error(err))
-		rsp.Error = bizErrorFrom(err)
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = auditquery.FillTrendSeries(points)
@@ -103,17 +101,9 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Request rate failed", zap.Error(err))
-		rsp.Error = bizErrorFrom(err)
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = auditquery.FillRateSeries(points)
 	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-// bizErrorFrom 把 ierr error 转换为可挂在 rsp.Error 上的业务错误。
-func bizErrorFrom(err error) *model.Error {
-	if errors.Is(err, ierr.ErrUnauthorized) {
-		return ierr.ErrUnauthorized.BizError()
-	}
-	return ierr.ToBizError(err, ierr.ErrInternal.BizError())
 }

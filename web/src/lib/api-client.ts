@@ -34,8 +34,10 @@ import type {
   RequestRateRsp,
   Granularity,
 } from "./types";
+import { BusinessErrorCode } from "./api-errors";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const AUTH_TOAST_DURATION_MS = 10_000;
 
 export class ApiError extends Error {
   status: number;
@@ -51,6 +53,7 @@ export class ApiError extends Error {
 
 class ApiClient {
   private refreshing: Promise<boolean> | null = null;
+  private authRetried = false;
 
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -97,6 +100,11 @@ class ApiClient {
   }
 
   private async handleAuthFailure<T>(path: string, options?: RequestInit): Promise<T> {
+    if (this.authRetried) {
+      this.clearAuthAndPromptLogin();
+      throw new ApiError(401, "Authentication required");
+    }
+    this.authRetried = true;
     const refreshed = await this.tryRefreshToken();
     if (refreshed) {
       const retryRes = await fetch(`${API_BASE}${path}`, {
@@ -108,11 +116,16 @@ class ApiClient {
       }
       return retryRes.json();
     }
+    this.clearAuthAndPromptLogin();
+    throw new ApiError(401, "Authentication required");
+  }
+
+  private clearAuthAndPromptLogin(): void {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     toast.error("Session expired", {
       description: "Please log in again to continue",
-      duration: Infinity,
+      duration: AUTH_TOAST_DURATION_MS,
       action: {
         label: "Login",
         onClick: () => {
@@ -120,13 +133,13 @@ class ApiClient {
         },
       },
     });
-    throw new ApiError(401, "Authentication required");
   }
 
   private async request<T>(
     path: string,
     options?: RequestInit
   ): Promise<T> {
+    this.authRetried = false;
     const res = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers: { ...this.getHeaders(), ...options?.headers },
@@ -143,7 +156,7 @@ class ApiClient {
     const body = await res.json();
 
     // Unified response: business-level auth error returned with HTTP 200
-    if (body && typeof body === "object" && body.error?.code === 10001) {
+    if (body && typeof body === "object" && body.error?.code === BusinessErrorCode.Unauthorized) {
       return this.handleAuthFailure<T>(path, options);
     }
 
