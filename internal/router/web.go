@@ -39,7 +39,7 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 	}
 
 	app.Get("/web/*", func(c fiber.Ctx) error {
-		filePath := strings.TrimPrefix(c.Path(), "/web/")
+		filePath := strings.TrimPrefix(c.Path(), "/web")
 		filePath = strings.TrimPrefix(filePath, "/")
 
 		if filePath == "" || strings.HasSuffix(filePath, "/") {
