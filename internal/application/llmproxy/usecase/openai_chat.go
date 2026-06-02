@@ -22,8 +22,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-func (u *openAIUseCase) forwardChatNative(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatNative(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool, rawBody []byte) *huma.StreamResponse {
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req.Body, upstream.Model)
+	if len(rawBody) > 0 {
+		body = proxyutil.MarshalRawOpenAIChatCompletionBodyForModel(rawBody, req.Body, upstream.Model)
+	}
 
 	if stream {
 		return u.forwardChatNativeStream(ctx, req, m, ep, upstream, body)
