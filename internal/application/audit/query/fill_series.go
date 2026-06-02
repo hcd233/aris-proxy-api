@@ -140,7 +140,6 @@ type throughputSlot struct {
 	outputTokens        int
 	cacheCreationTokens int
 	cacheReadTokens     int
-	outputTokensPerSec  float64
 }
 
 func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, end time.Time, granularity enum.Granularity) []*dto.TokenThroughputPoint {
@@ -158,7 +157,6 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 		s.outputTokens += p.OutputTokens
 		s.cacheCreationTokens += p.CacheCreationTokens
 		s.cacheReadTokens += p.CacheReadTokens
-		s.outputTokensPerSec += p.OutputTokensPerSecond
 	}
 	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	pts := make([]*dto.TokenThroughputPoint, 0, len(buckets))
@@ -169,7 +167,6 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 			tp.OutputTokens = s.outputTokens
 			tp.CacheCreationTokens = s.cacheCreationTokens
 			tp.CacheReadTokens = s.cacheReadTokens
-			tp.OutputTokensPerSecond = s.outputTokensPerSec
 		}
 		pts = append(pts, tp)
 	}

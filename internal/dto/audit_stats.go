@@ -63,12 +63,11 @@ type TokenThroughputRsp struct {
 }
 
 type TokenThroughputPoint struct {
-	Time                  time.Time `json:"time" doc:"时间桶"`
-	InputTokens           int       `json:"inputTokens" doc:"输入 Token 数"`
-	OutputTokens          int       `json:"outputTokens" doc:"输出 Token 数"`
-	CacheCreationTokens   int       `json:"cacheCreationTokens" doc:"缓存创建 Token 数"`
-	CacheReadTokens       int       `json:"cacheReadTokens" doc:"缓存读取 Token 数"`
-	OutputTokensPerSecond float64   `json:"outputTokensPerSecond" doc:"输出 Token 速率 (tokens/s)"`
+	Time                time.Time `json:"time" doc:"时间桶"`
+	InputTokens         int       `json:"inputTokens" doc:"输入 Token 数"`
+	OutputTokens        int       `json:"outputTokens" doc:"输出 Token 数"`
+	CacheCreationTokens int       `json:"cacheCreationTokens" doc:"缓存创建 Token 数"`
+	CacheReadTokens     int       `json:"cacheReadTokens" doc:"缓存读取 Token 数"`
 }
 
 // — Token Rate —
