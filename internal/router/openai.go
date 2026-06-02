@@ -57,3 +57,21 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 		},
 	}, openaiHandler.HandleCreateResponse)
 }
+
+// initOpenAIV2Router 初始化 OpenAI v2 兼容路由。
+func initOpenAIV2Router(openaiGroup huma.API, openaiHandler handler.OpenAIHandler, db *gorm.DB, cache *redis.Client) {
+	openaiGroup.UseMiddleware(middleware.APIKeyMiddleware(db), middleware.RawBodyMiddleware(), middleware.HeaderPassthroughMiddleware())
+
+	huma.Register(openaiGroup, huma.Operation{
+		OperationID: "createChatCompletionV2",
+		Method:      http.MethodPost,
+		Path:        "/chat/completions",
+		Summary:     "Create chat completion v2",
+		Description: "Creates a model response and forwards the original request body except for upstream model replacement.",
+		Tags:        []string{"OpenAI"},
+		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Security: []map[string][]string{
+			{"apiKeyAuth": {}},
+		},
+	}, openaiHandler.HandleChatCompletionV2)
+}

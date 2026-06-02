@@ -15,6 +15,7 @@ const (
 	ResponseStreamFieldDelta   = "delta"
 
 	OpenAIInvalidRequestErrorType      = "invalid_request_error"
+	OpenAIInvalidRequestBodyMessage    = "invalid request body"
 	OpenAIModelNotFoundCode            = "model_not_found"
 	OpenAIModelNotFoundMessageTemplate = "The model `%s` does not exist"
 	OpenAIInternalErrorShortMessage    = "Internal error"
