@@ -121,7 +121,30 @@ export function RequestRateChart() {
                 allowDataOverflow={false}
                 tickFormatter={(v) => `${v}%`}
               />
-              <ChartTooltip content={<ChartTooltipContent formatter={(value) => value != null ? `${Number(value).toFixed(1)}%` : ""} />} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value, name, item) => {
+                      if (value == null) return null;
+                      const indicatorColor = item?.color ?? "#888";
+                      return (
+                        <>
+                          <div
+                            className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                            style={{ backgroundColor: indicatorColor }}
+                          />
+                          <div className="flex flex-1 items-center justify-between leading-none">
+                            <span className="text-muted-foreground">{name}</span>
+                            <span className="font-mono font-medium text-foreground tabular-nums">
+                              {`${Number(value).toFixed(1)}%`}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    }}
+                  />
+                }
+              />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {models.map((m) => (
                 <Line
