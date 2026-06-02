@@ -23,7 +23,18 @@ func CopyContextValues(src context.Context) (dst context.Context) {
 	dst = context.WithValue(dst, constant.CtxKeyClient, src.Value(constant.CtxKeyClient))
 	dst = context.WithValue(dst, constant.CtxKeyPassthroughHeaders, src.Value(constant.CtxKeyPassthroughHeaders))
 	dst = context.WithValue(dst, constant.CtxKeyPassthroughResponseHeaders, src.Value(constant.CtxKeyPassthroughResponseHeaders))
+	dst = context.WithValue(dst, constant.CtxKeyRawRequestBody, src.Value(constant.CtxKeyRawRequestBody))
 	return dst
+}
+
+// GetRawRequestBody 从上下文中获取原始请求体。
+func GetRawRequestBody(ctx context.Context) []byte {
+	if v := ctx.Value(constant.CtxKeyRawRequestBody); v != nil {
+		if b, ok := v.([]byte); ok {
+			return append([]byte(nil), b...)
+		}
+	}
+	return nil
 }
 
 // GetPassthroughResponseHeaders 从上下文中获取上游透传的响应头
