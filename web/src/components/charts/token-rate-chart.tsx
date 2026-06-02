@@ -61,7 +61,7 @@ export function TokenRateChart() {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.outputTokensPerSecond || null;
+      pointMap.get(p.time)![item.model] = p.outputTokens > 0 ? p.outputTokensPerSecond : null;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({
@@ -108,7 +108,7 @@ export function TokenRateChart() {
                 fontSize={12}
               />
               <YAxis fontSize={12} domain={[0, "auto"]} allowDataOverflow={false} />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip content={<ChartTooltipContent formatter={(value) => value != null ? `${Number(value).toFixed(2)} tok/s` : ""} />} />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {models.map((m) => (
                 <Line
