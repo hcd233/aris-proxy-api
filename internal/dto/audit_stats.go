@@ -59,12 +59,7 @@ type TokenThroughputReq struct {
 
 type TokenThroughputRsp struct {
 	CommonRsp
-	Data []*TokenThroughputItem `json:"data,omitempty" doc:"各模型的 Token 吞吐量"`
-}
-
-type TokenThroughputItem struct {
-	Model  string                  `json:"model" doc:"模型名"`
-	Points []*TokenThroughputPoint `json:"points" doc:"时间序列点"`
+	Data []*TokenThroughputPoint `json:"data,omitempty" doc:"Token 吞吐量时间序列"`
 }
 
 type TokenThroughputPoint struct {

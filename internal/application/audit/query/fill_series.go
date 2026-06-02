@@ -143,37 +143,35 @@ type throughputSlot struct {
 	outputTokensPerSec  float64
 }
 
-func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, end time.Time, granularity enum.Granularity) []*dto.TokenThroughputItem {
-	modelOrder, byModel, timeSet := indexSeries(points,
-		func(p *modelcall.TokenThroughputPoint) string { return p.Model },
-		func(p *modelcall.TokenThroughputPoint) time.Time { return p.Time.UTC() },
-		func(p *modelcall.TokenThroughputPoint) throughputSlot {
-			return throughputSlot{
-				inputTokens:         p.InputTokens,
-				outputTokens:        p.OutputTokens,
-				cacheCreationTokens: p.CacheCreationTokens,
-				cacheReadTokens:     p.CacheReadTokens,
-				outputTokensPerSec:  p.OutputTokensPerSecond,
-			}
-		},
-	)
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := make([]*dto.TokenThroughputItem, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		pts := make([]*dto.TokenThroughputPoint, 0, len(buckets))
-		for _, t := range buckets {
-			s, ok := byModel[m][t]
-			tp := &dto.TokenThroughputPoint{Time: t}
-			if ok {
-				tp.InputTokens = s.inputTokens
-				tp.OutputTokens = s.outputTokens
-				tp.CacheCreationTokens = s.cacheCreationTokens
-				tp.CacheReadTokens = s.cacheReadTokens
-				tp.OutputTokensPerSecond = s.outputTokensPerSec
-			}
-			pts = append(pts, tp)
+func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, end time.Time, granularity enum.Granularity) []*dto.TokenThroughputPoint {
+	aggregated := make(map[time.Time]*throughputSlot)
+	timeSet := make(map[time.Time]struct{})
+	for _, p := range points {
+		t := p.Time.UTC()
+		timeSet[t] = struct{}{}
+		s := aggregated[t]
+		if s == nil {
+			s = &throughputSlot{}
+			aggregated[t] = s
 		}
-		items = append(items, &dto.TokenThroughputItem{Model: m, Points: pts})
+		s.inputTokens += p.InputTokens
+		s.outputTokens += p.OutputTokens
+		s.cacheCreationTokens += p.CacheCreationTokens
+		s.cacheReadTokens += p.CacheReadTokens
+		s.outputTokensPerSec += p.OutputTokensPerSecond
 	}
-	return items
+	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
+	pts := make([]*dto.TokenThroughputPoint, 0, len(buckets))
+	for _, t := range buckets {
+		tp := &dto.TokenThroughputPoint{Time: t}
+		if s, ok := aggregated[t]; ok {
+			tp.InputTokens = s.inputTokens
+			tp.OutputTokens = s.outputTokens
+			tp.CacheCreationTokens = s.cacheCreationTokens
+			tp.CacheReadTokens = s.cacheReadTokens
+			tp.OutputTokensPerSecond = s.outputTokensPerSec
+		}
+		pts = append(pts, tp)
+	}
+	return pts
 }

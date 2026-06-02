@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { TokenThroughputItem } from "@/lib/types";
+import type { TokenThroughputPoint } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export function TokenVolumeChart() {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [data, setData] = useState<TokenThroughputItem[]>([]);
+  const [data, setData] = useState<TokenThroughputPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
@@ -65,25 +65,17 @@ export function TokenVolumeChart() {
     TOKEN_LAYERS.map((l) => [l.key, { label: l.label, color: l.color }])
   );
 
-  const timeSet = new Set<string>();
-  const pointMap = new Map<string, Record<string, number>>();
-  for (const item of data) {
-    for (const p of item.points) {
-      timeSet.add(p.time);
-      if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      const entry = pointMap.get(p.time)!;
-      const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
-      const freshOutput = Math.max(p.outputTokens - p.cacheCreationTokens, 0);
-      entry.inputTokens = (entry.inputTokens ?? 0) + freshInput;
-      entry.outputTokens = (entry.outputTokens ?? 0) + freshOutput;
-      entry.cacheReadTokens = (entry.cacheReadTokens ?? 0) + p.cacheReadTokens;
-      entry.cacheCreationTokens = (entry.cacheCreationTokens ?? 0) + p.cacheCreationTokens;
-    }
-  }
-  const flatData = Array.from(timeSet).sort().map((time) => ({
-    time,
-    ...pointMap.get(time),
-  }));
+  const flatData = data.map((p) => {
+    const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
+    const freshOutput = Math.max(p.outputTokens - p.cacheCreationTokens, 0);
+    return {
+      time: p.time,
+      inputTokens: freshInput,
+      outputTokens: freshOutput,
+      cacheReadTokens: p.cacheReadTokens,
+      cacheCreationTokens: p.cacheCreationTokens,
+    };
+  });
 
   return (
     <Card>
