@@ -6,6 +6,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -47,7 +48,7 @@ func TestInitCronJobs_AllDisabled(t *testing.T) {
 	config.CronThinkExtractEnabled = false
 
 	cron.StopCronJobs()
-	cron.InitCronJobs(context.TODO(), nil, nil, nil)
+	cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
 
 	if cron.CronInstanceCount() != 0 {
 		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount())
@@ -83,31 +84,41 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 		{
 			Name:    "SessionDeduplicate",
 			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client) cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
 		},
 		{
 			Name:    "SessionSummarize",
 			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client) cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
 		},
 		{
 			Name:    "SessionScore",
 			Enabled: func() bool { return config.CronSessionScoreEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client) cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
 		},
 		{
 			Name:    "SoftDeletePurge",
 			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client) cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
 		},
 		{
 			Name:    "ThinkExtract",
 			Enabled: func() bool { return config.CronThinkExtractEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client) cron.Cron { return &mockCron{} },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
 		},
 	}
 
-	cron.InitCronJobs(context.TODO(), nil, nil, nil)
+	cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
 
 	if cron.CronInstanceCount() != 2 {
 		t.Fatalf("expected 2 cron instances, got %d", cron.CronInstanceCount())
@@ -144,11 +155,13 @@ func TestInitCronJobs_AllEnabled(t *testing.T) {
 		{
 			Name:    "TestCron",
 			Enabled: func() bool { return true },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client) cron.Cron { return mock },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return mock
+			},
 		},
 	}
 
-	cron.InitCronJobs(context.TODO(), nil, nil, nil)
+	cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
 
 	if cron.CronInstanceCount() != 1 {
 		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount())

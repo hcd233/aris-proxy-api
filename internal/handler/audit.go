@@ -89,7 +89,7 @@ func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrend
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditquery.FillTrendSeries(points)
+	rsp.Data = auditquery.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -105,7 +105,7 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditquery.FillRateSeries(points)
+	rsp.Data = auditquery.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -121,6 +121,6 @@ func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.Token
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditquery.FillTokenThroughputSeries(points)
+	rsp.Data = auditquery.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

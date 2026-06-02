@@ -600,5 +600,29 @@
     "want": [
       {"rule": "hardcoded.error_code", "severity": "error"}
     ]
+  },
+  {
+    "name": "non infrastructure package importing database model is rejected",
+    "files": [
+      {
+        "path": "internal/cron/think_extract.go",
+        "content": "package cron\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.database_model_dependency", "severity": "error"}
+    ]
+  },
+  {
+    "name": "infrastructure repository may import database model",
+    "files": [
+      {
+        "path": "internal/infrastructure/repository/message_repository.go",
+        "content": "package repository\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model\"\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "architecture.database_model_dependency", "severity": "error"}
+    ]
   }
 ]
