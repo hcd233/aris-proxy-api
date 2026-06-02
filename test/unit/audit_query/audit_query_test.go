@@ -291,10 +291,10 @@ func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 		{Model: "gpt-4", Time: t1, OutputTokens: 20, OutputTokensPerSecond: 2},
 	}
 	items := auditquery.FillTokenThroughputSeries(points, t1, t3, enum.GranularityHour)
-	if len(items) != 1 {
-		t.Fatalf("len(items) = %d, want 1", len(items))
+	if len(items) != 3 {
+		t.Fatalf("len(items) = %d, want 3", len(items))
 	}
-	pts := items[0].Points
+	pts := items
 	if len(pts) != 3 {
 		t.Fatalf("pts len = %d, want 3", len(pts))
 	}
@@ -324,10 +324,7 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 	if len(items) != 1 {
 		t.Fatalf("len(items) = %d, want 1", len(items))
 	}
-	if len(items[0].Points) != 1 {
-		t.Fatalf("points len = %d, want 1", len(items[0].Points))
-	}
-	pt := items[0].Points[0]
+	pt := items[0]
 	if pt.InputTokens != 11 || pt.OutputTokens != 22 || pt.CacheCreationTokens != 33 || pt.CacheReadTokens != 44 || pt.OutputTokensPerSecond != 5.5 {
 		t.Fatalf("timezone-equivalent bucket lost token aggregate data: %+v", pt)
 	}

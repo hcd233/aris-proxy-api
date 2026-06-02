@@ -388,13 +388,8 @@ export interface TokenThroughputPoint {
   outputTokensPerSecond: number;
 }
 
-export interface TokenThroughputItem {
-  model: string;
-  points: TokenThroughputPoint[];
-}
-
 export interface TokenThroughputRsp extends CommonRsp {
-  data?: TokenThroughputItem[];
+  data?: TokenThroughputPoint[];
 }
 
 export interface TokenRatePoint {
