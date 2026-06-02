@@ -96,7 +96,7 @@ export function ModelTokenBarChart() {
     return sortDir === "desc" ? " ▼" : " ▲";
   }
 
-  function renderBarPair(
+  function renderStackedBar(
     cacheLabel: string,
     cacheValue: number,
     cacheColor: string,
@@ -104,32 +104,32 @@ export function ModelTokenBarChart() {
     mainValue: number,
     mainColor: string,
   ) {
-    const maxVal = Math.max(cacheValue, mainValue);
+    // ratio: Cache : (Main - Cache), bar total = Main, so left = cache/Main, right = (Main-cache)/Main
+    const denom = mainValue > 0 ? mainValue : 1;
+    const cachePct = Math.min((cacheValue / denom) * 100, 100);
+    const freshPct = Math.max(100 - cachePct, 0);
     return (
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <span className="w-20 shrink-0 text-[11px] text-muted-foreground">{cacheLabel}</span>
-          <div className="h-2.5 flex-1 overflow-hidden rounded-sm bg-muted" title={`${cacheLabel}: ${formatTokenCount(cacheValue)}`}>
-            {maxVal > 0 && (
-              <div
-                style={{ width: `${(cacheValue / maxVal) * 100}%`, backgroundColor: cacheColor }}
-                className="h-full rounded-sm transition-all duration-200"
-              />
-            )}
-          </div>
-          <span className="w-12 shrink-0 text-right text-[11px] tabular-nums" style={{ color: cacheColor }}>{formatTokenCount(cacheValue)}</span>
+      <div>
+        <div
+          className="flex h-3 overflow-hidden rounded-md bg-muted"
+          title={`${cacheLabel}: ${formatTokenCount(cacheValue)} / ${mainLabel}: ${formatTokenCount(mainValue - cacheValue)}`}
+        >
+          {cachePct > 0 && (
+            <div
+              style={{ width: `${cachePct}%`, backgroundColor: cacheColor }}
+              className="transition-all duration-200"
+            />
+          )}
+          {freshPct > 0 && (
+            <div
+              style={{ width: `${freshPct}%`, backgroundColor: mainColor }}
+              className="transition-all duration-200"
+            />
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-20 shrink-0 text-[11px] text-muted-foreground">{mainLabel}</span>
-          <div className="h-2.5 flex-1 overflow-hidden rounded-sm bg-muted" title={`${mainLabel}: ${formatTokenCount(mainValue)}`}>
-            {maxVal > 0 && (
-              <div
-                style={{ width: `${(mainValue / maxVal) * 100}%`, backgroundColor: mainColor }}
-                className="h-full rounded-sm transition-all duration-200"
-              />
-            )}
-          </div>
-          <span className="w-12 shrink-0 text-right text-[11px] tabular-nums" style={{ color: mainColor }}>{formatTokenCount(mainValue)}</span>
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+          <span style={{ color: cacheColor }}>{cacheLabel} {formatTokenCount(cacheValue)}</span>
+          <span style={{ color: mainColor }}>{mainLabel} {formatTokenCount(mainValue)}</span>
         </div>
       </div>
     );
@@ -201,8 +201,8 @@ export function ModelTokenBarChart() {
                           {formatTokenCount(total)}
                         </td>
                         <td className="w-[240px] py-3 pr-4">
-                          {renderBarPair(
-                            "Read",
+                          {renderStackedBar(
+                            "Cache Read",
                             item.cacheReadTokens,
                             CACHE_READ_COLOR,
                             "Input",
@@ -211,8 +211,8 @@ export function ModelTokenBarChart() {
                           )}
                         </td>
                         <td className="w-[240px] py-3">
-                          {renderBarPair(
-                            "Created",
+                          {renderStackedBar(
+                            "Cache Write",
                             item.cacheCreationTokens,
                             CACHE_CREATED_COLOR,
                             "Output",
