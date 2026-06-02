@@ -20,7 +20,7 @@ type AuditHandler interface {
 	HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error)
 	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
 	HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error)
-	HandleTokenUsage(ctx context.Context, req *dto.TokenUsageReq) (*dto.HTTPResponse[*dto.TokenUsageRsp], error)
+	HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error)
 }
 
 type AuditDependencies struct {
@@ -143,9 +143,9 @@ func (h *auditHandler) HandleTokenRate(ctx context.Context, req *dto.TokenRateRe
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-func (h *auditHandler) HandleTokenUsage(ctx context.Context, req *dto.TokenUsageReq) (*dto.HTTPResponse[*dto.TokenUsageRsp], error) {
-	rsp := &dto.TokenUsageRsp{}
-	items, err := h.svc.TokenUsage(ctx,
+func (h *auditHandler) HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error) {
+	rsp := &dto.ModelUsageRsp{}
+	items, err := h.svc.ModelUsage(ctx,
 		util.CtxValuePermission(ctx),
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.StartTime, req.EndTime, req.Granularity,

@@ -99,20 +99,20 @@ type TokenRatePoint struct {
 	OutputTokensPerSecond float64   `json:"outputTokensPerSecond" doc:"输出 Token 速率 (tokens/s)"`
 }
 
-// — Token Usage —
+// — Model Usage —
 
-type TokenUsageReq struct {
+type ModelUsageReq struct {
 	StartTime   time.Time        `query:"startTime" required:"true"`
 	EndTime     time.Time        `query:"endTime" required:"true"`
 	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
 }
 
-type TokenUsageRsp struct {
+type ModelUsageRsp struct {
 	CommonRsp
-	Data []*TokenUsageItem `json:"data,omitempty" doc:"各模型的 Token 聚合用量"`
+	Data []*ModelUsageItem `json:"data,omitempty" doc:"各模型的 Token 聚合用量"`
 }
 
-type TokenUsageItem struct {
+type ModelUsageItem struct {
 	Model               string `json:"model" doc:"模型名"`
 	InputTokens         int    `json:"inputTokens" doc:"输入 Token 总数"`
 	OutputTokens        int    `json:"outputTokens" doc:"输出 Token 总数"`

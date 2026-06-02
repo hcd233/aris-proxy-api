@@ -355,8 +355,8 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewTokenThroughputByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewTokenRateHandler(repo),
 		auditquery.NewTokenRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewTokenUsageHandler(repo),
-		auditquery.NewTokenUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewModelUsageHandler(repo),
+		auditquery.NewModelUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 	)
 
 	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
@@ -378,9 +378,9 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 	}
 }
 
-// ─── TokenUsage 聚合测试 ────────────────────────
+// ─── ModelUsage 聚合测试 ────────────────────────
 
-func TestAggregateTokenUsage_SumsPerModel(t *testing.T) {
+func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	repo := &fakeAuditRepo{
@@ -392,8 +392,8 @@ func TestAggregateTokenUsage_SumsPerModel(t *testing.T) {
 			}, nil
 		},
 	}
-	h := auditquery.NewTokenUsageHandler(repo)
-	items, err := h.Handle(context.Background(), auditquery.TokenUsageQuery{
+	h := auditquery.NewModelUsageHandler(repo)
+	items, err := h.Handle(context.Background(), auditquery.ModelUsageQuery{
 		StartTime: t1, EndTime: t2, Granularity: enum.GranularityHour,
 	})
 	if err != nil {
