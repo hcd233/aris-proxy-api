@@ -198,6 +198,10 @@ var (
 	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
 	//	@update 2026-05-01 10:00:00
 	CronSoftDeletePurgeEnabled bool
+
+	// CronThinkExtractEnabled bool 是否启用 Think 内容提取定时任务
+	//	@update 2026-06-02 10:00:00
+	CronThinkExtractEnabled bool
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -318,6 +322,7 @@ func initEnvironment() {
 	CronSessionSummarizeEnabled = config.GetBool("cron.session.summarize.enabled")
 	CronSessionScoreEnabled = config.GetBool("cron.session.score.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
+	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{
