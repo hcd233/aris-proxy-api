@@ -15,6 +15,7 @@ import { ModelTrendChart } from "@/components/charts/model-trend-chart";
 import { RequestRateChart } from "@/components/charts/request-rate-chart";
 import { TokenVolumeChart } from "@/components/charts/token-volume-chart";
 import { TokenRateChart } from "@/components/charts/token-rate-chart";
+import { ModelTokenBarChart } from "@/components/charts/model-token-bar-chart";
 
 interface DashboardStats {
   apiKeys: number;
@@ -141,6 +142,10 @@ export default function DashboardPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <TokenVolumeChart />
           <TokenRateChart />
+        </div>
+
+        <div className="grid gap-4">
+          <ModelTokenBarChart />
         </div>
       </div>
   );
