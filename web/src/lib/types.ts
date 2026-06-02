@@ -385,7 +385,6 @@ export interface TokenThroughputPoint {
   outputTokens: number;
   cacheCreationTokens: number;
   cacheReadTokens: number;
-  outputTokensPerSecond: number;
 }
 
 export interface TokenThroughputRsp extends CommonRsp {

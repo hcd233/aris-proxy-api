@@ -20,9 +20,7 @@ import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
 const TOKEN_LAYERS = [
-  { key: "cacheReadTokens", label: "Cache Read", color: "#F2D0B8" },
   { key: "inputTokens", label: "Input", color: "#E6733F" },
-  { key: "cacheCreationTokens", label: "Cache Write", color: "#F2D5BE" },
   { key: "outputTokens", label: "Output", color: "#D46A3E" },
 ] as const;
 
@@ -65,22 +63,27 @@ export function TokenVolumeChart() {
     TOKEN_LAYERS.map((l) => [l.key, { label: l.label, color: l.color }])
   );
 
-  const flatData = data.map((p) => {
-    const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
-    const freshOutput = Math.max(p.outputTokens - p.cacheCreationTokens, 0);
-    return {
-      time: p.time,
-      inputTokens: freshInput,
-      outputTokens: freshOutput,
-      cacheReadTokens: p.cacheReadTokens,
-      cacheCreationTokens: p.cacheCreationTokens,
-    };
-  });
+  const totalCacheRead = data.reduce((s, p) => s + p.cacheReadTokens, 0);
+  const totalInput = data.reduce((s, p) => s + p.inputTokens, 0);
+  const cacheRate = totalInput > 0 ? ((totalCacheRead / totalInput) * 100).toFixed(1) : null;
+
+  const flatData = data.map((p) => ({
+    time: p.time,
+    inputTokens: p.inputTokens,
+    outputTokens: p.outputTokens,
+  }));
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Token Throughput</CardTitle>
+        <div className="flex items-center gap-3">
+          <CardTitle className="font-display">Token Throughput</CardTitle>
+          {cacheRate && (
+            <span className="text-xs text-muted-foreground">
+              Cache hit rate: {cacheRate}%
+            </span>
+          )}
+        </div>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}

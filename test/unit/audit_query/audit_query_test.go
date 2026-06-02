@@ -288,7 +288,7 @@ func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 	t2 := t1.Add(time.Hour)
 	t3 := t1.Add(2 * time.Hour)
 	points := []*modelcall.TokenThroughputPoint{
-		{Model: "gpt-4", Time: t1, OutputTokens: 20, OutputTokensPerSecond: 2},
+		{Model: "gpt-4", Time: t1, OutputTokens: 20},
 	}
 	items := auditquery.FillTokenThroughputSeries(points, t1, t3, enum.GranularityHour)
 	if len(items) != 3 {
@@ -298,7 +298,7 @@ func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 	if len(pts) != 3 {
 		t.Fatalf("pts len = %d, want 3", len(pts))
 	}
-	if !pts[1].Time.Equal(t2) || pts[1].OutputTokens != 0 || pts[1].OutputTokensPerSecond != 0 {
+	if !pts[1].Time.Equal(t2) || pts[1].OutputTokens != 0 {
 		t.Errorf("missing token bucket mismatch: %+v", pts[1])
 	}
 }
@@ -309,13 +309,12 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
 	points := []*modelcall.TokenThroughputPoint{
 		{
-			Model:                 "gpt-4",
-			Time:                  time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai),
-			InputTokens:           11,
-			OutputTokens:          22,
-			CacheCreationTokens:   33,
-			CacheReadTokens:       44,
-			OutputTokensPerSecond: 5.5,
+			Model:               "gpt-4",
+			Time:                time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai),
+			InputTokens:         11,
+			OutputTokens:        22,
+			CacheCreationTokens: 33,
+			CacheReadTokens:     44,
 		},
 	}
 
@@ -325,7 +324,7 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 		t.Fatalf("len(items) = %d, want 1", len(items))
 	}
 	pt := items[0]
-	if pt.InputTokens != 11 || pt.OutputTokens != 22 || pt.CacheCreationTokens != 33 || pt.CacheReadTokens != 44 || pt.OutputTokensPerSecond != 5.5 {
+	if pt.InputTokens != 11 || pt.OutputTokens != 22 || pt.CacheCreationTokens != 33 || pt.CacheReadTokens != 44 {
 		t.Fatalf("timezone-equivalent bucket lost token aggregate data: %+v", pt)
 	}
 }
