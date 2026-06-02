@@ -236,7 +236,8 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 
 - **生产 bug / 线上错误 / traceId / `X-Trace-Id` / CLS / E2E 失败**：使用 `cls-log-bugfix`，在 `ap-guangzhou` 查日志并按 trace 追链路。
 - **API 调用 / curl 示例 / 生产验证**：使用 `call-api`；它只负责交互式调用示例，不替代 E2E 回归。
-- **发布 / 部署**：使用 `deploy-to-production`；提交、推送、CI、SSH 部署和线上 E2E 都在该 skill 中维护。
+- **生产配置更新 / api.env / K8s ConfigMap**：使用 `update-prod-config`；SSH 到 `api.lvlvko.top` 修改配置，禁止使用裸 IP 地址。
+- **发布 / 部署**：推送到 `master` 或合并 PR 到 `master` 自动触发 `docker-publish.yml` 构建镜像并部署到 K8s；不需要额外手动部署步骤。
 - **会话开始/初次接触项目 / 需要历史上下文 / 沉淀经验教训**：使用 `agentmemory`；检查并启动 agentmemory 服务器，召回历史经验，保存新的洞察和偏好。
 - **写或改 `internal/dto/**` / 新增 huma 路由 / 排查 "field 总是零值" 类问题**：使用 `huma-dto-conventions`；它沉淀了 huma 的 path/query/body 绑定规则、Body 包装模板、响应 unwrap 行为和反模式速查。
 - 专项流程细节放在对应 skill，主文档只保留触发条件和项目级硬约束。
@@ -245,11 +246,12 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 
 - Go `1.25.1` 后端，提供 LLM 代理网关、用户、API Key、会话管理。
 - 入口：`main.go` → `cmd.Execute()` → `cmd/server.go` 的 `server start`。
-- 启动链路：database、Redis、共享 HTTP Client、Pond 协程池、cron、Fiber 中间件、可选 `/docs`、API 路由。
+- 启动链路：database、Redis、共享 HTTP Client、Pond 协程池 → `inflight.InitTracker()` → cron（5 个模块，CronRegistryEntry 模式，含 think-extract）→ Fiber 中间件链（Recover → Inflight → Guard → Fgprof → CORS → Compress → Trace → Log 采样）→ 可选 `/docs` → API 路由。
 - 请求链路：Fiber 中间件 → Huma 路由 → handler → application usecase/command → domain service → infrastructure repository/transport。
 - 依赖注入：`go.uber.org/dig`，全部在 `internal/bootstrap/container.go` 中注册。
 - LLM 代理分层：`application/llmproxy/usecase` 编排端点查找、转换、代理和存储；`infrastructure/transport` 做 HTTP/SSE 传输；`application/llmproxy/converter` 做 DTO 映射。
 - 模型路由和代理 Key 由数据库驱动；运行配置来自 Viper 和 `env/api.env`。
+- 优雅关闭：接收 SIGINT/SIGTERM → 8 步顺序关闭（停止 cron → 停止协程池 → draining 拒绝新请求 → 等待进行中请求 → 关闭 HTTP Server → 同步日志 → 关闭 DB → 关闭 Redis）。K8s 部署用 `terminationGracePeriodSeconds: 660` + `preStop: sleep 10` 配合 `/ready` 探针实现无损下线。
 
 ## 4. 常用命令
 
@@ -259,13 +261,20 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - 创建对象存储桶：`go run main.go object bucket create`
 - 完整本地栈：先创建 `postgresql-data`、`redis-data`、`minio-data` 卷，再执行 `docker compose -f docker/docker-compose-full.yml up -d`
 - 构建：`make build`；调试构建：`make build-dev` 或 `make build-debug`
-- 规范扫描：`make lint`
+- 规范扫描：`make lint`（执行 `lint-conv` + `lint-static` 两阶段）
+- 架构规范检查：`make lint-conv`（`go run main.go lint conv ./...`，检查 DTO 依赖、层间隔离、透传包装等自定义规则，规则定义在 `internal/tool/lintconv/`）
+- 静态分析：`make lint-static`（golangci-lint v2.11.4，errcheck/govet/staticcheck/gosec 等 20+ linter，配置见 `.golangci.yml`）
 - 全量测试：`make test` 或 `go test -count=1 ./...`
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
 - 前端开发：`cd web && npm install && npm run dev`（默认 `http://localhost:3000/web`）
 - 前端 lint：`cd web && npm run lint`
 - 前端构建（同时同步到 `internal/web/dist/`）：`make web-build`；清理产物：`make web-clean`
 - 生产构建会自动包含前端：`make build` 在编译 Go 之前先跑 `web-build`
+- 覆盖率测试：`make test-cover`（生成 `coverage.html`）
+- 性能分析：`make fgprof`（拉取远程 `/debug/fgprof?seconds=30` 火焰图并启动 Web UI `:8081`）
+- UPX 极致压缩：`make build-upx`（需安装 upx）
+- 编译缓存预热：`make warm-cache`（CI 加速）
+- 全量清理：`make clean-all`（含 `go clean -cache`）
 
 ## 5. 开发工作流
 
@@ -276,7 +285,7 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - 每次改动后依次跑：聚焦测试 → `make lint` → 必要时 `go test -count=1 ./...`。
 - 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 通过后，只有用户明确要求提交、推送或部署时才执行 git 提交/发布流程。
-- 正式发布使用 `deploy-to-production`：推送到 `master`，等待 `docker-publish.yml` 镜像构建完成，再在生产机执行部署脚本。
+- 正式发布：推送到 `master` 或合并 PR 到 `master`，`docker-publish.yml` 自动构建镜像并部署到 K8s，无需手动 SSH 执行部署脚本。
 - 部署后**先跑** `test/e2e/<topic>/` 的 Go 用例，而不是只 `curl` 一下；如需交互式补充验证再用 `call-api` skill。
 - 如果 E2E 失败，取响应头 `X-Trace-Id`，回到 CLS 排障步骤；重复直到需求或 bugfix 完成。
 
@@ -329,6 +338,12 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - 使用 `.worktrees/` 作为 git worktree 目录。
 - `AGENTS.md`、`CLAUDE.md`、`CODEBUDDY.md` 是项目级持久规范，修改其中一个时保持同步。
 - 编写文档必须使用中文
+
+### K8s 部署
+- Deployment：`k8s/deployment.yaml`，副本数 2，`maxUnavailable: 0` 蓝绿更新。
+- 优雅关闭：`terminationGracePeriodSeconds: 660`（11 分钟），`preStop: sleep 10` 等待 `/ready` 探针失效；应用内部 8 步关闭（`cmd/server.go:124`），超时后强制退出。
+- 存活探针：`GET /health`（15s 初始延迟，20s 间隔，失败 3 次重启）。
+- 就绪探针：`GET /ready`（5s 初始延迟，10s 间隔，失败 6 次下线），draining 期间返回 503。
 
 ### Git 分支规范
 
