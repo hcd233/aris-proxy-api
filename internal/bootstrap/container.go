@@ -281,6 +281,18 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newTokenThroughputByUserHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(auditquery.NewTokenRateHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newTokenRateByUserHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(auditquery.NewTokenUsageHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newTokenUsageByUserHandler); err != nil {
+		return err
+	}
 	if err := container.Provide(newAuditService); err != nil {
 		return err
 	}
@@ -574,6 +586,14 @@ func newRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apik
 
 func newTokenThroughputByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenThroughputByUserHandler {
 	return auditquery.NewTokenThroughputByUserHandler(repo, apiKeyRepo)
+}
+
+func newTokenRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenRateByUserHandler {
+	return auditquery.NewTokenRateByUserHandler(repo, apiKeyRepo)
+}
+
+func newTokenUsageByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenUsageByUserHandler {
+	return auditquery.NewTokenUsageByUserHandler(repo, apiKeyRepo)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {

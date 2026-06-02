@@ -2,29 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { TokenThroughputItem } from "@/lib/types";
+import type { TokenUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts";
-import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
 
-const METRIC_LAYERS = [
-  { key: "inputTokens", label: "Input", color: "#D97757" },
-  { key: "outputTokens", label: "Output", color: "#5B8DB8" },
-  { key: "cacheReadTokens", label: "Cache Read", color: "#7C6BA5" },
-  { key: "cacheCreationTokens", label: "Cache Creation", color: "#4A9E7D" },
-] as const;
+type SortField = "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
 
 function formatTokenCount(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -32,21 +18,26 @@ function formatTokenCount(v: number): string {
   return String(v);
 }
 
+function tokenTotal(item: TokenUsageItem): number {
+  return item.inputTokens + item.outputTokens + item.cacheReadTokens + item.cacheCreationTokens;
+}
+
 export function ModelTokenBarChart() {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [data, setData] = useState<TokenThroughputItem[]>([]);
+  const [data, setData] = useState<TokenUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
+  const [sortField, setSortField] = useState<SortField>("total");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
       const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
-      const rsp = await api.fetchTokenThroughput({ startTime, endTime, granularity });
+      const rsp = await api.fetchTokenUsage({ startTime, endTime, granularity });
       setData(rsp.data ?? []);
     } catch {
       setError(true);
@@ -61,22 +52,74 @@ export function ModelTokenBarChart() {
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const chartConfig = Object.fromEntries(
-    METRIC_LAYERS.map((l) => [l.key, { label: l.label, color: l.color }])
-  );
-
-  const modelData = data.map((item) => {
-    const totals: Record<string, number | string> = { model: item.model };
-    for (const metric of METRIC_LAYERS) {
-      totals[metric.key] = item.points.reduce((sum, p) => sum + p[metric.key], 0);
+  const sorted = [...data].sort((a, b) => {
+    let va: number, vb: number;
+    if (sortField === "total") {
+      va = tokenTotal(a);
+      vb = tokenTotal(b);
+    } else {
+      va = a[sortField];
+      vb = b[sortField];
     }
-    return totals;
+    return sortDir === "desc" ? vb - va : va - vb;
   });
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  }
+
+  function sortIndicator(field: SortField) {
+    if (sortField !== field) return "";
+    return sortDir === "desc" ? " ▼" : " ▲";
+  }
+
+  function renderBar(
+    leftLabel: string,
+    leftValue: number,
+    leftColor: string,
+    rightLabel: string,
+    rightValue: number,
+    rightColor: string,
+    total: number,
+  ) {
+    const leftPct = total > 0 ? (leftValue / total) * 100 : 0;
+    const rightPct = total > 0 ? (rightValue / total) * 100 : 0;
+    return (
+      <div>
+        <div
+          className="flex h-3 overflow-hidden rounded-md bg-muted"
+          title={`${leftLabel}: ${formatTokenCount(leftValue)} / ${rightLabel}: ${formatTokenCount(rightValue)}`}
+        >
+          {leftPct > 0 && (
+            <div
+              style={{ width: `${leftPct}%`, backgroundColor: leftColor }}
+              className="transition-all duration-200"
+            />
+          )}
+          {rightPct > 0 && (
+            <div
+              style={{ width: `${rightPct}%`, backgroundColor: rightColor }}
+              className="transition-all duration-200"
+            />
+          )}
+        </div>
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+          <span style={{ color: leftColor }}>{leftLabel} {formatTokenCount(leftValue)}</span>
+          <span style={{ color: rightColor }}>{rightLabel} {formatTokenCount(rightValue)}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Model Token Usage</CardTitle>
+        <CardTitle className="font-display">Model Usage</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}
@@ -98,48 +141,70 @@ export function ModelTokenBarChart() {
               Retry
             </Button>
           </div>
-        ) : modelData.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
             No data for this period
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-64 w-full">
-            <BarChart data={modelData} barCategoryGap="20%" barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="model"
-                fontSize={12}
-                tickLine={false}
-              />
-              <YAxis
-                fontSize={12}
-                tickFormatter={formatTokenCount}
-                domain={[0, "auto"]}
-                allowDataOverflow={false}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value) => (
-                      <span className="font-mono font-medium text-foreground tabular-nums">
-                        {formatTokenCount(Number(value))}
-                      </span>
-                    )}
-                  />
-                }
-              />
-              <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
-              {METRIC_LAYERS.map((layer) => (
-                <Bar
-                  key={layer.key}
-                  dataKey={layer.key}
-                  fill={layer.color}
-                  fillOpacity={getStrokeOpacity(layer.key)}
-                  radius={[4, 4, 0, 0]}
-                />
-              ))}
-            </BarChart>
-          </ChartContainer>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm tabular-nums">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="w-8 py-2 text-left font-medium">#</th>
+                  <th className="py-2 text-left font-medium">Model</th>
+                  <th
+                    className="cursor-pointer py-2 text-right font-medium hover:text-foreground"
+                    onClick={() => handleSort("total")}
+                  >
+                    Total{sortIndicator("total")}
+                  </th>
+                  <th className="w-[220px] py-2 text-left font-medium">Input</th>
+                  <th className="w-[220px] py-2 text-left font-medium">Output</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((item, i) => {
+                  const total = tokenTotal(item);
+                  const inputTotal = item.inputTokens + item.cacheReadTokens;
+                  const outputTotal = item.outputTokens + item.cacheCreationTokens;
+                  return (
+                    <tr
+                      key={item.model}
+                      className="border-b border-border transition-colors hover:bg-muted/50"
+                    >
+                      <td className="py-3 pr-2 text-muted-foreground">{i + 1}</td>
+                      <td className="py-3 pr-4 font-medium">{item.model}</td>
+                      <td className="py-3 pr-4 text-right font-semibold">
+                        {formatTokenCount(total)}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {renderBar(
+                          "Cache Read",
+                          item.cacheReadTokens,
+                          "#7C6BA5",
+                          "Input",
+                          item.inputTokens,
+                          "#D97757",
+                          inputTotal,
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {renderBar(
+                          "Cache Created",
+                          item.cacheCreationTokens,
+                          "#4A9E7D",
+                          "Output",
+                          item.outputTokens,
+                          "#5B8DB8",
+                          outputTotal,
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </CardContent>
     </Card>
