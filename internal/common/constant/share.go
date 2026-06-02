@@ -34,4 +34,6 @@ const (
 	ShareIDMaxLen = 8
 	// ShareIDMaxAttemptsPerLen 单一长度内的最大尝试次数；超过后递增长度再试
 	ShareIDMaxAttemptsPerLen = 3
+	// ShareListScanChunkSize 用户分享列表分页时每批从 Redis sorted set 拉取的最大 member 数
+	ShareListScanChunkSize = 100
 )

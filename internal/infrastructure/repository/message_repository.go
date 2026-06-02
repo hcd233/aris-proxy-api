@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
@@ -42,6 +44,10 @@ type messageRepository struct {
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
 func NewMessageRepository(db *gorm.DB) conversation.MessageRepository {
+	return &messageRepository{dao: dao.GetMessageDAO(), db: db}
+}
+
+func NewThinkExtractRepository(db *gorm.DB) conversation.ThinkExtractRepository {
 	return &messageRepository{dao: dao.GetMessageDAO(), db: db}
 }
 
@@ -130,4 +136,45 @@ func (r *messageRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggre
 		out = append(out, aggregate.RestoreMessage(m.ID, m.Message, m.Model, m.CheckSum))
 	}
 	return out, nil
+}
+
+func (r *messageRepository) FindThinkExtractCandidates(ctx context.Context, afterID uint, startTime, endTime time.Time, limit int) ([]*conversation.ThinkExtractMessage, error) {
+	if limit < 1 {
+		limit = 1
+	}
+	db := r.db.WithContext(ctx)
+	var records []*dbmodel.Message
+	query := db.Model(&dbmodel.Message{}).
+		Select([]string{constant.FieldID, constant.FieldMessage}).
+		Where(constant.DBConditionIDGreaterThan, afterID).
+		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.DBJSONConditionAssistantRole).
+		Where(constant.DBJSONConditionHasThinkTag).
+		Where(constant.DBJSONConditionReasoningEmpty)
+	if !startTime.IsZero() {
+		query = query.Where(constant.FieldCreatedAt+" >= ?", startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.FieldCreatedAt+" < ?", endTime)
+	}
+	if err := query.Order(constant.DBOrderByID).Limit(limit).Find(&records).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query think extract messages")
+	}
+	out := make([]*conversation.ThinkExtractMessage, 0, len(records))
+	for _, record := range records {
+		out = append(out, &conversation.ThinkExtractMessage{ID: record.ID, Message: record.Message})
+	}
+	return out, nil
+}
+
+func (r *messageRepository) UpdateMessageContent(ctx context.Context, id uint, message *vo.UnifiedMessage) error {
+	db := r.db.WithContext(ctx)
+	updates := map[string]any{
+		constant.FieldMessage:   message,
+		constant.FieldUpdatedAt: time.Now().UTC(),
+	}
+	if err := db.Model(&dbmodel.Message{ID: id}).Select([]string{constant.FieldMessage, constant.FieldUpdatedAt}).Updates(updates).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "update message content")
+	}
+	return nil
 }

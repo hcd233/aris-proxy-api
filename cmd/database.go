@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
@@ -18,8 +17,7 @@ var migrateDatabaseCmd = &cobra.Command{
 	Short: "Migrate Database",
 	Long:  `Execute database migration operation, update the database structure to the latest mode.`,
 	Run: func(cmd *cobra.Command, _ []string) {
-		db := database.InitDatabase().WithContext(cmd.Context())
-		lo.Must0(db.AutoMigrate(model.Models...))
+		lo.Must0(database.AutoMigrate(cmd.Context()))
 	},
 }
 

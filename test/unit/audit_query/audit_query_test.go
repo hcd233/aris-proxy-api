@@ -193,22 +193,23 @@ func TestListAuditLogsByUser_InvalidSortField(t *testing.T) {
 
 // ─── FillTrendSeries / FillRateSeries 测试 ────────────────────────
 
-func TestFillTrendSeries_FillsMissingSlots(t *testing.T) {
+func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	t3 := t1.Add(2 * time.Hour)
+	t4 := t1.Add(3 * time.Hour)
 	points := []*modelcall.ModelTrendPoint{
 		{Model: "gpt-4", Time: t1, Count: 3},
 		{Model: "gpt-4", Time: t3, Count: 5},
 		{Model: "claude", Time: t2, Count: 1},
 	}
-	items := auditquery.FillTrendSeries(points)
+	items := auditquery.FillTrendSeries(points, t1, t4, enum.GranularityHour)
 	if len(items) != 2 {
 		t.Fatalf("len(items) = %d, want 2", len(items))
 	}
 	for _, it := range items {
-		if len(it.Points) != 3 {
-			t.Errorf("model %s: points len = %d, want 3 (filled)", it.Model, len(it.Points))
+		if len(it.Points) != 4 {
+			t.Errorf("model %s: points len = %d, want 4 (complete requested range)", it.Model, len(it.Points))
 		}
 	}
 	byModel := map[string]map[time.Time]int{}
@@ -218,16 +219,16 @@ func TestFillTrendSeries_FillsMissingSlots(t *testing.T) {
 			byModel[it.Model][p.Time] = p.Count
 		}
 	}
-	if byModel["gpt-4"][t2] != 0 {
-		t.Errorf("gpt-4 missing slot at t2 should be 0, got %d", byModel["gpt-4"][t2])
+	if byModel["gpt-4"][t2] != 0 || byModel["gpt-4"][t4] != 0 {
+		t.Errorf("gpt-4 missing slots should be 0, got t2=%d t4=%d", byModel["gpt-4"][t2], byModel["gpt-4"][t4])
 	}
-	if byModel["claude"][t1] != 0 || byModel["claude"][t3] != 0 {
-		t.Errorf("claude missing slots should be 0, got t1=%d t3=%d", byModel["claude"][t1], byModel["claude"][t3])
+	if byModel["claude"][t1] != 0 || byModel["claude"][t3] != 0 || byModel["claude"][t4] != 0 {
+		t.Errorf("claude missing slots should be 0, got t1=%d t3=%d t4=%d", byModel["claude"][t1], byModel["claude"][t3], byModel["claude"][t4])
 	}
 }
 
 func TestFillTrendSeries_Empty(t *testing.T) {
-	items := auditquery.FillTrendSeries(nil)
+	items := auditquery.FillTrendSeries(nil, time.Time{}, time.Time{}, enum.GranularityHour)
 	if len(items) != 0 {
 		t.Errorf("empty input should return empty, got %d items", len(items))
 	}
@@ -240,7 +241,7 @@ func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
 		{Model: "gpt-4", Time: t1, Total: 10, Success: 8},
 		{Model: "gpt-4", Time: t2, Total: 5, Success: 5},
 	}
-	items := auditquery.FillRateSeries(points)
+	items := auditquery.FillRateSeries(points, t1, t2, enum.GranularityHour)
 	if len(items) != 1 {
 		t.Fatalf("len(items) = %d, want 1", len(items))
 	}
@@ -248,12 +249,31 @@ func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
 	if len(pts) != 2 {
 		t.Fatalf("pts len = %d, want 2", len(pts))
 	}
-	// Sorted by time: t1, t2
 	if pts[0].Total != 10 || pts[0].Success != 8 || pts[0].Failed != 2 || pts[0].SuccessRate != 0.8 {
 		t.Errorf("pts[0] mismatch: %+v", pts[0])
 	}
 	if pts[1].Total != 5 || pts[1].Success != 5 || pts[1].Failed != 0 || pts[1].SuccessRate != 1.0 {
 		t.Errorf("pts[1] mismatch: %+v", pts[1])
+	}
+}
+
+func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
+	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+	t2 := t1.Add(time.Hour)
+	t3 := t1.Add(2 * time.Hour)
+	points := []*modelcall.TokenThroughputPoint{
+		{Model: "gpt-4", Time: t1, OutputTokens: 20, OutputTokensPerSecond: 2},
+	}
+	items := auditquery.FillTokenThroughputSeries(points, t1, t3, enum.GranularityHour)
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	pts := items[0].Points
+	if len(pts) != 3 {
+		t.Fatalf("pts len = %d, want 3", len(pts))
+	}
+	if !pts[1].Time.Equal(t2) || pts[1].OutputTokens != 0 || pts[1].OutputTokensPerSecond != 0 {
+		t.Errorf("missing token bucket mismatch: %+v", pts[1])
 	}
 }
 

@@ -78,7 +78,8 @@ func InitInfrastructure() *Infrastructure {
 	httpclient.InitHTTPClient()
 	inflight.InitTracker()
 	poolManager := pool.InitPoolManager(db)
-	cron.InitCronJobs(context.Background(), db, poolManager, cache)
+	thinkExtractRepo := repository.NewThinkExtractRepository(db)
+	cron.InitCronJobs(context.Background(), db, poolManager, cache, thinkExtractRepo)
 	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
 }
 

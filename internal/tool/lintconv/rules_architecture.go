@@ -24,6 +24,9 @@ func (c *checker) checkArchitectureImports(file SourceFile) {
 		if err != nil {
 			continue
 		}
+		if path == constant.ConvCheckImportDatabaseModel && !isDatabaseModelAllowedPath(file.Path) {
+			c.report(file, imp, enum.SeverityError, constant.RuleDatabaseModelDependency, constant.ConvCheckMsgDatabaseModelDirect)
+		}
 		if isUnder(file.Path, constant.ConvCheckPathDomain) && strings.HasPrefix(path, constant.ConvCheckImportInfra) {
 			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainInfra)
 		}
@@ -118,6 +121,25 @@ func (c *checker) checkDTODependency(file SourceFile) {
 
 func isHandlerAllowedAppImport(path string) bool {
 	return strings.Contains(path, constant.ConvCheckImportPathPort)
+}
+
+func isDatabaseModelAllowedPath(path string) bool {
+	if isUnder(path, constant.ConvCheckPathInfrastructure) || strings.HasSuffix(path, constant.ConvCheckSuffixTestGo) {
+		return true
+	}
+	legacyPaths := []string{
+		constant.ConvCheckLegacyCronSessionDedup,
+		constant.ConvCheckLegacyCronSessionSummary,
+		constant.ConvCheckLegacyCronSessionScore,
+		constant.ConvCheckLegacyMiddlewareAPIKey,
+		constant.ConvCheckLegacyMiddlewareJWT,
+	}
+	for _, legacyPath := range legacyPaths {
+		if path == legacyPath {
+			return true
+		}
+	}
+	return false
 }
 
 func hasRootContextArg(call *ast.CallExpr) bool {

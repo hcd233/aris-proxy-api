@@ -22,6 +22,7 @@ const (
 	RuleHandlerDomainDirect         = "architecture.handler_domain_direct"
 	RuleHandlerAppDirect            = "architecture.handler_app_direct"
 	RuleDTODependency               = "architecture.dto_dependency"
+	RuleDatabaseModelDependency     = "architecture.database_model_dependency"
 	RuleRootContext                 = "architecture.root_context"
 	RuleDBRootContext               = "architecture.db_root_context"
 	RulePassthrough                 = "architecture.passthrough"

@@ -260,72 +260,81 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 	now := time.Now()
 	retentionStart := now.Add(-constant.ShareExpiredRetention)
 	minCreatedAt := now.Add(-constant.ShareTTLNeverExpire - constant.ShareExpiredRetention).Unix()
-	scoreRange := &redis.ZRangeBy{
-		Max: constant.RedisZRangePositiveInfinity,
-		Min: strconv.FormatInt(minCreatedAt, constant.DecimalBase),
+	minScore := strconv.FormatInt(minCreatedAt, constant.DecimalBase)
+	zTotal, countErr := s.cache.ZCount(ctx, userSharesKey, minScore, constant.RedisZRangePositiveInfinity).Result()
+	if countErr != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrInternal, countErr, "failed to count user shares")
 	}
 
-	results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, scoreRange).Result()
-	if zErr != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrInternal, zErr, "failed to list user shares")
+	scanCount := pageSize
+	if scanCount < constant.ShareListScanChunkSize {
+		scanCount = constant.ShareListScanChunkSize
 	}
+	wanted := page * pageSize
+	validItems := make([]*dto.ShareItem, 0, wanted)
+	offset := int64(0)
+	fullyScanned := false
 
-	// 解析当前页 member 为 shareRecord
-	records := make([]shareRecord, 0, len(results))
-	for _, result := range results {
-		var record shareRecord
-		if unmarshalErr := sonic.Unmarshal([]byte(result), &record); unmarshalErr != nil {
-			continue
+	for len(validItems) < wanted && offset < zTotal {
+		results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, &redis.ZRangeBy{
+			Max:    constant.RedisZRangePositiveInfinity,
+			Min:    minScore,
+			Offset: offset,
+			Count:  int64(scanCount),
+		}).Result()
+		if zErr != nil {
+			return nil, nil, ierr.Wrap(ierr.ErrInternal, zErr, "failed to list user shares")
 		}
-		records = append(records, record)
-	}
-
-	// 批量查询当前页 share key 的存在性（Pipeline 消除 N+1）
-	pipe := s.cache.Pipeline()
-	existsCmds := make([]*redis.IntCmd, len(records))
-	for i, r := range records {
-		shareKey := fmt.Sprintf(constant.ShareKeyTemplate, r.ShareID)
-		existsCmds[i] = pipe.Exists(ctx, shareKey)
-	}
-
-	if _, pipeErr := pipe.Exec(ctx); pipeErr != nil && !errors.Is(pipeErr, redis.Nil) {
-		return nil, nil, ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
-	}
-
-	// 仅过滤"被手动删除但尚未 TTL 过期"的边界记录；远过期项按各记录 TTL + retention 窗口过滤。
-	items := make([]*dto.ShareItem, 0, len(records))
-	for i, r := range records {
-		createdAt := time.Unix(r.CreatedAt, 0)
-		ttl := time.Duration(r.TTL) * time.Second
-		if ttl <= 0 {
-			ttl = constant.ShareTTLDefault
+		if len(results) == 0 {
+			fullyScanned = true
+			break
 		}
-		expiresAt := createdAt.Add(ttl)
-		if expiresAt.Before(retentionStart) {
-			continue
-		}
-		if existsCmds[i].Val() == 0 && !expiresAt.Before(now) {
-			continue
+		offset += int64(len(results))
+		if offset >= zTotal || len(results) < scanCount {
+			fullyScanned = true
 		}
 
-		items = append(items, &dto.ShareItem{
-			ShareID:   r.ShareID,
-			SessionID: r.SessionID,
-			CreatedAt: createdAt,
-			ExpiresAt: expiresAt,
-		})
+		records := make([]shareRecord, 0, len(results))
+		for _, result := range results {
+			var record shareRecord
+			if unmarshalErr := sonic.Unmarshal([]byte(result), &record); unmarshalErr != nil {
+				continue
+			}
+			records = append(records, record)
+		}
+
+		pipe := s.cache.Pipeline()
+		existsCmds := make([]*redis.IntCmd, len(records))
+		for i, r := range records {
+			shareKey := fmt.Sprintf(constant.ShareKeyTemplate, r.ShareID)
+			existsCmds[i] = pipe.Exists(ctx, shareKey)
+		}
+		if _, pipeErr := pipe.Exec(ctx); pipeErr != nil && !errors.Is(pipeErr, redis.Nil) {
+			return nil, nil, ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
+		}
+
+		for i, r := range records {
+			item := shareRecordToItem(r, existsCmds[i].Val(), now, retentionStart)
+			if item == nil {
+				continue
+			}
+			validItems = append(validItems, item)
+		}
 	}
 
-	total := int64(len(items))
+	total := zTotal
+	if fullyScanned {
+		total = int64(len(validItems))
+	}
+
 	start := (page - 1) * pageSize
-	if start >= len(items) {
-		items = []*dto.ShareItem{}
-	} else {
+	items := []*dto.ShareItem{}
+	if start < len(validItems) {
 		end := start + pageSize
-		if end > len(items) {
-			end = len(items)
+		if end > len(validItems) {
+			end = len(validItems)
 		}
-		items = items[start:end]
+		items = validItems[start:end]
 	}
 
 	pageInfo := &model.PageInfo{
@@ -333,8 +342,28 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 		PageSize: pageSize,
 		Total:    total,
 	}
-
 	return items, pageInfo, nil
+}
+
+func shareRecordToItem(r shareRecord, exists int64, now, retentionStart time.Time) *dto.ShareItem {
+	createdAt := time.Unix(r.CreatedAt, 0)
+	ttl := time.Duration(r.TTL) * time.Second
+	if ttl <= 0 {
+		ttl = constant.ShareTTLDefault
+	}
+	expiresAt := createdAt.Add(ttl)
+	if expiresAt.Before(retentionStart) {
+		return nil
+	}
+	if exists == 0 && !expiresAt.Before(now) {
+		return nil
+	}
+	return &dto.ShareItem{
+		ShareID:   r.ShareID,
+		SessionID: r.SessionID,
+		CreatedAt: createdAt,
+		ExpiresAt: expiresAt,
+	}
 }
 
 func (s *shareCache) GetSessionShareID(ctx context.Context, sessionID uint) (string, error) {

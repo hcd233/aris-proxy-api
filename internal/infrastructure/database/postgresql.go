@@ -11,6 +11,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
 
@@ -42,6 +43,11 @@ func CloseDatabase(db *gorm.DB) error {
 //	return *gorm.DB
 //	author centonhuang
 //	update 2024-09-22 10:04:36
+func AutoMigrate(ctx context.Context) error {
+	db := InitDatabase().WithContext(ctx)
+	return db.AutoMigrate(model.Models...)
+}
+
 func InitDatabase() *gorm.DB {
 	var dialector gorm.Dialector
 	var dbHost, dbPort, dbName string
