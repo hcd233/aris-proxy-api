@@ -88,7 +88,7 @@ func normalizeArgumentsWithSchema(args string, schema *commonvo.JSONSchemaProper
 		return args
 	}
 
-	if schema != nil && schema.Properties != nil {
+	if schema != nil && schema.Properties != nil && *schema.Properties != nil {
 		requiredSet := lo.SliceToMap(schema.Required, func(r string) (string, bool) {
 			return r, true
 		})
@@ -97,7 +97,7 @@ func normalizeArgumentsWithSchema(args string, schema *commonvo.JSONSchemaProper
 			if requiredSet[key] {
 				continue
 			}
-			prop, hasProp := schema.Properties[key]
+			prop, hasProp := (*schema.Properties)[key]
 			if !hasProp || prop.Default == nil {
 				continue
 			}
