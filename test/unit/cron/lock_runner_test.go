@@ -28,11 +28,12 @@ func newRealLocker(t *testing.T) (lock.Locker, *miniredis.Miniredis) {
 }
 
 type mockLocker struct {
-	lockFunc   func(ctx context.Context, key, value string, expire time.Duration) (bool, error)
-	refreshOK  atomic.Bool
-	refreshErr atomic.Value
-	refreshCnt atomic.Int32
-	unlockCnt  atomic.Int32
+	lockFunc     func(ctx context.Context, key, value string, expire time.Duration) (bool, error)
+	refreshOK    bool
+	refreshErr   error
+	refreshCnt   atomic.Int32
+	refreshAtCnt chan struct{}
+	unlockCnt    atomic.Int32
 }
 
 func (m *mockLocker) Lock(ctx context.Context, key, value string, expire time.Duration) (bool, error) {
@@ -43,10 +44,16 @@ func (m *mockLocker) Lock(ctx context.Context, key, value string, expire time.Du
 }
 func (m *mockLocker) Refresh(ctx context.Context, key, value string, expire time.Duration) (bool, error) {
 	m.refreshCnt.Add(1)
-	if v := m.refreshErr.Load(); v != nil {
-		return false, v.(error)
+	if m.refreshAtCnt != nil {
+		select {
+		case m.refreshAtCnt <- struct{}{}:
+		default:
+		}
 	}
-	return m.refreshOK.Load(), nil
+	if m.refreshErr != nil {
+		return false, m.refreshErr
+	}
+	return m.refreshOK, nil
 }
 func (m *mockLocker) Unlock(ctx context.Context, key, value string) error {
 	m.unlockCnt.Add(1)
@@ -103,9 +110,11 @@ func TestRunWithLock_RefreshesLock(t *testing.T) {
 }
 
 func TestRunWithLock_RenewFailure_StopsRenewal_KeepsFnRunning(t *testing.T) {
-	m := &mockLocker{}
-	m.refreshOK.Store(false)
-	m.refreshErr.Store(errors.New("redis down"))
+	m := &mockLocker{
+		refreshOK:    false,
+		refreshErr:   errors.New("redis down"),
+		refreshAtCnt: make(chan struct{}, 16),
+	}
 	key := "test:renewfail"
 
 	fnReturned := make(chan struct{})
@@ -113,11 +122,13 @@ func TestRunWithLock_RenewFailure_StopsRenewal_KeepsFnRunning(t *testing.T) {
 		TTL:           200 * time.Millisecond,
 		RenewInterval: 30 * time.Millisecond,
 	}, func(ctx context.Context) {
-		// 等待至少 3 次续期尝试（约 90ms）
-		deadline := time.Now().Add(2 * time.Second)
-		for time.Now().Before(deadline) {
-			if m.refreshCnt.Load() >= 3 {
-				break
+		for i := 0; i < 3; i++ {
+			select {
+			case <-m.refreshAtCnt:
+			case <-time.After(2 * time.Second):
+				t.Errorf("refresh attempt %d not signaled within 2s", i+1)
+				close(fnReturned)
+				return
 			}
 		}
 		close(fnReturned)
@@ -138,8 +149,7 @@ func TestRunWithLock_RenewFailure_StopsRenewal_KeepsFnRunning(t *testing.T) {
 }
 
 func TestRunWithLock_LockLost_StopsRenewal_KeepsFnRunning(t *testing.T) {
-	m := &mockLocker{}
-	m.refreshOK.Store(false)
+	m := &mockLocker{refreshOK: false}
 	key := "test:locklost"
 
 	fnReturned := make(chan struct{})
@@ -158,8 +168,7 @@ func TestRunWithLock_LockLost_StopsRenewal_KeepsFnRunning(t *testing.T) {
 }
 
 func TestRunWithLock_DeferUnlockAlways(t *testing.T) {
-	m := &mockLocker{}
-	m.refreshOK.Store(true)
+	m := &mockLocker{refreshOK: true}
 	key := "test:unlock"
 
 	cron.RunWithLock(context.Background(), m, key, cron.LockOptions{
@@ -169,5 +178,42 @@ func TestRunWithLock_DeferUnlockAlways(t *testing.T) {
 
 	if got := m.unlockCnt.Load(); got != 1 {
 		t.Fatalf("expected 1 unlock after fn returns, got %d", got)
+	}
+}
+
+func TestRunWithLock_ContextCancelReleasesLock(t *testing.T) {
+	m := &mockLocker{refreshOK: true, refreshAtCnt: make(chan struct{}, 16)}
+	key := "test:cancel"
+
+	ctx, cancel := context.WithCancel(context.Background())
+	runReturned := make(chan struct{})
+
+	go func() {
+		defer close(runReturned)
+		cron.RunWithLock(ctx, m, key, cron.LockOptions{
+			TTL:           200 * time.Millisecond,
+			RenewInterval: 30 * time.Millisecond,
+		}, func(ctx context.Context) {
+			<-ctx.Done()
+		})
+	}()
+
+	// 等至少一次续期再取消，确保 renewLoop 已启动。
+	select {
+	case <-m.refreshAtCnt:
+	case <-time.After(1 * time.Second):
+		t.Fatal("expected at least one refresh before cancel")
+	}
+
+	cancel()
+
+	select {
+	case <-runReturned:
+	case <-time.After(1 * time.Second):
+		t.Fatal("RunWithLock should return after context cancel")
+	}
+
+	if got := m.unlockCnt.Load(); got != 1 {
+		t.Fatalf("expected exactly 1 unlock, got %d", got)
 	}
 }

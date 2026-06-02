@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	"context"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/api"
@@ -74,7 +76,7 @@ func InitInfrastructure() *Infrastructure {
 	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
 	poolManager := pool.InitPoolManager(db)
-	cron.InitCronJobs(db, poolManager, cache)
+	cron.InitCronJobs(context.Background(), db, poolManager, cache)
 	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
 }
 

@@ -4,6 +4,7 @@
 package cron
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -36,9 +37,9 @@ type Cron interface {
 type CronRegistryEntry struct {
 	Name              string
 	Enabled           func() bool
-	Factory           func(db *gorm.DB, poolManager *pool.PoolManager) Cron
+	Factory           func(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) Cron
 	LockTTL           time.Duration // 0 → constant.CronLockDefaultTTL
-	LockRenewInterval time.Duration // 0 → constant.CronLockDefaultRenewInterval
+	LockRenewInterval time.Duration // 0 → ttl / constant.CronLockDefaultRenewDivisor
 }
 
 var cronInstances []Cron
@@ -51,14 +52,17 @@ var DefaultCronRegistry []CronRegistryEntry
 
 // InitCronJobs 初始化定时任务（每个 cron 自带分布式锁）
 //
+// parentCtx 通常传入 bootstrap 阶段的 shutdown context；nil 时退化为 context.Background()。
+//
 //	@author centonhuang
 //	@update 2026-06-01 10:00:00
-func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) {
+func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) {
+	SetBootstrapContext(parentCtx)
 	var entries []CronRegistryEntry
 	if len(DefaultCronRegistry) > 0 {
 		entries = DefaultCronRegistry
 	} else {
-		entries = buildRegistryEntries(db, poolManager, cache)
+		entries = buildRegistryEntries()
 	}
 	for _, entry := range entries {
 		if !entry.Enabled() {
@@ -66,7 +70,7 @@ func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Clien
 			continue
 		}
 
-		c := entry.Factory(db, poolManager)
+		c := entry.Factory(db, poolManager, cache)
 		lo.Must0(c.Start())
 		cronInstances = append(cronInstances, c)
 		logger.Logger().Info("[Cron] Cron job started", zap.String("name", entry.Name))
@@ -75,27 +79,38 @@ func InitCronJobs(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Clien
 	logger.Logger().Info("[Cron] Init cron jobs", zap.Int("count", len(cronInstances)))
 }
 
-func buildRegistryEntries(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client) []CronRegistryEntry {
+func buildRegistryEntries() []CronRegistryEntry {
 	return []CronRegistryEntry{
 		{
 			Name:    constant.CronModuleSessionDeduplicate,
 			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionDeduplicateCron(db, cache) },
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client) Cron {
+				return NewSessionDeduplicateCron(db, cache)
+			},
 		},
 		{
 			Name:    constant.CronModuleSessionSummarize,
 			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionSummarizeCron(db, poolManager, cache) },
+			Factory: NewSessionSummarizeCron,
 		},
 		{
 			Name:    constant.CronModuleSessionScore,
 			Enabled: func() bool { return config.CronSessionScoreEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSessionScoreCron(db, poolManager, cache) },
+			Factory: NewSessionScoreCron,
 		},
 		{
 			Name:    constant.CronModuleSoftDeletePurge,
 			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager) Cron { return NewSoftDeletePurgeCron(db, cache) },
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client) Cron {
+				return NewSoftDeletePurgeCron(db, cache)
+			},
+		},
+		{
+			Name:    constant.CronModuleThinkExtract,
+			Enabled: func() bool { return config.CronThinkExtractEnabled },
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client) Cron {
+				return NewThinkExtractCron(db, cache)
+			},
 		},
 	}
 }
