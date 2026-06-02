@@ -58,4 +58,26 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Security:    []map[string][]string{{"jwtAuth": {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryTokenThroughput", enum.PermissionUser)},
 	}, auditHandler.HandleTokenThroughput)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryTokenRate",
+		Method:      http.MethodGet,
+		Path:        "/stats/token/rate",
+		Summary:     "QueryTokenRate",
+		Description: "Query output token rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Tags:        []string{"Audit"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryTokenRate", enum.PermissionUser)},
+	}, auditHandler.HandleTokenRate)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryTokenUsage",
+		Method:      http.MethodGet,
+		Path:        "/stats/token/usage",
+		Summary:     "QueryTokenUsage",
+		Description: "Query aggregated token usage per model. Admin sees all; user sees only their own keys.",
+		Tags:        []string{"Audit"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryTokenUsage", enum.PermissionUser)},
+	}, auditHandler.HandleTokenUsage)
 }

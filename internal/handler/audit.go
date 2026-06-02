@@ -19,6 +19,8 @@ type AuditHandler interface {
 	HandleModelTrend(ctx context.Context, req *dto.ModelTrendReq) (*dto.HTTPResponse[*dto.ModelTrendRsp], error)
 	HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error)
 	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
+	HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error)
+	HandleTokenUsage(ctx context.Context, req *dto.TokenUsageReq) (*dto.HTTPResponse[*dto.TokenUsageRsp], error)
 }
 
 type AuditDependencies struct {
@@ -122,5 +124,37 @@ func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.Token
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = auditquery.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *auditHandler) HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error) {
+	rsp := &dto.TokenRateRsp{}
+	items, err := h.svc.TokenRate(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] Token rate failed", zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	rsp.Data = items
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *auditHandler) HandleTokenUsage(ctx context.Context, req *dto.TokenUsageReq) (*dto.HTTPResponse[*dto.TokenUsageRsp], error) {
+	rsp := &dto.TokenUsageRsp{}
+	items, err := h.svc.TokenUsage(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] Token usage failed", zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	rsp.Data = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
