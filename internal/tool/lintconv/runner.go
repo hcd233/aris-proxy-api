@@ -22,6 +22,7 @@ func Run(args []string) Result {
 	c.checkArchitecture()
 	c.checkStyle()
 	c.checkMagicValues()
+	c.checkHardcodedValues()
 	return Result{Diagnostics: c.diagnostics}
 }
 

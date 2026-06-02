@@ -14,6 +14,7 @@ func (c *checker) checkArchitecture() {
 		c.checkArchitectureImports(file)
 		c.checkArchitectureCalls(file)
 		c.checkPassthroughWrappers(file)
+		c.checkDTODependency(file)
 	}
 }
 
@@ -37,6 +38,12 @@ func (c *checker) checkArchitectureImports(file SourceFile) {
 		}
 		if isUnder(file.Path, constant.ConvCheckPathApp) && isDeprecatedApplicationImport(path) {
 			c.report(file, imp, enum.SeverityError, constant.RuleDeprecatedApplicationImport, constant.ConvCheckMsgDeprecatedAppImport)
+		}
+		if isUnder(file.Path, constant.ConvCheckPathHandler) && strings.HasPrefix(path, constant.ConvCheckImportPathDomain) {
+			c.report(file, imp, enum.SeverityWarning, constant.RuleHandlerDomainDirect, constant.ConvCheckMsgHandlerDomainDirect)
+		}
+		if isUnder(file.Path, constant.ConvCheckPathHandler) && strings.HasPrefix(path, constant.ConvCheckImportPathApp) && !isHandlerAllowedAppImport(path) {
+			c.report(file, imp, enum.SeverityWarning, constant.RuleHandlerAppDirect, constant.ConvCheckMsgHandlerAppDirect)
 		}
 	}
 }
@@ -86,6 +93,31 @@ func (c *checker) checkPassthroughWrappers(file SourceFile) {
 			c.report(file, fn, enum.SeverityWarning, constant.RulePassthrough, constant.ConvCheckMsgPassthrough)
 		}
 	}
+}
+
+// checkDTODependency 校验 DTO 层不依赖 infrastructure / application / domain / handler。
+//
+// DTO 是传输层数据结构，应只依赖 stdlib + internal/common + 其他 DTO。
+func (c *checker) checkDTODependency(file SourceFile) {
+	if !isUnder(file.Path, constant.ConvCheckPathDTO) {
+		return
+	}
+	for _, imp := range file.File.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			continue
+		}
+		if strings.HasPrefix(path, constant.ConvCheckImportInfra) ||
+			strings.HasPrefix(path, constant.ConvCheckImportPathApp) ||
+			strings.HasPrefix(path, constant.ConvCheckImportPathDomain) ||
+			strings.HasPrefix(path, constant.ConvCheckImportHandler) {
+			c.report(file, imp, enum.SeverityWarning, constant.RuleDTODependency, constant.ConvCheckMsgDTODependency)
+		}
+	}
+}
+
+func isHandlerAllowedAppImport(path string) bool {
+	return strings.Contains(path, constant.ConvCheckImportPathPort)
 }
 
 func hasRootContextArg(call *ast.CallExpr) bool {

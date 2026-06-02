@@ -528,5 +528,77 @@
     "want": [
       {"rule": "architecture.application_dependency", "severity": "error"}
     ]
+  },
+  {
+    "name": "dto importing domain is rejected",
+    "files": [
+      {
+        "path": "internal/dto/demo.go",
+        "content": "package dto\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/domain/foo\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.dto_dependency", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "handler importing application command is rejected",
+    "files": [
+      {
+        "path": "internal/handler/demo.go",
+        "content": "package handler\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/application/foo/command\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.handler_app_direct", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "handler importing domain is rejected",
+    "files": [
+      {
+        "path": "internal/handler/demo.go",
+        "content": "package handler\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/domain/foo\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "architecture.handler_domain_direct", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "hardcoded url in business code is rejected",
+    "files": [
+      {
+        "path": "internal/handler/demo/demo.go",
+        "content": "package demo\n\nfunc Endpoint() string {\n\treturn \"https://api.example.com/v1/chat\"\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "hardcoded.url", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "hardcoded url in test file is allowed",
+    "files": [
+      {
+        "path": "internal/handler/demo/demo_test.go",
+        "content": "package demo\n\nfunc TestEndpoint(t *testing.T) {\n\tt.Log(\"https://api.example.com/v1/chat\")\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "hardcoded.url", "severity": "warning"}
+    ]
+  },
+  {
+    "name": "hardcoded error code outside ierr is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/demo.go",
+        "content": "package demo\n\nimport \"github.com/hcd233/aris-proxy-api/internal/common/model\"\n\nfunc New() *model.Error {\n\treturn model.NewError(10001, \"Unauthorized\")\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "hardcoded.error_code", "severity": "error"}
+    ]
   }
 ]

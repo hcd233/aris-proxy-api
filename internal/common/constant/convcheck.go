@@ -38,6 +38,7 @@ const (
 	ConvCheckRecvReflect = "reflect"
 	ConvCheckRecvHTTP    = "http"
 	ConvCheckRecvLog     = "log"
+	ConvCheckRecvModel   = "model"
 )
 
 // logger 方法名
@@ -64,6 +65,7 @@ const (
 	ConvCheckMethodTODO          = "TODO"
 	ConvCheckMethodSleep         = "Sleep"
 	ConvCheckMethodGetDBInstance = "GetDBInstance"
+	ConvCheckMethodNewError      = "NewError"
 )
 
 // ierr 构造方法名
@@ -190,6 +192,13 @@ const (
 	ConvCheckImportUtil       = "github.com/hcd233/aris-proxy-api/internal/util"
 	ConvCheckImportZap        = "go.uber.org/zap"
 
+	ConvCheckImportPathDomain = "github.com/hcd233/aris-proxy-api/internal/domain/"
+	ConvCheckImportPathApp    = "github.com/hcd233/aris-proxy-api/internal/application/"
+	ConvCheckImportPathPort   = "/port"
+	ConvCheckImportHandler    = "github.com/hcd233/aris-proxy-api/internal/handler/"
+
+	ConvCheckPathLintconv = "internal/tool/lintconv"
+
 	ConvCheckDeprecatedImportService   = "github.com/hcd233/aris-proxy-api/internal/service"
 	ConvCheckDeprecatedImportConverter = "github.com/hcd233/aris-proxy-api/internal/converter"
 	ConvCheckDeprecatedImportProxy     = "github.com/hcd233/aris-proxy-api/internal/proxy"
@@ -203,6 +212,9 @@ const (
 	ConvCheckMsgAppInfraCache       = "Application layer must not depend on infrastructure/cache; define a port in application layer instead"
 	ConvCheckMsgDeprecatedAppImport = "Application layer must not import deprecated internal/service/converter/proxy/agent/jwt/oauth2 packages"
 	ConvCheckMsgHandlerDB           = "Handler layer must not operate DAO/DB directly; business logic should be in Service layer"
+	ConvCheckMsgHandlerDomainDirect = "Handler layer must not import internal/domain directly; depend on application-layer services"
+	ConvCheckMsgHandlerAppDirect    = "Handler layer must import only application/*/port packages from internal/application, not internal implementation packages"
+	ConvCheckMsgDTODependency       = "DTO layer must not import infrastructure/application/domain/handler; DTO is a transport-layer concern"
 	ConvCheckMsgRootContext         = "context.Background()/context.TODO() is prohibited in interface layer, pass context from the caller"
 	ConvCheckMsgDBRootContext       = "binding root context to DB is prohibited, use the injected base DB and bind request context at operation time"
 	ConvCheckMsgPassthrough         = "passthrough wrapper detected, inline the logic or merge the method"
@@ -216,6 +228,12 @@ const (
 	ConvCheckMsgMagicString     = "magic string literal, should be extracted as a named constant"
 	ConvCheckMsgMagicDuration   = "magic duration multiplier, should be extracted as a named constant"
 	ConvCheckMsgAnonymousStruct = "anonymous struct is prohibited, extract as a named type in the package"
+
+	ConvCheckMsgHardcodedURL       = "hardcoded URL literal, move to internal/config and read from environment"
+	ConvCheckMsgHardcodedErrorCode = "hardcoded business error code, add a sentinel in internal/common/ierr and use ierr.ErrXxx.BizError()"
+
+	ConvCheckURLPrefixHTTPS = "https://"
+	ConvCheckURLPrefixHTTP  = "http://"
 
 	ConvCheckBacktickPrefix = "`"
 	ConvCheckEmptyString    = ""

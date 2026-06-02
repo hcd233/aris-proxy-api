@@ -19,9 +19,15 @@ const (
 	RuleApplicationDependency       = "architecture.application_dependency"
 	RuleDeprecatedApplicationImport = "architecture.deprecated_application_import"
 	RuleHandlerDB                   = "architecture.handler_db"
+	RuleHandlerDomainDirect         = "architecture.handler_domain_direct"
+	RuleHandlerAppDirect            = "architecture.handler_app_direct"
+	RuleDTODependency               = "architecture.dto_dependency"
 	RuleRootContext                 = "architecture.root_context"
 	RuleDBRootContext               = "architecture.db_root_context"
 	RulePassthrough                 = "architecture.passthrough"
+
+	RuleHardcodedURL       = "hardcoded.url"
+	RuleHardcodedErrorCode = "hardcoded.error_code"
 
 	RuleLoggingPrefix         = "logging.prefix"
 	RuleLoggingFormat         = "logging.format"
