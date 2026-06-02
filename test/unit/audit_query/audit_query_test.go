@@ -257,6 +257,28 @@ func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
 	}
 }
 
+func TestFillRateSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
+	start := time.Date(2026, 6, 1, 9, 4, 59, 0, time.UTC)
+	end := time.Date(2026, 6, 1, 9, 59, 59, 0, time.UTC)
+	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
+	points := []*modelcall.RequestRatePoint{
+		{Model: "gpt-4", Time: time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai), Total: 10, Success: 8},
+	}
+
+	items := auditquery.FillRateSeries(points, start, end, enum.GranularityHour)
+
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	if len(items[0].Points) != 1 {
+		t.Fatalf("points len = %d, want 1", len(items[0].Points))
+	}
+	pt := items[0].Points[0]
+	if pt.Total != 10 || pt.Success != 8 || pt.Failed != 2 || pt.SuccessRate != 0.8 {
+		t.Fatalf("timezone-equivalent bucket lost aggregate data: %+v", pt)
+	}
+}
+
 func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
@@ -274,6 +296,36 @@ func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 	}
 	if !pts[1].Time.Equal(t2) || pts[1].OutputTokens != 0 || pts[1].OutputTokensPerSecond != 0 {
 		t.Errorf("missing token bucket mismatch: %+v", pts[1])
+	}
+}
+
+func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
+	start := time.Date(2026, 6, 1, 9, 4, 59, 0, time.UTC)
+	end := time.Date(2026, 6, 1, 9, 59, 59, 0, time.UTC)
+	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
+	points := []*modelcall.TokenThroughputPoint{
+		{
+			Model:                 "gpt-4",
+			Time:                  time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai),
+			InputTokens:           11,
+			OutputTokens:          22,
+			CacheCreationTokens:   33,
+			CacheReadTokens:       44,
+			OutputTokensPerSecond: 5.5,
+		},
+	}
+
+	items := auditquery.FillTokenThroughputSeries(points, start, end, enum.GranularityHour)
+
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	if len(items[0].Points) != 1 {
+		t.Fatalf("points len = %d, want 1", len(items[0].Points))
+	}
+	pt := items[0].Points[0]
+	if pt.InputTokens != 11 || pt.OutputTokens != 22 || pt.CacheCreationTokens != 33 || pt.CacheReadTokens != 44 || pt.OutputTokensPerSecond != 5.5 {
+		t.Fatalf("timezone-equivalent bucket lost token aggregate data: %+v", pt)
 	}
 }
 

@@ -110,10 +110,10 @@ var (
 
 	SessionSummarySelect = "id, created_at, updated_at, summary, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
 
-	DateTruncMinute = "date_trunc('minute', created_at)"
-	DateTruncHour   = "date_trunc('hour', created_at)"
-	DateTruncDay    = "date_trunc('day', created_at)"
-	DateTruncWeek   = "date_trunc('week', created_at)"
+	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
+	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
+	DateTruncDay    = "date_trunc('day', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
+	DateTruncWeek   = "date_trunc('week', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 
 	SQLConditionUpstreamSuccess = "upstream_status_code = 200"
 )

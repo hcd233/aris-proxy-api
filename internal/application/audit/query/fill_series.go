@@ -17,10 +17,10 @@ import (
 func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, granularity enum.Granularity) []*dto.ModelTrendItem {
 	modelOrder, byModel, timeSet := indexSeries(points,
 		func(p *modelcall.ModelTrendPoint) string { return p.Model },
-		func(p *modelcall.ModelTrendPoint) time.Time { return p.Time },
+		func(p *modelcall.ModelTrendPoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.ModelTrendPoint) int { return p.Count },
 	)
-	buckets := buildBuckets(start, end, granularity, timeSet)
+	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	items := make([]*dto.ModelTrendItem, 0, len(modelOrder))
 	for _, m := range modelOrder {
 		pts := make([]*dto.TrendPoint, 0, len(buckets))
@@ -37,10 +37,10 @@ func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, 
 	type slot struct{ total, success int }
 	modelOrder, byModel, timeSet := indexSeries(points,
 		func(p *modelcall.RequestRatePoint) string { return p.Model },
-		func(p *modelcall.RequestRatePoint) time.Time { return p.Time },
+		func(p *modelcall.RequestRatePoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.RequestRatePoint) slot { return slot{total: p.Total, success: p.Success} },
 	)
-	buckets := buildBuckets(start, end, granularity, timeSet)
+	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	items := make([]*dto.RequestRateItem, 0, len(modelOrder))
 	for _, m := range modelOrder {
 		pts := make([]*dto.RatePoint, 0, len(buckets))
@@ -146,7 +146,7 @@ type throughputSlot struct {
 func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, end time.Time, granularity enum.Granularity) []*dto.TokenThroughputItem {
 	modelOrder, byModel, timeSet := indexSeries(points,
 		func(p *modelcall.TokenThroughputPoint) string { return p.Model },
-		func(p *modelcall.TokenThroughputPoint) time.Time { return p.Time },
+		func(p *modelcall.TokenThroughputPoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.TokenThroughputPoint) throughputSlot {
 			return throughputSlot{
 				inputTokens:         p.InputTokens,
@@ -157,7 +157,7 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 			}
 		},
 	)
-	buckets := buildBuckets(start, end, granularity, timeSet)
+	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	items := make([]*dto.TokenThroughputItem, 0, len(modelOrder))
 	for _, m := range modelOrder {
 		pts := make([]*dto.TokenThroughputPoint, 0, len(buckets))
