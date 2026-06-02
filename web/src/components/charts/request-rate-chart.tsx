@@ -19,8 +19,6 @@ import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
-const MIN_TOTAL_FOR_RATE = 5;
-
 export function RequestRateChart() {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
   const [customStart, setCustomStart] = useState("");
@@ -69,7 +67,7 @@ export function RequestRateChart() {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.total >= MIN_TOTAL_FOR_RATE ? p.successRate * 100 : null;
+      pointMap.get(p.time)![item.model] = p.successRate * 100;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({

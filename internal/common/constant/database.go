@@ -19,7 +19,7 @@ const (
 	DBOrderByID                 = "id"
 
 	DBJSONConditionAssistantRole  = "message->>'role' = 'assistant'"
-	DBJSONConditionHasThinkTag    = "CAST(message AS TEXT) LIKE '%<think>%'"
+	DBJSONConditionHasThinkTag    = "CAST(message AS TEXT) LIKE '%" + ThinkTagOpen + "%'"
 	DBJSONConditionReasoningEmpty = "(message->>'reasoning_content' IS NULL OR message->>'reasoning_content' = '')"
 
 	DBQueryCountActiveSessions   = "SELECT COUNT(*) FROM sessions WHERE deleted_at = 0"

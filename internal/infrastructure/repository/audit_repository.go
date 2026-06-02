@@ -181,6 +181,9 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 	}
 
 	if param.Sort != "" && param.SortField != "" {
+		param.SortField = safeSortField(param.SortField)
+	}
+	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 
