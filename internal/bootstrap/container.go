@@ -552,8 +552,12 @@ func newAuditService(
 	requestRateByUser auditquery.RequestRateByUserHandler,
 	tokenThroughput auditquery.TokenThroughputHandler,
 	tokenThroughputByUser auditquery.TokenThroughputByUserHandler,
+	tokenRate auditquery.TokenRateHandler,
+	tokenRateByUser auditquery.TokenRateByUserHandler,
+	tokenUsage auditquery.TokenUsageHandler,
+	tokenUsageByUser auditquery.TokenUsageByUserHandler,
 ) auditquery.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser)
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, tokenUsage, tokenUsageByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
