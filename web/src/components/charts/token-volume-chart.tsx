@@ -20,10 +20,10 @@ import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
 const TOKEN_LAYERS = [
-  { key: "inputTokens", label: "Input", color: "#D97757" },
-  { key: "outputTokens", label: "Output", color: "#5B8DB8" },
-  { key: "cacheReadTokens", label: "Cache Read", color: "#7C6BA5" },
-  { key: "cacheCreationTokens", label: "Cache Creation", color: "#4A9E7D" },
+  { key: "cacheReadTokens", label: "Cache Read", color: "#F2D0B8" },
+  { key: "inputTokens", label: "Input", color: "#E6733F" },
+  { key: "cacheCreationTokens", label: "Cache Write", color: "#F2D5BE" },
+  { key: "outputTokens", label: "Output", color: "#D46A3E" },
 ] as const;
 
 function formatTokenCount(v: number): string {
@@ -72,8 +72,10 @@ export function TokenVolumeChart() {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
       const entry = pointMap.get(p.time)!;
-      entry.inputTokens = (entry.inputTokens ?? 0) + p.inputTokens;
-      entry.outputTokens = (entry.outputTokens ?? 0) + p.outputTokens;
+      const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
+      const freshOutput = Math.max(p.outputTokens - p.cacheCreationTokens, 0);
+      entry.inputTokens = (entry.inputTokens ?? 0) + freshInput;
+      entry.outputTokens = (entry.outputTokens ?? 0) + freshOutput;
       entry.cacheReadTokens = (entry.cacheReadTokens ?? 0) + p.cacheReadTokens;
       entry.cacheCreationTokens = (entry.cacheCreationTokens ?? 0) + p.cacheCreationTokens;
     }
