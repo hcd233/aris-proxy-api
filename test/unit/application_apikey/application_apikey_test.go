@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
+	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -127,7 +128,7 @@ func TestIssueAPIKeyHandler_HappyPath(t *testing.T) {
 
 	handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-	result, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	result, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 1,
 		Name:   "my-key",
 	})
@@ -161,7 +162,7 @@ func TestIssueAPIKeyHandler_QuotaExceeded(t *testing.T) {
 
 	handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-	_, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	_, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 1,
 		Name:   "my-key",
 	})
@@ -186,7 +187,7 @@ func TestIssueAPIKeyHandler_UserNotFound(t *testing.T) {
 
 	handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-	_, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	_, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 999,
 		Name:   "my-key",
 	})
@@ -227,7 +228,7 @@ func TestIssueAPIKeyHandler_Validation(t *testing.T) {
 
 			handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-			_, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+			_, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 				UserID: 1,
 				Name:   tc.nameInput,
 			})
@@ -254,7 +255,7 @@ func TestIssueAPIKeyHandler_EmptySecretFromGenerator(t *testing.T) {
 
 	handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-	_, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	_, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 1,
 		Name:   "my-key",
 	})
@@ -283,7 +284,7 @@ func TestIssueAPIKeyHandler_NilUserChecker(t *testing.T) {
 	// userExistsCh 为 nil，跳过用户存在性校验
 	handler := command.NewIssueAPIKeyHandler(repo, generator, nil)
 
-	result, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	result, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 999, // 不存在的用户 ID，但会被跳过
 		Name:   "my-key",
 	})
@@ -312,7 +313,7 @@ func TestIssueAPIKeyHandler_RepoError(t *testing.T) {
 
 	handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-	_, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	_, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 1,
 		Name:   "my-key",
 	})
@@ -342,7 +343,7 @@ func TestIssueAPIKeyHandler_GeneratorError(t *testing.T) {
 
 	handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-	_, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	_, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 1,
 		Name:   "my-key",
 	})
@@ -376,7 +377,7 @@ func TestIssueAPIKeyHandler_SaveSetsID(t *testing.T) {
 
 	handler := command.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
 
-	result, err := handler.Handle(context.Background(), command.IssueAPIKeyCommand{
+	result, err := handler.Handle(context.Background(), port.IssueAPIKeyCommand{
 		UserID: 1,
 		Name:   "my-key",
 	})
@@ -458,7 +459,7 @@ func TestRevokeAPIKeyHandler_OwnerSuccess(t *testing.T) {
 
 	handler := command.NewRevokeAPIKeyHandler(repo)
 
-	err := handler.Handle(context.Background(), command.RevokeAPIKeyCommand{
+	err := handler.Handle(context.Background(), port.RevokeAPIKeyCommand{
 		KeyID:               1,
 		RequesterID:         101,
 		RequesterPermission: enum.PermissionUser,
@@ -482,7 +483,7 @@ func TestRevokeAPIKeyHandler_AdminSuccess(t *testing.T) {
 
 	handler := command.NewRevokeAPIKeyHandler(repo)
 
-	err := handler.Handle(context.Background(), command.RevokeAPIKeyCommand{
+	err := handler.Handle(context.Background(), port.RevokeAPIKeyCommand{
 		KeyID:               1,
 		RequesterID:         1, // admin
 		RequesterPermission: enum.PermissionAdmin,
@@ -503,7 +504,7 @@ func TestRevokeAPIKeyHandler_NotFound(t *testing.T) {
 
 	handler := command.NewRevokeAPIKeyHandler(repo)
 
-	err := handler.Handle(context.Background(), command.RevokeAPIKeyCommand{
+	err := handler.Handle(context.Background(), port.RevokeAPIKeyCommand{
 		KeyID:               999,
 		RequesterID:         101,
 		RequesterPermission: enum.PermissionUser,
@@ -527,7 +528,7 @@ func TestRevokeAPIKeyHandler_NoPermission(t *testing.T) {
 
 	handler := command.NewRevokeAPIKeyHandler(repo)
 
-	err := handler.Handle(context.Background(), command.RevokeAPIKeyCommand{
+	err := handler.Handle(context.Background(), port.RevokeAPIKeyCommand{
 		KeyID:               1,
 		RequesterID:         101, // 不是所有者
 		RequesterPermission: enum.PermissionUser,
@@ -551,7 +552,7 @@ func TestRevokeAPIKeyHandler_LegacyKeyNoPermission(t *testing.T) {
 
 	handler := command.NewRevokeAPIKeyHandler(repo)
 
-	err := handler.Handle(context.Background(), command.RevokeAPIKeyCommand{
+	err := handler.Handle(context.Background(), port.RevokeAPIKeyCommand{
 		KeyID:               1,
 		RequesterID:         101,
 		RequesterPermission: enum.PermissionUser,
@@ -576,7 +577,7 @@ func TestRevokeAPIKeyHandler_RepoError(t *testing.T) {
 
 	handler := command.NewRevokeAPIKeyHandler(repo)
 
-	err := handler.Handle(context.Background(), command.RevokeAPIKeyCommand{
+	err := handler.Handle(context.Background(), port.RevokeAPIKeyCommand{
 		KeyID:               1,
 		RequesterID:         101,
 		RequesterPermission: enum.PermissionUser,
@@ -604,7 +605,7 @@ func TestRevokeAPIKeyHandler_DeleteError(t *testing.T) {
 
 	handler := command.NewRevokeAPIKeyHandler(repo)
 
-	err := handler.Handle(context.Background(), command.RevokeAPIKeyCommand{
+	err := handler.Handle(context.Background(), port.RevokeAPIKeyCommand{
 		KeyID:               1,
 		RequesterID:         101,
 		RequesterPermission: enum.PermissionUser,

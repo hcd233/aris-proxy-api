@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -27,13 +27,13 @@ type Oauth2Handler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type Oauth2Dependencies struct {
-	Initiate command.InitiateLoginHandler
-	Callback command.HandleCallbackHandler
+	Initiate port.InitiateLoginHandler
+	Callback port.HandleCallbackHandler
 }
 
 type oauth2Handler struct {
-	initiate command.InitiateLoginHandler
-	callback command.HandleCallbackHandler
+	initiate port.InitiateLoginHandler
+	callback port.HandleCallbackHandler
 }
 
 // NewOauth2Handler 创建OAuth2处理器
@@ -60,7 +60,7 @@ func NewOauth2Handler(deps Oauth2Dependencies) Oauth2Handler {
 //	@update 2026-04-22 20:30:00
 func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dto.HTTPResponse[*dto.LoginResp], error) {
 	rsp := &dto.LoginResp{}
-	result, err := h.initiate.Handle(ctx, command.InitiateLoginCommand{Platform: req.Platform})
+	result, err := h.initiate.Handle(ctx, port.InitiateLoginCommand{Platform: req.Platform})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[OAuth2Handler] Initiate login failed",
 			zap.String("platform", req.Platform), zap.Error(err))
@@ -82,7 +82,7 @@ func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dt
 //	@update 2026-04-22 20:30:00
 func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq) (*dto.HTTPResponse[*dto.CallbackRsp], error) {
 	rsp := &dto.CallbackRsp{}
-	result, err := h.callback.Handle(ctx, command.HandleCallbackCommand{
+	result, err := h.callback.Handle(ctx, port.HandleCallbackCommand{
 		Platform: req.Body.Platform,
 		Code:     req.Body.Code,
 		State:    req.Body.State,

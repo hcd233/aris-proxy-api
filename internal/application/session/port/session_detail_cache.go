@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 )
 
 // SessionMetaCacheRecord is the cache payload for session metadata.

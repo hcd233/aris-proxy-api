@@ -2,18 +2,18 @@ package query
 
 import (
 	"context"
-	"time"
 	"unicode/utf8"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -25,30 +25,12 @@ var validSessionSortFields = map[string]bool{
 	constant.FieldToolCount:    true,
 }
 
-type ListSessionsByUserQuery struct {
-	UserID    uint
-	IsAdmin   bool
-	Page      int
-	PageSize  int
-	Sort      enum.Sort
-	SortField string
-	StartTime time.Time
-	EndTime   time.Time
-}
-
 type ListSessionsByUserHandler interface {
-	Handle(ctx context.Context, q ListSessionsByUserQuery) ([]*SessionSummaryView, *model.PageInfo, error)
-}
-
-type GetSessionByUserQuery struct {
-	UserID             uint
-	IsAdmin            bool
-	SkipOwnershipCheck bool
-	SessionID          uint
+	Handle(ctx context.Context, q sessionport.ListSessionsByUserQuery) ([]*sessionport.SessionSummaryView, *model.PageInfo, error)
 }
 
 type GetSessionByUserHandler interface {
-	Handle(ctx context.Context, q GetSessionByUserQuery) (*SessionDetailView, error)
+	Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error)
 }
 
 type ownerNameLookup interface {
@@ -64,7 +46,7 @@ func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKey
 	return &listSessionsByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
 }
 
-func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsByUserQuery) ([]*SessionSummaryView, *model.PageInfo, error) {
+func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.ListSessionsByUserQuery) ([]*sessionport.SessionSummaryView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
 	param, err := sanitizeSessionListParam(ctx, q)
@@ -84,7 +66,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 			return nil, nil, lookupErr
 		}
 		if len(ownerNames) == 0 {
-			return []*SessionSummaryView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize, Total: 0}, nil
+			return []*sessionport.SessionSummaryView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize, Total: 0}, nil
 		}
 		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, param, q.StartTime, q.EndTime)
 	}
@@ -94,7 +76,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 		return nil, nil, err
 	}
 
-	views := make([]*SessionSummaryView, 0, len(projections))
+	views := make([]*sessionport.SessionSummaryView, 0, len(projections))
 
 	var emptySummaryIDs []uint
 	for _, p := range projections {
@@ -134,7 +116,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 			summary = firstUserMessageContent(sessionMsgIDs[p.ID], msgByID)
 		}
 
-		views = append(views, &SessionSummaryView{
+		views = append(views, &sessionport.SessionSummaryView{
 			ID:           p.ID,
 			CreatedAt:    p.CreatedAt,
 			UpdatedAt:    p.UpdatedAt,
@@ -146,7 +128,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q ListSessionsBy
 	return views, pageInfo, nil
 }
 
-func sanitizeSessionListParam(ctx context.Context, q ListSessionsByUserQuery) (model.CommonParam, error) {
+func sanitizeSessionListParam(ctx context.Context, q sessionport.ListSessionsByUserQuery) (model.CommonParam, error) {
 	page := q.Page
 	pageSize := q.PageSize
 	if pageSize < 1 {
@@ -221,7 +203,7 @@ func truncateSummary(s string) string {
 	return string([]rune(s)[:constant.MaxSummaryRunes])
 }
 
-func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUserQuery) (*SessionDetailView, error) {
+func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error) {
 	log := logger.WithCtx(ctx)
 
 	detail, err := h.readRepo.GetSessionDetail(ctx, q.SessionID)
@@ -256,9 +238,9 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUser
 		}
 	}
 
-	messages := make([]*MessageView, 0, len(detail.Messages))
+	messages := make([]*sessionport.MessageView, 0, len(detail.Messages))
 	for _, m := range detail.Messages {
-		messages = append(messages, &MessageView{
+		messages = append(messages, &sessionport.MessageView{
 			ID:        m.ID,
 			Model:     m.Model,
 			Message:   m.Message,
@@ -266,16 +248,16 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q GetSessionByUser
 		})
 	}
 
-	tools := make([]*ToolView, 0, len(detail.Tools))
+	tools := make([]*sessionport.ToolView, 0, len(detail.Tools))
 	for _, t := range detail.Tools {
-		tools = append(tools, &ToolView{
+		tools = append(tools, &sessionport.ToolView{
 			ID:        t.ID,
 			Tool:      t.Tool,
 			CreatedAt: t.CreatedAt,
 		})
 	}
 
-	return &SessionDetailView{
+	return &sessionport.SessionDetailView{
 		ID:         detail.ID,
 		APIKeyName: detail.APIKeyName,
 		CreatedAt:  detail.CreatedAt,
