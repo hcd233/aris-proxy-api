@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { TokenThroughputPoint } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,9 +34,9 @@ function formatTokenCount(v: number): string {
 }
 
 export function TokenVolumeChart() {
-  const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
+  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");
+  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.tokenVolume.customEnd", "");
   const [data, setData] = useState<TokenThroughputPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

@@ -8,15 +8,13 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/encoder"
 	"github.com/samber/lo"
-
-	commonvo "github.com/hcd233/aris-proxy-api/internal/domain/common/vo"
 )
 
 // ToolSchemaMap 工具名 → 参数 Schema 的映射表，用于 schema-aware checksum 计算
 //
 //	@author centonhuang
 //	@update 2026-04-22 14:15:00
-type ToolSchemaMap map[string]*commonvo.JSONSchemaProperty
+type ToolSchemaMap map[string]*JSONSchemaProperty
 
 // ComputeMessageChecksum 计算统一消息校验和
 //
@@ -42,7 +40,7 @@ func ComputeMessageChecksum(msg *UnifiedMessage, toolSchemas ToolSchemaMap) stri
 	if len(normalized.ToolCalls) > 0 {
 		cleanedCalls := make([]*UnifiedToolCall, len(normalized.ToolCalls))
 		for i, tc := range normalized.ToolCalls {
-			var schema *commonvo.JSONSchemaProperty
+			var schema *JSONSchemaProperty
 			if toolSchemas != nil {
 				schema = toolSchemas[tc.Name]
 			}
@@ -76,11 +74,11 @@ func ComputeMessageChecksum(msg *UnifiedMessage, toolSchemas ToolSchemaMap) stri
 //   - 最终 encode 失败 → 回退原始字符串
 //
 //     @param args string arguments JSON 字符串
-//     @param schema *commonvo.JSONSchemaProperty 工具参数 schema（可为 nil）
+//     @param schema *JSONSchemaProperty 工具参数 schema（可为 nil）
 //     @return string 规范化后的 JSON 字符串
 //     @author centonhuang
 //     @update 2026-04-23 11:00:00
-func normalizeArgumentsWithSchema(args string, schema *commonvo.JSONSchemaProperty) string {
+func normalizeArgumentsWithSchema(args string, schema *JSONSchemaProperty) string {
 	// 此处使用 map[string]any 是故意的：JSON 反序列化到未知结构的参数
 	// 没有静态类型可表达，属于 JSON Schema 表示的必要豁免。
 	var obj map[string]any
@@ -133,8 +131,8 @@ func jsonEqual(a, b any) bool {
 
 // toolChecksumWire is the JSON-shaped payload for stable tool checksum hashing.
 type toolChecksumWire struct {
-	Name       string                       `json:"name"`
-	Parameters *commonvo.JSONSchemaProperty `json:"parameters"`
+	Name       string              `json:"name"`
+	Parameters *JSONSchemaProperty `json:"parameters"`
 }
 
 // ComputeToolChecksum 计算工具校验和，基于工具名和完整参数 Schema

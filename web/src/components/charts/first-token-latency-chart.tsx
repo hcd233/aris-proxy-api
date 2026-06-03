@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { FirstTokenLatencyItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,9 +23,9 @@ import { computeRange, formatChartTime } from "@/lib/time-range";
 const CHART_COLORS = ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355", "#6B8BA4", "#A0522D"];
 
 export function FirstTokenLatencyChart() {
-  const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.firstTokenLatency.timeRange", "7d");
+  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.firstTokenLatency.customStart", "");
+  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.firstTokenLatency.customEnd", "");
   const [data, setData] = useState<FirstTokenLatencyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

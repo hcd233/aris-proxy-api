@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { APIKeyItem, APIKeyDetail, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export default function APIKeysPage() {
   const isMobile = useIsMobile();
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 1, total: 0 });
+  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.apikeys.page", 1);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.apikeys.pageSize", 20);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -59,19 +62,23 @@ export default function APIKeysPage() {
     try {
       const rsp = await api.listAPIKeys(page, pageSize, query);
       setKeys(rsp.keys ?? []);
-      if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
+      if (rsp.pageInfo) {
+        setPageInfo(rsp.pageInfo);
+        setPersistedPage(rsp.pageInfo.page);
+        setPersistedPageSize(rsp.pageInfo.pageSize);
+      }
     } catch {
       toast.error("Failed to load API keys");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setPersistedPage, setPersistedPageSize]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchKeys(1, 20);
+    fetchKeys(persistedPage, persistedPageSize);
   }, [fetchKeys]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleCreate = async () => {
     if (!newKeyName.trim()) return;

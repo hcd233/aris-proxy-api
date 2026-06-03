@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { AuditLogItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -70,13 +71,15 @@ function formatCache(creation: number, read: number): string {
 export default function AuditPage() {
   const isMobile = useIsMobile();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
+  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.audit.page", 1);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.audit.pageSize", 20);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
-  const [pageInputValue, setPageInputValue] = useState("1");
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.audit.timeRange", "24h");
+  const [customStart, setCustomStart] = usePersistentState("dashboard.audit.customStart", "");
+  const [customEnd, setCustomEnd] = usePersistentState("dashboard.audit.customEnd", "");
+  const [pageInputValue, setPageInputValue] = useState(String(persistedPage));
   const [sort, setSort] = useState<SortState>({ field: "created_at", dir: "desc" });
 
   const fetchLogs = useCallback(
@@ -109,6 +112,8 @@ export default function AuditPage() {
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
           setPageInputValue(String(rsp.pageInfo.page));
+          setPersistedPage(rsp.pageInfo.page);
+          setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to load audit logs");
@@ -116,14 +121,14 @@ export default function AuditPage() {
         setLoading(false);
       }
     },
-    [],
+    [setPersistedPage, setPersistedPageSize],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
   useEffect(() => {
-    fetchLogs(1, 20, "", "24h", "", "", { field: "created_at", dir: "desc" });
+    fetchLogs(persistedPage, persistedPageSize, "", "24h", "", "", { field: "created_at", dir: "desc" });
   }, [fetchLogs]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),

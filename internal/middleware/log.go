@@ -9,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
@@ -132,7 +131,6 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 			request := make(map[string]any)
 			if reqBody := c.Body(); reqBody != nil {
 				if len(reqBody) > 0 {
-					fields = append(fields, zap.String("requestBodyHashWithoutModel", util.HashJSONBodyExcludingTopLevelModel(reqBody)))
 				}
 				if jsonErr := sonic.Unmarshal(reqBody, &request); jsonErr != nil {
 					logger.Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(jsonErr))
