@@ -115,7 +115,7 @@ export function TokenRateChart() {
                       if (value == null) return null;
                       const indicatorColor = item?.color ?? "#888";
                       return (
-                        <>
+                        <div className="flex w-full items-center gap-2">
                           <div
                             className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
                             style={{ backgroundColor: indicatorColor }}
@@ -126,7 +126,7 @@ export function TokenRateChart() {
                               {`${Number(value).toFixed(2)} tok/s`}
                             </span>
                           </div>
-                        </>
+                        </div>
                       );
                     }}
                   />
