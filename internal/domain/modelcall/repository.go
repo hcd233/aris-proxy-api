@@ -47,6 +47,9 @@ type AuditRepository interface {
 
 	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
 	QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*TokenThroughputPoint, error)
+
+	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*FirstTokenLatencyPoint, error)
 }
 
 // ModelTrendPoint 模型调用趋势的数据点
@@ -73,4 +76,11 @@ type TokenThroughputPoint struct {
 	CacheCreationTokens   int       `gorm:"column:cache_creation_tokens"`
 	CacheReadTokens       int       `gorm:"column:cache_read_tokens"`
 	OutputTokensPerSecond float64   `gorm:"column:output_tokens_per_second"`
+}
+
+// FirstTokenLatencyPoint 首 Token 延迟的数据点
+type FirstTokenLatencyPoint struct {
+	Model            string    `gorm:"column:model"`
+	Time             time.Time `gorm:"column:time"`
+	AverageLatencyMs float64   `gorm:"column:average_latency_ms"`
 }
