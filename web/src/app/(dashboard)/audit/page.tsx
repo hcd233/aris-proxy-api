@@ -282,46 +282,69 @@ export default function AuditPage() {
                   <TableHead>Time</TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead>User</TableHead>
-                  <TableHead>API Key</TableHead>
+                  <TableHead>Provider</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
                   <TableHead>Latency</TableHead>
+                  <TableHead>UA</TableHead>
                   <TableHead>TraceID</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.map((log) => {
                   const ok = log.upstreamStatusCode === 200;
+                  const hasError = !!log.errorMessage;
+                  const cacheInfo = formatCacheTokens(log.cacheCreationInputTokens, log.cacheReadInputTokens);
                   return (
-                    <TableRow key={log.id}>
+                    <TableRow
+                      key={log.id}
+                      className={ok ? "" : "bg-destructive/5"}
+                    >
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {new Date(log.createdAt).toLocaleString()}
+                        <div>{new Date(log.createdAt).toLocaleTimeString()}</div>
+                        <div className="text-xs text-muted-foreground/70">
+                          {new Date(log.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        </div>
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
                       <TableCell>
                         <div className="text-sm">{log.userName || "—"}</div>
-                        <div className="text-xs text-muted-foreground">{log.userEmail || ""}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {log.apiKeyName || ""}{log.userEmail ? ` · ${log.userEmail}` : ""}
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-[140px] truncate">
-                        {log.apiKeyName || "—"}
+                      <TableCell>
+                        <div className="text-sm">{log.apiProvider || "—"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          upstream: {log.upstreamProvider || "—"}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={ok ? "secondary" : "destructive"}
                           className="text-xs"
-                          title={ok ? undefined : log.errorMessage}
+                          title={hasError ? log.errorMessage : undefined}
                         >
                           {log.upstreamStatusCode}
                         </Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {formatTokens(log.inputTokens, log.outputTokens)}
+                        <div>{formatTokens(log.inputTokens, log.outputTokens)}</div>
+                        {cacheInfo && (
+                          <div className="text-xs text-muted-foreground">{cacheInfo}</div>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {log.firstTokenLatencyMs}ms
+                        <div>{log.firstTokenLatencyMs}ms</div>
                         {log.streamDurationMs > 0 && (
-                          <span className="ml-1 text-xs">/ {log.streamDurationMs}ms</span>
+                          <div className="text-xs text-muted-foreground/70">{(log.streamDurationMs / 1000).toFixed(1)}s</div>
                         )}
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[160px] truncate text-xs"
+                        title={log.userAgent || undefined}
+                      >
+                        {log.userAgent || "—"}
                       </TableCell>
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
