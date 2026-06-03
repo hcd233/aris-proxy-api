@@ -205,7 +205,7 @@ export function ModelTokenBarChart() {
             No data for this period
           </div>
         ) : (
-          <div className="h-64 overflow-y-auto">
+          <div>
             <table className="w-full text-sm tabular-nums">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
