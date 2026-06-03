@@ -182,17 +182,17 @@ function ChartTooltipContent({
     labelKey,
   ])
 
-  if (!active || !payload?.length) {
-    return null
-  }
-
   const sortedPayload = React.useMemo(
     () =>
-      [...payload]
+      [...(payload ?? [])]
         .filter((item) => item.type !== "none")
         .sort((a, b) => (Number(b.value) ?? 0) - (Number(a.value) ?? 0)),
     [payload]
   )
+
+  if (!active || !payload?.length) {
+    return null
+  }
 
   const nestLabel = sortedPayload.length === 1 && indicator !== "dot"
 
