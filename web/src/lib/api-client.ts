@@ -510,7 +510,7 @@ class ApiClient {
     granularity: Granularity;
   }): Promise<FirstTokenLatencyRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<FirstTokenLatencyRsp>(`/api/v1/audit/stats/first-token-latency?${sp}`);
+    return this.request<FirstTokenLatencyRsp>(`/api/v1/audit/stats/token/latency?${sp}`);
   }
 }
 
