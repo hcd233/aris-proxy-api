@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api-client";
 import type { TokenThroughputPoint } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +65,14 @@ export function TokenVolumeChart() {
     TOKEN_LAYERS.map((l) => [l.key, { label: l.label, color: l.color }])
   );
 
+  const rawMap = useMemo(() => {
+    const m = new Map<string, { input: number; output: number }>();
+    for (const p of data) {
+      m.set(p.time, { input: p.inputTokens, output: p.outputTokens });
+    }
+    return m;
+  }, [data]);
+
   const flatData = data.map((p) => {
     const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
     const freshOutput = Math.max(p.outputTokens - p.cacheCreationTokens, 0);
@@ -74,8 +82,6 @@ export function TokenVolumeChart() {
       outputTokens: freshOutput,
       cacheReadTokens: p.cacheReadTokens,
       cacheCreationTokens: p.cacheCreationTokens,
-      inputTokensRaw: p.inputTokens,
-      outputTokensRaw: p.outputTokens,
     };
   });
 
@@ -122,11 +128,16 @@ export function TokenVolumeChart() {
                 content={
                   <ChartTooltipContent
                     formatter={(value, name, _item) => {
-                      if (name === "inputTokens" && _item?.payload?.inputTokensRaw !== undefined) {
-                        return <span>{formatTokenCount(Number(_item.payload.inputTokensRaw))}</span>;
-                      }
-                      if (name === "outputTokens" && _item?.payload?.outputTokensRaw !== undefined) {
-                        return <span>{formatTokenCount(Number(_item.payload.outputTokensRaw))}</span>;
+                      if (_item?.payload?.time) {
+                        const raw = rawMap.get(_item.payload.time as string);
+                        if (raw) {
+                          if (name === "inputTokens") {
+                            return <span>{formatTokenCount(raw.input)}</span>;
+                          }
+                          if (name === "outputTokens") {
+                            return <span>{formatTokenCount(raw.output)}</span>;
+                          }
+                        }
                       }
                       return <span>{formatTokenCount(Number(value))}</span>;
                     }}
