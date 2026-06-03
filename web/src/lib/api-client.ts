@@ -277,6 +277,15 @@ class ApiClient {
     );
   }
 
+  // ─── Session Delete ──────────────────────────────────────────────────────
+
+  async deleteSession(sessionId: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(
+      `/api/v1/session?sessionId=${sessionId}`,
+      { method: "DELETE" }
+    );
+  }
+
   /**
    * Get shared session metadata (public, no auth).
    */

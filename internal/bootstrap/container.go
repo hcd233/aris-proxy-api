@@ -17,6 +17,7 @@ import (
 	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
 	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
 	applicationoauth2 "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -158,6 +159,9 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 		return err
 	}
 	if err := container.Provide(newSessionReadRepository); err != nil {
+		return err
+	}
+	if err := container.Provide(newSessionWriteRepository); err != nil {
 		return err
 	}
 	if err := container.Provide(newAuditRepository); err != nil {
@@ -309,6 +313,9 @@ func provideApplication(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(newListSessionToolsHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newDeleteSessionHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
@@ -528,6 +535,7 @@ func newSessionDependencies(
 	getMetaByUser sessionquery.GetSessionMetaByUserHandler,
 	listMessages sessionquery.ListSessionMessagesHandler,
 	listTools sessionquery.ListSessionToolsHandler,
+	deleteSession sessioncommand.DeleteSessionHandler,
 ) handler.SessionDependencies {
 	return handler.SessionDependencies{
 		ListByUser:    listByUser,
@@ -536,6 +544,7 @@ func newSessionDependencies(
 		GetMetaByUser: getMetaByUser,
 		ListMessages:  listMessages,
 		ListTools:     listTools,
+		DeleteSession: deleteSession,
 	}
 }
 
@@ -634,4 +643,12 @@ func newListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQ
 
 func newListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionquery.ListSessionToolsHandler {
 	return sessionquery.NewListSessionToolsHandler(readRepo, metaQuery, detailCache)
+}
+
+func newSessionWriteRepository(db *gorm.DB) session.SessionRepository {
+	return repository.NewSessionRepository(db)
+}
+
+func newDeleteSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessioncommand.DeleteSessionHandler {
+	return sessioncommand.NewDeleteSessionHandler(sessionRepo, apiKeyRepo)
 }
