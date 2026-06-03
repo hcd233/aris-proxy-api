@@ -83,6 +83,7 @@ export default function AuditPage() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [pageInputValue, setPageInputValue] = useState("1");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const fetchLogs = useCallback(
     async (
@@ -242,34 +243,126 @@ export default function AuditPage() {
             <div className="space-y-3">
               {logs.map((log) => {
                 const ok = log.upstreamStatusCode === 200;
+                const hasError = !!log.errorMessage;
+                const isExpanded = expandedId === log.id;
+                const cacheInfo = formatCacheTokens(log.cacheCreationInputTokens, log.cacheReadInputTokens);
+
                 return (
-                  <div key={log.id} className="rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{log.model || "—"}</p>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {log.userName || "—"} · {log.apiKeyName || "—"}
-                        </p>
+                  <div
+                    key={log.id}
+                    className={`rounded-lg border border-border bg-card ${ok ? "" : "bg-destructive/5"}`}
+                  >
+                    <div
+                      className="cursor-pointer p-4"
+                      onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{log.model || "—"}</p>
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {log.userName || "—"} · {log.apiKeyName || "—"} · {log.apiProvider || "—"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={ok ? "secondary" : "destructive"}
+                          className="shrink-0 text-xs"
+                          title={hasError ? log.errorMessage : undefined}
+                        >
+                          {log.upstreamStatusCode}
+                        </Badge>
                       </div>
-                      <Badge
-                        variant={ok ? "secondary" : "destructive"}
-                        className="shrink-0 text-xs"
-                        title={ok ? undefined : log.errorMessage}
-                      >
-                        {log.upstreamStatusCode}
-                      </Badge>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
+                        <span>{log.firstTokenLatencyMs}ms</span>
+                        {cacheInfo && <span>{cacheInfo}</span>}
+                        <span
+                          className="cursor-pointer font-mono underline-offset-2 hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyTrace(log.traceId);
+                          }}
+                          title="Click to copy full traceID"
+                        >
+                          {log.traceId.slice(-6) || "—"}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground/70">
+                        <span>{new Date(log.createdAt).toLocaleString()}</span>
+                        <span
+                          className="inline-block transition-transform duration-200 motion-reduce:transition-none"
+                          style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                        >
+                          ▾
+                        </span>
+                      </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span>{new Date(log.createdAt).toLocaleString()}</span>
-                      <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
-                      <span>{log.firstTokenLatencyMs}ms</span>
-                      <span
-                        className="cursor-pointer font-mono underline-offset-2 hover:underline"
-                        onClick={() => handleCopyTrace(log.traceId)}
-                        title="Click to copy full traceID"
-                      >
-                        {log.traceId.slice(-6) || "—"}
-                      </span>
+
+                    <div
+                      className="grid overflow-hidden transition-all duration-[250ms] ease-out motion-reduce:transition-none"
+                      style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+                    >
+                      <div className="min-h-0">
+                        <div className="border-t border-border px-4 pb-4 pt-3">
+                          {hasError && (
+                            <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-xs">
+                              <span className="font-medium text-destructive">Error: </span>
+                              <span className="text-destructive">{log.errorMessage}</span>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Input Tokens</span>
+                              <p>{log.inputTokens.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Output Tokens</span>
+                              <p>{log.outputTokens.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Cache Write</span>
+                              <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Cache Hit</span>
+                              <p>{log.cacheReadInputTokens.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">First Token</span>
+                              <p>{log.firstTokenLatencyMs}ms</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Stream Duration</span>
+                              <p>{log.streamDurationMs > 0 ? `${(log.streamDurationMs / 1000).toFixed(1)}s` : "—"}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Upstream</span>
+                              <p>{log.upstreamProvider || "—"}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">User</span>
+                              <p>{log.userName || "—"}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 border-t border-border pt-2 text-xs">
+                            <span className="text-muted-foreground">UA: </span>
+                            <span className="break-all">{log.userAgent || "—"}</span>
+                          </div>
+
+                          <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-xs">
+                            <span className="text-muted-foreground">
+                              {new Date(log.createdAt).toLocaleString()}
+                            </span>
+                            <span
+                              className="cursor-pointer font-mono text-muted-foreground underline-offset-2 hover:underline"
+                              onClick={() => handleCopyTrace(log.traceId)}
+                            >
+                              Copy TraceID
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
