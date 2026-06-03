@@ -416,3 +416,17 @@ export interface ModelUsageItem {
 export interface ModelUsageRsp extends CommonRsp {
   data?: ModelUsageItem[];
 }
+
+export interface FirstTokenLatencyPoint {
+  time: string;
+  averageLatencyMs: number;
+}
+
+export interface FirstTokenLatencyItem {
+  model: string;
+  points: FirstTokenLatencyPoint[];
+}
+
+export interface FirstTokenLatencyRsp extends CommonRsp {
+  data?: FirstTokenLatencyItem[];
+}

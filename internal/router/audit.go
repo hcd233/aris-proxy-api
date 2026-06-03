@@ -80,4 +80,15 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Security:    []map[string][]string{{"jwtAuth": {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryModelUsage", enum.PermissionUser)},
 	}, auditHandler.HandleModelUsage)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryFirstTokenLatency",
+		Method:      http.MethodGet,
+		Path:        "/stats/first-token-latency",
+		Summary:     "QueryFirstTokenLatency",
+		Description: "Query average first token latency grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Tags:        []string{"Audit"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryFirstTokenLatency", enum.PermissionUser)},
+	}, auditHandler.HandleFirstTokenLatency)
 }

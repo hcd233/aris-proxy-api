@@ -35,6 +35,7 @@ import type {
   TokenThroughputRsp,
   TokenRateRsp,
   ModelUsageRsp,
+  FirstTokenLatencyRsp,
   Granularity,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
@@ -501,6 +502,15 @@ class ApiClient {
   }): Promise<ModelUsageRsp> {
     const sp = new URLSearchParams(params);
     return this.request<ModelUsageRsp>(`/api/v1/audit/stats/model/usage?${sp}`);
+  }
+
+  async fetchFirstTokenLatency(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<FirstTokenLatencyRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<FirstTokenLatencyRsp>(`/api/v1/audit/stats/first-token-latency?${sp}`);
   }
 }
 

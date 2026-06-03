@@ -21,6 +21,7 @@ type AuditHandler interface {
 	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
 	HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error)
 	HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error)
+	HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error)
 }
 
 type AuditDependencies struct {
@@ -152,6 +153,22 @@ func (h *auditHandler) HandleModelUsage(ctx context.Context, req *dto.ModelUsage
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Token usage failed", zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	rsp.Data = items
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *auditHandler) HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error) {
+	rsp := &dto.FirstTokenLatencyRsp{}
+	items, err := h.svc.FirstTokenLatency(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] First token latency failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
