@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { AuditLogItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -18,17 +17,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ScrollText,
   Search,
   ListFilter,
   Check,
-  Info,
-  ArrowUp,
-  ArrowDown,
-  Copy,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -38,69 +33,50 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TimeRangePicker } from "@/components/ui/time-range-picker";
-import type { TimeRangeKey } from "@/lib/time-range";
-import { computeRange } from "@/lib/time-range";
 
-type SortDir = "asc" | "desc";
+type TimeRangeKey = "1h" | "24h" | "7d" | "custom";
 
-interface SortState {
-  field: string;
-  dir: SortDir;
-}
-
-type StatusFilter = "all" | "failed" | "success";
-
-const SORTABLE_COLUMNS: Record<string, string> = {
-  createdAt: "created_at",
-  inputTokens: "input_tokens",
-  outputTokens: "output_tokens",
-  firstTokenLatencyMs: "first_token_latency_ms",
-  streamDurationMs: "stream_duration_ms",
+const TIME_RANGE_LABELS: Record<TimeRangeKey, string> = {
+  "1h": "Last 1 hour",
+  "24h": "Last 24 hours",
+  "7d": "Last 7 days",
+  custom: "Custom",
 };
 
-const LATENCY_THRESHOLD_MS = 3000;
+function computeRange(
+  key: TimeRangeKey,
+  customStart?: string,
+  customEnd?: string,
+): { startTime?: string; endTime?: string } {
+  if (key === "custom") {
+    return {
+      startTime: customStart ? new Date(customStart).toISOString() : undefined,
+      endTime: customEnd ? new Date(customEnd).toISOString() : undefined,
+    };
+  }
+  const now = new Date();
+  const start = new Date(now);
+  if (key === "1h") start.setHours(start.getHours() - 1);
+  else if (key === "24h") start.setHours(start.getHours() - 24);
+  else if (key === "7d") start.setDate(start.getDate() - 7);
+  return { startTime: start.toISOString(), endTime: now.toISOString() };
+}
 
 function formatTokens(input: number, output: number): string {
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  return `${fmt(input)}↑ / ${fmt(output)}↓`;
-}
-
-function formatCache(creation: number, read: number): string {
-  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  const parts: string[] = [];
-  if (creation > 0) parts.push(`${fmt(creation)}↑`);
-  if (read > 0) parts.push(`${fmt(read)}↓`);
-  return parts.join(" / ") || "—";
-}
-
-function isError(log: AuditLogItem): boolean {
-  return log.upstreamStatusCode !== 200;
-}
-
-function isHighLatency(log: AuditLogItem): boolean {
-  return log.firstTokenLatencyMs > LATENCY_THRESHOLD_MS;
-}
-
-function shouldAutoExpand(log: AuditLogItem): boolean {
-  return isError(log) || isHighLatency(log);
+  return `${fmt(input)} / ${fmt(output)}`;
 }
 
 export default function AuditPage() {
   const isMobile = useIsMobile();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.audit.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.audit.pageSize", 20);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.audit.timeRange", "24h");
-  const [customStart, setCustomStart] = usePersistentState("dashboard.audit.customStart", "");
-  const [customEnd, setCustomEnd] = usePersistentState("dashboard.audit.customEnd", "");
-  const [pageInputValue, setPageInputValue] = useState(String(persistedPage));
-  const [sort, setSort] = useState<SortState>({ field: "created_at", dir: "desc" });
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [pageInputValue, setPageInputValue] = useState("1");
 
   const fetchLogs = useCallback(
     async (
@@ -110,7 +86,6 @@ export default function AuditPage() {
       range: TimeRangeKey,
       cs: string,
       ce: string,
-      sortState: SortState,
     ) => {
       setLoading(true);
       try {
@@ -119,8 +94,6 @@ export default function AuditPage() {
           page,
           pageSize,
           query: query || undefined,
-          sort: sortState.dir,
-          sortField: sortState.field,
           startTime,
           endTime,
         });
@@ -132,8 +105,6 @@ export default function AuditPage() {
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
           setPageInputValue(String(rsp.pageInfo.page));
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to load audit logs");
@@ -141,28 +112,14 @@ export default function AuditPage() {
         setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize],
+    [],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
+  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchLogs(persistedPage, persistedPageSize, "", "24h", "", "", { field: "created_at", dir: "desc" });
+    fetchLogs(1, 20, "", "24h", "", "");
   }, [fetchLogs]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-
-  const filteredLogs = useMemo(() => {
-    if (statusFilter === "all") return logs;
-    if (statusFilter === "failed") return logs.filter((l) => isError(l));
-    return logs.filter((l) => !isError(l));
-  }, [logs, statusFilter]);
-
-  const expanded = useMemo(() => {
-    const result = new Set(expandedIds);
-    for (const log of filteredLogs) {
-      if (shouldAutoExpand(log)) result.add(log.id);
-    }
-    return result;
-  }, [expandedIds, filteredLogs]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),
@@ -170,7 +127,7 @@ export default function AuditPage() {
   );
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, sort);
+    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd);
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
@@ -178,29 +135,6 @@ export default function AuditPage() {
       () => toast.success("TraceID copied"),
       () => toast.error("Copy failed"),
     );
-  };
-
-  const handleSort = (field: string) => {
-    const newSort: SortState =
-      sort.field === field
-        ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
-        : { field, dir: "desc" };
-    setSort(newSort);
-    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, newSort);
-  };
-
-  const renderSortIcon = (field: string) => {
-    if (sort.field !== field) return null;
-    return sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />;
-  };
-
-  const toggleExpand = (id: number) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   };
 
   return (
@@ -222,38 +156,55 @@ export default function AuditPage() {
           {/* 筛选区 */}
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-0.5">
-                {(["all", "failed", "success"] as const).map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => {
-                      setStatusFilter(f);
-                      setExpandedIds(new Set());
-                    }}
-                    className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                      statusFilter === f
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {f === "all" ? "All" : f === "failed" ? "Failed" : "Success"}
-                  </button>
-                ))}
-              </div>
-              <TimeRangePicker
-                value={timeRange}
-                customStart={customStart}
-                customEnd={customEnd}
-                onChange={(key, cs, ce) => {
-                  setTimeRange(key);
-                  setCustomStart(cs);
-                  setCustomEnd(ce);
-                  if (key !== "custom") {
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce, sort);
-                  }
-                }}
-              />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="outline" size="sm" className="gap-1.5" />}
+                >
+                  <Clock className="size-3.5" />
+                  {TIME_RANGE_LABELS[timeRange]}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {(Object.keys(TIME_RANGE_LABELS) as TimeRangeKey[]).map((k) => (
+                    <DropdownMenuItem
+                      key={k}
+                      onClick={() => {
+                        setTimeRange(k);
+                        if (k !== "custom") {
+                          fetchLogs(1, pageInfo.pageSize, searchQuery, k, customStart, customEnd);
+                        }
+                      }}
+                    >
+                      {k === timeRange && <Check className="size-4" />}
+                      <span className={k === timeRange ? "ml-0" : "ml-6"}>
+                        {TIME_RANGE_LABELS[k]}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {timeRange === "custom" && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={customStart}
+                    onChange={(e) => setCustomStart(e.target.value)}
+                    onBlur={() =>
+                      fetchLogs(1, pageInfo.pageSize, searchQuery, "custom", customStart, customEnd)
+                    }
+                    className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs"
+                  />
+                  <span className="text-xs text-muted-foreground">–</span>
+                  <input
+                    type="datetime-local"
+                    value={customEnd}
+                    onChange={(e) => setCustomEnd(e.target.value)}
+                    onBlur={() =>
+                      fetchLogs(1, pageInfo.pageSize, searchQuery, "custom", customStart, customEnd)
+                    }
+                    className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs"
+                  />
+                </div>
+              )}
             </div>
             <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -276,117 +227,44 @@ export default function AuditPage() {
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
-          ) : filteredLogs.length === 0 ? (
+          ) : logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ScrollText className="mb-3 size-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
-                {logs.length > 0 ? "No matching logs in current filter" : "No audit logs in selected range"}
-              </p>
+              <p className="text-sm text-muted-foreground">No audit logs in selected range</p>
             </div>
           ) : isMobile ? (
             <div className="space-y-3">
-              {filteredLogs.map((log) => {
-                const err = isError(log);
-                const highLat = isHighLatency(log);
-                const isExpanded = expanded.has(log.id);
+              {logs.map((log) => {
+                const ok = log.upstreamStatusCode === 200;
                 return (
-                  <div
-                    key={log.id}
-                    className="overflow-hidden rounded-lg border border-border bg-card"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleExpand(log.id)}
-                      className="flex w-full items-start gap-3 p-4 text-left"
-                    >
-                      <Badge
-                        variant={err ? "destructive" : "secondary"}
-                        className="mt-0.5 shrink-0 text-xs"
-                        title={err ? log.errorMessage : undefined}
-                      >
-                        {log.upstreamStatusCode}
-                      </Badge>
+                  <div key={log.id} className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{log.model || "—"}</p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {log.userName || "—"} · {log.apiKeyName || "—"}
                         </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <span>{new Date(log.createdAt).toLocaleString()}</span>
-                          <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
-                          {highLat && (
-                            <span className="font-medium text-destructive">
-                              {log.firstTokenLatencyMs}ms
-                            </span>
-                          )}
-                        </div>
                       </div>
-                      <ChevronDown
-                        className={`mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                    {isExpanded && (
-                      <div className="border-t border-border bg-muted/30 px-4 py-3">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                          <div>
-                            <span className="text-muted-foreground">Provider</span>
-                            <p className="mt-0.5 text-foreground">
-                              {log.apiProvider || "—"} · {log.upstreamProvider || "—"}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Cache</span>
-                            <p className="mt-0.5 text-foreground">
-                              {formatCache(log.cacheCreationInputTokens, log.cacheReadInputTokens)}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Latency</span>
-                            <p
-                              className={`mt-0.5 ${
-                                highLat ? "font-medium text-destructive" : "text-foreground"
-                              }`}
-                            >
-                              {log.firstTokenLatencyMs}ms
-                              {log.streamDurationMs > 0 && (
-                                <span className="ml-1">/ {log.streamDurationMs}ms</span>
-                              )}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">TraceID</span>
-                            <p className="mt-0.5">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCopyTrace(log.traceId);
-                                }}
-                                className="flex items-center gap-1 font-mono text-foreground hover:underline"
-                              >
-                                {log.traceId.slice(-12) || "—"}
-                                <Copy className="size-3 text-muted-foreground" />
-                              </button>
-                            </p>
-                          </div>
-                        </div>
-                        {err && log.errorMessage && (
-                          <p className="mt-2 rounded bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
-                            {log.errorMessage}
-                          </p>
-                        )}
-                        {log.userAgent && (
-                          <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted-foreground/70">
-                            <Info className="size-3 shrink-0" />
-                            <span className="truncate" title={log.userAgent}>
-                              {log.userAgent}
-                            </span>
-                          </p>
-                        )}
-                      </div>
-                    )}
+                      <Badge
+                        variant={ok ? "secondary" : "destructive"}
+                        className="shrink-0 text-xs"
+                        title={ok ? undefined : log.errorMessage}
+                      >
+                        {log.upstreamStatusCode}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span>{new Date(log.createdAt).toLocaleString()}</span>
+                      <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
+                      <span>{log.firstTokenLatencyMs}ms</span>
+                      <span
+                        className="cursor-pointer font-mono underline-offset-2 hover:underline"
+                        onClick={() => handleCopyTrace(log.traceId)}
+                        title="Click to copy full traceID"
+                      >
+                        {log.traceId.slice(-6) || "—"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -395,163 +273,60 @@ export default function AuditPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[72px]">Status</TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none whitespace-nowrap"
-                    onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}
-                    </span>
-                  </TableHead>
+                  <TableHead>Time</TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>API Key</TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none whitespace-nowrap"
-                    onClick={() => handleSort(SORTABLE_COLUMNS.inputTokens)}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      Tokens {renderSortIcon(SORTABLE_COLUMNS.inputTokens)}
-                    </span>
-                  </TableHead>
-                  <TableHead className="w-[40px]" />
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tokens</TableHead>
+                  <TableHead>Latency</TableHead>
+                  <TableHead>TraceID</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLogs.map((log) => {
-                  const err = isError(log);
-                  const isExpanded = expanded.has(log.id);
+                {logs.map((log) => {
+                  const ok = log.upstreamStatusCode === 200;
                   return (
-                    <TableRow
-                      key={log.id}
-                      className={`cursor-pointer border-l-2 hover:bg-muted/50 ${
-                        err ? "border-l-destructive" : "border-l-transparent"
-                      }`}
-                      onClick={() => toggleExpand(log.id)}
-                    >
+                    <TableRow key={log.id}>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">{log.userName || "—"}</div>
+                        <div className="text-xs text-muted-foreground">{log.userEmail || ""}</div>
+                      </TableCell>
+                      <TableCell className="max-w-[140px] truncate">
+                        {log.apiKeyName || "—"}
+                      </TableCell>
                       <TableCell>
                         <Badge
-                          variant={err ? "destructive" : "secondary"}
+                          variant={ok ? "secondary" : "destructive"}
                           className="text-xs"
-                          title={err ? log.errorMessage : undefined}
+                          title={ok ? undefined : log.errorMessage}
                         >
                           {log.upstreamStatusCode}
                         </Badge>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {new Date(log.createdAt).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="max-w-[180px] truncate">
-                        <div className="flex items-center gap-1">
-                          <span className="truncate">{log.model || "—"}</span>
-                          {log.userAgent && (
-                            <span title={log.userAgent}>
-                              <Info className="size-3 shrink-0 text-muted-foreground/50" />
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[140px] truncate text-sm">
-                        {log.userName || "—"}
-                      </TableCell>
-                      <TableCell className="max-w-[140px] truncate text-sm text-muted-foreground">
-                        {log.apiKeyName || "—"}
-                      </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {formatTokens(log.inputTokens, log.outputTokens)}
                       </TableCell>
-                      <TableCell>
-                        <ChevronDown
-                          className={`size-4 text-muted-foreground transition-transform ${
-                            isExpanded ? "rotate-180" : ""
-                          }`}
-                        />
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {log.firstTokenLatencyMs}ms
+                        {log.streamDurationMs > 0 && (
+                          <span className="ml-1 text-xs">/ {log.streamDurationMs}ms</span>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
+                        onClick={() => handleCopyTrace(log.traceId)}
+                        title="Click to copy full traceID"
+                      >
+                        {log.traceId.slice(-6) || "—"}
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {/* 详情行单独渲染，不参与 TableRow 的点击事件 */}
-                {filteredLogs
-                  .filter((log) => expanded.has(log.id))
-                  .map((log) => {
-                    const err = isError(log);
-                    const highLat = isHighLatency(log);
-                    return (
-                      <TableRow
-                        key={`detail-${log.id}`}
-                        className="border-l-2 border-l-transparent bg-muted/30 hover:bg-muted/30"
-                      >
-                        <TableCell colSpan={7} className="p-0">
-                          <div className="grid grid-cols-4 gap-x-6 gap-y-2 px-4 py-3 text-sm">
-                            <div>
-                              <span className="text-xs text-muted-foreground">Provider</span>
-                              <p className="mt-0.5 text-foreground">
-                                {log.apiProvider || "—"} · {log.upstreamProvider || "—"}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground">Cache</span>
-                              <p className="mt-0.5 text-foreground">
-                                {formatCache(
-                                  log.cacheCreationInputTokens,
-                                  log.cacheReadInputTokens,
-                                )}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground">Latency</span>
-                              <p
-                                className={`mt-0.5 ${
-                                  highLat
-                                    ? "font-medium text-destructive"
-                                    : "text-foreground"
-                                }`}
-                              >
-                                {log.firstTokenLatencyMs}ms
-                                {log.streamDurationMs > 0 && (
-                                  <span className="ml-1 text-xs">
-                                    / {log.streamDurationMs}ms
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground">TraceID</span>
-                              <p className="mt-0.5">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopyTrace(log.traceId);
-                                  }}
-                                  className="flex items-center gap-1 font-mono text-xs text-foreground hover:underline"
-                                >
-                                  {log.traceId.slice(-12) || "—"}
-                                  <Copy className="size-3 text-muted-foreground" />
-                                </button>
-                              </p>
-                            </div>
-                          </div>
-                          {err && log.errorMessage && (
-                            <div className="mx-4 mb-3 rounded bg-destructive/10 px-3 py-1.5">
-                              <p className="text-xs font-medium text-destructive">
-                                {log.errorMessage}
-                              </p>
-                            </div>
-                          )}
-                          {log.userAgent && (
-                            <div className="mx-4 mb-3 flex items-center gap-1 truncate text-xs text-muted-foreground/70">
-                              <Info className="size-3 shrink-0" />
-                              <span className="truncate" title={log.userAgent}>
-                                UA: {log.userAgent}
-                              </span>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
               </TableBody>
             </Table>
           )}
