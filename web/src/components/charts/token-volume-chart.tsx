@@ -127,19 +127,32 @@ export function TokenVolumeChart() {
               <ChartTooltip
                 content={
                   <ChartTooltipContent
-                    formatter={(value, name, _item) => {
-                      if (_item?.payload?.time) {
-                        const raw = rawMap.get(_item.payload.time as string);
+                    formatter={(value, name, item) => {
+                      if (value == null) return null;
+                      const indicatorColor = item?.color ?? "#888";
+                      let displayValue = Number(value);
+                      if (item?.payload?.time) {
+                        const raw = rawMap.get(item.payload.time as string);
                         if (raw) {
-                          if (name === "inputTokens") {
-                            return <span>{formatTokenCount(raw.input)}</span>;
-                          }
-                          if (name === "outputTokens") {
-                            return <span>{formatTokenCount(raw.output)}</span>;
-                          }
+                          if (name === "inputTokens") displayValue = raw.input;
+                          if (name === "outputTokens") displayValue = raw.output;
                         }
                       }
-                      return <span>{formatTokenCount(Number(value))}</span>;
+                      const label = name ? (chartConfig[name]?.label ?? name) : "";
+                      return (
+                        <>
+                          <div
+                            className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                            style={{ backgroundColor: indicatorColor }}
+                          />
+                          <div className="flex flex-1 items-center justify-between leading-none">
+                            <span className="text-muted-foreground">{label}</span>
+                            <span className="font-mono font-medium text-foreground tabular-nums">
+                              {formatTokenCount(displayValue)}
+                            </span>
+                          </div>
+                        </>
+                      );
                     }}
                   />
                 }
