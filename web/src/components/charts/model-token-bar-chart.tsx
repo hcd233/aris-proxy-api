@@ -12,9 +12,9 @@ import { computeRange } from "@/lib/time-range";
 
 type SortField = "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
 
-const CACHE_READ_COLOR = "#E8B896";
+const CACHE_READ_COLOR = "#D4A882";
 const INPUT_COLOR = "#E6733F";
-const CACHE_CREATED_COLOR = "#E8C0A0";
+const CACHE_CREATED_COLOR = "#D4AE8A";
 const OUTPUT_COLOR = "#D46A3E";
 
 function formatTokenCount(v: number): string {
@@ -94,15 +94,14 @@ export function ModelTokenBarChart() {
     mainValue: number,
     mainColor: string,
   ) {
-    const total = cacheValue + mainValue;
-    const denom = total > 0 ? total : 1;
+    const denom = mainValue > 0 ? mainValue : 1;
     const cachePct = Math.min((cacheValue / denom) * 100, 100);
-    const mainPct = Math.min((mainValue / denom) * 100, 100);
+    const freshPct = Math.max(100 - cachePct, 0);
     return (
       <div>
         <div
           className="flex h-3 overflow-hidden rounded-md bg-muted"
-          title={`${cacheLabel}: ${formatTokenCount(cacheValue)} (${cachePct.toFixed(1)}%) / ${mainLabel}: ${formatTokenCount(mainValue)} (${mainPct.toFixed(1)}%)`}
+          title={`${cacheLabel}: ${formatTokenCount(cacheValue)} / ${mainLabel}: ${formatTokenCount(mainValue - cacheValue)}`}
         >
           {cachePct > 0 && (
             <div
@@ -110,16 +109,16 @@ export function ModelTokenBarChart() {
               className="transition-all duration-200"
             />
           )}
-          {mainPct > 0 && (
+          {freshPct > 0 && (
             <div
-              style={{ width: `${mainPct}%`, backgroundColor: mainColor }}
+              style={{ width: `${freshPct}%`, backgroundColor: mainColor }}
               className="transition-all duration-200"
             />
           )}
         </div>
         <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-          <span style={{ color: cacheColor }}>{cacheLabel}: {formatTokenCount(cacheValue)} ({cachePct.toFixed(1)}%)</span>
-          <span style={{ color: mainColor }}>{mainLabel}: {formatTokenCount(mainValue)} ({mainPct.toFixed(1)}%)</span>
+          <span style={{ color: cacheColor }}>{cacheLabel} {formatTokenCount(cacheValue)}</span>
+          <span style={{ color: mainColor }}>{mainLabel} {formatTokenCount(mainValue)}</span>
         </div>
       </div>
     );
