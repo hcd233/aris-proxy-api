@@ -95,9 +95,6 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)
 
-	openaiV2Group := huma.NewGroup(apiGroup, "/openai/v2")
-	initOpenAIV2Router(openaiV2Group, deps.OpenAIHandler, deps.DB, deps.Cache)
-
 	anthropicGroup := huma.NewGroup(apiGroup, "/anthropic/v1")
 	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.Cache)
 }

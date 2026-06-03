@@ -8,15 +8,13 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/util"
-
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -27,7 +25,6 @@ var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
 type OpenAIUseCase interface {
 	ListModels(ctx context.Context) (*dto.OpenAIListModelsRsp, error)
 	CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error)
-	CreateChatCompletionV2(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error)
 	CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error)
 }
 
@@ -76,33 +73,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	case enum.CompatRouteNative:
 		stream := req.Body.Stream != nil && *req.Body.Stream
 		upstream := toTransportEndpoint(m, ep, false)
-		return u.forwardChatNative(ctx, req, m, ep, upstream, stream, nil), nil
-	case enum.CompatRouteViaAnthropicMessage:
-		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model), nil
-	default:
-		log.Error("[OpenAIUseCase] Unsupported chat compatibility route", zap.String("model", req.Body.Model))
-		return proxyutil.SendOpenAIModelNotFoundError(req.Body.Model), nil
-	}
-}
-
-func (u *openAIUseCase) CreateChatCompletionV2(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
-	log := logger.WithCtx(ctx)
-
-	var compatRoute enum.CompatRoute
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
-		return compatRoute != enum.CompatRouteUnsupported
-	})
-	if err != nil {
-		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
-		return proxyutil.SendOpenAIModelNotFoundError(req.Body.Model), nil
-	}
-
-	switch compatRoute {
-	case enum.CompatRouteNative:
-		stream := req.Body.Stream != nil && *req.Body.Stream
-		upstream := toTransportEndpoint(m, ep, false)
-		return u.forwardChatNative(ctx, req, m, ep, upstream, stream, util.GetRawRequestBody(ctx)), nil
+		return u.forwardChatNative(ctx, req, m, ep, upstream, stream), nil
 	case enum.CompatRouteViaAnthropicMessage:
 		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model), nil
 	default:

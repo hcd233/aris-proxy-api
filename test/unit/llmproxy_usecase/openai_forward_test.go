@@ -3,16 +3,8 @@ package llmproxy_usecase
 import (
 	"context"
 	"errors"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 
-	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
-	"github.com/gofiber/fiber/v3"
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
@@ -20,8 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type mockOpenAIProxy struct {
@@ -236,46 +226,6 @@ func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
 	}
 	if rsp == nil {
 		t.Fatal("CreateChatCompletion() returned nil response")
-	}
-}
-
-func TestOpenAICreateChatCompletionV2_NativeUnaryUsesRawBody(t *testing.T) {
-	proxy := &mockOpenAIProxy{}
-	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{})
-
-	raw := []byte(`{"model":"test-alias","messages":[{"role":"user","content":"Hello","unknown_message_field":{"keep":true}}],"stream":false,"unknown_top":{"nested":true},"null_field":null}`)
-	app := fiber.New()
-	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))
-	api.UseMiddleware(middleware.RawBodyMiddleware())
-	huma.Register(api, huma.Operation{
-		OperationID: "testCreateChatCompletionV2",
-		Method:      http.MethodPost,
-		Path:        "/api/openai/v2/chat/completions",
-	}, func(ctx context.Context, _ *dto.EmptyReq) (*huma.StreamResponse, error) {
-		body := &dto.OpenAIChatCompletionReq{}
-		if err := sonic.Unmarshal(util.GetRawRequestBody(ctx), body); err != nil {
-			t.Fatalf("decode raw body: %v", err)
-		}
-		return uc.CreateChatCompletionV2(ctx, &dto.OpenAIChatCompletionRequest{Body: body})
-	})
-
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/openai/v2/chat/completions", strings.NewReader(string(raw)))
-	httpReq.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(httpReq, fiber.TestConfig{Timeout: 0})
-	if err != nil {
-		t.Fatalf("send v2 request: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("status = %d, want %d; body: %s", resp.StatusCode, http.StatusOK, string(body))
-	}
-	if !proxy.chatUnaryCalled {
-		t.Fatal("native unary proxy was not called")
-	}
-	if util.HashJSONBodyExcludingTopLevelModel(raw) != util.HashJSONBodyExcludingTopLevelModel(proxy.lastChatBody) {
-		t.Fatalf("v2 upstream body must preserve raw body fields except model\nraw: %s\nbody: %s", string(raw), string(proxy.lastChatBody))
 	}
 }
 
