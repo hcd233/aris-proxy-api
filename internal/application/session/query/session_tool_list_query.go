@@ -12,24 +12,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// ListSessionToolsQuery 分页获取 session tools 查询参数
-type ListSessionToolsQuery struct {
-	UserID    uint
-	IsAdmin   bool
-	SessionID uint
-	Page      int
-	PageSize  int
-}
-
-// ListSessionToolsResult 分页结果
-type ListSessionToolsResult struct {
-	Tools []*ToolView
-	Total int64
-}
-
 // ListSessionToolsHandler 分页获取 tools handler 接口
 type ListSessionToolsHandler interface {
-	Handle(ctx context.Context, q ListSessionToolsQuery) (*ListSessionToolsResult, error)
+	Handle(ctx context.Context, q sessionport.ListSessionToolsQuery) (*sessionport.ListSessionToolsResult, error)
 }
 
 type listSessionToolsHandler struct {
@@ -51,10 +36,10 @@ func NewListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuer
 }
 
 // Handle 处理 tools 分页查询
-func (h *listSessionToolsHandler) Handle(ctx context.Context, q ListSessionToolsQuery) (*ListSessionToolsResult, error) {
+func (h *listSessionToolsHandler) Handle(ctx context.Context, q sessionport.ListSessionToolsQuery) (*sessionport.ListSessionToolsResult, error) {
 	log := logger.WithCtx(ctx)
 
-	meta, err := h.metaQuery.Handle(ctx, GetSessionMetaByUserQuery{
+	meta, err := h.metaQuery.Handle(ctx, sessionport.GetSessionMetaByUserQuery{
 		UserID:    q.UserID,
 		IsAdmin:   q.IsAdmin,
 		SessionID: q.SessionID,
@@ -65,7 +50,7 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q ListSessionTools
 
 	total := int64(len(meta.ToolIDs))
 	if total == 0 {
-		return &ListSessionToolsResult{Tools: []*ToolView{}, Total: 0}, nil
+		return &sessionport.ListSessionToolsResult{Tools: []*sessionport.ToolView{}, Total: 0}, nil
 	}
 
 	start := (q.Page - 1) * q.PageSize
@@ -78,7 +63,7 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q ListSessionTools
 	}
 	pageIDs := meta.ToolIDs[start:end]
 	if len(pageIDs) == 0 {
-		return &ListSessionToolsResult{Tools: []*ToolView{}, Total: total}, nil
+		return &sessionport.ListSessionToolsResult{Tools: []*sessionport.ToolView{}, Total: total}, nil
 	}
 
 	hits, missing, cacheErr := h.cache.GetTools(ctx, pageIDs)
@@ -111,17 +96,17 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q ListSessionTools
 		}
 	}
 
-	views := make([]*ToolView, 0, len(pageIDs))
+	views := make([]*sessionport.ToolView, 0, len(pageIDs))
 	for _, id := range pageIDs {
 		rec, ok := hits[id]
 		if !ok {
 			continue
 		}
-		views = append(views, &ToolView{
+		views = append(views, &sessionport.ToolView{
 			ID:        rec.ID,
 			Tool:      rec.Tool,
 			CreatedAt: rec.CreatedAt,
 		})
 	}
-	return &ListSessionToolsResult{Tools: views, Total: total}, nil
+	return &sessionport.ListSessionToolsResult{Tools: views, Total: total}, nil
 }

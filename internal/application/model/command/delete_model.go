@@ -5,19 +5,15 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// DeleteModelCommand 删除 Model 命令
-type DeleteModelCommand struct {
-	ModelID uint
-}
-
 // DeleteModelHandler 删除命令处理器
 type DeleteModelHandler interface {
-	Handle(ctx context.Context, cmd DeleteModelCommand) error
+	Handle(ctx context.Context, cmd port.DeleteModelCommand) error
 }
 
 type deleteModelHandler struct {
@@ -30,7 +26,7 @@ func NewDeleteModelHandler(repo llmproxy.ModelRepository) DeleteModelHandler {
 }
 
 // Handle 执行删除命令
-func (h *deleteModelHandler) Handle(ctx context.Context, cmd DeleteModelCommand) error {
+func (h *deleteModelHandler) Handle(ctx context.Context, cmd port.DeleteModelCommand) error {
 	log := logger.WithCtx(ctx)
 
 	m, err := h.repo.FindByID(ctx, cmd.ModelID)

@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
@@ -14,26 +15,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
-
-// IssueAPIKeyCommand 签发新 API Key 命令
-//
-//	@author centonhuang
-//	@update 2026-04-22 17:00:00
-type IssueAPIKeyCommand struct {
-	UserID uint
-	Name   string
-}
-
-// IssueAPIKeyResult 签发命令结果
-//
-//	@author centonhuang
-//	@update 2026-04-22 17:00:00
-type IssueAPIKeyResult struct {
-	KeyID     uint
-	Name      string
-	Secret    string
-	CreatedAt time.Time
-}
 
 // UserExistenceChecker 用户存在性校验器（跨域适配接口，避免 apikey 域强依赖 identity 域）
 //
@@ -50,7 +31,7 @@ type UserExistenceChecker interface {
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
 type IssueAPIKeyHandler interface {
-	Handle(ctx context.Context, cmd IssueAPIKeyCommand) (*IssueAPIKeyResult, error)
+	Handle(ctx context.Context, cmd port.IssueAPIKeyCommand) (*port.IssueAPIKeyResult, error)
 }
 
 type issueAPIKeyHandler struct {
@@ -82,7 +63,7 @@ func NewIssueAPIKeyHandler(repo apikey.APIKeyRepository, generator service.APIKe
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func (h *issueAPIKeyHandler) Handle(ctx context.Context, cmd IssueAPIKeyCommand) (*IssueAPIKeyResult, error) {
+func (h *issueAPIKeyHandler) Handle(ctx context.Context, cmd port.IssueAPIKeyCommand) (*port.IssueAPIKeyResult, error) {
 	log := logger.WithCtx(ctx)
 
 	// 前置：校验用户存在（与原 service.CreateAPIKey 行为对齐）
@@ -136,7 +117,7 @@ func (h *issueAPIKeyHandler) Handle(ctx context.Context, cmd IssueAPIKeyCommand)
 		zap.String("name", key.Name().String()),
 		zap.String("masked", masked))
 
-	return &IssueAPIKeyResult{
+	return &port.IssueAPIKeyResult{
 		KeyID:     key.AggregateID(),
 		Name:      key.Name().String(),
 		Secret:    key.Secret().Raw(),

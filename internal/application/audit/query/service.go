@@ -33,25 +33,6 @@ type ListAuditLogsParams struct {
 	EndTime   time.Time
 }
 
-// toAllQuery 转换为 admin 全量查询的入参。
-func (p ListAuditLogsParams) toAllQuery() ListAllAuditLogsQuery {
-	return ListAllAuditLogsQuery(p)
-}
-
-// toByUserQuery 转换为 user 维度查询的入参。
-func (p ListAuditLogsParams) toByUserQuery(userID uint) ListAuditLogsByUserQuery {
-	return ListAuditLogsByUserQuery{
-		UserID:    userID,
-		Page:      p.Page,
-		PageSize:  p.PageSize,
-		Query:     p.Query,
-		Sort:      p.Sort,
-		SortField: p.SortField,
-		StartTime: p.StartTime,
-		EndTime:   p.EndTime,
-	}
-}
-
 type auditService struct {
 	listAll                 ListAllAuditLogsHandler
 	listByUser              ListAuditLogsByUserHandler
@@ -101,6 +82,25 @@ func NewAuditService(
 		modelUsageByUser:        modelUsageByUser,
 		firstTokenLatency:       firstTokenLatency,
 		firstTokenLatencyByUser: firstTokenLatencyByUser,
+	}
+}
+
+// toAllQuery 转换为 admin 全量查询的入参。
+func (p ListAuditLogsParams) toAllQuery() ListAllAuditLogsQuery {
+	return ListAllAuditLogsQuery(p)
+}
+
+// toByUserQuery 转换为 user 维度查询的入参。
+func (p ListAuditLogsParams) toByUserQuery(userID uint) ListAuditLogsByUserQuery {
+	return ListAuditLogsByUserQuery{
+		UserID:    userID,
+		Page:      p.Page,
+		PageSize:  p.PageSize,
+		Query:     p.Query,
+		Sort:      p.Sort,
+		SortField: p.SortField,
+		StartTime: p.StartTime,
+		EndTime:   p.EndTime,
 	}
 }
 

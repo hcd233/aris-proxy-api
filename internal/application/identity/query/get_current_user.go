@@ -3,41 +3,18 @@ package query
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// UserView 用户详情只读投影
-//
-//	@author centonhuang
-//	@update 2026-04-22 17:00:00
-type UserView struct {
-	ID         uint
-	Name       string
-	Email      string
-	Avatar     string
-	Permission enum.Permission
-	CreatedAt  time.Time
-	LastLogin  time.Time
-}
-
-// GetCurrentUserQuery 查询当前用户命令
-//
-//	@author centonhuang
-//	@update 2026-04-22 17:00:00
-type GetCurrentUserQuery struct {
-	UserID uint
-}
-
 // GetCurrentUserHandler 查询处理器
 type GetCurrentUserHandler interface {
-	Handle(ctx context.Context, q GetCurrentUserQuery) (*UserView, error)
+	Handle(ctx context.Context, q port.GetCurrentUserQuery) (*port.UserView, error)
 }
 
 type getCurrentUserHandler struct {
@@ -63,7 +40,7 @@ func NewGetCurrentUserHandler(repo identity.UserRepository) GetCurrentUserHandle
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func (h *getCurrentUserHandler) Handle(ctx context.Context, q GetCurrentUserQuery) (*UserView, error) {
+func (h *getCurrentUserHandler) Handle(ctx context.Context, q port.GetCurrentUserQuery) (*port.UserView, error) {
 	log := logger.WithCtx(ctx)
 
 	user, err := h.repo.FindByID(ctx, q.UserID)
@@ -74,7 +51,7 @@ func (h *getCurrentUserHandler) Handle(ctx context.Context, q GetCurrentUserQuer
 	if user == nil {
 		return nil, ierr.New(ierr.ErrDataNotExists, "user not found")
 	}
-	return &UserView{
+	return &port.UserView{
 		ID:         user.AggregateID(),
 		Name:       user.Name().String(),
 		Email:      user.Email().String(),
