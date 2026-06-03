@@ -260,7 +260,7 @@ export default function AuditPage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{log.model || "—"}</p>
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {log.userName || "—"} · {log.apiKeyName || "—"} · {log.apiProvider || "—"}
+                            {log.userName || "—"} · {log.apiKeyName || "—"} · {log.apiProtocol || "—"}
                           </p>
                         </div>
                         <Badge
@@ -337,7 +337,11 @@ export default function AuditPage() {
                             </div>
                             <div>
                               <span className="text-muted-foreground">Upstream</span>
-                              <p>{log.upstreamProvider || "—"}</p>
+                              <p>{log.upstreamProtocol || "—"}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Endpoint</span>
+                              <p>{log.endpoint || "—"}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">User</span>
@@ -407,9 +411,9 @@ export default function AuditPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">{log.apiProvider || "—"}</div>
+                        <div className="text-sm">{log.apiProtocol || "—"}</div>
                         <div className="text-xs text-muted-foreground">
-                          upstream: {log.upstreamProvider || "—"}
+                          upstream: {log.upstreamProtocol || "—"}
                         </div>
                       </TableCell>
                       <TableCell>
