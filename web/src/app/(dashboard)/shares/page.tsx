@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import {
   AlertTriangle,
   Check,
@@ -58,9 +59,11 @@ interface DeleteTarget {
 
 export default function SharesPage() {
   const [shares, setShares] = useState<ShareItem[]>([]);
+  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.shares.page", 1);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.shares.pageSize", 20);
   const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: 1,
-    pageSize: 20,
+    page: persistedPage,
+    pageSize: persistedPageSize,
     total: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -81,7 +84,11 @@ export default function SharesPage() {
         return;
       }
       setShares(rsp.shares ?? []);
-      if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
+      if (rsp.pageInfo) {
+        setPageInfo(rsp.pageInfo);
+        setPersistedPage(rsp.pageInfo.page);
+        setPersistedPageSize(rsp.pageInfo.pageSize);
+      }
       setRefreshedAt(Date.now());
     } catch (err) {
       const msg =
@@ -94,13 +101,13 @@ export default function SharesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setPersistedPage, setPersistedPageSize]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchShares(1, 20);
+    fetchShares(persistedPage, persistedPageSize);
   }, [fetchShares]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleCopy = useCallback(async (share: ShareItem) => {
     const url = buildShareURL(share.shareId);

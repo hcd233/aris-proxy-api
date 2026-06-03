@@ -257,7 +257,7 @@ type sessionSummaryRow struct {
 	ToolCount    int       `gorm:"column:tool_count"`
 }
 
-func (r *sessionReadRepository) paginate(ctx context.Context, baseWhere func(*gorm.DB) *gorm.DB, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -268,9 +268,6 @@ func (r *sessionReadRepository) paginate(ctx context.Context, baseWhere func(*go
 
 	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
 
-	if baseWhere != nil {
-		sql = baseWhere(sql)
-	}
 	if !startTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
 	}
@@ -309,20 +306,54 @@ func (r *sessionReadRepository) paginate(ctx context.Context, baseWhere func(*go
 	return out, pageInfo, nil
 }
 
-func (r *sessionReadRepository) ListSessions(ctx context.Context, owner string, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.paginate(ctx, func(db *gorm.DB) *gorm.DB {
-		return db.Where(constant.DBConditionAPIKeyNameEqual, owner)
-	}, param, startTime, endTime)
-}
-
-func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.paginate(ctx, nil, param, startTime, endTime)
-}
-
 func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
-	return r.paginate(ctx, func(db *gorm.DB) *gorm.DB {
-		return db.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
-	}, param, startTime, endTime)
+	db := r.db.WithContext(ctx)
+	if param.Page < 1 {
+		param.Page = 1
+	}
+	if param.PageSize < 1 {
+		param.PageSize = 20
+	}
+
+	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
+	sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+
+	if !startTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
+	}
+	if !endTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
+	}
+	if param.Sort != "" && param.SortField != "" {
+		param.SortField = safeSortField(param.SortField)
+	}
+	if param.Sort != "" && param.SortField != "" {
+		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
+
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if err := sql.Count(&pageInfo.Total).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count sessions")
+	}
+
+	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
+	var rows []sessionSummaryRow
+	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
+	}
+
+	out := make([]*session.SessionSummaryProjection, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, &session.SessionSummaryProjection{
+			ID:           row.ID,
+			CreatedAt:    row.CreatedAt,
+			UpdatedAt:    row.UpdatedAt,
+			Summary:      row.Summary,
+			MessageCount: row.MessageCount,
+			ToolCount:    row.ToolCount,
+		})
+	}
+	return out, pageInfo, nil
 }
 
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）

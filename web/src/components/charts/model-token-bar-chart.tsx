@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { ModelUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,9 +129,9 @@ function BarWithTooltip({
 }
 
 export function ModelTokenBarChart() {
-  const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTokenBar.timeRange", "7d");
+  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTokenBar.customStart", "");
+  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTokenBar.customEnd", "");
   const [data, setData] = useState<ModelUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
