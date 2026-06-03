@@ -10,30 +10,32 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-func auditFailure(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel string, apiProvider enum.ProviderType, totalMs int64, err error) {
-	auditFailureWithProviders(submitter, ctx, m, exposedModel, apiProvider, apiProvider, totalMs, err)
+func auditFailure(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel, endpoint string, apiProtocol enum.ProtocolType, totalMs int64, err error) {
+	auditFailureWithProviders(submitter, ctx, m, exposedModel, endpoint, apiProtocol, apiProtocol, totalMs, err)
 }
 
-func auditFailureWithProviders(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel string, upstreamProvider, apiProvider enum.ProviderType, totalMs int64, err error) {
+func auditFailureWithProviders(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, totalMs int64, err error) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
 		ModelID:             m.AggregateID(),
 		Model:               exposedModel,
-		UpstreamProvider:    upstreamProvider,
-		APIProvider:         apiProvider,
+		Endpoint:            endpoint,
+		UpstreamProtocol:    upstreamProtocol,
+		APIProtocol:         apiProtocol,
 		FirstTokenLatencyMs: totalMs,
 	}
 	task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 	_ = submitter.SubmitModelCallAuditTask(task)
 }
 
-func newAuditTask(ctx context.Context, m *aggregate.Model, exposedModel string, upstreamProvider, apiProvider enum.ProviderType, firstTokenLatencyMs int64) *dto.ModelCallAuditTask {
+func newAuditTask(ctx context.Context, m *aggregate.Model, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, firstTokenLatencyMs int64) *dto.ModelCallAuditTask {
 	return &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
 		ModelID:             m.AggregateID(),
 		Model:               exposedModel,
-		UpstreamProvider:    upstreamProvider,
-		APIProvider:         apiProvider,
+		Endpoint:            endpoint,
+		UpstreamProtocol:    upstreamProtocol,
+		APIProtocol:         apiProtocol,
 		FirstTokenLatencyMs: firstTokenLatencyMs,
 	}
 }

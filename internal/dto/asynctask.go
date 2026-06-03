@@ -61,8 +61,9 @@ type ModelCallAuditTask struct {
 	Ctx                      context.Context
 	ModelID                  uint
 	Model                    string
-	UpstreamProvider         string
-	APIProvider              string
+	UpstreamProtocol         string
+	APIProtocol              string
+	Endpoint                 string
 	InputTokens              int
 	OutputTokens             int
 	CacheCreationInputTokens int

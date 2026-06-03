@@ -9,8 +9,9 @@ type ModelCallAudit struct {
 	APIKeyID                 uint   `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_api_key_id_created_at,priority:1"`
 	ModelID                  uint   `json:"model_id" gorm:"column:model_id;not null;comment:模型端点ID;index:idx_model_id_created_at,priority:1"`
 	Model                    string `json:"model" gorm:"column:model;not null;default:'';comment:对外暴露的模型别名;index:idx_model_created_at,priority:1"`
-	UpstreamProvider         string `json:"upstream_provider" gorm:"column:upstream_provider;not null;default:'';comment:上游提供商(openai/anthropic)"`
-	APIProvider              string `json:"api_provider" gorm:"column:api_provider;not null;default:'';comment:接口层协议(openai/anthropic)"`
+	UpstreamProtocol         string `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message)"`
+	APIProtocol              string `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message)"`
+	Endpoint                 string `json:"endpoint" gorm:"column:endpoint;not null;default:'';comment:调用模型的 Endpoint 名"`
 	InputTokens              int    `json:"input_tokens" gorm:"column:input_tokens;not null;default:0;comment:输入token数"`
 	OutputTokens             int    `json:"output_tokens" gorm:"column:output_tokens;not null;default:0;comment:输出token数"`
 	CacheCreationInputTokens int    `json:"cache_creation_input_tokens" gorm:"column:cache_creation_input_tokens;not null;default:0;comment:缓存写入token数"`

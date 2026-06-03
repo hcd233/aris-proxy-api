@@ -21,9 +21,10 @@ type ModelCallAudit struct {
 
 	apiKeyID         uint
 	modelID          uint
-	model            string            // exposed model（客户端请求别名）
-	upstreamProvider enum.ProviderType // ep.Provider
-	apiProvider      enum.ProviderType // 入站协议
+	model            string // exposed model（客户端请求别名）
+	upstreamProtocol enum.ProtocolType
+	apiProtocol      enum.ProtocolType
+	endpoint         string
 	tokens           vo.TokenBreakdown
 	latency          vo.CallLatency
 	status           vo.CallStatus
@@ -54,8 +55,9 @@ type RecordCallInput struct {
 	APIKeyID         uint
 	ModelID          uint
 	Model            string
-	UpstreamProvider enum.ProviderType
-	APIProvider      enum.ProviderType
+	UpstreamProtocol enum.ProtocolType
+	APIProtocol      enum.ProtocolType
+	Endpoint         string
 	Tokens           vo.TokenBreakdown
 	Latency          vo.CallLatency
 	Status           vo.CallStatus
@@ -69,8 +71,9 @@ func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 		apiKeyID:         input.APIKeyID,
 		modelID:          input.ModelID,
 		model:            input.Model,
-		upstreamProvider: input.UpstreamProvider,
-		apiProvider:      input.APIProvider,
+		upstreamProtocol: input.UpstreamProtocol,
+		apiProtocol:      input.APIProtocol,
+		endpoint:         input.Endpoint,
 		tokens:           input.Tokens,
 		latency:          input.Latency,
 		status:           input.Status,
@@ -92,11 +95,14 @@ func (a *ModelCallAudit) ModelID() uint { return a.modelID }
 // Model 返回 exposed model 名
 func (a *ModelCallAudit) Model() string { return a.model }
 
-// UpstreamProvider 返回上游协议
-func (a *ModelCallAudit) UpstreamProvider() enum.ProviderType { return a.upstreamProvider }
+// UpstreamProtocol 返回上游协议
+func (a *ModelCallAudit) UpstreamProtocol() enum.ProtocolType { return a.upstreamProtocol }
 
-// APIProvider 返回入站协议
-func (a *ModelCallAudit) APIProvider() enum.ProviderType { return a.apiProvider }
+// APIProtocol 返回入站协议
+func (a *ModelCallAudit) APIProtocol() enum.ProtocolType { return a.apiProtocol }
+
+// Endpoint 返回 Endpoint 名
+func (a *ModelCallAudit) Endpoint() string { return a.endpoint }
 
 // Tokens 返回 token 统计
 func (a *ModelCallAudit) Tokens() vo.TokenBreakdown { return a.tokens }

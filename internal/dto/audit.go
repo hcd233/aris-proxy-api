@@ -39,8 +39,9 @@ type AuditLogItem struct {
 	ID                       uint      `json:"id" doc:"记录ID"`
 	CreatedAt                time.Time `json:"createdAt" doc:"创建时间"`
 	Model                    string    `json:"model" doc:"模型名"`
-	UpstreamProvider         string    `json:"upstreamProvider" doc:"上游提供商"`
-	APIProvider              string    `json:"apiProvider" doc:"接口协议"`
+	UpstreamProtocol         string    `json:"upstreamProtocol" doc:"上游协议"`
+	APIProtocol              string    `json:"apiProtocol" doc:"接口协议"`
+	Endpoint                 string    `json:"endpoint" doc:"调用 Endpoint 名"`
 	InputTokens              int       `json:"inputTokens" doc:"输入token数"`
 	OutputTokens             int       `json:"outputTokens" doc:"输出token数"`
 	CacheCreationInputTokens int       `json:"cacheCreationInputTokens" doc:"缓存写入token数"`
