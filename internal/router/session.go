@@ -70,6 +70,17 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionTools", enum.PermissionUser)},
 	}, sessionHandler.HandleListSessionTools)
 
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "deleteSession",
+		Method:      http.MethodDelete,
+		Path:        "",
+		Summary:     "DeleteSession",
+		Description: "Delete a session by ID (owner or admin)",
+		Tags:        []string{"Session"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteSession", enum.PermissionUser)},
+	}, sessionHandler.HandleDeleteSession)
+
 	initSessionShareRouter(sessionGroup, sessionHandler)
 }
 

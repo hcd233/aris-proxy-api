@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -23,7 +24,7 @@ import (
 // SessionHandler Session处理器
 //
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-06-03 10:00:00
 type SessionHandler interface {
 	HandleListSessionsByUser(ctx context.Context, req *dto.ListSessionsByUserReq) (*dto.HTTPResponse[*dto.ListSessionsRsp], error)
 	HandleGetSessionByUser(ctx context.Context, req *dto.GetSessionByUserReq) (*dto.HTTPResponse[*dto.GetSessionRsp], error)
@@ -37,20 +38,21 @@ type SessionHandler interface {
 	HandleGetShareMetadata(ctx context.Context, req *dto.GetShareMetadataReq) (*dto.HTTPResponse[*dto.GetShareMetadataRsp], error)
 	HandleListShareMessages(ctx context.Context, req *dto.ListShareMessagesReq) (*dto.HTTPResponse[*dto.ListShareMessagesRsp], error)
 	HandleListShareTools(ctx context.Context, req *dto.ListShareToolsReq) (*dto.HTTPResponse[*dto.ListShareToolsRsp], error)
+	HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
 //
 //	@author centonhuang
-//	@update 2026-04-26 10:00:00
+//	@update 2026-06-03 10:00:00
 type SessionDependencies struct {
-	ListByUser sessionquery.ListSessionsByUserHandler
-	GetByUser  sessionquery.GetSessionByUserHandler
-	ShareCache cache.ShareCache
-	// 新增（详情接口性能优化）
+	ListByUser    sessionquery.ListSessionsByUserHandler
+	GetByUser     sessionquery.GetSessionByUserHandler
+	ShareCache    cache.ShareCache
 	GetMetaByUser sessionquery.GetSessionMetaByUserHandler
 	ListMessages  sessionquery.ListSessionMessagesHandler
 	ListTools     sessionquery.ListSessionToolsHandler
+	DeleteSession sessioncommand.DeleteSessionHandler
 }
 
 type sessionHandler struct {
@@ -60,6 +62,7 @@ type sessionHandler struct {
 	getMetaByUser sessionquery.GetSessionMetaByUserHandler
 	listMessages  sessionquery.ListSessionMessagesHandler
 	listTools     sessionquery.ListSessionToolsHandler
+	deleteSession sessioncommand.DeleteSessionHandler
 }
 
 // NewSessionHandler 创建Session处理器
@@ -67,7 +70,7 @@ type sessionHandler struct {
 //	@param deps SessionDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
 //	@return SessionHandler
 //	@author centonhuang
-//	@update 2026-04-26 10:00:00
+//	@update 2026-06-03 10:00:00
 func NewSessionHandler(deps SessionDependencies) SessionHandler {
 	return &sessionHandler{
 		listByUser:    deps.ListByUser,
@@ -76,6 +79,7 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 		getMetaByUser: deps.GetMetaByUser,
 		listMessages:  deps.ListMessages,
 		listTools:     deps.ListTools,
+		deleteSession: deps.DeleteSession,
 	}
 }
 
@@ -307,6 +311,38 @@ func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteS
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Share deleted",
 		zap.String("shareID", req.ShareID))
+
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleDeleteSession 删除 Session（JWT认证）
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param req *dto.DeleteSessionReq
+//	@return *dto.HTTPResponse[*dto.EmptyRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-03 10:00:00
+func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	rsp := &dto.EmptyRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+
+	err := h.deleteSession.Handle(ctx, sessioncommand.DeleteSessionCommand{
+		SessionID:           req.SessionID,
+		RequesterID:         userID,
+		RequesterPermission: permission,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Delete session failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Session deleted",
+		zap.Uint("sessionID", req.SessionID))
 
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
