@@ -73,14 +73,14 @@ export default function DashboardPage() {
         api.listSessions({ page: 1, pageSize: 1 }),
       ]);
 
-      const endpointsCount = isAdmin() ? (await api.listEndpoints().catch(() => ({ endpoints: [] }))).endpoints?.length ?? 0 : 0;
-      const modelsCount = isAdmin() ? (await api.listModels().catch(() => ({ models: [] }))).models?.length ?? 0 : 0;
+      const endpointsRsp = isAdmin() ? await api.listEndpoints().catch(() => null) : null;
+      const modelsRsp = isAdmin() ? await api.listModels().catch(() => null) : null;
 
       setStats({
-        apiKeys: keysRsp.keys?.length ?? 0,
+        apiKeys: keysRsp.pageInfo?.total ?? 0,
         sessions: sessionsRsp.pageInfo?.total ?? 0,
-        endpoints: endpointsCount,
-        models: modelsCount,
+        endpoints: endpointsRsp?.pageInfo?.total ?? 0,
+        models: modelsRsp?.pageInfo?.total ?? 0,
       });
     } catch {
       // Errors handled silently — dashboard shows zeros
