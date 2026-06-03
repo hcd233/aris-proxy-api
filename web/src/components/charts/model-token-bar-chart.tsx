@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api-client";
 import type { ModelUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,12 +43,24 @@ function BarWithTooltip({
   mainColor: string;
 }) {
   const [hovered, setHovered] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ left: 0, top: 0 });
   const barRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const denom = mainValue > 0 ? mainValue : 1;
   const cachePct = Math.min((cacheValue / denom) * 100, 100);
   const freshPct = Math.max(100 - cachePct, 0);
   const cacheRatio = denom > 0 ? Math.round((cacheValue / denom) * 100) : 0;
+
+  useLayoutEffect(() => {
+    if (!hovered || !barRef.current || !tooltipRef.current) return;
+    const barRect = barRef.current.getBoundingClientRect();
+    const ttRect = tooltipRef.current.getBoundingClientRect();
+    const left = barRect.left + barRect.width / 2 - ttRect.width / 2;
+    const top = barRect.top - ttRect.height - 8;
+    const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - ttRect.width - 8));
+    setTooltipPos({ left: clampedLeft, top });
+  }, [hovered]);
 
   return (
     <div
@@ -78,7 +90,9 @@ function BarWithTooltip({
 
       {hovered && (
         <div
-          className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2"
+          ref={tooltipRef}
+          className="pointer-events-none fixed z-50"
+          style={{ left: tooltipPos.left, top: tooltipPos.top }}
         >
           <div className="grid min-w-40 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
             <div className="flex items-center gap-2">
@@ -107,7 +121,6 @@ function BarWithTooltip({
               </div>
             </div>
           </div>
-          <div className="mx-auto h-2 w-2 -translate-y-1 rotate-45 border-b border-r border-border/50 bg-background" />
         </div>
       )}
     </div>
@@ -205,7 +218,7 @@ export function ModelTokenBarChart() {
             No data for this period
           </div>
         ) : (
-          <div>
+          <div className="h-64 overflow-y-auto">
             <table className="w-full text-sm tabular-nums">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
