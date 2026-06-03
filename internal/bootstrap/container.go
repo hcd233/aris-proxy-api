@@ -293,6 +293,12 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newModelUsageByUserHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(auditquery.NewFirstTokenLatencyHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newFirstTokenLatencyByUserHandler); err != nil {
+		return err
+	}
 	if err := container.Provide(newAuditService); err != nil {
 		return err
 	}
@@ -568,8 +574,10 @@ func newAuditService(
 	tokenRateByUser auditquery.TokenRateByUserHandler,
 	modelUsage auditquery.ModelUsageHandler,
 	modelUsageByUser auditquery.ModelUsageByUserHandler,
+	firstTokenLatency auditquery.FirstTokenLatencyHandler,
+	firstTokenLatencyByUser auditquery.FirstTokenLatencyByUserHandler,
 ) auditquery.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser)
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
@@ -594,6 +602,10 @@ func newTokenRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey
 
 func newModelUsageByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelUsageByUserHandler {
 	return auditquery.NewModelUsageByUserHandler(repo, apiKeyRepo)
+}
+
+func newFirstTokenLatencyByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.FirstTokenLatencyByUserHandler {
+	return auditquery.NewFirstTokenLatencyByUserHandler(repo, apiKeyRepo)
 }
 
 func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {
