@@ -18,9 +18,9 @@ const (
 	DBOrderByIDAscLimitOffset   = " ORDER BY id ASC LIMIT ? OFFSET ?"
 	DBOrderByID                 = "id"
 
-	DBJSONConditionAssistantRole  = "(message::jsonb)->>'role' = 'assistant'"
+	DBJSONConditionAssistantRole  = "message->>'role' = 'assistant'"
 	DBJSONConditionHasThinkTag    = "CAST(message AS TEXT) LIKE '%" + ThinkTagOpen + "%'"
-	DBJSONConditionReasoningEmpty = "((message::jsonb)->>'reasoning_content' IS NULL OR (message::jsonb)->>'reasoning_content' = '')"
+	DBJSONConditionReasoningEmpty = "(message->>'reasoning_content' IS NULL OR message->>'reasoning_content' = '')"
 
 	DBQueryCountActiveSessions   = "SELECT COUNT(*) FROM sessions WHERE deleted_at = 0"
 	DBQueryListActiveSessionRows = `SELECT id, created_at, updated_at, summary,

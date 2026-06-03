@@ -15,7 +15,6 @@ import (
 	xoauth2 "golang.org/x/oauth2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
@@ -95,7 +94,7 @@ func TestInitiateLogin(t *testing.T) {
 
 	for _, tc := range loadCases(t) {
 		t.Run(tc.Name, func(t *testing.T) {
-			result, err := handler.Handle(ctx, port.InitiateLoginCommand{Platform: tc.Platform})
+			result, err := handler.Handle(ctx, command.InitiateLoginCommand{Platform: tc.Platform})
 
 			switch tc.ExpectErrKind {
 			case "":

@@ -5,7 +5,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
@@ -14,9 +13,17 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
+// RefreshTokensCommand 刷新 token 对命令
+//
+//	@author centonhuang
+//	@update 2026-04-22 17:00:00
+type RefreshTokensCommand struct {
+	RefreshToken string
+}
+
 // RefreshTokensHandler 刷新命令处理器
 type RefreshTokensHandler interface {
-	Handle(ctx context.Context, cmd port.RefreshTokensCommand) (*vo.TokenPair, error)
+	Handle(ctx context.Context, cmd RefreshTokensCommand) (*vo.TokenPair, error)
 }
 
 type refreshTokensHandler struct {
@@ -46,7 +53,7 @@ func NewRefreshTokensHandler(repo identity.UserRepository, access, refresh servi
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func (h *refreshTokensHandler) Handle(ctx context.Context, cmd port.RefreshTokensCommand) (*vo.TokenPair, error) {
+func (h *refreshTokensHandler) Handle(ctx context.Context, cmd RefreshTokensCommand) (*vo.TokenPair, error) {
 	log := logger.WithCtx(ctx)
 
 	userID, err := h.refresh.DecodeToken(cmd.RefreshToken)

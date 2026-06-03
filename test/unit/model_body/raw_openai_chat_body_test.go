@@ -7,6 +7,7 @@ import (
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 func TestMarshalRawOpenAIChatCompletionBodyForModel_PreservesUnknownFields(t *testing.T) {
@@ -23,6 +24,9 @@ func TestMarshalRawOpenAIChatCompletionBodyForModel_PreservesUnknownFields(t *te
 
 	if !strings.Contains(bodyStr, `"model":"upstream-chat-model"`) {
 		t.Fatalf("upstream body must use upstream model, got: %s", bodyStr)
+	}
+	if util.HashJSONBodyExcludingTopLevelModel(raw) != util.HashJSONBodyExcludingTopLevelModel(body) {
+		t.Fatalf("raw body fields other than model must be preserved\nraw: %s\nbody: %s", string(raw), bodyStr)
 	}
 	if req.Model != "exposed-chat-model" {
 		t.Fatalf("request model must remain exposed model, got: %s", req.Model)

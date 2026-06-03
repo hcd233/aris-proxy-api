@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	convvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
+	convvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
 
 // toolChecksumCase represents a tool checksum test case loaded from fixtures

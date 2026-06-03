@@ -5,16 +5,23 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
+// UpdateModelCommand 更新 Model 命令
+type UpdateModelCommand struct {
+	ModelID    uint
+	Alias      *string
+	ModelName  *string
+	EndpointID *uint
+}
+
 // UpdateModelHandler 更新命令处理器
 type UpdateModelHandler interface {
-	Handle(ctx context.Context, cmd port.UpdateModelCommand) error
+	Handle(ctx context.Context, cmd UpdateModelCommand) error
 }
 
 type updateModelHandler struct {
@@ -27,7 +34,7 @@ func NewUpdateModelHandler(repo llmproxy.ModelRepository) UpdateModelHandler {
 }
 
 // Handle 执行更新命令
-func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCommand) error {
+func (h *updateModelHandler) Handle(ctx context.Context, cmd UpdateModelCommand) error {
 	log := logger.WithCtx(ctx)
 
 	m, err := h.repo.FindByID(ctx, cmd.ModelID)

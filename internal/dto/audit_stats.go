@@ -93,29 +93,6 @@ type TokenRatePoint struct {
 	OutputTokensPerSecond float64   `json:"outputTokensPerSecond" doc:"输出 Token 速率 (tokens/s)"`
 }
 
-// — First Token Latency —
-
-type FirstTokenLatencyReq struct {
-	StartTime   time.Time        `query:"startTime" required:"true"`
-	EndTime     time.Time        `query:"endTime" required:"true"`
-	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
-}
-
-type FirstTokenLatencyRsp struct {
-	CommonRsp
-	Data []*FirstTokenLatencyItem `json:"data,omitempty" doc:"各模型的首 Token 延迟"`
-}
-
-type FirstTokenLatencyItem struct {
-	Model  string                    `json:"model" doc:"模型名"`
-	Points []*FirstTokenLatencyPoint `json:"points" doc:"时间序列点"`
-}
-
-type FirstTokenLatencyPoint struct {
-	Time             time.Time `json:"time" doc:"时间桶"`
-	AverageLatencyMs float64   `json:"averageLatencyMs" doc:"平均首 Token 延迟 (ms)"`
-}
-
 // — Model Usage —
 
 type ModelUsageReq struct {

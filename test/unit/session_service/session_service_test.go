@@ -7,7 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	convvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
+	convvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 )

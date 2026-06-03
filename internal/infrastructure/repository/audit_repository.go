@@ -300,26 +300,3 @@ func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []
 	}
 	return results, nil
 }
-
-func (r *auditRepository) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
-	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
-		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
-		Where(constant.DBConditionDeletedAtZero)
-
-	if len(apiKeyIDs) > 0 {
-		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
-	}
-
-	timeBucketExpr := dateTruncSQL(granularity)
-	selectFields := constant.FieldModel + ", " + timeBucketExpr + " AS time, " +
-		"AVG(" + constant.FieldFirstTokenLatencyMs + ") AS average_latency_ms"
-
-	var results []*modelcall.FirstTokenLatencyPoint
-	if err := db.Select(selectFields).
-		Group(constant.FieldModel + ", time").
-		Order(constant.FieldModel + ", time").
-		Scan(&results).Error; err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query first token latency")
-	}
-	return results, nil
-}

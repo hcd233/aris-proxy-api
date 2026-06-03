@@ -6,7 +6,8 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
+	"github.com/hcd233/aris-proxy-api/internal/application/model/command"
+	"github.com/hcd233/aris-proxy-api/internal/application/model/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -22,17 +23,17 @@ type ModelHandler interface {
 }
 
 type ModelDependencies struct {
-	Create port.CreateModelHandler
-	Update port.UpdateModelHandler
-	Delete port.DeleteModelHandler
-	List   port.ListModelsHandler
+	Create command.CreateModelHandler
+	Update command.UpdateModelHandler
+	Delete command.DeleteModelHandler
+	List   query.ListModelsHandler
 }
 
 type modelHandler struct {
-	create port.CreateModelHandler
-	update port.UpdateModelHandler
-	delete port.DeleteModelHandler
-	list   port.ListModelsHandler
+	create command.CreateModelHandler
+	update command.UpdateModelHandler
+	delete command.DeleteModelHandler
+	list   query.ListModelsHandler
 }
 
 func NewModelHandler(deps ModelDependencies) ModelHandler {
@@ -48,7 +49,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	rsp := &dto.EmptyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
-	result, err := h.create.Handle(ctx, port.CreateModelCommand{
+	result, err := h.create.Handle(ctx, command.CreateModelCommand{
 		Alias:      req.Body.Alias,
 		ModelName:  req.Body.ModelName,
 		EndpointID: req.Body.EndpointID,
@@ -68,7 +69,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error) {
 	rsp := &dto.ListModelsRsp{}
 
-	views, pageInfo, err := h.list.Handle(ctx, port.ListModelsQuery{
+	views, pageInfo, err := h.list.Handle(ctx, query.ListModelsQuery{
 		CommonParam: req.CommonParam,
 	})
 	if err != nil {
@@ -109,7 +110,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
 
-	err := h.update.Handle(ctx, port.UpdateModelCommand{
+	err := h.update.Handle(ctx, command.UpdateModelCommand{
 		ModelID:    req.ID,
 		Alias:      req.Body.Alias,
 		ModelName:  req.Body.ModelName,
@@ -126,7 +127,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
 
-	err := h.delete.Handle(ctx, port.DeleteModelCommand{ModelID: req.ID})
+	err := h.delete.Handle(ctx, command.DeleteModelCommand{ModelID: req.ID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Delete model failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())

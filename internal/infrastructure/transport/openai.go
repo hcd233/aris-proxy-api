@@ -130,6 +130,7 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpo
 		zap.String("upstreamModel", ep.Model),
 		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)),
 		zap.Any("upstreamHeaders", util.MaskHTTPHeadersForLog(req.Header)),
+		zap.String("upstreamBodyHashWithoutModel", util.HashJSONBodyExcludingTopLevelModel(body)),
 		zap.ByteString("upstreamBody", body),
 	)
 

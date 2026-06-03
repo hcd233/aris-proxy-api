@@ -7,7 +7,6 @@
 - **上下文**：以现有代码、`Makefile`、脚本、workflow、hook 为事实源；文档与可执行源冲突时信任可执行源。
 - **执行循环**：分类任务 → 加载必要 skill → 阅读相关代码/文档 → 小步计划 → 最小修改 → 聚焦验证 → 汇报证据。
 - **边界**：不为普通需求默认走线上日志排障；不为手工 `curl` 结果跳过仓库测试；不绕过 hook 或安全规则。
-- **Superpowers 强制合规**：任何响应或操作前必须先加载 `using-superpowers` skill，严格按照该 skill 中说明的流程执行。禁止以"简单问题""先看看代码""我记住了"等理由绕过。
 - **输出**：简短说明做了什么、验证了什么、还有什么未验证；引用文件路径和命令必须精确。
 
 ## 1. Karpathy 编码原则
@@ -239,6 +238,7 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - **API 调用 / curl 示例 / 生产验证**：使用 `call-api`；它只负责交互式调用示例，不替代 E2E 回归。
 - **生产配置更新 / api.env / K8s ConfigMap**：使用 `update-prod-config`；SSH 到 `api.lvlvko.top` 修改配置，禁止使用裸 IP 地址。
 - **发布 / 部署**：推送到 `master` 或合并 PR 到 `master` 自动触发 `docker-publish.yml` 构建镜像并部署到 K8s；不需要额外手动部署步骤。
+- **会话开始/初次接触项目 / 需要历史上下文 / 沉淀经验教训**：使用 `agentmemory`；检查并启动 agentmemory 服务器，召回历史经验，保存新的洞察和偏好。
 - **写或改 `internal/dto/**` / 新增 huma 路由 / 排查 "field 总是零值" 类问题**：使用 `huma-dto-conventions`；它沉淀了 huma 的 path/query/body 绑定规则、Body 包装模板、响应 unwrap 行为和反模式速查。
 - 专项流程细节放在对应 skill，主文档只保留触发条件和项目级硬约束。
 
@@ -255,24 +255,34 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 
 ## 4. 常用命令
 
-- 构建：`make build`
+- 安装依赖：`go mod download`
+- 本地运行：`go run main.go server start --host localhost --port 8080`
+- 数据库迁移：`go run main.go database migrate`
+- 创建对象存储桶：`go run main.go object bucket create`
+- 完整本地栈：先创建 `postgresql-data`、`redis-data`、`minio-data` 卷，再执行 `docker compose -f docker/docker-compose-full.yml up -d`
+- 构建：`make build`；调试构建：`make build-dev` 或 `make build-debug`
 - 规范扫描：`make lint`（执行 `lint-conv` + `lint-static` 两阶段）
+- 架构规范检查：`make lint-conv`（`go run main.go lint conv ./...`，检查 DTO 依赖、层间隔离、透传包装等自定义规则，规则定义在 `internal/tool/lintconv/`）
+- 静态分析：`make lint-static`（golangci-lint v2.11.4，errcheck/govet/staticcheck/gosec 等 20+ linter，配置见 `.golangci.yml`）
 - 全量测试：`make test` 或 `go test -count=1 ./...`
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
+- 前端开发：`cd web && npm install && npm run dev`（默认 `http://localhost:3000/web`）
 - 前端 lint：`cd web && npm run lint`
 - 前端构建（同时同步到 `internal/web/dist/`）：`make web-build`；清理产物：`make web-clean`
 - 生产构建会自动包含前端：`make build` 在编译 Go 之前先跑 `web-build`
+- 覆盖率测试：`make test-cover`（生成 `coverage.html`）
+- 性能分析：`make fgprof`（拉取远程 `/debug/fgprof?seconds=30` 火焰图并启动 Web UI `:8081`）
 - UPX 极致压缩：`make build-upx`（需安装 upx）
 - 编译缓存预热：`make warm-cache`（CI 加速）
 - 全量清理：`make clean-all`（含 `go clean -cache`）
 
 ## 5. 开发工作流
 
-- **严格遵循 Superpowers 研发流程**：收到任务后必须先加载 `using-superpowers` skill，严格按 skill 中说明的流程进行开发。process skill（brainstorming、debugging 等）优先于 implementation skill。禁止以"这不是正式任务""我先收集信息"等理由绕过。
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 修改前先定位相关 handler/usecase/converter/transport/DTO，不做大范围重写。
 - 新需求和 bugfix 都应先补或更新测试；bugfix 必须有能复现问题的回归用例。
+- 每次改动后依次跑：聚焦测试 → `make lint` → 必要时 `go test -count=1 ./...`。
 - 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 通过后，只有用户明确要求提交、推送或部署时才执行 git 提交/发布流程。
 - 正式发布：推送到 `master` 或合并 PR 到 `master`，`docker-publish.yml` 自动构建镜像并部署到 K8s，无需手动 SSH 执行部署脚本。
@@ -286,6 +296,10 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - 测试数据放对应目录 `fixtures/*.json`；E2E 请求体放 `fixtures/requests/*.json`；不要在 Go 测试里内联大段 JSON。
 - 测试和生产代码统一用 `github.com/bytedance/sonic`；禁止 `encoding/json`、`json.RawMessage`、`any`、`interface{}`。
 - 只用标准库 `testing`；禁止 testify / gomock；禁止用 `time.Sleep` 做同步。
+- E2E 入口必须读取 `BASE_URL` 和 `API_KEY`，任一为空则 `t.Skip("BASE_URL and API_KEY are required for e2e test")`。
+- E2E HTTP 客户端必须显式设置超时，禁止 `http.DefaultClient`。
+- E2E 至少覆盖非流式和流式路径：非流式断言 HTTP 200 和关键 JSON 字段；流式断言 HTTP 200、`text/event-stream`、`X-Trace-Id`，读到实质 delta 后仍继续消费到 `[DONE]`、EOF 或协议结束事件。
+- E2E 不强断言模型输出语义；失败时提取 `X-Trace-Id` 并转入 `cls-log-bugfix`。
 
 ## 7. 代码契约
 

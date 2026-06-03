@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
+	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -21,15 +21,14 @@ type AuditHandler interface {
 	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
 	HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error)
 	HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error)
-	HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error)
 }
 
 type AuditDependencies struct {
-	Service auditport.AuditService
+	Service auditquery.AuditService
 }
 
 type auditHandler struct {
-	svc auditport.AuditService
+	svc auditquery.AuditService
 }
 
 func NewAuditHandler(deps AuditDependencies) AuditHandler {
@@ -41,7 +40,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 	logs, pageInfo, err := h.svc.ListLogs(ctx,
 		util.CtxValuePermission(ctx),
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		auditport.ListAuditLogsParams{
+		auditquery.ListAuditLogsParams{
 			Page: req.Page, PageSize: req.PageSize, Query: req.Query,
 			Sort: req.Sort, SortField: req.SortField,
 			StartTime: req.StartTime, EndTime: req.EndTime,
@@ -92,7 +91,7 @@ func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrend
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditport.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	rsp.Data = auditquery.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -108,7 +107,7 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditport.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	rsp.Data = auditquery.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -124,7 +123,7 @@ func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.Token
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditport.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	rsp.Data = auditquery.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -153,22 +152,6 @@ func (h *auditHandler) HandleModelUsage(ctx context.Context, req *dto.ModelUsage
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Token usage failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-	rsp.Data = items
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *auditHandler) HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error) {
-	rsp := &dto.FirstTokenLatencyRsp{}
-	items, err := h.svc.FirstTokenLatency(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] First token latency failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}

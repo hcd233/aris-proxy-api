@@ -7,7 +7,7 @@ package query
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
 
 // SessionSummaryView Session 列表单项视图（application 层只读投影）

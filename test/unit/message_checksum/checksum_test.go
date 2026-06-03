@@ -5,7 +5,8 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
+	"github.com/hcd233/aris-proxy-api/internal/domain/common/vo"
+	convvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 )
 
 // testCase represents raw JSON structure aligned with fixtures/cases.json
@@ -53,7 +54,7 @@ func loadSchemaAwareCases(t *testing.T) []testCase {
 }
 
 // loadToolSchemas loads tool schemas from fixtures/tool_schemas.json
-func loadToolSchemas(t *testing.T) vo.ToolSchemaMap {
+func loadToolSchemas(t *testing.T) convvo.ToolSchemaMap {
 	t.Helper()
 	data, err := os.ReadFile("./fixtures/tool_schemas.json")
 	if err != nil {
@@ -63,7 +64,7 @@ func loadToolSchemas(t *testing.T) vo.ToolSchemaMap {
 	if err := sonic.Unmarshal(data, &schemas); err != nil {
 		t.Fatalf("failed to unmarshal fixtures/tool_schemas.json: %v", err)
 	}
-	return vo.ToolSchemaMap(schemas)
+	return convvo.ToolSchemaMap(schemas)
 }
 
 // findCase finds a test case by name, fatals if not found
@@ -78,21 +79,21 @@ func findCase(t *testing.T, cases []testCase, name string) testCase {
 	return testCase{}
 }
 
-// toUnifiedMessage converts a testCase to vo.UnifiedMessage
-func toUnifiedMessage(t *testing.T, tc testCase) *vo.UnifiedMessage {
+// toUnifiedMessage converts a testCase to convvo.UnifiedMessage
+func toUnifiedMessage(t *testing.T, tc testCase) *convvo.UnifiedMessage {
 	t.Helper()
-	msg := &vo.UnifiedMessage{
+	msg := &convvo.UnifiedMessage{
 		Role:             tc.Role,
 		ReasoningContent: tc.ReasoningContent,
 		ToolCallID:       tc.ToolCallID,
 	}
 	if tc.Content != "" {
-		msg.Content = &vo.UnifiedContent{Text: tc.Content}
+		msg.Content = &convvo.UnifiedContent{Text: tc.Content}
 	}
 	if len(tc.ToolCalls) > 0 {
-		msg.ToolCalls = make([]*vo.UnifiedToolCall, len(tc.ToolCalls))
+		msg.ToolCalls = make([]*convvo.UnifiedToolCall, len(tc.ToolCalls))
 		for i, call := range tc.ToolCalls {
-			msg.ToolCalls[i] = &vo.UnifiedToolCall{
+			msg.ToolCalls[i] = &convvo.UnifiedToolCall{
 				ID:        call.ID,
 				Name:      call.Name,
 				Arguments: call.Arguments,
@@ -123,8 +124,8 @@ func TestComputeMessageChecksum_DifferentKeyOrder(t *testing.T) {
 			msgA := toUnifiedMessage(t, tcA)
 			msgB := toUnifiedMessage(t, tcB)
 
-			checksumA := vo.ComputeMessageChecksum(msgA, nil)
-			checksumB := vo.ComputeMessageChecksum(msgB, nil)
+			checksumA := convvo.ComputeMessageChecksum(msgA, nil)
+			checksumB := convvo.ComputeMessageChecksum(msgB, nil)
 
 			t.Logf("caseA=%s arguments: %s", tt.caseA, tcA.ToolCalls[0].Arguments)
 			t.Logf("caseB=%s arguments: %s", tt.caseB, tcB.ToolCalls[0].Arguments)
@@ -145,8 +146,8 @@ func TestComputeMessageChecksum_ToolCallIDIgnored(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := convvo.ComputeMessageChecksum(msgA, nil)
+	checksumB := convvo.ComputeMessageChecksum(msgB, nil)
 
 	t.Logf("checksumA (ID=call_001): %s", checksumA)
 	t.Logf("checksumB (ID=call_999): %s", checksumB)
@@ -164,8 +165,8 @@ func TestComputeMessageChecksum_DifferentToolCallIDOnMessage(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := convvo.ComputeMessageChecksum(msgA, nil)
+	checksumB := convvo.ComputeMessageChecksum(msgB, nil)
 
 	t.Logf("checksumA (ToolCallID=call_001): %s", checksumA)
 	t.Logf("checksumB (ToolCallID=call_999): %s", checksumB)
@@ -183,8 +184,8 @@ func TestComputeMessageChecksum_DifferentMessages(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := convvo.ComputeMessageChecksum(msgA, nil)
+	checksumB := convvo.ComputeMessageChecksum(msgB, nil)
 
 	t.Logf("checksumA: %s", checksumA)
 	t.Logf("checksumB: %s", checksumB)
@@ -200,7 +201,7 @@ func TestComputeMessageChecksum_EmptyToolCalls(t *testing.T) {
 	tc := findCase(t, cases, "empty_tool_calls")
 	msg := toUnifiedMessage(t, tc)
 
-	checksum := vo.ComputeMessageChecksum(msg, nil)
+	checksum := convvo.ComputeMessageChecksum(msg, nil)
 	t.Logf("checksum: %s", checksum)
 
 	if checksum == "" {
@@ -216,8 +217,8 @@ func TestComputeMessageChecksum_MultipleToolCallsKeyOrder(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := convvo.ComputeMessageChecksum(msgA, nil)
+	checksumB := convvo.ComputeMessageChecksum(msgB, nil)
 
 	t.Logf("checksumA: %s", checksumA)
 	t.Logf("checksumB: %s", checksumB)
@@ -238,8 +239,8 @@ func TestComputeMessageChecksum_SchemaDefaultRemoved(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := convvo.ComputeMessageChecksum(msgA, schemas)
+	checksumB := convvo.ComputeMessageChecksum(msgB, schemas)
 
 	t.Logf("caseA args: %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args: %s", tcB.ToolCalls[0].Arguments)
@@ -259,8 +260,8 @@ func TestComputeMessageChecksum_SchemaNonDefaultKept(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := convvo.ComputeMessageChecksum(msgA, schemas)
+	checksumB := convvo.ComputeMessageChecksum(msgB, schemas)
 
 	t.Logf("caseA args (no replace_all): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (replace_all:true): %s", tcB.ToolCalls[0].Arguments)
@@ -280,8 +281,8 @@ func TestComputeMessageChecksum_SchemaRequiredFieldKept(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := convvo.ComputeMessageChecksum(msgA, schemas)
+	checksumB := convvo.ComputeMessageChecksum(msgB, schemas)
 
 	t.Logf("caseA args (verbose:false, required): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (no verbose, required field): %s", tcB.ToolCalls[0].Arguments)
@@ -300,8 +301,8 @@ func TestComputeMessageChecksum_NoSchemaFallback(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := convvo.ComputeMessageChecksum(msgA, nil)
+	checksumB := convvo.ComputeMessageChecksum(msgB, nil)
 
 	t.Logf("caseA args (no replace_all): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (replace_all:false): %s", tcB.ToolCalls[0].Arguments)
@@ -321,8 +322,8 @@ func TestComputeMessageChecksum_SchemaMultipleDefaultsRemoved(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := convvo.ComputeMessageChecksum(msgA, schemas)
+	checksumB := convvo.ComputeMessageChecksum(msgB, schemas)
 
 	t.Logf("caseA args (with defaults): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (without defaults): %s", tcB.ToolCalls[0].Arguments)

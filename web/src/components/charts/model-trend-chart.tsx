@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { ModelTrendItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,9 +20,9 @@ import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
 export function ModelTrendChart() {
-  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTrend.timeRange", "7d");
-  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTrend.customStart", "");
-  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTrend.customEnd", "");
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [data, setData] = useState<ModelTrendItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

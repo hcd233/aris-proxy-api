@@ -4,7 +4,7 @@ package schema
 import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
+	"github.com/hcd233/aris-proxy-api/internal/domain/common/vo"
 )
 
 // JSONSchemaTypeValue 是 domain/common/vo.JSONSchemaTypeValue 的内嵌类型
