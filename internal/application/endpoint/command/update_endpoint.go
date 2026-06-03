@@ -5,26 +5,15 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// UpdateEndpointCommand 更新 Endpoint 命令
-type UpdateEndpointCommand struct {
-	EndpointID                  uint
-	Name                        *string
-	OpenaiBaseURL               *string
-	AnthropicBaseURL            *string
-	APIKey                      *string
-	SupportOpenAIChatCompletion *bool
-	SupportOpenAIResponse       *bool
-	SupportAnthropicMessage     *bool
-}
-
 // UpdateEndpointHandler 更新命令处理器
 type UpdateEndpointHandler interface {
-	Handle(ctx context.Context, cmd UpdateEndpointCommand) error
+	Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error
 }
 
 type updateEndpointHandler struct {
@@ -37,7 +26,7 @@ func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) UpdateEndpointHa
 }
 
 // Handle 执行更新命令
-func (h *updateEndpointHandler) Handle(ctx context.Context, cmd UpdateEndpointCommand) error {
+func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
 	ep, err := h.repo.FindByID(ctx, cmd.EndpointID)

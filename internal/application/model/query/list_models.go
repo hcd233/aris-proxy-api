@@ -2,37 +2,20 @@ package query
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/zap"
 
+	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-
-	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
 )
-
-// ListModelsQuery 列出 Models 查询命令
-type ListModelsQuery struct {
-	model.CommonParam
-}
-
-// ModelView Model 只读投影
-type ModelView struct {
-	ID        uint
-	Alias     string
-	ModelName string
-	Endpoint  *endpointquery.EndpointView
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
 
 // ListModelsHandler 查询处理器
 type ListModelsHandler interface {
-	Handle(ctx context.Context, q ListModelsQuery) ([]*ModelView, *model.PageInfo, error)
+	Handle(ctx context.Context, q modelport.ListModelsQuery) ([]*modelport.ModelView, *model.PageInfo, error)
 }
 
 type listModelsHandler struct {
@@ -46,7 +29,7 @@ func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.E
 }
 
 // Handle 执行列表查询
-func (h *listModelsHandler) Handle(ctx context.Context, q ListModelsQuery) ([]*ModelView, *model.PageInfo, error) {
+func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQuery) ([]*modelport.ModelView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
 	models, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam)
@@ -61,9 +44,9 @@ func (h *listModelsHandler) Handle(ctx context.Context, q ListModelsQuery) ([]*M
 		return nil, nil, err
 	}
 
-	views := make([]*ModelView, 0, len(models))
+	views := make([]*modelport.ModelView, 0, len(models))
 	for _, m := range models {
-		views = append(views, &ModelView{
+		views = append(views, &modelport.ModelView{
 			ID:        m.AggregateID(),
 			Alias:     m.Alias().String(),
 			ModelName: m.ModelName(),
@@ -91,11 +74,11 @@ func (h *listModelsHandler) loadEndpoints(ctx context.Context, models []*aggrega
 	return h.endpointRepo.BatchFindByIDs(ctx, ids)
 }
 
-func toEndpointView(ep *aggregate.Endpoint) *endpointquery.EndpointView {
+func toEndpointView(ep *aggregate.Endpoint) *modelport.EndpointView {
 	if ep == nil {
 		return nil
 	}
-	return &endpointquery.EndpointView{
+	return &modelport.EndpointView{
 		ID:                          ep.AggregateID(),
 		Name:                        ep.Name(),
 		OpenaiBaseURL:               ep.OpenaiBaseURL(),

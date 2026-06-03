@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -12,21 +13,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// CreateModelCommand 创建 Model 命令
-type CreateModelCommand struct {
-	Alias      string
-	ModelName  string
-	EndpointID uint
-}
-
-// CreateModelResult 创建命令结果
-type CreateModelResult struct {
-	ModelID uint
-}
-
 // CreateModelHandler 创建命令处理器
 type CreateModelHandler interface {
-	Handle(ctx context.Context, cmd CreateModelCommand) (*CreateModelResult, error)
+	Handle(ctx context.Context, cmd port.CreateModelCommand) (*port.CreateModelResult, error)
 }
 
 type createModelHandler struct {
@@ -40,7 +29,7 @@ func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo l
 }
 
 // Handle 执行创建命令
-func (h *createModelHandler) Handle(ctx context.Context, cmd CreateModelCommand) (*CreateModelResult, error) {
+func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCommand) (*port.CreateModelResult, error) {
 	log := logger.WithCtx(ctx)
 
 	// Verify endpoint exists
@@ -65,5 +54,5 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd CreateModelCommand)
 	}
 
 	log.Info("[ModelCommand] Create model success", zap.Uint("id", id))
-	return &CreateModelResult{ModelID: id}, nil
+	return &port.CreateModelResult{ModelID: id}, nil
 }

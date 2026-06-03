@@ -5,31 +5,16 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// CreateEndpointCommand 创建 Endpoint 命令
-type CreateEndpointCommand struct {
-	Name                        string
-	OpenaiBaseURL               string
-	AnthropicBaseURL            string
-	APIKey                      string
-	SupportOpenAIChatCompletion bool
-	SupportOpenAIResponse       bool
-	SupportAnthropicMessage     bool
-}
-
-// CreateEndpointResult 创建命令结果
-type CreateEndpointResult struct {
-	EndpointID uint
-}
-
 // CreateEndpointHandler 创建命令处理器
 type CreateEndpointHandler interface {
-	Handle(ctx context.Context, cmd CreateEndpointCommand) (*CreateEndpointResult, error)
+	Handle(ctx context.Context, cmd port.CreateEndpointCommand) (*port.CreateEndpointResult, error)
 }
 
 type createEndpointHandler struct {
@@ -42,7 +27,7 @@ func NewCreateEndpointHandler(repo llmproxy.EndpointRepository) CreateEndpointHa
 }
 
 // Handle 执行创建命令
-func (h *createEndpointHandler) Handle(ctx context.Context, cmd CreateEndpointCommand) (*CreateEndpointResult, error) {
+func (h *createEndpointHandler) Handle(ctx context.Context, cmd port.CreateEndpointCommand) (*port.CreateEndpointResult, error) {
 	log := logger.WithCtx(ctx)
 
 	ep, err := aggregate.CreateEndpoint(0, cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage)
@@ -57,5 +42,5 @@ func (h *createEndpointHandler) Handle(ctx context.Context, cmd CreateEndpointCo
 	}
 
 	log.Info("[EndpointCommand] Create endpoint success", zap.Uint("id", id))
-	return &CreateEndpointResult{EndpointID: id}, nil
+	return &port.CreateEndpointResult{EndpointID: id}, nil
 }

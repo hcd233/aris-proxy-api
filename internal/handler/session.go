@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
+	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -44,22 +44,22 @@ type SessionHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type SessionDependencies struct {
-	ListByUser sessionquery.ListSessionsByUserHandler
-	GetByUser  sessionquery.GetSessionByUserHandler
+	ListByUser port.ListSessionsByUserHandler
+	GetByUser  port.GetSessionByUserHandler
 	ShareCache cache.ShareCache
 	// 新增（详情接口性能优化）
-	GetMetaByUser sessionquery.GetSessionMetaByUserHandler
-	ListMessages  sessionquery.ListSessionMessagesHandler
-	ListTools     sessionquery.ListSessionToolsHandler
+	GetMetaByUser port.GetSessionMetaByUserHandler
+	ListMessages  port.ListSessionMessagesHandler
+	ListTools     port.ListSessionToolsHandler
 }
 
 type sessionHandler struct {
-	listByUser    sessionquery.ListSessionsByUserHandler
-	getByUser     sessionquery.GetSessionByUserHandler
+	listByUser    port.ListSessionsByUserHandler
+	getByUser     port.GetSessionByUserHandler
 	shareCache    cache.ShareCache
-	getMetaByUser sessionquery.GetSessionMetaByUserHandler
-	listMessages  sessionquery.ListSessionMessagesHandler
-	listTools     sessionquery.ListSessionToolsHandler
+	getMetaByUser port.GetSessionMetaByUserHandler
+	listMessages  port.ListSessionMessagesHandler
+	listTools     port.ListSessionToolsHandler
 }
 
 // NewSessionHandler 创建Session处理器
@@ -94,7 +94,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	views, pageInfo, err := h.listByUser.Handle(ctx, sessionquery.ListSessionsByUserQuery{
+	views, pageInfo, err := h.listByUser.Handle(ctx, port.ListSessionsByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		Page:      req.Page,
@@ -110,7 +110,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Sessions = lo.Map(views, func(v *sessionquery.SessionSummaryView, _ int) *dto.SessionSummary {
+	rsp.Sessions = lo.Map(views, func(v *port.SessionSummaryView, _ int) *dto.SessionSummary {
 		return &dto.SessionSummary{
 			ID:           v.ID,
 			CreatedAt:    v.CreatedAt,
@@ -139,7 +139,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	view, err := h.getByUser.Handle(ctx, sessionquery.GetSessionByUserQuery{
+	view, err := h.getByUser.Handle(ctx, port.GetSessionByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -151,7 +151,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	messageItems := lo.Map(view.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
+	messageItems := lo.Map(view.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
 			Model:     m.Model,
@@ -159,7 +159,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 			CreatedAt: m.CreatedAt,
 		}
 	})
-	toolItems := lo.Map(view.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
+	toolItems := lo.Map(view.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
 		return &dto.ToolItem{
 			ID:        t.ID,
 			Tool:      t.Tool,
@@ -216,7 +216,7 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 	}
 	sessionID := req.Body.SessionID
 
-	view, err := h.getByUser.Handle(ctx, sessionquery.GetSessionByUserQuery{
+	view, err := h.getByUser.Handle(ctx, port.GetSessionByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: sessionID,
@@ -321,7 +321,7 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	view, err := h.getMetaByUser.Handle(ctx, sessionquery.GetSessionMetaByUserQuery{
+	view, err := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -370,7 +370,7 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	result, err := h.listMessages.Handle(ctx, sessionquery.ListSessionMessagesQuery{
+	result, err := h.listMessages.Handle(ctx, port.ListSessionMessagesQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -385,7 +385,7 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Messages = lo.Map(result.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
+	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
 			Model:     m.Model,
@@ -411,7 +411,7 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	result, err := h.listTools.Handle(ctx, sessionquery.ListSessionToolsQuery{
+	result, err := h.listTools.Handle(ctx, port.ListSessionToolsQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -426,7 +426,7 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Tools = lo.Map(result.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
+	rsp.Tools = lo.Map(result.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
 		return &dto.ToolItem{
 			ID:        t.ID,
 			Tool:      t.Tool,
@@ -456,7 +456,7 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	view, viewErr := h.getMetaByUser.Handle(ctx, sessionquery.GetSessionMetaByUserQuery{
+	view, viewErr := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
 		UserID:    0,
 		IsAdmin:   true,
 		SessionID: sessionID,
@@ -494,7 +494,7 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	result, resultErr := h.listMessages.Handle(ctx, sessionquery.ListSessionMessagesQuery{
+	result, resultErr := h.listMessages.Handle(ctx, port.ListSessionMessagesQuery{
 		UserID:    0,
 		IsAdmin:   true,
 		SessionID: sessionID,
@@ -509,7 +509,7 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Messages = lo.Map(result.Messages, func(m *sessionquery.MessageView, _ int) *dto.MessageItem {
+	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
 			Model:     m.Model,
@@ -540,7 +540,7 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	result, resultErr := h.listTools.Handle(ctx, sessionquery.ListSessionToolsQuery{
+	result, resultErr := h.listTools.Handle(ctx, port.ListSessionToolsQuery{
 		UserID:    0,
 		IsAdmin:   true,
 		SessionID: sessionID,
@@ -555,7 +555,7 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Tools = lo.Map(result.Tools, func(t *sessionquery.ToolView, _ int) *dto.ToolItem {
+	rsp.Tools = lo.Map(result.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
 		return &dto.ToolItem{
 			ID:        t.ID,
 			Tool:      t.Tool,

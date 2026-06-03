@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
+	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -25,11 +25,11 @@ type AuditHandler interface {
 }
 
 type AuditDependencies struct {
-	Service auditquery.AuditService
+	Service auditport.AuditService
 }
 
 type auditHandler struct {
-	svc auditquery.AuditService
+	svc auditport.AuditService
 }
 
 func NewAuditHandler(deps AuditDependencies) AuditHandler {
@@ -41,7 +41,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 	logs, pageInfo, err := h.svc.ListLogs(ctx,
 		util.CtxValuePermission(ctx),
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		auditquery.ListAuditLogsParams{
+		auditport.ListAuditLogsParams{
 			Page: req.Page, PageSize: req.PageSize, Query: req.Query,
 			Sort: req.Sort, SortField: req.SortField,
 			StartTime: req.StartTime, EndTime: req.EndTime,
@@ -92,7 +92,7 @@ func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrend
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditquery.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	rsp.Data = auditport.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -108,7 +108,7 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditquery.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	rsp.Data = auditport.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -124,7 +124,7 @@ func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.Token
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	rsp.Data = auditquery.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	rsp.Data = auditport.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

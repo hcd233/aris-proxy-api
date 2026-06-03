@@ -7,8 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/query"
+	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -30,13 +29,13 @@ type UserHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type UserDependencies struct {
-	GetCurrentUser query.GetCurrentUserHandler
-	UpdateProfile  command.UpdateProfileHandler
+	GetCurrentUser port.GetCurrentUserHandler
+	UpdateProfile  port.UpdateProfileHandler
 }
 
 type userHandler struct {
-	getCurrentUser query.GetCurrentUserHandler
-	updateProfile  command.UpdateProfileHandler
+	getCurrentUser port.GetCurrentUserHandler
+	updateProfile  port.UpdateProfileHandler
 }
 
 // NewUserHandler 创建用户处理器
@@ -65,7 +64,7 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 	rsp := &dto.GetCurUserRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
-	view, err := h.getCurrentUser.Handle(ctx, query.GetCurrentUserQuery{UserID: userID})
+	view, err := h.getCurrentUser.Handle(ctx, port.GetCurrentUserQuery{UserID: userID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Get current user failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
@@ -107,7 +106,7 @@ func (h *userHandler) HandleUpdateUser(ctx context.Context, req *dto.UpdateUserR
 	rsp := &dto.EmptyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
-	err := h.updateProfile.Handle(ctx, command.UpdateProfileCommand{
+	err := h.updateProfile.Handle(ctx, port.UpdateProfileCommand{
 		UserID: userID,
 		Name:   req.Body.User.Name,
 		Email:  req.Body.User.Email,
