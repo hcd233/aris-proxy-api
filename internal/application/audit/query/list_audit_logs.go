@@ -29,8 +29,9 @@ type AuditLogView struct {
 	ID                       uint
 	CreatedAt                time.Time
 	Model                    string
-	UpstreamProvider         string
-	APIProvider              string
+	UpstreamProtocol         string
+	APIProtocol              string
+	Endpoint                 string
 	InputTokens              int
 	OutputTokens             int
 	CacheCreationInputTokens int
@@ -199,8 +200,9 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			ID:                       audit.AggregateID(),
 			CreatedAt:                audit.CreatedAt(),
 			Model:                    audit.Model(),
-			UpstreamProvider:         audit.UpstreamProvider(),
-			APIProvider:              audit.APIProvider(),
+			UpstreamProtocol:         audit.UpstreamProtocol(),
+			APIProtocol:              audit.APIProtocol(),
+			Endpoint:                 audit.Endpoint(),
 			InputTokens:              audit.Tokens().Input(),
 			OutputTokens:             audit.Tokens().Output(),
 			CacheCreationInputTokens: audit.Tokens().CacheCreation(),

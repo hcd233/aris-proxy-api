@@ -15,8 +15,9 @@ type ReconstructAuditInput struct {
 	APIKeyID         uint
 	ModelID          uint
 	Model            string
-	UpstreamProvider enum.ProviderType
-	APIProvider      enum.ProviderType
+	UpstreamProtocol enum.ProtocolType
+	APIProtocol      enum.ProtocolType
+	Endpoint         string
 	Tokens           vo.TokenBreakdown
 	Latency          vo.CallLatency
 	Status           vo.CallStatus
@@ -36,8 +37,9 @@ func ReconstructAudit(input ReconstructAuditInput) *ModelCallAudit {
 		apiKeyID:         input.APIKeyID,
 		modelID:          input.ModelID,
 		model:            input.Model,
-		upstreamProvider: input.UpstreamProvider,
-		apiProvider:      input.APIProvider,
+		upstreamProtocol: input.UpstreamProtocol,
+		apiProtocol:      input.APIProtocol,
+		endpoint:         input.Endpoint,
 		tokens:           input.Tokens,
 		latency:          input.Latency,
 		status:           input.Status,

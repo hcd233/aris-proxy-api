@@ -16,8 +16,9 @@ type testCase struct {
 	Task        struct {
 		ModelID                  uint   `json:"model_id"`
 		Model                    string `json:"model"`
-		UpstreamProvider         string `json:"upstream_provider"`
-		APIProvider              string `json:"api_provider"`
+		UpstreamProtocol         string `json:"upstream_protocol"`
+		APIProtocol              string `json:"api_protocol"`
+		Endpoint                 string `json:"endpoint"`
 		InputTokens              int    `json:"input_tokens"`
 		OutputTokens             int    `json:"output_tokens"`
 		CacheCreationInputTokens int    `json:"cache_creation_input_tokens"`
@@ -51,8 +52,9 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 				Ctx:                      context.Background(),
 				ModelID:                  tc.Task.ModelID,
 				Model:                    tc.Task.Model,
-				UpstreamProvider:         tc.Task.UpstreamProvider,
-				APIProvider:              tc.Task.APIProvider,
+				UpstreamProtocol:         tc.Task.UpstreamProtocol,
+				APIProtocol:              tc.Task.APIProtocol,
+				Endpoint:                 tc.Task.Endpoint,
 				InputTokens:              tc.Task.InputTokens,
 				OutputTokens:             tc.Task.OutputTokens,
 				CacheCreationInputTokens: tc.Task.CacheCreationInputTokens,
@@ -66,11 +68,14 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 			if task.Model != tc.Task.Model {
 				t.Errorf("Model = %q, want %q", task.Model, tc.Task.Model)
 			}
-			if task.UpstreamProvider != tc.Task.UpstreamProvider {
-				t.Errorf("UpstreamProvider = %q, want %q", task.UpstreamProvider, tc.Task.UpstreamProvider)
+			if task.UpstreamProtocol != tc.Task.UpstreamProtocol {
+				t.Errorf("UpstreamProtocol = %q, want %q", task.UpstreamProtocol, tc.Task.UpstreamProtocol)
 			}
-			if task.APIProvider != tc.Task.APIProvider {
-				t.Errorf("APIProvider = %q, want %q", task.APIProvider, tc.Task.APIProvider)
+			if task.APIProtocol != tc.Task.APIProtocol {
+				t.Errorf("APIProtocol = %q, want %q", task.APIProtocol, tc.Task.APIProtocol)
+			}
+			if task.Endpoint != tc.Task.Endpoint {
+				t.Errorf("Endpoint = %q, want %q", task.Endpoint, tc.Task.Endpoint)
 			}
 			if task.InputTokens != tc.Task.InputTokens {
 				t.Errorf("InputTokens = %d, want %d", task.InputTokens, tc.Task.InputTokens)
