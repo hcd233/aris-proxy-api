@@ -43,9 +43,9 @@ func (u *openAIUseCase) forwardResponseViaChat(ctx context.Context, req *dto.Ope
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(chatReq, upstream.Model)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	if stream {
-		return u.forwardResponseViaChatStream(ctx, req, m, upstream, body)
+		return u.forwardResponseViaChatStream(ctx, req, m, upstream, ep.Name(), body)
 	}
-	return u.forwardResponseViaChatUnary(ctx, req, m, upstream, body)
+	return u.forwardResponseViaChatUnary(ctx, req, m, upstream, ep.Name(), body)
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) *huma.StreamResponse {
@@ -59,9 +59,9 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 	body := proxyutil.MarshalAnthropicMessageBodyForModel(anthropicReq, upstream.Model)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	if stream {
-		return u.forwardResponseViaAnthropicStream(ctx, req, m, upstream, body)
+		return u.forwardResponseViaAnthropicStream(ctx, req, m, upstream, ep.Name(), body)
 	}
-	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, body)
+	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, ep.Name(), body)
 }
 
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
@@ -107,8 +107,9 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
 			Model:               lo.FromPtr(req.Body.Model),
-			UpstreamProvider:    enum.ProviderOpenAI,
-			APIProvider:         enum.ProviderOpenAI,
+			Endpoint:            ep.Name(),
+			UpstreamProtocol:    enum.ProtocolOpenAIResponse,
+			APIProtocol:         enum.ProtocolOpenAIResponse,
 			FirstTokenLatencyMs: firstTokenLatencyMs,
 			StreamDurationMs:    streamDurationMs,
 		}
@@ -127,7 +128,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(u.taskSubmitter, ctx, m, lo.FromPtr(req.Body.Model), enum.ProviderOpenAI, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, m, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
 			return
 		}
 
@@ -153,8 +154,9 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
 			Model:               lo.FromPtr(req.Body.Model),
-			UpstreamProvider:    enum.ProviderOpenAI,
-			APIProvider:         enum.ProviderOpenAI,
+			Endpoint:            ep.Name(),
+			UpstreamProtocol:    enum.ProtocolOpenAIResponse,
+			APIProtocol:         enum.ProtocolOpenAIResponse,
 			FirstTokenLatencyMs: totalMs,
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
@@ -166,7 +168,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
 	conv := &converter.ResponseProtocolConverter{}
 	exposedModel := lo.FromPtr(req.Body.Model)
@@ -207,8 +209,9 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
 			Model:               exposedModel,
-			UpstreamProvider:    enum.ProviderOpenAI,
-			APIProvider:         enum.ProviderOpenAI,
+			Endpoint:            endpoint,
+			UpstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+			APIProtocol:         enum.ProtocolOpenAIResponse,
 			FirstTokenLatencyMs: firstTokenLatencyMs,
 			StreamDurationMs:    streamDurationMs,
 		}
@@ -218,7 +221,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
 	conv := &converter.ResponseProtocolConverter{}
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
@@ -227,7 +230,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(u.taskSubmitter, ctx, m, exposedModel, enum.ProviderOpenAI, totalMs, err)
+			auditFailure(u.taskSubmitter, ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIResponse, totalMs, err)
 			return
 		}
 		completion.Model = exposedModel
@@ -243,8 +246,9 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
 			Model:               exposedModel,
-			UpstreamProvider:    enum.ProviderOpenAI,
-			APIProvider:         enum.ProviderOpenAI,
+			Endpoint:            endpoint,
+			UpstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+			APIProtocol:         enum.ProtocolOpenAIResponse,
 			FirstTokenLatencyMs: totalMs,
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
@@ -253,7 +257,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
@@ -314,8 +318,9 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
 			Model:               exposedModel,
-			UpstreamProvider:    enum.ProviderAnthropic,
-			APIProvider:         enum.ProviderOpenAI,
+			Endpoint:            endpoint,
+			UpstreamProtocol:    enum.ProtocolAnthropicMessage,
+			APIProtocol:         enum.ProtocolOpenAIResponse,
 			FirstTokenLatencyMs: firstTokenLatencyMs,
 			StreamDurationMs:    streamDurationMs,
 		}
@@ -325,7 +330,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
 	exposedModel := lo.FromPtr(req.Body.Model)
@@ -335,7 +340,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailureWithProviders(u.taskSubmitter, ctx, m, exposedModel, enum.ProviderAnthropic, enum.ProviderOpenAI, totalMs, err)
+			auditFailureWithProviders(u.taskSubmitter, ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
 			return
 		}
 		chatCompletion, convErr := anthropicConv.ToOpenAIResponse(anthropicMsg)
@@ -357,8 +362,9 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
 			Model:               exposedModel,
-			UpstreamProvider:    enum.ProviderAnthropic,
-			APIProvider:         enum.ProviderOpenAI,
+			Endpoint:            endpoint,
+			UpstreamProtocol:    enum.ProtocolAnthropicMessage,
+			APIProtocol:         enum.ProtocolOpenAIResponse,
 			FirstTokenLatencyMs: totalMs,
 			UpstreamStatusCode:  fiber.StatusOK,
 		}

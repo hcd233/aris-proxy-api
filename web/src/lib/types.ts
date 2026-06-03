@@ -322,8 +322,9 @@ export interface AuditLogItem {
   id: number;
   createdAt: string;
   model: string;
-  upstreamProvider: string;
-  apiProvider: string;
+  upstreamProtocol: string;
+  apiProtocol: string;
+  endpoint: string;
   inputTokens: number;
   outputTokens: number;
   cacheCreationInputTokens: number;
