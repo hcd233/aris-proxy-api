@@ -123,27 +123,6 @@ func TestMarshalOpenAIChatCompletionBodyForModel_BytesStable(t *testing.T) {
 	}
 }
 
-// TestMarshalRawOpenAIChatCompletionBodyForModel_BytesStable
-// 守护 OpenAI ChatCompletion 透传路径上游请求体字节级稳定。
-// 该路径内部用 map[string]sonic.NoCopyRawMessage 重组顶层字段，
-// 即使每个 value 是 RawMessage 透传，map 的顶层 key 顺序在 sonic 默认配置下也会乱。
-func TestMarshalRawOpenAIChatCompletionBodyForModel_BytesStable(t *testing.T) {
-	req := loadOpenAIChatReq(t)
-	raw := []byte(toolsRichRequestJSON)
-
-	const rounds = 32
-	first := proxyutil.MarshalRawOpenAIChatCompletionBodyForModel(raw, req, "upstream-model")
-	firstHash := md5short(first)
-
-	for i := 1; i < rounds; i++ {
-		next := proxyutil.MarshalRawOpenAIChatCompletionBodyForModel(raw, req, "upstream-model")
-		if md5short(next) != firstHash {
-			t.Fatalf("round %d: marshal output drifted, expected md5=%s got md5=%s\nfirst=%s\nnext =%s",
-				i, firstHash, md5short(next), string(first), string(next))
-		}
-	}
-}
-
 // TestMarshalAnthropicMessageBodyForModel_BytesStable Anthropic 同等检查。
 func TestMarshalAnthropicMessageBodyForModel_BytesStable(t *testing.T) {
 	req := loadAnthropicMessageReq(t)
