@@ -11,12 +11,12 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
 
-	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
+	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
+	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
@@ -143,11 +143,11 @@ func (m *mockShareCache) GetSessionShareID(_ context.Context, sessionID uint) (s
 }
 
 type mockGetSessionByUserHandler struct {
-	view map[uint]*sessionport.SessionDetailView
+	view map[uint]*sessionquery.SessionDetailView
 	err  error
 }
 
-func (m *mockGetSessionByUserHandler) Handle(_ context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error) {
+func (m *mockGetSessionByUserHandler) Handle(_ context.Context, q sessionquery.GetSessionByUserQuery) (*sessionquery.SessionDetailView, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -160,7 +160,7 @@ func (m *mockGetSessionByUserHandler) Handle(_ context.Context, q sessionport.Ge
 
 type mockListSessionsByUserHandler struct{}
 
-func (m *mockListSessionsByUserHandler) Handle(_ context.Context, _ sessionport.ListSessionsByUserQuery) ([]*sessionport.SessionSummaryView, *model.PageInfo, error) {
+func (m *mockListSessionsByUserHandler) Handle(_ context.Context, _ sessionquery.ListSessionsByUserQuery) ([]*sessionquery.SessionSummaryView, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -171,23 +171,23 @@ func ctxWithUser(userID uint, permission enum.Permission) context.Context {
 	return ctx
 }
 
-func testSessionView(sessionID uint) *sessionport.SessionDetailView {
-	return &sessionport.SessionDetailView{
+func testSessionView(sessionID uint) *sessionquery.SessionDetailView {
+	return &sessionquery.SessionDetailView{
 		ID:         sessionID,
 		APIKeyName: "test-key",
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 		Metadata:   map[string]string{"k": "v"},
-		Messages: []*sessionport.MessageView{
+		Messages: []*sessionquery.MessageView{
 			{ID: 1, Model: "gpt-4", Message: &vo.UnifiedMessage{}, CreatedAt: time.Now()},
 		},
-		Tools: []*sessionport.ToolView{
+		Tools: []*sessionquery.ToolView{
 			{ID: 2, Tool: &vo.UnifiedTool{}, CreatedAt: time.Now()},
 		},
 	}
 }
 
-func newTestHandler(sc cache.ShareCache, getByUser sessionport.GetSessionByUserHandler) handler.SessionHandler {
+func newTestHandler(sc cache.ShareCache, getByUser sessionquery.GetSessionByUserHandler) handler.SessionHandler {
 	return handler.NewSessionHandler(handler.SessionDependencies{
 		ListByUser: &mockListSessionsByUserHandler{},
 		GetByUser:  getByUser,
@@ -197,7 +197,7 @@ func newTestHandler(sc cache.ShareCache, getByUser sessionport.GetSessionByUserH
 
 func TestCreateShare_Success(t *testing.T) {
 	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
@@ -218,7 +218,7 @@ func TestCreateShare_Success(t *testing.T) {
 
 func TestCreateShare_SessionNotFound(t *testing.T) {
 	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{}}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
@@ -234,7 +234,7 @@ func TestCreateShare_SessionNotFound(t *testing.T) {
 func TestCreateShare_CacheError(t *testing.T) {
 	sc := newMockShareCache()
 	sc.createErr = ierr.Wrap(ierr.ErrInternal, nil, "redis down")
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
@@ -251,7 +251,7 @@ func TestCreateShare_CacheError(t *testing.T) {
 //	@update 2026-05-28 14:35:00
 func TestCreateShare_NilBodyRejected(t *testing.T) {
 	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
@@ -353,7 +353,7 @@ func TestDeleteShare_Nonexistent(t *testing.T) {
 func TestCreateShare_AlreadyShared(t *testing.T) {
 	sc := newMockShareCache()
 	sc.sharedSessions[1] = true
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
@@ -369,7 +369,7 @@ func TestCreateShare_AlreadyShared(t *testing.T) {
 func TestHandleGetSessionByUser_IsShared(t *testing.T) {
 	sc := newMockShareCache()
 	sc.sharedSessions[1] = true
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 
@@ -384,7 +384,7 @@ func TestHandleGetSessionByUser_IsShared(t *testing.T) {
 
 func TestHandleGetSessionByUser_NotShared(t *testing.T) {
 	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionquery.SessionDetailView{1: testSessionView(1)}}
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42, enum.PermissionUser)
 

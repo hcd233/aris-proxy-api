@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
+	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -28,11 +28,11 @@ type TokenHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type TokenDependencies struct {
-	Refresh port.RefreshTokensHandler
+	Refresh command.RefreshTokensHandler
 }
 
 type tokenHandler struct {
-	refresh port.RefreshTokensHandler
+	refresh command.RefreshTokensHandler
 }
 
 // NewTokenHandler 创建令牌处理器
@@ -64,7 +64,7 @@ func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshT
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	pair, err := h.refresh.Handle(ctx, port.RefreshTokensCommand{
+	pair, err := h.refresh.Handle(ctx, command.RefreshTokensCommand{
 		RefreshToken: req.Body.RefreshToken,
 	})
 	if err != nil {

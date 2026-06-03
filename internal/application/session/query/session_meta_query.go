@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -12,9 +13,29 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
+// GetSessionMetaByUserQuery 获取 session 元数据查询参数
+type GetSessionMetaByUserQuery struct {
+	UserID    uint
+	IsAdmin   bool
+	SessionID uint
+}
+
+// SessionMetaView session 元数据视图（含 IDs 数组，仅在 application 层内部使用）
+type SessionMetaView struct {
+	ID           uint
+	APIKeyName   string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Metadata     map[string]string
+	MessageIDs   []uint
+	ToolIDs      []uint
+	MessageCount int
+	ToolCount    int
+}
+
 // GetSessionMetaByUserHandler 元数据查询 handler 接口
 type GetSessionMetaByUserHandler interface {
-	Handle(ctx context.Context, q sessionport.GetSessionMetaByUserQuery) (*sessionport.SessionMetaView, error)
+	Handle(ctx context.Context, q GetSessionMetaByUserQuery) (*SessionMetaView, error)
 }
 
 type getSessionMetaByUserHandler struct {
@@ -42,7 +63,7 @@ func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiK
 //  4. SQL 取 session 行（缓存未命中时）
 //  5. 写缓存
 //  6. 权限比对
-func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.GetSessionMetaByUserQuery) (*sessionport.SessionMetaView, error) {
+func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q GetSessionMetaByUserQuery) (*SessionMetaView, error) {
 	log := logger.WithCtx(ctx)
 
 	if q.SessionID == 0 {
@@ -110,7 +131,7 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 		}
 	}
 
-	return &sessionport.SessionMetaView{
+	return &SessionMetaView{
 		ID:           record.ID,
 		APIKeyName:   record.APIKeyName,
 		CreatedAt:    record.CreatedAt,

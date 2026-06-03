@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	conversationvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
+	conversationvo "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
 	sessionvo "github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 )
@@ -111,6 +111,8 @@ type SessionDetailProjection struct {
 //	@author centonhuang
 //	@update 2026-06-01 10:00:00
 type SessionReadRepository interface {
+	// ListSessions 分页查询 Session 列表投影
+	ListSessions(ctx context.Context, owner string, param model.CommonParam, startTime, endTime time.Time) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListAllSessions 分页查询所有 Session 列表投影（admin 用）
 	ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影

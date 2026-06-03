@@ -19,7 +19,6 @@ type AuditService interface {
 	TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
 	TokenRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenRateItem, error)
 	ModelUsage(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.ModelUsageItem, error)
-	FirstTokenLatency(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.FirstTokenLatencyItem, error)
 }
 
 // ListAuditLogsParams 列表查询的通用参数（不带权限相关字段）。
@@ -31,58 +30,6 @@ type ListAuditLogsParams struct {
 	SortField string
 	StartTime time.Time
 	EndTime   time.Time
-}
-
-type auditService struct {
-	listAll                 ListAllAuditLogsHandler
-	listByUser              ListAuditLogsByUserHandler
-	modelTrend              ModelTrendHandler
-	modelTrendByUser        ModelTrendByUserHandler
-	requestRate             RequestRateHandler
-	requestRateByUser       RequestRateByUserHandler
-	tokenThroughput         TokenThroughputHandler
-	tokenThroughputByUser   TokenThroughputByUserHandler
-	tokenRate               TokenRateHandler
-	tokenRateByUser         TokenRateByUserHandler
-	modelUsage              ModelUsageHandler
-	modelUsageByUser        ModelUsageByUserHandler
-	firstTokenLatency       FirstTokenLatencyHandler
-	firstTokenLatencyByUser FirstTokenLatencyByUserHandler
-}
-
-// NewAuditService 构造权限派发服务。
-func NewAuditService(
-	listAll ListAllAuditLogsHandler,
-	listByUser ListAuditLogsByUserHandler,
-	modelTrend ModelTrendHandler,
-	modelTrendByUser ModelTrendByUserHandler,
-	requestRate RequestRateHandler,
-	requestRateByUser RequestRateByUserHandler,
-	tokenThroughput TokenThroughputHandler,
-	tokenThroughputByUser TokenThroughputByUserHandler,
-	tokenRate TokenRateHandler,
-	tokenRateByUser TokenRateByUserHandler,
-	modelUsage ModelUsageHandler,
-	modelUsageByUser ModelUsageByUserHandler,
-	firstTokenLatency FirstTokenLatencyHandler,
-	firstTokenLatencyByUser FirstTokenLatencyByUserHandler,
-) AuditService {
-	return &auditService{
-		listAll:                 listAll,
-		listByUser:              listByUser,
-		modelTrend:              modelTrend,
-		modelTrendByUser:        modelTrendByUser,
-		requestRate:             requestRate,
-		requestRateByUser:       requestRateByUser,
-		tokenThroughput:         tokenThroughput,
-		tokenThroughputByUser:   tokenThroughputByUser,
-		tokenRate:               tokenRate,
-		tokenRateByUser:         tokenRateByUser,
-		modelUsage:              modelUsage,
-		modelUsageByUser:        modelUsageByUser,
-		firstTokenLatency:       firstTokenLatency,
-		firstTokenLatencyByUser: firstTokenLatencyByUser,
-	}
 }
 
 // toAllQuery 转换为 admin 全量查询的入参。
@@ -101,6 +48,52 @@ func (p ListAuditLogsParams) toByUserQuery(userID uint) ListAuditLogsByUserQuery
 		SortField: p.SortField,
 		StartTime: p.StartTime,
 		EndTime:   p.EndTime,
+	}
+}
+
+type auditService struct {
+	listAll               ListAllAuditLogsHandler
+	listByUser            ListAuditLogsByUserHandler
+	modelTrend            ModelTrendHandler
+	modelTrendByUser      ModelTrendByUserHandler
+	requestRate           RequestRateHandler
+	requestRateByUser     RequestRateByUserHandler
+	tokenThroughput       TokenThroughputHandler
+	tokenThroughputByUser TokenThroughputByUserHandler
+	tokenRate             TokenRateHandler
+	tokenRateByUser       TokenRateByUserHandler
+	modelUsage            ModelUsageHandler
+	modelUsageByUser      ModelUsageByUserHandler
+}
+
+// NewAuditService 构造权限派发服务。
+func NewAuditService(
+	listAll ListAllAuditLogsHandler,
+	listByUser ListAuditLogsByUserHandler,
+	modelTrend ModelTrendHandler,
+	modelTrendByUser ModelTrendByUserHandler,
+	requestRate RequestRateHandler,
+	requestRateByUser RequestRateByUserHandler,
+	tokenThroughput TokenThroughputHandler,
+	tokenThroughputByUser TokenThroughputByUserHandler,
+	tokenRate TokenRateHandler,
+	tokenRateByUser TokenRateByUserHandler,
+	modelUsage ModelUsageHandler,
+	modelUsageByUser ModelUsageByUserHandler,
+) AuditService {
+	return &auditService{
+		listAll:               listAll,
+		listByUser:            listByUser,
+		modelTrend:            modelTrend,
+		modelTrendByUser:      modelTrendByUser,
+		requestRate:           requestRate,
+		requestRateByUser:     requestRateByUser,
+		tokenThroughput:       tokenThroughput,
+		tokenThroughputByUser: tokenThroughputByUser,
+		tokenRate:             tokenRate,
+		tokenRateByUser:       tokenRateByUser,
+		modelUsage:            modelUsage,
+		modelUsageByUser:      modelUsageByUser,
 	}
 }
 
@@ -165,17 +158,6 @@ func (s *auditService) ModelUsage(ctx context.Context, permission enum.Permissio
 		return s.modelUsage.Handle(ctx, ModelUsageQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
 	case enum.PermissionUser:
 		return s.modelUsageByUser.Handle(ctx, ModelUsageByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
-	default:
-		return nil, ierr.ErrUnauthorized
-	}
-}
-
-func (s *auditService) FirstTokenLatency(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.FirstTokenLatencyItem, error) {
-	switch permission {
-	case enum.PermissionAdmin:
-		return s.firstTokenLatency.Handle(ctx, FirstTokenLatencyQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
-	case enum.PermissionUser:
-		return s.firstTokenLatencyByUser.Handle(ctx, FirstTokenLatencyByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
 	default:
 		return nil, ierr.ErrUnauthorized
 	}

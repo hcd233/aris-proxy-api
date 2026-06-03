@@ -5,15 +5,19 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
+// DeleteEndpointCommand 删除 Endpoint 命令
+type DeleteEndpointCommand struct {
+	EndpointID uint
+}
+
 // DeleteEndpointHandler 删除命令处理器
 type DeleteEndpointHandler interface {
-	Handle(ctx context.Context, cmd port.DeleteEndpointCommand) error
+	Handle(ctx context.Context, cmd DeleteEndpointCommand) error
 }
 
 type deleteEndpointHandler struct {
@@ -25,7 +29,7 @@ func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRep
 	return &deleteEndpointHandler{endpointRepo: endpointRepo, modelRepo: modelRepo}
 }
 
-func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd port.DeleteEndpointCommand) error {
+func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd DeleteEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
 	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID)

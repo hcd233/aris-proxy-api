@@ -1,6 +1,7 @@
 package web_router
 
 import (
+	"io"
 	"io/fs"
 	"net/http"
 	"testing"
@@ -10,40 +11,41 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/router"
 )
 
-func TestRegisterWebRouter_RedirectsWebRootToTrailingSlash(t *testing.T) {
+func TestRegisterWebRouter_ServesWebWithoutRedirect(t *testing.T) {
 	app := fiber.New()
 	router.RegisterWebRouter(app, testWebFS())
 
 	rsp := doRequest(t, app, "/web")
 	defer rsp.Body.Close()
 
-	if rsp.StatusCode != http.StatusMovedPermanently {
-		t.Fatalf("GET /web status = %d, want %d", rsp.StatusCode, http.StatusMovedPermanently)
+	if rsp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /web status = %d, want %d", rsp.StatusCode, http.StatusOK)
 	}
-	if location := rsp.Header.Get("Location"); location != "/web/" {
-		t.Fatalf("GET /web Location = %q, want %q", location, "/web/")
+	if location := rsp.Header.Get("Location"); location != "" {
+		t.Fatalf("GET /web Location = %q, want empty", location)
+	}
+	body, err := io.ReadAll(rsp.Body)
+	if err != nil {
+		t.Fatalf("ReadAll() error = %v", err)
+	}
+	if string(body) != "dashboard" {
+		t.Fatalf("GET /web body = %q, want %q", string(body), "dashboard")
 	}
 }
 
-func TestRegisterWebRouter_RedirectsWithoutOpeningFiles(t *testing.T) {
+func TestRegisterWebRouter_MapsWebPathToIndex(t *testing.T) {
 	webFS := &trackingFS{base: testWebFS()}
 	app := fiber.New()
 	router.RegisterWebRouter(app, webFS)
 
-	// Registration reads index.html once
-	if len(webFS.opened) != 1 || webFS.opened[0] != "dist/index.html" {
-		t.Fatalf("after registration opened %v, want [dist/index.html]", webFS.opened)
-	}
-
 	rsp := doRequest(t, app, "/web")
 	defer rsp.Body.Close()
 
-	if rsp.StatusCode != http.StatusMovedPermanently {
-		t.Fatalf("GET /web status = %d, want %d", rsp.StatusCode, http.StatusMovedPermanently)
+	if webFS.openCount("dist/web") != 0 {
+		t.Fatalf("GET /web opened dist/web, want dist/index.html")
 	}
-	// No additional opens during the redirect request
-	if len(webFS.opened) != 1 {
-		t.Fatalf("after redirect request opened %v, want still [dist/index.html]", webFS.opened)
+	if webFS.openCount("dist/index.html") < 2 {
+		t.Fatalf("GET /web opened dist/index.html %d times, want at least 2", webFS.openCount("dist/index.html"))
 	}
 }
 
@@ -80,6 +82,16 @@ type trackingFS struct {
 func (tfs *trackingFS) Open(name string) (fs.File, error) {
 	tfs.opened = append(tfs.opened, name)
 	return tfs.base.Open(name)
+}
+
+func (tfs *trackingFS) openCount(name string) int {
+	count := 0
+	for _, opened := range tfs.opened {
+		if opened == name {
+			count++
+		}
+	}
+	return count
 }
 
 func testWebFS() fstest.MapFS {

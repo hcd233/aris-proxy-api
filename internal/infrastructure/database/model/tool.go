@@ -3,7 +3,7 @@
 //	update 2026-03-18 10:00:00
 package model
 
-import "github.com/hcd233/aris-proxy-api/internal/common/vo"
+import "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 
 // Tool 工具数据库模型
 //

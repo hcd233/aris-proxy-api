@@ -6,7 +6,8 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
+	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
+	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -22,17 +23,17 @@ type EndpointHandler interface {
 }
 
 type EndpointDependencies struct {
-	Create port.CreateEndpointHandler
-	Update port.UpdateEndpointHandler
-	Delete port.DeleteEndpointHandler
-	List   port.ListEndpointsHandler
+	Create command.CreateEndpointHandler
+	Update command.UpdateEndpointHandler
+	Delete command.DeleteEndpointHandler
+	List   query.ListEndpointsHandler
 }
 
 type endpointHandler struct {
-	create port.CreateEndpointHandler
-	update port.UpdateEndpointHandler
-	delete port.DeleteEndpointHandler
-	list   port.ListEndpointsHandler
+	create command.CreateEndpointHandler
+	update command.UpdateEndpointHandler
+	delete command.DeleteEndpointHandler
+	list   query.ListEndpointsHandler
 }
 
 func NewEndpointHandler(deps EndpointDependencies) EndpointHandler {
@@ -48,7 +49,7 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 	rsp := &dto.EmptyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
-	result, err := h.create.Handle(ctx, port.CreateEndpointCommand{
+	result, err := h.create.Handle(ctx, command.CreateEndpointCommand{
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               req.Body.OpenaiBaseURL,
 		AnthropicBaseURL:            req.Body.AnthropicBaseURL,
@@ -72,7 +73,7 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.ListEndpointsReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error) {
 	rsp := &dto.ListEndpointsRsp{}
 
-	views, pageInfo, err := h.list.Handle(ctx, port.ListEndpointsQuery{
+	views, pageInfo, err := h.list.Handle(ctx, query.ListEndpointsQuery{
 		CommonParam: req.CommonParam,
 	})
 	if err != nil {
@@ -103,7 +104,7 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.UpdateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
 
-	err := h.update.Handle(ctx, port.UpdateEndpointCommand{
+	err := h.update.Handle(ctx, command.UpdateEndpointCommand{
 		EndpointID:                  req.ID,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               req.Body.OpenaiBaseURL,
@@ -124,7 +125,7 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.DeleteEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
 
-	err := h.delete.Handle(ctx, port.DeleteEndpointCommand{EndpointID: req.ID})
+	err := h.delete.Handle(ctx, command.DeleteEndpointCommand{EndpointID: req.ID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Delete endpoint failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())

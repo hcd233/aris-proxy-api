@@ -3,10 +3,10 @@ package query
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -14,12 +14,33 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
+// APIKeyView 只读 API Key 投影（列表响应）
+//
+//	@author centonhuang
+//	@update 2026-04-22 17:00:00
+type APIKeyView struct {
+	ID        uint
+	Name      string
+	MaskedKey string
+	CreatedAt time.Time
+}
+
+// ListAPIKeysQuery 列出 API Keys 查询命令
+//
+//	@author centonhuang
+//	@update 2026-05-27 10:00:00
+type ListAPIKeysQuery struct {
+	RequesterID         uint
+	RequesterPermission enum.Permission
+	model.CommonParam
+}
+
 // ListAPIKeysHandler 查询处理器
 //
 //	@author centonhuang
 //	@update 2026-05-27 10:00:00
 type ListAPIKeysHandler interface {
-	Handle(ctx context.Context, q port.ListAPIKeysQuery) ([]*port.APIKeyView, *model.PageInfo, error)
+	Handle(ctx context.Context, q ListAPIKeysQuery) ([]*APIKeyView, *model.PageInfo, error)
 }
 
 type listAPIKeysHandler struct {
@@ -46,7 +67,7 @@ func NewListAPIKeysHandler(repo apikey.APIKeyRepository) ListAPIKeysHandler {
 //	@return error
 //	@author centonhuang
 //	@update 2026-05-27 10:00:00
-func (h *listAPIKeysHandler) Handle(ctx context.Context, q port.ListAPIKeysQuery) ([]*port.APIKeyView, *model.PageInfo, error) {
+func (h *listAPIKeysHandler) Handle(ctx context.Context, q ListAPIKeysQuery) ([]*APIKeyView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
 	var (
@@ -64,9 +85,9 @@ func (h *listAPIKeysHandler) Handle(ctx context.Context, q port.ListAPIKeysQuery
 		return nil, nil, err
 	}
 
-	views := make([]*port.APIKeyView, 0, len(keys))
+	views := make([]*APIKeyView, 0, len(keys))
 	for _, k := range keys {
-		views = append(views, &port.APIKeyView{
+		views = append(views, &APIKeyView{
 			ID:        k.AggregateID(),
 			Name:      k.Name().String(),
 			MaskedKey: k.Secret().Masked(),

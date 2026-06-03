@@ -8,7 +8,8 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
+	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
+	"github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -31,15 +32,15 @@ type APIKeyHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type APIKeyDependencies struct {
-	Issue  port.IssueAPIKeyHandler
-	Revoke port.RevokeAPIKeyHandler
-	List   port.ListAPIKeysHandler
+	Issue  command.IssueAPIKeyHandler
+	Revoke command.RevokeAPIKeyHandler
+	List   query.ListAPIKeysHandler
 }
 
 type apiKeyHandler struct {
-	issue  port.IssueAPIKeyHandler
-	revoke port.RevokeAPIKeyHandler
-	list   port.ListAPIKeysHandler
+	issue  command.IssueAPIKeyHandler
+	revoke command.RevokeAPIKeyHandler
+	list   query.ListAPIKeysHandler
 }
 
 // NewAPIKeyHandler 创建 API Key 处理器
@@ -76,7 +77,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	result, err := h.issue.Handle(ctx, port.IssueAPIKeyCommand{
+	result, err := h.issue.Handle(ctx, command.IssueAPIKeyCommand{
 		UserID: userID,
 		Name:   req.Body.Name,
 	})
@@ -109,7 +110,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIK
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	permission := util.CtxValuePermission(ctx)
 
-	views, pageInfo, err := h.list.Handle(ctx, port.ListAPIKeysQuery{
+	views, pageInfo, err := h.list.Handle(ctx, query.ListAPIKeysQuery{
 		RequesterID:         userID,
 		RequesterPermission: permission,
 		CommonParam:         req.CommonParam,
@@ -154,7 +155,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	err := h.revoke.Handle(ctx, port.RevokeAPIKeyCommand{
+	err := h.revoke.Handle(ctx, command.RevokeAPIKeyCommand{
 		KeyID:               req.ID,
 		RequesterID:         userID,
 		RequesterPermission: permission,

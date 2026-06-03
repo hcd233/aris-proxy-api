@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { SessionSummary, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -58,18 +57,16 @@ function formatDateTime(dateStr: string): string {
 export default function SessionsPage() {
   const isMobile = useIsMobile();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.sessions.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.sessions.pageSize", 20);
   const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
+    page: 1,
+    pageSize: 20,
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [pageInputValue, setPageInputValue] = useState(String(persistedPage));
-  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.sessions.timeRange", "30d");
-  const [customStart, setCustomStart] = usePersistentState("dashboard.sessions.customStart", "");
-  const [customEnd, setCustomEnd] = usePersistentState("dashboard.sessions.customEnd", "");
+  const [pageInputValue, setPageInputValue] = useState("1");
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("30d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [sort, setSort] = useState<{ field: string; dir: SortDir }>({ field: "created_at", dir: "desc" });
 
   const fetchSessions = useCallback(
@@ -96,8 +93,6 @@ export default function SessionsPage() {
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
           setPageInputValue(String(rsp.pageInfo.page));
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch {
         // handled silently
@@ -105,14 +100,14 @@ export default function SessionsPage() {
         setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize],
+    [],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
+  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" });
+    fetchSessions(1, 20, "30d", "", "", { field: "created_at", dir: "desc" });
   }, [fetchSessions]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
 

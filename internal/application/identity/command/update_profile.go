@@ -6,16 +6,26 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
+// UpdateProfileCommand 更新用户档案命令
+//
+//	@author centonhuang
+//	@update 2026-04-22 17:00:00
+type UpdateProfileCommand struct {
+	UserID uint
+	Name   string
+	Email  string
+	Avatar string
+}
+
 // UpdateProfileHandler 更新档案命令处理器
 type UpdateProfileHandler interface {
-	Handle(ctx context.Context, cmd port.UpdateProfileCommand) error
+	Handle(ctx context.Context, cmd UpdateProfileCommand) error
 }
 
 type updateProfileHandler struct {
@@ -47,7 +57,7 @@ func NewUpdateProfileHandler(repo identity.UserRepository) UpdateProfileHandler 
 //     @return error
 //     @author centonhuang
 //     @update 2026-04-23 10:50:00
-func (h *updateProfileHandler) Handle(ctx context.Context, cmd port.UpdateProfileCommand) error {
+func (h *updateProfileHandler) Handle(ctx context.Context, cmd UpdateProfileCommand) error {
 	log := logger.WithCtx(ctx)
 
 	user, err := h.repo.FindByID(ctx, cmd.UserID)

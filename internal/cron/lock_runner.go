@@ -137,7 +137,7 @@ func wrapCronFunc(locker lock.Locker, key string, opts LockOptions, fn func(ctx 
 		ctx := context.WithValue(getBootstrapContext(), constant.CtxKeyTraceID, uuid.New().String())
 		defer func() {
 			if r := recover(); r != nil {
-				logger.WithCtx(ctx).Error("[Cron] Panic recovered",
+				logger.WithCtx(ctx).Error("[Cron] panic recovered",
 					zap.String("key", key),
 					zap.Any("panic", r),
 					zap.Stack("stack"),

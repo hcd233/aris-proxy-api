@@ -3,7 +3,7 @@
 //	update 2024-06-22 09:33:43
 package model
 
-import "github.com/hcd233/aris-proxy-api/internal/common/vo"
+import "github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
 
 // Message 消息数据库模型
 //
