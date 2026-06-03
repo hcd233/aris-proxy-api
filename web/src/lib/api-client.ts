@@ -223,7 +223,7 @@ class ApiClient {
 
   async getSession(sessionId: number): Promise<GetSessionRsp> {
     return this.request<GetSessionRsp>(
-      `/api/v1/session?sessionId=${sessionId}`
+      `/api/v1/session?id=${sessionId}`
     );
   }
 
@@ -282,7 +282,7 @@ class ApiClient {
 
   async deleteSession(sessionId: number): Promise<CommonRsp> {
     return this.request<CommonRsp>(
-      `/api/v1/session?sessionId=${sessionId}`,
+      `/api/v1/session?id=${sessionId}`,
       { method: "DELETE" }
     );
   }
