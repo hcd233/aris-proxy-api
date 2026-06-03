@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -64,7 +65,9 @@ export default function ModelsPage() {
   const isMobile = useIsMobile();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 1, total: 0 });
+  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.models.page", 1);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.models.pageSize", 20);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -80,13 +83,17 @@ export default function ModelsPage() {
     try {
       const modelsRsp = await api.listModels(page, pageSize, query);
       setModels(modelsRsp.models ?? []);
-      if (modelsRsp.pageInfo) setPageInfo(modelsRsp.pageInfo);
+      if (modelsRsp.pageInfo) {
+        setPageInfo(modelsRsp.pageInfo);
+        setPersistedPage(modelsRsp.pageInfo.page);
+        setPersistedPageSize(modelsRsp.pageInfo.pageSize);
+      }
     } catch {
       toast.error("Failed to load models");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setPersistedPage, setPersistedPageSize]);
 
   const fetchEndpoints = useCallback(async () => {
     try {
@@ -100,12 +107,12 @@ export default function ModelsPage() {
     }
   }, []);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchData(1, 20);
+    fetchData(persistedPage, persistedPageSize);
     fetchEndpoints();
   }, [fetchData, fetchEndpoints]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const openCreate = () => {
     setEditingId(null);

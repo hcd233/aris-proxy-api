@@ -40,7 +40,5 @@ const (
 	//	@update 2026-04-29 10:00:00
 	CtxKeyPassthroughResponseHeaders enum.CtxKey = "passthroughResponseHeaders"
 
-	// CtxKeyRawRequestBody 原始请求体，用于 v2 原生 OpenAI 透传。
-	//	@update 2026-06-02 16:20:00
 	CtxKeyRawRequestBody enum.CtxKey = "rawRequestBody"
 )

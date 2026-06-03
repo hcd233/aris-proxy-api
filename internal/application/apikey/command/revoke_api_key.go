@@ -5,31 +5,19 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// RevokeAPIKeyCommand 吊销 API Key 命令
-//
-//	@author centonhuang
-//	@update 2026-04-23 10:45:00
-type RevokeAPIKeyCommand struct {
-	// KeyID 要吊销的 Key ID
-	KeyID uint
-	// RequesterID 执行吊销操作的用户 ID（来自 ctx）
-	RequesterID uint
-	// RequesterPermission 执行者权限（判定是否可跨用户吊销）
-	RequesterPermission enum.Permission
-}
-
 // RevokeAPIKeyHandler 吊销命令处理器
 //
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
 type RevokeAPIKeyHandler interface {
-	Handle(ctx context.Context, cmd RevokeAPIKeyCommand) error
+	Handle(ctx context.Context, cmd port.RevokeAPIKeyCommand) error
 }
 
 type revokeAPIKeyHandler struct {
@@ -63,7 +51,7 @@ func NewRevokeAPIKeyHandler(repo apikey.APIKeyRepository) RevokeAPIKeyHandler {
 //     @return error
 //     @author centonhuang
 //     @update 2026-04-23 10:45:00
-func (h *revokeAPIKeyHandler) Handle(ctx context.Context, cmd RevokeAPIKeyCommand) error {
+func (h *revokeAPIKeyHandler) Handle(ctx context.Context, cmd port.RevokeAPIKeyCommand) error {
 	log := logger.WithCtx(ctx)
 
 	key, err := h.repo.FindByID(ctx, cmd.KeyID)

@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 )
 
 // FromOpenAITool 从 OpenAI ChatCompletionTool 转换为 UnifiedTool

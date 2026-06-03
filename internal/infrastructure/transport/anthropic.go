@@ -155,7 +155,6 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep vo.UpstreamEndpoint
 		zap.String("upstreamModel", ep.Model),
 		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)),
 		zap.Any("upstreamHeaders", util.MaskHTTPHeadersForLog(req.Header)),
-		zap.String("upstreamBodyHashWithoutModel", util.HashJSONBodyExcludingTopLevelModel(body)),
 		zap.ByteString("upstreamBody", body),
 	)
 

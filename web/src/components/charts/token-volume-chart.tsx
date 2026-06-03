@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { TokenThroughputPoint } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,7 @@ import { computeRange, formatChartTime } from "@/lib/time-range";
 
 const TOKEN_LAYERS = [
   { key: "cacheReadTokens", label: "Cache Read", color: "#F2D0B8" },
-  { key: "inputTokens", label: "Fresh Input", color: "#E6733F" },
+  { key: "inputTokens", label: "Input", color: "#E6733F" },
   { key: "cacheCreationTokens", label: "Cache Write", color: "#F2D5BE" },
   { key: "outputTokens", label: "Output", color: "#D46A3E" },
 ] as const;
@@ -33,9 +34,9 @@ function formatTokenCount(v: number): string {
 }
 
 export function TokenVolumeChart() {
-  const [timeRange, setTimeRange] = useState<TimeRangeKey>("7d");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
+  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");
+  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.tokenVolume.customEnd", "");
   const [data, setData] = useState<TokenThroughputPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -64,6 +65,14 @@ export function TokenVolumeChart() {
   const chartConfig = Object.fromEntries(
     TOKEN_LAYERS.map((l) => [l.key, { label: l.label, color: l.color }])
   );
+
+  const rawMap = useMemo(() => {
+    const m = new Map<string, { input: number; output: number }>();
+    for (const p of data) {
+      m.set(p.time, { input: p.inputTokens, output: p.outputTokens });
+    }
+    return m;
+  }, [data]);
 
   const flatData = data.map((p) => {
     const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
@@ -116,7 +125,39 @@ export function TokenVolumeChart() {
                 fontSize={12}
               />
               <YAxis fontSize={12} tickFormatter={formatTokenCount} domain={[0, "auto"]} allowDataOverflow={false} />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value, name, item) => {
+                      if (value == null) return null;
+                      const indicatorColor = item?.color ?? "#888";
+                      let displayValue = Number(value);
+                      if (item?.payload?.time) {
+                        const raw = rawMap.get(item.payload.time as string);
+                        if (raw) {
+                          if (name === "inputTokens") displayValue = raw.input;
+                          if (name === "outputTokens") displayValue = raw.output;
+                        }
+                      }
+                      const label = name ? (chartConfig[name]?.label ?? name) : "";
+                      return (
+                        <>
+                          <div
+                            className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                            style={{ backgroundColor: indicatorColor }}
+                          />
+                          <div className="flex flex-1 items-center justify-between leading-none">
+                            <span className="text-muted-foreground">{label}</span>
+                            <span className="font-mono font-medium text-foreground tabular-nums">
+                              {formatTokenCount(displayValue)}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    }}
+                  />
+                }
+              />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {TOKEN_LAYERS.map((layer) => (
                 <Area

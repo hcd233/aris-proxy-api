@@ -7,7 +7,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
@@ -26,11 +26,11 @@ type AnthropicHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type AnthropicDependencies struct {
-	UseCase usecase.AnthropicUseCase
+	UseCase port.AnthropicUseCase
 }
 
 type anthropicHandler struct {
-	uc usecase.AnthropicUseCase
+	uc port.AnthropicUseCase
 }
 
 // NewAnthropicHandler 创建Anthropic兼容接口处理器

@@ -7,7 +7,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/vo"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 )
 
 // ==================== Conversion: OpenAI -> Unified ====================

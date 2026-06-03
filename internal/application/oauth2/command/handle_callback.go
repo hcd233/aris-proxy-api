@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 	xoauth2 "golang.org/x/oauth2"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -30,22 +31,9 @@ import (
 // InitiateLoginCommand 发起 OAuth 登录：生成 state + 构造授权 URL
 // ============================================================
 
-// InitiateLoginCommand 登录发起命令
-//
-//	@author centonhuang
-//	@update 2026-04-22 20:30:00
-type InitiateLoginCommand struct {
-	Platform string
-}
-
-// InitiateLoginResult 登录发起结果
-type InitiateLoginResult struct {
-	RedirectURL string
-}
-
 // InitiateLoginHandler 登录发起命令处理器
 type InitiateLoginHandler interface {
-	Handle(ctx context.Context, cmd InitiateLoginCommand) (*InitiateLoginResult, error)
+	Handle(ctx context.Context, cmd port.InitiateLoginCommand) (*port.InitiateLoginResult, error)
 }
 
 type initiateLoginHandler struct {
@@ -72,7 +60,7 @@ func NewInitiateLoginHandler(platforms map[string]oauth2service.Platform, stateM
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
-func (h *initiateLoginHandler) Handle(ctx context.Context, cmd InitiateLoginCommand) (*InitiateLoginResult, error) {
+func (h *initiateLoginHandler) Handle(ctx context.Context, cmd port.InitiateLoginCommand) (*port.InitiateLoginResult, error) {
 	log := logger.WithCtx(ctx)
 
 	platform, ok := h.platforms[cmd.Platform]
@@ -92,7 +80,7 @@ func (h *initiateLoginHandler) Handle(ctx context.Context, cmd InitiateLoginComm
 	log.Info("[OAuth2Command] Initiate login",
 		zap.String("platform", cmd.Platform),
 		zap.String("redirectURL", url))
-	return &InitiateLoginResult{RedirectURL: url}, nil
+	return &port.InitiateLoginResult{RedirectURL: url}, nil
 }
 
 // ============================================================
@@ -100,40 +88,9 @@ func (h *initiateLoginHandler) Handle(ctx context.Context, cmd InitiateLoginComm
 //   → 获取用户信息 → 查/建用户 → 签发 token pair
 // ============================================================
 
-// HandleCallbackCommand 回调处理命令
-//
-//	@author centonhuang
-//	@update 2026-04-22 20:30:00
-type HandleCallbackCommand struct {
-	Platform string
-	Code     string
-	State    string
-}
-
-// HandleCallbackResult 回调处理结果（供 handler 写响应）
-//
-//	@author centonhuang
-//	@update 2026-04-22 20:30:00
-type HandleCallbackResult struct {
-	TokenPair *identityvo.TokenPair
-	UserID    uint
-	IsNewUser bool
-}
-
-// ObjectStorageDirCreator 对象存储目录创建器（跨域适配接口）
-//
-// 由 application/oauth2 负责注入（内部实现由 infrastructure/storage/obj_dao 适配）。
-// 返回值忽略，仅关注是否成功创建。
-//
-//	@author centonhuang
-//	@update 2026-04-22 20:30:00
-type ObjectStorageDirCreator interface {
-	CreateDir(ctx context.Context, userID uint) error
-}
-
 // HandleCallbackHandler 回调命令处理器
 type HandleCallbackHandler interface {
-	Handle(ctx context.Context, cmd HandleCallbackCommand) (*HandleCallbackResult, error)
+	Handle(ctx context.Context, cmd port.HandleCallbackCommand) (*port.HandleCallbackResult, error)
 }
 
 type handleCallbackHandler struct {
@@ -141,7 +98,7 @@ type handleCallbackHandler struct {
 	userRepo       identity.UserRepository
 	accessSigner   identityservice.TokenSigner
 	refreshSigner  identityservice.TokenSigner
-	objStorageDirC ObjectStorageDirCreator
+	objStorageDirC port.ObjectStorageDirCreator
 	stateManager   oauth2service.StateManager
 }
 
@@ -159,7 +116,7 @@ func NewHandleCallbackHandler(
 	platforms map[string]oauth2service.Platform,
 	userRepo identity.UserRepository,
 	accessSigner, refreshSigner identityservice.TokenSigner,
-	objStorageDirC ObjectStorageDirCreator,
+	objStorageDirC port.ObjectStorageDirCreator,
 	stateManager oauth2service.StateManager,
 ) HandleCallbackHandler {
 	return &handleCallbackHandler{
@@ -181,7 +138,7 @@ func NewHandleCallbackHandler(
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
-func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCommand) (*HandleCallbackResult, error) {
+func (h *handleCallbackHandler) Handle(ctx context.Context, cmd port.HandleCallbackCommand) (*port.HandleCallbackResult, error) {
 	log := logger.WithCtx(ctx)
 
 	platform, err := h.validateStateAndPlatform(ctx, cmd.State, cmd.Platform)
@@ -210,7 +167,7 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd HandleCallbackCo
 		zap.Bool("isNewUser", isNewUser))
 
 	tp := identityvo.NewTokenPair(accessToken, refreshToken)
-	return &HandleCallbackResult{
+	return &port.HandleCallbackResult{
 		TokenPair: &tp,
 		UserID:    userID,
 		IsNewUser: isNewUser,

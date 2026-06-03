@@ -15,6 +15,7 @@ import (
 	xoauth2 "golang.org/x/oauth2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
@@ -218,7 +219,7 @@ func (s *stubObjStorageDirCreator) CreateDir(ctx context.Context, userID uint) e
 }
 
 // makeHandler 构造 HandleCallbackHandler 的工厂方法
-func makeHandler(userRepo *stubUserRepo, tc *callbackCase, stateManager service.StateManager) command.HandleCallbackHandler {
+func makeHandler(userRepo *stubUserRepo, tc *callbackCase, stateManager service.StateManager) port.HandleCallbackHandler {
 	githubStub := newStubPlatform(enum.Oauth2PlatformGithub, tc.StubUserInfo)
 	platforms := map[string]service.Platform{
 		enum.Oauth2PlatformGithub: githubStub,
@@ -254,7 +255,7 @@ func TestHandleCallback_NewUser(t *testing.T) {
 	userRepo := newStubUserRepo()
 	handler := makeHandler(userRepo, &tc, stateManager)
 
-	result, err := handler.Handle(ctx, command.HandleCallbackCommand{
+	result, err := handler.Handle(ctx, port.HandleCallbackCommand{
 		Platform: tc.Platform,
 		Code:     tc.Code,
 		State:    state,
@@ -334,7 +335,7 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 
 	handler := makeHandler(repo, &tc, stateManager)
 
-	result, err := handler.Handle(ctx, command.HandleCallbackCommand{
+	result, err := handler.Handle(ctx, port.HandleCallbackCommand{
 		Platform: tc.Platform,
 		Code:     tc.Code,
 		State:    state,
@@ -372,7 +373,7 @@ func TestHandleCallback_InvalidPlatform(t *testing.T) {
 	userRepo := newStubUserRepo()
 	handler := makeHandler(userRepo, &tc, stateManager)
 
-	_, err = handler.Handle(ctx, command.HandleCallbackCommand{
+	_, err = handler.Handle(ctx, port.HandleCallbackCommand{
 		Platform: tc.Platform,
 		Code:     tc.Code,
 		State:    state,
@@ -395,7 +396,7 @@ func TestHandleCallback_InvalidState(t *testing.T) {
 	userRepo := newStubUserRepo()
 	handler := makeHandler(userRepo, &tc, stateManager)
 
-	_, err := handler.Handle(ctx, command.HandleCallbackCommand{
+	_, err := handler.Handle(ctx, port.HandleCallbackCommand{
 		Platform: tc.Platform,
 		Code:     tc.Code,
 		State:    tc.State,

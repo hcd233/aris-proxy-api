@@ -12,24 +12,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// ListSessionMessagesQuery 分页获取 session messages 查询参数
-type ListSessionMessagesQuery struct {
-	UserID    uint
-	IsAdmin   bool
-	SessionID uint
-	Page      int
-	PageSize  int
-}
-
-// ListSessionMessagesResult 分页结果
-type ListSessionMessagesResult struct {
-	Messages []*MessageView
-	Total    int64
-}
-
 // ListSessionMessagesHandler 分页获取 messages handler 接口
 type ListSessionMessagesHandler interface {
-	Handle(ctx context.Context, q ListSessionMessagesQuery) (*ListSessionMessagesResult, error)
+	Handle(ctx context.Context, q sessionport.ListSessionMessagesQuery) (*sessionport.ListSessionMessagesResult, error)
 }
 
 type listSessionMessagesHandler struct {
@@ -51,10 +36,10 @@ func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQ
 }
 
 // Handle 复用 metaQuery 完成"权限校验+元数据获取"，再在内存中切片+缓存批读
-func (h *listSessionMessagesHandler) Handle(ctx context.Context, q ListSessionMessagesQuery) (*ListSessionMessagesResult, error) {
+func (h *listSessionMessagesHandler) Handle(ctx context.Context, q sessionport.ListSessionMessagesQuery) (*sessionport.ListSessionMessagesResult, error) {
 	log := logger.WithCtx(ctx)
 
-	meta, err := h.metaQuery.Handle(ctx, GetSessionMetaByUserQuery{
+	meta, err := h.metaQuery.Handle(ctx, sessionport.GetSessionMetaByUserQuery{
 		UserID:    q.UserID,
 		IsAdmin:   q.IsAdmin,
 		SessionID: q.SessionID,
@@ -65,7 +50,7 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q ListSessionMe
 
 	total := int64(len(meta.MessageIDs))
 	if total == 0 {
-		return &ListSessionMessagesResult{Messages: []*MessageView{}, Total: 0}, nil
+		return &sessionport.ListSessionMessagesResult{Messages: []*sessionport.MessageView{}, Total: 0}, nil
 	}
 
 	start := (q.Page - 1) * q.PageSize
@@ -78,7 +63,7 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q ListSessionMe
 	}
 	pageIDs := meta.MessageIDs[start:end]
 	if len(pageIDs) == 0 {
-		return &ListSessionMessagesResult{Messages: []*MessageView{}, Total: total}, nil
+		return &sessionport.ListSessionMessagesResult{Messages: []*sessionport.MessageView{}, Total: total}, nil
 	}
 
 	hits, missing, cacheErr := h.cache.GetMessages(ctx, pageIDs)
@@ -112,18 +97,18 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q ListSessionMe
 		}
 	}
 
-	views := make([]*MessageView, 0, len(pageIDs))
+	views := make([]*sessionport.MessageView, 0, len(pageIDs))
 	for _, id := range pageIDs {
 		rec, ok := hits[id]
 		if !ok {
 			continue
 		}
-		views = append(views, &MessageView{
+		views = append(views, &sessionport.MessageView{
 			ID:        rec.ID,
 			Model:     rec.Model,
 			Message:   rec.Message,
 			CreatedAt: rec.CreatedAt,
 		})
 	}
-	return &ListSessionMessagesResult{Messages: views, Total: total}, nil
+	return &sessionport.ListSessionMessagesResult{Messages: views, Total: total}, nil
 }
