@@ -21,7 +21,7 @@ import { computeRange, formatChartTime } from "@/lib/time-range";
 
 const TOKEN_LAYERS = [
   { key: "cacheReadTokens", label: "Cache Read", color: "#F2D0B8" },
-  { key: "inputTokens", label: "Fresh Input", color: "#E6733F" },
+  { key: "inputTokens", label: "Input", color: "#E6733F" },
   { key: "cacheCreationTokens", label: "Cache Write", color: "#F2D5BE" },
   { key: "outputTokens", label: "Output", color: "#D46A3E" },
 ] as const;
@@ -74,6 +74,8 @@ export function TokenVolumeChart() {
       outputTokens: freshOutput,
       cacheReadTokens: p.cacheReadTokens,
       cacheCreationTokens: p.cacheCreationTokens,
+      inputTokensRaw: p.inputTokens,
+      outputTokensRaw: p.outputTokens,
     };
   });
 
@@ -116,7 +118,21 @@ export function TokenVolumeChart() {
                 fontSize={12}
               />
               <YAxis fontSize={12} tickFormatter={formatTokenCount} domain={[0, "auto"]} allowDataOverflow={false} />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value, name, _item) => {
+                      if (name === "inputTokens" && _item?.payload?.inputTokensRaw !== undefined) {
+                        return <span>{formatTokenCount(Number(_item.payload.inputTokensRaw))}</span>;
+                      }
+                      if (name === "outputTokens" && _item?.payload?.outputTokensRaw !== undefined) {
+                        return <span>{formatTokenCount(Number(_item.payload.outputTokensRaw))}</span>;
+                      }
+                      return <span>{formatTokenCount(Number(value))}</span>;
+                    }}
+                  />
+                }
+              />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {TOKEN_LAYERS.map((layer) => (
                 <Area
