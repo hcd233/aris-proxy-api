@@ -84,7 +84,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 	huma.Register(auditGroup, huma.Operation{
 		OperationID: "queryFirstTokenLatency",
 		Method:      http.MethodGet,
-		Path:        "/stats/first-token-latency",
+		Path:        "/stats/token/latency",
 		Summary:     "QueryFirstTokenLatency",
 		Description: "Query average first token latency grouped by model and time bucket. Admin sees all; user sees only their own keys.",
 		Tags:        []string{"Audit"},
