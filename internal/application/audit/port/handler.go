@@ -16,8 +16,9 @@ type AuditLogView struct {
 	ID                       uint
 	CreatedAt                time.Time
 	Model                    string
-	UpstreamProvider         string
-	APIProvider              string
+	UpstreamProtocol         string
+	APIProtocol              string
+	Endpoint                 string
 	InputTokens              int
 	OutputTokens             int
 	CacheCreationInputTokens int

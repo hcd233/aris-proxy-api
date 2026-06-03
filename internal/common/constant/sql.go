@@ -49,8 +49,9 @@ const (
 	FieldStreamDurationMs         = "stream_duration_ms"
 	FieldAPIKeyID                 = "api_key_id"
 	FieldModelID                  = "model_id"
-	FieldUpstreamProvider         = "upstream_provider"
-	FieldAPIProvider              = "api_provider"
+	FieldUpstreamProtocol         = "upstream_protocol"
+	FieldAPIProtocol              = "api_protocol"
+	FieldEndpoint                 = "endpoint"
 	FieldCacheCreationInputTokens = "cache_creation_input_tokens"
 	FieldCacheReadInputTokens     = "cache_read_input_tokens"
 	FieldUserAgent                = "user_agent"
@@ -100,7 +101,7 @@ var (
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
 	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID}
 
-	AuditRepoFields = []string{FieldID, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProvider, FieldAPIProvider, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, FieldCreatedAt}
+	AuditRepoFields = []string{FieldID, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, FieldCreatedAt}
 
 	AuditQueryFields = []string{FieldTraceID, FieldModel}
 
