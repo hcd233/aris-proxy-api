@@ -67,6 +67,12 @@ function formatTokens(input: number, output: number): string {
   return `${fmt(input)} / ${fmt(output)}`;
 }
 
+function formatCacheTokens(write: number, read: number): string | null {
+  if (write === 0 && read === 0) return null;
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+  return `c: ${fmt(write)} / ${fmt(read)}`;
+}
+
 export default function AuditPage() {
   const isMobile = useIsMobile();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
