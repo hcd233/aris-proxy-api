@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api-client";
 import type { ModelUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,9 @@ import { computeRange } from "@/lib/time-range";
 
 type SortField = "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
 
-const CACHE_READ_COLOR = "#D4A882";
+const CACHE_READ_COLOR = "#F2D0B8";
 const INPUT_COLOR = "#E6733F";
-const CACHE_CREATED_COLOR = "#D4AE8A";
+const CACHE_CREATED_COLOR = "#F2D5BE";
 const OUTPUT_COLOR = "#D46A3E";
 
 function formatTokenCount(v: number): string {
@@ -25,6 +25,93 @@ function formatTokenCount(v: number): string {
 
 function tokenTotal(item: ModelUsageItem): number {
   return item.inputTokens + item.outputTokens + item.cacheReadTokens + item.cacheCreationTokens;
+}
+
+function BarWithTooltip({
+  cacheLabel,
+  cacheValue,
+  cacheColor,
+  mainLabel,
+  mainValue,
+  mainColor,
+}: {
+  cacheLabel: string;
+  cacheValue: number;
+  cacheColor: string;
+  mainLabel: string;
+  mainValue: number;
+  mainColor: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  const denom = mainValue > 0 ? mainValue : 1;
+  const cachePct = Math.min((cacheValue / denom) * 100, 100);
+  const freshPct = Math.max(100 - cachePct, 0);
+  const cacheRatio = denom > 0 ? Math.round((cacheValue / denom) * 100) : 0;
+
+  return (
+    <div
+      ref={barRef}
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div className="flex h-3 overflow-hidden rounded-md bg-muted">
+        {cachePct > 0 && (
+          <div
+            style={{ width: `${cachePct}%`, backgroundColor: cacheColor }}
+            className="transition-all duration-200"
+          />
+        )}
+        {freshPct > 0 && (
+          <div
+            style={{ width: `${freshPct}%`, backgroundColor: mainColor }}
+            className="transition-all duration-200"
+          />
+        )}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+        <span style={{ color: cacheColor }}>{cacheLabel} {formatTokenCount(cacheValue)}</span>
+        <span style={{ color: mainColor }}>{mainLabel} {formatTokenCount(mainValue)}</span>
+      </div>
+
+      {hovered && (
+        <div
+          className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2"
+        >
+          <div className="grid min-w-40 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+            <div className="flex items-center gap-2">
+              <div
+                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                style={{ backgroundColor: mainColor }}
+              />
+              <div className="flex flex-1 items-center justify-between leading-none">
+                <span className="text-muted-foreground">{mainLabel}</span>
+                <span className="font-mono font-medium text-foreground tabular-nums">
+                  {formatTokenCount(mainValue)}
+                </span>
+              </div>
+            </div>
+            <div className="border-t border-border/50" />
+            <div className="flex items-center gap-2">
+              <div
+                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                style={{ backgroundColor: cacheColor }}
+              />
+              <div className="flex flex-1 items-center justify-between leading-none">
+                <span className="text-muted-foreground">{cacheLabel}</span>
+                <span className="font-mono font-medium text-foreground tabular-nums">
+                  {cacheRatio}%
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="mx-auto h-2 w-2 -translate-y-1 rotate-45 border-b border-r border-border/50 bg-background" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ModelTokenBarChart() {
@@ -84,44 +171,6 @@ export function ModelTokenBarChart() {
   function sortIndicator(field: SortField) {
     if (sortField !== field) return "";
     return sortDir === "desc" ? " ▼" : " ▲";
-  }
-
-  function renderStackedBar(
-    cacheLabel: string,
-    cacheValue: number,
-    cacheColor: string,
-    mainLabel: string,
-    mainValue: number,
-    mainColor: string,
-  ) {
-    const denom = mainValue > 0 ? mainValue : 1;
-    const cachePct = Math.min((cacheValue / denom) * 100, 100);
-    const freshPct = Math.max(100 - cachePct, 0);
-    return (
-      <div>
-        <div
-          className="flex h-3 overflow-hidden rounded-md bg-muted"
-          title={`${cacheLabel}: ${formatTokenCount(cacheValue)} / ${mainLabel}: ${formatTokenCount(mainValue - cacheValue)}`}
-        >
-          {cachePct > 0 && (
-            <div
-              style={{ width: `${cachePct}%`, backgroundColor: cacheColor }}
-              className="transition-all duration-200"
-            />
-          )}
-          {freshPct > 0 && (
-            <div
-              style={{ width: `${freshPct}%`, backgroundColor: mainColor }}
-              className="transition-all duration-200"
-            />
-          )}
-        </div>
-        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-          <span style={{ color: cacheColor }}>{cacheLabel} {formatTokenCount(cacheValue)}</span>
-          <span style={{ color: mainColor }}>{mainLabel} {formatTokenCount(mainValue)}</span>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -186,24 +235,24 @@ export function ModelTokenBarChart() {
                         {formatTokenCount(total)}
                       </td>
                       <td className="w-[220px] py-3 pr-4">
-                        {renderStackedBar(
-                          "Cache Read",
-                          item.cacheReadTokens,
-                          CACHE_READ_COLOR,
-                          "Input",
-                          item.inputTokens,
-                          INPUT_COLOR,
-                        )}
+                        <BarWithTooltip
+                          cacheLabel="Cache Read"
+                          cacheValue={item.cacheReadTokens}
+                          cacheColor={CACHE_READ_COLOR}
+                          mainLabel="Input"
+                          mainValue={item.inputTokens}
+                          mainColor={INPUT_COLOR}
+                        />
                       </td>
                       <td className="w-[220px] py-3 pr-6">
-                        {renderStackedBar(
-                          "Cache Write",
-                          item.cacheCreationTokens,
-                          CACHE_CREATED_COLOR,
-                          "Output",
-                          item.outputTokens,
-                          OUTPUT_COLOR,
-                        )}
+                        <BarWithTooltip
+                          cacheLabel="Cache Write"
+                          cacheValue={item.cacheCreationTokens}
+                          cacheColor={CACHE_CREATED_COLOR}
+                          mainLabel="Output"
+                          mainValue={item.outputTokens}
+                          mainColor={OUTPUT_COLOR}
+                        />
                       </td>
                     </tr>
                   );
