@@ -86,7 +86,7 @@ type ListSessionsByUserReq struct {
 //	@author centonhuang
 //	@update 2026-05-24 10:00:00
 type GetSessionByUserReq struct {
-	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
 }
 
 // GetSessionRsp 获取Session详情响应
@@ -175,5 +175,5 @@ type ListSessionToolsRsp struct {
 //	@author centonhuang
 //	@update 2026-06-03 10:00:00
 type DeleteSessionReq struct {
-	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
 }
