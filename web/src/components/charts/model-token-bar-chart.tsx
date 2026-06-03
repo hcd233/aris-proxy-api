@@ -24,7 +24,7 @@ function formatTokenCount(v: number): string {
 }
 
 function tokenTotal(item: ModelUsageItem): number {
-  return item.inputTokens + item.outputTokens + item.cacheReadTokens + item.cacheCreationTokens;
+  return item.inputTokens + item.outputTokens;
 }
 
 function BarWithTooltip({
