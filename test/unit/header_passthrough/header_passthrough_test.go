@@ -214,7 +214,7 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 	}
 }
 
-func TestOpenAIProxy_PreservesPassthroughHeaderCase(t *testing.T) {
+func TestOpenAIProxy_CanonicalizesPassthroughHeader(t *testing.T) {
 	t.Parallel()
 	const headerName = "X-CUSTOM-header"
 	const headerValue = "keep-me"
@@ -245,11 +245,11 @@ func TestOpenAIProxy_PreservesPassthroughHeaderCase(t *testing.T) {
 	}
 
 	request := receiveRawRequest(t, rawRequest)
-	if !strings.Contains(request, "\r\n"+headerName+": "+headerValue+"\r\n") {
-		t.Fatalf("expected raw upstream request to contain preserved header %q, got:\n%s", headerName, request)
+	if strings.Contains(request, "\r\n"+headerName+": "+headerValue+"\r\n") {
+		t.Fatalf("expected header %q to be canonicalized, but was preserved in raw request:\n%s", headerName, request)
 	}
-	if strings.Contains(request, "\r\nX-Custom-Header: "+headerValue+"\r\n") {
-		t.Fatalf("passthrough header was canonicalized unexpectedly, got:\n%s", request)
+	if !strings.Contains(request, "\r\nX-Custom-Header: "+headerValue+"\r\n") {
+		t.Fatalf("expected canonicalized header \"X-Custom-Header\" in raw upstream request, got:\n%s", request)
 	}
 
 	if err := receiveServerDone(t, serverDone); err != nil {

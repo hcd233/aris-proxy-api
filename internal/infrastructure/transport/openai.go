@@ -137,8 +137,8 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpo
 	// 透传客户端请求头
 	applyPassthroughRequestHeaders(ctx, req.Header)
 
-	setRequestHeader(req.Header, constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	setRequestHeader(req.Header, constant.HTTPTitleHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+	req.Header.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
+	req.Header.Set(constant.HTTPTitleHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
