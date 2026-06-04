@@ -296,6 +296,20 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     [sessionId, scoring],
   );
 
+  const handleDeleteScore = useCallback(async () => {
+    if (!sessionId || scoring) return;
+    setScoring(true);
+    try {
+      await api.deleteScoreSession(sessionId);
+      setScore(undefined);
+      toast.success("Score removed");
+    } catch {
+      toast.error("Failed to remove score");
+    } finally {
+      setScoring(false);
+    }
+  }, [sessionId, scoring]);
+
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
     void fetchMetadata();
@@ -542,8 +556,20 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             </div>
 
             <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">评分</span>
               {score != null ? (
-                <span className="text-sm font-medium tabular-nums text-amber-600">{score}</span>
+                <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums">
+                  {score}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteScore()}
+                    disabled={scoring}
+                    className="ml-0.5 rounded text-muted-foreground/40 transition-colors hover:text-destructive disabled:opacity-30"
+                    aria-label="Remove score"
+                  >
+                    ×
+                  </button>
+                </span>
               ) : scoreConfirmValue != null ? (
                 <div className="flex items-center gap-1 rounded-md border border-border bg-secondary/50 px-2 py-1">
                   <span className="text-xs text-muted-foreground">Rate {scoreConfirmValue}?</span>
@@ -551,7 +577,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                     type="button"
                     onClick={() => handleScore(scoreConfirmValue)}
                     disabled={scoring}
-                    className="rounded px-1.5 py-0.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
+                    className="rounded px-1.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-green-500/10 hover:text-green-600 disabled:opacity-50"
                   >
                     Yes
                   </button>
@@ -571,7 +597,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                       type="button"
                       disabled={scoring}
                       onClick={() => setScoreConfirmValue(v)}
-                      className="rounded px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-amber-600 disabled:opacity-30"
+                      className="rounded px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-foreground disabled:opacity-30"
                     >
                       {v}
                     </button>
@@ -781,8 +807,20 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
               <span>{new Date(metadata.createdAt).toLocaleString()}</span>
             </div>
+            <span className="hidden text-[11px] text-muted-foreground sm:inline">评分</span>
             {score != null ? (
-              <span className="text-sm font-medium tabular-nums text-amber-600">{score}</span>
+              <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums">
+                {score}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteScore()}
+                  disabled={scoring}
+                  className="ml-0.5 rounded text-muted-foreground/40 transition-colors hover:text-destructive disabled:opacity-30"
+                  aria-label="Remove score"
+                >
+                  ×
+                </button>
+              </span>
             ) : scoreConfirmValue != null ? (
               <div className="flex items-center gap-1 rounded-md border border-border bg-secondary/50 px-2 py-1">
                 <span className="text-xs text-muted-foreground">Rate {scoreConfirmValue}?</span>
@@ -790,7 +828,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                   type="button"
                   onClick={() => handleScore(scoreConfirmValue)}
                   disabled={scoring}
-                  className="rounded px-1.5 py-0.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
+                  className="rounded px-1.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-green-500/10 hover:text-green-600 disabled:opacity-50"
                 >
                   Yes
                 </button>

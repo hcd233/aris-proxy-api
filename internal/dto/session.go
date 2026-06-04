@@ -201,3 +201,8 @@ type ScoreSessionRsp struct {
 	Score     int        `json:"score" doc:"评分(1-5)"`
 	ScoredAt  *time.Time `json:"scoredAt" doc:"评分时间"`
 }
+
+// DeleteScoreSessionReq 删除评分请求
+type DeleteScoreSessionReq struct {
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
+}

@@ -41,6 +41,7 @@ type SessionHandler interface {
 	HandleListShareTools(ctx context.Context, req *dto.ListShareToolsReq) (*dto.HTTPResponse[*dto.ListShareToolsRsp], error)
 	HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error)
+	HandleDeleteScoreSession(ctx context.Context, req *dto.DeleteScoreSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
@@ -677,6 +678,47 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 	logger.WithCtx(ctx).Info("[SessionHandler] Session scored",
 		zap.Uint("sessionID", req.Body.SessionID),
 		zap.Int("score", req.Body.Score))
+
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.DeleteScoreSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	rsp := &dto.EmptyRsp{}
+
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	view, viewErr := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		SessionID: req.SessionID,
+	})
+	if viewErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: fetch meta failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(viewErr))
+		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	if view == nil {
+		rsp.Error = ierr.ErrDataNotExists.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	if err := h.sessionRepo.DeleteScore(ctx, req.SessionID); err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: delete failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	if delErr := h.sessionCache.DeleteSessionMeta(ctx, req.SessionID); delErr != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Delete score: cache delete failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(delErr))
+	}
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Score deleted",
+		zap.Uint("sessionID", req.SessionID))
 
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

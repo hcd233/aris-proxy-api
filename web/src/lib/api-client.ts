@@ -264,6 +264,12 @@ class ApiClient {
     });
   }
 
+  async deleteScoreSession(sessionId: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/session/score?id=${sessionId}`, {
+      method: "DELETE",
+    });
+  }
+
   // ─── Session Share ─────────────────────────────────────────────────────────
 
   async createShare(body: CreateShareReqBody): Promise<CreateShareRsp> {

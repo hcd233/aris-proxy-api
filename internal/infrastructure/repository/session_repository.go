@@ -213,6 +213,18 @@ func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score vo.S
 	return nil
 }
 
+func (r *sessionRepository) DeleteScore(ctx context.Context, id uint) error {
+	db := r.db.WithContext(ctx)
+	updates := map[string]any{
+		constant.FieldScore:    nil,
+		constant.FieldScoredAt: nil,
+	}
+	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "delete session score")
+	}
+	return nil
+}
+
 // ==================== CQRS 读模型实现 ====================
 
 // sessionReadRepository SessionReadRepository 的 GORM 实现
