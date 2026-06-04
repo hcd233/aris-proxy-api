@@ -18,6 +18,8 @@ type SessionMetaCacheRecord struct {
 	CreatedAt  time.Time         `json:"createdAt"`
 	UpdatedAt  time.Time         `json:"updatedAt"`
 	Metadata   map[string]string `json:"metadata,omitempty"`
+	Score      *int              `json:"score"`
+	ScoredAt   *time.Time        `json:"scoredAt"`
 	MessageIDs []uint            `json:"messageIds"`
 	ToolIDs    []uint            `json:"toolIds"`
 }

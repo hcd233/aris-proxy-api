@@ -123,15 +123,13 @@ func (s *Session) UpdateSummary(summary vo.SessionSummary, now time.Time) {
 	s.updatedAt = now
 }
 
-// UpdateScore 更新会话评分
-//
-// 由 ScoreAgent 在完成评分后调用，替代基础设施直接写入 DB 字段。
+// UpdateScore 更新会话人工评分
 //
 //	@receiver s *Session
 //	@param score vo.SessionScore
 //	@param now time.Time
 //	@author centonhuang
-//	@update 2026-04-24 20:00:00
+//	@update 2026-06-03 10:00:00
 func (s *Session) UpdateScore(score vo.SessionScore, now time.Time) {
 	s.score = score
 	s.updatedAt = now
