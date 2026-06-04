@@ -25,12 +25,16 @@ linters:
     # ── 错误处理 ──
     - nilerr          # 检测 err != nil 但返回 nil error
     - noctx           # 检测 HTTP 请求缺少 context
+    - canonicalheader # HTTP header key 规范化检查
+    - durationcheck   # time.Duration 运算检查
+    - bodyclose       # HTTP response body 关闭检查
 
     # ── 代码质量 ──
     - misspell        # 拼写检查
     - dupword         # 重复单词检查
     - goconst         # 重复字符串提取常量
     - nestif          # 嵌套 if 深度检查
+    - gocognit        # 认知复杂度检查
     - unconvert       # 不必要的类型转换
     - unparam         # 未使用的函数参数
     - wastedassign    # 浪费的赋值
@@ -42,6 +46,10 @@ linters:
     # ── 现代化 ──
     - modernize       # 使用现代 Go 特性
     - intrange        # 使用整数 range
+    - perfsprint      # 性能优化格式化检查
+
+    # ── 日志 ──
+    - loggercheck     # 结构化日志 key-value 配对检查
 
     # ── 代码风格 ──
     - whitespace      # 函数首尾多余空行
@@ -55,8 +63,16 @@ linters:
     # ── 测试规范 ──
     - thelper         # 检查 test helper 是否调用 t.Helper()
     - usetesting      # 检查测试包内函数使用
+    - paralleltest    # 检测测试函数未调用 t.Parallel()
+
+    # ── 序列化规范 ──
+    - musttag         # 强制序列化 struct 必须有 tag
 
   settings:
+    # ── errcheck: 未处理 error 返回值 ──
+    errcheck:
+      check-blank: true   # 检查 _ 忽略的 error 返回值
+
     # ── forbidigo: 禁止特定函数调用 ──
     # 迁移自 lint-conventions.sh 1.1, 1.2, 4.2
     forbidigo:
@@ -100,6 +116,10 @@ linters:
     # ── nestif: 嵌套深度 ──
     nestif:
       min-complexity: 5
+
+    # ── gocognit: 认知复杂度 ──
+    gocognit:
+      min-complexity: 25
 
     # ── goconst: 重复字符串 ──
     goconst:
@@ -160,6 +180,23 @@ linters:
         begin: true
       benchmark:
         begin: true
+
+    # ── loggercheck: 日志 key-value 配对 ──
+    loggercheck:
+      require-string-key: false
+      no-printf-like: true
+
+    # ── musttag: 序列化 struct tag 检查 ──
+    musttag:
+      functions:
+        - name: github.com/bytedance/sonic.Marshal
+          tag: json
+        - name: github.com/bytedance/sonic.Unmarshal
+          tag: json
+        - name: github.com/bytedance/sonic.ConfigDefault.Marshal
+          tag: json
+        - name: github.com/bytedance/sonic.ConfigDefault.Unmarshal
+          tag: json
 
     # ── misspell ──
     misspell:
@@ -287,14 +324,8 @@ linters:
     paths:
       - "third_party"
       - "vendor"
+      - "web/node_modules"
+      - ".worktrees"
 
 output:
-  formats:
-    text:
-      print-linter-name: true
-      print-issued-lines: true
-
-  sort-order:
-    - linter
-    - severity
-    - file
+  sort-results: true

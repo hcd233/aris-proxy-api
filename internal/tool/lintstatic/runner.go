@@ -17,7 +17,7 @@ type Result struct {
 	Err    error
 }
 
-// Run 执行 go vet 和 staticcheck（若已安装）静态分析。
+// Run 执行 go vet、staticcheck 和 golangci-lint（若已安装）静态分析。
 // 默认扫描 ./...，可通过 args 指定其他路径。
 func Run(args []string) Result {
 	if len(args) == 0 {
@@ -52,6 +52,22 @@ func Run(args []string) Result {
 		}
 	} else {
 		out.WriteString("[lintstatic] staticcheck not found in PATH or $(go env GOPATH)/bin, skipping. Install with: go install honnef.co/go/tools/cmd/staticcheck@latest\n")
+	}
+
+	// golangci-lint
+	glPath := resolveGolangciLint()
+	if glPath != "" {
+		glCmd := exec.Command(glPath, append([]string{"run"}, args...)...)
+		glOut, glErr := glCmd.CombinedOutput()
+		if len(glOut) > 0 {
+			out.Write(glOut)
+			out.WriteByte('\n')
+		}
+		if glErr != nil {
+			hasErr = true
+		}
+	} else {
+		out.WriteString("[lintstatic] golangci-lint not found in PATH or $(go env GOPATH)/bin, skipping. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest\n")
 	}
 
 	res := Result{Output: out.String()}
@@ -97,6 +113,25 @@ func resolveStaticcheck() string {
 	}
 	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil {
 		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.StaticcheckCommand)
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+			return p
+		}
+	}
+	return ""
+}
+
+func resolveGolangciLint() string {
+	if p, err := exec.LookPath(constant.GolangciLintCommand); err == nil {
+		return p
+	}
+	if gobin := os.Getenv(constant.GobinEnvKey); gobin != constant.ZeroString {
+		p := filepath.Join(gobin, constant.GolangciLintCommand)
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+			return p
+		}
+	}
+	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil {
+		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.GolangciLintCommand)
 		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
 			return p
 		}

@@ -23,6 +23,7 @@ func Run(args []string) Result {
 	c.checkStyle()
 	c.checkMagicValues()
 	c.checkHardcodedValues()
+	c.checkDTONaming()
 	return Result{Diagnostics: c.diagnostics}
 }
 

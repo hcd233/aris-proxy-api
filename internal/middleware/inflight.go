@@ -4,15 +4,10 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
-
-type serviceUnavailableResponse struct {
-	Error struct {
-		Message string `json:"message"`
-		Type    string `json:"type"`
-	} `json:"error"`
-}
 
 var healthCheckPaths = map[string]struct{}{
 	constant.RoutePathHealth:    {},
@@ -31,11 +26,9 @@ func InflightMiddleware() fiber.Handler {
 			c.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
 			c.Status(fiber.StatusServiceUnavailable)
 
-			resp := serviceUnavailableResponse{}
-			resp.Error.Message = constant.ServerShuttingDownMsg
-			resp.Error.Type = constant.ServerErrorType
-
-			body, _ := sonic.Marshal(resp)
+			body, _ := sonic.Marshal(&dto.CommonRsp{
+				Error: ierr.ErrInternal.BizError(),
+			})
 			return c.Send(body)
 		}
 		defer tracker.Untrack()
