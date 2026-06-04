@@ -24,7 +24,6 @@ import {
   ListFilter,
   Check,
   Clock,
-  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -405,11 +404,12 @@ export default function AuditPage() {
                   <TableHead>Time</TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead>Endpoint</TableHead>
+                  <TableHead>Protocol</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
                   <TableHead>Latency</TableHead>
-                  <TableHead>Metadata</TableHead>
+                  <TableHead>UserAgent</TableHead>
                   <TableHead>TraceID</TableHead>
                 </TableRow>
               </TableHeader>
@@ -418,6 +418,7 @@ export default function AuditPage() {
                   const ok = log.upstreamStatusCode === 200;
                   const hasError = !!log.errorMessage;
                   const cacheInfo = formatCacheTokens(log.cacheCreationInputTokens, log.cacheReadInputTokens);
+                  const uaShort = log.userAgent ? log.userAgent.slice(0, 30) + (log.userAgent.length > 30 ? "…" : "") : "—";
                   return (
                     <TableRow
                       key={log.id}
@@ -428,6 +429,10 @@ export default function AuditPage() {
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
                       <TableCell className="max-w-[140px] truncate text-muted-foreground">{log.endpoint || "—"}</TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        <div className="text-xs">{log.apiProtocol || "—"}</div>
+                        <div className="text-xs text-muted-foreground/70">{log.upstreamProtocol || "—"}</div>
+                      </TableCell>
                       <TableCell>
                         <div className="text-sm">{log.userName || "—"}</div>
                         <div className="text-xs text-muted-foreground">
@@ -435,16 +440,30 @@ export default function AuditPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={ok ? "secondary" : "destructive"}
-                          className="text-xs"
-                        >
-                          {log.upstreamStatusCode}
-                        </Badge>
-                        {hasError && (
-                          <div className="mt-1 max-w-[160px] truncate text-xs text-destructive">
-                            {log.errorMessage}
-                          </div>
+                        {!ok && hasError ? (
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <button type="button">
+                                    <Badge variant="destructive" className="text-xs">
+                                      {log.upstreamStatusCode}
+                                    </Badge>
+                                  </button>
+                                }
+                              />
+                              <TooltipContent side="top" className="max-w-xs">
+                                <span>{log.errorMessage}</span>
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        ) : (
+                          <Badge
+                            variant={ok ? "secondary" : "destructive"}
+                            className="text-xs"
+                          >
+                            {log.upstreamStatusCode}
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
@@ -454,34 +473,30 @@ export default function AuditPage() {
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        <div className="text-xs">IO</div>
                         <div className="text-xs">I: {log.firstTokenLatencyMs}ms</div>
                         {log.streamDurationMs > 0 && (
                           <div className="text-xs">O: {(log.streamDurationMs / 1000).toFixed(1)}s</div>
                         )}
                       </TableCell>
                       <TableCell>
-                        <TooltipProvider>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <button
-                                  type="button"
-                                  className="cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
-                                />
-                              }
-                            >
-                              <Info className="size-4" />
-                            </TooltipTrigger>
-                            <TooltipContent side="left" className="max-w-xs">
-                              <div className="flex flex-col gap-1 font-mono">
-                                <span>UserAgent: {log.userAgent || "—"}</span>
-                                <span>ApiProtocol: {log.apiProtocol || "—"}</span>
-                                <span>UpstreamProtocol: {log.upstreamProtocol || "—"}</span>
-                              </div>
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </TooltipProvider>
+                        {log.userAgent ? (
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <button type="button" className="max-w-[160px] cursor-default truncate text-xs text-muted-foreground">
+                                    {uaShort}
+                                  </button>
+                                }
+                              />
+                              <TooltipContent side="top" className="max-w-xs">
+                                <span className="break-all">{log.userAgent}</span>
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
