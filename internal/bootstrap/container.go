@@ -2,35 +2,26 @@ package bootstrap
 
 import (
 	"context"
-	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
-	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
-	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
-	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
 	identitycommand "github.com/hcd233/aris-proxy-api/internal/application/identity/command"
-	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
-	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
 	applicationoauth2 "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
-	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
-	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -42,7 +33,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
@@ -168,10 +158,10 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 		return err
 	}
 	if err := container.Provide(newSessionReadRepository); err != nil {
-		return err
+		panic(err)
 	}
-	if err := container.Provide(newSessionWriteRepository); err != nil {
-		return err
+	if err := container.Provide(newSessionRepository); err != nil {
+		panic(err)
 	}
 	if err := container.Provide(newAuditRepository); err != nil {
 		return err
@@ -222,46 +212,46 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(apikeycommand.NewUserExistenceChecker); err != nil {
 		return err
 	}
-	if err := container.Provide(newIssueAPIKeyHandler); err != nil {
+	if err := container.Provide(apikeycommand.NewIssueAPIKeyHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newRevokeAPIKeyHandler); err != nil {
+	if err := container.Provide(apikeycommand.NewRevokeAPIKeyHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newListAPIKeysHandler); err != nil {
+	if err := container.Provide(apikeyquery.NewListAPIKeysHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newCreateEndpointHandler); err != nil {
+	if err := container.Provide(endpointcommand.NewCreateEndpointHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newUpdateEndpointHandler); err != nil {
+	if err := container.Provide(endpointcommand.NewUpdateEndpointHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newDeleteEndpointHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newListEndpointsHandler); err != nil {
+	if err := container.Provide(endpointquery.NewListEndpointsHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newCreateModelHandler); err != nil {
+	if err := container.Provide(modelcommand.NewCreateModelHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newUpdateModelHandler); err != nil {
+	if err := container.Provide(modelcommand.NewUpdateModelHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newDeleteModelHandler); err != nil {
+	if err := container.Provide(modelcommand.NewDeleteModelHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newListModelsHandler); err != nil {
+	if err := container.Provide(modelquery.NewListModelsHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newRefreshTokensHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newUpdateProfileHandler); err != nil {
+	if err := container.Provide(identitycommand.NewUpdateProfileHandler); err != nil {
 		return err
 	}
-	if err := container.Provide(newGetCurrentUserHandler); err != nil {
+	if err := container.Provide(identityquery.NewGetCurrentUserHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(newInitiateLoginHandler); err != nil {
@@ -328,9 +318,6 @@ func provideApplication(container *dig.Container) error {
 		return err
 	}
 	if err := container.Provide(newListSessionToolsHandler); err != nil {
-		return err
-	}
-	if err := container.Provide(newDeleteSessionHandler); err != nil {
 		return err
 	}
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
@@ -430,234 +417,15 @@ func newSessionReadRepository(db *gorm.DB) session.SessionReadRepository {
 	return repository.NewSessionReadRepository(db)
 }
 
-func newEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
-	return repository.NewEndpointRepository(db)
-}
-
-func newModelRepository(db *gorm.DB) llmproxy.ModelRepository {
-	return repository.NewModelRepository(db)
-}
-
-func newEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
-	return repository.NewEndpointReadRepository(db)
-}
-
-func newTaskSubmitter() usecase.TaskSubmitter {
-	return pool.GetPoolManager()
-}
-
-func newAudioDirCreator() oauth2port.ObjectStorageDirCreator {
-	if config.CosAppID == "" && config.MinioEndpoint == "" {
-		return nil
-	}
-	return repository.NewAudioDirCreator()
-}
-
-func newAccessTokenSigner() identityservice.TokenSigner {
-	return jwt.GetAccessTokenSigner()
-}
-
-func newRefreshTokenSigner() identityservice.TokenSigner {
-	return jwt.GetRefreshTokenSigner()
-}
-
-func newOauth2Platforms() map[string]oauth2service.Platform {
-	return map[string]oauth2service.Platform{
-		enum.Oauth2PlatformGithub: infraoauth2.NewGithubPlatform(),
-		enum.Oauth2PlatformGoogle: infraoauth2.NewGooglePlatform(),
-	}
-}
-
-func newStateManager() oauth2service.StateManager {
-	return infraoauth2.NewStateManager()
-}
-
-func newEndpointResolver(
-	endpointRepo llmproxy.EndpointRepository,
-	modelRepo llmproxy.ModelRepository,
-) llmproxyservice.EndpointResolver {
-	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo)
-}
-
-type refreshTokensParams struct {
-	dig.In
-
-	UserRepo      identity.UserRepository
-	AccessSigner  identityservice.TokenSigner `name:"accessSigner"`
-	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
-}
-
-func newRefreshTokensHandler(params refreshTokensParams) identityport.RefreshTokensHandler {
-	return identitycommand.NewRefreshTokensHandler(params.UserRepo, params.AccessSigner, params.RefreshSigner)
-}
-
-type handleCallbackParams struct {
-	dig.In
-
-	Platforms     map[string]oauth2service.Platform
-	UserRepo      identity.UserRepository
-	AccessSigner  identityservice.TokenSigner `name:"accessSigner"`
-	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
-	DirCreator    oauth2port.ObjectStorageDirCreator
-	StateManager  oauth2service.StateManager
-}
-
-func newHandleCallbackHandler(params handleCallbackParams) oauth2port.HandleCallbackHandler {
-	return applicationoauth2.NewHandleCallbackHandler(
-		params.Platforms,
-		params.UserRepo,
-		params.AccessSigner,
-		params.RefreshSigner,
-		params.DirCreator,
-		params.StateManager,
-	)
-}
-
-func newInitiateLoginHandler(platforms map[string]oauth2service.Platform, stateManager oauth2service.StateManager) oauth2port.InitiateLoginHandler {
-	return applicationoauth2.NewInitiateLoginHandler(platforms, stateManager)
-}
-
-func newTokenDependencies(refresh identityport.RefreshTokensHandler) handler.TokenDependencies {
-	return handler.TokenDependencies{Refresh: refresh}
-}
-
-func newOauth2Dependencies(initiate oauth2port.InitiateLoginHandler, callback oauth2port.HandleCallbackHandler) handler.Oauth2Dependencies {
-	return handler.Oauth2Dependencies{
-		Initiate: initiate,
-		Callback: callback,
-	}
-}
-
-func newUserDependencies(getCurrentUser identityport.GetCurrentUserHandler, updateProfile identityport.UpdateProfileHandler) handler.UserDependencies {
-	return handler.UserDependencies{
-		GetCurrentUser: getCurrentUser,
-		UpdateProfile:  updateProfile,
-	}
-}
-
-func newAPIKeyDependencies(issue apikeyport.IssueAPIKeyHandler, revoke apikeyport.RevokeAPIKeyHandler, list apikeyport.ListAPIKeysHandler) handler.APIKeyDependencies {
-	return handler.APIKeyDependencies{
-		Issue:  issue,
-		Revoke: revoke,
-		List:   list,
-	}
-}
-
-func newSessionDependencies(
-	listByUser sessionport.ListSessionsByUserHandler,
-	getByUser sessionport.GetSessionByUserHandler,
-	shareCache cache.ShareCache,
-	getMetaByUser sessionport.GetSessionMetaByUserHandler,
-	listMessages sessionport.ListSessionMessagesHandler,
-	listTools sessionport.ListSessionToolsHandler,
-	deleteSession sessionport.DeleteSessionHandler,
-) handler.SessionDependencies {
-	return handler.SessionDependencies{
-		ListByUser:    listByUser,
-		GetByUser:     getByUser,
-		ShareCache:    shareCache,
-		GetMetaByUser: getMetaByUser,
-		ListMessages:  listMessages,
-		ListTools:     listTools,
-		DeleteSession: deleteSession,
-	}
-}
-
-func newOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependencies {
-	return handler.OpenAIDependencies{UseCase: &openAIUseCaseAdapter{inner: useCase}}
-}
-
-func newAnthropicDependencies(useCase usecase.AnthropicUseCase) handler.AnthropicDependencies {
-	return handler.AnthropicDependencies{UseCase: &anthropicUseCaseAdapter{inner: useCase}}
-}
-
-type openAIUseCaseAdapter struct {
-	inner usecase.OpenAIUseCase
-}
-
-func (a *openAIUseCaseAdapter) ListModels(ctx context.Context) (*dto.OpenAIListModelsRsp, error) {
-	return a.inner.ListModels(ctx)
-}
-func (a *openAIUseCaseAdapter) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
-	return a.inner.CreateChatCompletion(ctx, req)
-}
-func (a *openAIUseCaseAdapter) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
-	return a.inner.CreateResponse(ctx, req)
-}
-
-type anthropicUseCaseAdapter struct {
-	inner usecase.AnthropicUseCase
-}
-
-func (a *anthropicUseCaseAdapter) ListModels(ctx context.Context) (*dto.AnthropicListModelsRsp, error) {
-	return a.inner.ListModels(ctx)
-}
-func (a *anthropicUseCaseAdapter) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
-	return a.inner.CreateMessage(ctx, req)
-}
-func (a *anthropicUseCaseAdapter) CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
-	return a.inner.CountTokens(ctx, req)
-}
-
-type auditServiceAdapter struct {
-	inner auditquery.AuditService
-}
-
-func (a *auditServiceAdapter) ListLogs(ctx context.Context, permission enum.Permission, userID uint, q auditport.ListAuditLogsParams) ([]*auditport.AuditLogView, *model.PageInfo, error) {
-	views, pageInfo, err := a.inner.ListLogs(ctx, permission, userID, auditquery.ListAuditLogsParams(q))
-	if err != nil {
-		return nil, nil, err
-	}
-	result := make([]*auditport.AuditLogView, len(views))
-	for i, v := range views {
-		result[i] = &auditport.AuditLogView{
-			ID:                       v.ID,
-			CreatedAt:                v.CreatedAt,
-			Model:                    v.Model,
-			UpstreamProtocol:         v.UpstreamProtocol,
-			APIProtocol:              v.APIProtocol,
-			Endpoint:                 v.Endpoint,
-			InputTokens:              v.InputTokens,
-			OutputTokens:             v.OutputTokens,
-			CacheCreationInputTokens: v.CacheCreationInputTokens,
-			CacheReadInputTokens:     v.CacheReadInputTokens,
-			FirstTokenLatencyMs:      v.FirstTokenLatencyMs,
-			StreamDurationMs:         v.StreamDurationMs,
-			UserAgent:                v.UserAgent,
-			UpstreamStatusCode:       v.UpstreamStatusCode,
-			ErrorMessage:             v.ErrorMessage,
-			TraceID:                  v.TraceID,
-			APIKeyName:               v.APIKeyName,
-			UserName:                 v.UserName,
-			UserEmail:                v.UserEmail,
-		}
-	}
-	return result, pageInfo, nil
-}
-func (a *auditServiceAdapter) ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
-	return a.inner.ModelTrend(ctx, permission, userID, startTime, endTime, granularity)
-}
-func (a *auditServiceAdapter) RequestRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
-	return a.inner.RequestRate(ctx, permission, userID, startTime, endTime, granularity)
-}
-func (a *auditServiceAdapter) TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
-	return a.inner.TokenThroughput(ctx, permission, userID, startTime, endTime, granularity)
-}
-func (a *auditServiceAdapter) TokenRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenRateItem, error) {
-	return a.inner.TokenRate(ctx, permission, userID, startTime, endTime, granularity)
-}
-func (a *auditServiceAdapter) ModelUsage(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.ModelUsageItem, error) {
-	return a.inner.ModelUsage(ctx, permission, userID, startTime, endTime, granularity)
-}
-func (a *auditServiceAdapter) FirstTokenLatency(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.FirstTokenLatencyItem, error) {
-	return a.inner.FirstTokenLatency(ctx, permission, userID, startTime, endTime, granularity)
+func newSessionRepository(db *gorm.DB) session.SessionRepository {
+	return repository.NewSessionRepository(db)
 }
 
 func newAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 	return repository.NewAuditRepository(db)
 }
 
-func newAuditDependencies(svc auditport.AuditService) handler.AuditDependencies {
+func newAuditDependencies(svc auditquery.AuditService) handler.AuditDependencies {
 	return handler.AuditDependencies{Service: svc}
 }
 
@@ -676,8 +444,8 @@ func newAuditService(
 	modelUsageByUser auditquery.ModelUsageByUserHandler,
 	firstTokenLatency auditquery.FirstTokenLatencyHandler,
 	firstTokenLatencyByUser auditquery.FirstTokenLatencyByUserHandler,
-) auditport.AuditService {
-	return &auditServiceAdapter{inner: auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)}
+) auditquery.AuditService {
+	return auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)
 }
 
 func newListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
@@ -708,71 +476,23 @@ func newFirstTokenLatencyByUserHandler(repo modelcall.AuditRepository, apiKeyRep
 	return auditquery.NewFirstTokenLatencyByUserHandler(repo, apiKeyRepo)
 }
 
-func newEndpointDependencies(create endpointport.CreateEndpointHandler, update endpointport.UpdateEndpointHandler, delete endpointport.DeleteEndpointHandler, list endpointport.ListEndpointsHandler) handler.EndpointDependencies {
+func newEndpointDependencies(create endpointcommand.CreateEndpointHandler, update endpointcommand.UpdateEndpointHandler, delete endpointcommand.DeleteEndpointHandler, list endpointquery.ListEndpointsHandler) handler.EndpointDependencies {
 	return handler.EndpointDependencies{Create: create, Update: update, Delete: delete, List: list}
 }
 
-func newDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) endpointport.DeleteEndpointHandler {
+func newDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) endpointcommand.DeleteEndpointHandler {
 	return endpointcommand.NewDeleteEndpointHandler(endpointRepo, modelRepo)
 }
 
-func newCreateEndpointHandler(repo llmproxy.EndpointRepository) endpointport.CreateEndpointHandler {
-	return endpointcommand.NewCreateEndpointHandler(repo)
-}
-
-func newUpdateEndpointHandler(repo llmproxy.EndpointRepository) endpointport.UpdateEndpointHandler {
-	return endpointcommand.NewUpdateEndpointHandler(repo)
-}
-
-func newIssueAPIKeyHandler(repo apikey.APIKeyRepository, generator apikeyservice.APIKeyGenerator, userExistsCh apikeycommand.UserExistenceChecker) apikeyport.IssueAPIKeyHandler {
-	return apikeycommand.NewIssueAPIKeyHandler(repo, generator, userExistsCh)
-}
-
-func newRevokeAPIKeyHandler(repo apikey.APIKeyRepository) apikeyport.RevokeAPIKeyHandler {
-	return apikeycommand.NewRevokeAPIKeyHandler(repo)
-}
-
-func newListAPIKeysHandler(repo apikey.APIKeyRepository) apikeyport.ListAPIKeysHandler {
-	return apikeyquery.NewListAPIKeysHandler(repo)
-}
-
-func newCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) modelport.CreateModelHandler {
-	return modelcommand.NewCreateModelHandler(endpointRepo, modelRepo)
-}
-
-func newUpdateModelHandler(repo llmproxy.ModelRepository) modelport.UpdateModelHandler {
-	return modelcommand.NewUpdateModelHandler(repo)
-}
-
-func newDeleteModelHandler(repo llmproxy.ModelRepository) modelport.DeleteModelHandler {
-	return modelcommand.NewDeleteModelHandler(repo)
-}
-
-func newUpdateProfileHandler(repo identity.UserRepository) identityport.UpdateProfileHandler {
-	return identitycommand.NewUpdateProfileHandler(repo)
-}
-
-func newGetCurrentUserHandler(repo identity.UserRepository) identityport.GetCurrentUserHandler {
-	return identityquery.NewGetCurrentUserHandler(repo)
-}
-
-func newListEndpointsHandler(repo llmproxy.EndpointRepository) endpointport.ListEndpointsHandler {
-	return endpointquery.NewListEndpointsHandler(repo)
-}
-
-func newListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository) modelport.ListModelsHandler {
-	return modelquery.NewListModelsHandler(repo, endpointRepo)
-}
-
-func newModelDependencies(create modelport.CreateModelHandler, update modelport.UpdateModelHandler, delete modelport.DeleteModelHandler, list modelport.ListModelsHandler) handler.ModelDependencies {
+func newModelDependencies(create modelcommand.CreateModelHandler, update modelcommand.UpdateModelHandler, delete modelcommand.DeleteModelHandler, list modelquery.ListModelsHandler) handler.ModelDependencies {
 	return handler.ModelDependencies{Create: create, Update: update, Delete: delete, List: list}
 }
 
-func newListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
+func newListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionquery.ListSessionsByUserHandler {
 	return sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo)
 }
 
-func newGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.GetSessionByUserHandler {
+func newGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionquery.GetSessionByUserHandler {
 	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo)
 }
 
@@ -784,22 +504,14 @@ func newSessionDetailCache(redisClient *redis.Client) sessionport.SessionDetailC
 	return cache.NewSessionDetailCache(redisClient)
 }
 
-func newGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionport.GetSessionMetaByUserHandler {
+func newGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionquery.GetSessionMetaByUserHandler {
 	return sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache)
 }
 
-func newListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionMessagesHandler {
+func newListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionquery.ListSessionMessagesHandler {
 	return sessionquery.NewListSessionMessagesHandler(readRepo, metaQuery, detailCache)
 }
 
-func newListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionToolsHandler {
+func newListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionquery.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionquery.ListSessionToolsHandler {
 	return sessionquery.NewListSessionToolsHandler(readRepo, metaQuery, detailCache)
-}
-
-func newSessionWriteRepository(db *gorm.DB) session.SessionRepository {
-	return repository.NewSessionRepository(db)
-}
-
-func newDeleteSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.DeleteSessionHandler {
-	return sessioncommand.NewDeleteSessionHandler(sessionRepo, apiKeyRepo)
 }

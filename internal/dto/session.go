@@ -18,6 +18,7 @@ type SessionSummary struct {
 	CreatedAt    time.Time         `json:"createdAt" doc:"创建时间"`
 	UpdatedAt    time.Time         `json:"updatedAt" doc:"更新时间"`
 	Summary      string            `json:"summary" doc:"会话总结"`
+	Score        *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
 	MessageCount int               `json:"messageCount" doc:"消息数量"`
 	ToolCount    int               `json:"toolCount" doc:"工具数量"`
 	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
@@ -33,6 +34,8 @@ type SessionDetail struct {
 	CreatedAt  time.Time         `json:"createdAt" doc:"创建时间"`
 	UpdatedAt  time.Time         `json:"updatedAt" doc:"更新时间"`
 	Metadata   map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	Score      *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
+	ScoredAt   *time.Time        `json:"scoredAt,omitempty" doc:"评分时间"`
 	Messages   []*MessageItem    `json:"messages" doc:"消息列表"`
 	Tools      []*ToolItem       `json:"tools" doc:"工具列表"`
 	ShareID    string            `json:"shareID" doc:"分享ID（已分享时非空）"`
@@ -86,7 +89,7 @@ type ListSessionsByUserReq struct {
 //	@author centonhuang
 //	@update 2026-05-24 10:00:00
 type GetSessionByUserReq struct {
-	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
 }
 
 // GetSessionRsp 获取Session详情响应
@@ -108,6 +111,8 @@ type SessionMetadata struct {
 	CreatedAt    time.Time         `json:"createdAt" doc:"创建时间"`
 	UpdatedAt    time.Time         `json:"updatedAt" doc:"更新时间"`
 	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	Score        *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
+	ScoredAt     *time.Time        `json:"scoredAt,omitempty" doc:"评分时间"`
 	MessageCount int               `json:"messageCount" doc:"消息总数"`
 	ToolCount    int               `json:"toolCount" doc:"工具总数"`
 	ShareID      string            `json:"shareID" doc:"分享ID（已分享时非空）"`
@@ -170,10 +175,21 @@ type ListSessionToolsRsp struct {
 	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }
 
-// DeleteSessionReq 删除 Session 请求
-//
-//	@author centonhuang
-//	@update 2026-06-03 10:00:00
-type DeleteSessionReq struct {
-	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
+// ScoreSessionReq 人工评分请求
+type ScoreSessionReq struct {
+	Body *ScoreSessionReqBody
+}
+
+// ScoreSessionReqBody 评分请求体
+type ScoreSessionReqBody struct {
+	SessionID uint `json:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	Score     int  `json:"score" required:"true" minimum:"1" maximum:"5" doc:"评分(1-5)"`
+}
+
+// ScoreSessionRsp 评分响应
+type ScoreSessionRsp struct {
+	CommonRsp
+	SessionID uint       `json:"sessionId" doc:"Session ID"`
+	Score     int        `json:"score" doc:"评分(1-5)"`
+	ScoredAt  *time.Time `json:"scoredAt" doc:"评分时间"`
 }

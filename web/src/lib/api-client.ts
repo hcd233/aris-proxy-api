@@ -29,6 +29,8 @@ import type {
   ListShareToolsRsp,
   ListSharesRsp,
   CommonRsp,
+  ScoreSessionReqBody,
+  ScoreSessionRsp,
   ListAuditLogsRsp,
   ModelTrendRsp,
   RequestRateRsp,
@@ -251,6 +253,15 @@ class ApiClient {
     return this.request<ListSessionToolsRsp>(
       `/api/v1/session/tool/list?sessionId=${sessionId}&page=${page}&pageSize=${pageSize}`
     );
+  }
+
+  // ─── Session Score ─────────────────────────────────────────────────────────
+
+  async scoreSession(body: ScoreSessionReqBody): Promise<ScoreSessionRsp> {
+    return this.request<ScoreSessionRsp>("/api/v1/session/score", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
   }
 
   // ─── Session Share ─────────────────────────────────────────────────────────

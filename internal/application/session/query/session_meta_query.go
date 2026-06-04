@@ -83,6 +83,8 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 			CreatedAt:  projection.CreatedAt,
 			UpdatedAt:  projection.UpdatedAt,
 			Metadata:   projection.Metadata,
+			Score:      projection.Score,
+			ScoredAt:   projection.ScoredAt,
 			MessageIDs: projection.MessageIDs,
 			ToolIDs:    projection.ToolIDs,
 		}
@@ -116,6 +118,8 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 		CreatedAt:    record.CreatedAt,
 		UpdatedAt:    record.UpdatedAt,
 		Metadata:     record.Metadata,
+		Score:        record.Score,
+		ScoredAt:     record.ScoredAt,
 		MessageIDs:   record.MessageIDs,
 		ToolIDs:      record.ToolIDs,
 		MessageCount: len(record.MessageIDs),

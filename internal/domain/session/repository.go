@@ -25,7 +25,7 @@ type SessionRepository interface {
 	Delete(ctx context.Context, id uint) error
 	// UpdateSummary 更新会话摘要（由 SummarizeAgent 调用）
 	UpdateSummary(ctx context.Context, id uint, summary sessionvo.SessionSummary) error
-	// UpdateScore 更新会话评分（由 ScoreAgent 调用）
+	// UpdateScore 更新会话人工评分
 	UpdateScore(ctx context.Context, id uint, score sessionvo.SessionScore) error
 }
 
@@ -41,14 +41,12 @@ type PageParam struct {
 // ==================== CQRS 读模型 ====================
 
 // SessionSummaryProjection Session 列表只读投影
-//
-//	@author centonhuang
-//	@update 2026-04-24 20:00:00
 type SessionSummaryProjection struct {
 	ID           uint
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	Summary      string
+	Score        *int
 	MessageCount int
 	ToolCount    int
 }
@@ -75,29 +73,27 @@ type ToolDetailProjection struct {
 }
 
 // SessionMetaProjection Session 元数据只读投影（不含 messages/tools 内容）
-//
-//	@author centonhuang
-//	@update 2026-05-29 14:00:00
 type SessionMetaProjection struct {
 	ID         uint
 	APIKeyName string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	Metadata   map[string]string
+	Score      *int
+	ScoredAt   *time.Time
 	MessageIDs []uint
 	ToolIDs    []uint
 }
 
 // SessionDetailProjection Session 详情只读投影
-//
-//	@author centonhuang
-//	@update 2026-04-24 20:00:00
 type SessionDetailProjection struct {
 	ID         uint
 	APIKeyName string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	Metadata   map[string]string
+	Score      *int
+	ScoredAt   *time.Time
 	MessageIDs []uint
 	ToolIDs    []uint
 	Messages   []*MessageDetailProjection

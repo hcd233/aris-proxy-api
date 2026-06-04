@@ -30,20 +30,17 @@ func (m *mockCron) Stop() {
 func TestInitCronJobs_AllDisabled(t *testing.T) {
 	origDedup := config.CronSessionDeduplicateEnabled
 	origSum := config.CronSessionSummarizeEnabled
-	origScore := config.CronSessionScoreEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
 	origThink := config.CronThinkExtractEnabled
 	defer func() {
 		config.CronSessionDeduplicateEnabled = origDedup
 		config.CronSessionSummarizeEnabled = origSum
-		config.CronSessionScoreEnabled = origScore
 		config.CronSoftDeletePurgeEnabled = origPurge
 		config.CronThinkExtractEnabled = origThink
 	}()
 
 	config.CronSessionDeduplicateEnabled = false
 	config.CronSessionSummarizeEnabled = false
-	config.CronSessionScoreEnabled = false
 	config.CronSoftDeletePurgeEnabled = false
 	config.CronThinkExtractEnabled = false
 
@@ -59,14 +56,12 @@ func TestInitCronJobs_AllDisabled(t *testing.T) {
 func TestInitCronJobs_PartialEnabled(t *testing.T) {
 	origDedup := config.CronSessionDeduplicateEnabled
 	origSum := config.CronSessionSummarizeEnabled
-	origScore := config.CronSessionScoreEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
 	origThink := config.CronThinkExtractEnabled
 	origRegistry := cron.DefaultCronRegistry
 	defer func() {
 		config.CronSessionDeduplicateEnabled = origDedup
 		config.CronSessionSummarizeEnabled = origSum
-		config.CronSessionScoreEnabled = origScore
 		config.CronSoftDeletePurgeEnabled = origPurge
 		config.CronThinkExtractEnabled = origThink
 		cron.DefaultCronRegistry = origRegistry
@@ -74,7 +69,6 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 
 	config.CronSessionDeduplicateEnabled = true
 	config.CronSessionSummarizeEnabled = false
-	config.CronSessionScoreEnabled = true
 	config.CronSoftDeletePurgeEnabled = false
 	config.CronThinkExtractEnabled = false
 
@@ -91,13 +85,6 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 		{
 			Name:    "SessionSummarize",
 			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
-				return &mockCron{}
-			},
-		},
-		{
-			Name:    "SessionScore",
-			Enabled: func() bool { return config.CronSessionScoreEnabled },
 			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
 				return &mockCron{}
 			},
@@ -120,8 +107,8 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 
 	cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
 
-	if cron.CronInstanceCount() != 2 {
-		t.Fatalf("expected 2 cron instances, got %d", cron.CronInstanceCount())
+	if cron.CronInstanceCount() != 1 {
+		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount())
 	}
 }
 
@@ -129,14 +116,12 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 func TestInitCronJobs_AllEnabled(t *testing.T) {
 	origDedup := config.CronSessionDeduplicateEnabled
 	origSum := config.CronSessionSummarizeEnabled
-	origScore := config.CronSessionScoreEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
 	origThink := config.CronThinkExtractEnabled
 	origRegistry := cron.DefaultCronRegistry
 	defer func() {
 		config.CronSessionDeduplicateEnabled = origDedup
 		config.CronSessionSummarizeEnabled = origSum
-		config.CronSessionScoreEnabled = origScore
 		config.CronSoftDeletePurgeEnabled = origPurge
 		config.CronThinkExtractEnabled = origThink
 		cron.DefaultCronRegistry = origRegistry
@@ -144,7 +129,6 @@ func TestInitCronJobs_AllEnabled(t *testing.T) {
 
 	config.CronSessionDeduplicateEnabled = true
 	config.CronSessionSummarizeEnabled = true
-	config.CronSessionScoreEnabled = true
 	config.CronSoftDeletePurgeEnabled = true
 	config.CronThinkExtractEnabled = true
 

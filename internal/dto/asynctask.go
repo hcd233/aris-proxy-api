@@ -43,16 +43,6 @@ type SummarizeTask struct {
 	Content   string
 }
 
-// ScoreTask Session评分任务
-//
-//	@author centonhuang
-//	@update 2026-04-02 10:00:00
-type ScoreTask struct {
-	Ctx       context.Context
-	SessionID uint
-	Content   string
-}
-
 // ModelCallAuditTask 模型调用审计任务
 //
 //	@author centonhuang

@@ -82,6 +82,7 @@ export interface SessionSummary {
   createdAt: string;
   updatedAt: string;
   summary: string;
+  score?: number;
   messageCount: number;
   toolCount: number;
   metadata?: Record<string, string>;
@@ -93,6 +94,8 @@ export interface SessionDetail {
   createdAt: string;
   updatedAt: string;
   metadata?: Record<string, string>;
+  score?: number;
+  scoredAt?: string;
   messages: MessageItem[];
   tools: ToolItem[];
   shareID?: string;
@@ -150,6 +153,8 @@ export interface SessionMetadata {
   createdAt: string;
   updatedAt: string;
   metadata?: Record<string, string>;
+  score?: number;
+  scoredAt?: string;
   messageCount: number;
   toolCount: number;
   shareID?: string;
@@ -169,7 +174,20 @@ export interface ListSessionToolsRsp extends CommonRsp {
   pageInfo?: PageInfo;
 }
 
-// ─── Session Share ─────────────────────────────────────────────────────────────
+// ─── Session Score ───────────────────────────────────────────────────────────
+
+export interface ScoreSessionReqBody {
+  sessionId: number;
+  score: number;
+}
+
+export interface ScoreSessionRsp extends CommonRsp {
+  sessionId: number;
+  score: number;
+  scoredAt?: string;
+}
+
+// ─── Session Share ────────────────────────────────────────────────────────────
 
 export interface CreateShareReqBody {
   sessionId: number;
@@ -189,6 +207,7 @@ export interface ShareSessionMetadata {
   createdAt: string;
   updatedAt: string;
   metadata?: Record<string, string>;
+  score?: number;
   messageCount: number;
   toolCount: number;
 }
