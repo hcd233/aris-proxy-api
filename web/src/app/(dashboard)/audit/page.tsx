@@ -453,12 +453,10 @@ export default function AuditPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         <div className="text-xs">IO</div>
-                        <div className="text-xs">
-                          I: {log.firstTokenLatencyMs}ms
-                          {log.streamDurationMs > 0 && (
-                            <span> O: {(log.streamDurationMs / 1000).toFixed(1)}s</span>
-                          )}
-                        </div>
+                        <div className="text-xs">I: {log.firstTokenLatencyMs}ms</div>
+                        {log.streamDurationMs > 0 && (
+                          <div className="text-xs">O: {(log.streamDurationMs / 1000).toFixed(1)}s</div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <TooltipProvider>
