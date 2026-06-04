@@ -77,20 +77,20 @@ func TestGetPassthroughHeaders_EmptyMap(t *testing.T) {
 func TestMaskHTTPHeadersForLog_MasksSensitiveHeaders(t *testing.T) {
 	t.Parallel()
 	headers := http.Header{
-		constant.HTTPTitleHeaderAuthorization:      {"Bearer raw-secret-token"},
-		constant.HTTPTitleHeaderCookie:             {"session=raw-secret-cookie"},
-		constant.HTTPLowerHeaderProxyAuthorization: {"Basic raw-proxy-secret"},
-		constant.HTTPTitleHeaderAPIKey:             {"raw-api-key"},
-		"X-Custom-Header":                          {"keep-me"},
+		constant.HTTPHeaderAuthorization:      {"Bearer raw-secret-token"},
+		constant.HTTPHeaderCookie:             {"session=raw-secret-cookie"},
+		constant.HTTPHeaderProxyAuthorization: {"Basic raw-proxy-secret"},
+		constant.HTTPHeaderAPIKey:             {"raw-api-key"},
+		"X-Custom-Header":                     {"keep-me"},
 	}
 
 	got := util.MaskHTTPHeadersForLog(headers)
 
 	for _, key := range []string{
-		constant.HTTPTitleHeaderAuthorization,
-		constant.HTTPTitleHeaderCookie,
-		constant.HTTPLowerHeaderProxyAuthorization,
-		constant.HTTPTitleHeaderAPIKey,
+		constant.HTTPHeaderAuthorization,
+		constant.HTTPHeaderCookie,
+		constant.HTTPHeaderProxyAuthorization,
+		constant.HTTPHeaderAPIKey,
 	} {
 		if got[key] != constant.MaskSecretPlaceholder {
 			t.Errorf("%s = %v, want %s", key, got[key], constant.MaskSecretPlaceholder)
@@ -214,7 +214,7 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 	}
 }
 
-func TestOpenAIProxy_PreservesPassthroughHeaderCase(t *testing.T) {
+func TestOpenAIProxy_CanonicalizesPassthroughHeader(t *testing.T) {
 	t.Parallel()
 	const headerName = "X-CUSTOM-header"
 	const headerValue = "keep-me"
@@ -245,11 +245,11 @@ func TestOpenAIProxy_PreservesPassthroughHeaderCase(t *testing.T) {
 	}
 
 	request := receiveRawRequest(t, rawRequest)
-	if !strings.Contains(request, "\r\n"+headerName+": "+headerValue+"\r\n") {
-		t.Fatalf("expected raw upstream request to contain preserved header %q, got:\n%s", headerName, request)
+	if strings.Contains(request, "\r\n"+headerName+": "+headerValue+"\r\n") {
+		t.Fatalf("expected header %q to be canonicalized, but was preserved in raw request:\n%s", headerName, request)
 	}
-	if strings.Contains(request, "\r\nX-Custom-Header: "+headerValue+"\r\n") {
-		t.Fatalf("passthrough header was canonicalized unexpectedly, got:\n%s", request)
+	if !strings.Contains(request, "\r\nX-Custom-Header: "+headerValue+"\r\n") {
+		t.Fatalf("expected canonicalized header \"X-Custom-Header\" in raw upstream request, got:\n%s", request)
 	}
 
 	if err := receiveServerDone(t, serverDone); err != nil {

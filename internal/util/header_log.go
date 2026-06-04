@@ -8,13 +8,11 @@ import (
 )
 
 var sensitiveHeadersForLog = []string{
-	constant.HTTPLowerHeaderAuthorization,
-	constant.HTTPTitleHeaderAuthorization,
-	constant.HTTPLowerHeaderAPIKey,
-	constant.HTTPTitleHeaderAPIKey,
-	constant.HTTPLowerHeaderProxyAuthorization,
-	constant.HTTPTitleHeaderCookie,
-	constant.HTTPTitleHeaderSetCookie,
+	constant.HTTPHeaderAuthorization,
+	constant.HTTPHeaderAPIKey,
+	constant.HTTPHeaderProxyAuthorization,
+	constant.HTTPHeaderCookie,
+	constant.HTTPHeaderSetCookie,
 }
 
 // MaskHTTPHeadersForLog 返回可安全写入日志的 HTTP 请求头副本。
