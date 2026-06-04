@@ -27,6 +27,8 @@ type SessionRepository interface {
 	UpdateSummary(ctx context.Context, id uint, summary sessionvo.SessionSummary) error
 	// UpdateScore 更新会话人工评分
 	UpdateScore(ctx context.Context, id uint, score sessionvo.SessionScore) error
+	// DeleteScore 清除会话人工评分
+	DeleteScore(ctx context.Context, id uint) error
 }
 
 // PageParam 分页查询参数

@@ -88,6 +88,7 @@ export default function SessionsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; summary: string } | null>(null);
   const [scoring, setScoring] = useState<number | null>(null);
+  const [scoreConfirm, setScoreConfirm] = useState<{ id: number; value: number } | null>(null);
 
   const fetchSessions = useCallback(
     async (
@@ -176,6 +177,7 @@ export default function SessionsPage() {
     e.stopPropagation();
     if (scoring !== null) return;
     setScoring(sessionId);
+    setScoreConfirm(null);
     try {
       await api.scoreSession({ sessionId, score });
       setSessions((prev) =>
@@ -184,6 +186,23 @@ export default function SessionsPage() {
       toast.success("Scored");
     } catch {
       toast.error("Failed to score");
+    } finally {
+      setScoring(null);
+    }
+  };
+
+  const handleDeleteScore = async (e: React.MouseEvent, sessionId: number) => {
+    e.stopPropagation();
+    if (scoring !== null) return;
+    setScoring(sessionId);
+    try {
+      await api.deleteScoreSession(sessionId);
+      setSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, score: undefined } : s)),
+      );
+      toast.success("Score removed");
+    } catch {
+      toast.error("Failed to remove score");
     } finally {
       setScoring(null);
     }
@@ -253,9 +272,39 @@ export default function SessionsPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {s.score != null ? (
-                          <Badge variant="secondary" className="text-xs tabular-nums text-amber-600">
-                            {s.score}
-                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="secondary" className="text-xs tabular-nums">
+                              {s.score}
+                            </Badge>
+                            <button
+                              type="button"
+                              disabled={scoring === s.id}
+                              onClick={(e) => handleDeleteScore(e, s.id)}
+                              className="text-xs text-muted-foreground/30 hover:text-destructive disabled:opacity-30"
+                              aria-label="Remove score"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : scoreConfirm?.id === s.id ? (
+                          <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
+                            <span className="text-xs text-muted-foreground">{scoreConfirm.value}?</span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleScoreSession(e, s.id, scoreConfirm.value)}
+                              disabled={scoring === s.id}
+                              className="rounded px-1 text-xs font-medium text-foreground hover:text-green-600 disabled:opacity-50"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setScoreConfirm(null); }}
+                              className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              No
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center gap-0.5">
                             {[1, 2, 3, 4, 5].map((v) => (
@@ -263,8 +312,8 @@ export default function SessionsPage() {
                                 key={v}
                                 type="button"
                                 disabled={scoring === s.id}
-                                onClick={(e) => handleScoreSession(e, s.id, v)}
-                                className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/50 transition-colors hover:text-amber-600 disabled:opacity-30"
+                                onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
+                                className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/50 transition-colors hover:text-foreground disabled:opacity-30"
                               >
                                 {v}
                               </button>
@@ -343,7 +392,37 @@ export default function SessionsPage() {
                       <TableCell>
                         <div className="flex justify-center">
                           {s.score != null ? (
-                            <span className="text-sm font-medium tabular-nums text-amber-600">{s.score}</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-medium tabular-nums">{s.score}</span>
+                              <button
+                                type="button"
+                                disabled={scoring === s.id}
+                                onClick={(e) => handleDeleteScore(e, s.id)}
+                                className="text-xs text-muted-foreground/20 hover:text-destructive disabled:opacity-30"
+                                aria-label="Remove score"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : scoreConfirm?.id === s.id ? (
+                            <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
+                              <span className="text-xs text-muted-foreground">{scoreConfirm.value}?</span>
+                              <button
+                                type="button"
+                                onClick={(e) => handleScoreSession(e, s.id, scoreConfirm.value)}
+                                disabled={scoring === s.id}
+                                className="rounded px-1 text-xs font-medium text-foreground hover:text-green-600 disabled:opacity-50"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setScoreConfirm(null); }}
+                                className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
+                              >
+                                No
+                              </button>
+                            </div>
                           ) : (
                             <div className="flex items-center gap-0.5">
                               {[1, 2, 3, 4, 5].map((v) => (
@@ -351,8 +430,8 @@ export default function SessionsPage() {
                                   key={v}
                                   type="button"
                                   disabled={scoring === s.id}
-                                  onClick={(e) => handleScoreSession(e, s.id, v)}
-                                  className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-amber-600 disabled:opacity-30"
+                                  onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
+                                  className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-foreground disabled:opacity-30"
                                 >
                                   {v}
                                 </button>
