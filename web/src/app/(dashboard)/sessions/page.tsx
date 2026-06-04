@@ -24,7 +24,8 @@ import {
   Check,
   ArrowUp,
   ArrowDown,
-  Star,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -36,6 +37,17 @@ import {
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 type SortDir = "asc" | "desc";
 
@@ -72,6 +84,10 @@ export default function SessionsPage() {
   const [customStart, setCustomStart] = usePersistentState("dashboard.sessions.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.sessions.customEnd", "");
   const [sort, setSort] = useState<{ field: string; dir: SortDir }>({ field: "created_at", dir: "desc" });
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; summary: string } | null>(null);
+  const [scoring, setScoring] = useState<number | null>(null);
 
   const fetchSessions = useCallback(
     async (
@@ -132,6 +148,45 @@ export default function SessionsPage() {
   const renderSortIcon = (field: string) => {
     if (sort.field !== field) return null;
     return sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />;
+  };
+
+  const openDeleteConfirm = (s: SessionSummary, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteTarget({ id: s.id, summary: s.summary || `Session #${s.id}` });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
+    try {
+      await api.deleteSession(deleteTarget.id);
+      toast.success("Session deleted");
+      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete session");
+    } finally {
+      setDeleting(null);
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleScoreSession = async (e: React.MouseEvent, sessionId: number, score: number) => {
+    e.stopPropagation();
+    if (scoring !== null) return;
+    setScoring(sessionId);
+    try {
+      await api.scoreSession({ sessionId, score });
+      setSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, score } : s)),
+      );
+      toast.success("Scored");
+    } catch {
+      toast.error("Failed to score");
+    } finally {
+      setScoring(null);
+    }
   };
 
   return (
@@ -196,16 +251,39 @@ export default function SessionsPage() {
                           {s.summary || `Session #${s.id}`}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {s.score != null && (
-                          <Badge variant="secondary" className="shrink-0 text-xs text-amber-600">
-                            <Star className="mr-0.5 inline size-3 fill-amber-500 stroke-amber-500" />
+                      <div className="flex items-center gap-2 shrink-0">
+                        {s.score != null ? (
+                          <Badge variant="secondary" className="text-xs tabular-nums text-amber-600">
                             {s.score}
                           </Badge>
+                        ) : (
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                disabled={scoring === s.id}
+                                onClick={(e) => handleScoreSession(e, s.id, v)}
+                                className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/50 transition-colors hover:text-amber-600 disabled:opacity-30"
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
                         )}
-                        <Badge variant="secondary" className="shrink-0 text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {s.messageCount ?? 0} msgs
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          disabled={deleting === s.id}
+                          onClick={(e) => openDeleteConfirm(s, e)}
+                          className="size-8 text-muted-foreground hover:text-destructive"
+                          aria-label="Delete session"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
                       </div>
                     </div>
                     <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
@@ -220,9 +298,15 @@ export default function SessionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[80px]">ID</TableHead>
-                    <TableHead className="w-[60px]">Score</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
+                    >
+                      <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
+                    </TableHead>
                     <TableHead>Summary</TableHead>
+                    <TableHead className="w-[80px] text-center">Score</TableHead>
                     <TableHead
                       className="cursor-pointer select-none whitespace-nowrap"
                       onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
@@ -235,12 +319,7 @@ export default function SessionsPage() {
                     >
                       <span className="inline-flex items-center gap-1">Tools {renderSortIcon(SORTABLE_COLUMNS.toolCount)}</span>
                     </TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none whitespace-nowrap"
-                      onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
-                    >
-                      <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
-                    </TableHead>
+                    <TableHead className="w-16 sr-only">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -255,23 +334,48 @@ export default function SessionsPage() {
                       <TableCell className="font-mono text-xs">
                         {s.id}
                       </TableCell>
-                      <TableCell>
-                        {s.score != null ? (
-                          <span className="inline-flex items-center gap-0.5 text-amber-600">
-                            <Star className="size-3.5 fill-amber-500 stroke-amber-500" />
-                            {s.score}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                      <TableCell className="text-muted-foreground">
+                        {formatDateTime(s.createdAt)}
                       </TableCell>
                       <TableCell className="max-w-[300px] truncate">
                         {s.summary || "—"}
                       </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center">
+                          {s.score != null ? (
+                            <span className="text-sm font-medium tabular-nums text-amber-600">{s.score}</span>
+                          ) : (
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((v) => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  disabled={scoring === s.id}
+                                  onClick={(e) => handleScoreSession(e, s.id, v)}
+                                  className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-amber-600 disabled:opacity-30"
+                                >
+                                  {v}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{s.messageCount ?? 0}</TableCell>
                       <TableCell>{s.toolCount ?? 0}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDateTime(s.createdAt)}
+                      <TableCell className="w-16">
+                        <div className="flex justify-center">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={deleting === s.id}
+                            onClick={(e) => openDeleteConfirm(s, e)}
+                            className="size-8 text-muted-foreground hover:text-destructive"
+                            aria-label="Delete session"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -355,8 +459,28 @@ export default function SessionsPage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="size-5 text-destructive" />
+                Are you sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete session <strong>{deleteTarget?.summary}</strong> and all its messages. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
+                {deleting !== null ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
   );
 }
