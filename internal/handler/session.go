@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -52,7 +51,7 @@ type SessionDependencies struct {
 	GetMetaByUser port.GetSessionMetaByUserHandler
 	ListMessages  port.ListSessionMessagesHandler
 	ListTools     port.ListSessionToolsHandler
-	DeleteSession sessioncommand.DeleteSessionHandler
+	DeleteSession port.DeleteSessionHandler
 }
 
 type sessionHandler struct {
@@ -62,7 +61,7 @@ type sessionHandler struct {
 	getMetaByUser port.GetSessionMetaByUserHandler
 	listMessages  port.ListSessionMessagesHandler
 	listTools     port.ListSessionToolsHandler
-	deleteSession sessioncommand.DeleteSessionHandler
+	deleteSession port.DeleteSessionHandler
 }
 
 // NewSessionHandler 创建Session处理器
@@ -329,7 +328,7 @@ func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.Delet
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	permission := util.CtxValuePermission(ctx)
 
-	err := h.deleteSession.Handle(ctx, sessioncommand.DeleteSessionCommand{
+	err := h.deleteSession.Handle(ctx, port.DeleteSessionCommand{
 		SessionID:           req.SessionID,
 		RequesterID:         userID,
 		RequesterPermission: permission,
