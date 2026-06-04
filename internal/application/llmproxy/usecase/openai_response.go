@@ -182,12 +182,19 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 }
 
 func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
+	log := logger.WithCtx(ctx)
 	conv := &converter.ResponseProtocolConverter{}
+	assertRespConvInit(conv, req)
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
+
+		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, exposedModel); err != nil {
+			log.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
+		}
+
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			hasWritten, writeErr := writeResponseDeltaFromChatChunk(w, chunk)
 			if firstTokenTime.IsZero() && hasWritten {
@@ -263,8 +270,10 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
+	log := logger.WithCtx(ctx)
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
+	assertRespConvInit(responseConv, req)
 	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return func(w *bufio.Writer) {
@@ -272,6 +281,11 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
 		var allChunks []*dto.OpenAIChatCompletionChunk
+
+		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, exposedModel); err != nil {
+			log.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
+		}
+
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
 			if firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
 				firstTokenTime = time.Now()
@@ -317,6 +331,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
+	assertRespConvInit(responseConv, req)
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
@@ -467,4 +482,24 @@ func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, u
 	}
 	_ = w.Flush() //nolint:errcheck // flush best effort on stream close
 	return rsp
+}
+
+func assertRespConvInit(conv *converter.ResponseProtocolConverter, req *dto.OpenAICreateResponseRequest) {
+	if req == nil || req.Body == nil || len(req.Body.Tools) == 0 {
+		return
+	}
+	conv.SetToolTypeMap(converter.BuildToolTypeMap(req.Body.Tools))
+}
+
+func writeResponseLifecycleEvent(w *bufio.Writer, event enum.ResponseStreamEventType, model string) error {
+	payload := lo.Must1(sonic.Marshal(map[string]any{
+		constant.ResponseStreamFieldType: string(event),
+		constant.ResponseStreamFieldResponse: map[string]any{
+			constant.ResponseStreamFieldObject: enum.CompletionObjectResponse,
+			constant.ResponseStreamFieldModel:  model,
+			constant.ResponseStreamFieldStatus: enum.ResponseStatusInProgress,
+		},
+	}))
+	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
+	return err
 }
