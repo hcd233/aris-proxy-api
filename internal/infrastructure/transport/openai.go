@@ -40,7 +40,7 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamE
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -64,7 +64,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
 
 	var collectedChunks []*dto.OpenAIChatCompletionChunk
 
