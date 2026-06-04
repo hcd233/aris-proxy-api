@@ -8,6 +8,7 @@ package header_passthrough
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -31,10 +32,10 @@ func loadFixture(t *testing.T, name string) []byte {
 	return data
 }
 
-func mustE2EEnv(t *testing.T) (string, string) {
+func mustE2EEnv(t *testing.T) (baseURL string, apiKey string) {
 	t.Helper()
-	baseURL := os.Getenv("BASE_URL")
-	apiKey := os.Getenv("API_KEY")
+	baseURL = os.Getenv("BASE_URL")
+	apiKey = os.Getenv("API_KEY")
 	if baseURL == "" || apiKey == "" {
 		t.Skip("BASE_URL and API_KEY are required for e2e test")
 	}
@@ -47,7 +48,7 @@ func newE2EClient() *http.Client {
 
 func postWithHeaders(t *testing.T, baseURL, apiKey string, body []byte, extraHeaders map[string]string) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(body)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(body)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -64,6 +65,7 @@ func postWithHeaders(t *testing.T, baseURL, apiKey string, body []byte, extraHea
 }
 
 func TestHeaderPassthrough_NonStream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postWithHeaders(t, baseURL, apiKey, loadFixture(t, "chat_completion"), map[string]string{
@@ -85,6 +87,7 @@ func TestHeaderPassthrough_NonStream(t *testing.T) {
 }
 
 func TestHeaderPassthrough_Stream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postWithHeaders(t, baseURL, apiKey, loadFixture(t, "chat_completion_stream"), map[string]string{

@@ -8,12 +8,14 @@ import (
 )
 
 func TestContextKeyTypeMatch(t *testing.T) {
+	t.Parallel()
 	key := enum.CtxKey("apiKeyID")
 	expectedValue := uint(42)
 
 	ctx := context.WithValue(context.Background(), key, expectedValue)
 
 	t.Run("enum.CtxKey lookup finds value", func(t *testing.T) {
+		t.Parallel()
 		got := ctx.Value(key)
 		if got == nil {
 			t.Fatal("context.Value(enum.CtxKey) returned nil, expected value to be found")
@@ -24,6 +26,7 @@ func TestContextKeyTypeMatch(t *testing.T) {
 	})
 
 	t.Run("string lookup does NOT find value (regression for rate limiter bug)", func(t *testing.T) {
+		t.Parallel()
 		got := ctx.Value("apiKeyID")
 		if got != nil {
 			t.Fatalf("context.Value(string) = %v, expected nil (different type from enum.CtxKey)", got)

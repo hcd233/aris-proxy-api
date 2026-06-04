@@ -8,6 +8,7 @@ import (
 )
 
 func TestMobileSheetTriggerIsInsideSheetRoot(t *testing.T) {
+	t.Parallel()
 	layoutPath := filepath.Join("..", "..", "..", "web", "src", "app", "(dashboard)", "layout.tsx")
 	data, err := os.ReadFile(layoutPath)
 	if err != nil {

@@ -24,9 +24,9 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 		Path:        "",
 		Summary:     "CreateModel",
 		Description: "Create a new model mapping",
-		Tags:        []string{"Model"},
+		Tags:        []string{constant.TagModel},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("createModel", enum.PermissionAdmin),
@@ -36,12 +36,12 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 	huma.Register(modelGroup, huma.Operation{
 		OperationID: "listModelMappings",
 		Method:      http.MethodGet,
-		Path:        "/list",
+		Path:        constant.RoutePathList,
 		Summary:     "ListModels",
 		Description: "List all model mappings",
-		Tags:        []string{"Model"},
+		Tags:        []string{constant.TagModel},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("listModels", enum.PermissionAdmin),
@@ -54,9 +54,9 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 		Path:        "",
 		Summary:     "UpdateModel",
 		Description: "Update a model mapping",
-		Tags:        []string{"Model"},
+		Tags:        []string{constant.TagModel},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("updateModel", enum.PermissionAdmin),
@@ -69,9 +69,9 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 		Path:        "",
 		Summary:     "DeleteModel",
 		Description: "Delete a model mapping",
-		Tags:        []string{"Model"},
+		Tags:        []string{constant.TagModel},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("deleteModel", enum.PermissionAdmin),

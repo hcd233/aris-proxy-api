@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"slices"
 	"unicode/utf8"
 
 	"github.com/samber/lo"
@@ -223,13 +224,7 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 			log.Error("[SessionQuery] Failed to lookup owner names", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
 			return nil, lookupErr
 		}
-		allowed := false
-		for _, name := range ownerNames {
-			if detail.APIKeyName == name {
-				allowed = true
-				break
-			}
-		}
+		allowed := slices.Contains(ownerNames, detail.APIKeyName)
 		if !allowed {
 			log.Warn("[SessionQuery] No permission to access session",
 				zap.Uint("sessionID", q.SessionID),

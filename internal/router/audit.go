@@ -7,6 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
@@ -21,8 +22,8 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Path:        "/log/list",
 		Summary:     "ListAuditLogs",
 		Description: "Paginate audit logs scoped by current JWT user. Admin sees all records; regular user sees records under their own API keys.",
-		Tags:        []string{"Audit"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listAuditLogs", enum.PermissionUser)},
 	}, auditHandler.HandleListAuditLogs)
 
@@ -32,8 +33,8 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Path:        "/stats/model/trend",
 		Summary:     "QueryModelTrend",
 		Description: "Query model call count trend grouped by model and time bucket. Admin sees all; user sees only their own keys.",
-		Tags:        []string{"Audit"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryModelTrend", enum.PermissionUser)},
 	}, auditHandler.HandleModelTrend)
 
@@ -43,8 +44,8 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Path:        "/stats/request/rate",
 		Summary:     "QueryRequestRate",
 		Description: "Query request success rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
-		Tags:        []string{"Audit"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryRequestRate", enum.PermissionUser)},
 	}, auditHandler.HandleRequestRate)
 
@@ -54,8 +55,8 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Path:        "/stats/token/throughput",
 		Summary:     "QueryTokenThroughput",
 		Description: "Query token throughput (volume + output rate) grouped by model and time bucket. Admin sees all; user sees only their own keys.",
-		Tags:        []string{"Audit"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryTokenThroughput", enum.PermissionUser)},
 	}, auditHandler.HandleTokenThroughput)
 
@@ -65,8 +66,8 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Path:        "/stats/token/rate",
 		Summary:     "QueryTokenRate",
 		Description: "Query output token rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
-		Tags:        []string{"Audit"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryTokenRate", enum.PermissionUser)},
 	}, auditHandler.HandleTokenRate)
 
@@ -76,8 +77,8 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Path:        "/stats/model/usage",
 		Summary:     "QueryModelUsage",
 		Description: "Query aggregated model usage per model. Admin sees all; user sees only their own keys.",
-		Tags:        []string{"Audit"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryModelUsage", enum.PermissionUser)},
 	}, auditHandler.HandleModelUsage)
 
@@ -87,8 +88,8 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 		Path:        "/stats/token/latency",
 		Summary:     "QueryFirstTokenLatency",
 		Description: "Query average first token latency grouped by model and time bucket. Admin sees all; user sees only their own keys.",
-		Tags:        []string{"Audit"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("queryFirstTokenLatency", enum.PermissionUser)},
 	}, auditHandler.HandleFirstTokenLatency)
 }

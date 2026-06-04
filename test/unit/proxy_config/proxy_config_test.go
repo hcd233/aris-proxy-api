@@ -101,11 +101,14 @@ func assembleModels(t *testing.T, endpoints []testEndpoint) map[string]modelConf
 }
 
 func TestProxyConfig_ModelListAssembly(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 
 	tests := []string{"basic_openai_model", "multi_provider_model", "multiple_models_and_keys"}
 	for _, caseName := range tests {
+		caseName := caseName
 		t.Run(caseName, func(t *testing.T) {
+			t.Parallel()
 			tc := findCase(t, allCases, caseName)
 			models := assembleModels(t, tc.Endpoints)
 
@@ -155,6 +158,7 @@ func TestProxyConfig_ModelListAssembly(t *testing.T) {
 }
 
 func TestProxyConfig_EndpointFields(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "basic_openai_model")
 	models := assembleModels(t, tc.Endpoints)
@@ -183,6 +187,7 @@ func TestProxyConfig_EndpointFields(t *testing.T) {
 }
 
 func TestProxyConfig_MultiProviderEndpoints(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "multi_provider_model")
 	models := assembleModels(t, tc.Endpoints)
@@ -214,6 +219,7 @@ func TestProxyConfig_MultiProviderEndpoints(t *testing.T) {
 }
 
 func TestProxyConfig_APIKeyLookup(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "api_key_lookup")
 
@@ -224,7 +230,9 @@ func TestProxyConfig_APIKeyLookup(t *testing.T) {
 	}
 
 	for _, lt := range tc.KeyLookupTests {
+		lt := lt
 		t.Run(lt.Key, func(t *testing.T) {
+			t.Parallel()
 			name, found := apiKeyMap[lt.Key]
 
 			if found != lt.ExpectFound {

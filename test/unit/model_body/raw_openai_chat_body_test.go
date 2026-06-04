@@ -10,6 +10,7 @@ import (
 )
 
 func TestMarshalRawOpenAIChatCompletionBodyForModel_PreservesUnknownFields(t *testing.T) {
+	t.Parallel()
 	raw := []byte(`{"model":"exposed-chat-model","messages":[{"role":"user","content":"hi","unknown_message_field":{"keep":true}}],"unknown_top":{"nested":true},"null_field":null,"tools":[{"type":"function","function":{"name":"lookup","parameters":{"type":"object","x-extra":false}}}]}`)
 	req := &dto.OpenAIChatCompletionReq{
 		Model: "exposed-chat-model",

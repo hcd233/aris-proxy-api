@@ -9,6 +9,7 @@ import (
 )
 
 func TestCreateEndpoint_AllowsSingleProtocolEndpoint(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name                        string
 		openaiBaseURL               string
@@ -30,7 +31,9 @@ func TestCreateEndpoint_AllowsSingleProtocolEndpoint(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ep, err := aggregate.CreateEndpoint(
 				1,
 				tc.name,
@@ -52,6 +55,7 @@ func TestCreateEndpoint_AllowsSingleProtocolEndpoint(t *testing.T) {
 }
 
 func TestCreateEndpoint_RejectsMissingSupportedProtocolBaseURL(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name                        string
 		openaiBaseURL               string
@@ -75,7 +79,9 @@ func TestCreateEndpoint_RejectsMissingSupportedProtocolBaseURL(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			_, err := aggregate.CreateEndpoint(
 				1,
 				tc.name,

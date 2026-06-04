@@ -11,6 +11,7 @@ import (
 )
 
 func TestMarshalOpenAIChatCompletionBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model: "exposed-chat-model",
 		Messages: []*dto.OpenAIChatCompletionMessageParam{
@@ -33,6 +34,7 @@ func TestMarshalOpenAIChatCompletionBodyForModel_UsesUpstreamModelWithoutMutatin
 }
 
 func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAICreateResponseReq{Model: lo.ToPtr("exposed-response-model")}
 
 	body := proxyutil.MarshalOpenAIResponseBodyForModel(req, "upstream-response-model")
@@ -50,6 +52,7 @@ func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingReque
 }
 
 func TestMarshalAnthropicMessageBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
+	t.Parallel()
 	req := &dto.AnthropicCreateMessageReq{
 		Model:     "exposed-anthropic-model",
 		MaxTokens: 1024,
@@ -73,6 +76,7 @@ func TestMarshalAnthropicMessageBodyForModel_UsesUpstreamModelWithoutMutatingReq
 }
 
 func TestMarshalAnthropicCountTokensBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
+	t.Parallel()
 	req := &dto.AnthropicCountTokensReq{
 		Model: "exposed-count-model",
 		Messages: []*dto.AnthropicMessageParam{

@@ -50,7 +50,7 @@ func newStubModelRepo(behavior string) *stubModelRepo {
 	}
 }
 
-var errStubDBFailure = ierr.Wrap(ierr.ErrDBQuery, errors.New("simulated db outage"), "stub db query")
+var errStubDBFailure = ierr.New(ierr.ErrDBQuery, "simulated db outage")
 
 func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error) {
 	s.callsByAlias[alias.String()]++
@@ -67,7 +67,7 @@ func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) (
 	case "db_error":
 		return nil, errStubDBFailure
 	default:
-		return nil, errors.New("unknown stub behavior")
+		return nil, ierr.New(ierr.ErrInternal, "unknown stub behavior")
 	}
 }
 
@@ -202,6 +202,7 @@ func (s *endpointByIDRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*
 }
 
 func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	alias := vo.EndpointAlias("test-model")
 	anthropicOnly, _ := aggregate.CreateEndpoint(1, "anthropic-only", "", "https://api.anthropic.com", "sk-ant", false, false, true)
@@ -228,10 +229,13 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 }
 
 func TestEndpointResolver_Resolve(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	for _, tc := range loadCases(t) {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			modelRepo := newStubModelRepo(tc.ModelBehavior)
 			endpointRepo := &stubEndpointRepo{}
 			resolver := service.NewEndpointResolver(endpointRepo, modelRepo)

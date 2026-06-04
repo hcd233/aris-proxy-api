@@ -25,7 +25,7 @@ type baseDAO[ModelT any] struct{}
 
 func isValidSortField(field string) bool {
 	for _, c := range field {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
 			return false
 		}
 	}

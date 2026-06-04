@@ -38,8 +38,11 @@ func loadCases(t *testing.T) []testCase {
 
 // TestWriteAnthropicMessageStop_Frame 断言两条转发路径下生成的 SSE frame 完全一致且符合协议
 func TestWriteAnthropicMessageStop_Frame(t *testing.T) {
+	t.Parallel()
 	for _, tc := range loadCases(t) {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			var buf bytes.Buffer
 			w := bufio.NewWriter(&buf)
 
@@ -57,6 +60,7 @@ func TestWriteAnthropicMessageStop_Frame(t *testing.T) {
 
 // TestAnthropicMessageStopSSEFrame_Format 保护常量本身的格式稳定
 func TestAnthropicMessageStopSSEFrame_Format(t *testing.T) {
+	t.Parallel()
 	frame := constant.AnthropicMessageStopSSEFrame
 
 	if !bytes.HasPrefix([]byte(frame), []byte("event: message_stop\n")) {

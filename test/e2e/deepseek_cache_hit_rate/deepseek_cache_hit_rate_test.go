@@ -2,6 +2,7 @@ package deepseekcachehitrate
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -141,10 +142,10 @@ func loadAnthropicScript(t *testing.T, name string) *anthropicScript {
 	return &script
 }
 
-func mustE2EEnv(t *testing.T) (string, string) {
+func mustE2EEnv(t *testing.T) (baseURL, apiKey string) {
 	t.Helper()
-	baseURL := os.Getenv("BASE_URL")
-	apiKey := os.Getenv("API_KEY")
+	baseURL = os.Getenv("BASE_URL")
+	apiKey = os.Getenv("API_KEY")
 	if baseURL == "" || apiKey == "" {
 		t.Skip("BASE_URL and API_KEY are required for e2e test")
 	}
@@ -157,7 +158,7 @@ func newE2EClient() *http.Client {
 
 func postE2E(t *testing.T, baseURL, apiKey, path string, body []byte) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, baseURL+path, strings.NewReader(string(body)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+path, strings.NewReader(string(body)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -172,6 +173,7 @@ func postE2E(t *testing.T, baseURL, apiKey, path string, body []byte) *http.Resp
 }
 
 func TestDeepSeekCacheHitRate_OpenAI_NonStream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadOpenAIScript(t, "openai_multi_turn_non_stream")
 
@@ -182,6 +184,7 @@ func TestDeepSeekCacheHitRate_OpenAI_NonStream(t *testing.T) {
 }
 
 func TestDeepSeekCacheHitRate_OpenAI_Stream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadOpenAIScript(t, "openai_multi_turn_stream")
 
@@ -192,6 +195,7 @@ func TestDeepSeekCacheHitRate_OpenAI_Stream(t *testing.T) {
 }
 
 func TestDeepSeekCacheHitRate_Anthropic_NonStream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadAnthropicScript(t, "anthropic_multi_turn_non_stream")
 
@@ -202,6 +206,7 @@ func TestDeepSeekCacheHitRate_Anthropic_NonStream(t *testing.T) {
 }
 
 func TestDeepSeekCacheHitRate_Anthropic_Stream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 	script := loadAnthropicScript(t, "anthropic_multi_turn_stream")
 
@@ -211,21 +216,20 @@ func TestDeepSeekCacheHitRate_Anthropic_Stream(t *testing.T) {
 	assertMeasuredCacheHit(t, "anthropic stream", warmTurns, measuredTurns, warmTotal, measuredTotal)
 }
 
-func runOpenAIScript(t *testing.T, baseURL, apiKey string, script *openAIScript) ([]cacheStats, cacheStats) {
+func runOpenAIScript(t *testing.T, baseURL, apiKey string, script *openAIScript) (perTurnStats []cacheStats, total cacheStats) {
 	t.Helper()
 	conversation, userTurns := splitOpenAIScript(t, script)
-	var total cacheStats
-	perTurnStats := make([]cacheStats, len(userTurns))
+	total = cacheStats{}
+	perTurnStats = make([]cacheStats, len(userTurns))
 	for i, userText := range userTurns {
-		messages := append([]openAIMessage{}, conversation...)
-		messages = append(messages, openAIMessage{Role: "user", Content: userText})
+		conversation = append(conversation, openAIMessage{Role: "user", Content: userText})
 		req := openAIRequest{
 			Model:         script.Model,
 			Stream:        script.Stream,
 			StreamOptions: script.StreamOptions,
 			MaxTokens:     script.MaxTokens,
 			Temperature:   script.Temperature,
-			Messages:      messages,
+			Messages:      conversation,
 		}
 		if req.Stream && req.StreamOptions == nil {
 			req.StreamOptions = &streamOptions{IncludeUsage: true}
@@ -237,18 +241,17 @@ func runOpenAIScript(t *testing.T, baseURL, apiKey string, script *openAIScript)
 		assistantText, stats := callOpenAITurn(t, baseURL, apiKey, req.Stream, body)
 		perTurnStats[i] = stats
 		total = total.Add(stats)
-		conversation = append(messages, openAIMessage{Role: "assistant", Content: assistantText})
+		conversation = append(conversation, openAIMessage{Role: "assistant", Content: assistantText})
 	}
 	return perTurnStats, total
 }
 
-func splitOpenAIScript(t *testing.T, script *openAIScript) ([]openAIMessage, []string) {
+func splitOpenAIScript(t *testing.T, script *openAIScript) (conversation []openAIMessage, userTurns []string) {
 	t.Helper()
 	if script.Model == "" {
 		t.Fatal("openai script missing model")
 	}
 	var systemMessages []openAIMessage
-	var userTurns []string
 	for i, msg := range script.Messages {
 		switch msg.Role {
 		case "system":
@@ -396,21 +399,19 @@ func callOpenAIStream(t *testing.T, baseURL, apiKey string, body []byte) (string
 	return assistantText, openAICacheStats(lastUsage)
 }
 
-func runAnthropicScript(t *testing.T, baseURL, apiKey string, script *anthropicScript) ([]cacheStats, cacheStats) {
+func runAnthropicScript(t *testing.T, baseURL, apiKey string, script *anthropicScript) (perTurnStats []cacheStats, total cacheStats) {
 	t.Helper()
 	conversation, userTurns := splitAnthropicScript(t, script)
-	var total cacheStats
-	perTurnStats := make([]cacheStats, len(userTurns))
+	perTurnStats = make([]cacheStats, len(userTurns))
 	for i, userText := range userTurns {
-		messages := append([]anthropicMessage{}, conversation...)
-		messages = append(messages, anthropicMessage{Role: "user", Content: userText})
+		conversation = append(conversation, anthropicMessage{Role: "user", Content: userText})
 		req := anthropicRequest{
 			Model:       script.Model,
 			Stream:      script.Stream,
 			MaxTokens:   script.MaxTokens,
 			Temperature: script.Temperature,
 			System:      script.System,
-			Messages:    messages,
+			Messages:    conversation,
 		}
 		body, err := sonic.Marshal(&req)
 		if err != nil {
@@ -419,7 +420,7 @@ func runAnthropicScript(t *testing.T, baseURL, apiKey string, script *anthropicS
 		assistantText, stats := callAnthropicTurn(t, baseURL, apiKey, req.Stream, body)
 		perTurnStats[i] = stats
 		total = total.Add(stats)
-		conversation = append(messages, anthropicMessage{Role: "assistant", Content: assistantText})
+		conversation = append(conversation, anthropicMessage{Role: "assistant", Content: assistantText})
 	}
 	return perTurnStats, total
 }

@@ -39,11 +39,7 @@ func (*ResponseProtocolConverter) FromResponseRequest(req *dto.OpenAICreateRespo
 		chatReq.ToolChoice = responseToolChoiceToChat(req.ToolChoice)
 	}
 
-	messages, err := responseInputToChatMessages(req)
-	if err != nil {
-		return nil, err
-	}
-	chatReq.Messages = messages
+	chatReq.Messages = responseInputToChatMessages(req)
 	return chatReq, nil
 }
 
@@ -77,17 +73,14 @@ func (*ResponseProtocolConverter) ToResponseResponse(completion *dto.OpenAIChatC
 	if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return rsp, nil
 	}
-	item, err := chatMessageToResponseOutput(completion.Choices[0].Message)
-	if err != nil {
-		return nil, err
-	}
+	item := chatMessageToResponseOutput(completion.Choices[0].Message)
 	if item != nil {
 		rsp.Output = []*dto.ResponseInputItem{item}
 	}
 	return rsp, nil
 }
 
-func responseInputToChatMessages(req *dto.OpenAICreateResponseReq) ([]*dto.OpenAIChatCompletionMessageParam, error) {
+func responseInputToChatMessages(req *dto.OpenAICreateResponseReq) []*dto.OpenAIChatCompletionMessageParam {
 	var messages []*dto.OpenAIChatCompletionMessageParam
 	if req.Instructions != nil && *req.Instructions != "" {
 		messages = append(messages, &dto.OpenAIChatCompletionMessageParam{
@@ -96,7 +89,7 @@ func responseInputToChatMessages(req *dto.OpenAICreateResponseReq) ([]*dto.OpenA
 		})
 	}
 	if req.Input == nil {
-		return messages, nil
+		return messages
 	}
 	if len(req.Input.Items) == 0 {
 		if req.Input.Text != "" {
@@ -105,62 +98,54 @@ func responseInputToChatMessages(req *dto.OpenAICreateResponseReq) ([]*dto.OpenA
 				Content: &dto.OpenAIMessageContent{Text: req.Input.Text},
 			})
 		}
-		return messages, nil
+		return messages
 	}
-	for i, item := range req.Input.Items {
-		chatMsgs, err := responseInputItemToChatMessages(item)
-		if err != nil {
-			return nil, ierr.Wrapf(ierr.ErrDTOConvert, err, "convert response input item[%d] to chat", i)
-		}
-		messages = append(messages, chatMsgs...)
+	for _, item := range req.Input.Items {
+		messages = append(messages, responseInputItemToChatMessages(item)...)
 	}
-	return messages, nil
+	return messages
 }
 
-func responseInputItemToChatMessages(item *dto.ResponseInputItem) ([]*dto.OpenAIChatCompletionMessageParam, error) {
+func responseInputItemToChatMessages(item *dto.ResponseInputItem) []*dto.OpenAIChatCompletionMessageParam {
 	if item == nil {
-		return nil, nil
+		return nil
 	}
 	switch lo.FromPtr(item.Type) {
 	case "", enum.ResponseInputItemTypeMessage:
 		msg := &dto.OpenAIChatCompletionMessageParam{Role: responseRoleToChat(lo.FromPtr(item.Role))}
-		content, err := responseMessageContentToChat(item.Content)
-		if err != nil {
-			return nil, err
-		}
-		msg.Content = content
-		return []*dto.OpenAIChatCompletionMessageParam{msg}, nil
+		msg.Content = responseMessageContentToChat(item.Content)
+		return []*dto.OpenAIChatCompletionMessageParam{msg}
 	case enum.ResponseInputItemTypeFunctionCall, enum.ResponseInputItemTypeCustomToolCall:
-		return []*dto.OpenAIChatCompletionMessageParam{responseFunctionCallToChat(item)}, nil
+		return []*dto.OpenAIChatCompletionMessageParam{responseFunctionCallToChat(item)}
 	case enum.ResponseInputItemTypeFunctionCallOutput, enum.ResponseInputItemTypeCustomToolCallOutput:
-		return []*dto.OpenAIChatCompletionMessageParam{responseFunctionCallOutputToChat(item)}, nil
+		return []*dto.OpenAIChatCompletionMessageParam{responseFunctionCallOutputToChat(item)}
 	case enum.ResponseInputItemTypeReasoning:
 		if text := responseReasoningText(item); text != "" {
-			return []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleAssistant, ReasoningContent: lo.ToPtr(text)}}, nil
+			return []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleAssistant, ReasoningContent: lo.ToPtr(text)}}
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func responseRoleToChat(role string) enum.Role {
 	switch role {
-	case string(enum.RoleAssistant):
+	case enum.RoleAssistant:
 		return enum.RoleAssistant
-	case string(enum.RoleSystem), string(enum.RoleDeveloper):
+	case enum.RoleSystem, enum.RoleDeveloper:
 		return enum.RoleSystem
-	case string(enum.RoleUser), "":
+	case enum.RoleUser, "":
 		return enum.RoleUser
 	default:
 		return enum.RoleUser
 	}
 }
 
-func responseMessageContentToChat(content *dto.ResponseInputMessageContent) (*dto.OpenAIMessageContent, error) {
+func responseMessageContentToChat(content *dto.ResponseInputMessageContent) *dto.OpenAIMessageContent {
 	if content == nil {
-		return nil, nil
+		return nil
 	}
 	if len(content.Parts) == 0 {
-		return &dto.OpenAIMessageContent{Text: content.Text}, nil
+		return &dto.OpenAIMessageContent{Text: content.Text}
 	}
 	parts := make([]*dto.OpenAIChatCompletionContentPart, 0, len(content.Parts))
 	var texts []string
@@ -179,7 +164,7 @@ func responseMessageContentToChat(content *dto.ResponseInputMessageContent) (*dt
 				Type: enum.ContentPartTypeImageURL,
 				ImageURL: &dto.OpenAIChatCompletionImageURL{
 					URL:    lo.FromPtr(part.ImageURL),
-					Detail: enum.ImageDetail(lo.FromPtr(part.Detail)),
+					Detail: lo.FromPtr(part.Detail),
 				},
 			})
 		case enum.ResponseContentTypeRefusal:
@@ -189,9 +174,9 @@ func responseMessageContentToChat(content *dto.ResponseInputMessageContent) (*dt
 		}
 	}
 	if multimodal {
-		return &dto.OpenAIMessageContent{Parts: parts}, nil
+		return &dto.OpenAIMessageContent{Parts: parts}
 	}
-	return &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")}, nil
+	return &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")}
 }
 
 func responseFunctionCallToChat(item *dto.ResponseInputItem) *dto.OpenAIChatCompletionMessageParam {
@@ -265,11 +250,11 @@ func responseTextFormatToChat(format *dto.ResponseTextFormat) *dto.OpenAIRespons
 	if format == nil {
 		return nil
 	}
-	rspFormat := &dto.OpenAIResponseFormat{Type: enum.ResponseFormatType(format.Type)}
+	rspFormat := &dto.OpenAIResponseFormat{Type: format.Type}
 	if format.Schema != nil {
 		schema := lo.Must1(sonic.Marshal(format.Schema))
 		var schemaMap map[string]any
-		_ = sonic.Unmarshal(schema, &schemaMap)
+		_ = sonic.Unmarshal(schema, &schemaMap) //nolint:errcheck // best-effort schema unmarshal
 		rspFormat.JSONSchema = &dto.OpenAIJSONSchemaFormat{
 			Name:        lo.FromPtr(format.Name),
 			Description: format.Description,
@@ -440,7 +425,7 @@ func responseToolChoiceToChat(tc *dto.ResponseToolChoiceParam) *dto.OpenAIChatCo
 	case enum.ResponseToolChoiceOptionRequired:
 		return &dto.OpenAIChatCompletionToolChoiceParam{Mode: enum.ToolChoiceRequired}
 	}
-	if tc.Object != nil && tc.Object.Type == string(enum.ResponseToolChoiceTypeFunction) {
+	if tc.Object != nil && tc.Object.Type == enum.ResponseToolChoiceTypeFunction {
 		return &dto.OpenAIChatCompletionToolChoiceParam{
 			Named: &dto.OpenAIChatCompletionToolChoice{
 				Type: enum.ToolTypeFunction,
@@ -453,19 +438,19 @@ func responseToolChoiceToChat(tc *dto.ResponseToolChoiceParam) *dto.OpenAIChatCo
 	return nil
 }
 
-func chatMessageToResponseOutput(msg *dto.OpenAIChatCompletionMessageParam) (*dto.ResponseInputItem, error) {
+func chatMessageToResponseOutput(msg *dto.OpenAIChatCompletionMessageParam) *dto.ResponseInputItem {
 	if msg == nil {
-		return nil, nil
+		return nil
 	}
 	if len(msg.ToolCalls) > 0 {
 		tc := msg.ToolCalls[0]
 		if tc.Function != nil {
 			return &dto.ResponseInputItem{
-				Type:      lo.ToPtr(string(enum.ResponseInputItemTypeFunctionCall)),
+				Type:      lo.ToPtr(enum.ResponseInputItemTypeFunctionCall),
 				CallID:    tc.ID,
 				Name:      lo.ToPtr(tc.Function.Name),
 				Arguments: lo.ToPtr(tc.Function.Arguments),
-			}, nil
+			}
 		}
 	}
 	content := chatContentToResponseContent(msg.Content, enum.ResponseContentTypeOutputText)
@@ -473,10 +458,10 @@ func chatMessageToResponseOutput(msg *dto.OpenAIChatCompletionMessageParam) (*dt
 		content = append(content, &dto.ResponseInputContent{Type: enum.ResponseContentTypeRefusal, Refusal: msg.Refusal})
 	}
 	return &dto.ResponseInputItem{
-		Type:    lo.ToPtr(string(enum.ResponseInputItemTypeMessage)),
-		Role:    lo.ToPtr(string(enum.RoleAssistant)),
+		Type:    lo.ToPtr(enum.ResponseInputItemTypeMessage),
+		Role:    lo.ToPtr(enum.RoleAssistant),
 		Content: &dto.ResponseInputMessageContent{Parts: content},
-	}, nil
+	}
 }
 
 func chatContentToResponseContent(content *dto.OpenAIMessageContent, textType string) []*dto.ResponseInputContent {
@@ -498,7 +483,7 @@ func chatContentToResponseContent(content *dto.OpenAIMessageContent, textType st
 			if part.ImageURL != nil {
 				content := &dto.ResponseInputContent{Type: enum.ResponseContentTypeInputImage, ImageURL: lo.ToPtr(part.ImageURL.URL)}
 				if part.ImageURL.Detail != "" {
-					detail := string(part.ImageURL.Detail)
+					detail := part.ImageURL.Detail
 					content.Detail = &detail
 				}
 				parts = append(parts, content)

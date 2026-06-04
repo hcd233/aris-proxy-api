@@ -25,9 +25,9 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 		Path:        "/models",
 		Summary:     "List models",
 		Description: "List available Anthropic models.",
-		Tags:        []string{"Anthropic"},
+		Tags:        []string{constant.TagAnthropic},
 		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
+			{constant.SecuritySchemeAPIKey: {}},
 		},
 	}, anthropicHandler.HandleListModels)
 
@@ -37,10 +37,10 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 		Path:        "/messages",
 		Summary:     "Create a Message",
 		Description: "Send a structured list of input messages and the model will return the next message in the conversation.",
-		Tags:        []string{"Anthropic"},
+		Tags:        []string{constant.TagAnthropic},
 		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
 		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
+			{constant.SecuritySchemeAPIKey: {}},
 		},
 	}, anthropicHandler.HandleCreateMessage)
 
@@ -50,9 +50,9 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 		Path:        "/messages/count_tokens",
 		Summary:     "Count Tokens",
 		Description: "Count the number of tokens in a Message, including tools, images, and documents, without creating it.",
-		Tags:        []string{"Anthropic"},
+		Tags:        []string{constant.TagAnthropic},
 		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
+			{constant.SecuritySchemeAPIKey: {}},
 		},
 	}, anthropicHandler.HandleCountTokens)
 }

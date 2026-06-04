@@ -74,14 +74,15 @@ func (p *stubPlatform) GetAuthURLWithState(state string) string {
 }
 
 func (p *stubPlatform) ExchangeToken(_ context.Context, _ string) (*xoauth2.Token, error) {
-	return nil, errors.New("not used in initiate tests")
+	return nil, ierr.New(ierr.ErrInternal, "not used in initiate tests")
 }
 
 func (p *stubPlatform) GetUserInfo(_ context.Context, _ *xoauth2.Token) (vo.OAuthUserInfo, error) {
-	return vo.NewOAuthUserInfo("", "", "", ""), errors.New("not used in initiate tests")
+	return vo.NewOAuthUserInfo("", "", "", ""), ierr.New(ierr.ErrInternal, "not used in initiate tests")
 }
 
 func TestInitiateLogin(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	githubStub := newStubPlatform(enum.Oauth2PlatformGithub)
@@ -94,7 +95,9 @@ func TestInitiateLogin(t *testing.T) {
 	handler := command.NewInitiateLoginHandler(platforms, stateManager)
 
 	for _, tc := range loadCases(t) {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			result, err := handler.Handle(ctx, port.InitiateLoginCommand{Platform: tc.Platform})
 
 			switch tc.ExpectErrKind {

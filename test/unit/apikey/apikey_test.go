@@ -32,19 +32,23 @@ const (
 //	@author centonhuang
 //	@update 2026-04-08 10:00:00
 func TestAPIKeyConstants(t *testing.T) {
+	t.Parallel()
 	t.Run("prefix constant", func(t *testing.T) {
+		t.Parallel()
 		if constant.APIKeyPrefix != apiKeyPrefix {
 			t.Errorf("APIKeyPrefix = %s, want %s", constant.APIKeyPrefix, apiKeyPrefix)
 		}
 	})
 
 	t.Run("random length constant", func(t *testing.T) {
+		t.Parallel()
 		if constant.APIKeyRandomLength != apiKeyRandomLength {
 			t.Errorf("APIKeyRandomLength = %d, want %d", constant.APIKeyRandomLength, apiKeyRandomLength)
 		}
 	})
 
 	t.Run("total length", func(t *testing.T) {
+		t.Parallel()
 		totalLen := len(apiKeyPrefix) + apiKeyRandomLength
 		if totalLen != apiKeyTotalLength {
 			t.Errorf("total length = %d, want %d", totalLen, apiKeyTotalLength)
@@ -83,6 +87,7 @@ func findCase(t *testing.T, cases []testCase, name string) testCase {
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func TestAPIKeyConstants_Prefix(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "constant_prefix")
 
@@ -96,6 +101,7 @@ func TestAPIKeyConstants_Prefix(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func TestAPIKeyConstants_RandomLength(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "constant_random_length")
 
@@ -109,6 +115,7 @@ func TestAPIKeyConstants_RandomLength(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func TestAPIKeyConstants_TotalLength(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "constant_total_length")
 
@@ -123,6 +130,7 @@ func TestAPIKeyConstants_TotalLength(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func TestCreateAPIKeyReqBody_ValidJSON(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "dto_unmarshal_valid")
 
@@ -141,6 +149,7 @@ func TestCreateAPIKeyReqBody_ValidJSON(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func TestCreateAPIKeyReqBody_EmptyName(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "dto_unmarshal_empty_name")
 
@@ -159,6 +168,7 @@ func TestCreateAPIKeyReqBody_EmptyName(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func TestCreateAPIKeyReqBody_UnicodeName(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "dto_unmarshal_unicode_name")
 

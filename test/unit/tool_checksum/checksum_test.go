@@ -45,6 +45,7 @@ func findCase(t *testing.T, cases []toolChecksumCase, name string) toolChecksumC
 // TestComputeToolChecksum_PairComparison runs table-driven tests for all
 // fixture cases that compare two tools and check checksum equality/inequality.
 func TestComputeToolChecksum_PairComparison(t *testing.T) {
+	t.Parallel()
 	allCases := loadToolCases(t)
 
 	pairCases := []string{
@@ -59,12 +60,14 @@ func TestComputeToolChecksum_PairComparison(t *testing.T) {
 	}
 
 	for _, caseName := range pairCases {
+		caseName := caseName
 		tc := findCase(t, allCases, caseName)
 		if len(tc.Tools) < 2 {
 			t.Fatalf("case %q requires at least 2 tools, got %d", caseName, len(tc.Tools))
 		}
 
 		t.Run(caseName, func(t *testing.T) {
+			t.Parallel()
 			checksum1 := convvo.ComputeToolChecksum(tc.Tools[0])
 			checksum2 := convvo.ComputeToolChecksum(tc.Tools[1])
 
@@ -85,6 +88,7 @@ func TestComputeToolChecksum_PairComparison(t *testing.T) {
 // TestComputeToolChecksum_SingleToolCases tests single-tool fixture cases
 // that only need to verify the checksum is non-empty.
 func TestComputeToolChecksum_SingleToolCases(t *testing.T) {
+	t.Parallel()
 	allCases := loadToolCases(t)
 
 	singleCases := []string{
@@ -93,9 +97,11 @@ func TestComputeToolChecksum_SingleToolCases(t *testing.T) {
 	}
 
 	for _, caseName := range singleCases {
+		caseName := caseName
 		tc := findCase(t, allCases, caseName)
 
 		t.Run(caseName, func(t *testing.T) {
+			t.Parallel()
 			checksum := convvo.ComputeToolChecksum(tc.Tools[0])
 			t.Logf("tool: name=%s, checksum=%s", tc.Tools[0].Name, checksum)
 
@@ -107,6 +113,7 @@ func TestComputeToolChecksum_SingleToolCases(t *testing.T) {
 }
 
 func TestComputeToolChecksum_Deterministic(t *testing.T) {
+	t.Parallel()
 	allCases := loadToolCases(t)
 	tc := findCase(t, allCases, "deterministic")
 
@@ -127,6 +134,7 @@ func TestComputeToolChecksum_Deterministic(t *testing.T) {
 }
 
 func TestComputeToolChecksum_NilVsEmptyProperties(t *testing.T) {
+	t.Parallel()
 	allCases := loadToolCases(t)
 
 	nilCase := findCase(t, allCases, "nil_vs_empty_properties_nil")

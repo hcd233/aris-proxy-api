@@ -47,6 +47,7 @@ func findCase(t *testing.T, cases []testCase, name string) testCase {
 // ==================== PoolConfig Structure Tests ====================
 
 func TestPoolConfig_Structure(t *testing.T) {
+	t.Parallel()
 	poolConfig := config.PoolConfig{
 		Store: config.PoolGroupConfig{
 			Workers:   50,
@@ -78,6 +79,7 @@ func TestPoolConfig_Structure(t *testing.T) {
 }
 
 func TestPoolGroupConfig_Fields(t *testing.T) {
+	t.Parallel()
 	groupConfig := config.PoolGroupConfig{
 		Workers:   25,
 		QueueSize: 500,
@@ -94,6 +96,7 @@ func TestPoolGroupConfig_Fields(t *testing.T) {
 // ==================== PoolConfig Parsing Tests ====================
 
 func TestPoolConfig_DefaultValues(t *testing.T) {
+	t.Parallel()
 	// Verify the default Pool config is loaded
 	poolConfig := config.Pool
 
@@ -118,6 +121,7 @@ func TestPoolConfig_DefaultValues(t *testing.T) {
 }
 
 func TestPoolConfig_FromFixture(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tc := findCase(t, cases, "default_pool_config")
@@ -149,6 +153,7 @@ func TestPoolConfig_FromFixture(t *testing.T) {
 }
 
 func TestPoolConfig_CustomValues(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tc := findCase(t, cases, "custom_pool_config")
@@ -179,6 +184,7 @@ func TestPoolConfig_CustomValues(t *testing.T) {
 }
 
 func TestPoolConfig_MinimalValues(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tc := findCase(t, cases, "minimal_pool_config")
@@ -211,6 +217,7 @@ func TestPoolConfig_MinimalValues(t *testing.T) {
 // ==================== PoolManager Method Signature Tests ====================
 
 func TestPoolManager_GetPoolManager(t *testing.T) {
+	t.Parallel()
 	// Init first, then GetPoolManager should return non-nil PoolManager
 	pool.InitPoolManager(nil)
 	pm := pool.GetPoolManager()
@@ -221,6 +228,7 @@ func TestPoolManager_GetPoolManager(t *testing.T) {
 }
 
 func TestPoolManager_Stop(t *testing.T) {
+	t.Parallel()
 	// InitPoolManager and StopPoolManager should work without panic
 	pool.InitPoolManager(nil)
 	pool.StopPoolManager()

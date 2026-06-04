@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"slices"
 
 	"go.uber.org/zap"
 
@@ -44,13 +45,7 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 			return lookupErr
 		}
 		owner := sess.Owner()
-		allowed := false
-		for _, name := range ownerNames {
-			if owner.String() == name {
-				allowed = true
-				break
-			}
-		}
+		allowed := slices.Contains(ownerNames, owner.String())
 		if !allowed {
 			log.Warn("[SessionCommand] No permission to delete session",
 				zap.Uint("sessionID", cmd.SessionID),

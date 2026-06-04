@@ -31,7 +31,7 @@ func RecoverMiddleware() fiber.Handler {
 		},
 		PanicHandler: func(c fiber.Ctx, _ any) error {
 			c.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			c.Status(fiber.StatusOK).Send(
+			_ = c.Status(fiber.StatusOK).Send( //nolint:errcheck // recovery response
 				lo.Must1(sonic.Marshal(&dto.CommonRsp{
 					Error: ierr.ErrInternal.BizError(),
 				})),

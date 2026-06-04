@@ -143,7 +143,7 @@ func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, k
 			return
 		}
 
-		remaining, _ := strconv.ParseFloat(result[0], constant.ParseFloat64BitSize)
+		remaining, _ := strconv.ParseFloat(result[0], constant.ParseFloat64BitSize) //nolint:errcheck // redis returns float string
 		remainingInt := int64(math.Max(0, math.Floor(remaining)))
 		limitStr := result[2]
 
