@@ -11,6 +11,8 @@
 package vo
 
 import (
+	"slices"
+
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -58,12 +60,7 @@ func (t *JSONSchemaTypeValue) HasType(typeName string) bool {
 	if t.Single == typeName {
 		return true
 	}
-	for _, v := range t.Multi {
-		if v == typeName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(t.Multi, typeName)
 }
 
 // JSONSchemaProperty 递归 JSON Schema 属性定义，覆盖标准 JSON Schema 字段

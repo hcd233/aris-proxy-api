@@ -27,7 +27,7 @@ func (m *mockCron) Stop() {
 }
 
 // TestInitCronJobs_AllDisabled 验证所有任务关闭时不会注册任何定时任务
-func TestInitCronJobs_AllDisabled(t *testing.T) {
+func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron tests share global state
 	origDedup := config.CronSessionDeduplicateEnabled
 	origSum := config.CronSessionSummarizeEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
@@ -53,7 +53,7 @@ func TestInitCronJobs_AllDisabled(t *testing.T) {
 }
 
 // TestInitCronJobs_PartialEnabled 验证部分开启时只注册启用的任务
-func TestInitCronJobs_PartialEnabled(t *testing.T) {
+func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cron tests share global state
 	origDedup := config.CronSessionDeduplicateEnabled
 	origSum := config.CronSessionSummarizeEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
@@ -113,7 +113,7 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) {
 }
 
 // TestInitCronJobs_AllEnabled 验证全部开启时注册所有任务
-func TestInitCronJobs_AllEnabled(t *testing.T) {
+func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron tests share global state
 	origDedup := config.CronSessionDeduplicateEnabled
 	origSum := config.CronSessionSummarizeEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
@@ -162,6 +162,6 @@ func TestInitCronJobs_AllEnabled(t *testing.T) {
 }
 
 // TestStopCronJobs_Empty 验证空实例列表下停止不会 panic
-func TestStopCronJobs_Empty(t *testing.T) {
+func TestStopCronJobs_Empty(t *testing.T) { //nolint:paralleltest // cron tests share global state
 	cron.StopCronJobs()
 }

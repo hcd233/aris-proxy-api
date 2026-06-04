@@ -40,7 +40,7 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamE
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -64,7 +64,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	var collectedChunks []*dto.OpenAIChatCompletionChunk
 
@@ -140,8 +140,8 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpo
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck
-		_ = resp.Body.Close()                 //nolint:errcheck
+		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck // read best effort on error path
+		_ = resp.Body.Close()                 //nolint:errcheck // close best effort on error path
 		log.Error("[OpenAIProxy] Upstream returned non-200 status",
 			zap.String("upstreamURL", upstreamURL),
 			zap.Int("statusCode", resp.StatusCode),
@@ -166,7 +166,7 @@ func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep vo.UpstreamE
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -184,7 +184,7 @@ func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep vo.Ups
 	if err != nil {
 		return err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	reader := bufio.NewReader(resp.Body)
 	var currentEvent string

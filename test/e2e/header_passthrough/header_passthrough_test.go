@@ -32,7 +32,7 @@ func loadFixture(t *testing.T, name string) []byte {
 	return data
 }
 
-func mustE2EEnv(t *testing.T) (baseURL string, apiKey string) {
+func mustE2EEnv(t *testing.T) (baseURL, apiKey string) {
 	t.Helper()
 	baseURL = os.Getenv("BASE_URL")
 	apiKey = os.Getenv("API_KEY")
