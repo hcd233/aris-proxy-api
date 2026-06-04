@@ -2,6 +2,7 @@ package lintconv
 
 import (
 	"go/ast"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -133,12 +134,7 @@ func isDatabaseModelAllowedPath(path string) bool {
 		constant.ConvCheckLegacyMiddlewareAPIKey,
 		constant.ConvCheckLegacyMiddlewareJWT,
 	}
-	for _, legacyPath := range legacyPaths {
-		if path == legacyPath {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(legacyPaths, path)
 }
 
 func hasRootContextArg(call *ast.CallExpr) bool {
@@ -180,7 +176,7 @@ func isDeprecatedApplicationImport(path string) bool {
 	return false
 }
 
-func isHandlerDBCall(receiver string, method string) bool {
+func isHandlerDBCall(receiver, method string) bool {
 	if receiver == constant.ConvCheckRecvDAO || receiver == constant.ConvCheckRecvDB {
 		return true
 	}

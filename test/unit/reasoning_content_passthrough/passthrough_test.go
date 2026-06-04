@@ -54,8 +54,11 @@ func loadCases(_ *testing.T) []testCase {
 }
 
 func TestReasoningContentPreservedInSerializedBody(t *testing.T) {
+	t.Parallel()
 	for _, tc := range loadCases(t) {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			reqBody := buildReqBody(t, tc.Messages)
 			marshaled, err := sonic.Marshal(reqBody)
 			if err != nil {
@@ -79,6 +82,7 @@ func TestReasoningContentPreservedInSerializedBody(t *testing.T) {
 }
 
 func TestReasoningContentWithToolCallsPreserved(t *testing.T) {
+	t.Parallel()
 	reqBody := &dto.OpenAIChatCompletionReq{
 		Model: "test-model",
 		Messages: []*dto.OpenAIChatCompletionMessageParam{
@@ -116,7 +120,7 @@ func buildReqBody(t *testing.T, msgs []testMessage) *dto.OpenAIChatCompletionReq
 	req := &dto.OpenAIChatCompletionReq{Model: "test-model"}
 	for _, m := range msgs {
 		msg := &dto.OpenAIChatCompletionMessageParam{
-			Role: enum.Role(m.Role),
+			Role: m.Role,
 		}
 		if m.ReasoningContent != "" {
 			msg.ReasoningContent = lo.ToPtr(m.ReasoningContent)

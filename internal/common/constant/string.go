@@ -135,6 +135,19 @@ const (
 	FieldModelModelName                      = "model"
 	FieldModelEndpointID                     = "endpoint_id"
 
+	// Router tag names
+	TagAnthropic = "Anthropic"
+	TagAPIKey    = "APIKey"
+	TagAudit     = "Audit"
+	TagEndpoint  = "Endpoint"
+	TagHealth    = "Health"
+	TagModel     = "Model"
+	TagOpenAI    = "OpenAI"
+	TagSession   = "Session"
+
+	// Router sub-paths
+	RoutePathList = "/list"
+
 	// Router path/query/field constants
 	PathWebLogin      = "/web/login"
 	QueryCode         = "code"

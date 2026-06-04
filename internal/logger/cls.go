@@ -187,7 +187,7 @@ func encodeFields(fields []zapcore.Field) map[string]string {
 //
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
-func valueToString(v interface{}) string {
+func valueToString(v any) string {
 	switch val := v.(type) {
 	case string:
 		return val

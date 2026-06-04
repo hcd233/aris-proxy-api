@@ -54,13 +54,9 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q sessionport.L
 	}
 
 	start := (q.Page - 1) * q.PageSize
-	if start > len(meta.MessageIDs) {
-		start = len(meta.MessageIDs)
-	}
+	start = min(start, len(meta.MessageIDs))
 	end := start + q.PageSize
-	if end > len(meta.MessageIDs) {
-		end = len(meta.MessageIDs)
-	}
+	end = min(end, len(meta.MessageIDs))
 	pageIDs := meta.MessageIDs[start:end]
 	if len(pageIDs) == 0 {
 		return &sessionport.ListSessionMessagesResult{Messages: []*sessionport.MessageView{}, Total: total}, nil

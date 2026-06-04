@@ -139,9 +139,10 @@ func (c *ThinkExtractCron) extract(ctx context.Context) {
 	log.Info("[ThinkExtractCron] Extract completed", zap.Int("totalProcessed", totalProcessed))
 }
 
-func currentDayRange(now time.Time) (time.Time, time.Time) {
-	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	return start, start.AddDate(0, 0, 1)
+func currentDayRange(now time.Time) (start, end time.Time) {
+	start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	end = start.AddDate(0, 0, 1)
+	return
 }
 
 // extractThinkFromContent 从消息内容中提取 <think> 标签内容并移除标签
@@ -187,7 +188,7 @@ func extractThinkFromContent(msg *vo.UnifiedMessage) string {
 //	@return string 移除标签后的文本
 //	@author centonhuang
 //	@update 2026-06-02 10:00:00
-func extractAndRemoveThinkTags(text string) (string, string) {
+func extractAndRemoveThinkTags(text string) (thinking, remaining string) {
 	matches := thinkRegexp.FindAllStringSubmatch(text, -1)
 	if len(matches) == 0 {
 		return "", text

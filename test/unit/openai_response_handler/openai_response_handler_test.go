@@ -68,12 +68,15 @@ func buildTestAPI(t *testing.T) *http.ServeMux {
 // containing `client_metadata`, which must NOT trigger a 422 now that the
 // field is modeled on OpenAICreateResponseReq.
 func TestCreateResponse_HandlesModeledFields(t *testing.T) {
+	t.Parallel()
 	mux := buildTestAPI(t)
 	cases := loadHandlerCases(t)
 
 	for _, tc := range cases {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, tc.Path, strings.NewReader(string(tc.RequestBody)))
+			t.Parallel()
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, tc.Path, strings.NewReader(string(tc.RequestBody)))
 			req.Header.Set("Content-Type", "application/json")
 
 			rec := httptest.NewRecorder()

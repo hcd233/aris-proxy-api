@@ -106,7 +106,7 @@ func (p *githubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	if err != nil {
 		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // best-effort close
 
 	var userInfo GithubUserInfo
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
@@ -118,7 +118,7 @@ func (p *githubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	if err != nil {
 		return vo.NewOAuthUserInfo("", "", "", ""), err
 	}
-	defer func() { _ = emailResp.Body.Close() }()
+	defer func() { _ = emailResp.Body.Close() }() //nolint:errcheck // best-effort close
 
 	var emails []GithubEmail
 	if err := sonic.ConfigDefault.NewDecoder(emailResp.Body).Decode(&emails); err != nil {

@@ -8,13 +8,13 @@ package upstream_error
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/bytedance/sonic"
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
@@ -52,11 +52,11 @@ func buildError(t *testing.T, tc testCase) error {
 	case "upstream_http":
 		return &model.UpstreamError{StatusCode: tc.UpstreamStatus, Body: tc.UpstreamBody}
 	case "upstream_connection":
-		return &model.UpstreamConnectionError{Cause: errors.New(tc.CauseMessage)}
+		return &model.UpstreamConnectionError{Cause: ierr.New(ierr.ErrInternal, tc.CauseMessage)}
 	case "upstream_connection_nil_cause":
 		return &model.UpstreamConnectionError{}
 	case "plain":
-		return errors.New(tc.CauseMessage)
+		return ierr.New(ierr.ErrInternal, tc.CauseMessage)
 	case "context_canceled":
 		return context.Canceled
 	}
@@ -66,8 +66,11 @@ func buildError(t *testing.T, tc testCase) error {
 
 // TestExtractUpstreamStatusAndError 覆盖所有错误分支的状态码/消息语义
 func TestExtractUpstreamStatusAndError(t *testing.T) {
+	t.Parallel()
 	for _, tc := range loadCases(t) {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			err := buildError(t, tc)
 
 			status, message := apiutil.ExtractUpstreamStatusAndError(err)
@@ -91,8 +94,9 @@ func TestExtractUpstreamStatusAndError(t *testing.T) {
 // TestExtractUpstreamStatusAndError_ConnectionErrorIsDistinctFromUnknown 专项回归：
 // UpstreamConnectionError 必须映射为 -1，与未知错误的 0 区分。
 func TestExtractUpstreamStatusAndError_ConnectionErrorIsDistinctFromUnknown(t *testing.T) {
-	connStatus, _ := apiutil.ExtractUpstreamStatusAndError(&model.UpstreamConnectionError{Cause: errors.New("dial failed")})
-	unknownStatus, _ := apiutil.ExtractUpstreamStatusAndError(errors.New("convert failed"))
+	t.Parallel()
+	connStatus, _ := apiutil.ExtractUpstreamStatusAndError(&model.UpstreamConnectionError{Cause: ierr.New(ierr.ErrInternal, "dial failed")})
+	unknownStatus, _ := apiutil.ExtractUpstreamStatusAndError(ierr.New(ierr.ErrInternal, "convert failed"))
 
 	if connStatus != -1 {
 		t.Fatalf("connection error status = %d, want -1", connStatus)

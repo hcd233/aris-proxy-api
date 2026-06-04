@@ -165,9 +165,8 @@ func resolveStopSequences(stop *dto.OpenAIStopSequence) []string {
 	return nil
 }
 
-func extractOpenAISystemAndMessages(messages []*dto.OpenAIChatCompletionMessageParam) (*dto.AnthropicMessageContent, []*dto.AnthropicMessageParam, error) {
+func extractOpenAISystemAndMessages(messages []*dto.OpenAIChatCompletionMessageParam) (system *dto.AnthropicMessageContent, anthropicMessages []*dto.AnthropicMessageParam, err error) {
 	var systemTexts []string
-	var anthropicMessages []*dto.AnthropicMessageParam
 
 	for i, msg := range messages {
 		switch msg.Role {
@@ -177,11 +176,7 @@ func extractOpenAISystemAndMessages(messages []*dto.OpenAIChatCompletionMessageP
 			}
 
 		case enum.RoleUser:
-			am, err := convertOpenAIUserMessageToAnthropic(msg)
-			if err != nil {
-				return nil, nil, ierr.Wrapf(ierr.ErrDTOConvert, err, "convert openai user message[%d]", i)
-			}
-			anthropicMessages = append(anthropicMessages, am)
+			anthropicMessages = append(anthropicMessages, convertOpenAIUserMessageToAnthropic(msg))
 
 		case enum.RoleAssistant:
 			am, err := convertOpenAIAssistantMessageToAnthropic(msg)
@@ -199,7 +194,6 @@ func extractOpenAISystemAndMessages(messages []*dto.OpenAIChatCompletionMessageP
 		}
 	}
 
-	var system *dto.AnthropicMessageContent
 	if len(systemTexts) > 0 {
 		system = &dto.AnthropicMessageContent{Text: strings.Join(systemTexts, "\n")}
 	}
@@ -223,37 +217,33 @@ func resolveOpenAIContentText(content *dto.OpenAIMessageContent) string {
 	return ""
 }
 
-func convertOpenAIUserMessageToAnthropic(msg *dto.OpenAIChatCompletionMessageParam) (*dto.AnthropicMessageParam, error) {
+func convertOpenAIUserMessageToAnthropic(msg *dto.OpenAIChatCompletionMessageParam) *dto.AnthropicMessageParam {
 	am := &dto.AnthropicMessageParam{
 		Role: enum.RoleUser,
 	}
 
 	if msg.Content == nil {
 		am.Content = &dto.AnthropicMessageContent{Text: ""}
-		return am, nil
+		return am
 	}
 
 	// 纯文本
 	if msg.Content.Text != "" && len(msg.Content.Parts) == 0 {
 		am.Content = &dto.AnthropicMessageContent{Text: msg.Content.Text}
-		return am, nil
+		return am
 	}
 
 	// 多部分内容
 	if len(msg.Content.Parts) > 0 {
-		blocks, err := convertOpenAIPartsToAnthropicBlocks(msg.Content.Parts)
-		if err != nil {
-			return nil, err
-		}
-		am.Content = &dto.AnthropicMessageContent{Blocks: blocks}
-		return am, nil
+		am.Content = &dto.AnthropicMessageContent{Blocks: convertOpenAIPartsToAnthropicBlocks(msg.Content.Parts)}
+		return am
 	}
 
 	am.Content = &dto.AnthropicMessageContent{Text: ""}
-	return am, nil
+	return am
 }
 
-func convertOpenAIPartsToAnthropicBlocks(parts []*dto.OpenAIChatCompletionContentPart) ([]*dto.AnthropicContentBlock, error) {
+func convertOpenAIPartsToAnthropicBlocks(parts []*dto.OpenAIChatCompletionContentPart) []*dto.AnthropicContentBlock {
 	var blocks []*dto.AnthropicContentBlock
 	for _, part := range parts {
 		switch part.Type {
@@ -271,7 +261,7 @@ func convertOpenAIPartsToAnthropicBlocks(parts []*dto.OpenAIChatCompletionConten
 			continue
 		}
 	}
-	return blocks, nil
+	return blocks
 }
 
 func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL) *dto.AnthropicContentBlock {

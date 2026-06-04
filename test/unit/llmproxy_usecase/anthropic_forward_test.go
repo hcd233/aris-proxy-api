@@ -2,11 +2,11 @@ package llmproxy_usecase
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -72,6 +72,7 @@ func buildAnthropicTestModel() *aggregate.Model {
 }
 
 func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
+	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
 	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
@@ -96,6 +97,7 @@ func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 }
 
 func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
+	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
 	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
@@ -120,7 +122,8 @@ func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 }
 
 func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
-	mockResolver := &mockResolver{resolveErr: errors.New("model not found")}
+	t.Parallel()
+	mockResolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
 	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockAnthropicProxyForAnthropic{}, &mockOpenAIProxy{}, &mockTaskSubmitter{})
 
 	stream := false
@@ -143,6 +146,7 @@ func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 }
 
 func TestAnthropicCreateMessage_NativeStream_UpstreamError(t *testing.T) {
+	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
 	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
@@ -167,6 +171,7 @@ func TestAnthropicCreateMessage_NativeStream_UpstreamError(t *testing.T) {
 }
 
 func TestAnthropicCreateMessage_NativeUnary_UpstreamError(t *testing.T) {
+	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
 	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
@@ -191,6 +196,7 @@ func TestAnthropicCreateMessage_NativeUnary_UpstreamError(t *testing.T) {
 }
 
 func TestAnthropicCreateMessage_ChatResponseEndpointUsesChatCompatibility(t *testing.T) {
+	t.Parallel()
 	anthropicProxy := &mockAnthropicProxyForAnthropic{}
 	openAIProxy := &mockOpenAIProxy{}
 	mockResolver := &mockResolver{
@@ -203,7 +209,7 @@ func TestAnthropicCreateMessage_ChatResponseEndpointUsesChatCompatibility(t *tes
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
 		Model: "claude-alias",
 		Messages: []*dto.AnthropicMessageParam{
-			{Role: string(enum.RoleUser), Content: &dto.AnthropicMessageContent{Text: "Hello"}},
+			{Role: enum.RoleUser, Content: &dto.AnthropicMessageContent{Text: "Hello"}},
 		},
 		Stream: &stream,
 	}}

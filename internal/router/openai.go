@@ -25,9 +25,9 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 		Path:        "/models",
 		Summary:     "List models",
 		Description: "Lists the currently available models, and provides basic information about each one such as the owner and availability.",
-		Tags:        []string{"OpenAI"},
+		Tags:        []string{constant.TagOpenAI},
 		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
+			{constant.SecuritySchemeAPIKey: {}},
 		},
 	}, openaiHandler.HandleListModels)
 

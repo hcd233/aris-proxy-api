@@ -1,13 +1,13 @@
 package lintstatic
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
 )
@@ -28,7 +28,7 @@ func Run(args []string) Result {
 	var hasErr bool
 
 	// go vet
-	vetCmd := exec.Command(constant.GoCommand, append([]string{constant.GoVetCommand}, args...)...)
+	vetCmd := exec.Command(constant.GoCommand, append([]string{constant.GoVetCommand}, args...)...) //nolint:gosec,noctx // args are trusted package paths
 	vetOut, vetErr := vetCmd.CombinedOutput()
 	if len(vetOut) > 0 {
 		out.Write(vetOut)
@@ -41,7 +41,7 @@ func Run(args []string) Result {
 	// staticcheck
 	scPath := resolveStaticcheck()
 	if scPath != "" {
-		scCmd := exec.Command(scPath, args...)
+		scCmd := exec.Command(scPath, args...) //nolint:gosec,noctx // args are trusted package paths
 		scOut, scErr := scCmd.CombinedOutput()
 		if len(scOut) > 0 {
 			out.Write(scOut)
@@ -57,7 +57,7 @@ func Run(args []string) Result {
 	// golangci-lint
 	glPath := resolveGolangciLint()
 	if glPath != "" {
-		glCmd := exec.Command(glPath, append([]string{constant.GolangciLintRunCommand}, args...)...)
+		glCmd := exec.Command(glPath, append([]string{constant.GolangciLintRunCommand}, args...)...) //nolint:gosec,noctx // args are trusted package paths
 		glOut, glErr := glCmd.CombinedOutput()
 		if len(glOut) > 0 {
 			out.Write(glOut)
@@ -72,7 +72,7 @@ func Run(args []string) Result {
 
 	res := Result{Output: out.String()}
 	if hasErr {
-		res.Err = fmt.Errorf(constant.StaticChecksFailedMessage)
+		res.Err = ierr.New(ierr.ErrInternal, constant.StaticChecksFailedMessage)
 	}
 	return res
 }
@@ -84,7 +84,7 @@ func (r Result) Log() {
 		log.Info("[LintStatic] All static checks passed!")
 		return
 	}
-	for _, line := range strings.Split(r.Output, "\n") {
+	for line := range strings.SplitSeq(r.Output, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -107,13 +107,13 @@ func resolveStaticcheck() string {
 	}
 	if gobin := os.Getenv(constant.GobinEnvKey); gobin != constant.ZeroString {
 		p := filepath.Join(gobin, constant.StaticcheckCommand)
-		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // gobin comes from GOBIN env var
 			return p
 		}
 	}
-	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil {
+	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil { //nolint:gosec
 		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.StaticcheckCommand)
-		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // path from GOPATH env var
 			return p
 		}
 	}
@@ -126,13 +126,13 @@ func resolveGolangciLint() string {
 	}
 	if gobin := os.Getenv(constant.GobinEnvKey); gobin != constant.ZeroString {
 		p := filepath.Join(gobin, constant.GolangciLintCommand)
-		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // gobin comes from GOBIN env var
 			return p
 		}
 	}
-	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil {
+	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil { //nolint:gosec
 		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.GolangciLintCommand)
-		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 {
+		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // path from GOPATH env var
 			return p
 		}
 	}

@@ -24,8 +24,8 @@ func mustAPIKeySecret(raw string) vo.APIKeySecret {
 	return secret
 }
 
-func restoreProxyAPIKeyForTest(id, userID uint, name, secret string, createdAt time.Time) *aggregate.ProxyAPIKey {
-	return aggregate.RestoreProxyAPIKey(id, userID, vo.APIKeyName(name), mustAPIKeySecret(secret), createdAt)
+func restoreProxyAPIKeyForTest(userID uint, name, secret string, createdAt time.Time) *aggregate.ProxyAPIKey {
+	return aggregate.RestoreProxyAPIKey(1, userID, vo.APIKeyName(name), mustAPIKeySecret(secret), createdAt)
 }
 
 // mockAPIKeyRepository mock APIKeyRepository
@@ -110,6 +110,7 @@ func (m *mockUserExistenceChecker) Exists(ctx context.Context, userID uint) (boo
 
 // TestIssueAPIKeyHandler_HappyPath 验证成功签发场景
 func TestIssueAPIKeyHandler_HappyPath(t *testing.T) {
+	t.Parallel()
 	repo := &mockAPIKeyRepository{
 		countByUser: func(ctx context.Context, userID uint) (int64, error) {
 			return 3, nil
@@ -138,6 +139,7 @@ func TestIssueAPIKeyHandler_HappyPath(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected result, got nil")
+		return
 	}
 	if result.Name != "my-key" {
 		t.Errorf("Name = %q, want %q", result.Name, "my-key")
@@ -152,6 +154,7 @@ func TestIssueAPIKeyHandler_HappyPath(t *testing.T) {
 
 // TestIssueAPIKeyHandler_QuotaExceeded 验证配额超限
 func TestIssueAPIKeyHandler_QuotaExceeded(t *testing.T) {
+	t.Parallel()
 	repo := &mockAPIKeyRepository{
 		countByUser: func(ctx context.Context, userID uint) (int64, error) {
 			return 5, nil // 已达配额
@@ -177,6 +180,7 @@ func TestIssueAPIKeyHandler_QuotaExceeded(t *testing.T) {
 
 // TestIssueAPIKeyHandler_UserNotFound 验证用户不存在
 func TestIssueAPIKeyHandler_UserNotFound(t *testing.T) {
+	t.Parallel()
 	repo := &mockAPIKeyRepository{}
 	generator := &mockAPIKeyGenerator{}
 	userExistsCh := &mockUserExistenceChecker{
@@ -202,6 +206,7 @@ func TestIssueAPIKeyHandler_UserNotFound(t *testing.T) {
 
 // TestIssueAPIKeyHandler_Validation 验证参数校验
 func TestIssueAPIKeyHandler_Validation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		nameInput   string
@@ -217,7 +222,9 @@ func TestIssueAPIKeyHandler_Validation(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			repo := &mockAPIKeyRepository{}
 			generator := &mockAPIKeyGenerator{
 				generateFunc: func() (vo.APIKeySecret, error) {
@@ -245,6 +252,7 @@ func TestIssueAPIKeyHandler_Validation(t *testing.T) {
 
 // TestIssueAPIKeyHandler_EmptySecret 验证空密钥时使用 generator 返回值
 func TestIssueAPIKeyHandler_EmptySecretFromGenerator(t *testing.T) {
+	t.Parallel()
 	repo := &mockAPIKeyRepository{}
 	generator := &mockAPIKeyGenerator{
 		generateFunc: func() (vo.APIKeySecret, error) {
@@ -270,6 +278,7 @@ func TestIssueAPIKeyHandler_EmptySecretFromGenerator(t *testing.T) {
 
 // TestIssueAPIKeyHandler_NilUserChecker 验证 userExistsCh 为 nil 时跳过校验
 func TestIssueAPIKeyHandler_NilUserChecker(t *testing.T) {
+	t.Parallel()
 	repo := &mockAPIKeyRepository{
 		countByUser: func(ctx context.Context, userID uint) (int64, error) {
 			return 0, nil
@@ -294,6 +303,7 @@ func TestIssueAPIKeyHandler_NilUserChecker(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected result, got nil")
+		return
 	}
 	if result.Name != "my-key" {
 		t.Errorf("Name = %q, want %q", result.Name, "my-key")
@@ -302,7 +312,8 @@ func TestIssueAPIKeyHandler_NilUserChecker(t *testing.T) {
 
 // TestIssueAPIKeyHandler_RepoError 验证仓储错误传播
 func TestIssueAPIKeyHandler_RepoError(t *testing.T) {
-	repoErr := errors.New("database error")
+	t.Parallel()
+	repoErr := ierr.New(ierr.ErrDBQuery, "database error")
 	repo := &mockAPIKeyRepository{
 		countByUser: func(ctx context.Context, userID uint) (int64, error) {
 			return 0, repoErr
@@ -328,7 +339,8 @@ func TestIssueAPIKeyHandler_RepoError(t *testing.T) {
 
 // TestIssueAPIKeyHandler_GeneratorError 验证生成器错误传播
 func TestIssueAPIKeyHandler_GeneratorError(t *testing.T) {
-	genErr := errors.New("random generation failed")
+	t.Parallel()
+	genErr := ierr.New(ierr.ErrInternal, "random generation failed")
 	repo := &mockAPIKeyRepository{
 		countByUser: func(ctx context.Context, userID uint) (int64, error) {
 			return 0, nil
@@ -358,6 +370,7 @@ func TestIssueAPIKeyHandler_GeneratorError(t *testing.T) {
 
 // TestIssueAPIKeyHandler_SaveSetsID 验证 Save 后回填 ID
 func TestIssueAPIKeyHandler_SaveSetsID(t *testing.T) {
+	t.Parallel()
 	repo := &mockAPIKeyRepository{
 		countByUser: func(ctx context.Context, userID uint) (int64, error) {
 			return 0, nil
@@ -451,9 +464,10 @@ func (m *mockRevokeAPIKeyRepository) PaginateAll(ctx context.Context, param mode
 
 // TestRevokeAPIKeyHandler_OwnerSuccess 验证所有者成功吊销
 func TestRevokeAPIKeyHandler_OwnerSuccess(t *testing.T) {
+	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(1, 101, "my-key", "sk-aris-test", nowTime()), nil
+			return restoreProxyAPIKeyForTest(101, "my-key", "sk-aris-test", nowTime()), nil
 		},
 	}
 
@@ -475,9 +489,10 @@ func TestRevokeAPIKeyHandler_OwnerSuccess(t *testing.T) {
 
 // TestRevokeAPIKeyHandler_AdminSuccess 验证 admin 成功吊销他人 Key
 func TestRevokeAPIKeyHandler_AdminSuccess(t *testing.T) {
+	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(1, 999, "other-key", "sk-aris-other", nowTime()), nil
+			return restoreProxyAPIKeyForTest(999, "other-key", "sk-aris-other", nowTime()), nil
 		},
 	}
 
@@ -496,6 +511,7 @@ func TestRevokeAPIKeyHandler_AdminSuccess(t *testing.T) {
 
 // TestRevokeAPIKeyHandler_NotFound 验证 Key 不存在
 func TestRevokeAPIKeyHandler_NotFound(t *testing.T) {
+	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
 			return nil, nil // not found
@@ -520,9 +536,10 @@ func TestRevokeAPIKeyHandler_NotFound(t *testing.T) {
 
 // TestRevokeAPIKeyHandler_NoPermission 验证无权限吊销
 func TestRevokeAPIKeyHandler_NoPermission(t *testing.T) {
+	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(1, 999, "other-key", "sk-aris-other", nowTime()), nil
+			return restoreProxyAPIKeyForTest(999, "other-key", "sk-aris-other", nowTime()), nil
 		},
 	}
 
@@ -544,9 +561,10 @@ func TestRevokeAPIKeyHandler_NoPermission(t *testing.T) {
 
 // TestRevokeAPIKeyHandler_LegacyKeyNoPermission 验证 legacy Key 禁止普通用户吊销
 func TestRevokeAPIKeyHandler_LegacyKeyNoPermission(t *testing.T) {
+	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(1, 0, "legacy-key", "sk-aris-legacy", nowTime()), nil
+			return restoreProxyAPIKeyForTest(0, "legacy-key", "sk-aris-legacy", nowTime()), nil
 		},
 	}
 
@@ -568,7 +586,8 @@ func TestRevokeAPIKeyHandler_LegacyKeyNoPermission(t *testing.T) {
 
 // TestRevokeAPIKeyHandler_RepoError 验证仓储错误传播
 func TestRevokeAPIKeyHandler_RepoError(t *testing.T) {
-	repoErr := errors.New("database error")
+	t.Parallel()
+	repoErr := ierr.New(ierr.ErrInternal, "database error")
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
 			return nil, repoErr
@@ -593,10 +612,11 @@ func TestRevokeAPIKeyHandler_RepoError(t *testing.T) {
 
 // TestRevokeAPIKeyHandler_DeleteError 验证删除错误传播
 func TestRevokeAPIKeyHandler_DeleteError(t *testing.T) {
-	deleteErr := errors.New("delete failed")
+	t.Parallel()
+	deleteErr := ierr.New(ierr.ErrInternal, "delete failed")
 	repo := &mockRevokeAPIKeyRepository{
 		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(1, 101, "my-key", "sk-aris-test", nowTime()), nil
+			return restoreProxyAPIKeyForTest(101, "my-key", "sk-aris-test", nowTime()), nil
 		},
 		deleteFunc: func(ctx context.Context, id uint) error {
 			return deleteErr

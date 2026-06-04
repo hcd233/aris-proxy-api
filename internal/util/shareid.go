@@ -47,7 +47,7 @@ func GenerateShareID(sessionID uint, length int) (string, error) {
 
 	// 取前 length 个字节，每字节模 62 映射到字符集；对短长度（6-8）足够均匀。
 	out := make([]byte, length)
-	for i := 0; i < length; i++ {
+	for i := range length {
 		out[i] = constant.ShareIDAlphabet[int(digest[i])%len(constant.ShareIDAlphabet)]
 	}
 	return string(out), nil

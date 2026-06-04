@@ -41,9 +41,11 @@ func loadIssueCases(t *testing.T) []issueCase {
 
 // TestIssueProxyAPIKey 验证签发聚合的 happy path + 3 个边界
 func TestIssueProxyAPIKey(t *testing.T) {
+	t.Parallel()
 	cases := loadIssueCases(t)
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			secret, err := vo.NewAPIKeySecret(tc.Secret)
 			if err != nil {
 				if tc.ExpectErr == "validation" {
@@ -115,6 +117,7 @@ func TestIssueProxyAPIKey(t *testing.T) {
 // TestProxyAPIKey_IsOwnedBy 验证所有权判定：严格匹配 UserID；
 // UserID==0 的 legacy key 不再被视为任何普通用户所有，必须走 admin 分支。
 func TestProxyAPIKey_IsOwnedBy(t *testing.T) {
+	t.Parallel()
 	secX, err := vo.NewAPIKeySecret("x")
 	if err != nil {
 		t.Fatalf("failed to create secret x: %v", err)
@@ -147,6 +150,7 @@ func TestProxyAPIKey_IsOwnedBy(t *testing.T) {
 
 // TestAPIKeySecret_Masked 验证脱敏输出稳定
 func TestAPIKeySecret_Masked(t *testing.T) {
+	t.Parallel()
 	s, err := vo.NewAPIKeySecret("sk-abcdefghijklmnop")
 	if err != nil {
 		t.Fatalf("failed to create secret: %v", err)

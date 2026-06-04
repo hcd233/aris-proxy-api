@@ -1,6 +1,7 @@
 package json_schema
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -10,6 +11,7 @@ import (
 )
 
 func TestToolParametersRoundTrip(t *testing.T) {
+	t.Parallel()
 	// Simulate MCP tool with empty properties - should survive round-trip
 	cases := []struct {
 		name    string
@@ -30,7 +32,9 @@ func TestToolParametersRoundTrip(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			var req dto.OpenAIChatCompletionReq
 			if err := sonic.Unmarshal([]byte(tc.rawBody), &req); err != nil {
 				t.Fatalf("unmarshal error: %v", err)
@@ -48,7 +52,7 @@ func TestToolParametersRoundTrip(t *testing.T) {
 			origTools, _ := json.Marshal(orig["tools"])
 			remarshTools, _ := json.Marshal(remarsh["tools"])
 
-			if string(origTools) != string(remarshTools) {
+			if !bytes.Equal(origTools, remarshTools) {
 				t.Errorf("TOOLS ROUND-TRIP BROKEN\n  raw:   %s\n  remarsh: %s", string(origTools), string(remarshTools))
 			} else {
 				fmt.Printf("  OK: %s\n", string(origTools))

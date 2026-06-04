@@ -26,7 +26,7 @@ func InflightMiddleware() fiber.Handler {
 			c.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
 			c.Status(fiber.StatusServiceUnavailable)
 
-			body, _ := sonic.Marshal(&dto.CommonRsp{
+			body, _ := sonic.Marshal(&dto.CommonRsp{ //nolint:errcheck // Marshal always succeeds for static struct
 				Error: ierr.ErrInternal.BizError(),
 			})
 			return c.Send(body)

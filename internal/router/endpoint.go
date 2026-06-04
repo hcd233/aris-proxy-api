@@ -24,9 +24,9 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 		Path:        "",
 		Summary:     "CreateEndpoint",
 		Description: "Create a new endpoint configuration",
-		Tags:        []string{"Endpoint"},
+		Tags:        []string{constant.TagEndpoint},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("createEndpoint", enum.PermissionAdmin),
@@ -36,12 +36,12 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 	huma.Register(endpointGroup, huma.Operation{
 		OperationID: "listEndpoints",
 		Method:      http.MethodGet,
-		Path:        "/list",
+		Path:        constant.RoutePathList,
 		Summary:     "ListEndpoints",
 		Description: "List all endpoint configurations",
-		Tags:        []string{"Endpoint"},
+		Tags:        []string{constant.TagEndpoint},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("listEndpoints", enum.PermissionAdmin),
@@ -54,9 +54,9 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 		Path:        "",
 		Summary:     "UpdateEndpoint",
 		Description: "Update an endpoint configuration",
-		Tags:        []string{"Endpoint"},
+		Tags:        []string{constant.TagEndpoint},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("updateEndpoint", enum.PermissionAdmin),
@@ -69,9 +69,9 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 		Path:        "",
 		Summary:     "DeleteEndpoint",
 		Description: "Delete an endpoint configuration",
-		Tags:        []string{"Endpoint"},
+		Tags:        []string{constant.TagEndpoint},
 		Security: []map[string][]string{
-			{"jwtAuth": {}},
+			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
 			middleware.LimitUserPermissionMiddleware("deleteEndpoint", enum.PermissionAdmin),

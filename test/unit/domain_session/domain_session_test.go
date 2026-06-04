@@ -57,6 +57,7 @@ func findCase(t *testing.T, cases []sessionCase, name string) sessionCase {
 
 // TestCreateSession_ValidOwner 用非空 owner 创建 Session 应成功
 func TestCreateSession_ValidOwner(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "create_session_valid_owner")
 
@@ -83,6 +84,7 @@ func TestCreateSession_ValidOwner(t *testing.T) {
 
 // TestCreateSession_EmptyOwner 空 owner 应返回校验错误
 func TestCreateSession_EmptyOwner(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "create_session_empty_owner")
 
@@ -106,6 +108,7 @@ func TestCreateSession_EmptyOwner(t *testing.T) {
 
 // TestRestoreSession 从持久化数据重建 Session 应正确还原所有字段
 func TestRestoreSession(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "restore_session_full")
 
@@ -127,6 +130,7 @@ func TestRestoreSession(t *testing.T) {
 
 	if s == nil {
 		t.Fatal("RestoreSession() returned nil")
+		return
 	}
 	if s.AggregateID() != tc.ID {
 		t.Errorf("AggregateID = %d, want %d", s.AggregateID(), tc.ID)
@@ -147,6 +151,7 @@ func TestRestoreSession(t *testing.T) {
 
 // TestUpdateSummary_Valid 更新有效摘要应设置摘要并更新时间
 func TestUpdateSummary_Valid(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "update_summary_valid")
 
@@ -168,6 +173,7 @@ func TestUpdateSummary_Valid(t *testing.T) {
 
 // TestUpdateSummary_Failed 更新失败摘要应反映在 Failed() 中
 func TestUpdateSummary_Failed(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "update_summary_failed")
 
@@ -192,6 +198,7 @@ func TestUpdateSummary_Failed(t *testing.T) {
 
 // TestUpdateScore_Valid 更新有效评分应正确设置各维度值
 func TestUpdateScore_Valid(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "update_score_valid")
 
@@ -216,6 +223,7 @@ func TestUpdateScore_Valid(t *testing.T) {
 
 // TestIsOwnedBy_Matching 匹配 owner 应返回 true
 func TestIsOwnedBy_Matching(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "is_owned_by_matching")
 
@@ -231,6 +239,7 @@ func TestIsOwnedBy_Matching(t *testing.T) {
 
 // TestIsOwnedBy_NonMatching 不匹配 owner 应返回 false
 func TestIsOwnedBy_NonMatching(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "is_owned_by_non_matching")
 

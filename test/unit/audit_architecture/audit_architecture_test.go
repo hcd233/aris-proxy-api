@@ -22,6 +22,7 @@ func readRepoFile(t *testing.T, rel string) string {
 }
 
 func TestAuditRouteUsesLogListPath(t *testing.T) {
+	t.Parallel()
 	content := readRepoFile(t, "internal/router/audit.go")
 	if !strings.Contains(content, `Path:        "/log/list"`) {
 		t.Fatalf("audit list route should use /log/list path")
@@ -32,6 +33,7 @@ func TestAuditRouteUsesLogListPath(t *testing.T) {
 }
 
 func TestAuditHandlerAndApplicationDoNotDependOnInfrastructure(t *testing.T) {
+	t.Parallel()
 	files := []string{
 		"internal/handler/audit.go",
 		"internal/application/audit/query/list_audit_logs.go",

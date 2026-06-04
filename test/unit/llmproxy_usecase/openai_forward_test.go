@@ -2,13 +2,13 @@ package llmproxy_usecase
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -90,7 +90,7 @@ func (r *mockResolver) Resolve(_ context.Context, _ vo.EndpointAlias, matcher fu
 		return r.resolveEndpoint, r.resolveModel, r.resolveErr
 	}
 	if matcher != nil && !matcher(r.resolveEndpoint) {
-		return nil, nil, errors.New("endpoint unsupported")
+		return nil, nil, ierr.New(ierr.ErrInternal, "endpoint unsupported")
 	}
 	return r.resolveEndpoint, r.resolveModel, nil
 }
@@ -162,6 +162,7 @@ func buildTestModel() *aggregate.Model {
 }
 
 func TestOpenAICreateChatCompletion_NativeStream(t *testing.T) {
+	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{})
@@ -185,6 +186,7 @@ func TestOpenAICreateChatCompletion_NativeStream(t *testing.T) {
 }
 
 func TestOpenAICreateChatCompletion_NativeUnary(t *testing.T) {
+	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{})
@@ -208,7 +210,8 @@ func TestOpenAICreateChatCompletion_NativeUnary(t *testing.T) {
 }
 
 func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
-	resolver := &mockResolver{resolveErr: errors.New("model not found")}
+	t.Parallel()
+	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{})
 
 	stream := false
@@ -230,6 +233,7 @@ func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
 }
 
 func TestOpenAICreateResponse_NativeStream(t *testing.T) {
+	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{})
@@ -250,6 +254,7 @@ func TestOpenAICreateResponse_NativeStream(t *testing.T) {
 }
 
 func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
+	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{})
@@ -270,7 +275,8 @@ func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
 }
 
 func TestOpenAICreateResponse_ModelNotFound(t *testing.T) {
-	resolver := &mockResolver{resolveErr: errors.New("model not found")}
+	t.Parallel()
+	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{})
 
 	stream := false
@@ -289,6 +295,7 @@ func TestOpenAICreateResponse_ModelNotFound(t *testing.T) {
 }
 
 func TestOpenAICreateChatCompletion_AnthropicOnlyUsesAnthropicCompatibility(t *testing.T) {
+	t.Parallel()
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("anthropic-only", false, false, true), resolveModel: buildTestModel()}
@@ -316,6 +323,7 @@ func TestOpenAICreateChatCompletion_AnthropicOnlyUsesAnthropicCompatibility(t *t
 }
 
 func TestOpenAICreateResponse_ChatOnlyUsesChatCompatibility(t *testing.T) {
+	t.Parallel()
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("chat-only", true, false, false), resolveModel: buildTestModel()}
@@ -343,6 +351,7 @@ func TestOpenAICreateResponse_ChatOnlyUsesChatCompatibility(t *testing.T) {
 }
 
 func TestOpenAICreateResponse_AnthropicOnlyUsesAnthropicCompatibility(t *testing.T) {
+	t.Parallel()
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("anthropic-only", false, false, true), resolveModel: buildTestModel()}
@@ -370,6 +379,7 @@ func TestOpenAICreateResponse_AnthropicOnlyUsesAnthropicCompatibility(t *testing
 }
 
 func TestOpenAICreateResponse_ChatAndAnthropicPrefersChatCompatibility(t *testing.T) {
+	t.Parallel()
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("chat-and-anthropic", true, false, true), resolveModel: buildTestModel()}

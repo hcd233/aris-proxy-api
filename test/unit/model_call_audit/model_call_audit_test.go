@@ -44,10 +44,13 @@ func loadCases(t *testing.T) []testCase {
 }
 
 func TestModelCallAuditTask_Fields(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	for _, tc := range cases {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			task := &dto.ModelCallAuditTask{
 				Ctx:                      context.Background(),
 				ModelID:                  tc.Task.ModelID,

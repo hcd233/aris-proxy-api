@@ -110,6 +110,7 @@ func toDBTools(t *testing.T, fixtures []*toolFixture) []*dbmodel.Tool {
 }
 
 func TestBuildOrderedMessageProjections(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 
 	messageCases := []string{
@@ -122,6 +123,7 @@ func TestBuildOrderedMessageProjections(t *testing.T) {
 	for _, caseName := range messageCases {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
+			t.Parallel()
 			messages := toDBMessages(t, tc.Messages)
 			items := repository.BuildOrderedMessageProjections(tc.MessageIDs, messages)
 
@@ -157,6 +159,7 @@ func TestBuildOrderedMessageProjections(t *testing.T) {
 }
 
 func TestBuildOrderedMessageProjections_NilInputs(t *testing.T) {
+	t.Parallel()
 	items := repository.BuildOrderedMessageProjections(nil, nil)
 	if len(items) != 0 {
 		t.Errorf("BuildOrderedMessageProjections(nil, nil) returned %d items, want 0", len(items))
@@ -164,6 +167,7 @@ func TestBuildOrderedMessageProjections_NilInputs(t *testing.T) {
 }
 
 func TestBuildOrderedToolProjections(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 
 	toolCases := []string{
@@ -176,6 +180,7 @@ func TestBuildOrderedToolProjections(t *testing.T) {
 	for _, caseName := range toolCases {
 		tc := findCase(t, allCases, caseName)
 		t.Run(tc.Description, func(t *testing.T) {
+			t.Parallel()
 			tools := toDBTools(t, tc.Tools)
 			items := repository.BuildOrderedToolProjections(tc.ToolIDs, tools)
 
@@ -204,6 +209,7 @@ func TestBuildOrderedToolProjections(t *testing.T) {
 }
 
 func TestBuildOrderedToolProjections_NilInputs(t *testing.T) {
+	t.Parallel()
 	items := repository.BuildOrderedToolProjections(nil, nil)
 	if len(items) != 0 {
 		t.Errorf("BuildOrderedToolProjections(nil, nil) returned %d items, want 0", len(items))

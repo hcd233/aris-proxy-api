@@ -2,6 +2,7 @@ package openai_chat_completion
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -33,10 +34,10 @@ func loadFixture(t *testing.T, name string) []byte {
 
 // mustE2EEnv 返回 (baseURL, apiKey) 或 t.Skip；
 // E2E 默认离线 skip，只有显式提供环境变量时才打到生产。
-func mustE2EEnv(t *testing.T) (string, string) {
+func mustE2EEnv(t *testing.T) (baseURL, apiKey string) {
 	t.Helper()
-	baseURL := os.Getenv("BASE_URL")
-	apiKey := os.Getenv("API_KEY")
+	baseURL = os.Getenv("BASE_URL")
+	apiKey = os.Getenv("API_KEY")
 	if baseURL == "" || apiKey == "" {
 		t.Skip("BASE_URL and API_KEY are required for e2e test")
 	}
@@ -53,7 +54,7 @@ func newE2EClient() *http.Client {
 // 调用方负责 close body 并对 resp 做断言。
 func postChatCompletions(t *testing.T, baseURL, apiKey string, body []byte) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(body)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(body)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -70,6 +71,7 @@ func postChatCompletions(t *testing.T, baseURL, apiKey string, body []byte) *htt
 // TestChatCompletion_ToolCall_NonStream 覆盖 kimi 工具调用的非流式路径；
 // 也验证 Moonshot 思考模式下缺失 reasoning_content 的补位逻辑对非流式也生效。
 func TestChatCompletion_ToolCall_NonStream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "tool_call_non_stream"))
@@ -120,6 +122,7 @@ func TestChatCompletion_ToolCall_NonStream(t *testing.T) {
 // 上游接受了我们的 reasoning_content 占位并真的开始推理；只看到空壳 role chunk
 // 不能证明链路健康（极端情况下 Moonshot 可能先发 role 再 500）。
 func TestChatCompletion_KimiThinking_MissingReasoningContent_Stream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "kimi_thinking_missing_reasoning_stream"))
@@ -191,6 +194,7 @@ func TestChatCompletion_KimiThinking_MissingReasoningContent_Stream(t *testing.T
 // {"error":{...}}，与代理层直接返回的 {"message":...} 不同；此处优先断言 200，
 // 因为 gpt-5.5 在生产环境有实际配置且被频繁调用。
 func TestChatCompletion_GPT55_AliasRegression_NonStream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "gpt55_alias_regression_non_stream"))
@@ -242,6 +246,7 @@ func TestChatCompletion_GPT55_AliasRegression_NonStream(t *testing.T) {
 //
 // 断言策略：HTTP 200 + 响应 JSON 关键字段存在。
 func TestChatCompletion_ToolObjectMissingProperties_NonStream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "tool_object_missing_properties_non_stream"))
@@ -284,6 +289,7 @@ func TestChatCompletion_ToolObjectMissingProperties_NonStream(t *testing.T) {
 //
 // 断言策略：HTTP 200 + text/event-stream + X-Trace-Id 响应头 + 读到实质内容 delta。
 func TestChatCompletion_ToolObjectMissingProperties_Stream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "tool_object_missing_properties_stream"))

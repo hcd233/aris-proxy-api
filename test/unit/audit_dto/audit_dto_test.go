@@ -10,6 +10,7 @@ import (
 )
 
 func TestListAuditLogsRsp_EmptyLogs(t *testing.T) {
+	t.Parallel()
 	rsp := &dto.ListAuditLogsRsp{
 		Logs:     nil,
 		PageInfo: &model.PageInfo{Page: 1, PageSize: 20, Total: 0},
@@ -30,6 +31,7 @@ func TestListAuditLogsRsp_EmptyLogs(t *testing.T) {
 }
 
 func TestAuditLogItem_JSONTags(t *testing.T) {
+	t.Parallel()
 	createdAt := time.Date(2026, 5, 11, 10, 0, 0, 0, time.UTC)
 	item := dto.AuditLogItem{
 		ID:                  1,

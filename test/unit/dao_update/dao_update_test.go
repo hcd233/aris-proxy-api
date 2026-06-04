@@ -9,6 +9,7 @@ import (
 )
 
 func TestUpdateSelectFieldsWithNilValues(t *testing.T) {
+	t.Parallel()
 	info := map[string]any{
 		constant.FieldScore:    nil,
 		constant.FieldScoredAt: nil,
@@ -28,6 +29,7 @@ func TestUpdateSelectFieldsWithNilValues(t *testing.T) {
 }
 
 func TestUpdateSelectFieldsMixedValues(t *testing.T) {
+	t.Parallel()
 	now := 12345
 	info := map[string]any{
 		constant.FieldScore:      nil,
@@ -74,6 +76,7 @@ func TestUpdateSelectFieldsMixedValues(t *testing.T) {
 }
 
 func TestReflectValueOfNilPanicsOnIsZero(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("expected panic when calling reflect.ValueOf(nil).IsZero()")

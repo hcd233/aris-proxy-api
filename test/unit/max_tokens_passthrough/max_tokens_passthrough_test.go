@@ -36,6 +36,7 @@ func buildForwardBody(t *testing.T, req *dto.OpenAIChatCompletionReq, upstreamMo
 
 // TestForwardNative_MaxTokensPreserved 回归：用户请求中的 max_tokens 必须原样透传给上游。
 func TestForwardNative_MaxTokensPreserved(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model:     "gpt-5.5",
 		MaxTokens: lo.ToPtr(32000),
@@ -59,6 +60,7 @@ func TestForwardNative_MaxTokensPreserved(t *testing.T) {
 // TestForwardNative_MaxCompletionTokensPreserved 当用户主动指定
 // max_completion_tokens（例如调用 GPT-5 / o1 系列）时，同样必须原样透传。
 func TestForwardNative_MaxCompletionTokensPreserved(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model:               "gpt-5.5",
 		MaxCompletionTokens: lo.ToPtr(16000),
@@ -81,6 +83,7 @@ func TestForwardNative_MaxCompletionTokensPreserved(t *testing.T) {
 // TestForwardNative_BothFieldsPreserved 当用户同时传了 max_tokens 和
 // max_completion_tokens 时（某些客户端为兼容老/新模型会同时带上），两者都应原样透传。
 func TestForwardNative_BothFieldsPreserved(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model:               "gpt-5.5",
 		MaxTokens:           lo.ToPtr(8000),
@@ -104,6 +107,7 @@ func TestForwardNative_BothFieldsPreserved(t *testing.T) {
 // TestForwardNative_ModelAliasReplaced 顺带验证：upstream body 中的 model
 // 字段已经被替换成上游真实 model，而不是用户请求里的别名。
 func TestForwardNative_ModelAliasReplaced(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model:     "gpt-5.5", // 用户层别名
 		MaxTokens: lo.ToPtr(1024),
