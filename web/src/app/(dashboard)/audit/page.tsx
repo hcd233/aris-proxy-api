@@ -24,6 +24,7 @@ import {
   ListFilter,
   Check,
   Clock,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,6 +34,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 type TimeRangeKey = "1h" | "24h" | "7d" | "custom";
 
@@ -62,6 +69,12 @@ function computeRange(
   return { startTime: start.toISOString(), endTime: now.toISOString() };
 }
 
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 function formatTokens(input: number, output: number): string {
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
   return `${fmt(input)} / ${fmt(output)}`;
@@ -70,7 +83,7 @@ function formatTokens(input: number, output: number): string {
 function formatCacheTokens(write: number, read: number): string | null {
   if (write === 0 && read === 0) return null;
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  return `c: ${fmt(write)} / ${fmt(read)}`;
+  return `c: ${fmt(read)} / ${fmt(write)}`;
 }
 
 export default function AuditPage() {
@@ -260,20 +273,29 @@ export default function AuditPage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{log.model || "—"}</p>
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {log.userName || "—"} · {log.apiKeyName || "—"} · {log.apiProtocol || "—"}
+                            {log.userName || "—"} · {log.apiKeyName || "—"}
                           </p>
                         </div>
-                        <Badge
-                          variant={ok ? "secondary" : "destructive"}
-                          className="shrink-0 text-xs"
-                          title={hasError ? log.errorMessage : undefined}
-                        >
-                          {log.upstreamStatusCode}
-                        </Badge>
+                        <div className="shrink-0 text-right">
+                          <Badge
+                            variant={ok ? "secondary" : "destructive"}
+                            className="text-xs"
+                          >
+                            {log.upstreamStatusCode}
+                          </Badge>
+                          {hasError && (
+                            <p className="mt-1 max-w-[200px] truncate text-xs text-destructive">
+                              {log.errorMessage}
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
-                        <span>{log.firstTokenLatencyMs}ms</span>
+                        <span>I: {log.firstTokenLatencyMs}ms</span>
+                        {log.streamDurationMs > 0 && (
+                          <span>O: {(log.streamDurationMs / 1000).toFixed(1)}s</span>
+                        )}
                         {cacheInfo && <span>{cacheInfo}</span>}
                         <span
                           className="cursor-pointer font-mono underline-offset-2 hover:underline"
@@ -287,7 +309,7 @@ export default function AuditPage() {
                         </span>
                       </div>
                       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground/70">
-                        <span>{new Date(log.createdAt).toLocaleString()}</span>
+                        <span>{formatTime(log.createdAt)}</span>
                         <span
                           className="inline-block transition-transform duration-200 motion-reduce:transition-none"
                           style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
@@ -320,19 +342,19 @@ export default function AuditPage() {
                               <p>{log.outputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Cache Write</span>
-                              <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Cache Hit</span>
+                              <span className="text-muted-foreground">Cache Read</span>
                               <p>{log.cacheReadInputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">First Token</span>
+                              <span className="text-muted-foreground">Cache Creation</span>
+                              <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">I (First Token)</span>
                               <p>{log.firstTokenLatencyMs}ms</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Stream Duration</span>
+                              <span className="text-muted-foreground">O (Stream Duration)</span>
                               <p>{log.streamDurationMs > 0 ? `${(log.streamDurationMs / 1000).toFixed(1)}s` : "—"}</p>
                             </div>
                             <div>
@@ -347,6 +369,10 @@ export default function AuditPage() {
                               <span className="text-muted-foreground">User</span>
                               <p>{log.userName || "—"}</p>
                             </div>
+                            <div>
+                              <span className="text-muted-foreground">API Protocol</span>
+                              <p>{log.apiProtocol || "—"}</p>
+                            </div>
                           </div>
 
                           <div className="mt-3 border-t border-border pt-2 text-xs">
@@ -356,7 +382,7 @@ export default function AuditPage() {
 
                           <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-xs">
                             <span className="text-muted-foreground">
-                              {new Date(log.createdAt).toLocaleString()}
+                              {formatTime(log.createdAt)}
                             </span>
                             <span
                               className="cursor-pointer font-mono text-muted-foreground underline-offset-2 hover:underline"
@@ -379,11 +405,10 @@ export default function AuditPage() {
                   <TableHead>Time</TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead>User</TableHead>
-                  <TableHead>Provider</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
                   <TableHead>Latency</TableHead>
-                  <TableHead>UA</TableHead>
+                  <TableHead>Metadata</TableHead>
                   <TableHead>TraceID</TableHead>
                 </TableRow>
               </TableHeader>
@@ -398,32 +423,27 @@ export default function AuditPage() {
                       className={ok ? "" : "bg-destructive/5"}
                     >
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        <div>{new Date(log.createdAt).toLocaleTimeString()}</div>
-                        <div className="text-xs text-muted-foreground/70">
-                          {new Date(log.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                        </div>
+                        {formatTime(log.createdAt)}
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
                       <TableCell>
                         <div className="text-sm">{log.userName || "—"}</div>
                         <div className="text-xs text-muted-foreground">
-                          {log.apiKeyName || ""}{log.userEmail ? ` · ${log.userEmail}` : ""}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">{log.apiProtocol || "—"}</div>
-                        <div className="text-xs text-muted-foreground">
-                          upstream: {log.upstreamProtocol || "—"}
+                          {log.apiKeyName || "—"}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={ok ? "secondary" : "destructive"}
                           className="text-xs"
-                          title={hasError ? log.errorMessage : undefined}
                         >
                           {log.upstreamStatusCode}
                         </Badge>
+                        {hasError && (
+                          <div className="mt-1 max-w-[160px] truncate text-xs text-destructive">
+                            {log.errorMessage}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div>{formatTokens(log.inputTokens, log.outputTokens)}</div>
@@ -432,16 +452,36 @@ export default function AuditPage() {
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        <div>{log.firstTokenLatencyMs}ms</div>
-                        {log.streamDurationMs > 0 && (
-                          <div className="text-xs text-muted-foreground/70">{(log.streamDurationMs / 1000).toFixed(1)}s</div>
-                        )}
+                        <div className="text-xs">IO</div>
+                        <div className="text-xs">
+                          I: {log.firstTokenLatencyMs}ms
+                          {log.streamDurationMs > 0 && (
+                            <span> O: {(log.streamDurationMs / 1000).toFixed(1)}s</span>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell
-                        className="max-w-[160px] truncate text-xs"
-                        title={log.userAgent || undefined}
-                      >
-                        {log.userAgent || "—"}
+                      <TableCell>
+                        <TooltipProvider>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <button
+                                  type="button"
+                                  className="cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                                />
+                              }
+                            >
+                              <Info className="size-4" />
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-xs">
+                              <div className="flex flex-col gap-1 font-mono">
+                                <span>UserAgent: {log.userAgent || "—"}</span>
+                                <span>ApiProtocol: {log.apiProtocol || "—"}</span>
+                                <span>UpstreamProtocol: {log.upstreamProtocol || "—"}</span>
+                              </div>
+                            </TooltipContent>
+                          </TooltipRoot>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
