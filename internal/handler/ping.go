@@ -64,11 +64,11 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 	return &huma.StreamResponse{
 		Body: func(ctx huma.Context) {
 			fCtx := humafiber.Unwrap(ctx)
-			fCtx.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeEventStream)
-			fCtx.Set(constant.HTTPTitleHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
+			fCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
 			_ = fCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // SSE healthcheck
 				for i := range constant.SSEHeartbeatCount {

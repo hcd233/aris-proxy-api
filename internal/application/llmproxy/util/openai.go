@@ -259,8 +259,8 @@ func SendOpenAIUpstreamError(statusCode int, body string) (rsp *huma.StreamRespo
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
-			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{ //nolint:errcheck // best-effort write on error response
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
 				Error: &dto.OpenAIError{
 					Message: errMsg,
 					Type:    constant.UpstreamErrorType,
