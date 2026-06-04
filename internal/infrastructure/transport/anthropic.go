@@ -146,10 +146,10 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep vo.UpstreamEndpoint
 	// 透传客户端请求头
 	applyPassthroughRequestHeaders(ctx, req.Header)
 
-	req.Header.Set(constant.HTTPTitleHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
-	req.Header.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	req.Header.Set(constant.HTTPTitleHeaderAPIKey, ep.APIKey)
-	req.Header.Set(constant.HTTPTitleHeaderAnthropicVersion, constant.AnthropicAPIVersion)
+	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+	req.Header.Set(constant.HTTPHeaderAPIKey, ep.APIKey)
+	req.Header.Set(constant.HTTPHeaderAnthropicVersion, constant.AnthropicAPIVersion)
 
 	log.Info("[AnthropicProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),

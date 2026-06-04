@@ -91,7 +91,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build create request failed: %v", err)
 	}
-	createReq.Header.Set(constant.HTTPTitleHeaderAuthorization, constant.HTTPAuthBearerPrefix+jwtToken)
+	createReq.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+jwtToken)
 	createReq.Header.Set("Content-Type", constant.HTTPContentTypeJSON)
 
 	createHTTPResp, err := client.Do(createReq)
@@ -104,10 +104,10 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 		body, _ := io.ReadAll(createHTTPResp.Body)
 		t.Fatalf("create share unexpected status=%d (traceID=%s); body=%s",
 			createHTTPResp.StatusCode,
-			createHTTPResp.Header.Get(constant.HTTPTitleHeaderTraceID),
+			createHTTPResp.Header.Get(constant.HTTPHeaderTraceID),
 			string(body))
 	}
-	createTraceID := createHTTPResp.Header.Get(constant.HTTPTitleHeaderTraceID)
+	createTraceID := createHTTPResp.Header.Get(constant.HTTPHeaderTraceID)
 	t.Logf("Create share traceID=%s", createTraceID)
 
 	createBodyBytes, err := io.ReadAll(createHTTPResp.Body)
@@ -144,10 +144,10 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 		body, _ := io.ReadAll(getHTTPResp.Body)
 		t.Fatalf("get share unexpected status=%d (traceID=%s); body=%s",
 			getHTTPResp.StatusCode,
-			getHTTPResp.Header.Get(constant.HTTPTitleHeaderTraceID),
+			getHTTPResp.Header.Get(constant.HTTPHeaderTraceID),
 			string(body))
 	}
-	getTraceID := getHTTPResp.Header.Get(constant.HTTPTitleHeaderTraceID)
+	getTraceID := getHTTPResp.Header.Get(constant.HTTPHeaderTraceID)
 	t.Logf("Get share traceID=%s", getTraceID)
 
 	getBodyBytes, err := io.ReadAll(getHTTPResp.Body)
@@ -195,7 +195,7 @@ func TestSessionShare_Create_RejectsZeroSessionID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build request failed: %v", err)
 	}
-	req.Header.Set(constant.HTTPTitleHeaderAuthorization, constant.HTTPAuthBearerPrefix+jwtToken)
+	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+jwtToken)
 	req.Header.Set("Content-Type", constant.HTTPContentTypeJSON)
 
 	resp, err := newE2EClient().Do(req)
@@ -214,5 +214,5 @@ func TestSessionShare_Create_RejectsZeroSessionID(t *testing.T) {
 		}
 	}
 	t.Logf("zero sessionId rejected as expected, status=%d, traceID=%s",
-		resp.StatusCode, resp.Header.Get(constant.HTTPTitleHeaderTraceID))
+		resp.StatusCode, resp.Header.Get(constant.HTTPHeaderTraceID))
 }

@@ -77,20 +77,20 @@ func TestGetPassthroughHeaders_EmptyMap(t *testing.T) {
 func TestMaskHTTPHeadersForLog_MasksSensitiveHeaders(t *testing.T) {
 	t.Parallel()
 	headers := http.Header{
-		constant.HTTPTitleHeaderAuthorization:      {"Bearer raw-secret-token"},
-		constant.HTTPTitleHeaderCookie:             {"session=raw-secret-cookie"},
-		constant.HTTPLowerHeaderProxyAuthorization: {"Basic raw-proxy-secret"},
-		constant.HTTPTitleHeaderAPIKey:             {"raw-api-key"},
-		"X-Custom-Header":                          {"keep-me"},
+		constant.HTTPHeaderAuthorization:      {"Bearer raw-secret-token"},
+		constant.HTTPHeaderCookie:             {"session=raw-secret-cookie"},
+		constant.HTTPHeaderProxyAuthorization: {"Basic raw-proxy-secret"},
+		constant.HTTPHeaderAPIKey:             {"raw-api-key"},
+		"X-Custom-Header":                     {"keep-me"},
 	}
 
 	got := util.MaskHTTPHeadersForLog(headers)
 
 	for _, key := range []string{
-		constant.HTTPTitleHeaderAuthorization,
-		constant.HTTPTitleHeaderCookie,
-		constant.HTTPLowerHeaderProxyAuthorization,
-		constant.HTTPTitleHeaderAPIKey,
+		constant.HTTPHeaderAuthorization,
+		constant.HTTPHeaderCookie,
+		constant.HTTPHeaderProxyAuthorization,
+		constant.HTTPHeaderAPIKey,
 	} {
 		if got[key] != constant.MaskSecretPlaceholder {
 			t.Errorf("%s = %v, want %s", key, got[key], constant.MaskSecretPlaceholder)

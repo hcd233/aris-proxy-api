@@ -61,15 +61,15 @@ func (dao *CosObjDAO) CreateDir(ctx context.Context, userID uint) (objectInfo *O
 		return
 	}
 
-	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPTitleHeaderLastModified)) //nolint:errcheck // ignore parse errors for optional header
+	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPHeaderLastModified))
 
 	objectInfo = &ObjectInfo{
 		ObjectName:   dirName,
-		ContentType:  head.Header.Get(constant.HTTPTitleHeaderContentType),
+		ContentType:  head.Header.Get(constant.HTTPHeaderContentType),
 		Size:         0,
 		LastModified: lastModified,
 		Expires:      time.Time{},
-		ETag:         strings.Trim(head.Header.Get(constant.HTTPTitleHeaderETag), constant.QuoteString),
+		ETag:         strings.Trim(head.Header.Get(constant.HTTPHeaderETag), constant.QuoteString),
 	}
 
 	return
@@ -137,15 +137,15 @@ func (dao *CosObjDAO) DownloadObject(ctx context.Context, userID uint, objectNam
 		return
 	}
 
-	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPTitleHeaderLastModified)) //nolint:errcheck // ignore parse errors for optional header
+	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPHeaderLastModified))
 
 	objectInfo = &ObjectInfo{
 		ObjectName:   objectName,
-		ContentType:  head.Header.Get(constant.HTTPTitleHeaderContentType),
+		ContentType:  head.Header.Get(constant.HTTPHeaderContentType),
 		Size:         head.ContentLength,
 		LastModified: lastModified,
 		Expires:      time.Time{},
-		ETag:         strings.Trim(head.Header.Get(constant.HTTPTitleHeaderETag), constant.QuoteString),
+		ETag:         strings.Trim(head.Header.Get(constant.HTTPHeaderETag), constant.QuoteString),
 	}
 
 	_, err = io.Copy(writer, resp.Body)

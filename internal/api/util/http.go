@@ -34,7 +34,7 @@ func WriteErrorResponse(bodyWriter io.Writer, err *model.Error) error {
 
 func WriteErrorHTTPResponse(ctx huma.Context, statusCode int, err *model.Error) error {
 	ctx.SetStatus(statusCode)
-	ctx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
+	ctx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 	return WriteErrorResponse(ctx.BodyWriter(), err)
 }
 
@@ -47,11 +47,11 @@ func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
 					fiberCtx.Set(k, hv)
 				}
 			}
-			fiberCtx.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeEventStream)
-			fiberCtx.Set(constant.HTTPTitleHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fiberCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fiberCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fiberCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
+			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fiberCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fiberCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fiberCtx.Status(fiber.StatusOK)
 			_ = fiberCtx.SendStreamWriter(handler) //nolint:errcheck // stream write errors propagate via the Fiber error handler
 		},
@@ -70,14 +70,14 @@ func (rw JSONResponseWriter) WriteJSON(v any) {
 		}
 	}
 	rw.HumaCtx.SetStatus(fiber.StatusOK)
-	rw.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	_, _ = rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v))) //nolint:errcheck // best-effort response write
+	rw.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+	_, _ = rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v)))
 }
 
 func (rw JSONResponseWriter) WriteError(statusCode int, body []byte) {
 	rw.HumaCtx.SetStatus(statusCode)
-	rw.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	_, _ = rw.HumaCtx.BodyWriter().Write(body) //nolint:errcheck // best-effort response write
+	rw.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+	_, _ = rw.HumaCtx.BodyWriter().Write(body)
 }
 
 func WrapJSONResponse(ctx context.Context, handler func(writer JSONResponseWriter)) *huma.StreamResponse {
@@ -96,8 +96,8 @@ func WriteUpstreamError(writer JSONResponseWriter, err error, fallbackBody []byt
 			writer.HumaCtx.SetHeader(k, v)
 		}
 		writer.HumaCtx.SetStatus(upstreamErr.StatusCode)
-		writer.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body)) //nolint:errcheck // best-effort write on error response
+		writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body))
 		return
 	}
 	log.Error("[ProxyService] Proxy error", zap.Error(err))
