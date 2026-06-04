@@ -552,6 +552,7 @@ func newSessionDependencies(
 	listTools sessionport.ListSessionToolsHandler,
 	deleteSession sessionport.DeleteSessionHandler,
 	sessionRepo session.SessionRepository,
+	sessionCache sessionport.SessionDetailCache,
 ) handler.SessionDependencies {
 	return handler.SessionDependencies{
 		ListByUser:    listByUser,
@@ -562,6 +563,7 @@ func newSessionDependencies(
 		ListTools:     listTools,
 		DeleteSession: deleteSession,
 		SessionRepo:   sessionRepo,
+		SessionCache:  sessionCache,
 	}
 }
 

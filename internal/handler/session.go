@@ -56,6 +56,7 @@ type SessionDependencies struct {
 	ListTools     port.ListSessionToolsHandler
 	DeleteSession port.DeleteSessionHandler
 	SessionRepo   session.SessionRepository
+	SessionCache  port.SessionDetailCache
 }
 
 type sessionHandler struct {
@@ -67,6 +68,7 @@ type sessionHandler struct {
 	listTools     port.ListSessionToolsHandler
 	deleteSession port.DeleteSessionHandler
 	sessionRepo   session.SessionRepository
+	sessionCache  port.SessionDetailCache
 }
 
 // NewSessionHandler 创建Session处理器
@@ -85,6 +87,7 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 		listTools:     deps.ListTools,
 		deleteSession: deps.DeleteSession,
 		sessionRepo:   deps.SessionRepo,
+		sessionCache:  deps.SessionCache,
 	}
 }
 
@@ -660,6 +663,11 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 			zap.Uint("sessionID", req.Body.SessionID), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	if delErr := h.sessionCache.DeleteSessionMeta(ctx, req.Body.SessionID); delErr != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Score session: cache delete failed",
+			zap.Uint("sessionID", req.Body.SessionID), zap.Error(delErr))
 	}
 
 	rsp.SessionID = req.Body.SessionID

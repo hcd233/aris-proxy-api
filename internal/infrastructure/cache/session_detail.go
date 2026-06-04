@@ -59,6 +59,14 @@ func (s *sessionDetailCache) SetSessionMeta(ctx context.Context, record *session
 	return nil
 }
 
+func (s *sessionDetailCache) DeleteSessionMeta(ctx context.Context, sessionID uint) error {
+	key := fmt.Sprintf(constant.SessionMetaKeyTemplate, sessionID)
+	if err := s.cache.Del(ctx, key).Err(); err != nil {
+		return ierr.Wrap(ierr.ErrInternal, err, "failed to delete session meta cache")
+	}
+	return nil
+}
+
 func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (map[uint]*sessionport.MessageCacheRecord, []uint, error) {
 	if len(ids) == 0 {
 		return map[uint]*sessionport.MessageCacheRecord{}, nil, nil
