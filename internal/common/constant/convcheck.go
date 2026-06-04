@@ -83,6 +83,7 @@ const (
 	ConvCheckPrefixErr             = "Err"
 	ConvCheckMsgDeprecatedConstErr = "constant.ErrXxx is deprecated, use ierr.ErrXxx.BizError()"
 	ConvCheckTokConst              = "const"
+	ConvCheckTokType               = "type"
 	ConvCheckMsgForwardingConst    = "forwarding const X = pkg.Y is prohibited in constant/enum, use the original constant directly"
 	ConvCheckErrorPrefix           = "Error"
 )
@@ -171,6 +172,10 @@ const (
 const (
 	ConvCheckPrefixTest         = "test/"
 	ConvCheckSeparatorSlash     = "/"
+	ConvCheckSuffixREQ          = "REQ"
+	ConvCheckSuffixRSP          = "RSP"
+	ConvCheckSuffixREQUEST      = "REQUEST"
+	ConvCheckSuffixRESPONSE     = "RESPONSE"
 	ConvCheckPrefixTestify      = "github.com/stretchr/testify"
 	ConvCheckMsgTestingInternal = "*_test.go in internal/ is prohibited, place tests under test/ directory"
 	ConvCheckMsgTestingRoot     = "*_test.go in test/ root is prohibited, place in a topic subdirectory"
@@ -226,6 +231,8 @@ const (
 	ConvCheckMsgRootContext         = "context.Background()/context.TODO() is prohibited in interface layer, pass context from the caller"
 	ConvCheckMsgDBRootContext       = "binding root context to DB is prohibited, use the injected base DB and bind request context at operation time"
 	ConvCheckMsgPassthrough         = "passthrough wrapper detected, inline the logic or merge the method"
+
+	ConvCheckMsgDTONaming = "Req/Request/Rsp/Response struct types must be defined in internal/dto, not here"
 )
 
 // magic 检查常量

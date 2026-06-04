@@ -86,7 +86,7 @@ lint: lint-conv lint-static
 lint-conv:
 	@go run $(MAIN) lint conv ./...
 
-## lint-static: 运行 Go 静态分析
+## lint-static: run go vet + staticcheck + golangci-lint
 lint-static:
 	@go run $(MAIN) lint static ./...
 

@@ -45,6 +45,7 @@ const (
 	GoVetCommand              = "vet"
 	GoAllPackagesPattern      = "./..."
 	StaticcheckCommand        = "staticcheck"
+	GolangciLintCommand       = "golangci-lint"
 	StaticChecksFailedMessage = "static checks failed"
 	GoEnvCommand              = "env"
 	GoEnvKeyGOPATH            = "GOPATH"

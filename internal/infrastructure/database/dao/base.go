@@ -68,7 +68,11 @@ func (dao *baseDAO[ModelT]) Update(db *gorm.DB, data *ModelT, info map[string]an
 
 	sql := db.Model(data)
 	selectFields := lo.Filter(lo.Keys(info), func(item string, _ int) bool {
-		return !reflect.ValueOf(info[item]).IsZero()
+		v := info[item]
+		if v == nil {
+			return true
+		}
+		return !reflect.ValueOf(v).IsZero()
 	})
 	sql = sql.Select(selectFields)
 	err = sql.Updates(info).Error

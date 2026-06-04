@@ -40,4 +40,6 @@ const (
 	RuleTestingRootFile     = "testing.root_file"
 	RuleTestingTestify      = "testing.testify"
 	RuleTestingSleep        = "testing.sleep"
+
+	RuleDTONaming = "architecture.dto_naming"
 )
