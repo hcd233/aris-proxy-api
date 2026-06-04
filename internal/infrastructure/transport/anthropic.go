@@ -40,7 +40,7 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep vo.Upstrea
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -64,7 +64,7 @@ func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep vo.U
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	var collectedEvents []dto.AnthropicSSEEvent
 	var currentEvent string
@@ -114,7 +114,7 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.UpstreamE
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -165,8 +165,8 @@ func (p *anthropicProxy) sendRequest(ctx context.Context, ep vo.UpstreamEndpoint
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck
-		_ = resp.Body.Close()                 //nolint:errcheck
+		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck // read best effort on error path
+		_ = resp.Body.Close()                 //nolint:errcheck // close best effort on error path
 		log.Error("[AnthropicProxy] Upstream returned non-200 status",
 			zap.String("upstreamURL", upstreamURL),
 			zap.Int("statusCode", resp.StatusCode),

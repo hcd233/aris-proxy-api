@@ -425,7 +425,7 @@ func runAnthropicScript(t *testing.T, baseURL, apiKey string, script *anthropicS
 	return perTurnStats, total
 }
 
-func splitAnthropicScript(t *testing.T, script *anthropicScript) ([]anthropicMessage, []string) {
+func splitAnthropicScript(t *testing.T, script *anthropicScript) (messages []anthropicMessage, systemBlocks []string) { //nolint:unparam // messages always nil - data not needed yet
 	t.Helper()
 	if script.Model == "" {
 		t.Fatal("anthropic script missing model")
@@ -592,7 +592,7 @@ func callAnthropicStream(t *testing.T, baseURL, apiKey string, body []byte) (str
 	return assistantText, anthropicCacheStats(lastUsage)
 }
 
-func parseOpenAIStreamPayload(payload string) (*openAIUsage, bool, string, string) {
+func parseOpenAIStreamPayload(payload string) (*openAIUsage, bool, string, string) { //nolint:gocritic // unnamed results acceptable in test helpers
 	var chunk struct {
 		Choices []struct {
 			Delta struct {
@@ -618,7 +618,7 @@ func parseOpenAIStreamPayload(payload string) (*openAIUsage, bool, string, strin
 	return chunk.Usage, chunk.Usage != nil, content.String(), reasoning.String()
 }
 
-func parseAnthropicStreamPayload(eventType, payload string) (*anthropicUsage, bool, string, string) {
+func parseAnthropicStreamPayload(eventType, payload string) (*anthropicUsage, bool, string, string) { //nolint:gocritic // unnamed results acceptable in test helpers
 	var event struct {
 		Message *struct {
 			Usage *anthropicUsage `json:"usage"`

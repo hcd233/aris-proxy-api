@@ -108,50 +108,23 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 }
 
 func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	log := logger.WithCtx(ctx)
+	return apiutil.WrapStreamResponse(u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
+}
+
+func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) func(w *bufio.Writer) {
 	conv := &converter.OpenAIProtocolConverter{}
 	tracker := converter.NewSSEContentBlockTracker()
-	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
+	return func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
 		isFirst := true
-		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
-			if firstTokenTime.IsZero() && proxyutil.HasNonEmptyDelta(chunk) {
-				firstTokenTime = time.Now()
-				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
-			}
-			events, convErr := conv.ToAnthropicSSEResponse(chunk, isFirst, exposedModel, tracker)
-			isFirst = false
-			if convErr != nil {
-				log.Error("[AnthropicUseCase] Failed to convert chat chunk to anthropic SSE", zap.Error(convErr))
-				return convErr
-			}
-			for _, event := range events {
-				if _, writeErr := fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event); writeErr != nil {
-					log.Debug("[AnthropicUseCase] Failed to write converted SSE event", zap.Error(writeErr))
-				}
-				if _, dataErr := fmt.Fprintf(w, constant.SSEDataLineTemplate, event.Data); dataErr != nil {
-					log.Debug("[AnthropicUseCase] Failed to write converted SSE data", zap.Error(dataErr))
-				}
-			}
-			return w.Flush()
-		})
+		onChunk := u.buildAnthropicChatStreamCallback(conv, tracker, w, exposedModel, startTime, &firstTokenTime, &firstTokenLatencyMs, &isFirst)
+		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, onChunk)
 		if !firstTokenTime.IsZero() {
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
-		var anthropicMsg *dto.AnthropicMessage
-		if err == nil {
-			if completion != nil {
-				anthropicMsg, _ = conv.ToAnthropicResponse(completion) //nolint:errcheck // best-effort conversion
-				if anthropicMsg != nil {
-					anthropicMsg.Model = exposedModel
-				}
-			}
-			_ = proxyutil.WriteAnthropicMessageStop(w) //nolint:errcheck // best-effort write
-		} else {
-			proxyutil.WriteUpstreamSSEError(ctx, w, err)
-		}
+		anthropicMsg := u.finalizeAnthropicChatStream(ctx, conv, w, completion, err, exposedModel)
 		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model)
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, firstTokenLatencyMs)
 		task.StreamDurationMs = streamDurationMs
@@ -160,7 +133,42 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
-	})
+	}
+}
+
+func (u *anthropicUseCase) buildAnthropicChatStreamCallback(conv *converter.OpenAIProtocolConverter, tracker *converter.SSEContentBlockTracker, w *bufio.Writer, exposedModel string, startTime time.Time, firstTokenTime *time.Time, firstTokenLatencyMs *int64, isFirst *bool) func(*dto.OpenAIChatCompletionChunk) error {
+	return func(chunk *dto.OpenAIChatCompletionChunk) error {
+		if firstTokenTime.IsZero() && proxyutil.HasNonEmptyDelta(chunk) {
+			*firstTokenTime = time.Now()
+			*firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+		}
+		events, convErr := conv.ToAnthropicSSEResponse(chunk, *isFirst, exposedModel, tracker)
+		*isFirst = false
+		if convErr != nil {
+			return convErr
+		}
+		for _, event := range events {
+			fmt.Fprintf(w, constant.SSEEventLineTemplate, event.Event) //nolint:errcheck // best-effort write
+			fmt.Fprintf(w, constant.SSEDataLineTemplate, event.Data)   //nolint:errcheck // best-effort write
+		}
+		return w.Flush()
+	}
+}
+
+func (u *anthropicUseCase) finalizeAnthropicChatStream(ctx context.Context, conv *converter.OpenAIProtocolConverter, w *bufio.Writer, completion *dto.OpenAIChatCompletion, upstreamErr error, exposedModel string) *dto.AnthropicMessage {
+	if upstreamErr != nil {
+		proxyutil.WriteUpstreamSSEError(ctx, w, upstreamErr)
+		return nil
+	}
+	var anthropicMsg *dto.AnthropicMessage
+	if completion != nil {
+		anthropicMsg, _ = conv.ToAnthropicResponse(completion) //nolint:errcheck // best-effort conversion
+		if anthropicMsg != nil {
+			anthropicMsg.Model = exposedModel
+		}
+	}
+	_ = proxyutil.WriteAnthropicMessageStop(w) //nolint:errcheck // best-effort write
+	return anthropicMsg
 }
 
 func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {

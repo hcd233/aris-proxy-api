@@ -234,6 +234,11 @@ linters:
           - goconst
         path: "(internal/enum/|internal/common/constant/|internal/common/enum/)"
 
+      # 测试代码放宽 depguard (json schema 测试需要 encoding/json 确保 key 顺序)
+      - linters:
+          - depguard
+        path: "test/unit/json_schema/"
+
       # api 层初始化文件可能用到 encoding/json（Fiber JSON 编解码器配置）
       - linters:
           - depguard
@@ -252,7 +257,7 @@ linters:
         path: "internal/cron/"
         text: "SA1029"
 
-      # converter/dto 层的复杂嵌套是业务逻辑固有复杂度
+      # converter/dto/cron/middleware 层的复杂嵌套是业务逻辑固有复杂度
       - linters:
           - nestif
         path: "(internal/converter/|internal/dto/|internal/cron/|internal/middleware/)"
@@ -260,6 +265,11 @@ linters:
       # 测试代码放宽嵌套复杂度
       - linters:
           - nestif
+        path: "test/"
+
+      # 测试代码放宽认知复杂度
+      - linters:
+          - gocognit
         path: "test/"
 
       # 测试代码放宽 modernize（sort.Slice 等旧写法在测试中可接受）

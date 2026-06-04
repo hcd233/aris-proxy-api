@@ -216,9 +216,38 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 }
 
 func provideApplication(container *dig.Container) error {
-	if err := container.Provide(newEndpointResolver); err != nil {
+	if err := provideLLMProxyEndpointApp(container); err != nil {
 		return err
 	}
+	if err := provideAPIKeyApp(container); err != nil {
+		return err
+	}
+	if err := provideEndpointApp(container); err != nil {
+		return err
+	}
+	if err := provideModelApp(container); err != nil {
+		return err
+	}
+	if err := provideIdentityOAuth2App(container); err != nil {
+		return err
+	}
+	if err := provideAuditApp(container); err != nil {
+		return err
+	}
+	if err := provideSessionApp(container); err != nil {
+		return err
+	}
+	if err := provideLLMProxyUseCaseApp(container); err != nil {
+		return err
+	}
+	return nil
+}
+
+func provideLLMProxyEndpointApp(container *dig.Container) error {
+	return container.Provide(newEndpointResolver)
+}
+
+func provideAPIKeyApp(container *dig.Container) error {
 	if err := container.Provide(apikeycommand.NewUserExistenceChecker); err != nil {
 		return err
 	}
@@ -231,6 +260,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newListAPIKeysHandler); err != nil {
 		return err
 	}
+	return nil
+}
+
+func provideEndpointApp(container *dig.Container) error {
 	if err := container.Provide(newCreateEndpointHandler); err != nil {
 		return err
 	}
@@ -243,6 +276,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newListEndpointsHandler); err != nil {
 		return err
 	}
+	return nil
+}
+
+func provideModelApp(container *dig.Container) error {
 	if err := container.Provide(newCreateModelHandler); err != nil {
 		return err
 	}
@@ -255,6 +292,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newListModelsHandler); err != nil {
 		return err
 	}
+	return nil
+}
+
+func provideIdentityOAuth2App(container *dig.Container) error {
 	if err := container.Provide(newRefreshTokensHandler); err != nil {
 		return err
 	}
@@ -270,6 +311,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newHandleCallbackHandler); err != nil {
 		return err
 	}
+	return nil
+}
+
+func provideAuditApp(container *dig.Container) error {
 	if err := container.Provide(auditquery.NewListAllAuditLogsHandler); err != nil {
 		return err
 	}
@@ -315,6 +360,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newAuditService); err != nil {
 		return err
 	}
+	return nil
+}
+
+func provideSessionApp(container *dig.Container) error {
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
 		return err
 	}
@@ -339,6 +388,10 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newDeleteScoreSessionHandler); err != nil {
 		return err
 	}
+	return nil
+}
+
+func provideLLMProxyUseCaseApp(container *dig.Container) error {
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
 		return err
 	}

@@ -150,7 +150,7 @@ func NewSSEContentBlockTracker() *SSEContentBlockTracker {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
-func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatCompletionChunk, isFirst bool, model string, tracker *SSEContentBlockTracker) ([]dto.AnthropicSSEEvent, error) {
+func (c *OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatCompletionChunk, isFirst bool, model string, tracker *SSEContentBlockTracker) ([]dto.AnthropicSSEEvent, error) {
 	var events []dto.AnthropicSSEEvent
 
 	if isFirst {
@@ -175,69 +175,82 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 			continue
 		}
 
-		// 文本内容增量
-		if choice.Delta.Content != nil && *choice.Delta.Content != "" {
-			if _, started := tracker.startedTextBlocks[choice.Index]; !started {
-				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
-					Type: enum.AnthropicContentBlockTypeText,
-					Text: lo.ToPtr(""),
-				}))
-				tracker.startedTextBlocks[choice.Index] = struct{}{}
-			}
-			events = append(events, newTextDeltaEvent(choice.Index, *choice.Delta.Content))
-		}
-
-		// 推理内容增量（thinking 与 text 共用同一 index，用负数偏移区分）
-		if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
-			thinkingKey := -(choice.Index + 1)
-			if _, started := tracker.startedTextBlocks[thinkingKey]; !started {
-				events = append(events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
-					Type:     enum.AnthropicContentBlockTypeThinking,
-					Thinking: lo.ToPtr(""),
-				}))
-				tracker.startedTextBlocks[thinkingKey] = struct{}{}
-			}
-			events = append(events, newThinkingDeltaEvent(choice.Index, *choice.Delta.ReasoningContent))
-		}
-
-		// 工具调用增量
-		for _, tc := range choice.Delta.ToolCalls {
-			toolCallIndex := choice.Index
-			if tc.Index != nil {
-				toolCallIndex = *tc.Index
-			}
-			if tc.Function != nil && lo.FromPtr(tc.ID) != "" {
-				if _, started := tracker.startedToolBlocks[toolCallIndex]; !started {
-					name := tc.Function.Name
-					events = append(events, newContentBlockStartEvent(toolCallIndex, &dto.AnthropicContentBlock{
-						Type:  enum.AnthropicContentBlockTypeToolUse,
-						ID:    tc.ID,
-						Name:  &name,
-						Input: map[string]any{},
-					}))
-					tracker.startedToolBlocks[toolCallIndex] = struct{}{}
-				}
-			}
-			if tc.Function != nil && tc.Function.Arguments != "" {
-				events = append(events, newInputJSONDeltaEvent(toolCallIndex, tc.Function.Arguments))
-			}
-		}
-
-		// finish_reason
-		if choice.FinishReason != nil && *choice.FinishReason != "" {
-			events = append(events, dto.AnthropicSSEEvent{
-				Event: enum.AnthropicSSEEventTypeMessageDelta,
-				Data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEMessageDelta{
-					Delta: dto.AnthropicSSEMessageDeltaPayload{
-						StopReason: convertOpenAIFinishReasonToAnthropic(*choice.FinishReason),
-					},
-					Usage: convertChunkUsageToAnthropic(chunk.Usage),
-				})),
-			})
-		}
+		c.handleTextDelta(choice, tracker, &events)
+		c.handleThinkingDelta(choice, tracker, &events)
+		c.handleToolCallDelta(choice, tracker, &events)
+		c.handleFinishReasonDelta(choice, chunk, &events)
 	}
 
 	return events, nil
+}
+
+// handleTextDelta 处理文本内容增量
+func (*OpenAIProtocolConverter) handleTextDelta(choice *dto.OpenAIChatCompletionChunkChoice, tracker *SSEContentBlockTracker, events *[]dto.AnthropicSSEEvent) {
+	if choice.Delta.Content != nil && *choice.Delta.Content != "" {
+		if _, started := tracker.startedTextBlocks[choice.Index]; !started {
+			*events = append(*events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
+				Type: enum.AnthropicContentBlockTypeText,
+				Text: lo.ToPtr(""),
+			}))
+			tracker.startedTextBlocks[choice.Index] = struct{}{}
+		}
+		*events = append(*events, newTextDeltaEvent(choice.Index, *choice.Delta.Content))
+	}
+}
+
+// handleThinkingDelta 处理推理内容增量（thinking 与 text 共用同一 index，用负数偏移区分）
+func (*OpenAIProtocolConverter) handleThinkingDelta(choice *dto.OpenAIChatCompletionChunkChoice, tracker *SSEContentBlockTracker, events *[]dto.AnthropicSSEEvent) {
+	if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
+		thinkingKey := -(choice.Index + 1)
+		if _, started := tracker.startedTextBlocks[thinkingKey]; !started {
+			*events = append(*events, newContentBlockStartEvent(choice.Index, &dto.AnthropicContentBlock{
+				Type:     enum.AnthropicContentBlockTypeThinking,
+				Thinking: lo.ToPtr(""),
+			}))
+			tracker.startedTextBlocks[thinkingKey] = struct{}{}
+		}
+		*events = append(*events, newThinkingDeltaEvent(choice.Index, *choice.Delta.ReasoningContent))
+	}
+}
+
+// handleToolCallDelta 处理工具调用增量
+func (*OpenAIProtocolConverter) handleToolCallDelta(choice *dto.OpenAIChatCompletionChunkChoice, tracker *SSEContentBlockTracker, events *[]dto.AnthropicSSEEvent) {
+	for _, tc := range choice.Delta.ToolCalls {
+		toolCallIndex := choice.Index
+		if tc.Index != nil {
+			toolCallIndex = *tc.Index
+		}
+		if tc.Function != nil && lo.FromPtr(tc.ID) != "" {
+			if _, started := tracker.startedToolBlocks[toolCallIndex]; !started {
+				name := tc.Function.Name
+				*events = append(*events, newContentBlockStartEvent(toolCallIndex, &dto.AnthropicContentBlock{
+					Type:  enum.AnthropicContentBlockTypeToolUse,
+					ID:    tc.ID,
+					Name:  &name,
+					Input: map[string]any{},
+				}))
+				tracker.startedToolBlocks[toolCallIndex] = struct{}{}
+			}
+		}
+		if tc.Function != nil && tc.Function.Arguments != "" {
+			*events = append(*events, newInputJSONDeltaEvent(toolCallIndex, tc.Function.Arguments))
+		}
+	}
+}
+
+// handleFinishReasonDelta 处理 finish_reason
+func (*OpenAIProtocolConverter) handleFinishReasonDelta(choice *dto.OpenAIChatCompletionChunkChoice, chunk *dto.OpenAIChatCompletionChunk, events *[]dto.AnthropicSSEEvent) {
+	if choice.FinishReason != nil && *choice.FinishReason != "" {
+		*events = append(*events, dto.AnthropicSSEEvent{
+			Event: enum.AnthropicSSEEventTypeMessageDelta,
+			Data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEMessageDelta{
+				Delta: dto.AnthropicSSEMessageDeltaPayload{
+					StopReason: convertOpenAIFinishReasonToAnthropic(*choice.FinishReason),
+				},
+				Usage: convertChunkUsageToAnthropic(chunk.Usage),
+			})),
+		})
+	}
 }
 
 // ==================== Internal Helpers ====================
@@ -353,36 +366,11 @@ func convertAnthropicBlocksToOpenAIMessages(role string, blocks []*dto.Anthropic
 
 	var messages []*dto.OpenAIChatCompletionMessageParam
 
-	// 构建主消息
-	if len(contentParts) > 0 || len(thinkingParts) > 0 || len(toolCalls) > 0 {
-		mainMsg := &dto.OpenAIChatCompletionMessageParam{
-			Role: role,
-		}
-
-		if len(contentParts) > 0 {
-			if hasMultiModal {
-				mainMsg.Content = &dto.OpenAIMessageContent{Parts: contentParts}
-			} else {
-				// 纯文本，合并为单个字符串
-				var texts []string
-				for _, p := range contentParts {
-					texts = append(texts, lo.FromPtr(p.Text))
-				}
-				mainMsg.Content = &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")}
-			}
-		}
-
-		if len(thinkingParts) > 0 {
-			thinking := strings.Join(thinkingParts, "\n")
-			mainMsg.ReasoningContent = &thinking
-		}
-		if len(toolCalls) > 0 {
-			mainMsg.ToolCalls = toolCalls
-		}
+	mainMsg := buildOpenAIMainMessage(role, contentParts, thinkingParts, toolCalls, hasMultiModal)
+	if mainMsg != nil {
 		messages = append(messages, mainMsg)
 	}
 
-	// tool_result 消息附加在主消息之后
 	messages = append(messages, toolResultMessages...)
 
 	if len(messages) == 0 {
@@ -392,6 +380,38 @@ func convertAnthropicBlocksToOpenAIMessages(role string, blocks []*dto.Anthropic
 	}
 
 	return messages, nil
+}
+
+func buildOpenAIMainMessage(role string, contentParts []*dto.OpenAIChatCompletionContentPart, thinkingParts []string, toolCalls []*dto.OpenAIChatCompletionMessageToolCall, hasMultiModal bool) *dto.OpenAIChatCompletionMessageParam {
+	if len(contentParts) == 0 && len(thinkingParts) == 0 && len(toolCalls) == 0 {
+		return nil
+	}
+
+	msg := &dto.OpenAIChatCompletionMessageParam{
+		Role: role,
+	}
+
+	if len(contentParts) > 0 {
+		if hasMultiModal {
+			msg.Content = &dto.OpenAIMessageContent{Parts: contentParts}
+		} else {
+			var texts []string
+			for _, p := range contentParts {
+				texts = append(texts, lo.FromPtr(p.Text))
+			}
+			msg.Content = &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")}
+		}
+	}
+
+	if len(thinkingParts) > 0 {
+		thinking := strings.Join(thinkingParts, "\n")
+		msg.ReasoningContent = &thinking
+	}
+	if len(toolCalls) > 0 {
+		msg.ToolCalls = toolCalls
+	}
+
+	return msg
 }
 
 func extractAnthropicToolResultText(content *dto.AnthropicToolResultContent) string {

@@ -230,53 +230,23 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 			}
 
 		case enum.AnthropicContentBlockTypeRedactedThinking:
-			// redacted_thinking 块不包含用户可见的内容，跳过（data 字段是加密数据）
 			continue
 
 		case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
-			args, err := sonic.MarshalString(block.Input)
+			tc, err := buildToolCallFromAnthropicBlock(block, i)
 			if err != nil {
-				return ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
+				return err
 			}
-			id := ""
-			if block.ID != nil {
-				id = *block.ID
-			}
-			name := ""
-			if block.Name != nil {
-				name = *block.Name
-			}
-			toolCalls = append(toolCalls, &vo.UnifiedToolCall{
-				ID:        id,
-				Name:      name,
-				Arguments: args,
-			})
+			toolCalls = append(toolCalls, tc)
 
 		case enum.AnthropicContentBlockTypeToolResult:
-			if block.ToolUseID != nil {
-				toolResultID = *block.ToolUseID
+			id, content := extractToolResultContent(block)
+			if id != "" {
+				toolResultID = id
 			}
-			if block.Content != nil {
-				// tool_result 的 content 可以是字符串或 ContentBlock 数组
-				if block.Content.Text != "" && len(block.Content.Blocks) == 0 {
-					toolResultContent = &vo.UnifiedContent{Text: block.Content.Text}
-				} else if len(block.Content.Blocks) > 0 {
-					// 嵌套的 content blocks，提取文本
-					var nestedTexts []string
-					for _, nested := range block.Content.Blocks {
-						if nested.Type == enum.AnthropicContentBlockTypeText && nested.Text != nil {
-							nestedTexts = append(nestedTexts, *nested.Text)
-						}
-						// 其他类型（image 等）也可以在这里扩展
-					}
-					if len(nestedTexts) > 0 {
-						toolResultContent = &vo.UnifiedContent{Text: strings.Join(nestedTexts, "\n")}
-					}
-				}
-			}
+			toolResultContent = content
 
 		case enum.AnthropicContentBlockTypeWebSearchToolResult, enum.AnthropicContentBlockTypeCodeExecutionToolResult, enum.AnthropicContentBlockTypeWebFetchToolResult:
-			// 服务器工具结果，content 中包含搜索/执行结果等，跳过详细存储
 			continue
 
 		default:
@@ -284,26 +254,65 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 		}
 	}
 
-	// 设置 ReasoningContent
 	if len(thinkingParts) > 0 {
 		um.ReasoningContent = strings.Join(thinkingParts, "\n")
 	}
 
-	// 设置 ToolCalls
 	if len(toolCalls) > 0 {
 		um.ToolCalls = toolCalls
 	}
 
-	// 设置 ToolCallID 和 Content
 	if toolResultID != "" {
 		um.ToolCallID = toolResultID
 		um.Content = toolResultContent
-	} else {
-		// 非 tool_result 消息：合并文本
-		if len(textParts) > 0 {
-			um.Content = &vo.UnifiedContent{Text: strings.Join(textParts, "\n")}
-		}
+	} else if len(textParts) > 0 {
+		um.Content = &vo.UnifiedContent{Text: strings.Join(textParts, "\n")}
 	}
 
 	return nil
+}
+
+func buildToolCallFromAnthropicBlock(block *AnthropicContentBlock, idx int) (*vo.UnifiedToolCall, error) {
+	args, err := sonic.MarshalString(block.Input)
+	if err != nil {
+		return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", idx)
+	}
+	id := ""
+	if block.ID != nil {
+		id = *block.ID
+	}
+	name := ""
+	if block.Name != nil {
+		name = *block.Name
+	}
+	return &vo.UnifiedToolCall{
+		ID:        id,
+		Name:      name,
+		Arguments: args,
+	}, nil
+}
+
+func extractToolResultContent(block *AnthropicContentBlock) (toolUseID string, content *vo.UnifiedContent) {
+	if block.ToolUseID != nil {
+		toolUseID = *block.ToolUseID
+	}
+	if block.Content == nil {
+		return
+	}
+	if block.Content.Text != "" && len(block.Content.Blocks) == 0 {
+		content = &vo.UnifiedContent{Text: block.Content.Text}
+		return
+	}
+	if len(block.Content.Blocks) > 0 {
+		var nestedTexts []string
+		for _, nested := range block.Content.Blocks {
+			if nested.Type == enum.AnthropicContentBlockTypeText && nested.Text != nil {
+				nestedTexts = append(nestedTexts, *nested.Text)
+			}
+		}
+		if len(nestedTexts) > 0 {
+			content = &vo.UnifiedContent{Text: strings.Join(nestedTexts, "\n")}
+		}
+	}
+	return
 }

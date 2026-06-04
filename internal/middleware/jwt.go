@@ -5,6 +5,7 @@ package middleware
 
 import (
 	"cmp"
+	"context"
 	"fmt"
 	"strings"
 
@@ -49,7 +50,6 @@ func jwtUserCacheKey(userID uint) string {
 //	@author centonhuang
 //	@update 2026-05-13 11:44:46
 func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next func(huma.Context)) {
-	userDAO := dao.GetUserDAO()
 	accessTokenSvc := jwt.GetAccessTokenSigner()
 
 	return func(ctx huma.Context, next func(huma.Context)) {
@@ -59,57 +59,82 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next
 			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
 			return
 		}
-		reqDB := db.WithContext(ctx.Context())
 
-		tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAuthorization), ctx.Header(constant.HTTPTitleHeaderAuthorization))
-		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
-		if tokenString == "" {
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
-			return
-		}
-		userID, err := accessTokenSvc.DecodeToken(tokenString)
+		userID, err := extractToken(ctx, accessTokenSvc)
 		if err != nil {
 			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError()))
 			return
 		}
 
-		var name string
-		var permission enum.Permission
-		cacheHit := false
-
-		cacheKey := jwtUserCacheKey(userID)
-		if cache != nil {
-			if raw, redisErr := cache.Get(ctx.Context(), cacheKey).Bytes(); redisErr == nil {
-				var cached jwtUserCache
-				if unmarshalErr := sonic.Unmarshal(raw, &cached); unmarshalErr == nil {
-					name = cached.Name
-					permission = cached.Permission
-					cacheHit = true
-				}
-			}
-		}
-
-		if !cacheHit {
-			user, dbErr := userDAO.Get(reqDB, &model.User{ID: userID}, constant.UserRepoFieldsAuth)
-			if dbErr != nil {
-				lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
-				return
-			}
-			name = user.Name
-			permission = user.Permission
-
-			if cache != nil {
-				if cacheVal, marshalErr := sonic.Marshal(&jwtUserCache{Name: name, Permission: permission}); marshalErr == nil {
-					if setErr := cache.Set(ctx.Context(), cacheKey, cacheVal, config.JwtAccessTokenExpired).Err(); setErr != nil {
-						log.Warn("[JwtMiddleware] Failed to cache user info", zap.Uint("userID", userID), zap.Error(setErr))
-					}
-				}
-			}
+		name, permission, err := resolveJWTUser(ctx.Context(), db, cache, userID)
+		if err != nil {
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
+			return
 		}
 
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, userID)
 		ctx = huma.WithValue(ctx, constant.CtxKeyUserName, name)
 		ctx = huma.WithValue(ctx, constant.CtxKeyPermission, permission)
 		next(ctx)
+	}
+}
+
+func extractToken(ctx huma.Context, accessTokenSvc jwt.TokenSigner) (uint, error) {
+	tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAuthorization), ctx.Header(constant.HTTPTitleHeaderAuthorization))
+	tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
+	if tokenString == "" {
+		return 0, ierr.ErrUnauthorized
+	}
+	return accessTokenSvc.DecodeToken(tokenString)
+}
+
+func resolveJWTUser(ctx context.Context, db *gorm.DB, cache *redis.Client, userID uint) (string, enum.Permission, error) {
+	var name string
+	var permission enum.Permission
+
+	cacheKey := jwtUserCacheKey(userID)
+	if cached := loadJWTUserCache(ctx, cache, cacheKey); cached != nil {
+		return cached.Name, cached.Permission, nil
+	}
+
+	userDAO := dao.GetUserDAO()
+	reqDB := db.WithContext(ctx)
+	user, dbErr := userDAO.Get(reqDB, &model.User{ID: userID}, constant.UserRepoFieldsAuth)
+	if dbErr != nil {
+		return "", "", dbErr
+	}
+	name = user.Name
+	permission = user.Permission
+
+	saveJWTUserCache(ctx, cache, cacheKey, name, permission)
+
+	return name, permission, nil
+}
+
+func loadJWTUserCache(ctx context.Context, cache *redis.Client, cacheKey string) *jwtUserCache {
+	if cache == nil {
+		return nil
+	}
+	raw, redisErr := cache.Get(ctx, cacheKey).Bytes()
+	if redisErr != nil {
+		return nil
+	}
+	var cached jwtUserCache
+	if err := sonic.Unmarshal(raw, &cached); err != nil {
+		return nil
+	}
+	return &cached
+}
+
+func saveJWTUserCache(ctx context.Context, cache *redis.Client, cacheKey, name string, permission enum.Permission) {
+	if cache == nil {
+		return
+	}
+	cacheVal, marshalErr := sonic.Marshal(&jwtUserCache{Name: name, Permission: permission})
+	if marshalErr != nil {
+		return
+	}
+	if setErr := cache.Set(ctx, cacheKey, cacheVal, config.JwtAccessTokenExpired).Err(); setErr != nil {
+		logger.WithCtx(ctx).Warn("[JwtMiddleware] Failed to cache user info", zap.Error(setErr))
 	}
 }

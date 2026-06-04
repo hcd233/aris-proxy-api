@@ -25,30 +25,55 @@ func (c *checker) checkArchitectureImports(file SourceFile) {
 		if err != nil {
 			continue
 		}
-		if path == constant.ConvCheckImportDatabaseModel && !isDatabaseModelAllowedPath(file.Path) {
-			c.report(file, imp, enum.SeverityError, constant.RuleDatabaseModelDependency, constant.ConvCheckMsgDatabaseModelDirect)
-		}
-		if isUnder(file.Path, constant.ConvCheckPathDomain) && strings.HasPrefix(path, constant.ConvCheckImportInfra) {
-			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainInfra)
-		}
-		if isUnder(file.Path, constant.ConvCheckPathDomain) && path == constant.ConvCheckImportDTO {
-			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainDTO)
-		}
-		if isUnder(file.Path, constant.ConvCheckPathDomain) && path == constant.ConvCheckImportUtil {
-			c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainUtil)
-		}
-		if isUnder(file.Path, constant.ConvCheckPathApp) && isInfrastructureCacheImport(path) {
-			c.report(file, imp, enum.SeverityError, constant.RuleApplicationDependency, constant.ConvCheckMsgAppInfraCache)
-		}
-		if isUnder(file.Path, constant.ConvCheckPathApp) && isDeprecatedApplicationImport(path) {
-			c.report(file, imp, enum.SeverityError, constant.RuleDeprecatedApplicationImport, constant.ConvCheckMsgDeprecatedAppImport)
-		}
-		if isUnder(file.Path, constant.ConvCheckPathHandler) && strings.HasPrefix(path, constant.ConvCheckImportPathDomain) {
-			c.report(file, imp, enum.SeverityWarning, constant.RuleHandlerDomainDirect, constant.ConvCheckMsgHandlerDomainDirect)
-		}
-		if isUnder(file.Path, constant.ConvCheckPathHandler) && strings.HasPrefix(path, constant.ConvCheckImportPathApp) && !isHandlerAllowedAppImport(path) {
-			c.report(file, imp, enum.SeverityWarning, constant.RuleHandlerAppDirect, constant.ConvCheckMsgHandlerAppDirect)
-		}
+		c.checkArchDatabaseModel(file, imp, path)
+		c.checkArchDomainImports(file, imp, path)
+		c.checkArchApplicationImports(file, imp, path)
+		c.checkArchHandlerImports(file, imp, path)
+	}
+}
+
+func (c *checker) checkArchDatabaseModel(file SourceFile, imp *ast.ImportSpec, path string) {
+	if path == constant.ConvCheckImportDatabaseModel && !isDatabaseModelAllowedPath(file.Path) {
+		c.report(file, imp, enum.SeverityError, constant.RuleDatabaseModelDependency, constant.ConvCheckMsgDatabaseModelDirect)
+	}
+}
+
+func (c *checker) checkArchDomainImports(file SourceFile, imp *ast.ImportSpec, path string) {
+	if !isUnder(file.Path, constant.ConvCheckPathDomain) {
+		return
+	}
+	if strings.HasPrefix(path, constant.ConvCheckImportInfra) {
+		c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainInfra)
+	}
+	if path == constant.ConvCheckImportDTO {
+		c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainDTO)
+	}
+	if path == constant.ConvCheckImportUtil {
+		c.report(file, imp, enum.SeverityError, constant.RuleDomainDependency, constant.ConvCheckMsgDomainUtil)
+	}
+}
+
+func (c *checker) checkArchApplicationImports(file SourceFile, imp *ast.ImportSpec, path string) {
+	if !isUnder(file.Path, constant.ConvCheckPathApp) {
+		return
+	}
+	if isInfrastructureCacheImport(path) {
+		c.report(file, imp, enum.SeverityError, constant.RuleApplicationDependency, constant.ConvCheckMsgAppInfraCache)
+	}
+	if isDeprecatedApplicationImport(path) {
+		c.report(file, imp, enum.SeverityError, constant.RuleDeprecatedApplicationImport, constant.ConvCheckMsgDeprecatedAppImport)
+	}
+}
+
+func (c *checker) checkArchHandlerImports(file SourceFile, imp *ast.ImportSpec, path string) {
+	if !isUnder(file.Path, constant.ConvCheckPathHandler) {
+		return
+	}
+	if strings.HasPrefix(path, constant.ConvCheckImportPathDomain) {
+		c.report(file, imp, enum.SeverityWarning, constant.RuleHandlerDomainDirect, constant.ConvCheckMsgHandlerDomainDirect)
+	}
+	if strings.HasPrefix(path, constant.ConvCheckImportPathApp) && !isHandlerAllowedAppImport(path) {
+		c.report(file, imp, enum.SeverityWarning, constant.RuleHandlerAppDirect, constant.ConvCheckMsgHandlerAppDirect)
 	}
 }
 
