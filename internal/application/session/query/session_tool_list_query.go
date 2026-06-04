@@ -54,13 +54,9 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q sessionport.List
 	}
 
 	start := (q.Page - 1) * q.PageSize
-	if start > len(meta.ToolIDs) {
-		start = len(meta.ToolIDs)
-	}
+	start = min(start, len(meta.ToolIDs))
 	end := start + q.PageSize
-	if end > len(meta.ToolIDs) {
-		end = len(meta.ToolIDs)
-	}
+	end = min(end, len(meta.ToolIDs))
 	pageIDs := meta.ToolIDs[start:end]
 	if len(pageIDs) == 0 {
 		return &sessionport.ListSessionToolsResult{Tools: []*sessionport.ToolView{}, Total: total}, nil

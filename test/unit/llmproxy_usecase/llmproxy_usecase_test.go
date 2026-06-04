@@ -64,6 +64,7 @@ func (p *mockAnthropicProxy) ForwardCreateMessage(_ context.Context, _ vo.Upstre
 var _ usecase.AnthropicProxyPort = (*mockAnthropicProxy)(nil)
 
 func TestListOpenAIModels_Success(t *testing.T) {
+	t.Parallel()
 	repo := newMockReadRepo([]string{"gpt-4o", "gpt-4o-mini", "gpt-4-turbo"})
 	query := usecase.NewListOpenAIModels(repo)
 
@@ -73,6 +74,7 @@ func TestListOpenAIModels_Success(t *testing.T) {
 	}
 	if rsp == nil {
 		t.Fatal("Handle() returned nil response")
+		return
 	}
 	if len(rsp.Data) != 3 {
 		t.Errorf("expected 3 models, got %d", len(rsp.Data))
@@ -85,6 +87,7 @@ func TestListOpenAIModels_Success(t *testing.T) {
 }
 
 func TestListOpenAIModels_Empty(t *testing.T) {
+	t.Parallel()
 	repo := newMockReadRepo([]string{})
 	query := usecase.NewListOpenAIModels(repo)
 
@@ -98,6 +101,7 @@ func TestListOpenAIModels_Empty(t *testing.T) {
 }
 
 func TestListAnthropicModels_Success(t *testing.T) {
+	t.Parallel()
 	repo := newMockReadRepo([]string{"claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022"})
 	query := usecase.NewListAnthropicModels(repo)
 
@@ -107,6 +111,7 @@ func TestListAnthropicModels_Success(t *testing.T) {
 	}
 	if rsp == nil {
 		t.Fatal("Handle() returned nil response")
+		return
 	}
 	if len(rsp.Data) != 2 {
 		t.Errorf("expected 2 models, got %d", len(rsp.Data))
@@ -117,6 +122,7 @@ func TestListAnthropicModels_Success(t *testing.T) {
 }
 
 func TestListAnthropicModels_Empty(t *testing.T) {
+	t.Parallel()
 	repo := newMockReadRepo([]string{})
 	query := usecase.NewListAnthropicModels(repo)
 
@@ -136,6 +142,7 @@ func TestListAnthropicModels_Empty(t *testing.T) {
 }
 
 func TestListModels_Pagination(t *testing.T) {
+	t.Parallel()
 	aliases := []string{"model-a", "model-b", "model-c"}
 	repo := newMockReadRepo(aliases)
 	query := usecase.NewListAnthropicModels(repo)
@@ -153,6 +160,7 @@ func TestListModels_Pagination(t *testing.T) {
 }
 
 func TestCountTokens_ModelNotFound(t *testing.T) {
+	t.Parallel()
 	repo := &mockReadRepo{
 		findResult:      nil,
 		findModelResult: nil,

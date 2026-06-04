@@ -105,6 +105,7 @@ func toUnifiedMessage(t *testing.T, tc testCase) *vo.UnifiedMessage {
 // ==================== Original Tests (nil schema) ====================
 
 func TestComputeMessageChecksum_DifferentKeyOrder(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tests := []struct {
@@ -117,7 +118,9 @@ func TestComputeMessageChecksum_DifferentKeyOrder(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tcA := findCase(t, cases, tt.caseA)
 			tcB := findCase(t, cases, tt.caseB)
 			msgA := toUnifiedMessage(t, tcA)
@@ -138,6 +141,7 @@ func TestComputeMessageChecksum_DifferentKeyOrder(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_ToolCallIDIgnored(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tcA := findCase(t, cases, "tool_call_id_ignored_a")
@@ -157,6 +161,7 @@ func TestComputeMessageChecksum_ToolCallIDIgnored(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_DifferentToolCallIDOnMessage(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tcA := findCase(t, cases, "different_tool_call_id_on_message_a")
@@ -176,6 +181,7 @@ func TestComputeMessageChecksum_DifferentToolCallIDOnMessage(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_DifferentMessages(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tcA := findCase(t, cases, "different_messages_a")
@@ -195,6 +201,7 @@ func TestComputeMessageChecksum_DifferentMessages(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_EmptyToolCalls(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tc := findCase(t, cases, "empty_tool_calls")
@@ -209,6 +216,7 @@ func TestComputeMessageChecksum_EmptyToolCalls(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_MultipleToolCallsKeyOrder(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 
 	tcA := findCase(t, cases, "multiple_tool_calls_key_order_a")
@@ -230,6 +238,7 @@ func TestComputeMessageChecksum_MultipleToolCallsKeyOrder(t *testing.T) {
 // ==================== Schema-Aware Tests ====================
 
 func TestComputeMessageChecksum_SchemaDefaultRemoved(t *testing.T) {
+	t.Parallel()
 	cases := loadSchemaAwareCases(t)
 	schemas := loadToolSchemas(t)
 
@@ -251,6 +260,7 @@ func TestComputeMessageChecksum_SchemaDefaultRemoved(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_SchemaNonDefaultKept(t *testing.T) {
+	t.Parallel()
 	cases := loadSchemaAwareCases(t)
 	schemas := loadToolSchemas(t)
 
@@ -272,6 +282,7 @@ func TestComputeMessageChecksum_SchemaNonDefaultKept(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_SchemaRequiredFieldKept(t *testing.T) {
+	t.Parallel()
 	cases := loadSchemaAwareCases(t)
 	schemas := loadToolSchemas(t)
 
@@ -293,6 +304,7 @@ func TestComputeMessageChecksum_SchemaRequiredFieldKept(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_NoSchemaFallback(t *testing.T) {
+	t.Parallel()
 	cases := loadSchemaAwareCases(t)
 
 	tcA := findCase(t, cases, "no_schema_different_a")
@@ -313,6 +325,7 @@ func TestComputeMessageChecksum_NoSchemaFallback(t *testing.T) {
 }
 
 func TestComputeMessageChecksum_SchemaMultipleDefaultsRemoved(t *testing.T) {
+	t.Parallel()
 	cases := loadSchemaAwareCases(t)
 	schemas := loadToolSchemas(t)
 

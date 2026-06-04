@@ -66,7 +66,7 @@ func (c *checker) checkMagicDuration(file SourceFile, expr *ast.BinaryExpr) {
 }
 
 func (c *checker) checkAnonymousStructs(file SourceFile) {
-	if !(isUnder(file.Path, constant.ConvCheckPathInternal) || isUnder(file.Path, constant.ConvCheckPathCMD)) || strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
+	if !isUnder(file.Path, constant.ConvCheckPathInternal) && !isUnder(file.Path, constant.ConvCheckPathCMD) || strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
 		return
 	}
 	ast.Inspect(file.File, func(node ast.Node) bool {

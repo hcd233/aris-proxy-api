@@ -160,7 +160,7 @@ func (dao *MinioObjDAO) DownloadObject(ctx context.Context, userID uint, objectN
 	if err != nil {
 		return
 	}
-	defer func() { _ = object.Close() }()
+	defer func() { _ = object.Close() }() //nolint:errcheck // best-effort close
 
 	stat := lo.Must1(object.Stat())
 

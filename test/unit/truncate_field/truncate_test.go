@@ -71,6 +71,7 @@ func findMapCase(t *testing.T, cases []mapCase, name string) mapCase {
 }
 
 func TestTruncateFieldValue_ShortString(t *testing.T) {
+	t.Parallel()
 	cases := loadFieldCases(t)
 	tc := findFieldCase(t, cases, "short_string_unchanged")
 
@@ -81,6 +82,7 @@ func TestTruncateFieldValue_ShortString(t *testing.T) {
 }
 
 func TestTruncateFieldValue_ExactLength(t *testing.T) {
+	t.Parallel()
 	cases := loadFieldCases(t)
 	tc := findFieldCase(t, cases, "exact_length_unchanged")
 
@@ -91,6 +93,7 @@ func TestTruncateFieldValue_ExactLength(t *testing.T) {
 }
 
 func TestTruncateFieldValue_LongString(t *testing.T) {
+	t.Parallel()
 	cases := loadFieldCases(t)
 	tc := findFieldCase(t, cases, "long_string_truncated")
 
@@ -101,6 +104,7 @@ func TestTruncateFieldValue_LongString(t *testing.T) {
 }
 
 func TestTruncateFieldValue_EmptyString(t *testing.T) {
+	t.Parallel()
 	cases := loadFieldCases(t)
 	tc := findFieldCase(t, cases, "empty_string")
 
@@ -111,6 +115,7 @@ func TestTruncateFieldValue_EmptyString(t *testing.T) {
 }
 
 func TestTruncateFieldValue_SingleCharOver(t *testing.T) {
+	t.Parallel()
 	cases := loadFieldCases(t)
 	tc := findFieldCase(t, cases, "single_char_over")
 
@@ -121,6 +126,7 @@ func TestTruncateFieldValue_SingleCharOver(t *testing.T) {
 }
 
 func TestTruncateFieldValue_UnicodeString(t *testing.T) {
+	t.Parallel()
 	cases := loadFieldCases(t)
 	tc := findFieldCase(t, cases, "unicode_string_truncated")
 
@@ -131,6 +137,7 @@ func TestTruncateFieldValue_UnicodeString(t *testing.T) {
 }
 
 func TestTruncateMapValues_FlatMapShortValues(t *testing.T) {
+	t.Parallel()
 	cases := loadMapCases(t)
 	tc := findMapCase(t, cases, "flat_map_short_values")
 
@@ -144,6 +151,7 @@ func TestTruncateMapValues_FlatMapShortValues(t *testing.T) {
 }
 
 func TestTruncateMapValues_FlatMapLongString(t *testing.T) {
+	t.Parallel()
 	cases := loadMapCases(t)
 	tc := findMapCase(t, cases, "flat_map_long_string")
 
@@ -154,6 +162,7 @@ func TestTruncateMapValues_FlatMapLongString(t *testing.T) {
 }
 
 func TestTruncateMapValues_NestedMap(t *testing.T) {
+	t.Parallel()
 	cases := loadMapCases(t)
 	tc := findMapCase(t, cases, "nested_map_truncation")
 
@@ -172,6 +181,7 @@ func TestTruncateMapValues_NestedMap(t *testing.T) {
 }
 
 func TestTruncateMapValues_ArrayOfStrings(t *testing.T) {
+	t.Parallel()
 	cases := loadMapCases(t)
 	tc := findMapCase(t, cases, "array_of_strings_truncation")
 
@@ -190,6 +200,7 @@ func TestTruncateMapValues_ArrayOfStrings(t *testing.T) {
 }
 
 func TestTruncateMapValues_MixedTypes(t *testing.T) {
+	t.Parallel()
 	cases := loadMapCases(t)
 	tc := findMapCase(t, cases, "mixed_types_preserved")
 
@@ -209,6 +220,7 @@ func TestTruncateMapValues_MixedTypes(t *testing.T) {
 }
 
 func TestTruncateMapValues_EmptyMap(t *testing.T) {
+	t.Parallel()
 	cases := loadMapCases(t)
 	tc := findMapCase(t, cases, "empty_map")
 

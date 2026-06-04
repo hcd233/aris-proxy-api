@@ -19,7 +19,9 @@ func requireJSONContains(t *testing.T, raw []byte, fragments ...string) {
 }
 
 func TestDTOExplicitZeroValuesSurviveOmitEmptyRoundTrip(t *testing.T) {
+	t.Parallel()
 	t.Run("openai chat usage token details", func(t *testing.T) {
+		t.Parallel()
 		raw := []byte(`{"completion_tokens":0,"prompt_tokens":0,"total_tokens":0,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0}}`)
 		var usage dto.OpenAICompletionUsage
 		if err := sonic.Unmarshal(raw, &usage); err != nil {
@@ -39,6 +41,7 @@ func TestDTOExplicitZeroValuesSurviveOmitEmptyRoundTrip(t *testing.T) {
 	})
 
 	t.Run("response annotations and computer actions", func(t *testing.T) {
+		t.Parallel()
 		raw := []byte(`{"type":"message","role":"assistant","content":[{"type":"output_text","text":"","annotations":[{"type":"url_citation","start_index":0,"end_index":0,"title":"","url":"https://example.com"}]}],"action":{"type":"scroll","x":0,"y":0,"scroll_x":0,"scroll_y":0},"actions":[{"type":"click","x":0,"y":0}]}`)
 		var item dto.ResponseInputItem
 		if err := sonic.Unmarshal(raw, &item); err != nil {
@@ -60,6 +63,7 @@ func TestDTOExplicitZeroValuesSurviveOmitEmptyRoundTrip(t *testing.T) {
 	})
 
 	t.Run("anthropic cache token usage", func(t *testing.T) {
+		t.Parallel()
 		raw := []byte(`{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}`)
 		var usage dto.AnthropicUsage
 		if err := sonic.Unmarshal(raw, &usage); err != nil {

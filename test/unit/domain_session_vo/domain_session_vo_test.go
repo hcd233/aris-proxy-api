@@ -48,6 +48,7 @@ func findCase(t *testing.T, cases []sessionVOCase, name string) sessionVOCase {
 }
 
 func TestNewSessionSummary_Valid(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_summary_valid")
 
@@ -64,6 +65,7 @@ func TestNewSessionSummary_Valid(t *testing.T) {
 }
 
 func TestNewSessionSummary_Failed(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_summary_failed")
 
@@ -77,6 +79,7 @@ func TestNewSessionSummary_Failed(t *testing.T) {
 }
 
 func TestNewSessionSummary_EmptyText(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_summary_empty_text")
 
@@ -87,6 +90,7 @@ func TestNewSessionSummary_EmptyText(t *testing.T) {
 }
 
 func TestNewSessionSummary_WhitespaceText(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_summary_whitespace")
 
@@ -97,6 +101,7 @@ func TestNewSessionSummary_WhitespaceText(t *testing.T) {
 }
 
 func TestNewSessionScore_Valid(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "session_score_valid")
 
@@ -118,6 +123,7 @@ func TestNewSessionScore_Valid(t *testing.T) {
 }
 
 func TestNewSessionScore_OutOfRange(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	_, err := vo.NewSessionScore(0, now)
 	if err == nil {
@@ -137,6 +143,7 @@ func TestNewSessionScore_OutOfRange(t *testing.T) {
 }
 
 func TestRestoreSessionScore(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "restore_session_score")
 
@@ -155,6 +162,7 @@ func TestRestoreSessionScore(t *testing.T) {
 }
 
 func TestRestoreSessionScore_Nil(t *testing.T) {
+	t.Parallel()
 	s := vo.RestoreSessionScore(nil, nil)
 
 	if s.Score() != nil {

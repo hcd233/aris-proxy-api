@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -90,12 +91,7 @@ func isImplementationDetailName(name string) bool {
 	if !implementationNamePattern.MatchString(name) {
 		return false
 	}
-	for _, item := range allowedImplNames {
-		if name == item {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(allowedImplNames, name)
 }
 
 func (c *checker) checkLocalConst(file SourceFile) {

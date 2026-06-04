@@ -26,6 +26,7 @@ import (
 )
 
 func TestGetPassthroughHeaders_NoHeaders(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	headers := util.GetPassthroughHeaders(ctx)
 	if headers != nil {
@@ -34,6 +35,7 @@ func TestGetPassthroughHeaders_NoHeaders(t *testing.T) {
 }
 
 func TestGetPassthroughHeaders_WithHeaders(t *testing.T) {
+	t.Parallel()
 	expected := map[string]string{
 		"User-Agent": "test-agent",
 		"X-Custom":   "custom-value",
@@ -52,6 +54,7 @@ func TestGetPassthroughHeaders_WithHeaders(t *testing.T) {
 }
 
 func TestGetPassthroughHeaders_WrongType(t *testing.T) {
+	t.Parallel()
 	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, "not-a-map")
 	headers := util.GetPassthroughHeaders(ctx)
 	if headers != nil {
@@ -60,6 +63,7 @@ func TestGetPassthroughHeaders_WrongType(t *testing.T) {
 }
 
 func TestGetPassthroughHeaders_EmptyMap(t *testing.T) {
+	t.Parallel()
 	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, map[string]string{})
 	headers := util.GetPassthroughHeaders(ctx)
 	if headers == nil {
@@ -71,6 +75,7 @@ func TestGetPassthroughHeaders_EmptyMap(t *testing.T) {
 }
 
 func TestMaskHTTPHeadersForLog_MasksSensitiveHeaders(t *testing.T) {
+	t.Parallel()
 	headers := http.Header{
 		constant.HTTPTitleHeaderAuthorization:      {"Bearer raw-secret-token"},
 		constant.HTTPTitleHeaderCookie:             {"session=raw-secret-cookie"},
@@ -97,6 +102,7 @@ func TestMaskHTTPHeadersForLog_MasksSensitiveHeaders(t *testing.T) {
 }
 
 func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
+	t.Parallel()
 	var got map[string]string
 	mux := http.NewServeMux()
 	api := humago.New(mux, huma.DefaultConfig("Aris Test", "1.0"))
@@ -112,7 +118,7 @@ func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
 		return &struct{ Body string }{Body: "ok"}, nil
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/capture", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/capture", http.NoBody)
 	req.Header.Set("Accept-Encoding", "gzip")
 	req.Header.Set("X-Custom-Header", "keep-me")
 	rec := httptest.NewRecorder()
@@ -133,6 +139,7 @@ func TestHeaderPassthroughMiddleware_ExcludesAcceptEncoding(t *testing.T) {
 }
 
 func TestHeaderPassthroughMiddleware_ExcludesReverseProxyHeaders(t *testing.T) {
+	t.Parallel()
 	var got map[string]string
 	mux := http.NewServeMux()
 	api := humago.New(mux, huma.DefaultConfig("Aris Test", "1.0"))
@@ -148,12 +155,12 @@ func TestHeaderPassthroughMiddleware_ExcludesReverseProxyHeaders(t *testing.T) {
 		return &struct{ Body string }{Body: "ok"}, nil
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/capture", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/capture", http.NoBody)
 	req.Header.Set("X-Forwarded-For", "1.2.3.4")
 	req.Header.Set("X-Real-IP", "1.2.3.4")
 	req.Header.Set("X-Forwarded-Proto", "https")
 	req.Header.Set("X-Forwarded-Port", "443")
-	req.Header.Set("REMOTE-HOST", "1.2.3.4")
+	req.Header.Set("Remote-Host", "1.2.3.4")
 	req.Header.Set("X-Custom-Header", "keep-me")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -175,6 +182,7 @@ func TestHeaderPassthroughMiddleware_ExcludesReverseProxyHeaders(t *testing.T) {
 }
 
 func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
+	t.Parallel()
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))
 	api.UseMiddleware(func(ctx huma.Context, next func(huma.Context)) {
@@ -194,7 +202,7 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 		}), nil
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/stream", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/stream", http.NoBody)
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0})
 	if err != nil {
 		t.Fatalf("stream request: %v", err)
@@ -207,10 +215,12 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 }
 
 func TestOpenAIProxy_PreservesPassthroughHeaderCase(t *testing.T) {
+	t.Parallel()
 	const headerName = "X-CUSTOM-header"
 	const headerValue = "keep-me"
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	var lc net.ListenConfig
+	listener, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen raw upstream: %v", err)
 	}

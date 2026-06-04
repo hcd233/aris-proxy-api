@@ -198,7 +198,7 @@ func (s *stubTokenSigner) EncodeToken(userID uint) (string, error) {
 }
 
 func (s *stubTokenSigner) DecodeToken(_ string) (uint, error) {
-	return 0, errors.New("not implemented")
+	return 0, ierr.New(ierr.ErrInternal, "not implemented")
 }
 
 // stubObjStorageDirCreator 模拟对象存储目录创建器
@@ -241,6 +241,7 @@ func makeHandler(userRepo *stubUserRepo, tc *callbackCase, stateManager service.
 
 // TestHandleCallback_NewUser 新用户流程应注册并签发 token 对
 func TestHandleCallback_NewUser(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "callback_new_user")
 	ctx := context.Background()
@@ -265,6 +266,7 @@ func TestHandleCallback_NewUser(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("Handle() returned nil result")
+		return
 	}
 	if result.TokenPair == nil {
 		t.Fatal("TokenPair should not be nil")
@@ -285,6 +287,7 @@ func TestHandleCallback_NewUser(t *testing.T) {
 
 // TestHandleCallback_ExistingUser 已存在用户应更新登录时间而非重新注册
 func TestHandleCallback_ExistingUser(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "callback_existing_user")
 	ctx := context.Background()
@@ -345,6 +348,7 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("Handle() returned nil result")
+		return
 	}
 	if result.UserID != uint(existingUserID) {
 		t.Errorf("UserID = %d, want %d", result.UserID, existingUserID)
@@ -359,6 +363,7 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 
 // TestHandleCallback_InvalidPlatform 无效平台应返回错误
 func TestHandleCallback_InvalidPlatform(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "callback_invalid_platform")
 	ctx := context.Background()
@@ -388,6 +393,7 @@ func TestHandleCallback_InvalidPlatform(t *testing.T) {
 
 // TestHandleCallback_InvalidState 无效 state 应返回 Unauthorized 错误
 func TestHandleCallback_InvalidState(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "callback_invalid_state")
 	ctx := context.Background()

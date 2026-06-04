@@ -20,6 +20,7 @@ func newRedis(t *testing.T) (*miniredis.Miniredis, *redis.Client) {
 }
 
 func TestLocker_Refresh_OwnerOnly(t *testing.T) {
+	t.Parallel()
 	mr, rdb := newRedis(t)
 	locker := lock.NewLocker(rdb)
 	ctx := context.Background()
@@ -50,6 +51,7 @@ func TestLocker_Refresh_OwnerOnly(t *testing.T) {
 }
 
 func TestLocker_Unlock_OwnerOnly(t *testing.T) {
+	t.Parallel()
 	_, rdb := newRedis(t)
 	locker := lock.NewLocker(rdb)
 	ctx := context.Background()

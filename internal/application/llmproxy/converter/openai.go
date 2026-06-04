@@ -39,10 +39,7 @@ func (*OpenAIProtocolConverter) FromAnthropicRequest(req *dto.AnthropicCreateMes
 	}
 
 	// 转换 system prompt
-	messages, err := convertAnthropicSystemToOpenAI(req.System)
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert anthropic system to openai")
-	}
+	messages := convertAnthropicSystemToOpenAI(req.System)
 
 	// 转换消息列表
 	for i, msg := range req.Messages {
@@ -245,16 +242,16 @@ func (*OpenAIProtocolConverter) ToAnthropicSSEResponse(chunk *dto.OpenAIChatComp
 
 // ==================== Internal Helpers ====================
 
-func convertAnthropicSystemToOpenAI(system *dto.AnthropicMessageContent) ([]*dto.OpenAIChatCompletionMessageParam, error) {
+func convertAnthropicSystemToOpenAI(system *dto.AnthropicMessageContent) []*dto.OpenAIChatCompletionMessageParam {
 	if system == nil {
-		return nil, nil
+		return nil
 	}
 
 	if system.Text != "" {
 		return []*dto.OpenAIChatCompletionMessageParam{{
 			Role:    enum.RoleSystem,
 			Content: &dto.OpenAIMessageContent{Text: system.Text},
-		}}, nil
+		}}
 	}
 
 	if len(system.Blocks) > 0 {
@@ -268,11 +265,11 @@ func convertAnthropicSystemToOpenAI(system *dto.AnthropicMessageContent) ([]*dto
 			return []*dto.OpenAIChatCompletionMessageParam{{
 				Role:    enum.RoleSystem,
 				Content: &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")},
-			}}, nil
+			}}
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func convertAnthropicMessageToOpenAI(msg *dto.AnthropicMessageParam) ([]*dto.OpenAIChatCompletionMessageParam, error) {

@@ -46,7 +46,7 @@ func doGetJSON(t *testing.T, client *http.Client, url, jwt string, out any) int 
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		t.Fatalf("new request: %v", err)
 	}
@@ -65,6 +65,7 @@ func doGetJSON(t *testing.T, client *http.Client, url, jwt string, out any) int 
 }
 
 func TestSessionDetailPerf_GetMetadata_Success(t *testing.T) {
+	t.Parallel()
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
@@ -98,6 +99,7 @@ func TestSessionDetailPerf_GetMetadata_Success(t *testing.T) {
 }
 
 func TestSessionDetailPerf_ListMessages_Pagination(t *testing.T) {
+	t.Parallel()
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
@@ -130,6 +132,7 @@ func TestSessionDetailPerf_ListMessages_Pagination(t *testing.T) {
 }
 
 func TestSessionDetailPerf_ListMessages_PageSizeRejected(t *testing.T) {
+	t.Parallel()
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
@@ -141,6 +144,7 @@ func TestSessionDetailPerf_ListMessages_PageSizeRejected(t *testing.T) {
 }
 
 func TestSessionDetailPerf_ListTools_Pagination(t *testing.T) {
+	t.Parallel()
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
@@ -167,6 +171,7 @@ func TestSessionDetailPerf_ListTools_Pagination(t *testing.T) {
 }
 
 func TestSessionDetailPerf_CacheConsistency(t *testing.T) {
+	t.Parallel()
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 

@@ -27,7 +27,7 @@ func Run(args []string) Result {
 	return Result{Diagnostics: c.diagnostics}
 }
 
-func (c *checker) report(file SourceFile, node ast.Node, severity enum.Severity, rule string, message string) {
+func (c *checker) report(file SourceFile, node ast.Node, severity enum.Severity, rule, message string) {
 	c.diagnostics = append(c.diagnostics, Diagnostic{Rule: rule, Severity: severity, Path: file.Path, Line: file.line(node.Pos()), Message: message})
 }
 
@@ -41,7 +41,7 @@ func inspectFile(file SourceFile, fn func(ast.Node)) {
 	})
 }
 
-func selectorName(expr ast.Expr) (string, string, bool) {
+func selectorName(expr ast.Expr) (receiver, method string, ok bool) {
 	selector, ok := expr.(*ast.SelectorExpr)
 	if !ok {
 		return "", "", false
@@ -61,7 +61,7 @@ func selectorMethodName(expr ast.Expr) (string, bool) {
 	return selector.Sel.Name, true
 }
 
-func isUnder(path string, prefix string) bool {
+func isUnder(path, prefix string) bool {
 	path = slashPath(path)
 	prefix = strings.TrimSuffix(slashPath(prefix), constant.ConvCheckSeparatorSlash) + constant.ConvCheckSeparatorSlash
 	return strings.HasPrefix(path, prefix)

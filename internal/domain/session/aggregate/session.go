@@ -2,6 +2,7 @@
 package aggregate
 
 import (
+	"maps"
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -157,11 +158,7 @@ func (s *Session) ToolIDs() []uint {
 
 // Metadata 返回请求元数据的防御性副本
 func (s *Session) Metadata() map[string]string {
-	out := make(map[string]string, len(s.metadata))
-	for k, v := range s.metadata {
-		out[k] = v
-	}
-	return out
+	return maps.Clone(s.metadata)
 }
 
 // Summary 返回总结值对象

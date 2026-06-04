@@ -11,15 +11,15 @@ import (
 func convertOpenAIFinishReasonToAnthropic(reason enum.FinishReason) *string {
 	switch reason {
 	case enum.FinishReasonStop:
-		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
+		return lo.ToPtr(enum.AnthropicStopReasonEndTurn)
 	case enum.FinishReasonLength:
-		return lo.ToPtr(string(enum.AnthropicStopReasonMaxTokens))
+		return lo.ToPtr(enum.AnthropicStopReasonMaxTokens)
 	case enum.FinishReasonToolCalls:
-		return lo.ToPtr(string(enum.AnthropicStopReasonToolUse))
+		return lo.ToPtr(enum.AnthropicStopReasonToolUse)
 	case enum.FinishReasonContentFilter:
-		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
+		return lo.ToPtr(enum.AnthropicStopReasonEndTurn)
 	default:
-		return lo.ToPtr(string(enum.AnthropicStopReasonEndTurn))
+		return lo.ToPtr(enum.AnthropicStopReasonEndTurn)
 	}
 }
 

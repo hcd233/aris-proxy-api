@@ -86,6 +86,7 @@ var _ modelcall.AuditRepository = (*fakeAuditRepo)(nil)
 // ─── ListAllAuditLogsHandler 测试 ───────────────────────────
 
 func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
+	t.Parallel()
 	repo := &fakeAuditRepo{
 		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if param.Page != 1 {
@@ -113,6 +114,7 @@ func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
 }
 
 func TestListAllAuditLogs_InvalidSortField(t *testing.T) {
+	t.Parallel()
 	repo := &fakeAuditRepo{}
 	h := auditquery.NewListAllAuditLogsHandler(repo)
 	_, _, err := h.Handle(context.Background(), auditquery.ListAllAuditLogsQuery{
@@ -130,6 +132,7 @@ func TestListAllAuditLogs_InvalidSortField(t *testing.T) {
 }
 
 func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
+	t.Parallel()
 	start := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC)
 	repo := &fakeAuditRepo{
@@ -151,6 +154,7 @@ func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
 // ─── ListAuditLogsByUserHandler 测试 ────────────────────────
 
 func TestListAuditLogsByUser_LoadsUserAPIKeyIDs(t *testing.T) {
+	t.Parallel()
 	repo := &fakeAuditRepo{
 		listByAPIKeyIDsFn: func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if len(apiKeyIDs) != 2 || apiKeyIDs[0] != 10 || apiKeyIDs[1] != 20 {
@@ -183,6 +187,7 @@ func TestListAuditLogsByUser_LoadsUserAPIKeyIDs(t *testing.T) {
 }
 
 func TestListAuditLogsByUser_InvalidSortField(t *testing.T) {
+	t.Parallel()
 	repo := &fakeAuditRepo{}
 	h := auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{})
 	_, _, err := h.Handle(context.Background(), auditquery.ListAuditLogsByUserQuery{
@@ -202,6 +207,7 @@ func TestListAuditLogsByUser_InvalidSortField(t *testing.T) {
 // ─── FillTrendSeries / FillRateSeries 测试 ────────────────────────
 
 func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
+	t.Parallel()
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	t3 := t1.Add(2 * time.Hour)
@@ -236,6 +242,7 @@ func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
 }
 
 func TestFillTrendSeries_Empty(t *testing.T) {
+	t.Parallel()
 	items := auditquery.FillTrendSeries(nil, time.Time{}, time.Time{}, enum.GranularityHour)
 	if len(items) != 0 {
 		t.Errorf("empty input should return empty, got %d items", len(items))
@@ -243,6 +250,7 @@ func TestFillTrendSeries_Empty(t *testing.T) {
 }
 
 func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
+	t.Parallel()
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	points := []*modelcall.RequestRatePoint{
@@ -266,6 +274,7 @@ func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
 }
 
 func TestFillRateSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
+	t.Parallel()
 	start := time.Date(2026, 6, 1, 9, 4, 59, 0, time.UTC)
 	end := time.Date(2026, 6, 1, 9, 59, 59, 0, time.UTC)
 	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
@@ -288,6 +297,7 @@ func TestFillRateSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
 }
 
 func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
+	t.Parallel()
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	t3 := t1.Add(2 * time.Hour)
@@ -308,6 +318,7 @@ func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 }
 
 func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
+	t.Parallel()
 	start := time.Date(2026, 6, 1, 9, 4, 59, 0, time.UTC)
 	end := time.Date(2026, 6, 1, 9, 59, 59, 0, time.UTC)
 	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
@@ -336,6 +347,7 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 // ─── AuditService 派发测试 ────────────────────────
 
 func TestAuditService_DispatchesByPermission(t *testing.T) {
+	t.Parallel()
 	repo := &fakeAuditRepo{
 		listAllFunc: func(ctx context.Context, _ model.CommonParam, _, _ time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			return nil, &model.PageInfo{Page: 1, PageSize: 20}, nil
@@ -383,6 +395,7 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 // ─── ModelUsage 聚合测试 ────────────────────────
 
 func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
+	t.Parallel()
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	repo := &fakeAuditRepo{

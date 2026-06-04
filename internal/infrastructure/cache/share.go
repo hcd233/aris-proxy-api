@@ -133,9 +133,9 @@ func (s *shareCache) CreateShare(ctx context.Context, userID, sessionID uint, tt
 //	@return error
 //	@author centonhuang
 //	@update 2026-05-28 20:10:00
-func (s *shareCache) reserveShareID(ctx context.Context, sessionID uint, ttl time.Duration) (string, string, error) {
+func (s *shareCache) reserveShareID(ctx context.Context, sessionID uint, ttl time.Duration) (shareID, key string, err error) {
 	for length := constant.ShareIDMinLen; length <= constant.ShareIDMaxLen; length++ {
-		for attempt := 0; attempt < constant.ShareIDMaxAttemptsPerLen; attempt++ {
+		for range constant.ShareIDMaxAttemptsPerLen {
 			shareID, genErr := util.GenerateShareID(sessionID, length)
 			if genErr != nil {
 				return "", "", genErr
@@ -267,9 +267,7 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 	}
 
 	scanCount := pageSize
-	if scanCount < constant.ShareListScanChunkSize {
-		scanCount = constant.ShareListScanChunkSize
-	}
+	scanCount = max(scanCount, constant.ShareListScanChunkSize)
 	wanted := page * pageSize
 	validItems := make([]*dto.ShareItem, 0, wanted)
 	offset := int64(0)
@@ -331,9 +329,7 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 	items := []*dto.ShareItem{}
 	if start < len(validItems) {
 		end := start + pageSize
-		if end > len(validItems) {
-			end = len(validItems)
-		}
+		end = min(end, len(validItems))
 		items = validItems[start:end]
 	}
 

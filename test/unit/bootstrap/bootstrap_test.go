@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -10,22 +11,27 @@ import (
 )
 
 func TestBuildServer(t *testing.T) {
+	t.Parallel()
 	server, err := appbootstrap.BuildServer()
 	if err != nil {
 		t.Fatalf("BuildServer() error = %v", err)
 	}
 	if server == nil {
 		t.Fatal("BuildServer() returned nil server")
+		return
 	}
 	if server.App == nil {
 		t.Fatal("BuildServer() returned nil Fiber app")
+		return
 	}
 	if server.HumaAPI == nil {
 		t.Fatal("BuildServer() returned nil Huma API")
+		return
 	}
 }
 
 func TestRegisterRoutes(t *testing.T) {
+	t.Parallel()
 	server, err := appbootstrap.BuildServer()
 	if err != nil {
 		t.Fatalf("BuildServer() error = %v", err)
@@ -36,6 +42,7 @@ func TestRegisterRoutes(t *testing.T) {
 }
 
 func TestRegisterRoutes_RegistersHealthRoute(t *testing.T) {
+	t.Parallel()
 	server, err := appbootstrap.BuildServer()
 	if err != nil {
 		t.Fatalf("BuildServer() error = %v", err)
@@ -44,7 +51,7 @@ func TestRegisterRoutes_RegistersHealthRoute(t *testing.T) {
 		t.Fatalf("RegisterRoutes() error = %v", err)
 	}
 
-	req, err := http.NewRequest(http.MethodGet, "/health", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/health", http.NoBody)
 	if err != nil {
 		t.Fatalf("NewRequest() error = %v", err)
 	}
@@ -59,6 +66,7 @@ func TestRegisterRoutes_RegistersHealthRoute(t *testing.T) {
 }
 
 func TestServerDoesNotExposeDigContainer(t *testing.T) {
+	t.Parallel()
 	content := readFile(t, "../../../internal/bootstrap/container.go")
 	if strings.Contains(content, "Container *dig.Container") {
 		t.Fatal("Server must not expose dig.Container as an exported field")
@@ -66,6 +74,7 @@ func TestServerDoesNotExposeDigContainer(t *testing.T) {
 }
 
 func TestBootstrapDoesNotUseAnyProviderList(t *testing.T) {
+	t.Parallel()
 	content := readFile(t, "../../../internal/bootstrap/container.go")
 	if strings.Contains(content, "[]any{") || strings.Contains(content, "[]interface{}{") {
 		t.Fatal("bootstrap providers must be registered without any/interface{} provider lists")
@@ -82,6 +91,7 @@ func readFile(t *testing.T, path string) string {
 }
 
 func TestWebRouter_FallbackAndNotFound(t *testing.T) {
+	t.Parallel()
 	server, err := appbootstrap.BuildServer()
 	if err != nil {
 		t.Fatalf("BuildServer() error = %v", err)
@@ -91,7 +101,7 @@ func TestWebRouter_FallbackAndNotFound(t *testing.T) {
 	}
 
 	// 1. 测试首页加载，应返回 200 (即 index.html)
-	req1, _ := http.NewRequest(http.MethodGet, "/web/", nil)
+	req1, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/web/", http.NoBody)
 	rsp1, err := server.App.Test(req1)
 	if err != nil {
 		t.Fatalf("App.Test() error = %v", err)
@@ -102,7 +112,7 @@ func TestWebRouter_FallbackAndNotFound(t *testing.T) {
 	}
 
 	// 2. 测试不存在的页面路由，应 Fallback 到 index.html 返回 200
-	req2, _ := http.NewRequest(http.MethodGet, "/web/some-non-existent-page-route", nil)
+	req2, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/web/some-non-existent-page-route", http.NoBody)
 	rsp2, err := server.App.Test(req2)
 	if err != nil {
 		t.Fatalf("App.Test() error = %v", err)
@@ -113,7 +123,7 @@ func TestWebRouter_FallbackAndNotFound(t *testing.T) {
 	}
 
 	// 3. 测试不存在的静态资源（带有 js 后缀），应返回 404
-	req3, _ := http.NewRequest(http.MethodGet, "/web/_next/static/chunks/non-existent-file.js", nil)
+	req3, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/web/_next/static/chunks/non-existent-file.js", http.NoBody)
 	rsp3, err := server.App.Test(req3)
 	if err != nil {
 		t.Fatalf("App.Test() error = %v", err)

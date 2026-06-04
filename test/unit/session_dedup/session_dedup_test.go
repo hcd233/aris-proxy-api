@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	vo "github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -141,7 +140,7 @@ func toDBMessages(fixtures []terminalToolCallMessageFix) []*dbmodel.Message {
 		}
 		m := &dbmodel.Message{
 			Message: &vo.UnifiedMessage{
-				Role:      enum.Role(f.Role),
+				Role:      f.Role,
 				ToolCalls: toolCalls,
 			},
 		}
@@ -167,6 +166,7 @@ func toDBSessions(fixtures []sessionFixture) []*dbmodel.Session {
 
 // TestIsSubArray runs all IsSubArray fixture cases
 func TestIsSubArray(t *testing.T) {
+	t.Parallel()
 	allCases := loadIsSubArrayCases(t)
 
 	caseNames := []string{
@@ -189,6 +189,7 @@ func TestIsSubArray(t *testing.T) {
 		tc := findIsSubArrayCase(t, allCases, caseName)
 
 		t.Run(caseName, func(t *testing.T) {
+			t.Parallel()
 			got := cron.IsSubArray(tc.Sub, tc.Arr)
 
 			t.Logf("description: %s", tc.Description)
@@ -203,6 +204,7 @@ func TestIsSubArray(t *testing.T) {
 
 // TestFindRedundantSessionsWithMerge tests the tool_ids merging functionality
 func TestFindRedundantSessionsWithMerge(t *testing.T) {
+	t.Parallel()
 	allCases := loadFindRedundantSessionsCases(t)
 
 	testCases := []struct {
@@ -227,6 +229,7 @@ func TestFindRedundantSessionsWithMerge(t *testing.T) {
 		fixtureCase := findFindRedundantSessionsCase(t, allCases, tc.name)
 
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			sessions := toDBSessions(fixtureCase.Sessions)
 			result := cron.FindRedundantSessionsWithMerge(sessions)
 
@@ -267,6 +270,7 @@ func TestFindRedundantSessionsWithMerge(t *testing.T) {
 
 // TestFindRedundantSessions runs all FindRedundantSessions fixture cases
 func TestFindRedundantSessions(t *testing.T) {
+	t.Parallel()
 	allCases := loadFindRedundantSessionsCases(t)
 
 	caseNames := []string{
@@ -288,6 +292,7 @@ func TestFindRedundantSessions(t *testing.T) {
 		tc := findFindRedundantSessionsCase(t, allCases, caseName)
 
 		t.Run(caseName, func(t *testing.T) {
+			t.Parallel()
 			sessions := toDBSessions(tc.Sessions)
 			got := cron.FindRedundantSessions(sessions)
 
@@ -318,6 +323,7 @@ func TestFindRedundantSessions(t *testing.T) {
 
 // TestFindTerminalToolCallSessions tests the FindTerminalToolCallSessions function
 func TestFindTerminalToolCallSessions(t *testing.T) {
+	t.Parallel()
 	allCases := loadTerminalToolCallCases(t)
 
 	caseNames := []string{
@@ -340,6 +346,7 @@ func TestFindTerminalToolCallSessions(t *testing.T) {
 		}
 
 		t.Run(caseName, func(t *testing.T) {
+			t.Parallel()
 			sessions := toDBSessions(tc.Sessions)
 			messages := toDBMessages(tc.Messages)
 			result := cron.FindTerminalToolCallSessions(sessions, messages, tc.ExcludeIDs)
@@ -401,6 +408,7 @@ func TestFindTerminalToolCallSessions(t *testing.T) {
 
 // TestFindParentSessionID tests the findParentSessionID function (exported via FindTerminalToolCallSessions)
 func TestFindParentSessionID(t *testing.T) {
+	t.Parallel()
 	sessions := toDBSessions([]sessionFixture{
 		{ID: 1, MessageIDs: []uint{1, 2, 3, 4, 5, 6}, ToolIDs: []uint{100}},
 		{ID: 2, MessageIDs: []uint{1, 2, 3, 4, 5}, ToolIDs: []uint{200}},

@@ -19,8 +19,8 @@ type User struct {
 //	@update 2026-04-25 15:00:00
 type DetailedUser struct {
 	ID         uint      `json:"id" doc:"Unique identifier for the user"`
-	CreatedAt  time.Time `json:"createdAt,omitempty" doc:"Timestamp when the user account was created"`
-	LastLogin  time.Time `json:"lastLogin,omitempty" doc:"Timestamp of the user's last login"`
+	CreatedAt  time.Time `json:"createdAt,omitzero" doc:"Timestamp when the user account was created"`
+	LastLogin  time.Time `json:"lastLogin,omitzero" doc:"Timestamp of the user's last login"`
 	Permission string    `json:"permission,omitempty" doc:"Permission level of the user"`
 	User
 }

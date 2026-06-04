@@ -23,6 +23,7 @@ package openai_max_tokens_passthrough
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -57,10 +58,10 @@ func loadFixture(t *testing.T, name string) []byte {
 
 // mustE2EEnv 返回 (baseURL, apiKey) 或 t.Skip；
 // E2E 默认离线 skip，只有显式提供环境变量时才打到生产。
-func mustE2EEnv(t *testing.T) (string, string) {
+func mustE2EEnv(t *testing.T) (baseURL, apiKey string) {
 	t.Helper()
-	baseURL := os.Getenv("BASE_URL")
-	apiKey := os.Getenv("API_KEY")
+	baseURL = os.Getenv("BASE_URL")
+	apiKey = os.Getenv("API_KEY")
 	if baseURL == "" || apiKey == "" {
 		t.Skip("BASE_URL and API_KEY are required for e2e test")
 	}
@@ -73,7 +74,7 @@ func newE2EClient() *http.Client {
 
 func postChatCompletions(t *testing.T, baseURL, apiKey string, body []byte) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(body)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(body)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -90,6 +91,7 @@ func postChatCompletions(t *testing.T, baseURL, apiKey string, body []byte) *htt
 // TestMaxTokensPassthrough_NonStream 非流式路径下，`max_tokens:1` 必须被上游生效。
 // 回归场景：gpt-5.5 / chatanywhere.tech（503 "模型无返回结果" 的那条线）。
 func TestMaxTokensPassthrough_NonStream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "gpt55_max_tokens_1_non_stream"))
@@ -151,6 +153,7 @@ func TestMaxTokensPassthrough_NonStream(t *testing.T) {
 // TestMaxTokensPassthrough_Stream 流式路径下，`max_tokens:1` 同样必须被上游生效。
 // 用最后一个携带 usage 的 chunk（stream_options.include_usage=true）做断言。
 func TestMaxTokensPassthrough_Stream(t *testing.T) {
+	t.Parallel()
 	baseURL, apiKey := mustE2EEnv(t)
 
 	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "gpt55_max_tokens_1_stream"))

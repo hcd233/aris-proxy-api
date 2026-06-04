@@ -70,11 +70,11 @@ func indexSeries[P any, V any](
 	modelOf func(P) string,
 	timeOf func(P) time.Time,
 	valueOf func(P) V,
-) ([]string, map[string]map[time.Time]V, map[time.Time]struct{}) {
+) (modelOrder []string, byModel map[string]map[time.Time]V, timeSet map[time.Time]struct{}) {
 	seenModel := make(map[string]struct{}, len(points))
-	modelOrder := make([]string, 0, len(points))
-	byModel := make(map[string]map[time.Time]V, len(points))
-	timeSet := make(map[time.Time]struct{}, len(points))
+	modelOrder = make([]string, 0, len(points))
+	byModel = make(map[string]map[time.Time]V, len(points))
+	timeSet = make(map[time.Time]struct{}, len(points))
 	for _, p := range points {
 		m := modelOf(p)
 		t := timeOf(p)

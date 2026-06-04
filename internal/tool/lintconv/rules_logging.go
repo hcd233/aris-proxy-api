@@ -133,12 +133,11 @@ func (c *checker) checkLogMessageFormat(file SourceFile, call *ast.CallExpr) {
 	if !strings.HasPrefix(message, constant.ConvCheckPrefixBracket) {
 		return
 	}
-	idx := strings.IndexByte(message, ']')
-	if idx < 0 {
+	_, after, found := strings.Cut(message, "]")
+	if !found {
 		return
 	}
-	after := message[idx+1:]
-	if len(after) == 0 {
+	if after == "" {
 		c.report(file, call.Args[0].(*ast.BasicLit), enum.SeverityWarning, constant.RuleLoggingFormat, constant.ConvCheckMsgAfterModuleName)
 		return
 	}
@@ -147,7 +146,7 @@ func (c *checker) checkLogMessageFormat(file SourceFile, call *ast.CallExpr) {
 		return
 	}
 	rest := strings.TrimLeft(after, " ")
-	if len(rest) == 0 {
+	if rest == "" {
 		c.report(file, call.Args[0].(*ast.BasicLit), enum.SeverityWarning, constant.RuleLoggingFormat, constant.ConvCheckMsgAfterModuleName)
 		return
 	}

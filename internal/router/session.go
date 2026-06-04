@@ -21,8 +21,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "/list",
 		Summary:     "ListSessions",
 		Description: "Paginate session list for current user (JWT auth)",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessions", enum.PermissionUser)},
 	}, sessionHandler.HandleListSessionsByUser)
 
@@ -32,8 +32,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "",
 		Summary:     "GetSession",
 		Description: "Get session detail by session ID (JWT auth)",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getSession", enum.PermissionUser)},
 	}, sessionHandler.HandleGetSessionByUser)
 
@@ -43,8 +43,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "/metadata",
 		Summary:     "GetSessionMetadata",
 		Description: "Get session metadata (without messages/tools content)",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getSessionMetadata", enum.PermissionUser)},
 	}, sessionHandler.HandleGetSessionMetadata)
 
@@ -54,8 +54,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "/message/list",
 		Summary:     "ListSessionMessages",
 		Description: "Paginate session messages by offset+limit",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionMessages", enum.PermissionUser)},
 	}, sessionHandler.HandleListSessionMessages)
 
@@ -65,8 +65,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "/tool/list",
 		Summary:     "ListSessionTools",
 		Description: "Paginate session tools by offset+limit",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionTools", enum.PermissionUser)},
 	}, sessionHandler.HandleListSessionTools)
 
@@ -76,8 +76,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "",
 		Summary:     "DeleteSession",
 		Description: "Delete a session by ID (owner or admin)",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteSession", enum.PermissionUser)},
 	}, sessionHandler.HandleDeleteSession)
 
@@ -87,8 +87,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "/score",
 		Summary:     "ScoreSession",
 		Description: "Submit manual rating (1-5) for a session",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("scoreSession", enum.PermissionUser)},
 	}, sessionHandler.HandleScoreSession)
 
@@ -98,8 +98,8 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Path:        "/score",
 		Summary:     "DeleteScoreSession",
 		Description: "Remove manual rating for a session",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteScoreSession", enum.PermissionUser)},
 	}, sessionHandler.HandleDeleteScoreSession)
 
@@ -113,8 +113,8 @@ func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.Sessio
 		Path:        "/share",
 		Summary:     "CreateShare",
 		Description: "Create a share link for a session",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 	}, sessionHandler.HandleCreateShare)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -123,8 +123,8 @@ func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.Sessio
 		Path:        "/share/list",
 		Summary:     "ListShares",
 		Description: "List all share links for current user",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 	}, sessionHandler.HandleListShares)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -133,8 +133,8 @@ func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.Sessio
 		Path:        "/share",
 		Summary:     "DeleteShare",
 		Description: "Delete a share link",
-		Tags:        []string{"Session"},
-		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 	}, sessionHandler.HandleDeleteShare)
 }
 
@@ -145,7 +145,7 @@ func initSessionPublicRouter(sessionGroup huma.API, sessionHandler handler.Sessi
 		Path:        "/share/metadata",
 		Summary:     "GetShareMetadata",
 		Description: "Get shared session metadata (public, rate limited)",
-		Tags:        []string{"Session"},
+		Tags:        []string{constant.TagSession},
 		Middlewares: huma.Middlewares{
 			middleware.TokenBucketRateLimiterMiddleware(cache, "getShareMetadata", "", constant.PeriodGetShareMetadata, constant.LimitGetShareMetadata),
 		},
@@ -157,7 +157,7 @@ func initSessionPublicRouter(sessionGroup huma.API, sessionHandler handler.Sessi
 		Path:        "/share/message/list",
 		Summary:     "ListShareMessages",
 		Description: "Paginate shared session messages (public, rate limited)",
-		Tags:        []string{"Session"},
+		Tags:        []string{constant.TagSession},
 		Middlewares: huma.Middlewares{
 			middleware.TokenBucketRateLimiterMiddleware(cache, "listShareMessages", "", constant.PeriodListShareMessages, constant.LimitListShareMessages),
 		},
@@ -169,7 +169,7 @@ func initSessionPublicRouter(sessionGroup huma.API, sessionHandler handler.Sessi
 		Path:        "/share/tool/list",
 		Summary:     "ListShareTools",
 		Description: "Paginate shared session tools (public, rate limited)",
-		Tags:        []string{"Session"},
+		Tags:        []string{constant.TagSession},
 		Middlewares: huma.Middlewares{
 			middleware.TokenBucketRateLimiterMiddleware(cache, "listShareTools", "", constant.PeriodListShareTools, constant.LimitListShareTools),
 		},

@@ -70,8 +70,7 @@ func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*vo.UnifiedMessag
 			continue
 		}
 		itemType := lo.FromPtr(item.Type)
-		switch itemType {
-		case enum.ResponseInputItemTypeReasoning:
+		if itemType == enum.ResponseInputItemTypeReasoning {
 			// Reasoning 项单独处理：不生成独立 UnifiedMessage，而是挂到下一个 assistant message 上
 			if text := collectReasoningText(item); text != "" {
 				if pendingReasoning.Len() > 0 {

@@ -96,7 +96,7 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromOpenAIUsage(usage)
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
 
@@ -107,7 +107,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(u.taskSubmitter, ctx, m, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
+			auditFailure(ctx, u.taskSubmitter, m, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
 			return
 		}
 		completion.Model = req.Body.Model
@@ -118,7 +118,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 		task := newAuditTask(ctx, m, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIChatCompletion, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromOpenAIUsage(completion.Usage)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck
 	})
 }
 
@@ -165,11 +165,11 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 			if _, doneErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal); doneErr != nil {
 				log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(doneErr))
 			}
-			_ = w.Flush()
+			_ = w.Flush() //nolint:errcheck
 		} else {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		}
-		completion, _ := proxyutil.ConcatChatCompletionChunks(allChunks)
+		completion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck
 		if completion != nil {
 			completion.Model = exposedModel
 		}
@@ -178,7 +178,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck
 	})
 }
 
@@ -190,7 +190,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailureWithProviders(u.taskSubmitter, ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
+			auditFailureWithProviders(ctx, u.taskSubmitter, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
 			return
 		}
 		completion, convErr := conv.ToOpenAIResponse(anthropicMsg)
@@ -205,6 +205,6 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck
 	})
 }

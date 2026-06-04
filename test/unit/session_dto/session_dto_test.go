@@ -60,6 +60,7 @@ func findCase(t *testing.T, cases []sessionDTOCase, name string) sessionDTOCase 
 }
 
 func TestSessionSummary_JSONSerialization(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "session_summary_roundtrip")
 
@@ -85,6 +86,7 @@ func TestSessionSummary_JSONSerialization(t *testing.T) {
 }
 
 func TestSessionDetail_JSONSerialization(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "session_detail_roundtrip")
 
@@ -119,6 +121,7 @@ func TestSessionDetail_JSONSerialization(t *testing.T) {
 }
 
 func TestListSessionsRsp_EmptySessions(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "list_sessions_empty")
 
@@ -142,6 +145,7 @@ func TestListSessionsRsp_EmptySessions(t *testing.T) {
 }
 
 func TestGetSessionRsp_WithError(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "get_session_with_error")
 
@@ -170,6 +174,7 @@ func TestGetSessionRsp_WithError(t *testing.T) {
 }
 
 func TestSessionMetadata_JSONSerialization(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 5, 29, 10, 0, 0, 0, time.UTC)
 	meta := &dto.SessionMetadata{
 		ID:           42,
@@ -210,6 +215,7 @@ func TestSessionMetadata_JSONSerialization(t *testing.T) {
 }
 
 func TestListSessionMessagesRsp_PageInfoFields(t *testing.T) {
+	t.Parallel()
 	rsp := &dto.ListSessionMessagesRsp{
 		Messages: []*dto.MessageItem{},
 		PageInfo: &model.PageInfo{Page: 1, PageSize: 50, Total: 156},
@@ -229,6 +235,7 @@ func TestListSessionMessagesRsp_PageInfoFields(t *testing.T) {
 }
 
 func TestListSessionToolsRsp_EmptyTools(t *testing.T) {
+	t.Parallel()
 	rsp := &dto.ListSessionToolsRsp{
 		Tools:    nil,
 		PageInfo: &model.PageInfo{Page: 1, PageSize: 20, Total: 0},

@@ -16,6 +16,7 @@ import (
 )
 
 func TestSessionMetaCacheRecord_RoundTrip(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 5, 29, 10, 0, 0, 0, time.UTC)
 	original := &sessionport.SessionMetaCacheRecord{
 		ID:         42,
@@ -60,6 +61,7 @@ func TestSessionMetaCacheRecord_RoundTrip(t *testing.T) {
 }
 
 func TestSessionMetaCacheRecord_EmptyIDs(t *testing.T) {
+	t.Parallel()
 	original := &sessionport.SessionMetaCacheRecord{
 		ID:         1,
 		APIKeyName: "k",
@@ -80,6 +82,7 @@ func TestSessionMetaCacheRecord_EmptyIDs(t *testing.T) {
 }
 
 func TestMessageCacheRecord_RoundTrip(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 5, 29, 11, 0, 0, 0, time.UTC)
 	original := &sessionport.MessageCacheRecord{
 		ID:    100,
@@ -116,6 +119,7 @@ func TestMessageCacheRecord_RoundTrip(t *testing.T) {
 }
 
 func TestToolCacheRecord_RoundTrip(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 5, 29, 12, 0, 0, 0, time.UTC)
 	original := &sessionport.ToolCacheRecord{
 		ID: 7,
