@@ -73,31 +73,23 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 		raw, readErr := reader.ReadString('\n')
 		line := strings.TrimRight(raw, constant.NewlineCRLF)
 
-		if line != "" {
-			if strings.HasPrefix(line, constant.SSEDataPrefix) {
-				payload := line[len(constant.SSEDataPrefix):]
-				if payload != constant.SSEDoneSignal {
-					chunk := &dto.OpenAIChatCompletionChunk{}
-					if err := sonic.UnmarshalString(payload, chunk); err != nil {
-						log.Warn("[OpenAIProxy] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
-						continue
-					}
-					collectedChunks = append(collectedChunks, chunk)
-
-					if err := onChunk(chunk); err != nil {
-						log.Warn("[OpenAIProxy] OnChunk callback error", zap.Error(err))
-						return nil, err
-					}
-				}
-			}
-		}
-
 		if readErr != nil {
 			if readErr != io.EOF {
 				log.Warn("[OpenAIProxy] Read upstream sse error", zap.Error(readErr))
 				return nil, &model.UpstreamConnectionError{Cause: readErr}
 			}
 			break
+		}
+
+		chunk, skip := parseSSEDataLine(line)
+		if skip || chunk == nil {
+			continue
+		}
+
+		collectedChunks = append(collectedChunks, chunk)
+		if err := onChunk(chunk); err != nil {
+			log.Warn("[OpenAIProxy] OnChunk callback error", zap.Error(err))
+			return nil, err
 		}
 	}
 
@@ -106,6 +98,28 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 	}
 
 	return proxyutil.ConcatChatCompletionChunks(collectedChunks)
+}
+
+func parseSSEDataLine(line string) (chunk *dto.OpenAIChatCompletionChunk, skip bool) {
+	if line == "" {
+		skip = true
+		return
+	}
+	if !strings.HasPrefix(line, constant.SSEDataPrefix) {
+		skip = true
+		return
+	}
+	payload := line[len(constant.SSEDataPrefix):]
+	if payload == constant.SSEDoneSignal {
+		return
+	}
+	chunk = &dto.OpenAIChatCompletionChunk{}
+	if err := sonic.UnmarshalString(payload, chunk); err != nil {
+		zap.L().Warn("[OpenAIProxy] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
+		skip = true
+		return
+	}
+	return
 }
 
 // doUpstreamRequest 构建并发送上游 HTTP 请求的公共逻辑

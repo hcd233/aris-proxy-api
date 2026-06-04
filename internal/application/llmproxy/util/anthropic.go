@@ -57,6 +57,14 @@ func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
 	}
 }
 
+// blockState tracks content blocks by index during SSE event accumulation
+type blockState struct {
+	block         *dto.AnthropicContentBlock
+	textParts     []string
+	thinkingParts []string
+	inputParts    []string // input_json_delta
+}
+
 // ConcatAnthropicSSEEvents 合并 Anthropic SSE 事件为完整的 AnthropicMessage 响应
 //
 // Anthropic SSE 事件类型：
@@ -82,86 +90,94 @@ func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
 //     @update 2026-03-18 10:00:00
 func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMessage, error) {
 	msg := &dto.AnthropicMessage{}
-
-	// Track content blocks by index
-	type blockState struct {
-		block         *dto.AnthropicContentBlock
-		textParts     []string
-		thinkingParts []string
-		inputParts    []string // input_json_delta
-	}
 	blocks := make(map[int]*blockState)
 	blockOrder := make([]int, 0)
 
 	for _, event := range events {
-		switch event.Event {
-		case enum.AnthropicSSEEventTypeMessageStart:
-			var payload dto.AnthropicSSEMessageStart
-			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_start")
-			}
-			if payload.Message != nil {
-				msg.ID = payload.Message.ID
-				msg.Type = payload.Message.Type
-				msg.Role = payload.Message.Role
-				msg.Model = payload.Message.Model
-				msg.Usage = payload.Message.Usage
-			}
-
-		case enum.AnthropicSSEEventTypeContentBlockStart:
-			var payload dto.AnthropicSSEContentBlockStart
-			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_start")
-			}
-			bs := &blockState{
-				block: payload.ContentBlock,
-			}
-			blocks[payload.Index] = bs
-			blockOrder = append(blockOrder, payload.Index)
-
-		case enum.AnthropicSSEEventTypeContentBlockDelta:
-			var payload dto.AnthropicSSEContentBlockDelta
-			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_delta")
-			}
-			bs, ok := blocks[payload.Index]
-			if !ok {
-				return nil, ierr.Newf(ierr.ErrSSEParse, "content_block_delta for unknown index %d", payload.Index)
-			}
-			switch payload.Delta.Type {
-			case enum.AnthropicDeltaTypeTextDelta:
-				bs.textParts = append(bs.textParts, payload.Delta.Text)
-			case enum.AnthropicDeltaTypeThinkingDelta:
-				bs.thinkingParts = append(bs.thinkingParts, payload.Delta.Thinking)
-			case enum.AnthropicDeltaTypeInputJSONDelta:
-				bs.inputParts = append(bs.inputParts, payload.Delta.PartialJSON)
-			case enum.AnthropicDeltaTypeSignatureDelta:
-				if bs.block != nil {
-					bs.block.Signature = lo.ToPtr(lo.FromPtr(bs.block.Signature) + payload.Delta.Text)
-				}
-			}
-
-		case enum.AnthropicSSEEventTypeMessageDelta:
-			var payload dto.AnthropicSSEMessageDelta
-			if err := sonic.Unmarshal(event.Data, &payload); err != nil {
-				return nil, ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_delta")
-			}
-			msg.StopReason = payload.Delta.StopReason
-			msg.StopSequence = payload.Delta.StopSequence
-			if payload.Usage != nil && msg.Usage != nil {
-				msg.Usage.OutputTokens = payload.Usage.OutputTokens
-			}
-
-		case enum.AnthropicSSEEventTypeContentBlockStop, enum.AnthropicSSEEventTypeMessageStop, enum.AnthropicSSEEventTypePing:
-			// 无需处理
-
-		default:
-			return nil, ierr.Newf(ierr.ErrSSEUnknownEvent, "unknown SSE event type: %q", event.Event)
+		if err := processAnthropicSSEEvent(event, msg, blocks, &blockOrder); err != nil {
+			return nil, err
 		}
 	}
 
-	// Build final content blocks
-	msg.Content = make([]*dto.AnthropicContentBlock, 0, len(blockOrder))
+	content, err := buildAnthropicContentBlocks(blocks, blockOrder)
+	if err != nil {
+		return nil, err
+	}
+	msg.Content = content
+	return msg, nil
+}
+
+// processAnthropicSSEEvent processes a single SSE event and updates the message and blocks
+func processAnthropicSSEEvent(event dto.AnthropicSSEEvent, msg *dto.AnthropicMessage, blocks map[int]*blockState, blockOrder *[]int) error {
+	switch event.Event {
+	case enum.AnthropicSSEEventTypeMessageStart:
+		var payload dto.AnthropicSSEMessageStart
+		if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+			return ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_start")
+		}
+		if payload.Message != nil {
+			msg.ID = payload.Message.ID
+			msg.Type = payload.Message.Type
+			msg.Role = payload.Message.Role
+			msg.Model = payload.Message.Model
+			msg.Usage = payload.Message.Usage
+		}
+
+	case enum.AnthropicSSEEventTypeContentBlockStart:
+		var payload dto.AnthropicSSEContentBlockStart
+		if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+			return ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_start")
+		}
+		blocks[payload.Index] = &blockState{
+			block: payload.ContentBlock,
+		}
+		*blockOrder = append(*blockOrder, payload.Index)
+
+	case enum.AnthropicSSEEventTypeContentBlockDelta:
+		var payload dto.AnthropicSSEContentBlockDelta
+		if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+			return ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal content_block_delta")
+		}
+		bs, ok := blocks[payload.Index]
+		if !ok {
+			return ierr.Newf(ierr.ErrSSEParse, "content_block_delta for unknown index %d", payload.Index)
+		}
+		switch payload.Delta.Type {
+		case enum.AnthropicDeltaTypeTextDelta:
+			bs.textParts = append(bs.textParts, payload.Delta.Text)
+		case enum.AnthropicDeltaTypeThinkingDelta:
+			bs.thinkingParts = append(bs.thinkingParts, payload.Delta.Thinking)
+		case enum.AnthropicDeltaTypeInputJSONDelta:
+			bs.inputParts = append(bs.inputParts, payload.Delta.PartialJSON)
+		case enum.AnthropicDeltaTypeSignatureDelta:
+			if bs.block != nil {
+				bs.block.Signature = lo.ToPtr(lo.FromPtr(bs.block.Signature) + payload.Delta.Text)
+			}
+		}
+
+	case enum.AnthropicSSEEventTypeMessageDelta:
+		var payload dto.AnthropicSSEMessageDelta
+		if err := sonic.Unmarshal(event.Data, &payload); err != nil {
+			return ierr.Wrap(ierr.ErrSSEParse, err, "unmarshal message_delta")
+		}
+		msg.StopReason = payload.Delta.StopReason
+		msg.StopSequence = payload.Delta.StopSequence
+		if payload.Usage != nil && msg.Usage != nil {
+			msg.Usage.OutputTokens = payload.Usage.OutputTokens
+		}
+
+	case enum.AnthropicSSEEventTypeContentBlockStop, enum.AnthropicSSEEventTypeMessageStop, enum.AnthropicSSEEventTypePing:
+		// 无需处理
+
+	default:
+		return ierr.Newf(ierr.ErrSSEUnknownEvent, "unknown SSE event type: %q", event.Event)
+	}
+	return nil
+}
+
+// buildAnthropicContentBlocks assembles final content blocks from accumulated block state
+func buildAnthropicContentBlocks(blocks map[int]*blockState, blockOrder []int) ([]*dto.AnthropicContentBlock, error) {
+	content := make([]*dto.AnthropicContentBlock, 0, len(blockOrder))
 	for _, idx := range blockOrder {
 		bs := blocks[idx]
 		if bs.block == nil {
@@ -170,7 +186,6 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 
 		block := bs.block
 
-		// 累积文本增量
 		switch block.Type {
 		case enum.AnthropicContentBlockTypeText:
 			if len(bs.textParts) > 0 {
@@ -193,10 +208,9 @@ func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMes
 			}
 		}
 
-		msg.Content = append(msg.Content, block)
+		content = append(content, block)
 	}
-
-	return msg, nil
+	return content, nil
 }
 
 // SendAnthropicUpstreamError 发送上游错误响应

@@ -87,20 +87,23 @@ func WriteAnthropicMessageStop(w *bufio.Writer) error {
 func WriteUpstreamSSEError(ctx context.Context, w *bufio.Writer, err error) {
 	log := logger.WithCtx(ctx)
 	var upstreamErr *model.UpstreamError
-	if errors.As(err, &upstreamErr) {
-		if upstreamErr.Body != "" {
-			if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body); writeErr != nil {
-				log.Debug("[WriteUpstreamSSEError] Failed to write upstream error body", zap.Error(writeErr))
-			}
-		} else {
-			if _, writeErr := fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode); writeErr != nil {
-				log.Debug("[WriteUpstreamSSEError] Failed to write upstream status frame", zap.Error(writeErr))
-			}
-		}
-	} else {
+	if !errors.As(err, &upstreamErr) {
 		log.Error("[WriteUpstreamSSEError] Non-upstream error in SSE stream", zap.Error(err))
 		if _, writeErr := fmt.Fprint(w, constant.SSEOpenAIInternalErrorFrame); writeErr != nil {
 			log.Debug("[WriteUpstreamSSEError] Failed to write internal error frame", zap.Error(writeErr))
+		}
+		if flushErr := w.Flush(); flushErr != nil {
+			log.Debug("[WriteUpstreamSSEError] Failed to flush SSE writer", zap.Error(flushErr))
+		}
+		return
+	}
+	if upstreamErr.Body != "" {
+		if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body); writeErr != nil {
+			log.Debug("[WriteUpstreamSSEError] Failed to write upstream error body", zap.Error(writeErr))
+		}
+	} else {
+		if _, writeErr := fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode); writeErr != nil {
+			log.Debug("[WriteUpstreamSSEError] Failed to write upstream status frame", zap.Error(writeErr))
 		}
 	}
 	if flushErr := w.Flush(); flushErr != nil {

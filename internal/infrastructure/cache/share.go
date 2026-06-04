@@ -266,58 +266,10 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 		return nil, nil, ierr.Wrap(ierr.ErrInternal, countErr, "failed to count user shares")
 	}
 
-	scanCount := pageSize
-	scanCount = max(scanCount, constant.ShareListScanChunkSize)
 	wanted := page * pageSize
-	validItems := make([]*dto.ShareItem, 0, wanted)
-	offset := int64(0)
-	fullyScanned := false
-
-	for len(validItems) < wanted && offset < zTotal {
-		results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, &redis.ZRangeBy{
-			Max:    constant.RedisZRangePositiveInfinity,
-			Min:    minScore,
-			Offset: offset,
-			Count:  int64(scanCount),
-		}).Result()
-		if zErr != nil {
-			return nil, nil, ierr.Wrap(ierr.ErrInternal, zErr, "failed to list user shares")
-		}
-		if len(results) == 0 {
-			fullyScanned = true
-			break
-		}
-		offset += int64(len(results))
-		if offset >= zTotal || len(results) < scanCount {
-			fullyScanned = true
-		}
-
-		records := make([]shareRecord, 0, len(results))
-		for _, result := range results {
-			var record shareRecord
-			if unmarshalErr := sonic.Unmarshal([]byte(result), &record); unmarshalErr != nil {
-				continue
-			}
-			records = append(records, record)
-		}
-
-		pipe := s.cache.Pipeline()
-		existsCmds := make([]*redis.IntCmd, len(records))
-		for i, r := range records {
-			shareKey := fmt.Sprintf(constant.ShareKeyTemplate, r.ShareID)
-			existsCmds[i] = pipe.Exists(ctx, shareKey)
-		}
-		if _, pipeErr := pipe.Exec(ctx); pipeErr != nil && !errors.Is(pipeErr, redis.Nil) {
-			return nil, nil, ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
-		}
-
-		for i, r := range records {
-			item := shareRecordToItem(r, existsCmds[i].Val(), now, retentionStart)
-			if item == nil {
-				continue
-			}
-			validItems = append(validItems, item)
-		}
+	validItems, fullyScanned, collectErr := s.collectUserShares(ctx, userSharesKey, minScore, zTotal, pageSize, wanted, now, retentionStart)
+	if collectErr != nil {
+		return nil, nil, collectErr
 	}
 
 	total := zTotal
@@ -339,6 +291,70 @@ func (s *shareCache) ListUserShares(ctx context.Context, userID uint, page, page
 		Total:    total,
 	}
 	return items, pageInfo, nil
+}
+
+func (s *shareCache) collectUserShares(ctx context.Context, userSharesKey, minScore string, zTotal int64, pageSize, wanted int, now, retentionStart time.Time) ([]*dto.ShareItem, bool, error) {
+	scanCount := pageSize
+	scanCount = max(scanCount, constant.ShareListScanChunkSize)
+	validItems := make([]*dto.ShareItem, 0, wanted)
+	offset := int64(0)
+	fullyScanned := false
+
+	for len(validItems) < wanted && offset < zTotal {
+		results, zErr := s.cache.ZRevRangeByScore(ctx, userSharesKey, &redis.ZRangeBy{
+			Max:    constant.RedisZRangePositiveInfinity,
+			Min:    minScore,
+			Offset: offset,
+			Count:  int64(scanCount),
+		}).Result()
+		if zErr != nil {
+			return nil, false, ierr.Wrap(ierr.ErrInternal, zErr, "failed to list user shares")
+		}
+		if len(results) == 0 {
+			fullyScanned = true
+			break
+		}
+		offset += int64(len(results))
+		if offset >= zTotal || len(results) < scanCount {
+			fullyScanned = true
+		}
+
+		records := make([]shareRecord, 0, len(results))
+		for _, result := range results {
+			var record shareRecord
+			if unmarshalErr := sonic.Unmarshal([]byte(result), &record); unmarshalErr != nil {
+				continue
+			}
+			records = append(records, record)
+		}
+
+		if batchErr := s.batchFilterShares(ctx, records, &validItems, now, retentionStart); batchErr != nil {
+			return nil, false, batchErr
+		}
+	}
+
+	return validItems, fullyScanned, nil
+}
+
+func (s *shareCache) batchFilterShares(ctx context.Context, records []shareRecord, validItems *[]*dto.ShareItem, now, retentionStart time.Time) error {
+	pipe := s.cache.Pipeline()
+	existsCmds := make([]*redis.IntCmd, len(records))
+	for i, r := range records {
+		shareKey := fmt.Sprintf(constant.ShareKeyTemplate, r.ShareID)
+		existsCmds[i] = pipe.Exists(ctx, shareKey)
+	}
+	if _, pipeErr := pipe.Exec(ctx); pipeErr != nil && !errors.Is(pipeErr, redis.Nil) {
+		return ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
+	}
+
+	for i, r := range records {
+		item := shareRecordToItem(r, existsCmds[i].Val(), now, retentionStart)
+		if item == nil {
+			continue
+		}
+		*validItems = append(*validItems, item)
+	}
+	return nil
 }
 
 func shareRecordToItem(r shareRecord, exists int64, now, retentionStart time.Time) *dto.ShareItem {

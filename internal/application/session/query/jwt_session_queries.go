@@ -89,26 +89,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	var sessionMsgIDs map[uint][]uint
 	var msgByID map[uint]*session.MessageDetailProjection
 	if len(emptySummaryIDs) > 0 {
-		var batchErr error
-		sessionMsgIDs, batchErr = h.readRepo.FindSessionMessageIDsByIDs(ctx, emptySummaryIDs)
-		if batchErr != nil {
-			log.Error("[SessionQuery] Failed to batch load message IDs for empty summary", zap.Error(batchErr))
-		} else {
-			var allMsgIDs []uint
-			for _, ids := range sessionMsgIDs {
-				allMsgIDs = append(allMsgIDs, ids...)
-			}
-			if len(allMsgIDs) > 0 {
-				messages, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(allMsgIDs))
-				if msgErr != nil {
-					log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(msgErr))
-				} else {
-					msgByID = lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
-						return m.ID, m
-					})
-				}
-			}
-		}
+		sessionMsgIDs, msgByID = h.loadMessagesForEmptySummaries(ctx, emptySummaryIDs)
 	}
 
 	for _, p := range projections {
@@ -179,6 +160,33 @@ func firstUserMessageContent(msgIDs []uint, msgByID map[uint]*session.MessageDet
 		return truncateSummary(extractTextContent(m.Message.Content))
 	}
 	return ""
+}
+
+func (h *listSessionsByUserHandler) loadMessagesForEmptySummaries(ctx context.Context, sessionIDs []uint) (
+	sessionMsgIDsMap map[uint][]uint, messageProjectionsMap map[uint]*session.MessageDetailProjection,
+) {
+	log := logger.WithCtx(ctx)
+	sessionMsgIDs, err := h.readRepo.FindSessionMessageIDsByIDs(ctx, sessionIDs)
+	if err != nil {
+		log.Error("[SessionQuery] Failed to batch load message IDs for empty summary", zap.Error(err))
+		return sessionMsgIDs, nil
+	}
+	var allMsgIDs []uint
+	for _, ids := range sessionMsgIDs {
+		allMsgIDs = append(allMsgIDs, ids...)
+	}
+	if len(allMsgIDs) == 0 {
+		return sessionMsgIDs, nil
+	}
+	messages, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(allMsgIDs))
+	if msgErr != nil {
+		log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(msgErr))
+		return sessionMsgIDs, nil
+	}
+	msgByID := lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
+		return m.ID, m
+	})
+	return sessionMsgIDs, msgByID
 }
 
 // extractTextContent 从 UnifiedContent 中提取纯文本内容
