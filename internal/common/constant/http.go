@@ -16,7 +16,6 @@ const (
 	HTTPLowerHeaderContentLength      = "content-length"
 	HTTPLowerHeaderAcceptEncoding     = "accept-encoding"
 	HTTPLowerHeaderAPIKey             = "x-api-key"
-	HTTPLowerHeaderAnthropicVersion   = "anthropic-version"
 	HTTPLowerHeaderConnection         = "connection"
 	HTTPLowerHeaderTransferEncoding   = "transfer-encoding"
 	HTTPLowerHeaderHost               = "host"
