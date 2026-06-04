@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
+	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -25,55 +25,66 @@ import (
 // SessionHandler Session处理器
 //
 //	@author centonhuang
-//	@update 2026-03-19 10:00:00
+//	@update 2026-06-03 10:00:00
 type SessionHandler interface {
 	HandleListSessionsByUser(ctx context.Context, req *dto.ListSessionsByUserReq) (*dto.HTTPResponse[*dto.ListSessionsRsp], error)
 	HandleGetSessionByUser(ctx context.Context, req *dto.GetSessionByUserReq) (*dto.HTTPResponse[*dto.GetSessionRsp], error)
-	HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error)
 	HandleCreateShare(ctx context.Context, req *dto.CreateShareReq) (*dto.HTTPResponse[*dto.CreateShareRsp], error)
 	HandleListShares(ctx context.Context, req *dto.ListSharesReq) (*dto.HTTPResponse[*dto.ListSharesRsp], error)
 	HandleDeleteShare(ctx context.Context, req *dto.DeleteShareReq) (*dto.HTTPResponse[*dto.CommonRsp], error)
+	// 新增（详情接口性能优化）
 	HandleGetSessionMetadata(ctx context.Context, req *dto.GetSessionMetadataReq) (*dto.HTTPResponse[*dto.GetSessionMetadataRsp], error)
 	HandleListSessionMessages(ctx context.Context, req *dto.ListSessionMessagesReq) (*dto.HTTPResponse[*dto.ListSessionMessagesRsp], error)
 	HandleListSessionTools(ctx context.Context, req *dto.ListSessionToolsReq) (*dto.HTTPResponse[*dto.ListSessionToolsRsp], error)
 	HandleGetShareMetadata(ctx context.Context, req *dto.GetShareMetadataReq) (*dto.HTTPResponse[*dto.GetShareMetadataRsp], error)
 	HandleListShareMessages(ctx context.Context, req *dto.ListShareMessagesReq) (*dto.HTTPResponse[*dto.ListShareMessagesRsp], error)
 	HandleListShareTools(ctx context.Context, req *dto.ListShareToolsReq) (*dto.HTTPResponse[*dto.ListShareToolsRsp], error)
+	HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
 //
 //	@author centonhuang
-//	@update 2026-04-26 10:00:00
+//	@update 2026-06-03 10:00:00
 type SessionDependencies struct {
-	ListByUser    sessionport.ListSessionsByUserHandler
-	GetByUser     sessionport.GetSessionByUserHandler
+	ListByUser    port.ListSessionsByUserHandler
+	GetByUser     port.GetSessionByUserHandler
 	ShareCache    cache.ShareCache
+	GetMetaByUser port.GetSessionMetaByUserHandler
+	ListMessages  port.ListSessionMessagesHandler
+	ListTools     port.ListSessionToolsHandler
+	DeleteSession port.DeleteSessionHandler
 	SessionRepo   session.SessionRepository
-	GetMetaByUser sessionport.GetSessionMetaByUserHandler
-	ListMessages  sessionport.ListSessionMessagesHandler
-	ListTools     sessionport.ListSessionToolsHandler
 }
 
 type sessionHandler struct {
-	listByUser    sessionport.ListSessionsByUserHandler
-	getByUser     sessionport.GetSessionByUserHandler
+	listByUser    port.ListSessionsByUserHandler
+	getByUser     port.GetSessionByUserHandler
 	shareCache    cache.ShareCache
+	getMetaByUser port.GetSessionMetaByUserHandler
+	listMessages  port.ListSessionMessagesHandler
+	listTools     port.ListSessionToolsHandler
+	deleteSession port.DeleteSessionHandler
 	sessionRepo   session.SessionRepository
-	getMetaByUser sessionport.GetSessionMetaByUserHandler
-	listMessages  sessionport.ListSessionMessagesHandler
-	listTools     sessionport.ListSessionToolsHandler
 }
 
+// NewSessionHandler 创建Session处理器
+//
+//	@param deps SessionDependencies 依赖项（由调用方注入，避免 handler 直接实例化 infrastructure）
+//	@return SessionHandler
+//	@author centonhuang
+//	@update 2026-06-03 10:00:00
 func NewSessionHandler(deps SessionDependencies) SessionHandler {
 	return &sessionHandler{
 		listByUser:    deps.ListByUser,
 		getByUser:     deps.GetByUser,
 		shareCache:    deps.ShareCache,
-		sessionRepo:   deps.SessionRepo,
 		getMetaByUser: deps.GetMetaByUser,
 		listMessages:  deps.ListMessages,
 		listTools:     deps.ListTools,
+		deleteSession: deps.DeleteSession,
+		sessionRepo:   deps.SessionRepo,
 	}
 }
 
@@ -92,7 +103,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	views, pageInfo, err := h.listByUser.Handle(ctx, sessionport.ListSessionsByUserQuery{
+	views, pageInfo, err := h.listByUser.Handle(ctx, port.ListSessionsByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		Page:      req.Page,
@@ -108,15 +119,15 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Sessions = lo.Map(views, func(v *sessionport.SessionSummaryView, _ int) *dto.SessionSummary {
+	rsp.Sessions = lo.Map(views, func(v *port.SessionSummaryView, _ int) *dto.SessionSummary {
 		return &dto.SessionSummary{
 			ID:           v.ID,
 			CreatedAt:    v.CreatedAt,
 			UpdatedAt:    v.UpdatedAt,
 			Summary:      v.Summary,
-			Score:        v.Score,
 			MessageCount: v.MessageCount,
 			ToolCount:    v.ToolCount,
+			Score:        v.Score,
 		}
 	})
 	rsp.PageInfo = pageInfo
@@ -138,7 +149,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	view, err := h.getByUser.Handle(ctx, sessionport.GetSessionByUserQuery{
+	view, err := h.getByUser.Handle(ctx, port.GetSessionByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -150,7 +161,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	messageItems := lo.Map(view.Messages, func(m *sessionport.MessageView, _ int) *dto.MessageItem {
+	messageItems := lo.Map(view.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
 			Model:     m.Model,
@@ -158,7 +169,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 			CreatedAt: m.CreatedAt,
 		}
 	})
-	toolItems := lo.Map(view.Tools, func(t *sessionport.ToolView, _ int) *dto.ToolItem {
+	toolItems := lo.Map(view.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
 		return &dto.ToolItem{
 			ID:        t.ID,
 			Tool:      t.Tool,
@@ -179,11 +190,11 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		CreatedAt:  view.CreatedAt,
 		UpdatedAt:  view.UpdatedAt,
 		Metadata:   view.Metadata,
-		Score:      view.Score,
-		ScoredAt:   view.ScoredAt,
 		Messages:   messageItems,
 		Tools:      toolItems,
 		ShareID:    shareID,
+		Score:      view.Score,
+		ScoredAt:   view.ScoredAt,
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Get session detail by user",
@@ -217,7 +228,7 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 	}
 	sessionID := req.Body.SessionID
 
-	view, err := h.getByUser.Handle(ctx, sessionport.GetSessionByUserQuery{
+	view, err := h.getByUser.Handle(ctx, port.GetSessionByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: sessionID,
@@ -312,6 +323,38 @@ func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteS
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
+// HandleDeleteSession 删除 Session（JWT认证）
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param req *dto.DeleteSessionReq
+//	@return *dto.HTTPResponse[*dto.EmptyRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-03 10:00:00
+func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	rsp := &dto.EmptyRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+
+	err := h.deleteSession.Handle(ctx, port.DeleteSessionCommand{
+		SessionID:           req.SessionID,
+		RequesterID:         userID,
+		RequesterPermission: permission,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Delete session failed",
+			zap.Uint("sessionID", req.SessionID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Session deleted",
+		zap.Uint("sessionID", req.SessionID))
+
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
 // HandleGetSessionMetadata 获取 Session 元数据（不含 messages/tools 内容）
 //
 //	@author centonhuang
@@ -322,7 +365,7 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	view, err := h.getMetaByUser.Handle(ctx, sessionport.GetSessionMetaByUserQuery{
+	view, err := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -347,11 +390,11 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 		CreatedAt:    view.CreatedAt,
 		UpdatedAt:    view.UpdatedAt,
 		Metadata:     view.Metadata,
-		Score:        view.Score,
-		ScoredAt:     view.ScoredAt,
 		MessageCount: view.MessageCount,
 		ToolCount:    view.ToolCount,
 		ShareID:      shareID,
+		Score:        view.Score,
+		ScoredAt:     view.ScoredAt,
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Get session metadata",
@@ -373,7 +416,7 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	result, err := h.listMessages.Handle(ctx, sessionport.ListSessionMessagesQuery{
+	result, err := h.listMessages.Handle(ctx, port.ListSessionMessagesQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -388,7 +431,7 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Messages = lo.Map(result.Messages, func(m *sessionport.MessageView, _ int) *dto.MessageItem {
+	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
 			Model:     m.Model,
@@ -414,7 +457,7 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	result, err := h.listTools.Handle(ctx, sessionport.ListSessionToolsQuery{
+	result, err := h.listTools.Handle(ctx, port.ListSessionToolsQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
@@ -429,7 +472,7 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Tools = lo.Map(result.Tools, func(t *sessionport.ToolView, _ int) *dto.ToolItem {
+	rsp.Tools = lo.Map(result.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
 		return &dto.ToolItem{
 			ID:        t.ID,
 			Tool:      t.Tool,
@@ -459,7 +502,7 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	view, viewErr := h.getMetaByUser.Handle(ctx, sessionport.GetSessionMetaByUserQuery{
+	view, viewErr := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
 		UserID:    0,
 		IsAdmin:   true,
 		SessionID: sessionID,
@@ -476,9 +519,9 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 		CreatedAt:    view.CreatedAt,
 		UpdatedAt:    view.UpdatedAt,
 		Metadata:     view.Metadata,
-		Score:        view.Score,
 		MessageCount: view.MessageCount,
 		ToolCount:    view.ToolCount,
+		Score:        view.Score,
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
@@ -498,7 +541,7 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	result, resultErr := h.listMessages.Handle(ctx, sessionport.ListSessionMessagesQuery{
+	result, resultErr := h.listMessages.Handle(ctx, port.ListSessionMessagesQuery{
 		UserID:    0,
 		IsAdmin:   true,
 		SessionID: sessionID,
@@ -513,7 +556,7 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Messages = lo.Map(result.Messages, func(m *sessionport.MessageView, _ int) *dto.MessageItem {
+	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
 			Model:     m.Model,
@@ -544,7 +587,7 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	result, resultErr := h.listTools.Handle(ctx, sessionport.ListSessionToolsQuery{
+	result, resultErr := h.listTools.Handle(ctx, port.ListSessionToolsQuery{
 		UserID:    0,
 		IsAdmin:   true,
 		SessionID: sessionID,
@@ -559,7 +602,7 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Tools = lo.Map(result.Tools, func(t *sessionport.ToolView, _ int) *dto.ToolItem {
+	rsp.Tools = lo.Map(result.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
 		return &dto.ToolItem{
 			ID:        t.ID,
 			Tool:      t.Tool,
@@ -596,7 +639,7 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	view, viewErr := h.getMetaByUser.Handle(ctx, sessionport.GetSessionMetaByUserQuery{
+	view, viewErr := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
 		SessionID: req.Body.SessionID,
@@ -607,7 +650,6 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-
 	if view == nil {
 		rsp.Error = ierr.ErrDataNotExists.BizError()
 		return apiutil.WrapHTTPResponse(rsp, nil)

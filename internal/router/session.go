@@ -71,6 +71,17 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 	}, sessionHandler.HandleListSessionTools)
 
 	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "deleteSession",
+		Method:      http.MethodDelete,
+		Path:        "",
+		Summary:     "DeleteSession",
+		Description: "Delete a session by ID (owner or admin)",
+		Tags:        []string{"Session"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteSession", enum.PermissionUser)},
+	}, sessionHandler.HandleDeleteSession)
+
+	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "scoreSession",
 		Method:      http.MethodPost,
 		Path:        "/score",
