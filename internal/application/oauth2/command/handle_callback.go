@@ -245,7 +245,7 @@ func (h *handleCallbackHandler) exchangeAndFetchUser(ctx context.Context, platfo
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName string, userInfo oauth2vo.OAuthUserInfo) (uint, bool, error) {
+func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName string, userInfo oauth2vo.OAuthUserInfo) (uid uint, isNew bool, err error) {
 	log := logger.WithCtx(ctx)
 	thirdPartyID := userInfo.ID()
 	userName, email, avatar := userInfo.Name(), userInfo.Email(), userInfo.Avatar()
@@ -320,15 +320,15 @@ func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName st
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (h *handleCallbackHandler) signTokenPair(ctx context.Context, userID uint) (string, string, error) {
+func (h *handleCallbackHandler) signTokenPair(ctx context.Context, userID uint) (accessToken, refreshToken string, err error) {
 	log := logger.WithCtx(ctx)
 
-	accessToken, err := h.accessSigner.EncodeToken(userID)
+	accessToken, err = h.accessSigner.EncodeToken(userID)
 	if err != nil {
 		log.Error("[OAuth2Command] Failed to encode access token", zap.Error(err))
 		return "", "", ierr.Wrap(ierr.ErrJWTEncode, err, "encode access token")
 	}
-	refreshToken, err := h.refreshSigner.EncodeToken(userID)
+	refreshToken, err = h.refreshSigner.EncodeToken(userID)
 	if err != nil {
 		log.Error("[OAuth2Command] Failed to encode refresh token", zap.Error(err))
 		return "", "", ierr.Wrap(ierr.ErrJWTEncode, err, "encode refresh token")

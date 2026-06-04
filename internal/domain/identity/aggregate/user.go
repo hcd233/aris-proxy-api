@@ -54,9 +54,9 @@ func RegisterUser(name vo.UserName, email vo.Email, avatar vo.Avatar, authProvid
 		createdAt:  now,
 	}
 	switch authProvider {
-	case string(enum.Oauth2PlatformGithub):
+	case enum.Oauth2PlatformGithub:
 		u.githubBindID = bindID
-	case string(enum.Oauth2PlatformGoogle):
+	case enum.Oauth2PlatformGoogle:
 		u.googleBindID = bindID
 	}
 	return u, nil

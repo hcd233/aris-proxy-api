@@ -42,6 +42,7 @@ func findCase(t *testing.T, cases []testCase, name string) testCase {
 }
 
 func TestNormalizeOpenAIStreamToolCalls_IndexZeroAndFollowupID(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "index_zero_and_followup_id")
 	if len(tc.Chunks) != 2 {
@@ -78,6 +79,7 @@ func TestNormalizeOpenAIStreamToolCalls_IndexZeroAndFollowupID(t *testing.T) {
 }
 
 func TestOpenAIToolCallIndex_OmitInAssistantMessage(t *testing.T) {
+	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "assistant_message_without_index")
 	if len(tc.Messages) != 1 || len(tc.Messages[0].ToolCalls) != 1 {
@@ -93,11 +95,11 @@ func TestOpenAIToolCallIndex_OmitInAssistantMessage(t *testing.T) {
 	}
 }
 
-func contains(value string, substr string) bool {
-	return len(substr) == 0 || len(value) >= len(substr) && containsAt(value, substr)
+func contains(value, substr string) bool {
+	return substr == "" || len(value) >= len(substr) && containsAt(value, substr)
 }
 
-func containsAt(value string, substr string) bool {
+func containsAt(value, substr string) bool {
 	for i := 0; i+len(substr) <= len(value); i++ {
 		if value[i:i+len(substr)] == substr {
 			return true

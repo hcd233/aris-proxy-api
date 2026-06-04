@@ -19,6 +19,7 @@ import (
 
 // TestMarshalOpenAIChatCompletionBody_UpstreamModel 验证模型名正确替换且不修改原请求
 func TestMarshalOpenAIChatCompletionBody_UpstreamModel(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model: "exposed-chat-model",
 		Messages: []*dto.OpenAIChatCompletionMessageParam{
@@ -42,6 +43,7 @@ func TestMarshalOpenAIChatCompletionBody_UpstreamModel(t *testing.T) {
 
 // TestMarshalOpenAIChatCompletionBody_SystemMessagePreserved 验证超长 system message 在 marshal 后完整保留
 func TestMarshalOpenAIChatCompletionBody_SystemMessagePreserved(t *testing.T) {
+	t.Parallel()
 	longText := strings.Repeat("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*() ", 500)
 	expectedLen := len(longText)
 
@@ -77,6 +79,7 @@ func TestMarshalOpenAIChatCompletionBody_SystemMessagePreserved(t *testing.T) {
 
 // TestMarshalOpenAIChatCompletionBody_FullRoundTripRawJSON 验证从原始 JSON 到 struct 再回到 JSON 的完整往返
 func TestMarshalOpenAIChatCompletionBody_FullRoundTripRawJSON(t *testing.T) {
+	t.Parallel()
 	longText := strings.Repeat("A Very Long System Prompt That Must Survive JSON Serialization. ", 720)
 	fullLength := len(longText)
 
@@ -117,6 +120,7 @@ func TestMarshalOpenAIChatCompletionBody_FullRoundTripRawJSON(t *testing.T) {
 // TestSonicMapUnmarshal_PreservesLongStrings 验证 sonic 在 map[string]any 中也能完整保留超长字符串
 // （LogMiddleware 和 Huma 使用了不同的 unmarshal 目标类型）
 func TestSonicMapUnmarshal_PreservesLongStrings(t *testing.T) {
+	t.Parallel()
 	longText := strings.Repeat("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*() ", 500)
 	fullLength := len(longText)
 
@@ -154,6 +158,7 @@ func TestSonicMapUnmarshal_PreservesLongStrings(t *testing.T) {
 
 // TestOpenAIChatCompletionReq_MessagesWithMixedContent 验证混合消息类型（string content / parts content）的往返
 func TestOpenAIChatCompletionReq_MessagesWithMixedContent(t *testing.T) {
+	t.Parallel()
 	text := "Hello, this is a system message with some content."
 	req := &dto.OpenAIChatCompletionReq{
 		Model: "test-model",
@@ -183,6 +188,7 @@ func TestOpenAIChatCompletionReq_MessagesWithMixedContent(t *testing.T) {
 
 // TestMarshalOpenAIChatCompletionBody_ComplexRequestPreserved 验证复杂请求体所有字段的往返
 func TestMarshalOpenAIChatCompletionBody_ComplexRequestPreserved(t *testing.T) {
+	t.Parallel()
 	longText := strings.Repeat("System instruction with important details. ", 200)
 
 	req := &dto.OpenAIChatCompletionReq{

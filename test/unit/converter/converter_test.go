@@ -50,6 +50,7 @@ func findCase(t *testing.T, cases []testCase, name string) testCase {
 // ==================== OpenAI -> Anthropic (AnthropicProtocolConverter) ====================
 
 func TestAnthropicProtocolConverter_FromOpenAIRequest_SimpleText(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "simple_text_message")
 
@@ -96,6 +97,7 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_SimpleText(t *testing.T) {
 }
 
 func TestAnthropicProtocolConverter_FromOpenAIRequest_ToolCallFlow(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "tool_call_flow")
 
@@ -166,6 +168,7 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_ToolCallFlow(t *testing.T)
 }
 
 func TestAnthropicProtocolConverter_FromOpenAIRequest_StopSequences(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "stop_sequences")
 
@@ -184,6 +187,7 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_StopSequences(t *testing.T
 }
 
 func TestAnthropicProtocolConverter_FromOpenAIRequest_ToolChoiceRequired(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "tool_choice_required")
 
@@ -202,6 +206,7 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_ToolChoiceRequired(t *test
 }
 
 func TestAnthropicProtocolConverter_FromOpenAIRequest_ImageContent(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "image_content")
 
@@ -243,6 +248,7 @@ func TestAnthropicProtocolConverter_FromOpenAIRequest_ImageContent(t *testing.T)
 // ==================== Anthropic -> OpenAI (OpenAIProtocolConverter) ====================
 
 func TestOpenAIProtocolConverter_FromAnthropicRequest_SimpleText(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "simple_text_message")
 
@@ -285,6 +291,7 @@ func TestOpenAIProtocolConverter_FromAnthropicRequest_SimpleText(t *testing.T) {
 }
 
 func TestOpenAIProtocolConverter_FromAnthropicRequest_ToolCallFlow(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "tool_call_flow")
 
@@ -346,6 +353,7 @@ func TestOpenAIProtocolConverter_FromAnthropicRequest_ToolCallFlow(t *testing.T)
 }
 
 func TestOpenAIProtocolConverter_FromAnthropicRequest_ImageContent(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "image_content")
 
@@ -387,6 +395,7 @@ func TestOpenAIProtocolConverter_FromAnthropicRequest_ImageContent(t *testing.T)
 // ==================== Response Conversion Tests ====================
 
 func TestAnthropicProtocolConverter_ToOpenAIResponse_WithReasoning(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "reasoning_content")
 
@@ -435,6 +444,7 @@ func TestAnthropicProtocolConverter_ToOpenAIResponse_WithReasoning(t *testing.T)
 }
 
 func TestAnthropicProtocolConverter_ToOpenAIResponse_WithToolUse(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "tool_use_response")
 
@@ -470,6 +480,7 @@ func TestAnthropicProtocolConverter_ToOpenAIResponse_WithToolUse(t *testing.T) {
 }
 
 func TestOpenAIProtocolConverter_ToAnthropicResponse_WithReasoning(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "reasoning_content")
 
@@ -529,6 +540,7 @@ func TestOpenAIProtocolConverter_ToAnthropicResponse_WithReasoning(t *testing.T)
 }
 
 func TestOpenAIProtocolConverter_ToAnthropicResponse_WithToolUse(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "tool_use_response")
 
@@ -567,6 +579,7 @@ func TestOpenAIProtocolConverter_ToAnthropicResponse_WithToolUse(t *testing.T) {
 // ==================== Roundtrip Tests ====================
 
 func TestRoundtrip_OpenAIRequest_ToAnthropic_BackToOpenAI(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "simple_text_message")
 
@@ -601,6 +614,7 @@ func TestRoundtrip_OpenAIRequest_ToAnthropic_BackToOpenAI(t *testing.T) {
 }
 
 func TestRoundtrip_AnthropicRequest_ToOpenAI_BackToAnthropic(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "simple_text_message")
 
@@ -643,6 +657,7 @@ func TestRoundtrip_AnthropicRequest_ToOpenAI_BackToAnthropic(t *testing.T) {
 }
 
 func TestRoundtrip_OpenAIResponse_ToAnthropic_BackToOpenAI(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "reasoning_content")
 
@@ -689,6 +704,7 @@ func TestRoundtrip_OpenAIResponse_ToAnthropic_BackToOpenAI(t *testing.T) {
 // 数据保留内联构造，以保持测试可读性。
 
 func TestOpenAIProtocolConverter_ToAnthropicSSEResponse(t *testing.T) {
+	t.Parallel()
 	conv := converter.OpenAIProtocolConverter{}
 
 	chunk := &dto.OpenAIChatCompletionChunk{
@@ -729,6 +745,7 @@ func TestOpenAIProtocolConverter_ToAnthropicSSEResponse(t *testing.T) {
 }
 
 func TestAnthropicProtocolConverter_ToOpenAISSEResponse_TextDelta(t *testing.T) {
+	t.Parallel()
 	conv := converter.AnthropicProtocolConverter{}
 
 	deltaPayload := &dto.AnthropicSSEContentBlockDelta{
@@ -767,6 +784,7 @@ func TestAnthropicProtocolConverter_ToOpenAISSEResponse_TextDelta(t *testing.T) 
 }
 
 func TestOpenAIProtocolConverter_FromAnthropicRequest_ToolNoParameters(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	tc := findCase(t, allCases, "tool_no_parameters")
 
@@ -794,6 +812,7 @@ func TestOpenAIProtocolConverter_FromAnthropicRequest_ToolNoParameters(t *testin
 }
 
 func TestAnthropicProtocolConverter_ToOpenAISSEResponse_MessageDelta(t *testing.T) {
+	t.Parallel()
 	// 豁免说明：AnthropicSSEEvent.Data 为 sonic.NoCopyRawMessage，无法通过 JSON fixture 表示
 	conv := converter.AnthropicProtocolConverter{}
 
@@ -869,6 +888,7 @@ func findResponseCase(t *testing.T, cases []responseTestCase, name string) respo
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_SimpleText(t *testing.T) {
+	t.Parallel()
 	allCases := loadResponseCases(t)
 	tc := findResponseCase(t, allCases, "response_simple_text")
 
@@ -908,6 +928,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_SimpleText(t *testing
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_ReasoningEffort(t *testing.T) {
+	t.Parallel()
 	allCases := loadResponseCases(t)
 
 	tests := []struct {
@@ -925,6 +946,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_ReasoningEffort(t *te
 
 	for _, tt := range tests {
 		t.Run(tt.effort, func(t *testing.T) {
+			t.Parallel()
 			tc := findResponseCase(t, allCases, "response_reasoning_effort_"+tt.effort)
 
 			conv := converter.AnthropicProtocolConverter{}
@@ -944,6 +966,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_ReasoningEffort(t *te
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_DeveloperRoleMappedToSystem(t *testing.T) {
+	t.Parallel()
 	allCases := loadResponseCases(t)
 	tc := findResponseCase(t, allCases, "response_developer_role_mapped_to_system")
 
@@ -970,6 +993,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_DeveloperRoleMappedTo
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_TextFormatJSONSchema(t *testing.T) {
+	t.Parallel()
 	allCases := loadResponseCases(t)
 	tc := findResponseCase(t, allCases, "response_text_format_json_schema")
 
@@ -991,6 +1015,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_TextFormatJSONSchema(
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_TextFormatJSONObject(t *testing.T) {
+	t.Parallel()
 	allCases := loadResponseCases(t)
 	tc := findResponseCase(t, allCases, "response_text_format_json_object")
 
@@ -1011,6 +1036,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_TextFormatJSONObject(
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_FunctionCall(t *testing.T) {
+	t.Parallel()
 	allCases := loadResponseCases(t)
 	tc := findResponseCase(t, allCases, "response_function_call")
 
@@ -1038,6 +1064,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_FunctionCall(t *testi
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_NoReasoning(t *testing.T) {
+	t.Parallel()
 	// 测试没有 reasoning 配置时 Thinking 为 nil
 	allCases := loadResponseCases(t)
 	tc := findResponseCase(t, allCases, "response_no_reasoning")
@@ -1054,6 +1081,7 @@ func TestAnthropicProtocolConverter_FromResponseAPIRequest_NoReasoning(t *testin
 }
 
 func TestAnthropicProtocolConverter_FromResponseAPIRequest_EmptyInput(t *testing.T) {
+	t.Parallel()
 	// 测试空 input 时不崩溃
 	conv := converter.AnthropicProtocolConverter{}
 	req := &dto.OpenAICreateResponseReq{

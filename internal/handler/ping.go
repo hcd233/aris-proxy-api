@@ -70,13 +70,13 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
-			fCtx.SendStreamWriter(func(w *bufio.Writer) {
+			_ = fCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // SSE healthcheck
 				for i := range constant.SSEHeartbeatCount {
 					data := &dto.SSEResponse{
 						DataType: enum.SSEDataTypeHeartBeat,
 						Data:     strconv.Itoa(i),
 					}
-					_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(data)))
+					_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(data))) //nolint:errcheck // best-effort write
 					err := w.Flush()
 					if err != nil {
 						return

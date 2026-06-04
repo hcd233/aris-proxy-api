@@ -10,11 +10,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-func auditFailure(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel, endpoint string, apiProtocol enum.ProtocolType, totalMs int64, err error) {
-	auditFailureWithProviders(submitter, ctx, m, exposedModel, endpoint, apiProtocol, apiProtocol, totalMs, err)
+func auditFailure(ctx context.Context, submitter TaskSubmitter, m *aggregate.Model, exposedModel, endpoint string, apiProtocol enum.ProtocolType, totalMs int64, err error) {
+	auditFailureWithProviders(ctx, submitter, m, exposedModel, endpoint, apiProtocol, apiProtocol, totalMs, err)
 }
 
-func auditFailureWithProviders(submitter TaskSubmitter, ctx context.Context, m *aggregate.Model, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, totalMs int64, err error) {
+func auditFailureWithProviders(ctx context.Context, submitter TaskSubmitter, m *aggregate.Model, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, totalMs int64, err error) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
 		ModelID:             m.AggregateID(),
@@ -25,7 +25,7 @@ func auditFailureWithProviders(submitter TaskSubmitter, ctx context.Context, m *
 		FirstTokenLatencyMs: totalMs,
 	}
 	task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-	_ = submitter.SubmitModelCallAuditTask(task)
+	_ = submitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 }
 
 func newAuditTask(ctx context.Context, m *aggregate.Model, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, firstTokenLatencyMs int64) *dto.ModelCallAuditTask {

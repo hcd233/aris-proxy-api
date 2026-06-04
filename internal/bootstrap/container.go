@@ -720,8 +720,8 @@ func newFirstTokenLatencyByUserHandler(repo modelcall.AuditRepository, apiKeyRep
 	return auditquery.NewFirstTokenLatencyByUserHandler(repo, apiKeyRepo)
 }
 
-func newEndpointDependencies(create endpointport.CreateEndpointHandler, update endpointport.UpdateEndpointHandler, delete endpointport.DeleteEndpointHandler, list endpointport.ListEndpointsHandler) handler.EndpointDependencies {
-	return handler.EndpointDependencies{Create: create, Update: update, Delete: delete, List: list}
+func newEndpointDependencies(create endpointport.CreateEndpointHandler, update endpointport.UpdateEndpointHandler, deleteHandler endpointport.DeleteEndpointHandler, list endpointport.ListEndpointsHandler) handler.EndpointDependencies {
+	return handler.EndpointDependencies{Create: create, Update: update, Delete: deleteHandler, List: list}
 }
 
 func newDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) endpointport.DeleteEndpointHandler {
@@ -776,8 +776,8 @@ func newListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.E
 	return modelquery.NewListModelsHandler(repo, endpointRepo)
 }
 
-func newModelDependencies(create modelport.CreateModelHandler, update modelport.UpdateModelHandler, delete modelport.DeleteModelHandler, list modelport.ListModelsHandler) handler.ModelDependencies {
-	return handler.ModelDependencies{Create: create, Update: update, Delete: delete, List: list}
+func newModelDependencies(create modelport.CreateModelHandler, update modelport.UpdateModelHandler, deleteHandler modelport.DeleteModelHandler, list modelport.ListModelsHandler) handler.ModelDependencies {
+	return handler.ModelDependencies{Create: create, Update: update, Delete: deleteHandler, List: list}
 }
 
 func newListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {

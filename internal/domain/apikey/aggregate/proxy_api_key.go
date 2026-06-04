@@ -68,7 +68,7 @@ func IssueProxyAPIKey(userID uint, name vo.APIKeyName, secret vo.APIKeySecret, q
 //	@return *ProxyAPIKey
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func RestoreProxyAPIKey(id uint, userID uint, name vo.APIKeyName, secret vo.APIKeySecret, createdAt time.Time) *ProxyAPIKey {
+func RestoreProxyAPIKey(id, userID uint, name vo.APIKeyName, secret vo.APIKeySecret, createdAt time.Time) *ProxyAPIKey {
 	k := &ProxyAPIKey{
 		userID:    userID,
 		name:      name,

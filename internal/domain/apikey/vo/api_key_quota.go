@@ -22,11 +22,11 @@ type APIKeyQuota struct {
 //	@return error max <= 0 时返回 ierr.ErrValidation
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
-func NewAPIKeyQuota(max int) (APIKeyQuota, error) {
-	if max <= 0 {
+func NewAPIKeyQuota(maxQuota int) (APIKeyQuota, error) {
+	if maxQuota <= 0 {
 		return APIKeyQuota{}, ierr.New(ierr.ErrValidation, "API key quota must be greater than 0")
 	}
-	return APIKeyQuota{max: max}, nil
+	return APIKeyQuota{max: maxQuota}, nil
 }
 
 // DefaultAPIKeyQuota 返回默认配额（来自 constant.APIKeyMaxCount）
@@ -35,7 +35,7 @@ func NewAPIKeyQuota(max int) (APIKeyQuota, error) {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func DefaultAPIKeyQuota() APIKeyQuota {
-	q, _ := NewAPIKeyQuota(constant.APIKeyMaxCount)
+	q, _ := NewAPIKeyQuota(constant.APIKeyMaxCount) //nolint:errcheck // constant.APIKeyMaxCount is always valid
 	return q
 }
 

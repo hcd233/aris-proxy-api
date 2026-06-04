@@ -12,6 +12,7 @@ import (
 )
 
 func TestMarshalOpenAIChatCompletionBodyForModel_IncludesThinkingParam(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model: "deepseek-v4-flash",
 		Messages: []*dto.OpenAIChatCompletionMessageParam{
@@ -29,6 +30,7 @@ func TestMarshalOpenAIChatCompletionBodyForModel_IncludesThinkingParam(t *testin
 }
 
 func TestMarshalOpenAIChatCompletionBodyForModel_OmitsThinkingParamWhenNil(t *testing.T) {
+	t.Parallel()
 	req := &dto.OpenAIChatCompletionReq{
 		Model: "deepseek-v4-flash",
 		Messages: []*dto.OpenAIChatCompletionMessageParam{
@@ -45,6 +47,7 @@ func TestMarshalOpenAIChatCompletionBodyForModel_OmitsThinkingParamWhenNil(t *te
 }
 
 func TestUnmarshalOpenAIChatCompletionReq_WithThinkingParam(t *testing.T) {
+	t.Parallel()
 	raw := `{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hi"}],"thinking":{"type":"enabled"}}`
 
 	req := &dto.OpenAIChatCompletionReq{}
@@ -61,6 +64,7 @@ func TestUnmarshalOpenAIChatCompletionReq_WithThinkingParam(t *testing.T) {
 }
 
 func TestUnmarshalOpenAIChatCompletionReq_WithoutThinkingParam(t *testing.T) {
+	t.Parallel()
 	raw := `{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hi"}]}`
 
 	req := &dto.OpenAIChatCompletionReq{}

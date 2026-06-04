@@ -13,6 +13,7 @@ import (
 // tags on the database model struct. A mismatch causes GORM "invalid field"
 // errors (regression: traceID e65fc42f-fb16-4ac0-8ab6-a30dd8a7fe63).
 func TestModelUpdateColumnConstantsMatchGORMTags(t *testing.T) {
+	t.Parallel()
 	modelType := reflect.TypeOf(dbmodel.Model{})
 
 	// Map of Go field names to the constant we expect to match their gorm column tag

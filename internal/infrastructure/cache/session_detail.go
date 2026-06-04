@@ -67,7 +67,7 @@ func (s *sessionDetailCache) DeleteSessionMeta(ctx context.Context, sessionID ui
 	return nil
 }
 
-func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (map[uint]*sessionport.MessageCacheRecord, []uint, error) {
+func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (results map[uint]*sessionport.MessageCacheRecord, missed []uint, err error) {
 	if len(ids) == 0 {
 		return map[uint]*sessionport.MessageCacheRecord{}, nil, nil
 	}
@@ -123,7 +123,7 @@ func (s *sessionDetailCache) SetMessages(ctx context.Context, records []*session
 	return nil
 }
 
-func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (map[uint]*sessionport.ToolCacheRecord, []uint, error) {
+func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (results map[uint]*sessionport.ToolCacheRecord, missed []uint, err error) {
 	if len(ids) == 0 {
 		return map[uint]*sessionport.ToolCacheRecord{}, nil, nil
 	}

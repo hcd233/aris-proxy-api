@@ -129,9 +129,7 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 
 		if strings.Contains(string(c.Request().Header.ContentType()), constant.HTTPContentTypeJSON) {
 			request := make(map[string]any)
-			if reqBody := c.Body(); reqBody != nil {
-				if len(reqBody) > 0 {
-				}
+			if reqBody := c.Body(); len(reqBody) > 0 {
 				if jsonErr := sonic.Unmarshal(reqBody, &request); jsonErr != nil {
 					logger.Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(jsonErr))
 				}

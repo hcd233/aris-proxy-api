@@ -7,6 +7,7 @@ import (
 )
 
 func TestGetTracker_DefaultIsUsable(t *testing.T) {
+	t.Parallel()
 	tracker := inflight.GetTracker()
 	if tracker == nil {
 		t.Fatal("GetTracker should return a usable default tracker before InitTracker")

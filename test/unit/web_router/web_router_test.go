@@ -1,6 +1,7 @@
 package web_router
 
 import (
+	"context"
 	"io/fs"
 	"net/http"
 	"testing"
@@ -11,6 +12,7 @@ import (
 )
 
 func TestRegisterWebRouter_RedirectsWebRootToTrailingSlash(t *testing.T) {
+	t.Parallel()
 	app := fiber.New()
 	router.RegisterWebRouter(app, testWebFS())
 
@@ -26,6 +28,7 @@ func TestRegisterWebRouter_RedirectsWebRootToTrailingSlash(t *testing.T) {
 }
 
 func TestRegisterWebRouter_RedirectsWithoutOpeningFiles(t *testing.T) {
+	t.Parallel()
 	webFS := &trackingFS{base: testWebFS()}
 	app := fiber.New()
 	router.RegisterWebRouter(app, webFS)
@@ -48,6 +51,7 @@ func TestRegisterWebRouter_RedirectsWithoutOpeningFiles(t *testing.T) {
 }
 
 func TestRegisterWebRouter_FallbackAndStaticNotFound(t *testing.T) {
+	t.Parallel()
 	app := fiber.New()
 	router.RegisterWebRouter(app, testWebFS())
 
@@ -63,6 +67,7 @@ func TestRegisterWebRouter_FallbackAndStaticNotFound(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			rsp := doRequest(t, app, tc.path)
 			defer rsp.Body.Close()
 			if rsp.StatusCode != tc.wantStatus {
@@ -95,7 +100,7 @@ func testWebFS() fstest.MapFS {
 
 func doRequest(t *testing.T, app *fiber.App, path string) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodGet, path, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, path, http.NoBody)
 	if err != nil {
 		t.Fatalf("NewRequest() error = %v", err)
 	}

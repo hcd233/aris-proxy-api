@@ -15,7 +15,7 @@ func initHealthRouter(healthGroup huma.API, pingHandler handler.PingHandler) {
 		Path:        constant.RoutePathHealth,
 		Summary:     "HealthCheck",
 		Description: "Check the server health",
-		Tags:        []string{"Health"},
+		Tags:        []string{constant.TagHealth},
 	}, pingHandler.HandlePing)
 
 	huma.Register(healthGroup, huma.Operation{
@@ -24,7 +24,7 @@ func initHealthRouter(healthGroup huma.API, pingHandler handler.PingHandler) {
 		Path:        constant.RoutePathReady,
 		Summary:     "ReadinessCheck",
 		Description: "Check if the server is ready to accept traffic",
-		Tags:        []string{"Health"},
+		Tags:        []string{constant.TagHealth},
 	}, pingHandler.HandleReady)
 
 	huma.Register(healthGroup, huma.Operation{
@@ -33,6 +33,6 @@ func initHealthRouter(healthGroup huma.API, pingHandler handler.PingHandler) {
 		Path:        constant.RoutePathSSEHealth,
 		Summary:     "SSEHealthCheck",
 		Description: "Check the server health",
-		Tags:        []string{"Health"},
+		Tags:        []string{constant.TagHealth},
 	}, pingHandler.HandleSSEPing)
 }

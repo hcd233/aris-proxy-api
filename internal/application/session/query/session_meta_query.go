@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"slices"
 
 	"go.uber.org/zap"
 
@@ -96,13 +97,7 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 	}
 
 	if !q.IsAdmin {
-		allowed := false
-		for _, name := range ownerNames {
-			if record.APIKeyName == name {
-				allowed = true
-				break
-			}
-		}
+		allowed := slices.Contains(ownerNames, record.APIKeyName)
 		if !allowed {
 			log.Warn("[SessionQuery] No permission to access session",
 				zap.Uint("sessionID", q.SessionID),

@@ -47,17 +47,17 @@ func findCase(t *testing.T, cases []conversionCase, name string) conversionCase 
 	return conversionCase{}
 }
 
-func parseBodies(t *testing.T, tc conversionCase) (*dto.OpenAICreateResponseReq, *dto.OpenAICreateResponseRsp) {
+func parseBodies(t *testing.T, tc conversionCase) (req *dto.OpenAICreateResponseReq, rsp *dto.OpenAICreateResponseRsp) {
 	t.Helper()
-	var req dto.OpenAICreateResponseReq
-	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
+	var request dto.OpenAICreateResponseReq
+	if err := sonic.Unmarshal(tc.RequestBody, &request); err != nil {
 		t.Fatalf("unmarshal request_body: %v", err)
 	}
-	var rsp dto.OpenAICreateResponseRsp
-	if err := sonic.Unmarshal(tc.ResponseBody, &rsp); err != nil {
+	var response dto.OpenAICreateResponseRsp
+	if err := sonic.Unmarshal(tc.ResponseBody, &response); err != nil {
 		t.Fatalf("unmarshal response_body: %v", err)
 	}
-	return &req, &rsp
+	return &request, &response
 }
 
 // buildConversation mimics the service-layer orchestration: it merges
@@ -99,6 +99,7 @@ func buildConversation(t *testing.T, req *dto.OpenAICreateResponseReq, rsp *dto.
 }
 
 func TestFromResponseAPI_TextInTextOut(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "text_in_text_out")
 	req, rsp := parseBodies(t, tc)
 
@@ -124,6 +125,7 @@ func TestFromResponseAPI_TextInTextOut(t *testing.T) {
 }
 
 func TestFromResponseAPI_ReasoningMergedIntoAssistant(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "reasoning_then_message")
 	req, rsp := parseBodies(t, tc)
 
@@ -148,6 +150,7 @@ func TestFromResponseAPI_ReasoningMergedIntoAssistant(t *testing.T) {
 }
 
 func TestFromResponseAPI_FunctionCallAndOutput(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "function_call_and_output")
 	req, rsp := parseBodies(t, tc)
 
@@ -190,6 +193,7 @@ func TestFromResponseAPI_FunctionCallAndOutput(t *testing.T) {
 }
 
 func TestFromResponseAPI_StringInput(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "string_input")
 	req, rsp := parseBodies(t, tc)
 
@@ -208,6 +212,7 @@ func TestFromResponseAPI_StringInput(t *testing.T) {
 // TestResponseUsage_AuditTokens verifies token accounting uses the Response
 // API usage block (including cached-input tokens).
 func TestResponseUsage_AuditTokens(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "reasoning_then_message")
 	_, rsp := parseBodies(t, tc)
 
@@ -227,6 +232,7 @@ func TestResponseUsage_AuditTokens(t *testing.T) {
 // TestResponseStreamTerminalEvent_Parse asserts the response.completed SSE
 // data payload parses into the typed terminal event wrapper.
 func TestResponseStreamTerminalEvent_Parse(t *testing.T) {
+	t.Parallel()
 	payload := []byte(`{"type":"response.completed","response":{"id":"resp_x","object":"response","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":2,"output_tokens":1,"total_tokens":3}}}`)
 	var ev dto.ResponseStreamTerminalEvent
 	if err := sonic.Unmarshal(payload, &ev); err != nil {
@@ -252,6 +258,7 @@ func TestResponseStreamTerminalEvent_Parse(t *testing.T) {
 // object and must populate Usage + diagnostic fields (error /
 // incomplete_details) so audit accounting is not lost on in-band failure.
 func TestResponseStreamTerminalEvent_ParseFailed(t *testing.T) {
+	t.Parallel()
 	payload := []byte(`{"type":"response.failed","response":{"id":"resp_f","object":"response","status":"failed","output":[],"error":{"code":"server_error","message":"upstream model unavailable"},"usage":{"input_tokens":4,"output_tokens":0,"total_tokens":4}}}`)
 	var ev dto.ResponseStreamTerminalEvent
 	if err := sonic.Unmarshal(payload, &ev); err != nil {
@@ -272,6 +279,7 @@ func TestResponseStreamTerminalEvent_ParseFailed(t *testing.T) {
 }
 
 func TestResponseStreamTerminalEvent_ParseIncomplete(t *testing.T) {
+	t.Parallel()
 	payload := []byte(`{"type":"response.incomplete","response":{"id":"resp_i","object":"response","status":"incomplete","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"partial"}]}],"incomplete_details":{"reason":"max_output_tokens"},"usage":{"input_tokens":3,"output_tokens":9,"total_tokens":12}}}`)
 	var ev dto.ResponseStreamTerminalEvent
 	if err := sonic.Unmarshal(payload, &ev); err != nil {
@@ -294,6 +302,7 @@ func TestResponseStreamTerminalEvent_ParseIncomplete(t *testing.T) {
 // *.done) must not count; every generated-token event (regardless of
 // modality) must.
 func TestIsResponseAPIDeltaEvent(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		event string
 		want  bool
@@ -327,6 +336,7 @@ func TestIsResponseAPIDeltaEvent(t *testing.T) {
 // the service doesn't try to unmarshal an intermediate event body as a
 // ResponseStreamTerminalEvent.
 func TestIsResponseAPITerminalEvent(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		event string
 		want  bool
@@ -351,6 +361,7 @@ func TestIsResponseAPITerminalEvent(t *testing.T) {
 // transport returned 200 but the response object carried status=failed
 // with an error payload; the reason must land on the audit task.
 func TestSetErrorFromResponseStatus_Failed(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "failed_response")
 	_, rsp := parseBodies(t, tc)
 
@@ -370,6 +381,7 @@ func TestSetErrorFromResponseStatus_Failed(t *testing.T) {
 // TestSetErrorFromResponseStatus_Incomplete verifies the reason from
 // incomplete_details (e.g. max_output_tokens) is also surfaced.
 func TestSetErrorFromResponseStatus_Incomplete(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "incomplete_with_output")
 	_, rsp := parseBodies(t, tc)
 
@@ -387,6 +399,7 @@ func TestSetErrorFromResponseStatus_Incomplete(t *testing.T) {
 // transport-level error extracted upstream), matching the intent of
 // distinguishing transport vs. in-band failures.
 func TestSetErrorFromResponseStatus_PreservesTransportError(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "failed_response")
 	_, rsp := parseBodies(t, tc)
 
@@ -400,6 +413,7 @@ func TestSetErrorFromResponseStatus_PreservesTransportError(t *testing.T) {
 // TestSetErrorFromResponseStatus_CompletedIsNoop asserts a healthy
 // response never produces an ErrorMessage.
 func TestSetErrorFromResponseStatus_CompletedIsNoop(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "text_in_text_out")
 	_, rsp := parseBodies(t, tc)
 
@@ -415,6 +429,7 @@ func TestSetErrorFromResponseStatus_CompletedIsNoop(t *testing.T) {
 // UnifiedMessages. This matches /chat/completions, which stores
 // completions even when finish_reason=length.
 func TestFromResponseAPI_IncompleteWithOutputPersists(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "incomplete_with_output")
 	req, rsp := parseBodies(t, tc)
 

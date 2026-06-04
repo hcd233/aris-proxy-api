@@ -62,7 +62,7 @@ func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateR
 	// instructions → system 消息
 	if req.Instructions != nil && *req.Instructions != "" {
 		messages = append(messages, &dto.AnthropicMessageParam{
-			Role:    string(enum.RoleSystem),
+			Role:    enum.RoleSystem,
 			Content: &dto.AnthropicMessageContent{Text: *req.Instructions},
 		})
 	}
@@ -83,7 +83,7 @@ func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateR
 		} else if req.Input.Text != "" {
 			// 纯文本 input → user 消息
 			messages = append(messages, &dto.AnthropicMessageParam{
-				Role:    string(enum.RoleUser),
+				Role:    enum.RoleUser,
 				Content: &dto.AnthropicMessageContent{Text: req.Input.Text},
 			})
 		}
@@ -170,33 +170,27 @@ func convertResponseMessageToAnthropic(item *dto.ResponseInputItem) (*dto.Anthro
 	}
 
 	// 数组形态 → content blocks
-	blocks, err := convertResponseContentPartsToAnthropicBlocks(item.Content.Parts)
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert response content parts")
-	}
-	msg.Content = &dto.AnthropicMessageContent{Blocks: blocks}
+	msg.Content = &dto.AnthropicMessageContent{Blocks: convertResponseContentPartsToAnthropicBlocks(item.Content.Parts)}
 	return msg, nil
 }
 
 // resolveResponseAPIRole 将 Response API 角色字符串解析为 Anthropic 角色
 func resolveResponseAPIRole(role string) string {
 	switch role {
-	case string(enum.RoleAssistant), "":
-		return string(enum.RoleAssistant)
-	case string(enum.RoleUser):
-		return string(enum.RoleUser)
-	case string(enum.RoleSystem):
-		return string(enum.RoleSystem)
-	case string(enum.RoleDeveloper):
+	case enum.RoleAssistant, "":
+		return enum.RoleAssistant
+	case enum.RoleUser:
+		return enum.RoleUser
+	case enum.RoleDeveloper:
 		// Anthropic 不支持 developer 角色，将其映射为 system
-		return string(enum.RoleSystem)
+		return enum.RoleSystem
 	default:
-		return string(enum.RoleUser)
+		return enum.RoleUser
 	}
 }
 
 // convertResponseContentPartsToAnthropicBlocks 将 Response API content parts 转换为 Anthropic content blocks
-func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputContent) ([]*dto.AnthropicContentBlock, error) {
+func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputContent) []*dto.AnthropicContentBlock {
 	var blocks []*dto.AnthropicContentBlock
 	for _, p := range parts {
 		if p == nil {
@@ -239,7 +233,7 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 			// 其他类型忽略
 		}
 	}
-	return blocks, nil
+	return blocks
 }
 
 // convertResponseFunctionCallToAnthropic 将 function_call / custom_tool_call 转换为 Anthropic assistant 消息
@@ -249,7 +243,7 @@ func convertResponseFunctionCallToAnthropic(item *dto.ResponseInputItem) *dto.An
 		args = lo.FromPtr(item.Input)
 	}
 	return &dto.AnthropicMessageParam{
-		Role: string(enum.RoleAssistant),
+		Role: enum.RoleAssistant,
 		Content: &dto.AnthropicMessageContent{
 			Blocks: []*dto.AnthropicContentBlock{{
 				Type:  enum.AnthropicContentBlockTypeToolUse,
@@ -264,7 +258,7 @@ func convertResponseFunctionCallToAnthropic(item *dto.ResponseInputItem) *dto.An
 // convertResponseFunctionCallOutputToAnthropic 将 function_call_output / custom_tool_call_output 转换为 Anthropic 消息
 func convertResponseFunctionCallOutputToAnthropic(item *dto.ResponseInputItem) *dto.AnthropicMessageParam {
 	msg := &dto.AnthropicMessageParam{
-		Role: string(enum.RoleUser),
+		Role: enum.RoleUser,
 	}
 
 	if item.Output == nil || (item.Output.Text == "" && item.Output.FunctionOutput == nil) {
@@ -317,7 +311,7 @@ func convertResponseReasoningToAnthropic(item *dto.ResponseInputItem) *dto.Anthr
 		return nil
 	}
 	return &dto.AnthropicMessageParam{
-		Role: string(enum.RoleAssistant),
+		Role: enum.RoleAssistant,
 		Content: &dto.AnthropicMessageContent{
 			Blocks: []*dto.AnthropicContentBlock{{
 				Type:     enum.AnthropicContentBlockTypeThinking,
@@ -367,7 +361,7 @@ func convertResponseToolChoiceToAnthropic(tc *dto.ResponseToolChoiceParam) *dto.
 	case enum.ResponseToolChoiceOptionRequired:
 		return &dto.AnthropicToolChoice{Type: enum.AnthropicToolChoiceTypeAny}
 	}
-	if tc.Object != nil && tc.Object.Type == string(enum.ResponseToolChoiceTypeFunction) {
+	if tc.Object != nil && tc.Object.Type == enum.ResponseToolChoiceTypeFunction {
 		return &dto.AnthropicToolChoice{
 			Type: enum.AnthropicToolChoiceTypeTool,
 			Name: tc.Object.Name,

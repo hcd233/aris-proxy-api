@@ -62,9 +62,11 @@ func jsonEqual(t *testing.T, got, want []byte) bool {
 // TestOpenAICreateResponseReq_RoundTripAll verifies that every fixture body
 // unmarshals and re-marshals to the same semantic JSON through the typed DTO.
 func TestOpenAICreateResponseReq_RoundTripAll(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 	for _, tc := range allCases {
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			var req dto.OpenAICreateResponseReq
 			if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
 				t.Fatalf("unmarshal failed: %v\nbody: %s", err, string(tc.RequestBody))
@@ -83,6 +85,7 @@ func TestOpenAICreateResponseReq_RoundTripAll(t *testing.T) {
 // TestOpenAICreateResponseReq_ClientMetadata asserts that Codex Desktop's
 // client_metadata field is modeled as a typed map and round-trips cleanly.
 func TestOpenAICreateResponseReq_ClientMetadata(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "create_response_codex_client_metadata")
 	var req dto.OpenAICreateResponseReq
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -102,6 +105,7 @@ func TestOpenAICreateResponseReq_ClientMetadata(t *testing.T) {
 // (model/stream/store/parallel_tool_calls/input/tools/tool_choice/reasoning/text/
 // include/prompt_cache_key/instructions) parse correctly from the Codex body.
 func TestOpenAICreateResponseReq_CodexFullBody(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "create_response_codex_full")
 	var req dto.OpenAICreateResponseReq
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -174,6 +178,7 @@ func TestOpenAICreateResponseReq_CodexFullBody(t *testing.T) {
 
 // TestOpenAICreateResponseReq_Minimal ensures minimal body with only model parses.
 func TestOpenAICreateResponseReq_Minimal(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "create_response_minimal")
 	var req dto.OpenAICreateResponseReq
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -189,6 +194,7 @@ func TestOpenAICreateResponseReq_Minimal(t *testing.T) {
 
 // TestOpenAICreateResponseReq_Scalars verifies typed scalar fields.
 func TestOpenAICreateResponseReq_Scalars(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "create_response_scalars")
 	var req dto.OpenAICreateResponseReq
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -213,9 +219,11 @@ func TestOpenAICreateResponseReq_Scalars(t *testing.T) {
 
 // TestOpenAICreateResponseReq_ToolChoiceVariants covers string/function/mcp forms.
 func TestOpenAICreateResponseReq_ToolChoiceVariants(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 
 	t.Run("string", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "tool_choice_string")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -227,6 +235,7 @@ func TestOpenAICreateResponseReq_ToolChoiceVariants(t *testing.T) {
 	})
 
 	t.Run("function", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "tool_choice_object_function")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -239,6 +248,7 @@ func TestOpenAICreateResponseReq_ToolChoiceVariants(t *testing.T) {
 	})
 
 	t.Run("mcp", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "tool_choice_object_mcp")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -255,9 +265,11 @@ func TestOpenAICreateResponseReq_ToolChoiceVariants(t *testing.T) {
 
 // TestOpenAICreateResponseReq_InputVariants covers input as string vs array.
 func TestOpenAICreateResponseReq_InputVariants(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 
 	t.Run("string", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "input_string")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -269,6 +281,7 @@ func TestOpenAICreateResponseReq_InputVariants(t *testing.T) {
 	})
 
 	t.Run("array_with_string_content", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "input_array_message_string_content")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -286,9 +299,11 @@ func TestOpenAICreateResponseReq_InputVariants(t *testing.T) {
 
 // TestOpenAICreateResponseReq_ConversationVariants covers conversation string/object.
 func TestOpenAICreateResponseReq_ConversationVariants(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 
 	t.Run("string", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "conversation_string")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -300,6 +315,7 @@ func TestOpenAICreateResponseReq_ConversationVariants(t *testing.T) {
 	})
 
 	t.Run("object", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "conversation_object")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -313,6 +329,7 @@ func TestOpenAICreateResponseReq_ConversationVariants(t *testing.T) {
 
 // TestOpenAICreateResponseReq_TextJSONSchema verifies text.format with nested JSONSchemaProperty.
 func TestOpenAICreateResponseReq_TextJSONSchema(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "text_json_schema")
 	var req dto.OpenAICreateResponseReq
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -335,6 +352,7 @@ func TestOpenAICreateResponseReq_TextJSONSchema(t *testing.T) {
 
 // TestOpenAICreateResponseReq_ToolsFileSearch verifies file_search compound filter parses.
 func TestOpenAICreateResponseReq_ToolsFileSearch(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "tools_file_search")
 	var req dto.OpenAICreateResponseReq
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -361,6 +379,7 @@ func TestOpenAICreateResponseReq_ToolsFileSearch(t *testing.T) {
 // TestOpenAICreateResponseReq_ToolsFunctionTypeArray verifies function tool
 // JSON Schema accepts union `type` arrays such as ["string","null"].
 func TestOpenAICreateResponseReq_ToolsFunctionTypeArray(t *testing.T) {
+	t.Parallel()
 	tc := findCase(t, loadCases(t), "tools_function_schema_type_array")
 	var req dto.OpenAICreateResponseReq
 	if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -380,9 +399,11 @@ func TestOpenAICreateResponseReq_ToolsFunctionTypeArray(t *testing.T) {
 
 // TestOpenAICreateResponseReq_ToolsMcp covers MCP allowed_tools array and filter variants.
 func TestOpenAICreateResponseReq_ToolsMcp(t *testing.T) {
+	t.Parallel()
 	allCases := loadCases(t)
 
 	t.Run("allowed_tools_array", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "tools_mcp_with_allowed_array")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {
@@ -398,6 +419,7 @@ func TestOpenAICreateResponseReq_ToolsMcp(t *testing.T) {
 	})
 
 	t.Run("allowed_tools_filter", func(t *testing.T) {
+		t.Parallel()
 		tc := findCase(t, allCases, "tools_mcp_with_allowed_filter")
 		var req dto.OpenAICreateResponseReq
 		if err := sonic.Unmarshal(tc.RequestBody, &req); err != nil {

@@ -70,7 +70,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		if err == nil {
-			_ = proxyutil.WriteAnthropicMessageStop(w)
+			_ = proxyutil.WriteAnthropicMessageStop(w) //nolint:errcheck // best-effort write // flush errors are not actionable at stream end
 		} else {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		}
@@ -81,7 +81,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
 
@@ -92,7 +92,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
-			auditFailure(u.taskSubmitter, ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
+			auditFailure(ctx, u.taskSubmitter, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
 			return
 		}
 		anthropicMsg.Model = exposedModel
@@ -103,7 +103,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
 
@@ -143,12 +143,12 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 		var anthropicMsg *dto.AnthropicMessage
 		if err == nil {
 			if completion != nil {
-				anthropicMsg, _ = conv.ToAnthropicResponse(completion)
+				anthropicMsg, _ = conv.ToAnthropicResponse(completion) //nolint:errcheck // best-effort conversion
 				if anthropicMsg != nil {
 					anthropicMsg.Model = exposedModel
 				}
 			}
-			_ = proxyutil.WriteAnthropicMessageStop(w)
+			_ = proxyutil.WriteAnthropicMessageStop(w) //nolint:errcheck // best-effort write
 		} else {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		}
@@ -159,7 +159,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 			task.SetTokensFromOpenAIUsage(completion.Usage)
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
 
@@ -171,7 +171,7 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, anthropicInternalErrorBody)
-			auditFailureWithProviders(u.taskSubmitter, ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
+			auditFailureWithProviders(ctx, u.taskSubmitter, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
 			return
 		}
 		anthropicMsg, convErr := conv.ToAnthropicResponse(completion)
@@ -186,6 +186,6 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromOpenAIUsage(completion.Usage)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task)
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }

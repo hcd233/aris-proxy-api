@@ -1,6 +1,7 @@
 package skills_symlink_test
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 )
 
 func TestSyncSkillsSymlinksCreatesLinksAndKeepsConflicts(t *testing.T) {
+	t.Parallel()
 	repoRoot := findRepoRoot(t)
 	scriptData, err := os.ReadFile(filepath.Join(repoRoot, "script", "sync-skills-symlinks.sh"))
 	if err != nil {
@@ -38,7 +40,7 @@ func TestSyncSkillsSymlinksCreatesLinksAndKeepsConflicts(t *testing.T) {
 
 func runSyncScript(t *testing.T, root string) {
 	t.Helper()
-	cmd := exec.Command("sh", filepath.Join(root, "script", "sync-skills-symlinks.sh"))
+	cmd := exec.CommandContext(context.Background(), "sh", filepath.Join(root, "script", "sync-skills-symlinks.sh"))
 	cmd.Dir = root
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -46,7 +48,7 @@ func runSyncScript(t *testing.T, root string) {
 	}
 }
 
-func assertSymlink(t *testing.T, path string, wantTarget string) {
+func assertSymlink(t *testing.T, path, wantTarget string) {
 	t.Helper()
 	target, err := os.Readlink(path)
 	if err != nil {
@@ -57,7 +59,7 @@ func assertSymlink(t *testing.T, path string, wantTarget string) {
 	}
 }
 
-func writeFile(t *testing.T, path string, content string) {
+func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)

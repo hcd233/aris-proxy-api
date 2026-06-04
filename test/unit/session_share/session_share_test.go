@@ -164,16 +164,16 @@ func (m *mockListSessionsByUserHandler) Handle(_ context.Context, _ sessionport.
 	return nil, nil, nil
 }
 
-func ctxWithUser(userID uint, permission enum.Permission) context.Context {
+func ctxWithUser(userID uint) context.Context {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, constant.CtxKeyUserID, userID)
-	ctx = context.WithValue(ctx, constant.CtxKeyPermission, permission)
+	ctx = context.WithValue(ctx, constant.CtxKeyPermission, enum.PermissionUser)
 	return ctx
 }
 
-func testSessionView(sessionID uint) *sessionport.SessionDetailView {
+func testSessionView() *sessionport.SessionDetailView {
 	return &sessionport.SessionDetailView{
-		ID:         sessionID,
+		ID:         1,
 		APIKeyName: "test-key",
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -196,10 +196,11 @@ func newTestHandler(sc cache.ShareCache, getByUser sessionport.GetSessionByUserH
 }
 
 func TestCreateShare_Success(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView()}}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, err := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
 	if err != nil {
@@ -217,10 +218,11 @@ func TestCreateShare_Success(t *testing.T) {
 }
 
 func TestCreateShare_SessionNotFound(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{}}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 999}})
 	if rsp.Body.Error == nil {
@@ -232,11 +234,12 @@ func TestCreateShare_SessionNotFound(t *testing.T) {
 }
 
 func TestCreateShare_CacheError(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	sc.createErr = ierr.Wrap(ierr.ErrInternal, nil, "redis down")
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView()}}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
 	if rsp.Body.Error == nil {
@@ -250,10 +253,11 @@ func TestCreateShare_CacheError(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-05-28 14:35:00
 func TestCreateShare_NilBodyRejected(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView()}}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: nil})
 	if rsp.Body.Error == nil {
@@ -269,12 +273,13 @@ func TestCreateShare_NilBodyRejected(t *testing.T) {
 }
 
 func TestListShares_Success(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	sc.CreateShare(context.Background(), 42, 1, constant.ShareTTLDefault)
 	sc.CreateShare(context.Background(), 42, 2, constant.ShareTTLDefault)
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, err := h.HandleListShares(ctx, &dto.ListSharesReq{PageParam: model.PageParam{Page: 1, PageSize: 10}})
 	if err != nil {
@@ -286,10 +291,11 @@ func TestListShares_Success(t *testing.T) {
 }
 
 func TestListShares_Empty(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, err := h.HandleListShares(ctx, &dto.ListSharesReq{PageParam: model.PageParam{Page: 1, PageSize: 10}})
 	if err != nil {
@@ -301,11 +307,12 @@ func TestListShares_Empty(t *testing.T) {
 }
 
 func TestDeleteShare_Success(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1, constant.ShareTTLDefault)
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, err := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: shareID})
 	if err != nil {
@@ -320,11 +327,12 @@ func TestDeleteShare_Success(t *testing.T) {
 }
 
 func TestDeleteShare_NotOwner(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	shareID, _, _ := sc.CreateShare(context.Background(), 42, 1, constant.ShareTTLDefault)
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(99, enum.PermissionUser)
+	ctx := ctxWithUser(99)
 
 	rsp, _ := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: shareID})
 	if rsp.Body.Error == nil {
@@ -339,10 +347,11 @@ func TestDeleteShare_NotOwner(t *testing.T) {
 }
 
 func TestDeleteShare_Nonexistent(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	getByUser := &mockGetSessionByUserHandler{}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, _ := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: "nonexistent"})
 	if rsp.Body.Error == nil {
@@ -351,11 +360,12 @@ func TestDeleteShare_Nonexistent(t *testing.T) {
 }
 
 func TestCreateShare_AlreadyShared(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	sc.sharedSessions[1] = true
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView()}}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
 	if rsp.Body.Error == nil {
@@ -367,11 +377,12 @@ func TestCreateShare_AlreadyShared(t *testing.T) {
 }
 
 func TestHandleGetSessionByUser_IsShared(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
 	sc.sharedSessions[1] = true
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView()}}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, _ := h.HandleGetSessionByUser(ctx, &dto.GetSessionByUserReq{SessionID: 1})
 	if rsp.Body.Session == nil {
@@ -383,10 +394,11 @@ func TestHandleGetSessionByUser_IsShared(t *testing.T) {
 }
 
 func TestHandleGetSessionByUser_NotShared(t *testing.T) {
+	t.Parallel()
 	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView(1)}}
+	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView()}}
 	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42, enum.PermissionUser)
+	ctx := ctxWithUser(42)
 
 	rsp, _ := h.HandleGetSessionByUser(ctx, &dto.GetSessionByUserReq{SessionID: 1})
 	if rsp.Body.Session == nil {
@@ -398,6 +410,7 @@ func TestHandleGetSessionByUser_NotShared(t *testing.T) {
 }
 
 func TestParseExpiresIn(t *testing.T) {
+	t.Parallel()
 	past := time.Now().Add(-time.Hour).Unix()
 
 	tests := []struct {
@@ -421,6 +434,7 @@ func TestParseExpiresIn(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := handler.ParseExpiresIn(tt.expiresIn, tt.customAt)
 			if tt.wantErr {
 				if err == nil {
@@ -439,6 +453,7 @@ func TestParseExpiresIn(t *testing.T) {
 
 	// custom valid: use approximate match
 	t.Run("custom valid", func(t *testing.T) {
+		t.Parallel()
 		now := time.Now()
 		target := now.Add(48 * time.Hour)
 		customAt := lo.ToPtr(target.Unix())
@@ -464,6 +479,7 @@ func TestParseExpiresIn(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-05-28 14:35:00
 func TestCreateShareReq_DTOFollowsHumaBodyConvention(t *testing.T) {
+	t.Parallel()
 	reqType := reflect.TypeOf(dto.CreateShareReq{})
 	bodyField, ok := reqType.FieldByName("Body")
 	if !ok {
@@ -507,6 +523,7 @@ func TestCreateShareReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 }
 
 func TestRedisShareCacheListUserShares_IncludesRecentlyExpiredOnly(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	server := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: server.Addr()})
@@ -516,9 +533,9 @@ func TestRedisShareCacheListUserShares_IncludesRecentlyExpiredOnly(t *testing.T)
 	now := time.Now()
 	userID := uint(42)
 
-	seedRedisShare(t, rdb, userID, "active-share", 1, now.Add(-time.Hour), true, constant.ShareTTLDefault)
-	seedRedisShare(t, rdb, userID, "recent-expired-share", 2, now.Add(-constant.ShareTTLDefault-time.Hour), false, constant.ShareTTLDefault)
-	seedRedisShare(t, rdb, userID, "old-expired-share", 3, now.Add(-constant.ShareTTLDefault-72*time.Hour-time.Hour), false, constant.ShareTTLDefault)
+	seedRedisShare(t, rdb, userID, "active-share", 1, now.Add(-time.Hour), true)
+	seedRedisShare(t, rdb, userID, "recent-expired-share", 2, now.Add(-constant.ShareTTLDefault-time.Hour), false)
+	seedRedisShare(t, rdb, userID, "old-expired-share", 3, now.Add(-constant.ShareTTLDefault-72*time.Hour-time.Hour), false)
 
 	shares, pageInfo, err := shareCache.ListUserShares(ctx, userID, 1, 10)
 	if err != nil {
@@ -542,6 +559,7 @@ func TestRedisShareCacheListUserShares_IncludesRecentlyExpiredOnly(t *testing.T)
 }
 
 func TestRedisShareCache_CreateShare_WithCustomTTL(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	server := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: server.Addr()})
@@ -591,7 +609,7 @@ func TestRedisShareCache_CreateShare_WithCustomTTL(t *testing.T) {
 	}
 }
 
-func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string, sessionID uint, createdAt time.Time, active bool, ttl time.Duration) {
+func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string, sessionID uint, createdAt time.Time, active bool) {
 	t.Helper()
 	ctx := context.Background()
 	record := struct {
@@ -603,7 +621,7 @@ func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string
 		ShareID:   shareID,
 		SessionID: sessionID,
 		CreatedAt: createdAt.Unix(),
-		TTL:       int64(ttl.Seconds()),
+		TTL:       int64(constant.ShareTTLDefault.Seconds()),
 	}
 	recordJSON, err := sonic.Marshal(record)
 	if err != nil {
@@ -618,7 +636,7 @@ func seedRedisShare(t *testing.T, rdb *redis.Client, userID uint, shareID string
 	if !active {
 		return
 	}
-	remaining := time.Until(createdAt.Add(ttl))
+	remaining := time.Until(createdAt.Add(constant.ShareTTLDefault))
 	if remaining <= 0 {
 		t.Fatalf("active share %s has non-positive ttl %s", shareID, remaining)
 	}

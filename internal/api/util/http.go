@@ -53,7 +53,7 @@ func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
 			fiberCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fiberCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fiberCtx.Status(fiber.StatusOK)
-			fiberCtx.SendStreamWriter(handler)
+			_ = fiberCtx.SendStreamWriter(handler) //nolint:errcheck // stream write errors propagate via the Fiber error handler
 		},
 	}
 }
@@ -71,13 +71,13 @@ func (rw JSONResponseWriter) WriteJSON(v any) {
 	}
 	rw.HumaCtx.SetStatus(fiber.StatusOK)
 	rw.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	_, _ = rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v)))
+	_, _ = rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v))) //nolint:errcheck // best-effort response write
 }
 
 func (rw JSONResponseWriter) WriteError(statusCode int, body []byte) {
 	rw.HumaCtx.SetStatus(statusCode)
 	rw.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-	_, _ = rw.HumaCtx.BodyWriter().Write(body)
+	_, _ = rw.HumaCtx.BodyWriter().Write(body) //nolint:errcheck // best-effort response write
 }
 
 func WrapJSONResponse(ctx context.Context, handler func(writer JSONResponseWriter)) *huma.StreamResponse {
@@ -97,7 +97,7 @@ func WriteUpstreamError(writer JSONResponseWriter, err error, fallbackBody []byt
 		}
 		writer.HumaCtx.SetStatus(upstreamErr.StatusCode)
 		writer.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body))
+		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body)) //nolint:errcheck
 		return
 	}
 	log.Error("[ProxyService] Proxy error", zap.Error(err))

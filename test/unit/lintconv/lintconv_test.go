@@ -28,9 +28,11 @@ type fixtureExpected struct {
 }
 
 func TestRunReportsExpectedDiagnostics(t *testing.T) {
+	t.Parallel()
 	cases := loadFixtureCases(t)
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			root := t.TempDir()
 			writeModule(t, root)
 			for _, file := range tc.Files {
@@ -53,6 +55,7 @@ func TestRunReportsExpectedDiagnostics(t *testing.T) {
 }
 
 func TestResultCountsBySeverity(t *testing.T) {
+	t.Parallel()
 	result := lintconv.Result{Diagnostics: []lintconv.Diagnostic{
 		{Rule: "a", Severity: enum.SeverityError},
 		{Rule: "b", Severity: enum.SeverityWarning},

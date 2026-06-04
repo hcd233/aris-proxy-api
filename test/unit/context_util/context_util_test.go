@@ -91,9 +91,11 @@ func findMetaCase(t *testing.T, cases []extractMetadataCase, name string) extrac
 }
 
 func TestCtxValueString(t *testing.T) {
+	t.Parallel()
 	allCases := loadCtxValueStringCases(t)
 
 	t.Run("existing string value", func(t *testing.T) {
+		t.Parallel()
 		tc := findCtxCase(t, allCases, "ctx_value_string_exists")
 		ctx := context.WithValue(context.Background(), enum.CtxKey(tc.Key), "Mozilla/5.0")
 		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
@@ -103,6 +105,7 @@ func TestCtxValueString(t *testing.T) {
 	})
 
 	t.Run("missing key", func(t *testing.T) {
+		t.Parallel()
 		tc := findCtxCase(t, allCases, "ctx_value_string_missing_key")
 		ctx := context.Background()
 		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
@@ -112,6 +115,7 @@ func TestCtxValueString(t *testing.T) {
 	})
 
 	t.Run("non-string value", func(t *testing.T) {
+		t.Parallel()
 		tc := findCtxCase(t, allCases, "ctx_value_string_non_string_value")
 		ctx := context.WithValue(context.Background(), enum.CtxKey(tc.Key), 12345)
 		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
@@ -121,6 +125,7 @@ func TestCtxValueString(t *testing.T) {
 	})
 
 	t.Run("empty string value", func(t *testing.T) {
+		t.Parallel()
 		tc := findCtxCase(t, allCases, "ctx_value_string_empty_value")
 		ctx := context.WithValue(context.Background(), enum.CtxKey(tc.Key), "")
 		got := util.CtxValueString(ctx, enum.CtxKey(tc.Key))
@@ -131,9 +136,11 @@ func TestCtxValueString(t *testing.T) {
 }
 
 func TestExtractAnthropicMetadata(t *testing.T) {
+	t.Parallel()
 	allCases := loadExtractMetadataCases(t)
 
 	t.Run("nil metadata", func(t *testing.T) {
+		t.Parallel()
 		tc := findMetaCase(t, allCases, "extract_anthropic_metadata_nil")
 		got := proxyutil.ExtractAnthropicMetadata(tc.Metadata)
 		if got != nil {
@@ -142,6 +149,7 @@ func TestExtractAnthropicMetadata(t *testing.T) {
 	})
 
 	t.Run("metadata with user_id", func(t *testing.T) {
+		t.Parallel()
 		tc := findMetaCase(t, allCases, "extract_anthropic_metadata_with_user_id")
 		got := proxyutil.ExtractAnthropicMetadata(tc.Metadata)
 		if got == nil {
@@ -158,6 +166,7 @@ func TestExtractAnthropicMetadata(t *testing.T) {
 	})
 
 	t.Run("metadata with empty user_id", func(t *testing.T) {
+		t.Parallel()
 		tc := findMetaCase(t, allCases, "extract_anthropic_metadata_empty_user_id")
 		got := proxyutil.ExtractAnthropicMetadata(tc.Metadata)
 		if got != nil {

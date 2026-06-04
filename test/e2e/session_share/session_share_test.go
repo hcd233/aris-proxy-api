@@ -19,6 +19,7 @@ package session_share
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -33,10 +34,10 @@ import (
 
 const e2eHTTPTimeout = 30 * time.Second
 
-func mustE2EEnv(t *testing.T) (string, string, uint) {
+func mustE2EEnv(t *testing.T) (baseURL, jwtToken string, sessionID uint) {
 	t.Helper()
-	baseURL := os.Getenv("BASE_URL")
-	jwtToken := os.Getenv("JWT_TOKEN")
+	baseURL = os.Getenv("BASE_URL")
+	jwtToken = os.Getenv("JWT_TOKEN")
 	rawSessionID := os.Getenv("SHARE_SESSION_ID")
 	if baseURL == "" || jwtToken == "" || rawSessionID == "" {
 		t.Skip("BASE_URL, JWT_TOKEN and SHARE_SESSION_ID are required for e2e test")
@@ -77,6 +78,7 @@ type getShareMetadataResp struct {
 //	@author centonhuang
 //	@update 2026-05-28 14:35:00
 func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
+	t.Parallel()
 	baseURL, jwtToken, sessionID := mustE2EEnv(t)
 	client := newE2EClient()
 
@@ -85,7 +87,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create body failed: %v", err)
 	}
-	createReq, err := http.NewRequest(http.MethodPost, baseURL+"/api/v1/session/share", bytes.NewReader(createBody))
+	createReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/v1/session/share", bytes.NewReader(createBody))
 	if err != nil {
 		t.Fatalf("build create request failed: %v", err)
 	}
@@ -128,7 +130,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	}
 
 	// Step 2: 公开访问分享元数据
-	getReq, err := http.NewRequest(http.MethodGet, baseURL+"/api/v1/session/share/metadata?id="+created.ShareID, nil)
+	getReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/session/share/metadata?id="+created.ShareID, http.NoBody)
 	if err != nil {
 		t.Fatalf("build get request failed: %v", err)
 	}
@@ -177,6 +179,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 //	@author centonhuang
 //	@update 2026-05-28 14:35:00
 func TestSessionShare_Create_RejectsZeroSessionID(t *testing.T) {
+	t.Parallel()
 	baseURL := os.Getenv("BASE_URL")
 	jwtToken := os.Getenv("JWT_TOKEN")
 	if baseURL == "" || jwtToken == "" {
@@ -188,7 +191,7 @@ func TestSessionShare_Create_RejectsZeroSessionID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal body failed: %v", err)
 	}
-	req, err := http.NewRequest(http.MethodPost, baseURL+"/api/v1/session/share", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/v1/session/share", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("build request failed: %v", err)
 	}

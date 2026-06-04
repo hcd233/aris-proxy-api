@@ -2,12 +2,12 @@ package cron_test
 
 import (
 	"context"
-	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/redis/go-redis/v9"
@@ -21,6 +21,7 @@ func newMiniredis(t *testing.T) *miniredis.Miniredis {
 }
 
 func newRealLocker(t *testing.T) (lock.Locker, *miniredis.Miniredis) {
+	t.Helper()
 	mr := newMiniredis(t)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	t.Cleanup(func() { _ = rdb.Close() })
@@ -61,6 +62,7 @@ func (m *mockLocker) Unlock(ctx context.Context, key, value string) error {
 }
 
 func TestRunWithLock_LockFailed_SkipsFn(t *testing.T) {
+	t.Parallel()
 	locker, mr := newRealLocker(t)
 	called := false
 	key := "test:lockfail"
@@ -77,6 +79,7 @@ func TestRunWithLock_LockFailed_SkipsFn(t *testing.T) {
 }
 
 func TestRunWithLock_LockSuccess_RunsFnAndUnlocks(t *testing.T) {
+	t.Parallel()
 	locker, _ := newRealLocker(t)
 	key := "test:success"
 	called := false
@@ -94,6 +97,7 @@ func TestRunWithLock_LockSuccess_RunsFnAndUnlocks(t *testing.T) {
 }
 
 func TestRunWithLock_RefreshesLock(t *testing.T) {
+	t.Parallel()
 	locker, mr := newRealLocker(t)
 	key := "test:refresh"
 
@@ -110,9 +114,10 @@ func TestRunWithLock_RefreshesLock(t *testing.T) {
 }
 
 func TestRunWithLock_RenewFailure_StopsRenewal_KeepsFnRunning(t *testing.T) {
+	t.Parallel()
 	m := &mockLocker{
 		refreshOK:    false,
-		refreshErr:   errors.New("redis down"),
+		refreshErr:   ierr.New(ierr.ErrInternal, "redis down"),
 		refreshAtCnt: make(chan struct{}, 16),
 	}
 	key := "test:renewfail"
@@ -149,6 +154,7 @@ func TestRunWithLock_RenewFailure_StopsRenewal_KeepsFnRunning(t *testing.T) {
 }
 
 func TestRunWithLock_LockLost_StopsRenewal_KeepsFnRunning(t *testing.T) {
+	t.Parallel()
 	m := &mockLocker{refreshOK: false}
 	key := "test:locklost"
 
@@ -168,6 +174,7 @@ func TestRunWithLock_LockLost_StopsRenewal_KeepsFnRunning(t *testing.T) {
 }
 
 func TestRunWithLock_DeferUnlockAlways(t *testing.T) {
+	t.Parallel()
 	m := &mockLocker{refreshOK: true}
 	key := "test:unlock"
 
@@ -182,6 +189,7 @@ func TestRunWithLock_DeferUnlockAlways(t *testing.T) {
 }
 
 func TestRunWithLock_ContextCancelReleasesLock(t *testing.T) {
+	t.Parallel()
 	m := &mockLocker{refreshOK: true, refreshAtCnt: make(chan struct{}, 16)}
 	key := "test:cancel"
 

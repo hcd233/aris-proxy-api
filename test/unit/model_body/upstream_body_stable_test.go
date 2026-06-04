@@ -108,6 +108,7 @@ func loadAnthropicMessageReq(t *testing.T) *dto.AnthropicCreateMessageReq {
 // TestMarshalOpenAIChatCompletionBodyForModel_BytesStable
 // 守护 OpenAI ChatCompletion 上游请求体字节级稳定。
 func TestMarshalOpenAIChatCompletionBodyForModel_BytesStable(t *testing.T) {
+	t.Parallel()
 	req := loadOpenAIChatReq(t)
 
 	const rounds = 32
@@ -125,6 +126,7 @@ func TestMarshalOpenAIChatCompletionBodyForModel_BytesStable(t *testing.T) {
 
 // TestMarshalAnthropicMessageBodyForModel_BytesStable Anthropic 同等检查。
 func TestMarshalAnthropicMessageBodyForModel_BytesStable(t *testing.T) {
+	t.Parallel()
 	req := loadAnthropicMessageReq(t)
 
 	const rounds = 32
@@ -144,6 +146,7 @@ func TestMarshalAnthropicMessageBodyForModel_BytesStable(t *testing.T) {
 // ReplaceModelInBody 把 body 解到 map[string]any 再 Marshal，
 // 默认 sonic 配置下顺序也会乱，必须保证字节稳定。
 func TestReplaceModelInBody_BytesStable(t *testing.T) {
+	t.Parallel()
 	body := []byte(toolsRichRequestJSON)
 
 	const rounds = 32
@@ -163,6 +166,7 @@ func TestReplaceModelInBody_BytesStable(t *testing.T) {
 // 进一步守护：tools.parameters.properties 的子 key 必须按字典序输出，
 // 这样 client 提交相同 properties（不论内部 map 迭代顺序）都能命中上游 prompt cache。
 func TestMarshalOpenAIChatCompletionBodyForModel_PropertiesKeySorted(t *testing.T) {
+	t.Parallel()
 	req := loadOpenAIChatReq(t)
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req, "upstream-model")
 	bodyStr := string(body)
