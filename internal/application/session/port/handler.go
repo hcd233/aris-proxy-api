@@ -142,3 +142,15 @@ type ListSessionToolsResult struct {
 type ListSessionToolsHandler interface {
 	Handle(ctx context.Context, q ListSessionToolsQuery) (*ListSessionToolsResult, error)
 }
+
+// DeleteSessionCommand 删除 Session 命令
+type DeleteSessionCommand struct {
+	SessionID           uint
+	RequesterID         uint
+	RequesterPermission enum.Permission
+}
+
+// DeleteSessionHandler 删除命令处理器接口
+type DeleteSessionHandler interface {
+	Handle(ctx context.Context, cmd DeleteSessionCommand) error
+}

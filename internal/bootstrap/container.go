@@ -550,7 +550,7 @@ func newSessionDependencies(
 	getMetaByUser sessionport.GetSessionMetaByUserHandler,
 	listMessages sessionport.ListSessionMessagesHandler,
 	listTools sessionport.ListSessionToolsHandler,
-	deleteSession sessioncommand.DeleteSessionHandler,
+	deleteSession sessionport.DeleteSessionHandler,
 ) handler.SessionDependencies {
 	return handler.SessionDependencies{
 		ListByUser:    listByUser,
@@ -800,6 +800,6 @@ func newSessionWriteRepository(db *gorm.DB) session.SessionRepository {
 	return repository.NewSessionRepository(db)
 }
 
-func newDeleteSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessioncommand.DeleteSessionHandler {
+func newDeleteSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.DeleteSessionHandler {
 	return sessioncommand.NewDeleteSessionHandler(sessionRepo, apiKeyRepo)
 }
