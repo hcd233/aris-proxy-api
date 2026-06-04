@@ -83,6 +83,7 @@ type ShareSessionMetadata struct {
 	CreatedAt    time.Time         `json:"createdAt" doc:"创建时间"`
 	UpdatedAt    time.Time         `json:"updatedAt" doc:"更新时间"`
 	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	Score        *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
 	MessageCount int               `json:"messageCount" doc:"消息总数"`
 	ToolCount    int               `json:"toolCount" doc:"工具总数"`
 }

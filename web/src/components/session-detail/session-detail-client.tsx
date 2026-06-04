@@ -25,7 +25,7 @@ import {
   Hash,
   MessagesSquare,
   Share2,
-  Trash2,
+  Star,
   Wrench,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -52,17 +52,6 @@ import {
 } from "@/components/ui/sheet";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { AlertTriangle } from "lucide-react";
 
 export function CollapsibleText({
   text,
@@ -214,8 +203,8 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [score, setScore] = useState<number | undefined>(undefined);
+  const [scoring, setScoring] = useState(false);
   // Mobile only: tracks whether the sticky header has been "pushed" — i.e. the
   // top sentinel has scrolled out of view. Drives the compact header variant.
   const [headerCompact, setHeaderCompact] = useState(false);
@@ -250,7 +239,10 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     setLoading(true);
     try {
       const rsp = await api.getSessionMetadata(sessionId);
-      if (rsp.session) setMetadata(rsp.session);
+      if (rsp.session) {
+        setMetadata(rsp.session);
+        setScore(rsp.session.score);
+      }
     } catch {
       // handled silently
     } finally {
@@ -258,19 +250,22 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     }
   }, [sessionId]);
 
-  const handleDelete = useCallback(async () => {
-    setDeleting(true);
-    try {
-      await api.deleteSession(sessionId);
-      toast.success("Session deleted");
-      router.push("/sessions/");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete session");
-    } finally {
-      setDeleting(false);
-      setDeleteConfirmOpen(false);
-    }
-  }, [sessionId, router]);
+  const handleScore = useCallback(
+    async (value: number) => {
+      if (!sessionId || scoring) return;
+      setScoring(true);
+      try {
+        await api.scoreSession({ sessionId, score: value });
+        setScore(value);
+        toast.success("评分成功");
+      } catch {
+        toast.error("评分失败，请重试");
+      } finally {
+        setScoring(false);
+      }
+    },
+    [sessionId, scoring],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -513,8 +508,34 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               >
                 {messageCount} message{messageCount === 1 ? "" : "s"}
                 {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
+                {score != null ? ` · ★ ${score}` : ""}
               </p>
             </div>
+
+            {score != null ? (
+              <span className="flex items-center gap-0.5 text-amber-500">
+                <Star className="size-4 fill-amber-500" />
+                <span className="text-sm font-medium">{score}</span>
+              </span>
+            ) : (
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={scoring}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleScore(s);
+                    }}
+                    className="p-0.5 text-muted-foreground/40 transition-colors hover:text-amber-500 disabled:opacity-50"
+                    aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
+                  >
+                    <Star className="size-4" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <Button
               variant="ghost"
@@ -530,17 +551,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               title={metadata.shareID ? "Shared" : "Share"}
             >
               <Share2 className="size-5" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setDeleteConfirmOpen(true)}
-              className="size-10 text-foreground/70 hover:text-destructive"
-              aria-label="Delete session"
-              title="Delete session"
-            >
-              <Trash2 className="size-5" />
             </Button>
 
             {metadata.toolCount > 0 && (
@@ -661,26 +671,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           open={shareOpen}
           onOpenChange={setShareOpen}
         />
-
-        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-destructive" />
-                Are you sure?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete this session and all its messages. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting}>
-                {deleting ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     );
   }
@@ -712,6 +702,27 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               <MessagesSquare className="size-3.5" />
               {messageCount} message{messageCount === 1 ? "" : "s"}
             </span>
+            {score != null ? (
+              <span className="flex items-center gap-0.5 text-amber-500">
+                <Star className="size-4 fill-amber-500" />
+                <span className="text-sm font-medium">{score}</span>
+              </span>
+            ) : (
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={scoring}
+                    onClick={() => void handleScore(s)}
+                    className="rounded p-0.5 text-muted-foreground/30 transition-colors hover:text-amber-500 disabled:opacity-50"
+                    aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
+                  >
+                    <Star className="size-4" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
@@ -726,16 +737,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             >
               <Share2 className="size-3.5" />
               <span className="hidden sm:inline">{metadata.shareID ? "Shared" : "Share"}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setDeleteConfirmOpen(true)}
-              className="text-muted-foreground hover:text-destructive"
-              title="Delete session"
-              aria-label="Delete session"
-            >
-              <Trash2 className="size-4" />
             </Button>
             {metadata.toolCount > 0 && (
               <Button
@@ -827,26 +828,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         open={shareOpen}
         onOpenChange={setShareOpen}
       />
-
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-destructive" />
-              Are you sure?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this session and all its messages. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

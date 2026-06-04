@@ -194,7 +194,6 @@ const (
 	ConvCheckMsgDatabaseModelDirect   = "database model imports are only allowed in infrastructure layer; expose a domain/application port instead"
 	ConvCheckLegacyCronSessionDedup   = "internal/cron/session_dedup.go"
 	ConvCheckLegacyCronSessionSummary = "internal/cron/session_summarize.go"
-	ConvCheckLegacyCronSessionScore   = "internal/cron/session_score.go"
 	ConvCheckLegacyMiddlewareAPIKey   = "internal/middleware/apikey.go"
 	ConvCheckLegacyMiddlewareJWT      = "internal/middleware/jwt.go"
 	ConvCheckImportDTO                = "github.com/hcd233/aris-proxy-api/internal/dto"

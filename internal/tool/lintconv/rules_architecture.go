@@ -130,7 +130,6 @@ func isDatabaseModelAllowedPath(path string) bool {
 	legacyPaths := []string{
 		constant.ConvCheckLegacyCronSessionDedup,
 		constant.ConvCheckLegacyCronSessionSummary,
-		constant.ConvCheckLegacyCronSessionScore,
 		constant.ConvCheckLegacyMiddlewareAPIKey,
 		constant.ConvCheckLegacyMiddlewareJWT,
 	}

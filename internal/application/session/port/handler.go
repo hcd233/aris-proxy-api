@@ -16,6 +16,7 @@ type SessionSummaryView struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	Summary      string
+	Score        *int
 	MessageCount int
 	ToolCount    int
 }
@@ -42,6 +43,8 @@ type SessionDetailView struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	Metadata   map[string]string
+	Score      *int
+	ScoredAt   *time.Time
 	MessageIDs []uint
 	ToolIDs    []uint
 	Messages   []*MessageView
@@ -55,6 +58,8 @@ type SessionMetaView struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	Metadata     map[string]string
+	Score        *int
+	ScoredAt     *time.Time
 	MessageIDs   []uint
 	ToolIDs      []uint
 	MessageCount int
