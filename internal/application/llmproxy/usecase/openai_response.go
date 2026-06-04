@@ -84,6 +84,19 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 						zap.String("event", event), zap.Error(err))
 				} else {
 					finalResponse = ev.Response
+					if finalResponse != nil {
+						outputTypes := make([]string, 0, len(finalResponse.Output))
+						for _, item := range finalResponse.Output {
+							if item != nil {
+								outputTypes = append(outputTypes, lo.FromPtr(item.Type))
+							}
+						}
+						log.Info("[OpenAIUseCase] Terminal event parsed",
+							zap.String("event", event),
+							zap.Int("outputCount", len(finalResponse.Output)),
+							zap.Strings("outputTypes", outputTypes),
+							zap.ByteString("rawData", data))
+					}
 				}
 			}
 			replaced := proxyutil.ReplaceModelInSSEData(data, lo.FromPtr(req.Body.Model))
