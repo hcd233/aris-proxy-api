@@ -14,8 +14,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	sessionvo "github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -49,27 +47,29 @@ type SessionHandler interface {
 //	@author centonhuang
 //	@update 2026-06-03 10:00:00
 type SessionDependencies struct {
-	ListByUser    port.ListSessionsByUserHandler
-	GetByUser     port.GetSessionByUserHandler
-	ShareCache    cache.ShareCache
-	GetMetaByUser port.GetSessionMetaByUserHandler
-	ListMessages  port.ListSessionMessagesHandler
-	ListTools     port.ListSessionToolsHandler
-	DeleteSession port.DeleteSessionHandler
-	SessionRepo   session.SessionRepository
-	SessionCache  port.SessionDetailCache
+	ListByUser         port.ListSessionsByUserHandler
+	GetByUser          port.GetSessionByUserHandler
+	ShareCache         cache.ShareCache
+	GetMetaByUser      port.GetSessionMetaByUserHandler
+	ListMessages       port.ListSessionMessagesHandler
+	ListTools          port.ListSessionToolsHandler
+	DeleteSession      port.DeleteSessionHandler
+	ScoreSession       port.ScoreSessionHandler
+	DeleteScoreSession port.DeleteScoreSessionHandler
+	SessionCache       port.SessionDetailCache
 }
 
 type sessionHandler struct {
-	listByUser    port.ListSessionsByUserHandler
-	getByUser     port.GetSessionByUserHandler
-	shareCache    cache.ShareCache
-	getMetaByUser port.GetSessionMetaByUserHandler
-	listMessages  port.ListSessionMessagesHandler
-	listTools     port.ListSessionToolsHandler
-	deleteSession port.DeleteSessionHandler
-	sessionRepo   session.SessionRepository
-	sessionCache  port.SessionDetailCache
+	listByUser         port.ListSessionsByUserHandler
+	getByUser          port.GetSessionByUserHandler
+	shareCache         cache.ShareCache
+	getMetaByUser      port.GetSessionMetaByUserHandler
+	listMessages       port.ListSessionMessagesHandler
+	listTools          port.ListSessionToolsHandler
+	deleteSession      port.DeleteSessionHandler
+	scoreSession       port.ScoreSessionHandler
+	deleteScoreSession port.DeleteScoreSessionHandler
+	sessionCache       port.SessionDetailCache
 }
 
 // NewSessionHandler 创建Session处理器
@@ -80,15 +80,16 @@ type sessionHandler struct {
 //	@update 2026-06-03 10:00:00
 func NewSessionHandler(deps SessionDependencies) SessionHandler {
 	return &sessionHandler{
-		listByUser:    deps.ListByUser,
-		getByUser:     deps.GetByUser,
-		shareCache:    deps.ShareCache,
-		getMetaByUser: deps.GetMetaByUser,
-		listMessages:  deps.ListMessages,
-		listTools:     deps.ListTools,
-		deleteSession: deps.DeleteSession,
-		sessionRepo:   deps.SessionRepo,
-		sessionCache:  deps.SessionCache,
+		listByUser:         deps.ListByUser,
+		getByUser:          deps.GetByUser,
+		shareCache:         deps.ShareCache,
+		getMetaByUser:      deps.GetMetaByUser,
+		listMessages:       deps.ListMessages,
+		listTools:          deps.ListTools,
+		deleteSession:      deps.DeleteSession,
+		scoreSession:       deps.ScoreSession,
+		deleteScoreSession: deps.DeleteScoreSession,
+		sessionCache:       deps.SessionCache,
 	}
 }
 
@@ -635,14 +636,6 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	sv, err := sessionvo.NewSessionScore(req.Body.Score, time.Now())
-	if err != nil {
-		logger.WithCtx(ctx).Warn("[SessionHandler] Score session: invalid score",
-			zap.Uint("sessionID", req.Body.SessionID), zap.Int("score", req.Body.Score), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrValidation.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
 	view, viewErr := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
 		UserID:    userID,
 		IsAdmin:   isAdmin,
@@ -659,7 +652,11 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	if err := h.sessionRepo.UpdateScore(ctx, req.Body.SessionID, sv); err != nil {
+	scoredAt, err := h.scoreSession.Handle(ctx, port.ScoreSessionCommand{
+		SessionID: req.Body.SessionID,
+		Score:     req.Body.Score,
+	})
+	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Score session: update failed",
 			zap.Uint("sessionID", req.Body.SessionID), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
@@ -673,7 +670,7 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 
 	rsp.SessionID = req.Body.SessionID
 	rsp.Score = req.Body.Score
-	rsp.ScoredAt = sv.At()
+	rsp.ScoredAt = scoredAt
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Session scored",
 		zap.Uint("sessionID", req.Body.SessionID),
@@ -705,7 +702,9 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	if err := h.sessionRepo.DeleteScore(ctx, req.SessionID); err != nil {
+	if err := h.deleteScoreSession.Handle(ctx, port.DeleteScoreSessionCommand{
+		SessionID: req.SessionID,
+	}); err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: delete failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())

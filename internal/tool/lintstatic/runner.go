@@ -57,7 +57,7 @@ func Run(args []string) Result {
 	// golangci-lint
 	glPath := resolveGolangciLint()
 	if glPath != "" {
-		glCmd := exec.Command(glPath, append([]string{"run"}, args...)...)
+		glCmd := exec.Command(glPath, append([]string{constant.GolangciLintRunCommand}, args...)...)
 		glOut, glErr := glCmd.CombinedOutput()
 		if len(glOut) > 0 {
 			out.Write(glOut)
