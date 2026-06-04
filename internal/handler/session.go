@@ -14,6 +14,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	sessionvo "github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -38,6 +40,7 @@ type SessionHandler interface {
 	HandleListShareMessages(ctx context.Context, req *dto.ListShareMessagesReq) (*dto.HTTPResponse[*dto.ListShareMessagesRsp], error)
 	HandleListShareTools(ctx context.Context, req *dto.ListShareToolsReq) (*dto.HTTPResponse[*dto.ListShareToolsRsp], error)
 	HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
@@ -52,6 +55,7 @@ type SessionDependencies struct {
 	ListMessages  port.ListSessionMessagesHandler
 	ListTools     port.ListSessionToolsHandler
 	DeleteSession port.DeleteSessionHandler
+	SessionRepo   session.SessionRepository
 }
 
 type sessionHandler struct {
@@ -62,6 +66,7 @@ type sessionHandler struct {
 	listMessages  port.ListSessionMessagesHandler
 	listTools     port.ListSessionToolsHandler
 	deleteSession port.DeleteSessionHandler
+	sessionRepo   session.SessionRepository
 }
 
 // NewSessionHandler 创建Session处理器
@@ -79,6 +84,7 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 		listMessages:  deps.ListMessages,
 		listTools:     deps.ListTools,
 		deleteSession: deps.DeleteSession,
+		sessionRepo:   deps.SessionRepo,
 	}
 }
 
@@ -121,6 +127,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 			Summary:      v.Summary,
 			MessageCount: v.MessageCount,
 			ToolCount:    v.ToolCount,
+			Score:        v.Score,
 		}
 	})
 	rsp.PageInfo = pageInfo
@@ -186,6 +193,8 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		Messages:   messageItems,
 		Tools:      toolItems,
 		ShareID:    shareID,
+		Score:      view.Score,
+		ScoredAt:   view.ScoredAt,
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Get session detail by user",
@@ -384,6 +393,8 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 		MessageCount: view.MessageCount,
 		ToolCount:    view.ToolCount,
 		ShareID:      shareID,
+		Score:        view.Score,
+		ScoredAt:     view.ScoredAt,
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Get session metadata",
@@ -510,6 +521,7 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 		Metadata:     view.Metadata,
 		MessageCount: view.MessageCount,
 		ToolCount:    view.ToolCount,
+		Score:        view.Score,
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
@@ -602,6 +614,62 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		PageSize: req.PageSize,
 		Total:    result.Total,
 	}
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleScoreSession 人工评分
+func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error) {
+	rsp := &dto.ScoreSessionRsp{}
+
+	if req.Body == nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Score session: empty request body")
+		rsp.Error = ierr.ErrValidation.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	sv, err := sessionvo.NewSessionScore(req.Body.Score, time.Now())
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Score session: invalid score",
+			zap.Uint("sessionID", req.Body.SessionID), zap.Int("score", req.Body.Score), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrValidation.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	view, viewErr := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		SessionID: req.Body.SessionID,
+	})
+	if viewErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Score session: fetch meta failed",
+			zap.Uint("sessionID", req.Body.SessionID), zap.Error(viewErr))
+		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	if view == nil {
+		rsp.Error = ierr.ErrDataNotExists.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	if err := h.sessionRepo.UpdateScore(ctx, req.Body.SessionID, sv); err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Score session: update failed",
+			zap.Uint("sessionID", req.Body.SessionID), zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.SessionID = req.Body.SessionID
+	rsp.Score = req.Body.Score
+	rsp.ScoredAt = sv.At()
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Session scored",
+		zap.Uint("sessionID", req.Body.SessionID),
+		zap.Int("score", req.Body.Score))
+
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

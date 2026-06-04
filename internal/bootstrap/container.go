@@ -551,6 +551,7 @@ func newSessionDependencies(
 	listMessages sessionport.ListSessionMessagesHandler,
 	listTools sessionport.ListSessionToolsHandler,
 	deleteSession sessionport.DeleteSessionHandler,
+	sessionRepo session.SessionRepository,
 ) handler.SessionDependencies {
 	return handler.SessionDependencies{
 		ListByUser:    listByUser,
@@ -560,6 +561,7 @@ func newSessionDependencies(
 		ListMessages:  listMessages,
 		ListTools:     listTools,
 		DeleteSession: deleteSession,
+		SessionRepo:   sessionRepo,
 	}
 }
 

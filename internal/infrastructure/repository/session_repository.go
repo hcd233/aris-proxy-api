@@ -73,12 +73,7 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 		updates[constant.FieldSummarizeError] = summary.Error()
 	}
 	if score := s.Score(); !score.IsEmpty() {
-		updates[constant.FieldCoherenceScore] = score.Coherence()
-		updates[constant.FieldDepthScore] = score.Depth()
-		updates[constant.FieldValueScore] = score.Value()
-		updates[constant.FieldTotalScore] = score.Total()
-		updates[constant.FieldScoreVersion] = score.Version()
-		updates[constant.FieldScoreError] = score.Error()
+		updates[constant.FieldScore] = *score.Score()
 		if at := score.At(); at != nil {
 			updates[constant.FieldScoredAt] = *at
 		}
@@ -97,12 +92,7 @@ func applySummary(record *dbmodel.Session, summary vo.SessionSummary) {
 
 // applyScore 将评分值对象写入 GORM 模型
 func applyScore(record *dbmodel.Session, score vo.SessionScore) {
-	record.CoherenceScore = score.Coherence()
-	record.DepthScore = score.Depth()
-	record.ValueScore = score.Value()
-	record.TotalScore = score.Total()
-	record.ScoreVersion = score.Version()
-	record.ScoreError = score.Error()
+	record.Score = score.Score()
 	record.ScoredAt = score.At()
 }
 
@@ -208,15 +198,14 @@ func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary 
 func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score vo.SessionScore) error {
 	db := r.db.WithContext(ctx)
 	updates := map[string]any{
-		constant.FieldCoherenceScore: score.Coherence(),
-		constant.FieldDepthScore:     score.Depth(),
-		constant.FieldValueScore:     score.Value(),
-		constant.FieldTotalScore:     score.Total(),
-		constant.FieldScoreVersion:   score.Version(),
-		constant.FieldScoreError:     score.Error(),
+		constant.FieldScore:    nil,
+		constant.FieldScoredAt: nil,
 	}
-	if at := score.At(); at != nil {
-		updates[constant.FieldScoredAt] = *at
+	if !score.IsEmpty() {
+		updates[constant.FieldScore] = *score.Score()
+		if at := score.At(); at != nil {
+			updates[constant.FieldScoredAt] = *at
+		}
 	}
 	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session score")
@@ -253,6 +242,7 @@ type sessionSummaryRow struct {
 	CreatedAt    time.Time `gorm:"column:created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at"`
 	Summary      string    `gorm:"column:summary"`
+	Score        *int      `gorm:"column:score"`
 	MessageCount int       `gorm:"column:message_count"`
 	ToolCount    int       `gorm:"column:tool_count"`
 }
@@ -299,6 +289,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
 			Summary:      row.Summary,
+			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
 		})
@@ -349,6 +340,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
 			Summary:      row.Summary,
+			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
 		})
@@ -387,6 +379,8 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (
 		CreatedAt:  sessionRecord.CreatedAt,
 		UpdatedAt:  sessionRecord.UpdatedAt,
 		Metadata:   sessionRecord.Metadata,
+		Score:      sessionRecord.Score,
+		ScoredAt:   sessionRecord.ScoredAt,
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
 		Messages:   BuildOrderedMessageProjections(sessionRecord.MessageIDs, messages),
@@ -452,6 +446,8 @@ func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*s
 		CreatedAt:  sessionRecord.CreatedAt,
 		UpdatedAt:  sessionRecord.UpdatedAt,
 		Metadata:   sessionRecord.Metadata,
+		Score:      sessionRecord.Score,
+		ScoredAt:   sessionRecord.ScoredAt,
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
 	}, nil
@@ -517,15 +513,7 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 // toSessionAggregate 将 GORM 模型映射为 Session 聚合根
 func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 	summary := vo.NewSessionSummary(m.Summary, m.SummarizeError)
-	score := vo.RestoreSessionScore(
-		m.CoherenceScore,
-		m.DepthScore,
-		m.ValueScore,
-		m.TotalScore,
-		m.ScoreVersion,
-		m.ScoredAt,
-		m.ScoreError,
-	)
+	score := vo.RestoreSessionScore(m.Score, m.ScoredAt)
 	return aggregate.RestoreSession(
 		m.ID,
 		vo.APIKeyOwner(m.APIKeyName),

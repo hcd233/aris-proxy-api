@@ -25,12 +25,7 @@ type sessionCase struct {
 	ID              uint              `json:"id"`
 	SummaryText     string            `json:"summary_text"`
 	SummaryError    string            `json:"summary_error"`
-	ScoreCoherence  float64           `json:"score_coherence"`
-	ScoreDepth      float64           `json:"score_depth"`
-	ScoreValue      float64           `json:"score_value"`
-	ScoreTotal      float64           `json:"score_total"`
-	ScoreVersion    string            `json:"score_version"`
-	ScoreError      string            `json:"score_error"`
+	Score           *int              `json:"score"`
 	CheckOwner      string            `json:"check_owner"`
 	ExpectOwned     bool              `json:"expect_owned"`
 	ExpectErrorKind string            `json:"expectErrorKind"`
@@ -116,10 +111,7 @@ func TestRestoreSession(t *testing.T) {
 
 	now := time.Now().UTC()
 	summary := vo.NewSessionSummary(tc.SummaryText, tc.SummaryError)
-	score := vo.RestoreSessionScore(
-		tc.ScoreCoherence, tc.ScoreDepth, tc.ScoreValue,
-		tc.ScoreTotal, tc.ScoreVersion, &now, tc.ScoreError,
-	)
+	score := vo.RestoreSessionScore(tc.Score, &now)
 
 	s := aggregate.RestoreSession(
 		tc.ID,
@@ -145,14 +137,11 @@ func TestRestoreSession(t *testing.T) {
 	if s.Summary().Text() != tc.SummaryText {
 		t.Errorf("Summary.Text = %q, want %q", s.Summary().Text(), tc.SummaryText)
 	}
-	if s.Score().Coherence() != tc.ScoreCoherence {
-		t.Errorf("Score.Coherence = %f, want %f", s.Score().Coherence(), tc.ScoreCoherence)
+	if s.Score().IsEmpty() && tc.Score != nil {
+		t.Errorf("Score.IsEmpty() = true, want false")
 	}
-	if s.Score().Depth() != tc.ScoreDepth {
-		t.Errorf("Score.Depth = %f, want %f", s.Score().Depth(), tc.ScoreDepth)
-	}
-	if s.Score().Value() != tc.ScoreValue {
-		t.Errorf("Score.Value = %f, want %f", s.Score().Value(), tc.ScoreValue)
+	if *s.Score().Score() != *tc.Score {
+		t.Errorf("Score = %d, want %d", *s.Score().Score(), *tc.Score)
 	}
 }
 
@@ -211,23 +200,17 @@ func TestUpdateScore_Valid(t *testing.T) {
 		t.Fatalf("CreateSession() error: %v", err)
 	}
 
-	score, err := vo.NewSessionScore(tc.ScoreCoherence, tc.ScoreDepth, tc.ScoreValue, tc.ScoreVersion, time.Now().UTC())
+	score, err := vo.NewSessionScore(*tc.Score, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("NewSessionScore() error: %v", err)
 	}
 	s.UpdateScore(score, time.Now().UTC())
 
-	if s.Score().Coherence() != tc.ScoreCoherence {
-		t.Errorf("Score.Coherence = %f, want %f", s.Score().Coherence(), tc.ScoreCoherence)
+	if s.Score().IsEmpty() {
+		t.Error("Score.IsEmpty() = true, want false")
 	}
-	if s.Score().Depth() != tc.ScoreDepth {
-		t.Errorf("Score.Depth = %f, want %f", s.Score().Depth(), tc.ScoreDepth)
-	}
-	if s.Score().Value() != tc.ScoreValue {
-		t.Errorf("Score.Value = %f, want %f", s.Score().Value(), tc.ScoreValue)
-	}
-	if s.Score().Version() != tc.ScoreVersion {
-		t.Errorf("Score.Version = %q, want %q", s.Score().Version(), tc.ScoreVersion)
+	if *s.Score().Score() != *tc.Score {
+		t.Errorf("Score = %d, want %d", *s.Score().Score(), *tc.Score)
 	}
 }
 

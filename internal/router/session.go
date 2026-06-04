@@ -81,6 +81,17 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteSession", enum.PermissionUser)},
 	}, sessionHandler.HandleDeleteSession)
 
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "scoreSession",
+		Method:      http.MethodPost,
+		Path:        "/score",
+		Summary:     "ScoreSession",
+		Description: "Submit manual rating (1-5) for a session",
+		Tags:        []string{"Session"},
+		Security:    []map[string][]string{{"jwtAuth": {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("scoreSession", enum.PermissionUser)},
+	}, sessionHandler.HandleScoreSession)
+
 	initSessionShareRouter(sessionGroup, sessionHandler)
 }
 

@@ -26,12 +26,7 @@
         "metadata": {"env": "test"},
         "summary_text": "session summary text",
         "summary_error": "",
-        "score_coherence": 8.0,
-        "score_depth": 7.5,
-        "score_value": 9.0,
-        "score_total": 8.166666666666666,
-        "score_version": "v1",
-        "score_error": ""
+        "score": 4
     },
     {
         "name": "update_summary_valid",
@@ -49,13 +44,9 @@
     },
     {
         "name": "update_score_valid",
-        "description": "UpdateScore should set the score values",
+        "description": "UpdateScore should set the score value",
         "owner": "test-key",
-        "score_coherence": 9.0,
-        "score_depth": 8.0,
-        "score_value": 7.0,
-        "score_version": "v2",
-        "score_error": ""
+        "score": 5
     },
     {
         "name": "is_owned_by_matching",

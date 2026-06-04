@@ -121,6 +121,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 			CreatedAt:    p.CreatedAt,
 			UpdatedAt:    p.UpdatedAt,
 			Summary:      summary,
+			Score:        p.Score,
 			MessageCount: p.MessageCount,
 			ToolCount:    p.ToolCount,
 		})
@@ -263,6 +264,8 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 		CreatedAt:  detail.CreatedAt,
 		UpdatedAt:  detail.UpdatedAt,
 		Metadata:   detail.Metadata,
+		Score:      detail.Score,
+		ScoredAt:   detail.ScoredAt,
 		MessageIDs: detail.MessageIDs,
 		ToolIDs:    detail.ToolIDs,
 		Messages:   messages,

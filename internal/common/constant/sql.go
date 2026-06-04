@@ -10,12 +10,8 @@ const (
 	FieldSummary                     = "summary"
 	FieldSummarizeError              = "summarize_error"
 	FieldScoreVersion                = "score_version"
-	FieldCoherenceScore              = "coherence_score"
-	FieldDepthScore                  = "depth_score"
-	FieldValueScore                  = "value_score"
-	FieldTotalScore                  = "total_score"
+	FieldScore                       = "score"
 	FieldScoredAt                    = "scored_at"
-	FieldScoreError                  = "score_error"
 	FieldName                        = "name"
 	FieldKey                         = "key"
 	FieldUserID                      = "user_id"
@@ -84,11 +80,10 @@ var (
 	UserRepoFieldsAuth  = []string{FieldID, FieldName, FieldPermission}
 
 	SessionRepoFieldsList       = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldSummary, FieldMessageIDs, FieldToolIDs}
-	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldSummary, FieldSummarizeError, FieldCoherenceScore, FieldDepthScore, FieldValueScore, FieldTotalScore, FieldScoreVersion, FieldScoredAt, FieldScoreError}
-	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldSummary}
-	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata}
+	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldSummary, FieldSummarizeError, FieldScore, FieldScoredAt}
+	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldSummary, FieldScore}
+	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
-	SessionRepoFieldsScore      = []string{FieldID, FieldMessageIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
 	EndpointRepoFieldsFull = []string{FieldID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey,
@@ -109,7 +104,7 @@ var (
 
 	SessionMaxPageSize = 200
 
-	SessionSummarySelect = "id, created_at, updated_at, summary, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
+	SessionSummarySelect = "id, created_at, updated_at, summary, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
