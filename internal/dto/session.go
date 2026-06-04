@@ -89,7 +89,7 @@ type ListSessionsByUserReq struct {
 //	@author centonhuang
 //	@update 2026-05-24 10:00:00
 type GetSessionByUserReq struct {
-	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
 }
 
 // GetSessionRsp 获取Session详情响应
@@ -173,6 +173,14 @@ type ListSessionToolsRsp struct {
 	CommonRsp
 	Tools    []*ToolItem     `json:"tools,omitempty" doc:"工具列表"`
 	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
+}
+
+// DeleteSessionReq 删除 Session 请求
+//
+//	@author centonhuang
+//	@update 2026-06-03 10:00:00
+type DeleteSessionReq struct {
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
 }
 
 // ScoreSessionReq 人工评分请求
