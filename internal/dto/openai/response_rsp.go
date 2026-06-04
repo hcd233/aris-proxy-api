@@ -81,3 +81,12 @@ type ResponseStreamTerminalEvent struct {
 	Type     string                   `json:"type" doc:"事件类型"`
 	Response *OpenAICreateResponseRsp `json:"response,omitempty" doc:"最终响应对象"`
 }
+
+// ResponseStreamOutputItemDoneEvent output_item.done 事件 payload
+//
+//	用于从流式事件中累积完整的 output item，以应对上游终态事件 output 为空的情况。
+type ResponseStreamOutputItemDoneEvent struct {
+	Type        string             `json:"type" doc:"事件类型"`
+	OutputIndex int                `json:"output_index" doc:"输出项索引"`
+	Item        *ResponseInputItem `json:"item,omitempty" doc:"完成的输出项"`
+}

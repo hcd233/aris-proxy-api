@@ -76,6 +76,7 @@ type ListSessionsByUserQuery struct {
 	SortField string
 	StartTime time.Time
 	EndTime   time.Time
+	Keyword   string
 }
 
 // ListSessionsByUserHandler 列出 session handler 接口
@@ -150,14 +151,26 @@ type ListSessionToolsHandler interface {
 
 // DeleteSessionCommand 删除 Session 命令
 type DeleteSessionCommand struct {
-	SessionID           uint
+	SessionIDs          []uint
 	RequesterID         uint
 	RequesterPermission enum.Permission
 }
 
-// DeleteSessionHandler 删除命令处理器接口
+// DeleteSessionFailedItem 删除失败项
+type DeleteSessionFailedItem struct {
+	ID    uint
+	Error string
+}
+
+// DeleteSessionResult 删除结果
+type DeleteSessionResult struct {
+	DeletedCount int
+	Failures     []DeleteSessionFailedItem
+}
+
+// DeleteSessionHandler 删除命令处理器接口（支持单个和批量）
 type DeleteSessionHandler interface {
-	Handle(ctx context.Context, cmd DeleteSessionCommand) error
+	Handle(ctx context.Context, cmd DeleteSessionCommand) (*DeleteSessionResult, error)
 }
 
 // ScoreSessionCommand 评分命令

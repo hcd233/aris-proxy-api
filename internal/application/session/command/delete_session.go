@@ -8,7 +8,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -24,46 +23,62 @@ type deleteSessionHandler struct {
 	apiKeyRepo apikey.APIKeyRepository
 }
 
-func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessionCommand) error {
+func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessionCommand) (*port.DeleteSessionResult, error) {
 	log := logger.WithCtx(ctx)
 
-	sess, err := h.repo.FindByID(ctx, cmd.SessionID)
-	if err != nil {
-		log.Error("[SessionCommand] FindByID failed", zap.Error(err), zap.Uint("sessionID", cmd.SessionID))
-		return err
-	}
-	if sess == nil {
-		log.Warn("[SessionCommand] Session not found", zap.Uint("sessionID", cmd.SessionID))
-		return ierr.New(ierr.ErrDataNotExists, "session not found")
-	}
-
-	if cmd.RequesterPermission != enum.PermissionAdmin {
-		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.RequesterID)
+	isAdmin := cmd.RequesterPermission == enum.PermissionAdmin
+	var ownerNames []string
+	if !isAdmin {
+		names, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.RequesterID)
 		if lookupErr != nil {
-			log.Error("[SessionCommand] LookupOwnerNamesByUserID failed",
+			log.Error("[SessionCommand] Delete: lookup owner names failed",
 				zap.Error(lookupErr), zap.Uint("userID", cmd.RequesterID))
-			return lookupErr
+			return nil, lookupErr
 		}
-		owner := sess.Owner()
-		allowed := slices.Contains(ownerNames, owner.String())
-		if !allowed {
-			log.Warn("[SessionCommand] No permission to delete session",
-				zap.Uint("sessionID", cmd.SessionID),
-				zap.String("owner", owner.String()),
-				zap.Uint("userID", cmd.RequesterID))
-			return ierr.New(ierr.ErrNoPermission, "no permission to delete session")
-		}
+		ownerNames = names
 	}
 
-	if err := h.repo.Delete(ctx, cmd.SessionID); err != nil {
-		log.Error("[SessionCommand] Delete session failed", zap.Error(err), zap.Uint("sessionID", cmd.SessionID))
-		return err
+	result := &port.DeleteSessionResult{}
+
+	for _, id := range cmd.SessionIDs {
+		sess, err := h.repo.FindByID(ctx, id)
+		if err != nil {
+			log.Error("[SessionCommand] Delete: FindByID failed", zap.Error(err), zap.Uint("sessionID", id))
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "failed to find session"})
+			continue
+		}
+		if sess == nil {
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "session not found"})
+			continue
+		}
+
+		if !isAdmin {
+			owner := sess.Owner()
+			allowed := slices.Contains(ownerNames, owner.String())
+			if !allowed {
+				result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "no permission"})
+				continue
+			}
+		}
+
+		if err := h.repo.Delete(ctx, id); err != nil {
+			log.Error("[SessionCommand] Delete: delete failed", zap.Error(err), zap.Uint("sessionID", id))
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "failed to delete"})
+			continue
+		}
+
+		result.DeletedCount++
+		log.Info("[SessionCommand] Session deleted",
+			zap.Uint("sessionID", id),
+			zap.Uint("requesterID", cmd.RequesterID),
+			zap.String("owner", sess.Owner().String()))
 	}
 
-	log.Info("[SessionCommand] Session deleted",
-		zap.Uint("sessionID", cmd.SessionID),
-		zap.Uint("requesterID", cmd.RequesterID),
-		zap.String("owner", sess.Owner().String()))
+	log.Info("[SessionCommand] Delete completed",
+		zap.Int("total", len(cmd.SessionIDs)),
+		zap.Int("deleted", result.DeletedCount),
+		zap.Int("failed", len(result.Failures)),
+		zap.Uint("requesterID", cmd.RequesterID))
 
-	return nil
+	return result, nil
 }

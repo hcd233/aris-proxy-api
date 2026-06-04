@@ -110,9 +110,9 @@ type SessionDetailProjection struct {
 //	@update 2026-06-01 10:00:00
 type SessionReadRepository interface {
 	// ListAllSessions 分页查询所有 Session 列表投影（admin 用）
-	ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影
-	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
 	// GetSessionMeta 查询 Session 元数据（不含 Message/Tool 内容，仅含 IDs 数组）；未找到返回 (nil, nil)
