@@ -25,7 +25,7 @@ import {
   Hash,
   MessagesSquare,
   Share2,
-  Star,
+  Trash2,
   Wrench,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -52,6 +52,17 @@ import {
 } from "@/components/ui/sheet";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 export function CollapsibleText({
   text,
@@ -203,8 +214,11 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [score, setScore] = useState<number | undefined>(undefined);
   const [scoring, setScoring] = useState(false);
+  const [scoreConfirmValue, setScoreConfirmValue] = useState<number | null>(null);
   // Mobile only: tracks whether the sticky header has been "pushed" — i.e. the
   // top sentinel has scrolled out of view. Drives the compact header variant.
   const [headerCompact, setHeaderCompact] = useState(false);
@@ -250,16 +264,31 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     }
   }, [sessionId]);
 
+  const handleDelete = useCallback(async () => {
+    setDeleting(true);
+    try {
+      await api.deleteSession(sessionId);
+      toast.success("Session deleted");
+      router.push("/sessions/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete session");
+    } finally {
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
+    }
+  }, [sessionId, router]);
+
   const handleScore = useCallback(
     async (value: number) => {
       if (!sessionId || scoring) return;
       setScoring(true);
+      setScoreConfirmValue(null);
       try {
         await api.scoreSession({ sessionId, score: value });
         setScore(value);
-        toast.success("评分成功");
+        toast.success("Scored");
       } catch {
-        toast.error("评分失败，请重试");
+        toast.error("Failed to score");
       } finally {
         setScoring(false);
       }
@@ -508,34 +537,48 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               >
                 {messageCount} message{messageCount === 1 ? "" : "s"}
                 {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
-                {score != null ? ` · ★ ${score}` : ""}
+                {score != null ? ` · ${score}` : ""}
               </p>
             </div>
 
-            {score != null ? (
-              <span className="flex items-center gap-0.5 text-amber-500">
-                <Star className="size-4 fill-amber-500" />
-                <span className="text-sm font-medium">{score}</span>
-              </span>
-            ) : (
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((s) => (
+            <div className="flex items-center gap-2">
+              {score != null ? (
+                <span className="text-sm font-medium tabular-nums text-amber-600">{score}</span>
+              ) : scoreConfirmValue != null ? (
+                <div className="flex items-center gap-1 rounded-md border border-border bg-secondary/50 px-2 py-1">
+                  <span className="text-xs text-muted-foreground">Rate {scoreConfirmValue}?</span>
                   <button
-                    key={s}
                     type="button"
+                    onClick={() => handleScore(scoreConfirmValue)}
                     disabled={scoring}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void handleScore(s);
-                    }}
-                    className="p-0.5 text-muted-foreground/40 transition-colors hover:text-amber-500 disabled:opacity-50"
-                    aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
+                    className="rounded px-1.5 py-0.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
                   >
-                    <Star className="size-4" />
+                    Yes
                   </button>
-                ))}
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => setScoreConfirmValue(null)}
+                    className="rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      disabled={scoring}
+                      onClick={() => setScoreConfirmValue(v)}
+                      className="rounded px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-amber-600 disabled:opacity-30"
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <Button
               variant="ghost"
@@ -551,6 +594,17 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               title={metadata.shareID ? "Shared" : "Share"}
             >
               <Share2 className="size-5" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setDeleteConfirmOpen(true)}
+              className="size-10 text-foreground/70 hover:text-destructive"
+              aria-label="Delete session"
+              title="Delete session"
+            >
+              <Trash2 className="size-5" />
             </Button>
 
             {metadata.toolCount > 0 && (
@@ -671,6 +725,26 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           open={shareOpen}
           onOpenChange={setShareOpen}
         />
+
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="size-5 text-destructive" />
+                Are you sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this session and all its messages. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting}>
+                {deleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
@@ -702,32 +776,47 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               <MessagesSquare className="size-3.5" />
               {messageCount} message{messageCount === 1 ? "" : "s"}
             </span>
-            {score != null ? (
-              <span className="flex items-center gap-0.5 text-amber-500">
-                <Star className="size-4 fill-amber-500" />
-                <span className="text-sm font-medium">{score}</span>
-              </span>
-            ) : (
-              <div className="flex items-center gap-0.5">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    disabled={scoring}
-                    onClick={() => void handleScore(s)}
-                    className="rounded p-0.5 text-muted-foreground/30 transition-colors hover:text-amber-500 disabled:opacity-50"
-                    aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
-                  >
-                    <Star className="size-4" />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
               <span>{new Date(metadata.createdAt).toLocaleString()}</span>
             </div>
+            {score != null ? (
+              <span className="text-sm font-medium tabular-nums text-amber-600">{score}</span>
+            ) : scoreConfirmValue != null ? (
+              <div className="flex items-center gap-1 rounded-md border border-border bg-secondary/50 px-2 py-1">
+                <span className="text-xs text-muted-foreground">Rate {scoreConfirmValue}?</span>
+                <button
+                  type="button"
+                  onClick={() => handleScore(scoreConfirmValue)}
+                  disabled={scoring}
+                  className="rounded px-1.5 py-0.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScoreConfirmValue(null)}
+                  className="rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    disabled={scoring}
+                    onClick={() => setScoreConfirmValue(v)}
+                    className="rounded px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-amber-600 disabled:opacity-30"
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            )}
             <Button
               variant={metadata.shareID ? "secondary" : "outline"}
               size="sm"
@@ -737,6 +826,16 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             >
               <Share2 className="size-3.5" />
               <span className="hidden sm:inline">{metadata.shareID ? "Shared" : "Share"}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setDeleteConfirmOpen(true)}
+              className="text-muted-foreground hover:text-destructive"
+              title="Delete session"
+              aria-label="Delete session"
+            >
+              <Trash2 className="size-4" />
             </Button>
             {metadata.toolCount > 0 && (
               <Button
@@ -828,6 +927,26 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         open={shareOpen}
         onOpenChange={setShareOpen}
       />
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-5 text-destructive" />
+              Are you sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this session and all its messages. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

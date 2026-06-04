@@ -43,6 +43,7 @@ type ToolCacheRecord struct {
 type SessionDetailCache interface {
 	GetSessionMeta(ctx context.Context, sessionID uint) (*SessionMetaCacheRecord, error)
 	SetSessionMeta(ctx context.Context, record *SessionMetaCacheRecord) error
+	DeleteSessionMeta(ctx context.Context, sessionID uint) error
 
 	GetMessages(ctx context.Context, ids []uint) (hits map[uint]*MessageCacheRecord, missing []uint, err error)
 	SetMessages(ctx context.Context, records []*MessageCacheRecord) error
