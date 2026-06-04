@@ -359,6 +359,8 @@ const (
 type ResponseStreamEventType = string
 
 const (
+	// ResponseStreamEventCreated 响应已创建
+	ResponseStreamEventCreated ResponseStreamEventType = "response.created"
 	// ResponseStreamEventCompleted 响应成功完成
 	ResponseStreamEventCompleted ResponseStreamEventType = "response.completed"
 	// ResponseStreamEventFailed 响应失败

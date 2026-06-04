@@ -8,11 +8,15 @@ const (
 
 	AnthropicAPIVersion = "2023-06-01"
 
-	AnthropicMessageIDTemplate = "msg_%s"
-	OpenAIChunkIDTemplate      = "chatcmpl-%s"
-	ConvertedChunkIDSuffix     = "converted"
-	ResponseStreamFieldType    = "type"
-	ResponseStreamFieldDelta   = "delta"
+	AnthropicMessageIDTemplate  = "msg_%s"
+	OpenAIChunkIDTemplate       = "chatcmpl-%s"
+	ConvertedChunkIDSuffix      = "converted"
+	ResponseStreamFieldType     = "type"
+	ResponseStreamFieldDelta    = "delta"
+	ResponseStreamFieldResponse = "response"
+	ResponseStreamFieldObject   = "object"
+	ResponseStreamFieldModel    = "model"
+	ResponseStreamFieldStatus   = "status"
 
 	OpenAIInvalidRequestErrorType      = "invalid_request_error"
 	OpenAIInvalidRequestBodyMessage    = "invalid request body"
