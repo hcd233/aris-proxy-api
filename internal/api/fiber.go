@@ -14,13 +14,12 @@ import (
 //	@update 2026-04-28 10:00:00
 func NewFiberApp() *fiber.App {
 	return fiber.New(fiber.Config{
-		ReadTimeout:              config.ReadTimeout,
-		WriteTimeout:             config.WriteTimeout,
-		IdleTimeout:              constant.IdleTimeout,
-		JSONEncoder:              sonic.Marshal,
-		JSONDecoder:              sonic.Unmarshal,
-		DisableHeaderNormalizing: true,
-		TrustProxy:               true,
+		ReadTimeout:  config.ReadTimeout,
+		WriteTimeout: config.WriteTimeout,
+		IdleTimeout:  constant.IdleTimeout,
+		JSONEncoder:  sonic.Marshal,
+		JSONDecoder:  sonic.Unmarshal,
+		TrustProxy:   true,
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Proxies: config.TrustedProxies,
 		},

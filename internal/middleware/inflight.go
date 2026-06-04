@@ -23,7 +23,7 @@ func InflightMiddleware() fiber.Handler {
 
 		tracker := inflight.GetTracker()
 		if !tracker.Track() {
-			c.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
+			c.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			c.Status(fiber.StatusServiceUnavailable)
 
 			body, _ := sonic.Marshal(&dto.CommonRsp{ //nolint:errcheck // Marshal always succeeds for static struct

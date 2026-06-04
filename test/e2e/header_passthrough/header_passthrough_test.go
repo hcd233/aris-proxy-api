@@ -76,10 +76,10 @@ func TestHeaderPassthrough_NonStream(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPTitleHeaderTraceID), string(body))
+		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPHeaderTraceID), string(body))
 	}
 
-	traceID := resp.Header.Get(constant.HTTPTitleHeaderTraceID)
+	traceID := resp.Header.Get(constant.HTTPHeaderTraceID)
 	if traceID == "" {
 		t.Error("expected X-Trace-Id header in response")
 	}
@@ -98,10 +98,10 @@ func TestHeaderPassthrough_Stream(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPTitleHeaderTraceID), string(body))
+		t.Fatalf("unexpected status = %d (traceID=%s); body: %s", resp.StatusCode, resp.Header.Get(constant.HTTPHeaderTraceID), string(body))
 	}
 
-	traceID := resp.Header.Get(constant.HTTPTitleHeaderTraceID)
+	traceID := resp.Header.Get(constant.HTTPHeaderTraceID)
 	if traceID == "" {
 		t.Error("expected X-Trace-Id header in response")
 	}

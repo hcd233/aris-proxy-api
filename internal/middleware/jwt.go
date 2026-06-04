@@ -4,7 +4,6 @@
 package middleware
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"strings"
@@ -60,7 +59,13 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next
 			return
 		}
 
-		userID, err := extractToken(ctx, accessTokenSvc)
+		tokenString := ctx.Header(constant.HTTPHeaderAuthorization)
+		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
+		if tokenString == "" {
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+			return
+		}
+		userID, err := accessTokenSvc.DecodeToken(tokenString)
 		if err != nil {
 			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError()))
 			return
@@ -77,15 +82,6 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next
 		ctx = huma.WithValue(ctx, constant.CtxKeyPermission, permission)
 		next(ctx)
 	}
-}
-
-func extractToken(ctx huma.Context, accessTokenSvc jwt.TokenSigner) (uint, error) {
-	tokenString := cmp.Or(ctx.Header(constant.HTTPLowerHeaderAuthorization), ctx.Header(constant.HTTPTitleHeaderAuthorization))
-	tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
-	if tokenString == "" {
-		return 0, ierr.ErrUnauthorized
-	}
-	return accessTokenSvc.DecodeToken(tokenString)
 }
 
 func resolveJWTUser(ctx context.Context, db *gorm.DB, cache *redis.Client, userID uint) (string, enum.Permission, error) {

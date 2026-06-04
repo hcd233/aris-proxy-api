@@ -139,8 +139,8 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 			}
 		}
 		writer.HumaCtx.SetStatus(fiber.StatusOK)
-		writer.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-		_, _ = writer.HumaCtx.BodyWriter().Write(replaced) //nolint:errcheck // best-effort write on response
+		writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+		_, _ = writer.HumaCtx.BodyWriter().Write(replaced)
 
 		var rsp dto.OpenAICreateResponseRsp
 		parseErr := sonic.Unmarshal(respBody, &rsp)
