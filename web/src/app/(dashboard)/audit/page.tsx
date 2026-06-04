@@ -404,6 +404,7 @@ export default function AuditPage() {
                 <TableRow>
                   <TableHead>Time</TableHead>
                   <TableHead>Model</TableHead>
+                  <TableHead>Endpoint</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
@@ -426,6 +427,7 @@ export default function AuditPage() {
                         {formatTime(log.createdAt)}
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
+                      <TableCell className="max-w-[140px] truncate text-muted-foreground">{log.endpoint || "—"}</TableCell>
                       <TableCell>
                         <div className="text-sm">{log.userName || "—"}</div>
                         <div className="text-xs text-muted-foreground">
