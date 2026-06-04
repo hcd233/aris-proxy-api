@@ -9,14 +9,15 @@ import (
 )
 
 // responsePassthroughExcludedHeaders 不从上游透传到客户端的响应头
+// 上游响应头已被 Go 标准库标准化为 Title-Case，使用 HTTPTitleHeader 常量匹配。
 var responsePassthroughExcludedHeaders = map[string]struct{}{
 	constant.HTTPTitleHeaderContentType:       {},
-	constant.HTTPLowerHeaderContentLength:     {},
-	constant.HTTPLowerHeaderTransferEncoding:  {},
-	constant.HTTPLowerHeaderConnection:        {},
-	constant.HTTPLowerHeaderUpgrade:           {},
-	constant.HTTPLowerHeaderTrailer:           {},
-	constant.HTTPLowerHeaderProxyAuthenticate: {},
+	constant.HTTPTitleHeaderContentLength:     {},
+	constant.HTTPTitleHeaderTransferEncoding:  {},
+	constant.HTTPTitleHeaderConnection:        {},
+	constant.HTTPTitleHeaderUpgrade:           {},
+	constant.HTTPTitleHeaderTrailer:           {},
+	constant.HTTPTitleHeaderProxyAuthenticate: {},
 	constant.HTTPTitleHeaderTraceID:           {},
 }
 

@@ -35,6 +35,12 @@ const (
 	// HTTPTitleHeader Title-Case格式的HTTP头部（用于响应/标准头部）
 	HTTPTitleHeaderContentType         = "Content-Type"
 	HTTPTitleHeaderCacheControl        = "Cache-Control"
+	HTTPTitleHeaderContentLength       = "Content-Length"
+	HTTPTitleHeaderTransferEncoding    = "Transfer-Encoding"
+	HTTPTitleHeaderConnection          = "Connection"
+	HTTPTitleHeaderUpgrade             = "Upgrade"
+	HTTPTitleHeaderTrailer             = "Trailer"
+	HTTPTitleHeaderProxyAuthenticate   = "Proxy-Authenticate"
 	HTTPTitleHeaderXAccelBuffering     = "X-Accel-Buffering"
 	HTTPTitleHeaderUserAgent           = "User-Agent"
 	HTTPTitleHeaderLastModified        = "Last-Modified"
@@ -46,6 +52,7 @@ const (
 	HTTPTitleHeaderRetryAfter          = "Retry-After"
 	HTTPTitleHeaderAuthorization       = "Authorization"
 	HTTPTitleHeaderAPIKey              = "X-Api-Key"
+	HTTPTitleHeaderAnthropicVersion    = "Anthropic-Version"
 	HTTPTitleHeaderTraceID             = "X-Trace-Id"
 
 	HTTPAuthBearerPrefix              = "Bearer "
