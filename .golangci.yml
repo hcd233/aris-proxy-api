@@ -257,20 +257,15 @@ linters:
         path: "internal/cron/"
         text: "SA1029"
 
-      # converter/dto/cron/middleware/llmproxy/oauth2/session/transport/lintconv 层的复杂嵌套是业务逻辑固有复杂度
+      # converter/dto/cron/middleware 层的复杂嵌套是业务逻辑固有复杂度
       - linters:
           - nestif
-        path: "(internal/converter/|internal/dto/|internal/cron/|internal/middleware/|internal/application/llmproxy/|internal/application/oauth2/|internal/application/session/|internal/infrastructure/transport/|internal/tool/lintconv/)"
+        path: "(internal/converter/|internal/dto/|internal/cron/|internal/middleware/)"
 
       # 测试代码放宽嵌套复杂度
       - linters:
           - nestif
         path: "test/"
-
-      # llmproxy/bootstrap/cron/dto/cache/transport/middleware/lintconv 层的复杂函数是业务逻辑固有复杂度
-      - linters:
-          - gocognit
-        path: "(internal/application/llmproxy/|internal/bootstrap/container\\.go|internal/cron/|internal/dto/|internal/infrastructure/cache/share\\.go|internal/infrastructure/transport/openai\\.go|internal/middleware/|internal/tool/lintconv/)"
 
       # 测试代码放宽认知复杂度
       - linters:

@@ -169,7 +169,6 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 }
 
 func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
-	log := logger.WithCtx(ctx)
 	conv := &converter.ResponseProtocolConverter{}
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
@@ -191,18 +190,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		if err != nil {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		} else {
-			if completion != nil {
-				completion.Model = exposedModel
-				var convErr error
-				rsp, convErr = conv.ToResponseResponse(completion)
-				if convErr != nil {
-					log.Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
-				}
-			}
-			if rsp != nil {
-				_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
-			}
-			_ = w.Flush() //nolint:errcheck // flush best effort on stream close
+			rsp = finalizeResponseFromChatCompletion(ctx, w, completion, exposedModel, conv)
 		}
 		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
 		task := &dto.ModelCallAuditTask{
@@ -258,12 +246,15 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
-	log := logger.WithCtx(ctx)
+	return apiutil.WrapStreamResponse(u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body))
+}
+
+func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
 	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
 	exposedModel := lo.FromPtr(req.Body.Model)
-	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
+	return func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
@@ -275,7 +266,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 			}
 			chunks, convErr := anthropicConv.ToOpenAISSEResponse(event, exposedModel, chunkID)
 			if convErr != nil {
-				log.Error("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
+				logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
 				return convErr
 			}
 			for _, chunk := range chunks {
@@ -292,27 +283,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 		if !firstTokenTime.IsZero() {
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
-		var rsp *dto.OpenAICreateResponseRsp
-		if err != nil {
-			proxyutil.WriteUpstreamSSEError(ctx, w, err)
-		} else {
-			chatCompletion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails
-			if chatCompletion == nil && anthropicMsg != nil {
-				chatCompletion, _ = anthropicConv.ToOpenAIResponse(anthropicMsg) //nolint:errcheck // best-effort fallback conversion
-			}
-			if chatCompletion != nil {
-				chatCompletion.Model = exposedModel
-				var convErr error
-				rsp, convErr = responseConv.ToResponseResponse(chatCompletion)
-				if convErr != nil {
-					log.Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
-				}
-			}
-			if rsp != nil {
-				_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
-			}
-			_ = w.Flush() //nolint:errcheck // flush best effort on stream close
-		}
+		rsp := finalizeResponseFromAnthropicStream(ctx, w, err, allChunks, anthropicMsg, exposedModel, anthropicConv, responseConv)
 		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -327,7 +298,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
-	})
+	}
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
@@ -382,31 +353,52 @@ func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 		if choice == nil || choice.Delta == nil {
 			continue
 		}
-		if choice.Delta.Content != nil && *choice.Delta.Content != "" {
-			wroteDelta = true
-			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventOutputTextDelta, *choice.Delta.Content); err != nil {
-				return wroteDelta, err
-			}
+		delta := choice.Delta
+		wrote, err := writeDeltaField(w, enum.ResponseStreamEventOutputTextDelta, delta.Content)
+		if err != nil {
+			return wroteDelta || wrote, err
 		}
-		if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
-			wroteDelta = true
-			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventReasoningTextDelta, *choice.Delta.ReasoningContent); err != nil {
-				return wroteDelta, err
-			}
+		wroteDelta = wroteDelta || wrote
+
+		wrote, err = writeDeltaField(w, enum.ResponseStreamEventReasoningTextDelta, delta.ReasoningContent)
+		if err != nil {
+			return wroteDelta || wrote, err
 		}
-		for _, toolCall := range choice.Delta.ToolCalls {
-			if toolCall != nil && toolCall.Function != nil && toolCall.Function.Arguments != "" {
-				wroteDelta = true
-				if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventFunctionCallArgumentsDelta, toolCall.Function.Arguments); err != nil {
-					return wroteDelta, err
-				}
-			}
+		wroteDelta = wroteDelta || wrote
+
+		wrote, err = writeToolCallDeltas(w, delta.ToolCalls)
+		if err != nil {
+			return wroteDelta || wrote, err
 		}
+		wroteDelta = wroteDelta || wrote
 	}
 	if wroteDelta {
 		return true, w.Flush()
 	}
 	return false, nil
+}
+
+func writeDeltaField(w *bufio.Writer, event enum.ResponseStreamEventType, value *string) (bool, error) {
+	if value == nil || *value == "" {
+		return false, nil
+	}
+	if err := writeResponseDeltaEvent(w, event, *value); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func writeToolCallDeltas(w *bufio.Writer, toolCalls []*dto.OpenAIChatCompletionMessageToolCall) (bool, error) {
+	wrote := false
+	for _, tc := range toolCalls {
+		if tc != nil && tc.Function != nil && tc.Function.Arguments != "" {
+			wrote = true
+			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventFunctionCallArgumentsDelta, tc.Function.Arguments); err != nil {
+				return wrote, err
+			}
+		}
+	}
+	return wrote, nil
 }
 
 func writeResponseDeltaEvent(w *bufio.Writer, event enum.ResponseStreamEventType, delta string) error {
@@ -422,4 +414,44 @@ func writeResponseTerminalEvent(w *bufio.Writer, event enum.ResponseStreamEventT
 	payload := lo.Must1(sonic.Marshal(&dto.ResponseStreamTerminalEvent{Type: event, Response: rsp}))
 	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
 	return err
+}
+
+func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, completion *dto.OpenAIChatCompletion, exposedModel string, conv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
+	if completion == nil {
+		return nil
+	}
+	completion.Model = exposedModel
+	rsp, convErr := conv.ToResponseResponse(completion)
+	if convErr != nil {
+		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
+	}
+	if rsp != nil {
+		_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
+	}
+	_ = w.Flush() //nolint:errcheck // flush best effort on stream close
+	return rsp
+}
+
+func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, upstreamErr error, allChunks []*dto.OpenAIChatCompletionChunk, anthropicMsg *dto.AnthropicMessage, exposedModel string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
+	if upstreamErr != nil {
+		proxyutil.WriteUpstreamSSEError(ctx, w, upstreamErr)
+		return nil
+	}
+	chatCompletion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails
+	if chatCompletion == nil && anthropicMsg != nil {
+		chatCompletion, _ = anthropicConv.ToOpenAIResponse(anthropicMsg) //nolint:errcheck // best-effort fallback conversion
+	}
+	if chatCompletion == nil {
+		return nil
+	}
+	chatCompletion.Model = exposedModel
+	rsp, convErr := responseConv.ToResponseResponse(chatCompletion)
+	if convErr != nil {
+		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
+	}
+	if rsp != nil {
+		_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
+	}
+	_ = w.Flush() //nolint:errcheck // flush best effort on stream close
+	return rsp
 }

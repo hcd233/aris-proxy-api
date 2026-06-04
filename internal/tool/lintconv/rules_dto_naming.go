@@ -10,40 +10,39 @@ import (
 
 func (c *checker) checkDTONaming() {
 	for _, file := range c.files {
-		if isUnder(file.Path, constant.ConvCheckPathDTO) {
-			continue
-		}
-		if strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
-			continue
-		}
-		if isUnder(file.Path, constant.ConvCheckPathTest) {
-			continue
-		}
-		if isUnder(file.Path, constant.ConvCheckPathLintconv) {
-			continue
-		}
+		c.checkDTONamingInFile(file)
+	}
+}
 
-		for _, decl := range file.File.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok.String() != constant.ConvCheckTokType {
+func (c *checker) checkDTONamingInFile(file SourceFile) {
+	if isDTONamingSkippablePath(file.Path) {
+		return
+	}
+	for _, decl := range file.File.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok.String() != constant.ConvCheckTokType {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
 				continue
 			}
-			for _, spec := range gen.Specs {
-				typeSpec, ok := spec.(*ast.TypeSpec)
-				if !ok {
-					continue
-				}
-				_, ok = typeSpec.Type.(*ast.StructType)
-				if !ok {
-					continue
-				}
-				name := typeSpec.Name.Name
-				if isDTOSuffix(name) {
-					c.report(file, typeSpec, enum.SeverityError, constant.RuleDTONaming, constant.ConvCheckMsgDTONaming)
-				}
+			if _, ok = typeSpec.Type.(*ast.StructType); !ok {
+				continue
+			}
+			if isDTOSuffix(typeSpec.Name.Name) {
+				c.report(file, typeSpec, enum.SeverityError, constant.RuleDTONaming, constant.ConvCheckMsgDTONaming)
 			}
 		}
 	}
+}
+
+func isDTONamingSkippablePath(path string) bool {
+	return isUnder(path, constant.ConvCheckPathDTO) ||
+		strings.HasSuffix(path, constant.ConvCheckSuffixTestGo) ||
+		isUnder(path, constant.ConvCheckPathTest) ||
+		isUnder(path, constant.ConvCheckPathLintconv)
 }
 
 func isDTOSuffix(name string) bool {
