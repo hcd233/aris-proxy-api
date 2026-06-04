@@ -92,7 +92,11 @@ func (u *openAIUseCase) convertRequestMessages(ctx context.Context, req *dto.Ope
 
 // storeResponseFromRsp Response API 原生响应 → 消息存储
 func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenAICreateResponseRequest, rsp *dto.OpenAICreateResponseRsp, proxyErr error, upstreamModel string) {
+	log := logger.WithCtx(ctx)
 	if proxyErr != nil || rsp == nil {
+		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: proxyErr or rsp nil",
+			zap.NamedError("proxyErr", proxyErr),
+			zap.Bool("rspIsNil", rsp == nil))
 		return
 	}
 	switch rsp.Status {
@@ -101,16 +105,31 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenA
 		enum.ResponseStatusIncomplete:
 		// persistable
 	default:
+		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: non-persistable status",
+			zap.String("status", rsp.Status),
+			zap.String("responseID", rsp.ID))
 		return
 	}
 
 	unifiedMessages, ok := buildResponseRequestUnifiedMessages(ctx, req)
 	if !ok {
+		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: buildRequestMessages failed",
+			zap.String("responseID", rsp.ID))
 		return
 	}
 
 	outputMsgs, ok := convertResponseOutput(rsp)
 	if !ok {
+		outputTypes := make([]string, 0, len(rsp.Output))
+		for _, item := range rsp.Output {
+			if item != nil && item.Type != nil {
+				outputTypes = append(outputTypes, *item.Type)
+			}
+		}
+		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: convertResponseOutput failed",
+			zap.String("responseID", rsp.ID),
+			zap.Int("outputCount", len(rsp.Output)),
+			zap.Strings("outputTypes", outputTypes))
 		return
 	}
 	unifiedMessages = append(unifiedMessages, outputMsgs...)
@@ -139,6 +158,15 @@ func convertResponseOutput(rsp *dto.OpenAICreateResponseRsp) ([]*vo.UnifiedMessa
 		return nil, false
 	}
 	if len(outputMsgs) == 0 {
+		outputTypes := make([]string, 0, len(rsp.Output))
+		for _, item := range rsp.Output {
+			if item != nil && item.Type != nil {
+				outputTypes = append(outputTypes, *item.Type)
+			}
+		}
+		log.Warn("[OpenAIUseCase] convertResponseOutput: no storable messages from output",
+			zap.Int("outputCount", len(rsp.Output)),
+			zap.Strings("outputTypes", outputTypes))
 		return nil, false
 	}
 	return outputMsgs, true
