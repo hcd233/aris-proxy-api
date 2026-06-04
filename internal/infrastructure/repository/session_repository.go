@@ -259,7 +259,7 @@ type sessionSummaryRow struct {
 	ToolCount    int       `gorm:"column:tool_count"`
 }
 
-func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -281,6 +281,9 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	}
 	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
+	if keyword != "" {
+		sql = sql.Where("EXISTS (SELECT 1 FROM messages WHERE messages.id = ANY(sessions.message_ids) AND messages.message::text ILIKE ?)", "%"+keyword+"%")
 	}
 
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
@@ -309,7 +312,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	return out, pageInfo, nil
 }
 
-func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -332,6 +335,9 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 	}
 	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
+	if keyword != "" {
+		sql = sql.Where("EXISTS (SELECT 1 FROM messages WHERE messages.id = ANY(sessions.message_ids) AND messages.message::text ILIKE ?)", "%"+keyword+"%")
 	}
 
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}

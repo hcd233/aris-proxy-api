@@ -39,6 +39,7 @@ import type {
   ModelUsageRsp,
   FirstTokenLatencyRsp,
   Granularity,
+  DeleteSessionRsp,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -211,6 +212,7 @@ class ApiClient {
     sortField?: string;
     startTime?: string;
     endTime?: string;
+    keyword?: string;
   }): Promise<ListSessionsRsp> {
     const sp = new URLSearchParams({
       page: String(params.page),
@@ -220,6 +222,7 @@ class ApiClient {
     if (params.sortField) sp.set("sortField", params.sortField);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
+    if (params.keyword) sp.set("keyword", params.keyword);
     return this.request<ListSessionsRsp>(`/api/v1/session/list?${sp}`);
   }
 
@@ -297,11 +300,19 @@ class ApiClient {
 
   // ─── Session Delete ──────────────────────────────────────────────────────
 
-  async deleteSession(sessionId: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(
+  async deleteSession(sessionId: number): Promise<DeleteSessionRsp> {
+    return this.request<DeleteSessionRsp>(
       `/api/v1/session?id=${sessionId}`,
       { method: "DELETE" }
     );
+  }
+
+  async batchDeleteSessions(ids: number[]): Promise<DeleteSessionRsp> {
+    return this.request<DeleteSessionRsp>("/api/v1/session", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
   }
 
   /**

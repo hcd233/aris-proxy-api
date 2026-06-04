@@ -71,11 +71,22 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
 		var finalResponse *dto.OpenAICreateResponseRsp
+		// 从流式事件中累积 output items，以应对上游终态事件 output 为空的情况
+		accumulatedOutput := make([]*dto.ResponseInputItem, 0)
 
 		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, func(event string, data []byte) error {
 			if firstTokenTime.IsZero() && proxyutil.IsResponseAPIDeltaEvent(event) {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+			}
+			// 累积 output_item.done 事件中的完整 output item
+			if event == enum.ResponseStreamEventOutputItemDone {
+				var ev dto.ResponseStreamOutputItemDoneEvent
+				if err := sonic.Unmarshal(data, &ev); err != nil {
+					log.Debug("[OpenAIUseCase] Failed to parse output_item.done event", zap.Error(err))
+				} else if ev.Item != nil {
+					accumulatedOutput = append(accumulatedOutput, ev.Item)
+				}
 			}
 			if finalResponse == nil && proxyutil.IsResponseAPITerminalEvent(event) {
 				var ev dto.ResponseStreamTerminalEvent
@@ -95,7 +106,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 							zap.String("event", event),
 							zap.Int("outputCount", len(finalResponse.Output)),
 							zap.Strings("outputTypes", outputTypes),
-							zap.ByteString("rawData", data))
+							zap.Int("accumulatedCount", len(accumulatedOutput)))
 					}
 				}
 			}
@@ -112,6 +123,13 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 		if proxyErr != nil {
 			log.Error("[OpenAIUseCase] Response API stream error", zap.Error(proxyErr))
 			proxyutil.WriteUpstreamSSEError(ctx, w, proxyErr)
+		}
+
+		// 如果终态事件的 output 为空但有累积的 output items，使用累积的数据
+		if finalResponse != nil && len(finalResponse.Output) == 0 && len(accumulatedOutput) > 0 {
+			log.Info("[OpenAIUseCase] Using accumulated output items",
+				zap.Int("count", len(accumulatedOutput)))
+			finalResponse.Output = accumulatedOutput
 		}
 
 		u.storeResponseFromRsp(ctx, req, finalResponse, proxyErr, upstream.Model)

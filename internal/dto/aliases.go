@@ -153,6 +153,7 @@ type ResponseOutputTokensDetail = openai.ResponseOutputTokensDetail
 type ResponseErrorBody = openai.ResponseErrorBody
 type ResponseIncomplete = openai.ResponseIncomplete
 type ResponseStreamTerminalEvent = openai.ResponseStreamTerminalEvent
+type ResponseStreamOutputItemDoneEvent = openai.ResponseStreamOutputItemDoneEvent
 type ResponseFileSearchFilter = openai.ResponseFileSearchFilter
 type ResponseFileSearchFilterValue = openai.ResponseFileSearchFilterValue
 type ResponseFileSearchRankingOptions = openai.ResponseFileSearchRankingOptions
