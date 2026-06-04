@@ -333,6 +333,12 @@ func provideApplication(container *dig.Container) error {
 	if err := container.Provide(newDeleteSessionHandler); err != nil {
 		return err
 	}
+	if err := container.Provide(newScoreSessionHandler); err != nil {
+		return err
+	}
+	if err := container.Provide(newDeleteScoreSessionHandler); err != nil {
+		return err
+	}
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
 		return err
 	}
@@ -551,19 +557,21 @@ func newSessionDependencies(
 	listMessages sessionport.ListSessionMessagesHandler,
 	listTools sessionport.ListSessionToolsHandler,
 	deleteSession sessionport.DeleteSessionHandler,
-	sessionRepo session.SessionRepository,
+	scoreSession sessionport.ScoreSessionHandler,
+	deleteScoreSession sessionport.DeleteScoreSessionHandler,
 	sessionCache sessionport.SessionDetailCache,
 ) handler.SessionDependencies {
 	return handler.SessionDependencies{
-		ListByUser:    listByUser,
-		GetByUser:     getByUser,
-		ShareCache:    shareCache,
-		GetMetaByUser: getMetaByUser,
-		ListMessages:  listMessages,
-		ListTools:     listTools,
-		DeleteSession: deleteSession,
-		SessionRepo:   sessionRepo,
-		SessionCache:  sessionCache,
+		ListByUser:         listByUser,
+		GetByUser:          getByUser,
+		ShareCache:         shareCache,
+		GetMetaByUser:      getMetaByUser,
+		ListMessages:       listMessages,
+		ListTools:          listTools,
+		DeleteSession:      deleteSession,
+		ScoreSession:       scoreSession,
+		DeleteScoreSession: deleteScoreSession,
+		SessionCache:       sessionCache,
 	}
 }
 
@@ -806,4 +814,12 @@ func newSessionWriteRepository(db *gorm.DB) session.SessionRepository {
 
 func newDeleteSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.DeleteSessionHandler {
 	return sessioncommand.NewDeleteSessionHandler(sessionRepo, apiKeyRepo)
+}
+
+func newScoreSessionHandler(sessionRepo session.SessionRepository) sessionport.ScoreSessionHandler {
+	return sessioncommand.NewScoreSessionHandler(sessionRepo)
+}
+
+func newDeleteScoreSessionHandler(sessionRepo session.SessionRepository) sessionport.DeleteScoreSessionHandler {
+	return sessioncommand.NewDeleteScoreSessionHandler(sessionRepo)
 }

@@ -159,3 +159,24 @@ type DeleteSessionCommand struct {
 type DeleteSessionHandler interface {
 	Handle(ctx context.Context, cmd DeleteSessionCommand) error
 }
+
+// ScoreSessionCommand 评分命令
+type ScoreSessionCommand struct {
+	SessionID uint
+	Score     int
+}
+
+// ScoreSessionHandler 评分命令处理器接口
+type ScoreSessionHandler interface {
+	Handle(ctx context.Context, cmd ScoreSessionCommand) (*time.Time, error)
+}
+
+// DeleteScoreSessionCommand 删除评分命令
+type DeleteScoreSessionCommand struct {
+	SessionID uint
+}
+
+// DeleteScoreSessionHandler 删除评分命令处理器接口
+type DeleteScoreSessionHandler interface {
+	Handle(ctx context.Context, cmd DeleteScoreSessionCommand) error
+}
