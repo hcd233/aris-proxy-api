@@ -118,7 +118,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 		task := newAuditTask(ctx, m, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIChatCompletion, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromOpenAIUsage(completion.Usage)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }
 
@@ -165,11 +165,11 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 			if _, doneErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal); doneErr != nil {
 				log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(doneErr))
 			}
-			_ = w.Flush() //nolint:errcheck
+			_ = w.Flush() //nolint:errcheck // flush best effort on stream close
 		} else {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		}
-		completion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck
+		completion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails
 		if completion != nil {
 			completion.Model = exposedModel
 		}
@@ -178,7 +178,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }
 
@@ -205,6 +205,6 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }

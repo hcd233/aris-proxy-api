@@ -97,7 +97,7 @@ func WriteUpstreamError(writer JSONResponseWriter, err error, fallbackBody []byt
 		}
 		writer.HumaCtx.SetStatus(upstreamErr.StatusCode)
 		writer.HumaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body)) //nolint:errcheck
+		_, _ = writer.HumaCtx.BodyWriter().Write([]byte(upstreamErr.Body)) //nolint:errcheck // best-effort write on error response
 		return
 	}
 	log.Error("[ProxyService] Proxy error", zap.Error(err))

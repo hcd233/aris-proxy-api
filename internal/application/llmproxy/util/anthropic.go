@@ -25,7 +25,7 @@ func SendAnthropicModelNotFoundError(model string) (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusNotFound)
 			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write on error response
 				Type: constant.AnthropicInternalErrorBodyType,
 				Error: &dto.AnthropicError{
 					Type:    constant.AnthropicNotFoundErrorType,
@@ -46,7 +46,7 @@ func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusInternalServerError)
 			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write on error response
 				Type: constant.AnthropicInternalErrorBodyType,
 				Error: &dto.AnthropicError{
 					Type:    constant.AnthropicInternalErrorType,
@@ -220,7 +220,7 @@ func SendAnthropicUpstreamError(statusCode int, body string) (rsp *huma.StreamRe
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
 			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write on error response
 				Type: constant.AnthropicInternalErrorBodyType,
 				Error: &dto.AnthropicError{
 					Type:    constant.UpstreamErrorType,
