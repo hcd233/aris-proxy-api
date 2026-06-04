@@ -40,7 +40,7 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamE
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -64,7 +64,7 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	var collectedChunks []*dto.OpenAIChatCompletionChunk
 
@@ -73,31 +73,23 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 		raw, readErr := reader.ReadString('\n')
 		line := strings.TrimRight(raw, constant.NewlineCRLF)
 
-		if line != "" {
-			if strings.HasPrefix(line, constant.SSEDataPrefix) {
-				payload := line[len(constant.SSEDataPrefix):]
-				if payload != constant.SSEDoneSignal {
-					chunk := &dto.OpenAIChatCompletionChunk{}
-					if err := sonic.UnmarshalString(payload, chunk); err != nil {
-						log.Warn("[OpenAIProxy] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
-						continue
-					}
-					collectedChunks = append(collectedChunks, chunk)
-
-					if err := onChunk(chunk); err != nil {
-						log.Warn("[OpenAIProxy] OnChunk callback error", zap.Error(err))
-						return nil, err
-					}
-				}
-			}
-		}
-
 		if readErr != nil {
 			if readErr != io.EOF {
 				log.Warn("[OpenAIProxy] Read upstream sse error", zap.Error(readErr))
 				return nil, &model.UpstreamConnectionError{Cause: readErr}
 			}
 			break
+		}
+
+		chunk, skip := parseSSEDataLine(line)
+		if skip || chunk == nil {
+			continue
+		}
+
+		collectedChunks = append(collectedChunks, chunk)
+		if err := onChunk(chunk); err != nil {
+			log.Warn("[OpenAIProxy] OnChunk callback error", zap.Error(err))
+			return nil, err
 		}
 	}
 
@@ -106,6 +98,28 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 	}
 
 	return proxyutil.ConcatChatCompletionChunks(collectedChunks)
+}
+
+func parseSSEDataLine(line string) (chunk *dto.OpenAIChatCompletionChunk, skip bool) {
+	if line == "" {
+		skip = true
+		return
+	}
+	if !strings.HasPrefix(line, constant.SSEDataPrefix) {
+		skip = true
+		return
+	}
+	payload := line[len(constant.SSEDataPrefix):]
+	if payload == constant.SSEDoneSignal {
+		return
+	}
+	chunk = &dto.OpenAIChatCompletionChunk{}
+	if err := sonic.UnmarshalString(payload, chunk); err != nil {
+		zap.L().Warn("[OpenAIProxy] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
+		skip = true
+		return
+	}
+	return
 }
 
 // doUpstreamRequest 构建并发送上游 HTTP 请求的公共逻辑
@@ -140,8 +154,8 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpo
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck
-		_ = resp.Body.Close()                 //nolint:errcheck
+		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck // read best effort on error path
+		_ = resp.Body.Close()                 //nolint:errcheck // close best effort on error path
 		log.Error("[OpenAIProxy] Upstream returned non-200 status",
 			zap.String("upstreamURL", upstreamURL),
 			zap.Int("statusCode", resp.StatusCode),
@@ -166,7 +180,7 @@ func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep vo.UpstreamE
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -184,7 +198,7 @@ func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep vo.Ups
 	if err != nil {
 		return err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
 
 	reader := bufio.NewReader(resp.Body)
 	var currentEvent string

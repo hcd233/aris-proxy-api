@@ -69,6 +69,77 @@ func (s *logSampler) shouldLog(path string, interval time.Duration) bool {
 	return true
 }
 
+func shouldSuppressLog(samplingIndex map[string]time.Duration, sampler *logSampler, path string, err error) bool {
+	if err != nil {
+		return false
+	}
+	interval, ok := samplingIndex[path]
+	if !ok {
+		return false
+	}
+	return !sampler.shouldLog(path, interval)
+}
+
+func buildRequestHeadersFields(c fiber.Ctx) []zap.Field {
+	reqHeaders := make(map[string]any)
+	for k, v := range c.Request().Header.All() {
+		key := string(k)
+		value := string(v)
+		if isSensitiveHeader(key) {
+			value = constant.MaskSecretPlaceholder
+		}
+		reqHeaders[key] = value
+	}
+	return []zap.Field{zap.Dict("request-headers", lo.MapToSlice(reqHeaders, func(key string, value any) zap.Field {
+		return zap.Any(key, value)
+	})...)}
+}
+
+func buildRequestBodyFields(c fiber.Ctx) []zap.Field {
+	if !strings.Contains(string(c.Request().Header.ContentType()), constant.HTTPContentTypeJSON) {
+		return nil
+	}
+	request := make(map[string]any)
+	if reqBody := c.Body(); len(reqBody) > 0 {
+		if jsonErr := sonic.Unmarshal(reqBody, &request); jsonErr != nil {
+			zap.L().Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(jsonErr))
+		}
+	}
+	return []zap.Field{zap.Dict("request", lo.MapToSlice(request, func(key string, value any) zap.Field {
+		return zap.Any(key, value)
+	})...)}
+}
+
+func buildResponseBodyFields(c fiber.Ctx) []zap.Field {
+	if !strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeJSON) {
+		return nil
+	}
+	response := make(map[string]any)
+	if respBody := c.Response().Body(); respBody != nil {
+		if jsonErr := sonic.Unmarshal(respBody, &response); jsonErr != nil {
+			zap.L().Warn("[LogMiddleware] Unmarshal response error", zap.ByteString("response", respBody), zap.Error(jsonErr))
+		}
+	}
+	return []zap.Field{zap.Dict("response", lo.MapToSlice(response, func(key string, value any) zap.Field {
+		return zap.Any(key, value)
+	})...)}
+}
+
+func buildResponseHeadersFields(c fiber.Ctx) []zap.Field {
+	respHeaders := make(map[string]any)
+	for k, v := range c.Response().Header.All() {
+		key := string(k)
+		value := string(v)
+		if isSensitiveHeader(key) {
+			value = constant.MaskSecretPlaceholder
+		}
+		respHeaders[key] = value
+	}
+	return []zap.Field{zap.Dict("response-headers", lo.MapToSlice(respHeaders, func(key string, value any) zap.Field {
+		return zap.Any(key, value)
+	})...)}
+}
+
 // LogMiddleware 日志中间件
 //
 //	@param cfg LogMiddlewareConfig
@@ -90,17 +161,11 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 
 		err := c.Next()
 
-		// 对匹配采样规则的路径，按间隔控制日志频率（错误始终打印）
-		if err == nil {
-			if interval, ok := samplingIndex[path]; ok {
-				if !sampler.shouldLog(path, interval) {
-					return err
-				}
-			}
+		if shouldSuppressLog(samplingIndex, sampler, path, err) {
+			return err
 		}
 
-		logger := logger.WithFCtx(c)
-
+		log := logger.WithFCtx(c)
 		latency := time.Since(start)
 
 		fields := []zap.Field{
@@ -113,66 +178,16 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 			zap.String("latency", latency.String()),
 		}
 
-		// request-headers
-		reqHeaders := make(map[string]any)
-		for k, v := range c.Request().Header.All() {
-			key := string(k)
-			value := string(v)
-			if isSensitiveHeader(key) {
-				value = constant.MaskSecretPlaceholder
-			}
-			reqHeaders[key] = value
-		}
-		fields = append(fields, zap.Dict("request-headers", lo.MapToSlice(reqHeaders, func(key string, value any) zap.Field {
-			return zap.Any(key, value)
-		})...))
-
-		if strings.Contains(string(c.Request().Header.ContentType()), constant.HTTPContentTypeJSON) {
-			request := make(map[string]any)
-			if reqBody := c.Body(); len(reqBody) > 0 {
-				if jsonErr := sonic.Unmarshal(reqBody, &request); jsonErr != nil {
-					logger.Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(jsonErr))
-				}
-			}
-			fields = append(fields, zap.Dict("request", lo.MapToSlice(request, func(key string, value any) zap.Field {
-				return zap.Any(key, value)
-			})...))
-		}
-
-		// FIXME: get response body will break sse
-		// reference: https://github.com/gofiber/fiber/issues/429
-		// reference: https://github.com/samber/slog-fiber/issues/68
-		if strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeJSON) { // response header content-type is not text/event-stream
-			response := make(map[string]any)
-			if respBody := c.Response().Body(); respBody != nil {
-				if jsonErr := sonic.Unmarshal(respBody, &response); jsonErr != nil {
-					logger.Warn("[LogMiddleware] Unmarshal response error", zap.ByteString("response", respBody), zap.Error(jsonErr))
-				}
-			}
-			fields = append(fields, zap.Dict("response", lo.MapToSlice(response, func(key string, value any) zap.Field {
-				return zap.Any(key, value)
-			})...))
-		}
-
-		// response-headers
-		respHeaders := make(map[string]any)
-		for k, v := range c.Response().Header.All() {
-			key := string(k)
-			value := string(v)
-			if isSensitiveHeader(key) {
-				value = constant.MaskSecretPlaceholder
-			}
-			respHeaders[key] = value
-		}
-		fields = append(fields, zap.Dict("response-headers", lo.MapToSlice(respHeaders, func(key string, value any) zap.Field {
-			return zap.Any(key, value)
-		})...))
+		fields = append(fields, buildRequestHeadersFields(c)...)
+		fields = append(fields, buildRequestBodyFields(c)...)
+		fields = append(fields, buildResponseBodyFields(c)...)
+		fields = append(fields, buildResponseHeadersFields(c)...)
 
 		if err != nil {
 			fields = append([]zap.Field{zap.Error(err)}, fields...)
-			logger.Error("[LogMiddleware] Error", fields...)
+			log.Error("[LogMiddleware] Error", fields...)
 		} else {
-			logger.Info("[LogMiddleware] Info", fields...)
+			log.Info("[LogMiddleware] Info", fields...)
 		}
 
 		return err

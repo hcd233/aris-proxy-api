@@ -68,26 +68,11 @@ func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateR
 	}
 
 	// input 处理
-	if req.Input != nil {
-		// 优先处理 Items（消息数组）
-		if len(req.Input.Items) > 0 {
-			for _, item := range req.Input.Items {
-				amsg, err := convertResponseInputItemToAnthropic(item)
-				if err != nil {
-					return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert response input item")
-				}
-				if amsg != nil {
-					messages = append(messages, amsg)
-				}
-			}
-		} else if req.Input.Text != "" {
-			// 纯文本 input → user 消息
-			messages = append(messages, &dto.AnthropicMessageParam{
-				Role:    enum.RoleUser,
-				Content: &dto.AnthropicMessageContent{Text: req.Input.Text},
-			})
-		}
+	rawMsgs, err := convertResponseInputMessages(req.Input)
+	if err != nil {
+		return nil, err
 	}
+	messages = append(messages, rawMsgs...)
 
 	anthropicReq.Messages = messages
 
@@ -127,6 +112,33 @@ func convertResponseOutputFormat(text *dto.ResponseTextConfig) *dto.AnthropicOut
 		return cfg
 	}
 	return nil
+}
+
+// convertResponseInputMessages 将 Response API input 转换为 Anthropic 消息列表
+func convertResponseInputMessages(input *dto.ResponseInput) ([]*dto.AnthropicMessageParam, error) {
+	if input == nil {
+		return nil, nil
+	}
+	if len(input.Items) > 0 {
+		var messages []*dto.AnthropicMessageParam
+		for _, item := range input.Items {
+			amsg, err := convertResponseInputItemToAnthropic(item)
+			if err != nil {
+				return nil, ierr.Wrap(ierr.ErrDTOConvert, err, "convert response input item")
+			}
+			if amsg != nil {
+				messages = append(messages, amsg)
+			}
+		}
+		return messages, nil
+	}
+	if input.Text != "" {
+		return []*dto.AnthropicMessageParam{{
+			Role:    enum.RoleUser,
+			Content: &dto.AnthropicMessageContent{Text: input.Text},
+		}}, nil
+	}
+	return nil, nil
 }
 
 // convertResponseInputItemToAnthropic 将 Response API input item 转换为 Anthropic 消息
@@ -206,25 +218,8 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 			}
 		case enum.ResponseContentTypeInputImage:
 			block := &dto.AnthropicContentBlock{
-				Type: enum.AnthropicContentBlockTypeImage,
-			}
-			if p.ImageURL != nil && strings.HasPrefix(*p.ImageURL, constant.DataURLPrefix) {
-				dataURLParts := strings.SplitN(*p.ImageURL, constant.DataURLBase64Separator, 2)
-				if len(dataURLParts) == 2 {
-					mt := strings.TrimPrefix(dataURLParts[0], constant.DataURLPrefix)
-					d := dataURLParts[1]
-					block.Source = &dto.AnthropicContentSource{
-						Type:      enum.SourceTypeBase64,
-						MediaType: &mt,
-						Data:      &d,
-					}
-				}
-			} else if p.ImageURL != nil {
-				u := *p.ImageURL
-				block.Source = &dto.AnthropicContentSource{
-					Type: enum.SourceTypeURL,
-					URL:  &u,
-				}
+				Type:   enum.AnthropicContentBlockTypeImage,
+				Source: buildImageSource(p.ImageURL),
 			}
 			blocks = append(blocks, block)
 		case enum.ResponseContentTypeRefusal:
@@ -234,6 +229,31 @@ func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputCont
 		}
 	}
 	return blocks
+}
+
+// buildImageSource 根据图片 URL 构建 Anthropic content source
+func buildImageSource(imageURL *string) *dto.AnthropicContentSource {
+	if imageURL == nil {
+		return nil
+	}
+	if strings.HasPrefix(*imageURL, constant.DataURLPrefix) {
+		dataURLParts := strings.SplitN(*imageURL, constant.DataURLBase64Separator, 2)
+		if len(dataURLParts) == 2 {
+			mt := strings.TrimPrefix(dataURLParts[0], constant.DataURLPrefix)
+			d := dataURLParts[1]
+			return &dto.AnthropicContentSource{
+				Type:      enum.SourceTypeBase64,
+				MediaType: &mt,
+				Data:      &d,
+			}
+		}
+		return nil
+	}
+	u := *imageURL
+	return &dto.AnthropicContentSource{
+		Type: enum.SourceTypeURL,
+		URL:  &u,
+	}
 }
 
 // convertResponseFunctionCallToAnthropic 将 function_call / custom_tool_call 转换为 Anthropic assistant 消息
@@ -266,23 +286,7 @@ func convertResponseFunctionCallOutputToAnthropic(item *dto.ResponseInputItem) *
 		return msg
 	}
 
-	var text string
-	if item.Output.Text != "" {
-		text = item.Output.Text
-	} else if item.Output.FunctionOutput != nil {
-		if item.Output.FunctionOutput.Text != "" {
-			text = item.Output.FunctionOutput.Text
-		} else if len(item.Output.FunctionOutput.Parts) > 0 {
-			var parts []string
-			for _, p := range item.Output.FunctionOutput.Parts {
-				if p != nil && (p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText) && p.Text != nil {
-					parts = append(parts, lo.FromPtr(p.Text))
-				}
-			}
-			text = strings.Join(parts, "\n")
-		}
-	}
-
+	text := extractResponseFunctionCallOutputText(item.Output)
 	msg.Content = &dto.AnthropicMessageContent{
 		Blocks: []*dto.AnthropicContentBlock{{
 			Type:      enum.AnthropicContentBlockTypeToolResult,
@@ -291,6 +295,29 @@ func convertResponseFunctionCallOutputToAnthropic(item *dto.ResponseInputItem) *
 		}},
 	}
 	return msg
+}
+
+// extractResponseFunctionCallOutputText 从 function call output 中提取文本内容
+func extractResponseFunctionCallOutputText(output *dto.ResponseInputItemOutput) string {
+	if output.Text != "" {
+		return output.Text
+	}
+	if output.FunctionOutput == nil {
+		return ""
+	}
+	if output.FunctionOutput.Text != "" {
+		return output.FunctionOutput.Text
+	}
+	if len(output.FunctionOutput.Parts) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, p := range output.FunctionOutput.Parts {
+		if p != nil && (p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText) && p.Text != nil {
+			parts = append(parts, lo.FromPtr(p.Text))
+		}
+	}
+	return strings.Join(parts, "\n")
 }
 
 // convertResponseReasoningToAnthropic 将 reasoning item 转换为 Anthropic thinking block

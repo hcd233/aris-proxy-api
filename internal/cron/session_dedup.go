@@ -216,6 +216,16 @@ type MergeResult struct {
 	MergeMapping map[uint]map[uint]struct{}
 }
 
+// sessionEntry 用于表示Session在去重过程中的内部数据结构
+//
+//	@author centonhuang
+//	@update 2026-06-04 10:00:00
+type sessionEntry struct {
+	id         uint
+	messageIDs []uint
+	toolIDs    []uint
+}
+
 // FindRedundantSessionsWithMerge 查找MessageIDs被其他Session完全包含（子数组）的冗余Session，并返回ToolIDs合并信息
 //
 // 算法：
@@ -233,20 +243,39 @@ type MergeResult struct {
 //     @author centonhuang
 //     @update 2026-03-30 10:00:00
 func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
-	type sessionEntry struct {
-		id         uint
-		messageIDs []uint
-		toolIDs    []uint
+	entries := prepareSessionEntries(sessions)
+
+	redundantIDs := make([]uint, 0)
+	redundantSet := make(map[uint]struct{})
+	mergeMapping := make(map[uint]map[uint]struct{})
+
+	for i := range entries {
+		if _, redundant := redundantSet[entries[i].id]; redundant {
+			continue
+		}
+		processEntryAgainstShorter(entries, i, redundantSet, &redundantIDs, mergeMapping)
 	}
 
+	return MergeResult{
+		RedundantIDs: redundantIDs,
+		MergeMapping: mergeMapping,
+	}
+}
+
+// prepareSessionEntries 将Session列表转换为排序、过滤后的内部条目列表
+//
+//	@param sessions []*dbmodel.Session
+//	@return []sessionEntry
+//	@author centonhuang
+//	@update 2026-06-04 10:00:00
+func prepareSessionEntries(sessions []*dbmodel.Session) []sessionEntry {
 	entries := lo.Map(sessions, func(s *dbmodel.Session, _ int) sessionEntry {
 		return sessionEntry{id: s.ID, messageIDs: s.MessageIDs, toolIDs: s.ToolIDs}
 	})
 
-	// 按MessageIDs长度降序排序，长度相同按ID升序（保留较早的）
 	slices.SortFunc(entries, func(a, b sessionEntry) int {
 		if len(a.messageIDs) != len(b.messageIDs) {
-			return len(b.messageIDs) - len(a.messageIDs) // 降序
+			return len(b.messageIDs) - len(a.messageIDs)
 		}
 		if a.id < b.id {
 			return -1
@@ -257,68 +286,72 @@ func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
 		return 0
 	})
 
-	// 过滤掉空MessageIDs的Session
 	entries = lo.Filter(entries, func(e sessionEntry, _ int) bool {
 		return len(e.messageIDs) > 0
 	})
 
-	redundantIDs := make([]uint, 0)
-	redundantSet := make(map[uint]struct{})
-	// mergeMapping: 长Session ID -> 需要合并的ToolID集合
-	mergeMapping := make(map[uint]map[uint]struct{})
+	return entries
+}
 
-	// 对每个Session，检查它是否是已知非冗余Session的子数组
-	// 从长到短遍历，短的只需要和比它长的比较
-	for i := range entries {
-		if _, redundant := redundantSet[entries[i].id]; redundant {
+// processEntryAgainstShorter 将 longer entry 与其后的所有 shorter entry 逐一比较，标记冗余并合并 ToolIDs
+//
+//	@param entries []sessionEntry
+//	@param i int longer entry 的索引
+//	@param redundantSet map[uint]struct{}
+//	@param redundantIDs *[]uint
+//	@param mergeMapping map[uint]map[uint]struct{}
+//	@author centonhuang
+//	@update 2026-06-04 10:00:00
+func processEntryAgainstShorter(entries []sessionEntry, i int, redundantSet map[uint]struct{}, redundantIDs *[]uint, mergeMapping map[uint]map[uint]struct{}) {
+	longer := entries[i]
+	for j := i + 1; j < len(entries); j++ {
+		shorter := entries[j]
+		if _, redundant := redundantSet[shorter.id]; redundant {
 			continue
 		}
-
-		for j := i + 1; j < len(entries); j++ {
-			if _, redundant := redundantSet[entries[j].id]; redundant {
-				continue
-			}
-
-			shorter := entries[j]
-			longer := entries[i]
-
-			isRedundant := false
-
-			// 长度相同时检查完全相等（保留ID较小的，即entries[i]）
-			if len(shorter.messageIDs) == len(longer.messageIDs) {
-				if isEqualSlice(shorter.messageIDs, longer.messageIDs) {
-					isRedundant = true
-				}
-			} else if IsSubArray(shorter.messageIDs, longer.messageIDs) {
-				// shorter 比 longer 短，检查 shorter 是否是 longer 的连续子数组
-				isRedundant = true
-			}
-
-			if isRedundant {
-				redundantSet[shorter.id] = struct{}{}
-				redundantIDs = append(redundantIDs, shorter.id)
-
-				// 将短Session的ToolIDs合并到长Session
-				if len(shorter.toolIDs) > 0 || len(longer.toolIDs) > 0 {
-					if mergeMapping[longer.id] == nil {
-						mergeMapping[longer.id] = make(map[uint]struct{})
-					}
-					// 先把长Session自己的ToolIDs加入集合
-					for _, tid := range longer.toolIDs {
-						mergeMapping[longer.id][tid] = struct{}{}
-					}
-					// 合并短Session的ToolIDs
-					for _, tid := range shorter.toolIDs {
-						mergeMapping[longer.id][tid] = struct{}{}
-					}
-				}
-			}
+		if !isSessionRedundant(shorter, longer) {
+			continue
 		}
+		redundantSet[shorter.id] = struct{}{}
+		*redundantIDs = append(*redundantIDs, shorter.id)
+		mergeToolIDsIntoMapping(mergeMapping, longer.id, longer.toolIDs, shorter.toolIDs)
 	}
+}
 
-	return MergeResult{
-		RedundantIDs: redundantIDs,
-		MergeMapping: mergeMapping,
+// isSessionRedundant 判断 shorter entry 是否是 longer entry 的冗余副本
+//
+//	@param shorter sessionEntry
+//	@param longer sessionEntry
+//	@return bool
+//	@author centonhuang
+//	@update 2026-06-04 10:00:00
+func isSessionRedundant(shorter, longer sessionEntry) bool {
+	if len(shorter.messageIDs) == len(longer.messageIDs) {
+		return isEqualSlice(shorter.messageIDs, longer.messageIDs)
+	}
+	return IsSubArray(shorter.messageIDs, longer.messageIDs)
+}
+
+// mergeToolIDsIntoMapping 将 target 和 source 的 ToolIDs 合并到 mapping 中指定 targetID 的条目
+//
+//	@param mapping map[uint]map[uint]struct{}
+//	@param targetID uint
+//	@param targetToolIDs []uint
+//	@param sourceToolIDs []uint
+//	@author centonhuang
+//	@update 2026-06-04 10:00:00
+func mergeToolIDsIntoMapping(mapping map[uint]map[uint]struct{}, targetID uint, targetToolIDs, sourceToolIDs []uint) {
+	if len(targetToolIDs) == 0 && len(sourceToolIDs) == 0 {
+		return
+	}
+	if mapping[targetID] == nil {
+		mapping[targetID] = make(map[uint]struct{})
+	}
+	for _, tid := range targetToolIDs {
+		mapping[targetID][tid] = struct{}{}
+	}
+	for _, tid := range sourceToolIDs {
+		mapping[targetID][tid] = struct{}{}
 	}
 }
 
@@ -455,36 +488,55 @@ func FindTerminalToolCallSessions(sessions []*dbmodel.Session, messages []*dbmod
 		if _, excluded := excludeSet[s.ID]; excluded {
 			continue
 		}
-		if len(s.MessageIDs) == 0 {
-			continue
-		}
-
-		lastMsgID := s.MessageIDs[len(s.MessageIDs)-1]
-		msg, ok := msgMap[lastMsgID]
-		if !ok || msg.Message == nil {
-			continue
-		}
-
-		if msg.Message.Role == enum.RoleAssistant && len(msg.Message.ToolCalls) > 0 {
-			result.RedundantIDs = append(result.RedundantIDs, s.ID)
-
-			if len(s.ToolIDs) > 0 {
-				parentID := findParentSessionID(s, sessions)
-				if parentID > 0 {
-					parentToolIDSet := make(map[uint]struct{})
-					for _, tid := range sessionByID[parentID].ToolIDs {
-						parentToolIDSet[tid] = struct{}{}
-					}
-					for _, tid := range s.ToolIDs {
-						parentToolIDSet[tid] = struct{}{}
-					}
-					result.MergeMapping[parentID] = parentToolIDSet
-				}
-			}
-		}
+		processTerminalToolCallSession(s, sessions, msgMap, sessionByID, &result)
 	}
 
 	return result
+}
+
+// processTerminalToolCallSession 检查单个 session 是否为终端 tool_call session，若是则标记冗余并合并 ToolIDs
+//
+//	@param s *dbmodel.Session
+//	@param sessions []*dbmodel.Session
+//	@param msgMap map[uint]*dbmodel.Message
+//	@param sessionByID map[uint]*dbmodel.Session
+//	@param result *MergeResult
+//	@author centonhuang
+//	@update 2026-06-04 10:00:00
+func processTerminalToolCallSession(s *dbmodel.Session, sessions []*dbmodel.Session, msgMap map[uint]*dbmodel.Message, sessionByID map[uint]*dbmodel.Session, result *MergeResult) {
+	if len(s.MessageIDs) == 0 {
+		return
+	}
+
+	lastMsgID := s.MessageIDs[len(s.MessageIDs)-1]
+	msg, ok := msgMap[lastMsgID]
+	if !ok || msg.Message == nil {
+		return
+	}
+
+	if msg.Message.Role != enum.RoleAssistant || len(msg.Message.ToolCalls) == 0 {
+		return
+	}
+
+	result.RedundantIDs = append(result.RedundantIDs, s.ID)
+
+	if len(s.ToolIDs) == 0 {
+		return
+	}
+
+	parentID := findParentSessionID(s, sessions)
+	if parentID == 0 {
+		return
+	}
+
+	parentToolIDSet := make(map[uint]struct{})
+	for _, tid := range sessionByID[parentID].ToolIDs {
+		parentToolIDSet[tid] = struct{}{}
+	}
+	for _, tid := range s.ToolIDs {
+		parentToolIDSet[tid] = struct{}{}
+	}
+	result.MergeMapping[parentID] = parentToolIDSet
 }
 
 func findParentSessionID(target *dbmodel.Session, sessions []*dbmodel.Session) uint {

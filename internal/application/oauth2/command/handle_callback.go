@@ -257,57 +257,48 @@ func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName st
 		return 0, false, err
 	}
 
-	var (
-		userID    uint
-		isNewUser bool
-	)
 	if existing != nil {
-		// 已存在用户：只更新 last_login（与原 service.userDAO.Update(db, user, {last_login}) 行为一致）
 		if err := h.userRepo.TouchLastLogin(ctx, existing.AggregateID()); err != nil {
 			log.Error("[OAuth2Command] Failed to update user login time",
 				zap.String("platform", platformName), zap.Error(err))
 			return 0, false, err
 		}
-		userID = existing.AggregateID()
-	} else {
-		// 新用户：若 userName 非法，回退到 "default_<unixts>"
-		if validateErr := util.ValidateUserName(userName); validateErr != nil {
-			userName = constant.DefaultUserNamePrefix + strconv.FormatInt(time.Now().UTC().Unix(), 10)
-		}
-
-		user, regErr := identityaggregate.RegisterUser(
-			identityvo.UserName(userName),
-			identityvo.Email(email),
-			identityvo.Avatar(avatar),
-			platformName,
-			thirdPartyID,
-			time.Now(),
-		)
-		if regErr != nil {
-			log.Error("[OAuth2Command] Register user aggregate failed",
-				zap.String("platform", platformName), zap.String("userName", userName), zap.Error(regErr))
-			return 0, false, regErr
-		}
-		if err := h.userRepo.Save(ctx, user); err != nil {
-			log.Error("[OAuth2Command] Failed to save new user",
-				zap.String("platform", platformName), zap.String("userName", userName), zap.Error(err))
-			return 0, false, err
-		}
-		userID = user.AggregateID()
-		isNewUser = true
-
-		// 创建存储目录（与原 service.audioObjDAO.CreateDir 行为一致）
-		if h.objStorageDirC != nil {
-			if dirErr := h.objStorageDirC.CreateDir(ctx, userID); dirErr != nil {
-				log.Error("[OAuth2Command] Failed to create audio dir",
-					zap.String("platform", platformName), zap.Error(dirErr))
-				return 0, false, dirErr
-			}
-			log.Info("[OAuth2Command] Audio dir created", zap.String("platform", platformName))
-		}
+		return existing.AggregateID(), false, nil
 	}
 
-	return userID, isNewUser, nil
+	if validateErr := util.ValidateUserName(userName); validateErr != nil {
+		userName = constant.DefaultUserNamePrefix + strconv.FormatInt(time.Now().UTC().Unix(), 10)
+	}
+
+	user, regErr := identityaggregate.RegisterUser(
+		identityvo.UserName(userName),
+		identityvo.Email(email),
+		identityvo.Avatar(avatar),
+		platformName,
+		thirdPartyID,
+		time.Now(),
+	)
+	if regErr != nil {
+		log.Error("[OAuth2Command] Register user aggregate failed",
+			zap.String("platform", platformName), zap.String("userName", userName), zap.Error(regErr))
+		return 0, false, regErr
+	}
+	if err := h.userRepo.Save(ctx, user); err != nil {
+		log.Error("[OAuth2Command] Failed to save new user",
+			zap.String("platform", platformName), zap.String("userName", userName), zap.Error(err))
+		return 0, false, err
+	}
+
+	if h.objStorageDirC != nil {
+		if dirErr := h.objStorageDirC.CreateDir(ctx, user.AggregateID()); dirErr != nil {
+			log.Error("[OAuth2Command] Failed to create audio dir",
+				zap.String("platform", platformName), zap.Error(dirErr))
+			return 0, false, dirErr
+		}
+		log.Info("[OAuth2Command] Audio dir created", zap.String("platform", platformName))
+	}
+
+	return user.AggregateID(), true, nil
 }
 
 // signTokenPair 签发 JWT token 对

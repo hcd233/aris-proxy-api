@@ -111,7 +111,7 @@ func resolveStaticcheck() string {
 			return p
 		}
 	}
-	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil { //nolint:gosec
+	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil { //nolint:gosec,noctx // resolving staticcheck from GOPATH is safe, CLI tool without context
 		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.StaticcheckCommand)
 		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // path from GOPATH env var
 			return p
@@ -130,7 +130,7 @@ func resolveGolangciLint() string {
 			return p
 		}
 	}
-	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil { //nolint:gosec
+	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil { //nolint:gosec,noctx // resolving golangci-lint from GOPATH is safe, CLI tool without context
 		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.GolangciLintCommand)
 		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // path from GOPATH env var
 			return p

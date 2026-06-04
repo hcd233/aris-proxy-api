@@ -13,13 +13,142 @@ import (
 	"github.com/samber/lo"
 )
 
-// ConcatChatCompletionChunks 合并聊天完成流式块
-//
-//	@param chunks
-//	@return *dto.OpenAIChatCompletionChunk
-//	@return error
-//	@author centonhuang
-//	@update 2026-03-06 18:08:53
+type toolCallState struct {
+	id           string
+	toolType     enum.ToolType
+	functionName []string
+	functionArgs []string
+	customName   []string
+	customInput  []string
+	hasFunction  bool
+	hasCustom    bool
+}
+
+type choiceState struct {
+	role                  enum.Role
+	contentParts          []string
+	reasoningContentParts []string
+	refusalParts          []string
+	toolCallMap           map[int]*toolCallState
+	toolCallOrder         []int
+	finishReason          enum.FinishReason
+	logprobs              *dto.OpenAILogprobs
+	index                 int
+}
+
+func (cs *choiceState) mergeToolCallDelta(tc *dto.OpenAIChatCompletionMessageToolCall) {
+	tcIdx := cs.index
+	if tc.Index != nil {
+		tcIdx = *tc.Index
+	}
+	tcs, ok := cs.toolCallMap[tcIdx]
+	if !ok {
+		tcs = &toolCallState{}
+		cs.toolCallMap[tcIdx] = tcs
+		cs.toolCallOrder = append(cs.toolCallOrder, tcIdx)
+	}
+	if lo.FromPtr(tc.ID) != "" {
+		tcs.id = lo.FromPtr(tc.ID)
+	}
+	if tc.Type != "" {
+		tcs.toolType = tc.Type
+	}
+	if tc.Function != nil {
+		tcs.hasFunction = true
+		if tc.Function.Name != "" {
+			tcs.functionName = append(tcs.functionName, tc.Function.Name)
+		}
+		if tc.Function.Arguments != "" {
+			tcs.functionArgs = append(tcs.functionArgs, tc.Function.Arguments)
+		}
+	}
+	if tc.Custom != nil {
+		tcs.hasCustom = true
+		if tc.Custom.Name != "" {
+			tcs.customName = append(tcs.customName, tc.Custom.Name)
+		}
+		if tc.Custom.Input != "" {
+			tcs.customInput = append(tcs.customInput, tc.Custom.Input)
+		}
+	}
+}
+
+func (cs *choiceState) mergeDelta(choice *dto.OpenAIChatCompletionChunkChoice) {
+	if cs.role == "" && choice.Delta.Role != "" {
+		cs.role = choice.Delta.Role
+	}
+	if choice.Delta.Content != nil && *choice.Delta.Content != "" {
+		cs.contentParts = append(cs.contentParts, *choice.Delta.Content)
+	}
+	if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
+		cs.reasoningContentParts = append(cs.reasoningContentParts, *choice.Delta.ReasoningContent)
+	}
+	if choice.Delta.Refusal != nil && *choice.Delta.Refusal != "" {
+		cs.refusalParts = append(cs.refusalParts, *choice.Delta.Refusal)
+	}
+	for _, tc := range choice.Delta.ToolCalls {
+		cs.mergeToolCallDelta(tc)
+	}
+	if choice.FinishReason != nil && *choice.FinishReason != "" {
+		cs.finishReason = *choice.FinishReason
+	}
+	if choice.Logprobs != nil {
+		if cs.logprobs == nil {
+			cs.logprobs = &dto.OpenAILogprobs{}
+		}
+		cs.logprobs.Content = append(cs.logprobs.Content, choice.Logprobs.Content...)
+		cs.logprobs.Refusal = append(cs.logprobs.Refusal, choice.Logprobs.Refusal...)
+	}
+}
+
+func buildMergedToolCalls(cs *choiceState) []*dto.OpenAIChatCompletionMessageToolCall {
+	var mergedToolCalls []*dto.OpenAIChatCompletionMessageToolCall
+	for _, tcIdx := range cs.toolCallOrder {
+		tcs := cs.toolCallMap[tcIdx]
+		id := tcs.id
+		tc := &dto.OpenAIChatCompletionMessageToolCall{
+			ID:   &id,
+			Type: tcs.toolType,
+		}
+		if tcs.hasFunction {
+			tc.Function = &dto.OpenAIChatCompletionMessageFunctionToolCall{
+				Name:      strings.Join(tcs.functionName, ""),
+				Arguments: strings.Join(tcs.functionArgs, ""),
+			}
+		}
+		if tcs.hasCustom {
+			tc.Custom = &dto.OpenAIChatCompletionMessageCustomToolCall{
+				Name:  strings.Join(tcs.customName, ""),
+				Input: strings.Join(tcs.customInput, ""),
+			}
+		}
+		mergedToolCalls = append(mergedToolCalls, tc)
+	}
+	return mergedToolCalls
+}
+
+func buildChoice(cs *choiceState) *dto.OpenAIChatCompletionChoice {
+	var content *dto.OpenAIMessageContent
+	if joined := strings.Join(cs.contentParts, ""); joined != "" {
+		content = &dto.OpenAIMessageContent{Text: joined}
+	}
+	reasoningContent := strings.Join(cs.reasoningContentParts, "")
+	refusal := strings.Join(cs.refusalParts, "")
+	message := &dto.OpenAIChatCompletionMessageParam{
+		Role:             cmp.Or(cs.role, enum.RoleAssistant),
+		Content:          content,
+		ReasoningContent: &reasoningContent,
+		Refusal:          &refusal,
+		ToolCalls:        buildMergedToolCalls(cs),
+	}
+	return &dto.OpenAIChatCompletionChoice{
+		Index:        cs.index,
+		Message:      message,
+		FinishReason: cs.finishReason,
+		Logprobs:     cs.logprobs,
+	}
+}
+
 func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.OpenAIChatCompletion, error) {
 	cmpl := &dto.OpenAIChatCompletion{}
 
@@ -27,29 +156,6 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 		return cmpl, nil
 	}
 
-	// choiceBuilders accumulates per-index delta state.
-	type toolCallState struct {
-		id           string
-		toolType     enum.ToolType
-		functionName []string
-		functionArgs []string
-		customName   []string
-		customInput  []string
-		hasFunction  bool
-		hasCustom    bool
-	}
-
-	type choiceState struct {
-		role                  enum.Role
-		contentParts          []string
-		reasoningContentParts []string
-		refusalParts          []string
-		toolCallMap           map[int]*toolCallState // keyed by tool_call index
-		toolCallOrder         []int
-		finishReason          enum.FinishReason
-		logprobs              *dto.OpenAILogprobs
-		index                 int
-	}
 	choiceMap := make(map[int]*choiceState)
 	choiceOrder := make([]int, 0)
 
@@ -58,7 +164,6 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 			continue
 		}
 
-		// Metadata: use the first chunk's values.
 		if cmpl.ID == "" {
 			cmpl.ID = chunk.ID
 			cmpl.Created = chunk.Created
@@ -68,7 +173,6 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 			cmpl.Model = chunk.Model
 		}
 
-		// Usage: keep the last non-nil value (upstream sends it in the final chunk).
 		if chunk.Usage != nil {
 			cmpl.Usage = chunk.Usage
 		}
@@ -83,127 +187,13 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 				choiceMap[choice.Index] = cs
 				choiceOrder = append(choiceOrder, choice.Index)
 			}
-
-			if cs.role == "" && choice.Delta.Role != "" {
-				cs.role = choice.Delta.Role
-			}
-			if choice.Delta.Content != nil && *choice.Delta.Content != "" {
-				cs.contentParts = append(cs.contentParts, *choice.Delta.Content)
-			}
-			if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
-				cs.reasoningContentParts = append(cs.reasoningContentParts, *choice.Delta.ReasoningContent)
-			}
-			if choice.Delta.Refusal != nil && *choice.Delta.Refusal != "" {
-				cs.refusalParts = append(cs.refusalParts, *choice.Delta.Refusal)
-			}
-
-			// Merge tool_call deltas by their index within the tool_calls array.
-			// Streaming chunks carry tool_calls with an "index" field (encoded in
-			// OpenAIChatCompletionMessageToolCall.Index) that indicates which logical
-			// tool_call the delta belongs to. We accumulate id, type, function
-			// name/arguments fragments and merge them into one complete tool_call
-			// per index.
-			for _, tc := range choice.Delta.ToolCalls {
-				tcIdx := choice.Index
-				if tc.Index != nil {
-					tcIdx = *tc.Index
-				}
-				tcs, ok := cs.toolCallMap[tcIdx]
-				if !ok {
-					tcs = &toolCallState{}
-					cs.toolCallMap[tcIdx] = tcs
-					cs.toolCallOrder = append(cs.toolCallOrder, tcIdx)
-				}
-				if lo.FromPtr(tc.ID) != "" {
-					tcs.id = lo.FromPtr(tc.ID)
-				}
-				if tc.Type != "" {
-					tcs.toolType = tc.Type
-				}
-				if tc.Function != nil {
-					tcs.hasFunction = true
-					if tc.Function.Name != "" {
-						tcs.functionName = append(tcs.functionName, tc.Function.Name)
-					}
-					if tc.Function.Arguments != "" {
-						tcs.functionArgs = append(tcs.functionArgs, tc.Function.Arguments)
-					}
-				}
-				if tc.Custom != nil {
-					tcs.hasCustom = true
-					if tc.Custom.Name != "" {
-						tcs.customName = append(tcs.customName, tc.Custom.Name)
-					}
-					if tc.Custom.Input != "" {
-						tcs.customInput = append(tcs.customInput, tc.Custom.Input)
-					}
-				}
-			}
-
-			if choice.FinishReason != nil && *choice.FinishReason != "" {
-				cs.finishReason = *choice.FinishReason
-			}
-
-			if choice.Logprobs != nil {
-				if cs.logprobs == nil {
-					cs.logprobs = &dto.OpenAILogprobs{}
-				}
-				cs.logprobs.Content = append(cs.logprobs.Content, choice.Logprobs.Content...)
-				cs.logprobs.Refusal = append(cs.logprobs.Refusal, choice.Logprobs.Refusal...)
-			}
+			cs.mergeDelta(choice)
 		}
 	}
 
 	cmpl.Choices = make([]*dto.OpenAIChatCompletionChoice, 0, len(choiceOrder))
 	for _, idx := range choiceOrder {
-		cs := choiceMap[idx]
-
-		// Build merged tool_calls from accumulated deltas.
-		var mergedToolCalls []*dto.OpenAIChatCompletionMessageToolCall
-		for _, tcIdx := range cs.toolCallOrder {
-			tcs := cs.toolCallMap[tcIdx]
-			id := tcs.id
-			tc := &dto.OpenAIChatCompletionMessageToolCall{
-				ID:   &id,
-				Type: tcs.toolType,
-			}
-			if tcs.hasFunction {
-				tc.Function = &dto.OpenAIChatCompletionMessageFunctionToolCall{
-					Name:      strings.Join(tcs.functionName, ""),
-					Arguments: strings.Join(tcs.functionArgs, ""),
-				}
-			}
-			if tcs.hasCustom {
-				tc.Custom = &dto.OpenAIChatCompletionMessageCustomToolCall{
-					Name:  strings.Join(tcs.customName, ""),
-					Input: strings.Join(tcs.customInput, ""),
-				}
-			}
-			mergedToolCalls = append(mergedToolCalls, tc)
-		}
-
-		// Use nil instead of empty string for Content to match non-stream responses
-		// when there is no textual content (e.g. tool-call-only messages).
-		var content *dto.OpenAIMessageContent
-		if joined := strings.Join(cs.contentParts, ""); joined != "" {
-			content = &dto.OpenAIMessageContent{Text: joined}
-		}
-
-		reasoningContent := strings.Join(cs.reasoningContentParts, "")
-		refusal := strings.Join(cs.refusalParts, "")
-		message := &dto.OpenAIChatCompletionMessageParam{
-			Role:             cmp.Or(cs.role, enum.RoleAssistant),
-			Content:          content,
-			ReasoningContent: &reasoningContent,
-			Refusal:          &refusal,
-			ToolCalls:        mergedToolCalls,
-		}
-		cmpl.Choices = append(cmpl.Choices, &dto.OpenAIChatCompletionChoice{
-			Index:        cs.index,
-			Message:      message,
-			FinishReason: cs.finishReason,
-			Logprobs:     cs.logprobs,
-		})
+		cmpl.Choices = append(cmpl.Choices, buildChoice(choiceMap[idx]))
 	}
 
 	return cmpl, nil
@@ -270,7 +260,7 @@ func SendOpenAIUpstreamError(statusCode int, body string) (rsp *huma.StreamRespo
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(statusCode)
 			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{ //nolint:errcheck
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{ //nolint:errcheck // best-effort write on error response
 				Error: &dto.OpenAIError{
 					Message: errMsg,
 					Type:    constant.UpstreamErrorType,

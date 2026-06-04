@@ -36,7 +36,7 @@ func WrapErrorSSE(ctx context.Context, err *model.Error) (rsp *huma.StreamRespon
 			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 
-			_ = fCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck
+			_ = fCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // best-effort stream write on error
 				writeSSEErrorResponse(ctx, w, err)
 			})
 		},
@@ -87,20 +87,23 @@ func WriteAnthropicMessageStop(w *bufio.Writer) error {
 func WriteUpstreamSSEError(ctx context.Context, w *bufio.Writer, err error) {
 	log := logger.WithCtx(ctx)
 	var upstreamErr *model.UpstreamError
-	if errors.As(err, &upstreamErr) {
-		if upstreamErr.Body != "" {
-			if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body); writeErr != nil {
-				log.Debug("[WriteUpstreamSSEError] Failed to write upstream error body", zap.Error(writeErr))
-			}
-		} else {
-			if _, writeErr := fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode); writeErr != nil {
-				log.Debug("[WriteUpstreamSSEError] Failed to write upstream status frame", zap.Error(writeErr))
-			}
-		}
-	} else {
+	if !errors.As(err, &upstreamErr) {
 		log.Error("[WriteUpstreamSSEError] Non-upstream error in SSE stream", zap.Error(err))
 		if _, writeErr := fmt.Fprint(w, constant.SSEOpenAIInternalErrorFrame); writeErr != nil {
 			log.Debug("[WriteUpstreamSSEError] Failed to write internal error frame", zap.Error(writeErr))
+		}
+		if flushErr := w.Flush(); flushErr != nil {
+			log.Debug("[WriteUpstreamSSEError] Failed to flush SSE writer", zap.Error(flushErr))
+		}
+		return
+	}
+	if upstreamErr.Body != "" {
+		if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body); writeErr != nil {
+			log.Debug("[WriteUpstreamSSEError] Failed to write upstream error body", zap.Error(writeErr))
+		}
+	} else {
+		if _, writeErr := fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode); writeErr != nil {
+			log.Debug("[WriteUpstreamSSEError] Failed to write upstream status frame", zap.Error(writeErr))
 		}
 	}
 	if flushErr := w.Flush(); flushErr != nil {
@@ -118,7 +121,7 @@ func SendOpenAIModelNotFoundError(modelName string) (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusNotFound)
 			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write on error response
 				Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
 				Type:    constant.OpenAIInvalidRequestErrorType,
 				Code:    constant.OpenAIModelNotFoundCode,
@@ -137,7 +140,7 @@ func SendOpenAIInternalError() (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusInternalServerError)
 			humaCtx.SetHeader(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write on error response
 				Message: constant.OpenAIInternalErrorShortMessage,
 				Type:    constant.OpenAIInternalErrorType,
 				Code:    constant.OpenAIInternalErrorCode,

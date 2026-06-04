@@ -19,7 +19,7 @@ const (
 	DBOrderByID                 = "id"
 
 	DBJSONConditionAssistantRole  = "(message::jsonb)->>'role' = 'assistant'"
-	DBJSONConditionHasThinkTag    = "CAST(message AS TEXT) LIKE '%" + ThinkTagOpen + "%'"
+	DBJSONConditionHasThinkTag    = "(message::jsonb)->>'content' LIKE '%<think>%'"
 	DBJSONConditionReasoningEmpty = "((message::jsonb)->>'reasoning_content' IS NULL OR (message::jsonb)->>'reasoning_content' = '')"
 
 	DBQueryCountActiveSessions   = "SELECT COUNT(*) FROM sessions WHERE deleted_at = 0"

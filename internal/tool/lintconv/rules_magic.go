@@ -224,25 +224,26 @@ func isIgnoredMagicStringLiteral(file SourceFile, lit *ast.BasicLit) bool {
 
 func isIgnoredMagicStringCall(call *ast.CallExpr) bool {
 	receiver, method, ok := selectorName(call.Fun)
-	if ok {
-		if receiver == constant.ConvCheckRecvIerr && (method == constant.ConvCheckIerrWrap || method == constant.ConvCheckIerrWrapf) {
-			return true
-		}
-		if receiver == constant.ConvCheckRecvIerr && (method == constant.ConvCheckIerrNew || method == constant.ConvCheckIerrNewf) {
-			return true
-		}
-		if (receiver == constant.ConvCheckRecvLogger || receiver == constant.ConvCheckRecvLog) && isLoggerMethod(method) {
-			return true
-		}
-		if receiver == constant.ConvCheckRecvZap {
-			return true
-		}
-		if receiver == constant.ConvCheckRecvReflect && method == constant.ConvCheckMethodTypeFor {
-			return true
-		}
+	if !ok {
+		method, ok = selectorMethodName(call.Fun)
+		return ok && isLoggerMethod(method)
 	}
-	method, ok = selectorMethodName(call.Fun)
-	return ok && isLoggerMethod(method)
+	if receiver == constant.ConvCheckRecvIerr && (method == constant.ConvCheckIerrWrap || method == constant.ConvCheckIerrWrapf) {
+		return true
+	}
+	if receiver == constant.ConvCheckRecvIerr && (method == constant.ConvCheckIerrNew || method == constant.ConvCheckIerrNewf) {
+		return true
+	}
+	if (receiver == constant.ConvCheckRecvLogger || receiver == constant.ConvCheckRecvLog) && isLoggerMethod(method) {
+		return true
+	}
+	if receiver == constant.ConvCheckRecvZap {
+		return true
+	}
+	if receiver == constant.ConvCheckRecvReflect && method == constant.ConvCheckMethodTypeFor {
+		return true
+	}
+	return false
 }
 
 func isHumaSchemaNameArg(call *ast.CallExpr, lit *ast.BasicLit) bool {

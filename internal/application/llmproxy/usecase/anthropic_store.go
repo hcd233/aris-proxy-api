@@ -41,35 +41,34 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.
 	}
 }
 
-func (u *anthropicUseCase) convertAnthropicRequestMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage) ([]*convvo.UnifiedMessage, []*convvo.UnifiedTool, int, int, error) {
+func (u *anthropicUseCase) convertAnthropicRequestMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage) (messages []*convvo.UnifiedMessage, tools []*convvo.UnifiedTool, inputTokens, outputTokens int, err error) {
 	log := logger.WithCtx(ctx)
-	unifiedMessages := make([]*convvo.UnifiedMessage, 0, len(req.Body.Messages)+1)
+	messages = make([]*convvo.UnifiedMessage, 0, len(req.Body.Messages)+1)
 	for _, msg := range req.Body.Messages {
-		um, err := dto.FromAnthropicMessage(msg)
-		if err != nil {
-			log.Error("[AnthropicUseCase] Failed to convert anthropic message", zap.Error(err))
-			return nil, nil, 0, 0, err
+		um, convErr := dto.FromAnthropicMessage(msg)
+		if convErr != nil {
+			log.Error("[AnthropicUseCase] Failed to convert anthropic message", zap.Error(convErr))
+			return nil, nil, 0, 0, convErr
 		}
-		unifiedMessages = append(unifiedMessages, um)
+		messages = append(messages, um)
 	}
 
-	aiMsg, err := dto.FromAnthropicResponse(assistantMsg)
-	if err != nil {
-		log.Error("[AnthropicUseCase] Failed to convert anthropic response", zap.Error(err))
-		return nil, nil, 0, 0, err
+	aiMsg, convErr := dto.FromAnthropicResponse(assistantMsg)
+	if convErr != nil {
+		log.Error("[AnthropicUseCase] Failed to convert anthropic response", zap.Error(convErr))
+		return nil, nil, 0, 0, convErr
 	}
-	unifiedMessages = append(unifiedMessages, aiMsg)
+	messages = append(messages, aiMsg)
 
-	unifiedTools := make([]*convvo.UnifiedTool, 0, len(req.Body.Tools))
+	tools = make([]*convvo.UnifiedTool, 0, len(req.Body.Tools))
 	for _, tool := range req.Body.Tools {
-		unifiedTools = append(unifiedTools, dto.FromAnthropicTool(tool))
+		tools = append(tools, dto.FromAnthropicTool(tool))
 	}
 
-	var inputTokens, outputTokens int
 	if assistantMsg.Usage != nil {
 		inputTokens = assistantMsg.Usage.InputTokens
 		outputTokens = assistantMsg.Usage.OutputTokens
 	}
 
-	return unifiedMessages, unifiedTools, inputTokens, outputTokens, nil
+	return messages, tools, inputTokens, outputTokens, nil
 }
