@@ -17,7 +17,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/tencentcloud/tencentcloud-cls-sdk-go v1.0.14
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.60
-	go.uber.org/dig v1.19.0
+	go.uber.org/fx v1.24.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/oauth2 v0.30.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -67,6 +67,7 @@ require (
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/dig v1.19.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
