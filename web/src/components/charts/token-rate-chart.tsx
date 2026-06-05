@@ -164,28 +164,49 @@ export function TokenRateChart() {
                     stroke={chartConfig[model]?.color ?? "#888"}
                     strokeDasharray="8 4"
                     strokeWidth={1.5}
-                    label={({ viewBox }: { viewBox: { x?: number; y?: number } }) => (
-                      <foreignObject
-                        x={(viewBox.x ?? 0) - 80}
-                        y={(viewBox.y ?? 0) - 10}
-                        width={76}
-                        height={24}
-                      >
-                        <div
-                          style={{
-                            color: chartConfig[model]?.color ?? "#888",
-                            fontSize: 11,
-                            fontWeight: 600,
-                            textAlign: "right",
-                            lineHeight: "12px",
-                            whiteSpace: "normal",
-                            overflow: "hidden",
-                          }}
+                    label={({ viewBox }: { viewBox: { x?: number; y?: number; width?: number } }) => {
+                      const color = chartConfig[model]?.color ?? "#888";
+                      const formatted =
+                        average >= 1000
+                          ? average.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                          : average.toFixed(2);
+                      const text = `avg ${formatted} tok/s`;
+                      const labelWidth = 120;
+                      const right = (viewBox.x ?? 0) + (viewBox.width ?? 0);
+                      return (
+                        <foreignObject
+                          x={right - labelWidth - 4}
+                          y={(viewBox.y ?? 0) - 22}
+                          width={labelWidth}
+                          height={20}
                         >
-                          {`${average.toFixed(2)} tok/s`}
-                        </div>
-                      </foreignObject>
-                    )}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "flex-end",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                padding: "2px 8px",
+                                borderRadius: 999,
+                                background: `${color}1A`,
+                                color,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                lineHeight: "16px",
+                                whiteSpace: "nowrap",
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {text}
+                            </span>
+                          </div>
+                        </foreignObject>
+                      );
+                    }}
                   />
                 )
               ))}
