@@ -230,7 +230,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			chunkCount++
-			hasWritten, writeErr := writeResponseDeltaFromChatChunk(w, chunk, initializedItems)
+			hasWritten, writeErr := writeResponseDeltaFromChatChunk(w, chunk, initializedItems, responseID)
 			if firstTokenTime.IsZero() && hasWritten {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
@@ -358,7 +358,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 				}
 				chunkCount++
 				allChunks = append(allChunks, chunk)
-				if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk, initializedItems); writeErr != nil {
+				if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk, initializedItems, responseID); writeErr != nil {
 					return writeErr
 				}
 			}
@@ -440,7 +440,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	})
 }
 
-func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk, initializedItems map[int]bool) (bool, error) { //nolint:gocognit // streaming event processing naturally involves multiple concerns
+func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk, initializedItems map[int]bool, responseID string) (bool, error) { //nolint:gocognit // streaming event processing naturally involves multiple concerns
 	if chunk == nil {
 		return false, nil
 	}
@@ -450,7 +450,7 @@ func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 			continue
 		}
 		delta := choice.Delta
-		itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, chunk.ID)
+		itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
 		outputIndex := choice.Index
 
 		// 在发送第一个 delta 之前，发送 output_item.added 和 content_part.added
