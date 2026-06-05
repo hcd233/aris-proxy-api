@@ -11,6 +11,8 @@ const (
 	AnthropicMessageIDTemplate          = "msg_%s"
 	OpenAIChunkIDTemplate               = "chatcmpl-%s"
 	ConvertedChunkIDSuffix              = "converted"
+	ResponseIDTemplate                  = "resp_%s"
+	ResponseItemIDTemplate              = "msg_%s"
 	ResponseStreamFieldType             = "type"
 	ResponseStreamFieldDelta            = "delta"
 	ResponseStreamFieldResponse         = "response"
@@ -79,6 +81,8 @@ const (
 	ResponseFailedAuditReasonTemplate     = "response.failed: %s"
 	ResponseIncompleteAuditReason         = "response.incomplete"
 	ResponseIncompleteAuditReasonTemplate = "response.incomplete: %s"
+	ResponseStreamFieldCreatedAt          = "created_at"
+	ResponseStreamFieldOutput             = "output"
 )
 
 var ResponseStreamFieldAnnotationsEmpty = []any{}
