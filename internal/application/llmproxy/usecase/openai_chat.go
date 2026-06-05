@@ -107,7 +107,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(ctx, u.taskSubmitter, m, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
+			auditFailure(ctx, m, u.taskSubmitter, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
 			return
 		}
 		completion.Model = req.Body.Model
@@ -196,7 +196,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 		totalMs := time.Since(startTime).Milliseconds()
 		if err != nil {
 			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailureWithProviders(ctx, u.taskSubmitter, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
+			auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
 			return
 		}
 		completion, convErr := conv.ToOpenAIResponse(anthropicMsg)

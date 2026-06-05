@@ -9,4 +9,6 @@ const (
 	ObjectStorageUnsupportedMessage   = "unsupported storage type"
 	COSBucketURLTemplate              = "https://%s-%s.cos.%s.myqcloud.com"
 	PresignObjectExpire               = 5 * time.Minute
+	PresignHeaderContentDisposition   = "response-content-disposition"
+	PresignHeaderContentType          = "response-content-type"
 )
