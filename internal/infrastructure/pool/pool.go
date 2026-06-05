@@ -5,7 +5,7 @@
 package pool
 
 import (
-	"time"
+	"context"
 
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -13,7 +13,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -26,8 +25,6 @@ type PoolManager struct {
 	storePool pond.Pool
 	agentPool pond.Pool
 }
-
-var poolManager *PoolManager
 
 // NewPoolManager 创建协程池管理器。
 //
@@ -43,45 +40,18 @@ func NewPoolManager(db *gorm.DB) *PoolManager {
 	}
 }
 
-// InitPoolManager 初始化全局协程池管理器
-//
-//	@param db *gorm.DB
-//	@return *PoolManager
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func InitPoolManager(db *gorm.DB) *PoolManager {
-	poolManager = NewPoolManager(db)
-	return poolManager
-}
-
-// GetPoolManager 获取全局协程池管理器实例
-//
-//	@return *PoolManager
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func GetPoolManager() *PoolManager {
-	return poolManager
-}
-
-// StopPoolManager 停止全局协程池管理器
-//
-//	@author centonhuang
-//	@update 2026-04-05 10:00:00
-func StopPoolManager() {
-	if poolManager != nil {
-		done := make(chan struct{})
-		go func() {
-			defer close(done)
-			poolManager.Stop()
-		}()
-
-		select {
-		case <-done:
-			logger.Logger().Info("[Pool] Pool manager stopped")
-		case <-time.After(constant.PoolStopTimeout):
-			logger.Logger().Warn("[Pool] Pool stop timed out, some tasks may not have completed",
-				zap.Duration("timeout", constant.PoolStopTimeout))
-		}
+func (pm *PoolManager) StopWithContext(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		pm.Stop()
+	}()
+	select {
+	case <-done:
+		logger.Logger().Info("[Pool] Pool manager stopped")
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
