@@ -65,6 +65,7 @@ type Server struct {
 	container *dig.Container
 	App       *fiber.App
 	HumaAPI   huma.API
+	Tracker   *inflight.Tracker
 }
 
 // Infrastructure 启动阶段初始化完成的基础设施依赖。
@@ -75,6 +76,7 @@ type Infrastructure struct {
 	DB          *gorm.DB
 	Cache       *redis.Client
 	PoolManager *pool.PoolManager
+	Tracker     *inflight.Tracker
 }
 
 // InitInfrastructure 初始化所有基础设施组件（数据库、Redis、HTTP Client、协程池、定时任务）。
@@ -86,11 +88,11 @@ func InitInfrastructure() *Infrastructure {
 	db := database.InitDatabase()
 	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
-	inflight.InitTracker()
+	tracker := inflight.NewTracker()
 	poolManager := pool.InitPoolManager(db)
 	thinkExtractRepo := repository.NewThinkExtractRepository(db)
 	cron.InitCronJobs(context.Background(), db, poolManager, cache, thinkExtractRepo)
-	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager}
+	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager, Tracker: tracker}
 }
 
 // BuildServer 构建启动依赖容器并解析 HTTP 服务对象。
@@ -111,8 +113,8 @@ func BuildServer(infras ...*Infrastructure) (*Server, error) {
 	}
 
 	var server *Server
-	if err := container.Invoke(func(app *fiber.App, humaAPI huma.API) {
-		server = &Server{container: container, App: app, HumaAPI: humaAPI}
+	if err := container.Invoke(func(app *fiber.App, humaAPI huma.API, tracker *inflight.Tracker) {
+		server = &Server{container: container, App: app, HumaAPI: humaAPI, Tracker: tracker}
 	}); err != nil {
 		return nil, err
 	}
@@ -159,6 +161,9 @@ func provideInfrastructure(container *dig.Container, infra *Infrastructure) erro
 		return err
 	}
 	if err := container.Provide(func() *pool.PoolManager { return infra.PoolManager }); err != nil {
+		return err
+	}
+	if err := container.Provide(func() *inflight.Tracker { return infra.Tracker }); err != nil {
 		return err
 	}
 	if err := container.Provide(newUserRepository); err != nil {

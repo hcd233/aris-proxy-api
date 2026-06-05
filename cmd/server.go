@@ -66,7 +66,7 @@ var startServerCmd = &cobra.Command{
 
 		app.Use(
 			middleware.RecoverMiddleware(),
-			middleware.InflightMiddleware(),
+			middleware.InflightMiddleware(server.Tracker),
 			middleware.GuardMiddleware(infra.Cache, middleware.GuardConfig{
 				StrikeThreshold: constant.GuardStrikeThreshold,
 				StrikeWindow:    constant.GuardStrikeWindow,
@@ -117,12 +117,12 @@ var startServerCmd = &cobra.Command{
 			}
 		case sig := <-quit:
 			logger.Logger().Info("[Server] Received shutdown signal, starting graceful shutdown...", zap.String("signal", sig.String()))
-			gracefulShutdown(app, infra)
+			gracefulShutdown(app, infra, server.Tracker)
 		}
 	},
 }
 
-func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
+func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure, tracker *inflight.Tracker) {
 	ctx, cancel := context.WithTimeout(context.Background(), constant.ShutdownTimeout)
 	defer cancel()
 
@@ -140,7 +140,6 @@ func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure) {
 
 		// Step 3: 进入 draining 状态，拒绝新请求
 		logger.Logger().Info("[Server] Step 3/8: Entering draining state...")
-		tracker := inflight.GetTracker()
 
 		// Step 4: 等待进行中请求完成（含 SSE 流）
 		logger.Logger().Info("[Server] Step 4/8: Waiting for inflight requests to complete...")

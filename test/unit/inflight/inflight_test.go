@@ -10,7 +10,7 @@ import (
 
 func TestTracker_TrackAndUntrack(t *testing.T) {
 	t.Parallel()
-	tracker := inflight.InitTracker()
+	tracker := inflight.NewTracker()
 
 	if !tracker.Track() {
 		t.Fatal("Track should succeed when running")
@@ -33,7 +33,7 @@ func TestTracker_TrackAndUntrack(t *testing.T) {
 
 func TestTracker_TrackReturnsFalseDuringDraining(t *testing.T) {
 	t.Parallel()
-	tracker := inflight.InitTracker()
+	tracker := inflight.NewTracker()
 
 	tracker.Track()
 
@@ -62,7 +62,7 @@ func TestTracker_TrackReturnsFalseDuringDraining(t *testing.T) {
 
 func TestTracker_DrainTimeout(t *testing.T) {
 	t.Parallel()
-	tracker := inflight.InitTracker()
+	tracker := inflight.NewTracker()
 
 	tracker.Track()
 
@@ -81,7 +81,7 @@ func TestTracker_DrainTimeout(t *testing.T) {
 
 func TestTracker_ConcurrentTrackUntrack(t *testing.T) {
 	t.Parallel()
-	tracker := inflight.InitTracker()
+	tracker := inflight.NewTracker()
 
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {

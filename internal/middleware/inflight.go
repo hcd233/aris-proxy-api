@@ -15,13 +15,12 @@ var healthCheckPaths = map[string]struct{}{
 	constant.RoutePathSSEHealth: {},
 }
 
-func InflightMiddleware() fiber.Handler {
+func InflightMiddleware(tracker *inflight.Tracker) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		if _, skip := healthCheckPaths[c.Path()]; skip {
 			return c.Next()
 		}
 
-		tracker := inflight.GetTracker()
 		if !tracker.Track() {
 			c.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			c.Status(fiber.StatusServiceUnavailable)
