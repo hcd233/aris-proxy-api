@@ -243,10 +243,12 @@ func provideApplication(container *dig.Container) error {
 	return nil
 }
 
+// provideLLMProxyEndpointApp 注册 LLM proxy endpoint 解析器
 func provideLLMProxyEndpointApp(container *dig.Container) error {
 	return container.Provide(newEndpointResolver)
 }
 
+// provideAPIKeyApp 注册 API Key 相关应用层服务（签发、吊销、列表查询）
 func provideAPIKeyApp(container *dig.Container) error {
 	if err := container.Provide(apikeycommand.NewUserExistenceChecker); err != nil {
 		return err
@@ -263,6 +265,7 @@ func provideAPIKeyApp(container *dig.Container) error {
 	return nil
 }
 
+// provideEndpointApp 注册 Endpoint 配置相关应用层服务（CRUD）
 func provideEndpointApp(container *dig.Container) error {
 	if err := container.Provide(newCreateEndpointHandler); err != nil {
 		return err
@@ -279,6 +282,7 @@ func provideEndpointApp(container *dig.Container) error {
 	return nil
 }
 
+// provideModelApp 注册 Model 配置相关应用层服务（CRUD）
 func provideModelApp(container *dig.Container) error {
 	if err := container.Provide(newCreateModelHandler); err != nil {
 		return err
@@ -295,6 +299,7 @@ func provideModelApp(container *dig.Container) error {
 	return nil
 }
 
+// provideIdentityOAuth2App 注册身份与 OAuth2 相关应用层服务（token 刷新、profile 更新、OAuth 登录回调）
 func provideIdentityOAuth2App(container *dig.Container) error {
 	if err := container.Provide(newRefreshTokensHandler); err != nil {
 		return err
@@ -314,6 +319,7 @@ func provideIdentityOAuth2App(container *dig.Container) error {
 	return nil
 }
 
+// provideAuditApp 注册审计相关应用层服务（日志查询、统计、趋势分析）
 func provideAuditApp(container *dig.Container) error {
 	if err := container.Provide(auditquery.NewListAllAuditLogsHandler); err != nil {
 		return err
@@ -363,6 +369,7 @@ func provideAuditApp(container *dig.Container) error {
 	return nil
 }
 
+// provideSessionApp 注册 Session 相关应用层服务（列表、详情、消息、工具、删除、评分）
 func provideSessionApp(container *dig.Container) error {
 	if err := container.Provide(newListSessionsByUserHandler); err != nil {
 		return err
@@ -391,6 +398,7 @@ func provideSessionApp(container *dig.Container) error {
 	return nil
 }
 
+// provideLLMProxyUseCaseApp 注册 LLM 代理用例层服务（OpenAI/Anthropic 转发、模型列表、token 计数）
 func provideLLMProxyUseCaseApp(container *dig.Container) error {
 	if err := container.Provide(usecase.NewListOpenAIModels); err != nil {
 		return err

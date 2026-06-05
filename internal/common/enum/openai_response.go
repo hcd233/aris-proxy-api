@@ -350,7 +350,7 @@ const (
 	// ResponseStatusIncomplete 响应未完成
 	ResponseStatusIncomplete ResponseStatus = "incomplete"
 	// ResponseStatusCancelled 响应被取消
-	ResponseStatusCancelled ResponseStatus = "canceled"
+	ResponseStatusCancelled ResponseStatus = "cancelled" //nolint:misspell // OpenAI API uses British spelling
 	// ResponseStatusQueued 响应排队中
 	ResponseStatusQueued ResponseStatus = "queued"
 )
