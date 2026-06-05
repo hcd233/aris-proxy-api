@@ -869,10 +869,10 @@ func newDeleteSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo a
 	return sessioncommand.NewDeleteSessionHandler(sessionRepo, apiKeyRepo)
 }
 
-func newScoreSessionHandler(sessionRepo session.SessionRepository) sessionport.ScoreSessionHandler {
-	return sessioncommand.NewScoreSessionHandler(sessionRepo)
+func newScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ScoreSessionHandler {
+	return sessioncommand.NewScoreSessionHandler(sessionRepo, apiKeyRepo)
 }
 
-func newDeleteScoreSessionHandler(sessionRepo session.SessionRepository) sessionport.DeleteScoreSessionHandler {
-	return sessioncommand.NewDeleteScoreSessionHandler(sessionRepo)
+func newDeleteScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.DeleteScoreSessionHandler {
+	return sessioncommand.NewDeleteScoreSessionHandler(sessionRepo, apiKeyRepo)
 }

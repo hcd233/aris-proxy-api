@@ -653,8 +653,10 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 	}
 
 	scoredAt, err := h.scoreSession.Handle(ctx, port.ScoreSessionCommand{
-		SessionID: req.Body.SessionID,
-		Score:     req.Body.Score,
+		SessionID:           req.Body.SessionID,
+		Score:               req.Body.Score,
+		RequesterID:         userID,
+		RequesterPermission: permission,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Score session: update failed",
@@ -703,7 +705,9 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 	}
 
 	if err := h.deleteScoreSession.Handle(ctx, port.DeleteScoreSessionCommand{
-		SessionID: req.SessionID,
+		SessionID:           req.SessionID,
+		RequesterID:         userID,
+		RequesterPermission: permission,
 	}); err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: delete failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(err))
