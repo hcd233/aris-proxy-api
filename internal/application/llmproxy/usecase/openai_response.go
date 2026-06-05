@@ -623,7 +623,7 @@ func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, co
 			if choice == nil {
 				continue
 			}
-			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, completion.ID)
+			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
 			outputIndex := choice.Index
 
 			// 获取文本内容
@@ -676,7 +676,7 @@ func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, u
 			if choice == nil {
 				continue
 			}
-			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, chatCompletion.ID)
+			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
 			outputIndex := choice.Index
 
 			// 获取文本内容
