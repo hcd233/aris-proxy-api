@@ -43,21 +43,14 @@ type CronRegistryEntry struct {
 	LockRenewInterval time.Duration // 0 → ttl / constant.CronLockDefaultRenewDivisor
 }
 
-var cronInstances []Cron
-
 // DefaultCronRegistry 默认定时任务注册表，保留用于测试覆盖。生产由 buildRegistryEntries 构造
 // （需要 cache 注入锁依赖，registry Factory 签名不接受 cache 故退化）。
 //
 //	@update 2026-06-01 10:00:00
 var DefaultCronRegistry []CronRegistryEntry
 
-// InitCronJobs 初始化定时任务（每个 cron 自带分布式锁）
-//
-// parentCtx 通常传入 bootstrap 阶段的 shutdown context；nil 时退化为 context.Background()。
-//
-//	@author centonhuang
-//	@update 2026-06-01 10:00:00
-func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) {
+// InitCronJobs 初始化定时任务（每个 cron 自带分布式锁），返回创建的 cron 列表。
+func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) []Cron {
 	SetBootstrapContext(parentCtx)
 	var entries []CronRegistryEntry
 	if len(DefaultCronRegistry) > 0 {
@@ -65,6 +58,7 @@ func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.Pool
 	} else {
 		entries = buildRegistryEntries()
 	}
+	var crons []Cron
 	for _, entry := range entries {
 		if !entry.Enabled() {
 			logger.Logger().Info("[Cron] Cron job is disabled by configuration", zap.String("name", entry.Name))
@@ -73,11 +67,12 @@ func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.Pool
 
 		c := entry.Factory(db, poolManager, cache, thinkRepo)
 		lo.Must0(c.Start())
-		cronInstances = append(cronInstances, c)
+		crons = append(crons, c)
 		logger.Logger().Info("[Cron] Cron job started", zap.String("name", entry.Name))
 	}
 
-	logger.Logger().Info("[Cron] Init cron jobs", zap.Int("count", len(cronInstances)))
+	logger.Logger().Info("[Cron] Init cron jobs", zap.Int("count", len(crons)))
+	return crons
 }
 
 func buildRegistryEntries() []CronRegistryEntry {
@@ -113,15 +108,11 @@ func buildRegistryEntries() []CronRegistryEntry {
 	}
 }
 
-// StopCronJobs 停止所有定时任务，用于优雅关闭
-//
-//	@author centonhuang
-//	@update 2026-03-20 10:00:00
-func StopCronJobs() {
+func StopCronJobsWithContext(ctx context.Context, crons []Cron) error {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		for _, c := range cronInstances {
+		for _, c := range crons {
 			c.Stop()
 		}
 	}()
@@ -129,19 +120,14 @@ func StopCronJobs() {
 	select {
 	case <-done:
 		logger.Logger().Info("[Cron] All cron jobs stopped")
-	case <-time.After(constant.CronStopTimeout):
-		logger.Logger().Warn("[Cron] Cron stop timed out, some jobs may not have completed",
-			zap.Duration("timeout", constant.CronStopTimeout))
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	cronInstances = nil
 }
 
-// CronInstanceCount 返回当前已注册的定时任务实例数量，供测试使用
-//
-//	@author centonhuang
-//	@update 2026-05-01 10:00:00
-func CronInstanceCount() int {
-	return len(cronInstances)
+func CronInstanceCount(crons []Cron) int {
+	return len(crons)
 }
 
 type cronLoggerAdapter struct {

@@ -5,6 +5,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -16,6 +17,7 @@ import (
 type APIRouterDependencies struct {
 	DB               *gorm.DB
 	Cache            *redis.Client
+	AccessSigner     jwt.TokenSigner
 	PingHandler      handler.PingHandler
 	TokenHandler     handler.TokenHandler
 	Oauth2Handler    handler.Oauth2Handler
@@ -72,25 +74,25 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initOauth2Router(oauth2Group, deps.Oauth2Handler, deps.Cache)
 
 	userGroup := huma.NewGroup(v1Group, "/user")
-	initUserRouter(userGroup, deps.UserHandler, deps.DB, deps.Cache)
+	initUserRouter(userGroup, deps.UserHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	apikeyGroup := huma.NewGroup(v1Group, "/apikey")
-	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.Cache)
+	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	sessionJWTGroup := huma.NewGroup(v1Group, "/session")
-	initSessionJWTRouter(sessionJWTGroup, deps.SessionHandler, deps.DB, deps.Cache)
+	initSessionJWTRouter(sessionJWTGroup, deps.SessionHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	sessionPublicGroup := huma.NewGroup(v1Group, "/session")
 	initSessionPublicRouter(sessionPublicGroup, deps.SessionHandler, deps.Cache)
 
 	endpointGroup := huma.NewGroup(v1Group, "/endpoint")
-	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache)
+	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	modelGroup := huma.NewGroup(v1Group, "/model")
-	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache)
+	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
-	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB, deps.Cache)
+	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)
