@@ -7,13 +7,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
-func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client) {
-	modelGroup.UseMiddleware(middleware.JwtMiddleware(db, cache))
+func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
+	modelGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	modelGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
 		cache, "modelManage", constant.CtxKeyUserID, constant.PeriodManageAPIKey, constant.LimitManageAPIKey,
 	))

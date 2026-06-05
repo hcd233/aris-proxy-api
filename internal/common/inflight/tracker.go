@@ -15,29 +15,7 @@ type Tracker struct {
 	state atomic.Int32
 }
 
-var (
-	globalTracker   *Tracker
-	globalTrackerMu sync.Mutex
-)
-
-func InitTracker() *Tracker {
-	t := newRunningTracker()
-	globalTrackerMu.Lock()
-	globalTracker = t
-	globalTrackerMu.Unlock()
-	return t
-}
-
-func GetTracker() *Tracker {
-	globalTrackerMu.Lock()
-	defer globalTrackerMu.Unlock()
-	if globalTracker == nil {
-		globalTracker = newRunningTracker()
-	}
-	return globalTracker
-}
-
-func newRunningTracker() *Tracker {
+func NewTracker() *Tracker {
 	t := &Tracker{}
 	t.state.Store(constant.InflightStateRunning)
 	return t
