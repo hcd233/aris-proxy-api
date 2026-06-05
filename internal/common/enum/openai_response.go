@@ -361,20 +361,30 @@ type ResponseStreamEventType = string
 const (
 	// ResponseStreamEventCreated 响应已创建
 	ResponseStreamEventCreated ResponseStreamEventType = "response.created"
+	// ResponseStreamEventInProgress 响应进行中
+	ResponseStreamEventInProgress ResponseStreamEventType = "response.in_progress"
 	// ResponseStreamEventCompleted 响应成功完成
 	ResponseStreamEventCompleted ResponseStreamEventType = "response.completed"
 	// ResponseStreamEventFailed 响应失败
 	ResponseStreamEventFailed ResponseStreamEventType = "response.failed"
 	// ResponseStreamEventIncomplete 响应未完成
 	ResponseStreamEventIncomplete ResponseStreamEventType = "response.incomplete"
+	// ResponseStreamEventOutputItemAdded 输出项添加事件
+	ResponseStreamEventOutputItemAdded ResponseStreamEventType = "response.output_item.added"
+	// ResponseStreamEventOutputItemDone 输出项完成事件
+	ResponseStreamEventOutputItemDone ResponseStreamEventType = "response.output_item.done"
+	// ResponseStreamEventContentPartAdded 内容部分添加事件
+	ResponseStreamEventContentPartAdded ResponseStreamEventType = "response.content_part.added"
+	// ResponseStreamEventContentPartDone 内容部分完成事件
+	ResponseStreamEventContentPartDone ResponseStreamEventType = "response.content_part.done"
 	// ResponseStreamEventOutputTextDelta 输出文本增量
 	ResponseStreamEventOutputTextDelta ResponseStreamEventType = "response.output_text.delta"
+	// ResponseStreamEventOutputTextDone 输出文本完成事件
+	ResponseStreamEventOutputTextDone ResponseStreamEventType = "response.output_text.done"
 	// ResponseStreamEventReasoningTextDelta 推理文本增量
 	ResponseStreamEventReasoningTextDelta ResponseStreamEventType = "response.reasoning_text.delta"
 	// ResponseStreamEventFunctionCallArgumentsDelta 函数调用参数增量
 	ResponseStreamEventFunctionCallArgumentsDelta ResponseStreamEventType = "response.function_call_arguments.delta"
-	// ResponseStreamEventOutputItemDone 输出项完成事件
-	ResponseStreamEventOutputItemDone ResponseStreamEventType = "response.output_item.done"
 )
 
 // ResponseStreamEventDeltaSuffix Response API 承载增量 token 的 SSE 事件后缀

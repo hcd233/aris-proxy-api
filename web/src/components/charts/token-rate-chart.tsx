@@ -14,7 +14,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceLine } from "recharts";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -69,6 +69,17 @@ export function TokenRateChart() {
     time,
     ...pointMap.get(time),
   }));
+
+  // Calculate average output token rate per model
+  const modelAverages = models.map((model) => {
+    const values = data
+      .find((d) => d.model === model)
+      ?.points.filter((p) => p.outputTokensPerSecond > 0)
+      .map((p) => p.outputTokensPerSecond) ?? [];
+    if (values.length === 0) return { model, average: 0 };
+    const sum = values.reduce((a, b) => a + b, 0);
+    return { model, average: sum / values.length };
+  });
 
   return (
     <Card>
@@ -144,6 +155,24 @@ export function TokenRateChart() {
                   strokeOpacity={getStrokeOpacity(m)}
                   dot={false}
                 />
+              ))}
+              {modelAverages.map(({ model, average }) => (
+                average > 0 && (
+                  <ReferenceLine
+                    key={`avg-${model}`}
+                    y={average}
+                    stroke={chartConfig[model]?.color ?? "#888"}
+                    strokeDasharray="6 3"
+                    strokeWidth={1}
+                    strokeOpacity={0.7}
+                    label={{
+                      value: `${average.toFixed(2)} tok/s`,
+                      position: "right",
+                      fill: chartConfig[model]?.color ?? "#888",
+                      fontSize: 10,
+                    }}
+                  />
+                )
               ))}
             </LineChart>
           </ChartContainer>
