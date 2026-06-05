@@ -252,7 +252,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		if err != nil {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		} else {
-			rsp = finalizeResponseFromChatCompletion(ctx, w, completion, exposedModel, conv)
+			rsp = finalizeResponseFromChatCompletion(ctx, w, completion, exposedModel, responseID, conv)
 			if rsp != nil {
 				log.Info("[OpenAIUseCase] Via chat response finalized",
 					zap.String("responseID", rsp.ID),
@@ -372,7 +372,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 			zap.Int64("streamDurationMs", streamDurationMs),
 			zap.Bool("hasError", err != nil))
 
-		rsp := finalizeResponseFromAnthropicStream(ctx, w, err, allChunks, anthropicMsg, exposedModel, anthropicConv, responseConv)
+		rsp := finalizeResponseFromAnthropicStream(ctx, w, err, allChunks, anthropicMsg, exposedModel, responseID, anthropicConv, responseConv)
 		if rsp != nil {
 			log.Info("[OpenAIUseCase] Via anthropic response finalized",
 				zap.String("responseID", rsp.ID),
@@ -605,7 +605,7 @@ func writeResponseTerminalEvent(w *bufio.Writer, event enum.ResponseStreamEventT
 	return err
 }
 
-func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, completion *dto.OpenAIChatCompletion, exposedModel string, conv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
+func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, completion *dto.OpenAIChatCompletion, exposedModel, responseID string, conv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if completion == nil {
 		return nil
 	}
@@ -615,6 +615,9 @@ func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, co
 		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
 	}
 	if rsp != nil {
+		// 使用传入的 responseID 确保 response.created 和 response.completed 的 ID 一致
+		rsp.ID = responseID
+		rsp.CreatedAt = time.Now().Unix()
 		// 发送完成事件序列
 		for _, choice := range completion.Choices {
 			if choice == nil {
@@ -647,7 +650,7 @@ func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, co
 	return rsp
 }
 
-func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, upstreamErr error, allChunks []*dto.OpenAIChatCompletionChunk, anthropicMsg *dto.AnthropicMessage, exposedModel string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
+func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, upstreamErr error, allChunks []*dto.OpenAIChatCompletionChunk, anthropicMsg *dto.AnthropicMessage, exposedModel, responseID string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if upstreamErr != nil {
 		proxyutil.WriteUpstreamSSEError(ctx, w, upstreamErr)
 		return nil
@@ -665,6 +668,9 @@ func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, u
 		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
 	}
 	if rsp != nil {
+		// 使用传入的 responseID 确保 response.created 和 response.completed 的 ID 一致
+		rsp.ID = responseID
+		rsp.CreatedAt = time.Now().Unix()
 		// 发送完成事件序列
 		for _, choice := range chatCompletion.Choices {
 			if choice == nil {
