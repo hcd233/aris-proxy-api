@@ -164,13 +164,18 @@ export function TokenRateChart() {
                     stroke={chartConfig[model]?.color ?? "#888"}
                     strokeDasharray="8 4"
                     strokeWidth={1.5}
-                    label={{
-                      value: `${average.toFixed(2)} tok/s`,
-                      position: "insideTopLeft",
-                      fill: chartConfig[model]?.color ?? "#888",
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
+                    label={({ viewBox }: { viewBox: { y?: number } }) => (
+                      <text
+                        x={0}
+                        y={(viewBox.y ?? 0) - 4}
+                        fill={chartConfig[model]?.color ?? "#888"}
+                        fontSize={11}
+                        fontWeight={600}
+                        textAnchor="start"
+                      >
+                        {`${average.toFixed(2)} tok/s`}
+                      </text>
+                    )}
                   />
                 )
               ))}
