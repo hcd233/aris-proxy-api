@@ -111,7 +111,7 @@ export function FirstTokenLatencyChart() {
             No data for this period
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-64 w-full overflow-hidden">
+          <ChartContainer config={chartConfig} className="h-64 w-full">
             <LineChart data={flatData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
@@ -174,7 +174,8 @@ export function FirstTokenLatencyChart() {
                         textAnchor="end"
                         dominantBaseline="central"
                       >
-                        {`${average.toFixed(0)} ms`}
+                        <tspan x={(viewBox.x ?? 0) - 4} dy="-0.5em">{`${average.toFixed(0)}`}</tspan>
+                        <tspan x={(viewBox.x ?? 0) - 4} dy="1.1em">ms</tspan>
                       </text>
                     )}
                   />
