@@ -19,9 +19,19 @@ func MarshalOpenAIChatCompletionBodyForModel(req *dto.OpenAIChatCompletionReq, m
 }
 
 // MarshalOpenAIResponseBodyForModel 使用上游模型名序列化 Response API 请求体，且不修改原请求。
+//
+// 同时初始化所有 input item 的 Summary 为空数组，确保上游 API 不会因
+// "missing required parameter: input[N].summary" 而拒绝请求。
 func MarshalOpenAIResponseBodyForModel(req *dto.OpenAICreateResponseReq, modelName string) []byte {
 	body := *req
 	body.Model = &modelName
+	if body.Input != nil {
+		for _, item := range body.Input.Items {
+			if item != nil && item.Summary == nil {
+				item.Summary = make([]*dto.ResponseReasoningSummary, 0)
+			}
+		}
+	}
 	return lo.Must1(MarshalUpstreamBody(&body))
 }
 
