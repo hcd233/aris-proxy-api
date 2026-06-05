@@ -166,9 +166,10 @@ export function FirstTokenLatencyChart() {
                     strokeWidth={1}
                     label={{
                       value: `${average.toFixed(0)} ms`,
-                      position: "right",
+                      position: "insideTopRight",
                       fill: chartConfig[model]?.color ?? "#888",
-                      fontSize: 10,
+                      fontSize: 11,
+                      fontWeight: 500,
                     }}
                   />
                 )
