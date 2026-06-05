@@ -111,7 +111,7 @@ export function FirstTokenLatencyChart() {
             No data for this period
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-64 w-full">
+          <ChartContainer config={chartConfig} className="h-64 w-full overflow-hidden">
             <LineChart data={flatData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
@@ -172,7 +172,7 @@ export function FirstTokenLatencyChart() {
                         fontSize={11}
                         fontWeight={600}
                         textAnchor="end"
-                        dominantBaseline="auto"
+                        dominantBaseline="central"
                       >
                         {`${average.toFixed(0)} ms`}
                       </text>
