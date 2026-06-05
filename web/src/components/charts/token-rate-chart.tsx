@@ -29,6 +29,7 @@ export function TokenRateChart() {
   const [data, setData] = useState<TokenRateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [hoveredRefLine, setHoveredRefLine] = useState<string | null>(null);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
   const fetchData = useCallback(async () => {
@@ -96,7 +97,7 @@ export function TokenRateChart() {
           }}
         />
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative">
         {loading ? (
           <Skeleton className="h-64 w-full" />
         ) : error ? (
@@ -111,6 +112,7 @@ export function TokenRateChart() {
             No data for this period
           </div>
         ) : (
+          <>
           <ChartContainer config={chartConfig} className="h-64 w-full">
             <LineChart data={flatData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -164,18 +166,36 @@ export function TokenRateChart() {
                     stroke={chartConfig[model]?.color ?? "#888"}
                     strokeDasharray="6 3"
                     strokeWidth={1}
-                    strokeOpacity={0.7}
+                    strokeOpacity={getStrokeOpacity(model)}
                     label={{
                       value: `${average.toFixed(2)} tok/s`,
                       position: "right",
                       fill: chartConfig[model]?.color ?? "#888",
+                      fillOpacity: getStrokeOpacity(model),
                       fontSize: 10,
                     }}
+                    onMouseEnter={() => setHoveredRefLine(model)}
+                    onMouseLeave={() => setHoveredRefLine(null)}
                   />
                 )
               ))}
             </LineChart>
           </ChartContainer>
+          {hoveredRefLine && (
+            <div className="absolute right-4 top-4 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+              <div className="flex items-center gap-1.5">
+                <div
+                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  style={{ backgroundColor: chartConfig[hoveredRefLine]?.color ?? "#888" }}
+                />
+                <span className="font-medium">{hoveredRefLine}</span>
+              </div>
+              <div className="mt-1 font-mono font-medium text-foreground tabular-nums">
+                {modelAverages.find((a) => a.model === hoveredRefLine)?.average.toFixed(2) ?? 0} tok/s
+              </div>
+            </div>
+          )}
+          </>
         )}
       </CardContent>
     </Card>
