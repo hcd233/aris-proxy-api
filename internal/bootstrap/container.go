@@ -521,11 +521,11 @@ func newAudioDirCreator() oauth2port.ObjectStorageDirCreator {
 }
 
 func newAccessTokenSigner() identityservice.TokenSigner {
-	return jwt.GetAccessTokenSigner()
+	return jwt.NewAccessTokenSigner()
 }
 
 func newRefreshTokenSigner() identityservice.TokenSigner {
-	return jwt.GetRefreshTokenSigner()
+	return jwt.NewRefreshTokenSigner()
 }
 
 func newOauth2Platforms() map[string]oauth2service.Platform {
