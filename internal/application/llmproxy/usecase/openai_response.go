@@ -119,7 +119,20 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 					}
 				}
 			}
-			replaced := proxyutil.ReplaceModelInSSEData(data, lo.FromPtr(req.Body.Model))
+			outgoingData := data
+			if proxyutil.IsResponseAPITerminalEvent(event) {
+				patched, changed, err := proxyutil.FillResponseTerminalOutput(data, accumulatedOutput)
+				if err != nil {
+					log.Warn("[OpenAIUseCase] Failed to fill response terminal output", zap.String("event", event), zap.Error(err))
+				} else if changed {
+					outgoingData = patched
+					if finalResponse != nil {
+						finalResponse.Output = accumulatedOutput
+					}
+					log.Info("[OpenAIUseCase] Native response terminal output filled", zap.Int("count", len(accumulatedOutput)))
+				}
+			}
+			replaced := proxyutil.ReplaceModelInSSEData(outgoingData, lo.FromPtr(req.Body.Model))
 			if _, writeErr := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
 				log.Debug("[OpenAIUseCase] Failed to write SSE event frame", zap.Error(writeErr))
 			}

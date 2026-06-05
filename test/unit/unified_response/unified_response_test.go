@@ -5,6 +5,7 @@
 package unified_response
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -21,6 +22,10 @@ type conversionCase struct {
 	Description  string                 `json:"description"`
 	RequestBody  sonic.NoCopyRawMessage `json:"request_body"`
 	ResponseBody sonic.NoCopyRawMessage `json:"response_body"`
+}
+
+func stringPtr(value string) *string {
+	return &value
 }
 
 func loadCases(t *testing.T) []conversionCase {
@@ -249,6 +254,60 @@ func TestResponseStreamTerminalEvent_Parse(t *testing.T) {
 	}
 	if ev.Response.Usage == nil || ev.Response.Usage.InputTokens != 2 {
 		t.Errorf("Usage mismatch: %+v", ev.Response.Usage)
+	}
+}
+
+func TestFillResponseTerminalOutputUsesAccumulatedItems(t *testing.T) {
+	t.Parallel()
+	payload := []byte(`{"type":"response.completed","response":{"id":"resp_x","object":"response","status":"completed","output":[],"usage":{"input_tokens":2,"output_tokens":1,"total_tokens":3}}}`)
+	accumulated := []*dto.ResponseInputItem{
+		{Type: stringPtr(enum.ResponseInputItemTypeReasoning), ID: stringPtr("rs_1")},
+		{Type: stringPtr(enum.ResponseInputItemTypeFunctionCall), ID: stringPtr("fc_1"), Name: stringPtr("exec"), Arguments: stringPtr("{}")},
+	}
+
+	patched, changed, err := proxyutil.FillResponseTerminalOutput(payload, accumulated)
+	if err != nil {
+		t.Fatalf("fill terminal output: %v", err)
+	}
+	if !changed {
+		t.Fatal("changed = false, want true")
+	}
+
+	var ev dto.ResponseStreamTerminalEvent
+	if err := sonic.Unmarshal(patched, &ev); err != nil {
+		t.Fatalf("unmarshal patched terminal event: %v", err)
+	}
+	if ev.Response == nil {
+		t.Fatal("Response should not be nil")
+	}
+	if len(ev.Response.Output) != 2 {
+		t.Fatalf("len(Output) = %d, want 2", len(ev.Response.Output))
+	}
+	if ev.Response.Output[0].Type == nil || *ev.Response.Output[0].Type != enum.ResponseInputItemTypeReasoning {
+		t.Errorf("Output[0].Type = %v, want reasoning", ev.Response.Output[0].Type)
+	}
+	if ev.Response.Output[1].Type == nil || *ev.Response.Output[1].Type != enum.ResponseInputItemTypeFunctionCall {
+		t.Errorf("Output[1].Type = %v, want function_call", ev.Response.Output[1].Type)
+	}
+	if ev.Response.Usage == nil || ev.Response.Usage.TotalTokens != 3 {
+		t.Errorf("Usage mismatch: %+v", ev.Response.Usage)
+	}
+}
+
+func TestFillResponseTerminalOutputKeepsExistingOutput(t *testing.T) {
+	t.Parallel()
+	payload := []byte(`{"type":"response.completed","response":{"id":"resp_x","object":"response","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}]}}`)
+	accumulated := []*dto.ResponseInputItem{{Type: stringPtr(enum.ResponseInputItemTypeReasoning), ID: stringPtr("rs_1")}}
+
+	patched, changed, err := proxyutil.FillResponseTerminalOutput(payload, accumulated)
+	if err != nil {
+		t.Fatalf("fill terminal output: %v", err)
+	}
+	if changed {
+		t.Fatal("changed = true, want false")
+	}
+	if !bytes.Equal(patched, payload) {
+		t.Errorf("patched payload changed unexpectedly")
 	}
 }
 
