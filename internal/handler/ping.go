@@ -29,15 +29,17 @@ type PingHandler interface {
 	HandleSSEPing(ctx context.Context, req *dto.EmptyReq) (rsp *huma.StreamResponse, err error)
 }
 
-type pingHandler struct{}
+type pingHandler struct {
+	tracker *inflight.Tracker
+}
 
 // NewPingHandler 创建健康检查处理器
 //
 //	return PingHandler
 //	author centonhuang
 //	update 2025-01-04 15:52:48
-func NewPingHandler() PingHandler {
-	return &pingHandler{}
+func NewPingHandler(tracker *inflight.Tracker) PingHandler {
+	return &pingHandler{tracker: tracker}
 }
 
 // HandlePing 健康检查处理器
@@ -50,8 +52,7 @@ func (h *pingHandler) HandlePing(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPR
 }
 
 func (h *pingHandler) HandleReady(_ context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.PingRsp], error) {
-	tracker := inflight.GetTracker()
-	if tracker.IsDraining() {
+	if h.tracker.IsDraining() {
 		return nil, huma.Error503ServiceUnavailable(constant.ServerShuttingDownMsg)
 	}
 	rsp := &dto.PingRsp{
