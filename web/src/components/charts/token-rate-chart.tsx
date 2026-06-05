@@ -111,7 +111,7 @@ export function TokenRateChart() {
             No data for this period
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-64 w-full overflow-hidden">
+          <ChartContainer config={chartConfig} className="h-64 w-full">
             <LineChart data={flatData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
@@ -174,7 +174,8 @@ export function TokenRateChart() {
                         textAnchor="end"
                         dominantBaseline="central"
                       >
-                        {`${average.toFixed(2)} tok/s`}
+                        <tspan x={(viewBox.x ?? 0) - 4} dy="-0.5em">{`${average.toFixed(2)}`}</tspan>
+                        <tspan x={(viewBox.x ?? 0) - 4} dy="1.1em">tok/s</tspan>
                       </text>
                     )}
                   />
