@@ -219,6 +219,28 @@ func IsResponseAPITerminalEvent(event string) bool {
 	return false
 }
 
+// FillResponseTerminalOutput patches a terminal Response API SSE payload when
+// the upstream terminal response omits output but earlier output_item.done
+// events already carried complete output items.
+func FillResponseTerminalOutput(data []byte, accumulatedOutput []*dto.ResponseInputItem) (patched []byte, changed bool, err error) {
+	if len(accumulatedOutput) == 0 {
+		return data, false, nil
+	}
+	var ev dto.ResponseStreamTerminalEvent
+	if err := sonic.Unmarshal(data, &ev); err != nil {
+		return nil, false, err
+	}
+	if ev.Response == nil || len(ev.Response.Output) > 0 {
+		return data, false, nil
+	}
+	ev.Response.Output = accumulatedOutput
+	patched, err = sonic.Marshal(&ev)
+	if err != nil {
+		return nil, false, err
+	}
+	return patched, true, nil
+}
+
 // IsResponseAPIDeltaEvent reports whether event is a delta SSE event that
 // carries real generated tokens.
 //
