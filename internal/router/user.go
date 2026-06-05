@@ -6,13 +6,14 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
-func initUserRouter(userGroup huma.API, userHandler handler.UserHandler, db *gorm.DB, cache *redis.Client) {
-	userGroup.UseMiddleware(middleware.JwtMiddleware(db, cache))
+func initUserRouter(userGroup huma.API, userHandler handler.UserHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
+	userGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 
 	huma.Register(userGroup, huma.Operation{
 		OperationID: "getCurrentUser",
