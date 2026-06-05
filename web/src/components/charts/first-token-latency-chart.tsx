@@ -164,11 +164,12 @@ export function FirstTokenLatencyChart() {
                     stroke={chartConfig[model]?.color ?? "#888"}
                     strokeDasharray="6 3"
                     strokeWidth={1}
-                    strokeOpacity={0.7}
+                    strokeOpacity={getStrokeOpacity(model)}
                     label={{
                       value: `${average.toFixed(0)} ms`,
                       position: "right",
                       fill: chartConfig[model]?.color ?? "#888",
+                      fillOpacity: getStrokeOpacity(model),
                       fontSize: 10,
                     }}
                   />

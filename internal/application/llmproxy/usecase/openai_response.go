@@ -213,7 +213,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	conv := &converter.ResponseProtocolConverter{}
 	assertRespConvInit(conv, req)
 	exposedModel := lo.FromPtr(req.Body.Model)
-	responseID := fmt.Sprintf("resp_%s", uuid.New().String())
+	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
 	initializedItems := make(map[int]bool)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
@@ -252,7 +252,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		if err != nil {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		} else {
-			rsp = finalizeResponseFromChatCompletion(ctx, w, completion, exposedModel, conv, initializedItems)
+			rsp = finalizeResponseFromChatCompletion(ctx, w, completion, exposedModel, conv)
 			if rsp != nil {
 				log.Info("[OpenAIUseCase] Via chat response finalized",
 					zap.String("responseID", rsp.ID),
@@ -324,7 +324,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 	assertRespConvInit(responseConv, req)
 	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
 	exposedModel := lo.FromPtr(req.Body.Model)
-	responseID := fmt.Sprintf("resp_%s", uuid.New().String())
+	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
 	initializedItems := make(map[int]bool)
 	return func(w *bufio.Writer) {
 		startTime := time.Now()
@@ -440,7 +440,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	})
 }
 
-func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk, initializedItems map[int]bool) (bool, error) {
+func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk, initializedItems map[int]bool) (bool, error) { //nolint:gocognit // streaming event processing naturally involves multiple concerns
 	if chunk == nil {
 		return false, nil
 	}
@@ -450,7 +450,7 @@ func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 			continue
 		}
 		delta := choice.Delta
-		itemID := fmt.Sprintf("msg_%s", chunk.ID)
+		itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, chunk.ID)
 		outputIndex := choice.Index
 
 		// 在发送第一个 delta 之前，发送 output_item.added 和 content_part.added
@@ -488,7 +488,7 @@ func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 	return false, nil
 }
 
-func writeDeltaField(w *bufio.Writer, event enum.ResponseStreamEventType, value *string, itemID string, outputIndex int, contentIndex int) (bool, error) {
+func writeDeltaField(w *bufio.Writer, event enum.ResponseStreamEventType, value *string, itemID string, outputIndex, contentIndex int) (bool, error) {
 	if value == nil || *value == "" {
 		return false, nil
 	}
@@ -511,7 +511,7 @@ func writeToolCallDeltas(w *bufio.Writer, toolCalls []*dto.OpenAIChatCompletionM
 	return wrote, nil
 }
 
-func writeResponseDeltaEvent(w *bufio.Writer, event enum.ResponseStreamEventType, delta string, itemID string, outputIndex int, contentIndex int) error {
+func writeResponseDeltaEvent(w *bufio.Writer, event enum.ResponseStreamEventType, delta, itemID string, outputIndex, contentIndex int) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:         event,
 		constant.ResponseStreamFieldDelta:        delta,
@@ -605,7 +605,7 @@ func writeResponseTerminalEvent(w *bufio.Writer, event enum.ResponseStreamEventT
 	return err
 }
 
-func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, completion *dto.OpenAIChatCompletion, exposedModel string, conv *converter.ResponseProtocolConverter, initializedItems map[int]bool) *dto.OpenAICreateResponseRsp {
+func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, completion *dto.OpenAIChatCompletion, exposedModel string, conv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if completion == nil {
 		return nil
 	}
@@ -620,7 +620,7 @@ func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, co
 			if choice == nil {
 				continue
 			}
-			itemID := fmt.Sprintf("msg_%s", completion.ID)
+			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, completion.ID)
 			outputIndex := choice.Index
 
 			// 获取文本内容
@@ -630,16 +630,16 @@ func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, co
 			}
 
 			// 发送 output_text.done
-			_ = writeOutputTextDoneEvent(w, itemID, outputIndex, textContent)
+			_ = writeOutputTextDoneEvent(w, itemID, outputIndex, textContent) //nolint:errcheck // best-effort write on stream close
 			// 发送 content_part.done
-			_ = writeContentPartDoneEvent(w, itemID, outputIndex, textContent)
+			_ = writeContentPartDoneEvent(w, itemID, outputIndex, textContent) //nolint:errcheck // best-effort write on stream close
 			// 发送 output_item.done
 			content := []map[string]any{{
 				constant.ResponseStreamFieldType:        constant.ResponseStreamFieldOutputTextType,
 				constant.ResponseStreamFieldText:        textContent,
 				constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 			}}
-			_ = writeOutputItemDoneEvent(w, itemID, outputIndex, content)
+			_ = writeOutputItemDoneEvent(w, itemID, outputIndex, content) //nolint:errcheck // best-effort write on stream close
 		}
 		_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
 	}
@@ -670,7 +670,7 @@ func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, u
 			if choice == nil {
 				continue
 			}
-			itemID := fmt.Sprintf("msg_%s", chatCompletion.ID)
+			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, chatCompletion.ID)
 			outputIndex := choice.Index
 
 			// 获取文本内容
@@ -680,16 +680,16 @@ func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, u
 			}
 
 			// 发送 output_text.done
-			_ = writeOutputTextDoneEvent(w, itemID, outputIndex, textContent)
+			_ = writeOutputTextDoneEvent(w, itemID, outputIndex, textContent) //nolint:errcheck // best-effort write on stream close
 			// 发送 content_part.done
-			_ = writeContentPartDoneEvent(w, itemID, outputIndex, textContent)
+			_ = writeContentPartDoneEvent(w, itemID, outputIndex, textContent) //nolint:errcheck // best-effort write on stream close
 			// 发送 output_item.done
 			content := []map[string]any{{
 				constant.ResponseStreamFieldType:        constant.ResponseStreamFieldOutputTextType,
 				constant.ResponseStreamFieldText:        textContent,
 				constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 			}}
-			_ = writeOutputItemDoneEvent(w, itemID, outputIndex, content)
+			_ = writeOutputItemDoneEvent(w, itemID, outputIndex, content) //nolint:errcheck // best-effort write on stream close
 		}
 		_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
 	}
@@ -704,16 +704,16 @@ func assertRespConvInit(conv *converter.ResponseProtocolConverter, req *dto.Open
 	conv.SetToolTypeMap(converter.BuildToolTypeMap(req.Body.Tools))
 }
 
-func writeResponseLifecycleEvent(w *bufio.Writer, event enum.ResponseStreamEventType, model string, responseID string) error {
+func writeResponseLifecycleEvent(w *bufio.Writer, event enum.ResponseStreamEventType, model, responseID string) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType: event,
 		constant.ResponseStreamFieldResponse: map[string]any{
-			constant.ResponseStreamFieldID:     responseID,
-			constant.ResponseStreamFieldObject: enum.CompletionObjectResponse,
-			constant.ResponseStreamFieldModel:  model,
-			constant.ResponseStreamFieldStatus: constant.ResponseStreamFieldStatusInProgress,
-			"created_at":                       time.Now().Unix(),
-			"output":                           []any{},
+			constant.ResponseStreamFieldID:        responseID,
+			constant.ResponseStreamFieldObject:    enum.CompletionObjectResponse,
+			constant.ResponseStreamFieldModel:     model,
+			constant.ResponseStreamFieldStatus:    constant.ResponseStreamFieldStatusInProgress,
+			constant.ResponseStreamFieldCreatedAt: time.Now().Unix(),
+			constant.ResponseStreamFieldOutput:    []any{},
 		},
 	}))
 	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
