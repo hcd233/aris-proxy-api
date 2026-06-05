@@ -61,7 +61,7 @@ func (dao *CosObjDAO) CreateDir(ctx context.Context, userID uint) (objectInfo *O
 		return
 	}
 
-	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPHeaderLastModified))
+	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPHeaderLastModified)) //nolint:errcheck // zero-valued time on parse failure is acceptable
 
 	objectInfo = &ObjectInfo{
 		ObjectName:   dirName,
@@ -137,7 +137,7 @@ func (dao *CosObjDAO) DownloadObject(ctx context.Context, userID uint, objectNam
 		return
 	}
 
-	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPHeaderLastModified))
+	lastModified, _ := http.ParseTime(head.Header.Get(constant.HTTPHeaderLastModified)) //nolint:errcheck // zero-valued time on parse failure is acceptable
 
 	objectInfo = &ObjectInfo{
 		ObjectName:   objectName,

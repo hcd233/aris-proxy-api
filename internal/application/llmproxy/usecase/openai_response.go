@@ -64,7 +64,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, ep.Name(), body)
 }
 
-func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse { //nolint:gocognit // this function orchestrates streaming response forwarding which inherently involves multiple concerns
 	log := logger.WithCtx(ctx)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
@@ -88,7 +88,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 					accumulatedOutput = append(accumulatedOutput, ev.Item)
 				}
 			}
-			if finalResponse == nil && proxyutil.IsResponseAPITerminalEvent(event) {
+			if finalResponse == nil && proxyutil.IsResponseAPITerminalEvent(event) { //nolint:nestif // streaming event processing naturally involves nested conditional logic
 				var ev dto.ResponseStreamTerminalEvent
 				if err := sonic.Unmarshal(data, &ev); err != nil {
 					log.Warn("[OpenAIUseCase] Failed to parse response terminal event",
@@ -171,7 +171,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		}
 		writer.HumaCtx.SetStatus(fiber.StatusOK)
 		writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-		_, _ = writer.HumaCtx.BodyWriter().Write(replaced)
+		_, _ = writer.HumaCtx.BodyWriter().Write(replaced) //nolint:errcheck // best-effort write in stream response handler
 
 		var rsp dto.OpenAICreateResponseRsp
 		parseErr := sonic.Unmarshal(respBody, &rsp)
@@ -511,7 +511,7 @@ func assertRespConvInit(conv *converter.ResponseProtocolConverter, req *dto.Open
 
 func writeResponseLifecycleEvent(w *bufio.Writer, event enum.ResponseStreamEventType, model string) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
-		constant.ResponseStreamFieldType: string(event),
+		constant.ResponseStreamFieldType: event,
 		constant.ResponseStreamFieldResponse: map[string]any{
 			constant.ResponseStreamFieldObject: enum.CompletionObjectResponse,
 			constant.ResponseStreamFieldModel:  model,

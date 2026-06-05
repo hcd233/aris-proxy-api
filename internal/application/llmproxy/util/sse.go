@@ -121,7 +121,7 @@ func SendOpenAIModelNotFoundError(modelName string) (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusNotFound)
 			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write in error handler
 				Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
 				Type:    constant.OpenAIInvalidRequestErrorType,
 				Code:    constant.OpenAIModelNotFoundCode,
@@ -140,7 +140,7 @@ func SendOpenAIInternalError() (rsp *huma.StreamResponse) {
 		Body: func(humaCtx huma.Context) {
 			humaCtx.SetStatus(http.StatusInternalServerError)
 			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write in error handler
 				Message: constant.OpenAIInternalErrorShortMessage,
 				Type:    constant.OpenAIInternalErrorType,
 				Code:    constant.OpenAIInternalErrorCode,
