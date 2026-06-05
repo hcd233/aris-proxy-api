@@ -162,14 +162,14 @@ export function TokenRateChart() {
                     key={`avg-${model}`}
                     y={average}
                     stroke={chartConfig[model]?.color ?? "#888"}
-                    strokeDasharray="6 3"
-                    strokeWidth={1}
+                    strokeDasharray="8 4"
+                    strokeWidth={1.5}
                     label={{
                       value: `${average.toFixed(2)} tok/s`,
-                      position: "insideTopRight",
+                      position: "insideTopLeft",
                       fill: chartConfig[model]?.color ?? "#888",
-                      fontSize: 11,
-                      fontWeight: 500,
+                      fontSize: 12,
+                      fontWeight: 600,
                     }}
                   />
                 )
