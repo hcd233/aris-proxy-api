@@ -15,7 +15,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"go.uber.org/zap"
@@ -132,11 +131,19 @@ func gracefulShutdown(app *fiber.App, infra *bootstrap.Infrastructure, tracker *
 
 		// Step 1: 停止定时任务（等待当前 job 完成）
 		logger.Logger().Info("[Server] Step 1/8: Stopping cron jobs...")
-		cron.StopCronJobs()
+		cronCtx, cronCancel := context.WithTimeout(context.Background(), constant.CronStopTimeout)
+		defer cronCancel()
+		if err := cron.StopCronJobsWithContext(cronCtx, infra.CronJobs); err != nil {
+			logger.Logger().Warn("[Server] Cron stop error", zap.Error(err))
+		}
 
 		// Step 2: 停止协程池（等待排队任务完成）
 		logger.Logger().Info("[Server] Step 2/8: Stopping pool manager...")
-		pool.StopPoolManager()
+		stopCtx, poolCancel := context.WithTimeout(context.Background(), constant.PoolStopTimeout)
+		defer poolCancel()
+		if err := infra.PoolManager.StopWithContext(stopCtx); err != nil {
+			logger.Logger().Warn("[Server] Pool stop error", zap.Error(err))
+		}
 
 		// Step 3: 进入 draining 状态，拒绝新请求
 		logger.Logger().Info("[Server] Step 3/8: Entering draining state...")

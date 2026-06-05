@@ -77,6 +77,7 @@ type Infrastructure struct {
 	Cache       *redis.Client
 	PoolManager *pool.PoolManager
 	Tracker     *inflight.Tracker
+	CronJobs    []cron.Cron
 }
 
 // InitInfrastructure 初始化所有基础设施组件（数据库、Redis、HTTP Client、协程池、定时任务）。
@@ -89,10 +90,10 @@ func InitInfrastructure() *Infrastructure {
 	cache := cache.InitCache()
 	httpclient.InitHTTPClient()
 	tracker := inflight.NewTracker()
-	poolManager := pool.InitPoolManager(db)
+	poolManager := pool.NewPoolManager(db)
 	thinkExtractRepo := repository.NewThinkExtractRepository(db)
-	cron.InitCronJobs(context.Background(), db, poolManager, cache, thinkExtractRepo)
-	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager, Tracker: tracker}
+	cronJobs := cron.InitCronJobs(context.Background(), db, poolManager, cache, thinkExtractRepo)
+	return &Infrastructure{DB: db, Cache: cache, PoolManager: poolManager, Tracker: tracker, CronJobs: cronJobs}
 }
 
 // BuildServer 构建启动依赖容器并解析 HTTP 服务对象。
@@ -514,8 +515,8 @@ func newEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
 	return repository.NewEndpointReadRepository(db)
 }
 
-func newTaskSubmitter() usecase.TaskSubmitter {
-	return pool.GetPoolManager()
+func newTaskSubmitter(pm *pool.PoolManager) usecase.TaskSubmitter {
+	return pm
 }
 
 func newAudioDirCreator() oauth2port.ObjectStorageDirCreator {
