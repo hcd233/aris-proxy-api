@@ -7,10 +7,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/bootstrap"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"go.uber.org/zap"
-
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var serverCmd = &cobra.Command{

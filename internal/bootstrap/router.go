@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	appenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
@@ -26,7 +25,6 @@ type routeParams struct {
 	PingHandler      handler.PingHandler
 	TokenHandler     handler.TokenHandler
 	Oauth2Handler    handler.Oauth2Handler
-	Oauth2Callback   port.HandleCallbackHandler
 	UserHandler      handler.UserHandler
 	APIKeyHandler    handler.APIKeyHandler
 	SessionHandler   handler.SessionHandler
