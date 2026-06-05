@@ -228,6 +228,10 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 			zap.String("responseID", responseID),
 			zap.String("model", exposedModel))
 
+		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, exposedModel, responseID); err != nil {
+			log.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
+		}
+
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			chunkCount++
 			hasWritten, writeErr := writeResponseDeltaFromChatChunk(w, chunk, initializedItems, responseID)
@@ -317,7 +321,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 	return apiutil.WrapStreamResponse(u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body))
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
+func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) { //nolint:gocognit // streaming response forwarding naturally involves multiple concerns
 	log := logger.WithCtx(ctx)
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
@@ -339,6 +343,10 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 		log.Info("[OpenAIUseCase] Via anthropic response.created written",
 			zap.String("responseID", responseID),
 			zap.String("model", exposedModel))
+
+		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, exposedModel, responseID); err != nil {
+			log.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
+		}
 
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
 			if firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
