@@ -10,11 +10,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-func auditFailure(ctx context.Context, submitter TaskSubmitter, m *aggregate.Model, exposedModel, endpoint string, apiProtocol enum.ProtocolType, totalMs int64, err error) {
-	auditFailureWithProviders(ctx, submitter, m, exposedModel, endpoint, apiProtocol, apiProtocol, totalMs, err)
+func auditFailure(ctx context.Context, m *aggregate.Model, submitter TaskSubmitter, exposedModel, endpoint string, apiProtocol enum.ProtocolType, totalMs int64, err error) {
+	auditFailureWithProviders(ctx, m, submitter, exposedModel, endpoint, apiProtocol, apiProtocol, totalMs, err)
 }
 
-func auditFailureWithProviders(ctx context.Context, submitter TaskSubmitter, m *aggregate.Model, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, totalMs int64, err error) {
+func auditFailureWithProviders(ctx context.Context, m *aggregate.Model, submitter TaskSubmitter, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, totalMs int64, err error) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
 		ModelID:             m.AggregateID(),

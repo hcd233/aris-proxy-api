@@ -79,7 +79,7 @@ func ReplaceModelInSSEData(data []byte, modelName string) []byte {
 //
 // 与 MarshalOpenAIChatCompletionBodyForModel 不同，此函数接受原始 JSON body，
 // 解析后仅替换 model 字段，保留所有未知字段（包括 messages 中的扩展字段）。
-func MarshalRawOpenAIChatCompletionBodyForModel(raw []byte, req *dto.OpenAIChatCompletionReq, modelName string) []byte {
+func MarshalRawOpenAIChatCompletionBodyForModel(raw []byte, modelName string) []byte {
 	var bodyMap map[string]any
 	if err := sonic.Unmarshal(raw, &bodyMap); err != nil {
 		logger.Logger().Warn("[Util] MarshalRawOpenAIChatCompletionBodyForModel unmarshal error", zap.Error(err))
