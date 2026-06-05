@@ -22,17 +22,42 @@ type ResponseProtocolConverter struct {
 
 func (c *ResponseProtocolConverter) FromResponseRequest(req *dto.OpenAICreateResponseReq) (*dto.OpenAIChatCompletionReq, error) {
 	chatReq := &dto.OpenAIChatCompletionReq{
-		Model:       lo.FromPtr(req.Model),
-		Stream:      req.Stream,
-		Temperature: req.Temperature,
-		TopP:        req.TopP,
-		Metadata:    req.Metadata,
+		Model:             lo.FromPtr(req.Model),
+		Stream:            req.Stream,
+		Temperature:       req.Temperature,
+		TopP:              req.TopP,
+		TopLogprobs:       req.TopLogprobs,
+		Metadata:          req.Metadata,
+		ParallelToolCalls: req.ParallelToolCalls,
+		PromptCacheKey:    req.PromptCacheKey,
+		SafetyIdentifier:  req.SafetyIdentifier,
+		Store:             req.Store,
+		User:              req.User,
 	}
 	if req.MaxOutputTokens != nil {
 		chatReq.MaxCompletionTokens = lo.ToPtr(int(*req.MaxOutputTokens))
 	}
-	if req.Text != nil && req.Text.Format != nil {
-		chatReq.ResponseFormat = responseTextFormatToChat(req.Text.Format)
+	if req.PromptCacheRetention != nil {
+		chatReq.PromptCacheRetention = *req.PromptCacheRetention
+	}
+	if req.ServiceTier != nil {
+		chatReq.ServiceTier = *req.ServiceTier
+	}
+	if req.Reasoning != nil && req.Reasoning.Effort != nil {
+		chatReq.ReasoningEffort = *req.Reasoning.Effort
+	}
+	if req.Text != nil {
+		if req.Text.Verbosity != nil {
+			chatReq.Verbosity = *req.Text.Verbosity
+		}
+		if req.Text.Format != nil {
+			chatReq.ResponseFormat = responseTextFormatToChat(req.Text.Format)
+		}
+	}
+	if req.StreamOptions != nil {
+		chatReq.StreamOptions = &dto.OpenAIChatCompletionStreamOptions{
+			IncludeObfuscation: req.StreamOptions.IncludeObfuscation,
+		}
 	}
 	if len(req.Tools) > 0 {
 		chatReq.Tools = responseToolsToChat(req.Tools)
