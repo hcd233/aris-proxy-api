@@ -1,30 +1,22 @@
 package jwt
 
-import "github.com/hcd233/aris-proxy-api/internal/config"
+import (
+	"time"
 
-var (
-	accessTokenSvc  *tokenSigner
-	refreshTokenSvc *tokenSigner
+	"github.com/hcd233/aris-proxy-api/internal/config"
 )
 
-// GetAccessTokenSigner 获取jwt access token服务
-func GetAccessTokenSigner() TokenSigner {
-	return accessTokenSvc
+func NewAccessTokenSigner() TokenSigner {
+	return newTokenSigner(config.JwtAccessTokenSecret, config.JwtAccessTokenExpired)
 }
 
-// GetRefreshTokenSigner 获取jwt refresh token服务
-func GetRefreshTokenSigner() TokenSigner {
-	return refreshTokenSvc
+func NewRefreshTokenSigner() TokenSigner {
+	return newTokenSigner(config.JwtRefreshTokenSecret, config.JwtRefreshTokenExpired)
 }
 
-func init() {
-	accessTokenSvc = &tokenSigner{
-		JwtTokenSecret:  config.JwtAccessTokenSecret,
-		JwtTokenExpired: config.JwtAccessTokenExpired,
-	}
-
-	refreshTokenSvc = &tokenSigner{
-		JwtTokenSecret:  config.JwtRefreshTokenSecret,
-		JwtTokenExpired: config.JwtRefreshTokenExpired,
+func newTokenSigner(secret string, expired time.Duration) TokenSigner {
+	return &tokenSigner{
+		JwtTokenSecret:  secret,
+		JwtTokenExpired: expired,
 	}
 }

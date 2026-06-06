@@ -1,8 +1,10 @@
 package pool_manager
 
 import (
+	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/config"
@@ -216,21 +218,22 @@ func TestPoolConfig_MinimalValues(t *testing.T) {
 
 // ==================== PoolManager Method Signature Tests ====================
 
-func TestPoolManager_GetPoolManager(t *testing.T) {
+func TestPoolManager_NewPoolManager(t *testing.T) {
 	t.Parallel()
-	// Init first, then GetPoolManager should return non-nil PoolManager
-	pool.InitPoolManager(nil)
-	pm := pool.GetPoolManager()
+	pm := pool.NewPoolManager(nil)
 	if pm == nil {
-		t.Error("GetPoolManager() returned nil after InitPoolManager()")
+		t.Error("NewPoolManager() returned nil")
 	}
-	t.Log("GetPoolManager() returned non-nil PoolManager after initialization")
+	t.Log("NewPoolManager() returned non-nil PoolManager")
 }
 
 func TestPoolManager_Stop(t *testing.T) {
 	t.Parallel()
-	// InitPoolManager and StopPoolManager should work without panic
-	pool.InitPoolManager(nil)
-	pool.StopPoolManager()
-	t.Log("InitPoolManager and StopPoolManager executed successfully")
+	pm := pool.NewPoolManager(nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := pm.StopWithContext(ctx); err != nil {
+		t.Errorf("StopWithContext returned error: %v", err)
+	}
+	t.Log("StopWithContext executed successfully")
 }

@@ -175,8 +175,10 @@ type DeleteSessionHandler interface {
 
 // ScoreSessionCommand 评分命令
 type ScoreSessionCommand struct {
-	SessionID uint
-	Score     int
+	SessionID           uint
+	Score               int
+	RequesterID         uint
+	RequesterPermission enum.Permission
 }
 
 // ScoreSessionHandler 评分命令处理器接口
@@ -186,7 +188,9 @@ type ScoreSessionHandler interface {
 
 // DeleteScoreSessionCommand 删除评分命令
 type DeleteScoreSessionCommand struct {
-	SessionID uint
+	SessionID           uint
+	RequesterID         uint
+	RequesterPermission enum.Permission
 }
 
 // DeleteScoreSessionHandler 删除评分命令处理器接口

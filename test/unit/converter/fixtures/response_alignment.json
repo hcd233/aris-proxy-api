@@ -1,0 +1,51 @@
+[
+  {
+    "name": "full_codex_request",
+    "description": "Codex Desktop 风格的全字段 Response 请求，覆盖所有 Chat 协议有对等项的字段，用于断言转换后字段全部对齐。",
+    "request": {
+      "model": "deepseek-v4-flash",
+      "instructions": "system prompt",
+      "max_output_tokens": 4096,
+      "metadata": {"k": "v"},
+      "parallel_tool_calls": true,
+      "prompt_cache_key": "019e9702-7b23-70c1-a2a8-7f0d85dab340",
+      "prompt_cache_retention": "24h",
+      "safety_identifier": "user-001",
+      "service_tier": "priority",
+      "store": false,
+      "stream": true,
+      "temperature": 0.7,
+      "top_logprobs": 5,
+      "top_p": 0.9,
+      "user": "user-id-1",
+      "stream_options": {"include_obfuscation": true},
+      "reasoning": {"effort": "low", "summary": "concise"},
+      "text": {"verbosity": "low"},
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {"type": "input_text", "text": "你好"}
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "minimal_request",
+    "description": "只包含必填项和一个用户消息的最小 Response 请求，用于断言可选字段保持零值不被写入。",
+    "request": {
+      "model": "deepseek-v4-flash",
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {"type": "input_text", "text": "ping"}
+          ]
+        }
+      ]
+    }
+  }
+]

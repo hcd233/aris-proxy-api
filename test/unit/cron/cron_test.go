@@ -44,11 +44,11 @@ func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron 
 	config.CronSoftDeletePurgeEnabled = false
 	config.CronThinkExtractEnabled = false
 
-	cron.StopCronJobs()
-	cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
+	cron.StopCronJobsWithContext(context.Background(), nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
 
-	if cron.CronInstanceCount() != 0 {
-		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount())
+	if cron.CronInstanceCount(crons) != 0 {
+		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount(crons))
 	}
 }
 
@@ -71,8 +71,6 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cr
 	config.CronSessionSummarizeEnabled = false
 	config.CronSoftDeletePurgeEnabled = false
 	config.CronThinkExtractEnabled = false
-
-	cron.StopCronJobs()
 
 	cron.DefaultCronRegistry = []cron.CronRegistryEntry{
 		{
@@ -105,10 +103,10 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cr
 		},
 	}
 
-	cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
 
-	if cron.CronInstanceCount() != 1 {
-		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount())
+	if cron.CronInstanceCount(crons) != 1 {
+		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
 	}
 }
 
@@ -132,7 +130,7 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 	config.CronSoftDeletePurgeEnabled = true
 	config.CronThinkExtractEnabled = true
 
-	cron.StopCronJobs()
+	cron.StopCronJobsWithContext(context.Background(), nil)
 
 	mock := &mockCron{}
 	cron.DefaultCronRegistry = []cron.CronRegistryEntry{
@@ -145,16 +143,16 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 		},
 	}
 
-	cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
 
-	if cron.CronInstanceCount() != 1 {
-		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount())
+	if cron.CronInstanceCount(crons) != 1 {
+		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
 	}
 	if !mock.started {
 		t.Fatal("expected mock cron to be started")
 	}
 
-	cron.StopCronJobs()
+	cron.StopCronJobsWithContext(context.Background(), crons)
 
 	if !mock.stopped {
 		t.Fatal("expected mock cron to be stopped")
@@ -163,5 +161,5 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 
 // TestStopCronJobs_Empty 验证空实例列表下停止不会 panic
 func TestStopCronJobs_Empty(t *testing.T) { //nolint:paralleltest // cron tests share global state
-	cron.StopCronJobs()
+	cron.StopCronJobsWithContext(context.Background(), nil)
 }
