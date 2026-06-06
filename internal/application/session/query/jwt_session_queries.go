@@ -178,7 +178,7 @@ func (h *listSessionsByUserHandler) loadMessagesForEmptySummaries(ctx context.Co
 	if len(allMsgIDs) == 0 {
 		return sessionMsgIDs, nil
 	}
-	messages, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(allMsgIDs))
+	messages, msgErr := h.readRepo.FindMessagesByIDsChunked(ctx, lo.Uniq(allMsgIDs))
 	if msgErr != nil {
 		log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(msgErr))
 		return sessionMsgIDs, nil
