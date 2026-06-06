@@ -200,6 +200,20 @@ export interface CreateShareRsp extends CommonRsp {
   expiresAt?: string;
 }
 
+// ─── Session Delete ─────────────────────────────────────────────────────────
+
+export interface DeleteSessionFailed {
+  id: number;
+  error: string;
+}
+
+export interface DeleteSessionRsp extends CommonRsp {
+  deletedCount?: number;
+  failures?: DeleteSessionFailed[];
+}
+
+// ─── Session Batch Delete ─────────────────────────────────────────────────────
+
 // ─── Share 分页接口（公开，与 session detail 优化模式对齐） ───────────────────
 
 export interface ShareSessionMetadata {

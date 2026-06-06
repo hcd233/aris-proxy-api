@@ -82,6 +82,7 @@ type ListSessionsByUserReq struct {
 	SortField string    `query:"sortField" maxLength:"50"`
 	StartTime time.Time `query:"startTime"`
 	EndTime   time.Time `query:"endTime"`
+	Keyword   string    `query:"keyword" maxLength:"200" doc:"搜索关键词（在消息内容和推理内容中搜索）"`
 }
 
 // GetSessionByUserReq 获取当前用户Session详情请求（JWT认证）
@@ -175,12 +176,31 @@ type ListSessionToolsRsp struct {
 	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }
 
-// DeleteSessionReq 删除 Session 请求
+// DeleteSessionReq 删除 Session 请求（单个 id 或批量 ids）
 //
 //	@author centonhuang
-//	@update 2026-06-03 10:00:00
+//	@update 2026-06-06 10:00:00
 type DeleteSessionReq struct {
-	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint                  `query:"id" minimum:"1" doc:"单个删除的 Session ID，与 body.ids 二选一"`
+	Body      *DeleteSessionReqBody `doc:"批量删除请求体"`
+}
+
+// DeleteSessionReqBody 批量删除请求体
+type DeleteSessionReqBody struct {
+	IDs []uint `json:"ids" minItems:"1" maxItems:"100" doc:"批量删除的 Session ID 列表"`
+}
+
+// DeleteSessionRsp 删除响应（批量时返回 deletedCount + failures）
+type DeleteSessionRsp struct {
+	CommonRsp
+	DeletedCount int            `json:"deletedCount,omitempty" doc:"成功删除数量"`
+	Failures     []DeleteFailed `json:"failures,omitempty" doc:"删除失败列表"`
+}
+
+// DeleteFailed 删除失败项
+type DeleteFailed struct {
+	ID    uint   `json:"id" doc:"Session ID"`
+	Error string `json:"error" doc:"失败原因"`
 }
 
 // ScoreSessionReq 人工评分请求
