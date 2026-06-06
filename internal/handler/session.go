@@ -3,6 +3,8 @@ package handler
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/samber/lo"
@@ -329,7 +331,7 @@ func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteS
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-// HandleDeleteSession 删除 Session（支持单个 id 或批量 ids）
+// HandleDeleteSession 删除 Session（支持逗号分隔批量删除）
 //
 //	@receiver h *sessionHandler
 //	@param ctx context.Context
@@ -343,13 +345,9 @@ func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.Delet
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	permission := util.CtxValuePermission(ctx)
 
-	var ids []uint
-	if req.SessionID != 0 {
-		ids = []uint{req.SessionID}
-	} else if req.Body != nil && len(req.Body.IDs) > 0 {
-		ids = req.Body.IDs
-	} else {
-		rsp.Error = ierr.ErrValidation.BizError()
+	ids, parseErr := parseCommaSeparatedIDs(req.IDs)
+	if parseErr != nil {
+		rsp.Error = ierr.ToBizError(parseErr, ierr.ErrValidation.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -774,4 +772,31 @@ func ParseExpiresIn(expiresIn string, customAt *int64) (time.Duration, error) {
 	default:
 		return constant.ShareTTLDefault, nil
 	}
+}
+
+// parseCommaSeparatedIDs 解析逗号分隔的 ID 字符串为 uint 切片
+func parseCommaSeparatedIDs(s string) ([]uint, error) {
+	if s == "" {
+		return nil, ierr.New(ierr.ErrValidation, "ids is required")
+	}
+	parts := strings.Split(s, ",")
+	ids := make([]uint, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		id, err := strconv.ParseUint(p, 10, 64)
+		if err != nil {
+			return nil, ierr.Wrap(ierr.ErrValidation, err, "invalid id: "+p)
+		}
+		if id == 0 {
+			return nil, ierr.New(ierr.ErrValidation, "id must be >= 1")
+		}
+		ids = append(ids, uint(id))
+	}
+	if len(ids) == 0 {
+		return nil, ierr.New(ierr.ErrValidation, "no valid ids provided")
+	}
+	return ids, nil
 }
