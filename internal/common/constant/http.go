@@ -46,6 +46,7 @@ const (
 
 	HTTPAuthBearerPrefix           = "Bearer "
 	HTTPContentTypeJSON            = "application/json"
+	HTTPContentTypeProblemJSON     = "application/problem+json"
 	HTTPContentTypeEventStream     = "text/event-stream"
 	HTTPAttachmentFilenameTemplate = "attachment; filename=%q"
 	HTTPCacheControlNoCache        = "no-cache"
