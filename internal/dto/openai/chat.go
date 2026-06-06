@@ -202,6 +202,7 @@ func (v OpenAIVoiceParam) Schema(_ huma.Registry) *huma.Schema {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionReq struct {
+	_                    struct{}                               `additionalProperties:"true"`
 	Messages             []*OpenAIChatCompletionMessageParam    `json:"messages" doc:"对话消息列表"`
 	Model                string                                 `json:"model" doc:"模型ID"`
 	Audio                *OpenAIChatCompletionAudioParam        `json:"audio,omitempty" doc:"音频输出参数"`
@@ -243,6 +244,7 @@ type OpenAIChatCompletionReq struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIChatCompletionMessageParam struct {
+	_                struct{}              `additionalProperties:"true"`
 	Role             enum.Role             `json:"role" doc:"消息角色"`
 	Content          *OpenAIMessageContent `json:"content,omitempty" doc:"消息内容(字符串或数组)"`
 	ReasoningContent *string               `json:"reasoning_content,omitempty" doc:"推理内容"`

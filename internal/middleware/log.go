@@ -109,7 +109,8 @@ func buildRequestBodyFields(c fiber.Ctx) []zap.Field {
 }
 
 func buildResponseBodyFields(c fiber.Ctx) []zap.Field {
-	if !strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeJSON) {
+	if !strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeJSON) &&
+		!strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeProblemJSON) {
 		return nil
 	}
 	response := make(map[string]any)
