@@ -25,13 +25,13 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
 
-# 复制前端构建产物到 internal/web/dist/（先于 internal 整体复制）
-COPY --from=frontend-builder /app/out ./internal/web/dist
-
-# 复制后端源码
+# 复制后端源码（先复制 internal，确保前端构建产物后覆盖，避免被 host 的空文件覆盖）
 COPY cmd ./cmd
 COPY internal ./internal
 COPY main.go ./
+
+# 复制前端构建产物到 internal/web/dist/，必须在 internal 之后复制以覆盖可能存在的空占位文件
+COPY --from=frontend-builder /app/out ./internal/web/dist
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

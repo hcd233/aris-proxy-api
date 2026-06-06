@@ -59,3 +59,4 @@ k8s/secret.yaml.local
 .understand-anything/intermediate/
 .understand-anything/tmp/
 migrate_think_extract
+.codebuddy/settings.local.json
