@@ -106,6 +106,8 @@ var (
 
 	SessionSummarySelect = "id, created_at, updated_at, summary, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
 
+	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM messages WHERE sessions.message_ids::jsonb ? messages.id::text AND messages.message::text ILIKE ?)"
+
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncDay    = "date_trunc('day', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
