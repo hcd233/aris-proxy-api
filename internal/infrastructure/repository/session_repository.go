@@ -283,7 +283,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 	if keyword != "" {
-		sql = sql.Where("EXISTS (SELECT 1 FROM messages WHERE messages.id = ANY(sessions.message_ids) AND messages.message::text ILIKE ?)", "%"+keyword+"%")
+		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
 	}
 
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
@@ -337,7 +337,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 	if keyword != "" {
-		sql = sql.Where("EXISTS (SELECT 1 FROM messages WHERE messages.id = ANY(sessions.message_ids) AND messages.message::text ILIKE ?)", "%"+keyword+"%")
+		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
 	}
 
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
