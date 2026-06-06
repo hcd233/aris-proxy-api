@@ -176,21 +176,15 @@ type ListSessionToolsRsp struct {
 	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
 }
 
-// DeleteSessionReq 删除 Session 请求（单个 id 或批量 ids）
+// DeleteSessionReq 删除 Session 请求（支持逗号分隔批量）
 //
 //	@author centonhuang
 //	@update 2026-06-06 10:00:00
 type DeleteSessionReq struct {
-	SessionID uint                  `query:"id" minimum:"1" doc:"单个删除的 Session ID，与 body.ids 二选一"`
-	Body      *DeleteSessionReqBody `doc:"批量删除请求体"`
+	IDs string `query:"ids" required:"true" minLength:"1" doc:"Session ID 列表，逗号分隔，如 123 或 123,456,789"`
 }
 
-// DeleteSessionReqBody 批量删除请求体
-type DeleteSessionReqBody struct {
-	IDs []uint `json:"ids" minItems:"1" maxItems:"100" doc:"批量删除的 Session ID 列表"`
-}
-
-// DeleteSessionRsp 删除响应（批量时返回 deletedCount + failures）
+// DeleteSessionRsp 删除响应
 type DeleteSessionRsp struct {
 	CommonRsp
 	DeletedCount int            `json:"deletedCount,omitempty" doc:"成功删除数量"`

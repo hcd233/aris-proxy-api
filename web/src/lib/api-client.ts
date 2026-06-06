@@ -302,17 +302,16 @@ class ApiClient {
 
   async deleteSession(sessionId: number): Promise<DeleteSessionRsp> {
     return this.request<DeleteSessionRsp>(
-      `/api/v1/session?id=${sessionId}`,
+      `/api/v1/session?ids=${sessionId}`,
       { method: "DELETE" }
     );
   }
 
   async batchDeleteSessions(ids: number[]): Promise<DeleteSessionRsp> {
-    return this.request<DeleteSessionRsp>("/api/v1/session", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
-    });
+    return this.request<DeleteSessionRsp>(
+      `/api/v1/session?ids=${ids.join(",")}`,
+      { method: "DELETE" }
+    );
   }
 
   /**
