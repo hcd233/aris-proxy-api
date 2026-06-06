@@ -28,8 +28,11 @@ func TestSessionKeywordFilterSQL_UsesJSONBOperator(t *testing.T) {
 	if !strings.Contains(fragment, "::jsonb") {
 		t.Errorf("SessionKeywordFilterSQL must cast message_ids to jsonb, got %q", fragment)
 	}
-	if !strings.Contains(fragment, "? messages.id::text") {
-		t.Errorf("SessionKeywordFilterSQL must use JSONB ? operator against messages.id::text, got %q", fragment)
+	if !strings.Contains(fragment, "jsonb_exists(") {
+		t.Errorf("SessionKeywordFilterSQL must use jsonb_exists() (avoiding bare '?' which collides with gorm placeholders), got %q", fragment)
+	}
+	if !strings.Contains(fragment, "messages.id::text") {
+		t.Errorf("SessionKeywordFilterSQL must reference messages.id::text, got %q", fragment)
 	}
 	if !strings.Contains(fragment, "ILIKE ?") {
 		t.Errorf("SessionKeywordFilterSQL must keep ILIKE ? parameter placeholder, got %q", fragment)
@@ -45,5 +48,12 @@ func TestSessionKeywordFilterSQL_DoesNotUseNativeArrayANY(t *testing.T) {
 	}
 	if strings.Contains(fragment, "ANY(message_ids)") {
 		t.Errorf("SessionKeywordFilterSQL must not use ANY against raw message_ids column, got %q", fragment)
+	}
+	// Bare '?' outside of the ILIKE placeholder would collide with gorm's ?-placeholder syntax
+	// and get treated as a parameter slot (which is what caused the SQLSTATE 42601 regression
+	// on the first deploy — see trace ec09dbee-1a34-401f-a2a0-d67678067da4).
+	placeholderCount := strings.Count(fragment, "?")
+	if placeholderCount != 1 {
+		t.Errorf("SessionKeywordFilterSQL must contain exactly one ? placeholder (for ILIKE), got %d in %q", placeholderCount, fragment)
 	}
 }
