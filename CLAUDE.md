@@ -275,9 +275,10 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - 新需求和 bugfix 都应先补或更新测试；bugfix 必须有能复现问题的回归用例。
 - 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 通过后，只有用户明确要求提交、推送或部署时才执行 git 提交/发布流程。
-- 正式发布：推送到 `master` 或合并 PR 到 `master`，`docker-publish.yml` 自动构建镜像并部署到 K8s，无需手动 SSH 执行部署脚本。
+- 正式发布：推送到 `master` 或合并 PR 到 `master`，`docker-publish.yml` 自动构建镜像并部署到 K8s，无需手动 SSH 执行部署脚本。可以通过gh命令行跟踪工作流执行情况，来判断是否完成部署
 - 部署后**先跑** `test/e2e/<topic>/` 的 Go 用例，而不是只 `curl` 一下；如需交互式补充验证再用 `call-api` skill。
 - 如果 E2E 失败，取响应头 `X-Trace-Id`，回到 CLS 排障步骤；重复直到需求或 bugfix 完成。
+- 如果是Web端相关的修复，还需要使用chrome mcp来验证相关网页交互
 
 ## 6. 测试契约
 
