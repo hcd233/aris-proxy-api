@@ -48,9 +48,7 @@ func jwtUserCacheKey(userID uint) string {
 //	@return func(ctx huma.Context, next func(huma.Context))
 //	@author centonhuang
 //	@update 2026-05-13 11:44:46
-func JwtMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, next func(huma.Context)) {
-	accessTokenSvc := jwt.GetAccessTokenSigner()
-
+func JwtMiddleware(db *gorm.DB, cache *redis.Client, accessTokenSvc jwt.TokenSigner) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		log := logger.WithCtx(ctx.Context())
 		if db == nil {

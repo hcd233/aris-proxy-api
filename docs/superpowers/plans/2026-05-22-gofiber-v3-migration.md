@@ -314,11 +314,11 @@ func WrapStreamResponse(ctx context.Context, handler func(w *bufio.Writer)) *hum
 					fiberCtx.Set(k, hv)
 				}
 			}
-			fiberCtx.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeEventStream)
-			fiberCtx.Set(constant.HTTPTitleHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fiberCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fiberCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fiberCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
+			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fiberCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fiberCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fiberCtx.Status(fiber.StatusOK)
 			fiberCtx.SendStreamWriter(handler)
 		},
@@ -345,11 +345,11 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 	return &huma.StreamResponse{
 		Body: func(ctx huma.Context) {
 			fCtx := humafiber.Unwrap(ctx)
-			fCtx.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeEventStream)
-			fCtx.Set(constant.HTTPTitleHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
+			fCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fCtx.SendStreamWriter(func(w *bufio.Writer) {
 				for i := range constant.SSEHeartbeatCount {
 					data := &dto.SSEResponse{
@@ -386,11 +386,11 @@ func WrapErrorSSE(ctx context.Context, err *model.Error) (rsp *huma.StreamRespon
 	return &huma.StreamResponse{
 		Body: func(hCtx huma.Context) {
 			fCtx := humafiber.Unwrap(hCtx)
-			fCtx.Set(constant.HTTPTitleHeaderContentType, constant.HTTPContentTypeEventStream)
-			fCtx.Set(constant.HTTPTitleHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fCtx.Set(constant.HTTPLowerHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fCtx.Set(constant.HTTPLowerHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fCtx.Set(constant.HTTPTitleHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
+			fCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fCtx.SendStreamWriter(func(w *bufio.Writer) {
 				writeSSEErrorResponse(ctx, w, err)
 			})

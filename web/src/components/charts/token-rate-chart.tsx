@@ -14,7 +14,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceLine } from "recharts";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -69,6 +69,17 @@ export function TokenRateChart() {
     time,
     ...pointMap.get(time),
   }));
+
+  // Calculate average output token rate per model
+  const modelAverages = models.map((model) => {
+    const values = data
+      .find((d) => d.model === model)
+      ?.points.filter((p) => p.outputTokensPerSecond > 0)
+      .map((p) => p.outputTokensPerSecond) ?? [];
+    if (values.length === 0) return { model, average: 0 };
+    const sum = values.reduce((a, b) => a + b, 0);
+    return { model, average: sum / values.length };
+  });
 
   return (
     <Card>
@@ -144,6 +155,60 @@ export function TokenRateChart() {
                   strokeOpacity={getStrokeOpacity(m)}
                   dot={false}
                 />
+              ))}
+              {modelAverages.map(({ model, average }) => (
+                activeLegend === model && average > 0 && (
+                  <ReferenceLine
+                    key={`avg-${model}`}
+                    y={average}
+                    stroke={chartConfig[model]?.color ?? "#888"}
+                    strokeDasharray="8 4"
+                    strokeWidth={1.5}
+                    label={({ viewBox }: { viewBox: { x?: number; y?: number; width?: number } }) => {
+                      const color = chartConfig[model]?.color ?? "#888";
+                      const formatted =
+                        average >= 1000
+                          ? average.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                          : average.toFixed(2);
+                      const text = `avg ${formatted} tok/s`;
+                      const labelWidth = 120;
+                      const right = (viewBox.x ?? 0) + (viewBox.width ?? 0);
+                      return (
+                        <foreignObject
+                          x={right - labelWidth - 4}
+                          y={(viewBox.y ?? 0) - 22}
+                          width={labelWidth}
+                          height={20}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "flex-end",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                padding: "2px 8px",
+                                borderRadius: 999,
+                                background: `${color}1A`,
+                                color,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                lineHeight: "16px",
+                                whiteSpace: "nowrap",
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {text}
+                            </span>
+                          </div>
+                        </foreignObject>
+                      );
+                    }}
+                  />
+                )
               ))}
             </LineChart>
           </ChartContainer>

@@ -96,6 +96,9 @@ func NewSessionScore(score int, at time.Time) (SessionScore, error) {
 	if score < 1 || score > 5 {
 		return SessionScore{}, ierr.Newf(ierr.ErrValidation, "score %d out of range [1,5]", score)
 	}
+	if at.IsZero() {
+		return SessionScore{}, ierr.New(ierr.ErrValidation, "scoredAt must not be zero")
+	}
 	return SessionScore{
 		score: &score,
 		at:    &at,
