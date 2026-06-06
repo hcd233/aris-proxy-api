@@ -59,7 +59,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	var pageInfo *model.PageInfo
 
 	if q.IsAdmin {
-		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime)
+		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword)
 	} else {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
@@ -69,7 +69,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 		if len(ownerNames) == 0 {
 			return []*sessionport.SessionSummaryView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize, Total: 0}, nil
 		}
-		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, param, q.StartTime, q.EndTime)
+		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, param, q.StartTime, q.EndTime, q.Keyword)
 	}
 
 	if err != nil {

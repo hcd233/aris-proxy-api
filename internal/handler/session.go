@@ -37,7 +37,7 @@ type SessionHandler interface {
 	HandleGetShareMetadata(ctx context.Context, req *dto.GetShareMetadataReq) (*dto.HTTPResponse[*dto.GetShareMetadataRsp], error)
 	HandleListShareMessages(ctx context.Context, req *dto.ListShareMessagesReq) (*dto.HTTPResponse[*dto.ListShareMessagesRsp], error)
 	HandleListShareTools(ctx context.Context, req *dto.ListShareToolsReq) (*dto.HTTPResponse[*dto.ListShareToolsRsp], error)
-	HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.DeleteSessionRsp], error)
 	HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error)
 	HandleDeleteScoreSession(ctx context.Context, req *dto.DeleteScoreSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
@@ -117,6 +117,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 		SortField: req.SortField,
 		StartTime: req.StartTime,
 		EndTime:   req.EndTime,
+		Keyword:   req.Keyword,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List sessions by user failed", zap.Error(err))
@@ -328,34 +329,50 @@ func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteS
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-// HandleDeleteSession 删除 Session（JWT认证）
+// HandleDeleteSession 删除 Session（支持单个 id 或批量 ids）
 //
 //	@receiver h *sessionHandler
 //	@param ctx context.Context
 //	@param req *dto.DeleteSessionReq
-//	@return *dto.HTTPResponse[*dto.EmptyRsp]
+//	@return *dto.HTTPResponse[*dto.DeleteSessionRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2026-06-03 10:00:00
-func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
-	rsp := &dto.EmptyRsp{}
+//	@update 2026-06-06 10:00:00
+func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.DeleteSessionRsp], error) {
+	rsp := &dto.DeleteSessionRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	permission := util.CtxValuePermission(ctx)
 
-	err := h.deleteSession.Handle(ctx, port.DeleteSessionCommand{
-		SessionID:           req.SessionID,
+	var ids []uint
+	if req.SessionID != 0 {
+		ids = []uint{req.SessionID}
+	} else if req.Body != nil && len(req.Body.IDs) > 0 {
+		ids = req.Body.IDs
+	} else {
+		rsp.Error = ierr.ErrValidation.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	result, err := h.deleteSession.Handle(ctx, port.DeleteSessionCommand{
+		SessionIDs:          ids,
 		RequesterID:         userID,
 		RequesterPermission: permission,
 	})
 	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Delete session failed",
-			zap.Uint("sessionID", req.SessionID), zap.Error(err))
+		logger.WithCtx(ctx).Error("[SessionHandler] Delete session failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	logger.WithCtx(ctx).Info("[SessionHandler] Session deleted",
-		zap.Uint("sessionID", req.SessionID))
+	rsp.DeletedCount = result.DeletedCount
+	rsp.Failures = lo.Map(result.Failures, func(f port.DeleteSessionFailedItem, _ int) dto.DeleteFailed {
+		return dto.DeleteFailed{ID: f.ID, Error: f.Error}
+	})
+
+	logger.WithCtx(ctx).Info("[SessionHandler] Session(s) deleted",
+		zap.Int("total", len(ids)),
+		zap.Int("deleted", result.DeletedCount),
+		zap.Int("failed", len(result.Failures)))
 
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

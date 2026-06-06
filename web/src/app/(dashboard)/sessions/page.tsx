@@ -26,6 +26,7 @@ import {
   ArrowDown,
   Trash2,
   AlertTriangle,
+  Search,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -89,6 +90,11 @@ export default function SessionsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; summary: string } | null>(null);
   const [scoring, setScoring] = useState<number | null>(null);
   const [scoreConfirm, setScoreConfirm] = useState<{ id: number; value: number } | null>(null);
+  const [keyword, setKeyword] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
 
   const fetchSessions = useCallback(
     async (
@@ -98,6 +104,7 @@ export default function SessionsPage() {
       cs: string,
       ce: string,
       sortState: { field: string; dir: SortDir },
+      kw: string,
     ) => {
       setLoading(true);
       try {
@@ -109,6 +116,7 @@ export default function SessionsPage() {
           sortField: sortState.field,
           startTime,
           endTime,
+          keyword: kw || undefined,
         });
         setSessions(rsp.sessions ?? []);
         if (rsp.pageInfo) {
@@ -128,14 +136,14 @@ export default function SessionsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
   useEffect(() => {
-    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" });
+    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "");
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort);
+    fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword);
 
   const handleSort = (field: string) => {
     const newSort: { field: string; dir: SortDir } =
@@ -143,7 +151,14 @@ export default function SessionsPage() {
         ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
         : { field, dir: "desc" };
     setSort(newSort);
-    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, newSort);
+    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, newSort, keyword);
+  };
+
+  const handleSearch = () => {
+    const kw = searchInput.trim();
+    setKeyword(kw);
+    setSelected(new Set());
+    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, kw);
   };
 
   const renderSortIcon = (field: string) => {
@@ -163,13 +178,56 @@ export default function SessionsPage() {
     try {
       await api.deleteSession(deleteTarget.id);
       toast.success("Session deleted");
-      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort);
+      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete session");
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
       setDeleteTarget(null);
+    }
+  };
+
+  const toggleSelect = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === sessions.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(sessions.map((s) => s.id)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selected.size === 0) return;
+    setBatchDeleting(true);
+    try {
+      const ids = Array.from(selected);
+      const rsp = await api.batchDeleteSessions(ids);
+      const failed = rsp.failures?.length ?? 0;
+      if (failed > 0) {
+        toast.warning(`${rsp.deletedCount} deleted, ${failed} failed`);
+      } else {
+        toast.success(`${rsp.deletedCount} sessions deleted`);
+      }
+      setSelected(new Set());
+      fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to batch delete");
+    } finally {
+      setBatchDeleting(false);
+      setBatchDeleteConfirmOpen(false);
     }
   };
 
@@ -247,158 +305,93 @@ export default function SessionsPage() {
                       setCustomStart(cs);
                       setCustomEnd(ce);
                       if (key !== "custom") {
-                        fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort);
+                        fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword);
                       }
                     }}
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 md:w-64">
+                    <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search messages..."
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSearch();
+                      }}
+                      className="h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
+                    />
+                    {searchInput && (
+                      <button
+                        type="button"
+                        onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, ""); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        x
+                      </button>
+                    )}
+                  </div>
+                  {selected.size > 0 && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setBatchDeleteConfirmOpen(true)}
+                      className="gap-1.5"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Delete {selected.size}
+                    </Button>
+                  )}
                 </div>
               </div>
 
               {isMobile ? (
               <div className="space-y-3">
-                {sessions.map((s) => (
-                  <div
-                    key={s.id}
-                    className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:bg-secondary/50"
-                    onClick={() => {
-                      window.location.href = `/web/sessions/detail/?id=${s.id}`;
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {s.summary || `Session #${s.id}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {s.score != null ? (
-                          <div className="flex items-center gap-1">
-                            <Badge variant="secondary" className="text-xs tabular-nums">
-                              {s.score}
-                            </Badge>
-                            <button
-                              type="button"
-                              disabled={scoring === s.id}
-                              onClick={(e) => handleDeleteScore(e, s.id)}
-                              className="text-xs text-muted-foreground/30 hover:text-destructive disabled:opacity-30"
-                              aria-label="Remove score"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ) : scoreConfirm?.id === s.id ? (
-                          <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
-                            <span className="text-xs text-muted-foreground">{scoreConfirm.value}?</span>
-                            <button
-                              type="button"
-                              onClick={(e) => handleScoreSession(e, s.id, scoreConfirm.value)}
-                              disabled={scoring === s.id}
-                              className="rounded px-1 text-xs font-medium text-foreground hover:text-green-600 disabled:opacity-50"
-                            >
-                              Yes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setScoreConfirm(null); }}
-                              className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
-                            >
-                              No
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((v) => (
-                              <button
-                                key={v}
-                                type="button"
-                                disabled={scoring === s.id}
-                                onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
-                                className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/50 transition-colors hover:text-foreground disabled:opacity-30"
-                              >
-                                {v}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        <Badge variant="secondary" className="text-xs">
-                          {s.messageCount ?? 0} msgs
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={deleting === s.id}
-                          onClick={(e) => openDeleteConfirm(s, e)}
-                          className="size-8 text-muted-foreground hover:text-destructive"
-                          aria-label="Delete session"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>ID: {s.id}</span>
-                      <span>{s.toolCount ?? 0} tools</span>
-                      <span>{formatDateTime(s.createdAt)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none whitespace-nowrap"
-                      onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
-                    >
-                      <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
-                    </TableHead>
-                    <TableHead>Summary</TableHead>
-                    <TableHead className="w-[80px] text-center">Score</TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none whitespace-nowrap"
-                      onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
-                    >
-                      <span className="inline-flex items-center gap-1">Messages {renderSortIcon(SORTABLE_COLUMNS.messageCount)}</span>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none whitespace-nowrap"
-                      onClick={() => handleSort(SORTABLE_COLUMNS.toolCount)}
-                    >
-                      <span className="inline-flex items-center gap-1">Tools {renderSortIcon(SORTABLE_COLUMNS.toolCount)}</span>
-                    </TableHead>
-                    <TableHead className="w-16 sr-only">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sessions.map((s) => (
-                    <TableRow
+                {sessions.map((s) => {
+                  const isSelected = selected.has(s.id);
+                  return (
+                    <div
                       key={s.id}
-                      className="cursor-pointer"
+                      className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:bg-secondary/50"
                       onClick={() => {
                         window.location.href = `/web/sessions/detail/?id=${s.id}`;
                       }}
                     >
-                      <TableCell className="font-mono text-xs">
-                        {s.id}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDateTime(s.createdAt)}
-                      </TableCell>
-                      <TableCell className="max-w-[300px] truncate">
-                        {s.summary || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-center">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div
+                            role="checkbox"
+                            aria-checked={isSelected}
+                            tabIndex={0}
+                            onClick={(e) => toggleSelect(s.id, e)}
+                            onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggleSelect(s.id, e as unknown as React.MouseEvent); }}
+                            className={`mt-0.5 flex size-4 shrink-0 cursor-pointer items-center justify-center rounded border transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/30 hover:border-muted-foreground"
+                            }`}
+                          >
+                            {isSelected && <Check className="size-3" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {s.summary || `Session #${s.id}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
                           {s.score != null ? (
                             <div className="flex items-center gap-1">
-                              <span className="text-sm font-medium tabular-nums">{s.score}</span>
+                              <Badge variant="secondary" className="text-xs tabular-nums">
+                                {s.score}
+                              </Badge>
                               <button
                                 type="button"
                                 disabled={scoring === s.id}
                                 onClick={(e) => handleDeleteScore(e, s.id)}
-                                className="text-xs text-muted-foreground/20 hover:text-destructive disabled:opacity-30"
+                                className="text-xs text-muted-foreground/30 hover:text-destructive disabled:opacity-30"
                                 aria-label="Remove score"
                               >
                                 ×
@@ -431,19 +424,16 @@ export default function SessionsPage() {
                                   type="button"
                                   disabled={scoring === s.id}
                                   onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
-                                  className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-foreground disabled:opacity-30"
+                                  className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/50 transition-colors hover:text-foreground disabled:opacity-30"
                                 >
                                   {v}
                                 </button>
                               ))}
                             </div>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{s.messageCount ?? 0}</TableCell>
-                      <TableCell>{s.toolCount ?? 0}</TableCell>
-                      <TableCell className="w-16">
-                        <div className="flex justify-center">
+                          <Badge variant="secondary" className="text-xs">
+                            {s.messageCount ?? 0} msgs
+                          </Badge>
                           <Button
                             variant="ghost"
                             size="icon-sm"
@@ -455,9 +445,166 @@ export default function SessionsPage() {
                             <Trash2 className="size-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      </div>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>ID: {s.id}</span>
+                        <span>{s.toolCount ?? 0} tools</span>
+                        <span>{formatDateTime(s.createdAt)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <div
+                        role="checkbox"
+                        aria-checked={selected.size === sessions.length}
+                        tabIndex={0}
+                        onClick={toggleSelectAll}
+                        onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggleSelectAll(); }}
+                        className={`flex size-4 cursor-pointer items-center justify-center rounded border transition-colors ${
+                          selected.size === sessions.length
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/30 hover:border-muted-foreground"
+                        }`}
+                      >
+                        {selected.size === sessions.length && <Check className="size-3" />}
+                      </div>
+                    </TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
+                    >
+                      <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
+                    </TableHead>
+                    <TableHead>Summary</TableHead>
+                    <TableHead className="w-[80px] text-center">Score</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
+                    >
+                      <span className="inline-flex items-center gap-1">Messages {renderSortIcon(SORTABLE_COLUMNS.messageCount)}</span>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none whitespace-nowrap"
+                      onClick={() => handleSort(SORTABLE_COLUMNS.toolCount)}
+                    >
+                      <span className="inline-flex items-center gap-1">Tools {renderSortIcon(SORTABLE_COLUMNS.toolCount)}</span>
+                    </TableHead>
+                    <TableHead className="w-16 sr-only">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sessions.map((s) => {
+                    const isSelected = selected.has(s.id);
+                    return (
+                      <TableRow
+                        key={s.id}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          window.location.href = `/web/sessions/detail/?id=${s.id}`;
+                        }}
+                      >
+                        <TableCell className="w-10">
+                          <div
+                            role="checkbox"
+                            aria-checked={isSelected}
+                            tabIndex={0}
+                            onClick={(e) => toggleSelect(s.id, e)}
+                            onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggleSelect(s.id, e as unknown as React.MouseEvent); }}
+                            className={`flex size-4 cursor-pointer items-center justify-center rounded border transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/30 hover:border-muted-foreground"
+                            }`}
+                          >
+                            {isSelected && <Check className="size-3" />}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {s.id}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDateTime(s.createdAt)}
+                        </TableCell>
+                        <TableCell className="max-w-[300px] truncate">
+                          {s.summary || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center">
+                            {s.score != null ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm font-medium tabular-nums">{s.score}</span>
+                                <button
+                                  type="button"
+                                  disabled={scoring === s.id}
+                                  onClick={(e) => handleDeleteScore(e, s.id)}
+                                  className="text-xs text-muted-foreground/20 hover:text-destructive disabled:opacity-30"
+                                  aria-label="Remove score"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ) : scoreConfirm?.id === s.id ? (
+                              <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
+                                <span className="text-xs text-muted-foreground">{scoreConfirm.value}?</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleScoreSession(e, s.id, scoreConfirm.value)}
+                                  disabled={scoring === s.id}
+                                  className="rounded px-1 text-xs font-medium text-foreground hover:text-green-600 disabled:opacity-50"
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setScoreConfirm(null); }}
+                                  className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
+                                >
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((v) => (
+                                  <button
+                                    key={v}
+                                    type="button"
+                                    disabled={scoring === s.id}
+                                    onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
+                                    className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-foreground disabled:opacity-30"
+                                  >
+                                    {v}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{s.messageCount ?? 0}</TableCell>
+                        <TableCell>{s.toolCount ?? 0}</TableCell>
+                        <TableCell className="w-16">
+                          <div className="flex justify-center">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={deleting === s.id}
+                              onClick={(e) => openDeleteConfirm(s, e)}
+                              className="size-8 text-muted-foreground hover:text-destructive"
+                              aria-label="Delete session"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -474,7 +621,7 @@ export default function SessionsPage() {
                       {[20, 50, 100, 200].map((size) => (
                         <DropdownMenuItem
                           key={size}
-                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort)}
+                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort, keyword)}
                         >
                           {size === pageInfo.pageSize && (
                             <Check className="size-4" />
@@ -556,6 +703,26 @@ export default function SessionsPage() {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
                 {deleting !== null ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={batchDeleteConfirmOpen} onOpenChange={setBatchDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="size-5 text-destructive" />
+                Batch delete sessions?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>{selected.size}</strong> session{selected.size !== 1 ? "s" : ""} and all their messages. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleBatchDelete} disabled={batchDeleting}>
+                {batchDeleting ? "Deleting..." : `Delete ${selected.size}`}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
