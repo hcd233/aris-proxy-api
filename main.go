@@ -1,7 +1,6 @@
 // Package main Main entry point for the Go Backend Tmpl application.
 //
 //	@update 2024-10-30 08:50:53
-//	@build 2026-06-06: retrigger docker build
 package main
 
 import (
