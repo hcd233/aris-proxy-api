@@ -114,7 +114,29 @@ var (
 
 	SessionSummarySelect = "id, created_at, updated_at, summary, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
 
-	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM messages WHERE jsonb_exists(sessions.message_ids::jsonb, messages.id::text) AND messages.message::text ILIKE ?)"
+	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段。
+	//
+	// 设计要点（refactor/session-list-keyword-perf-2026-06-07）：
+	//   旧实现写成 "EXISTS (SELECT 1 FROM messages WHERE jsonb_exists(sessions.message_ids::jsonb,
+	//   messages.id::text) AND messages.message::text ILIKE ?)"，messages 上没有任何能命中
+	//   ILIKE 的索引，且 jsonb_exists 把 sessions 与 messages 强相关，planner 只能为每条
+	//   候选 session 在 messages 全表上重跑一次 ILIKE 顺序扫描；外层再叠 COUNT(*)，复杂度
+	//   接近 O(候选 sessions × messages)。
+	//
+	//   新实现把方向反过来：先把这条 session 自己的 message_ids 数组（通常 5～50 条）
+	//   通过 jsonb_array_elements_text 在内存里展开，再按 PK 回查 messages（messages.id 走
+	//   主键索引，O(log N)），最后只对这 K 行做 ILIKE。
+	//
+	//   复杂度从 "候选 sessions × M（messages 总量）"
+	//   降到 "候选 sessions × K（每 session 的 messages 数）"，K << M。
+	//   COUNT(*) 跑同一个 WHERE，同步受益。
+	//
+	// 占位符约束：
+	//   - 必须是 ILIKE ?（gorm 占位符），且整段 SQL 中只能有 1 个 '?'，
+	//     否则会与 gorm 占位符撞车（参考 fix #59 的 jsonb_exists 由来）。
+	//   - 不要写 messages.id = ANY(sessions.message_ids)：message_ids 在 PG 里是 jsonb 文本，
+	//     不是原生数组，会触发 SQLSTATE 42809（参考 fix #58）。
+	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.message_ids::jsonb) AS arr(mid) JOIN messages ON messages.id = arr.mid::bigint WHERE messages.message::text ILIKE ?)"
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
