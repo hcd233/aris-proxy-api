@@ -112,7 +112,14 @@ var (
 	// 远少于旧实现 FindInBatches(500) 的 24 次顺序往返。
 	SessionListINChunkSize = 5000
 
-	SessionSummarySelect = "id, created_at, updated_at, summary, score, message_count, tool_count"
+	// SessionSummarySelect session 列表投影。
+	//
+	// 设计要点（perf/session-list-trigram-and-windowcount-2026-06-08）：
+	//   把 COUNT(*) OVER () AS total_count 折进同一条 SELECT，省掉一次独立 COUNT(*)
+	//   roundtrip 与一次 WHERE 评估。对带 keyword 的请求尤其受益——EXISTS 子查询
+	//   原来要跑两遍（COUNT 一次、SELECT 一次），现在一次搞定。
+	//   sessionSummaryRow.TotalCount 接收每行（窗口函数对所有行返回相同值）。
+	SessionSummarySelect = "id, created_at, updated_at, summary, score, message_count, tool_count, COUNT(*) OVER () AS total_count"
 
 	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段。
 	//
@@ -140,29 +147,38 @@ var (
 
 	// SessionPerfPostMigrateSQLs database migrate 阶段在 AutoMigrate 完成后跑的幂等 DDL/DML。
 	//
-	// 设计要点（refactor/session-list-baseline-perf-2026-06-07）：
+	// 设计要点：
 	//   1) AutoMigrate 只能把 GORM struct tag 里的字段/索引落到 schema，没法表达
 	//      Session 专有的"复合 BTREE 索引"（CreatedAt 在 BaseModel 里，没法在
 	//      Session 上加 index tag 而不污染所有嵌入了 BaseModel 的表）。这里直接
-	//      用标准 BTREE 复合索引 SQL 兜底。
+	//      用标准 BTREE 复合索引 SQL 兜底（refactor/session-list-baseline-perf-2026-06-07）。
 	//
 	//   2) message_count / tool_count 是 message_ids / tool_ids 长度的物化冗余列，
 	//      新数据由 sessionRepository.Save 在写入路径同步维护，存量数据用一条
 	//      幂等 UPDATE 回填。WHERE 里限定 (message_count = 0 AND tool_count = 0
 	//      AND (jsonb_array_length(...) > 0 OR jsonb_array_length(...) > 0))
-	//      确保第一次 deploy 后续 migrate 没有可更新行，几乎零成本。
+	//      确保第二次 deploy 起没有可更新行（refactor/session-list-baseline-perf-2026-06-07）。
 	//
-	// 雷区警告（避免上次 75658e5 的回滚事故）：
-	//   - 禁止使用 pg_trgm / 任何需要 superuser 的扩展。
-	//   - 禁止使用表达式索引（如 USING gin (col::text gin_trgm_ops)），
-	//     除非把表达式用括号严格包住，否则会 SQLSTATE 42601 卡死整个 migrate Job。
-	//   - 这里只用最简单的「列名 BTREE 复合索引 + 标准 UPDATE」，
-	//     标准 SQL 不会因 PG 版本/权限差异翻车。
+	//   3) keyword 路径走 messages.message::text ILIKE '%kw%'，无 trigram 索引时
+	//      ILIKE 是顺序扫描；pg_trgm + GIN ((message::text) gin_trgm_ops) 让 ILIKE
+	//      退化成 trigram bitmap 扫描，2 字符及以上子串都能命中索引
+	//      （perf/session-list-trigram-and-windowcount-2026-06-08）。
+	//
+	// 雷区警告（事故记录：commit 75658e5 -> 11e4602）：
+	//   - 75658e5 写的是 USING gin (message::text gin_trgm_ops)，缺少表达式外层括号，
+	//     PG parser 在 '::' 抛 SQLSTATE 42601，migrate Job 直接红灯卡死整个 deploy。
+	//   - 这次纠正写法是 USING gin ((message::text) gin_trgm_ops)，
+	//     **必须双层括号**：外层 (...) 是 CREATE INDEX 的索引列列表，
+	//     内层 (...) 是表达式本身，缺一不可。单测 test/unit/session_baseline_perf
+	//     钉死这个形态防止再次踩雷。
 	//
 	// 全部 SQL 必须可重入：DDL 用 IF NOT EXISTS，DML 用 WHERE 限定到未回填行。
+	// 顺序很关键：CREATE EXTENSION 必须先于任何使用该扩展的 CREATE INDEX。
 	SessionPerfPostMigrateSQLs = []string{
+		"CREATE EXTENSION IF NOT EXISTS pg_trgm",
 		"CREATE INDEX IF NOT EXISTS idx_sessions_api_key_name_created_at ON sessions (api_key_name, created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_sessions_deleted_at_created_at ON sessions (deleted_at, created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_messages_message_trgm ON messages USING gin ((message::text) gin_trgm_ops)",
 		"UPDATE sessions SET message_count = COALESCE(jsonb_array_length(message_ids::jsonb), 0), tool_count = COALESCE(jsonb_array_length(tool_ids::jsonb), 0) WHERE message_count = 0 AND tool_count = 0 AND (COALESCE(jsonb_array_length(message_ids::jsonb), 0) > 0 OR COALESCE(jsonb_array_length(tool_ids::jsonb), 0) > 0)",
 	}
 
