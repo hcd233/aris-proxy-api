@@ -271,6 +271,12 @@ func NewSessionReadRepository(db *gorm.DB) session.SessionReadRepository {
 	}
 }
 
+// sessionSummaryRow session 列表查询的扁平行模型。
+//
+// 设计要点（perf/session-list-trigram-and-windowcount-2026-06-08）：
+//   - TotalCount 接 SQL 里的 COUNT(*) OVER ()，把分页 SELECT 与 COUNT 折成一条
+//     语句执行，省掉一次独立 COUNT(*) 的 roundtrip 与 WHERE 评估。
+//     窗口函数对所有行返回相同值，所以只需读 rows[0].TotalCount。
 type sessionSummaryRow struct {
 	ID           uint      `gorm:"column:id"`
 	CreatedAt    time.Time `gorm:"column:created_at"`
@@ -279,6 +285,7 @@ type sessionSummaryRow struct {
 	Score        *int      `gorm:"column:score"`
 	MessageCount int       `gorm:"column:message_count"`
 	ToolCount    int       `gorm:"column:tool_count"`
+	TotalCount   int64     `gorm:"column:total_count"`
 }
 
 func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
@@ -308,16 +315,20 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
 	}
 
-	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
-	if err := sql.Count(&pageInfo.Total).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count sessions")
-	}
-
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 	var rows []sessionSummaryRow
 	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
 	}
+
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if len(rows) > 0 {
+		// COUNT(*) OVER () 对所有行返回相同 total，读首行即可。
+		pageInfo.Total = rows[0].TotalCount
+	}
+	// 空结果时 total 保持 0（窗口函数无行可读）。
+	// 这是合理 fallback：page > 1 且数据缩水的边界情况罕见，前端遇到 total=0 退化为
+	// "no results" 视图，比为了准确性多打一次 COUNT 划得来。
 
 	out := make([]*session.SessionSummaryProjection, 0, len(rows))
 	for _, row := range rows {
@@ -362,15 +373,15 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
 	}
 
-	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
-	if err := sql.Count(&pageInfo.Total).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count sessions")
-	}
-
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 	var rows []sessionSummaryRow
 	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
+	}
+
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if len(rows) > 0 {
+		pageInfo.Total = rows[0].TotalCount
 	}
 
 	out := make([]*session.SessionSummaryProjection, 0, len(rows))
