@@ -18,6 +18,7 @@ var migrateDatabaseCmd = &cobra.Command{
 	Long:  `Execute database migration operation, update the database structure to the latest mode.`,
 	Run: func(cmd *cobra.Command, _ []string) {
 		lo.Must0(database.AutoMigrate(cmd.Context()))
+		lo.Must0(database.EnsureSearchIndexes(cmd.Context()))
 	},
 }
 
