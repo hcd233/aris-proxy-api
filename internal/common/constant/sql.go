@@ -114,30 +114,7 @@ var (
 
 	SessionSummarySelect = "id, created_at, updated_at, summary, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
 
-	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM messages WHERE messages.message::text ILIKE ? AND jsonb_exists(sessions.message_ids::jsonb, messages.id::text))"
-
-	// SessionKeywordIndexSQLs session 列表 keyword 检索依赖的 PostgreSQL 索引 DDL。
-	//
-	// 背景（feature/session-keyword-trgm-perf-2026-06-07）：
-	//   - session_keyword_filter SQL 形如 "messages.message::text ILIKE '%kw%'"，
-	//     在没有 trigram 索引时是顺序扫描全表（按 2026-06-07 线上 messages 体量
-	//     一次 keyword 列表查询可耗秒级）。
-	//   - pg_trgm + GIN trgm_ops 把 ILIKE 退化为 trigram bitmap 扫描，
-	//     对 2 字符及以上的子串检索都能命中索引。
-	//
-	// 三条语句依次为：
-	//  1. 启用 pg_trgm 扩展（幂等，需要 superuser 或 db owner 权限）；
-	//  2. 在 messages.message::text 上建 GIN trigram 索引（用于 ILIKE）；
-	//  3. 在 sessions.message_ids::jsonb 上建 GIN jsonb_path_ops 索引（用于
-	//     jsonb_exists 的反查，避免每条 session 反复做小数组顺序扫描）。
-	//
-	// 全部使用 IF NOT EXISTS，由 internal/infrastructure/database.EnsureSearchIndexes
-	// 在 database migrate 阶段幂等执行。
-	SessionKeywordIndexSQLs = []string{
-		"CREATE EXTENSION IF NOT EXISTS pg_trgm",
-		"CREATE INDEX IF NOT EXISTS idx_messages_message_trgm ON messages USING gin (message::text gin_trgm_ops)",
-		"CREATE INDEX IF NOT EXISTS idx_sessions_message_ids_gin ON sessions USING gin (message_ids::jsonb jsonb_path_ops)",
-	}
+	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM messages WHERE jsonb_exists(sessions.message_ids::jsonb, messages.id::text) AND messages.message::text ILIKE ?)"
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
