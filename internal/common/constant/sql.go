@@ -112,7 +112,7 @@ var (
 	// 远少于旧实现 FindInBatches(500) 的 24 次顺序往返。
 	SessionListINChunkSize = 5000
 
-	SessionSummarySelect = "id, created_at, updated_at, summary, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count"
+	SessionSummarySelect = "id, created_at, updated_at, summary, score, message_count, tool_count"
 
 	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段。
 	//
@@ -137,6 +137,34 @@ var (
 	//   - 不要写 messages.id = ANY(sessions.message_ids)：message_ids 在 PG 里是 jsonb 文本，
 	//     不是原生数组，会触发 SQLSTATE 42809（参考 fix #58）。
 	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.message_ids::jsonb) AS arr(mid) JOIN messages ON messages.id = arr.mid::bigint WHERE messages.message::text ILIKE ?)"
+
+	// SessionPerfPostMigrateSQLs database migrate 阶段在 AutoMigrate 完成后跑的幂等 DDL/DML。
+	//
+	// 设计要点（refactor/session-list-baseline-perf-2026-06-07）：
+	//   1) AutoMigrate 只能把 GORM struct tag 里的字段/索引落到 schema，没法表达
+	//      Session 专有的"复合 BTREE 索引"（CreatedAt 在 BaseModel 里，没法在
+	//      Session 上加 index tag 而不污染所有嵌入了 BaseModel 的表）。这里直接
+	//      用标准 BTREE 复合索引 SQL 兜底。
+	//
+	//   2) message_count / tool_count 是 message_ids / tool_ids 长度的物化冗余列，
+	//      新数据由 sessionRepository.Save 在写入路径同步维护，存量数据用一条
+	//      幂等 UPDATE 回填。WHERE 里限定 (message_count = 0 AND tool_count = 0
+	//      AND (jsonb_array_length(...) > 0 OR jsonb_array_length(...) > 0))
+	//      确保第一次 deploy 后续 migrate 没有可更新行，几乎零成本。
+	//
+	// 雷区警告（避免上次 75658e5 的回滚事故）：
+	//   - 禁止使用 pg_trgm / 任何需要 superuser 的扩展。
+	//   - 禁止使用表达式索引（如 USING gin (col::text gin_trgm_ops)），
+	//     除非把表达式用括号严格包住，否则会 SQLSTATE 42601 卡死整个 migrate Job。
+	//   - 这里只用最简单的「列名 BTREE 复合索引 + 标准 UPDATE」，
+	//     标准 SQL 不会因 PG 版本/权限差异翻车。
+	//
+	// 全部 SQL 必须可重入：DDL 用 IF NOT EXISTS，DML 用 WHERE 限定到未回填行。
+	SessionPerfPostMigrateSQLs = []string{
+		"CREATE INDEX IF NOT EXISTS idx_sessions_api_key_name_created_at ON sessions (api_key_name, created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_sessions_deleted_at_created_at ON sessions (deleted_at, created_at)",
+		"UPDATE sessions SET message_count = COALESCE(jsonb_array_length(message_ids::jsonb), 0), tool_count = COALESCE(jsonb_array_length(tool_ids::jsonb), 0) WHERE message_count = 0 AND tool_count = 0 AND (COALESCE(jsonb_array_length(message_ids::jsonb), 0) > 0 OR COALESCE(jsonb_array_length(tool_ids::jsonb), 0) > 0)",
+	}
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
