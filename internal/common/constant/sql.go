@@ -178,7 +178,7 @@ var (
 		"CREATE INDEX IF NOT EXISTS idx_sessions_deleted_at_created_at ON sessions (deleted_at, created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_messages_message_trgm ON messages USING gin ((message::text) gin_trgm_ops)",
 		"UPDATE sessions SET message_count = COALESCE(jsonb_array_length(message_ids::jsonb), 0), tool_count = COALESCE(jsonb_array_length(tool_ids::jsonb), 0) WHERE message_count = 0 AND tool_count = 0 AND (COALESCE(jsonb_array_length(message_ids::jsonb), 0) > 0 OR COALESCE(jsonb_array_length(tool_ids::jsonb), 0) > 0)",
-		"UPDATE sessions SET questions = (SELECT COALESCE(jsonb_agg(m.id ORDER BY m.id), '[]'::jsonb) FROM messages m WHERE m.id IN (SELECT jsonb_array_elements_text(sessions.message_ids::jsonb)::bigint) AND m.message->>'role' = 'user' AND (m.message->>'tool_call_id' IS NULL OR m.message->>'tool_call_id' = '')) WHERE questions IS NULL",
+		"UPDATE sessions SET questions = (SELECT COALESCE(jsonb_agg(m.id ORDER BY m.id), '[]'::jsonb) FROM messages m WHERE m.id IN (SELECT jsonb_array_elements_text(sessions.message_ids::jsonb)::bigint) AND m.message::jsonb->>'role' = 'user' AND (m.message::jsonb->>'tool_call_id' IS NULL OR m.message::jsonb->>'tool_call_id' = '')) WHERE questions IS NULL",
 	}
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
