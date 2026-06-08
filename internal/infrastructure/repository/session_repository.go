@@ -252,7 +252,7 @@ type sessionSummaryRow struct {
 	Score        *int      `gorm:"column:score"`
 	MessageCount int       `gorm:"column:message_count"`
 	ToolCount    int       `gorm:"column:tool_count"`
-	Questions    []uint    `gorm:"column:questions"`
+	Questions    []uint    `gorm:"column:questions;serializer:json"`
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
