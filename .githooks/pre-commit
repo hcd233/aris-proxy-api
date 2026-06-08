@@ -102,28 +102,5 @@ fi
 printf "$PASS lint\n"
 
 # --------------------------------------------------------------------------
-# 6. codegraph sync — sync file changes to the code knowledge graph index
-# --------------------------------------------------------------------------
-printf "$INFO Running codegraph sync ...\n"
-
-if command -v codegraph >/dev/null 2>&1; then
-    SYNC_OUTPUT=$(codegraph sync 2>&1)
-    SYNC_EXIT=$?
-    if [ $SYNC_EXIT -ne 0 ]; then
-        # "database is locked" is transient (MCP server holds a reader lock)
-        if echo "$SYNC_OUTPUT" | grep -q "database is locked"; then
-            printf "$INFO codegraph database locked by MCP server — skipping (index stays fresh after next MCP query)\n"
-        else
-            printf "$FAIL codegraph index failed:\n"
-            echo "$SYNC_OUTPUT" | sed 's/^/       /'
-            fail "codegraph index failed. Ensure .codegraph/ exists and is healthy."
-        fi
-    fi
-else
-    printf "$INFO codegraph CLI not found — skipping\n"
-fi
-printf "$PASS codegraph index\n"
-
-# --------------------------------------------------------------------------
 echo ""
 printf "$PASS All checks passed. Proceeding with commit.\n"
