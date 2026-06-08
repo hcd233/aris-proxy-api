@@ -786,7 +786,7 @@ func parseCommaSeparatedIDs(s string) ([]uint, error) {
 		if p == "" {
 			continue
 		}
-		id, err := strconv.ParseUint(p, 10, 64)
+		id, err := strconv.ParseUint(p, constant.DecimalBase, constant.ParseFloat64BitSize)
 		if err != nil {
 			return nil, ierr.Wrap(ierr.ErrValidation, err, "invalid id: "+p)
 		}

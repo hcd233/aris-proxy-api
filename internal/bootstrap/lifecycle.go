@@ -60,8 +60,12 @@ func registerLifecycleHooks(params lifecycleParams) {
 
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			listenAddr := fmt.Sprintf("%s:%s", params.ListenHost, params.ListenPort)
-			go params.App.Listen(listenAddr)
+			listenAddr := fmt.Sprintf(constant.HostPortTemplate, params.ListenHost, params.ListenPort)
+			go func() {
+				if listenErr := params.App.Listen(listenAddr); listenErr != nil {
+					logger.Logger().Error("[Server] HTTP server listen error", zap.Error(listenErr))
+				}
+			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

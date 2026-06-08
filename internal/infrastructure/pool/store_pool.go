@@ -26,75 +26,79 @@ import (
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error {
+	return pm.storePool.Go(func() {
+		pm.runMessageStoreTask(task)
+	})
+}
+
+func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 	log := logger.WithCtx(task.Ctx)
 	db := pm.db.WithContext(task.Ctx)
 
-	return pm.storePool.Go(func() {
-		toolSchemas := vo.ToolSchemaMap{}
-		for _, t := range task.Tools {
-			if t.Parameters != nil {
-				toolSchemas[t.Name] = t.Parameters
-			}
+	toolSchemas := vo.ToolSchemaMap{}
+	for _, t := range task.Tools {
+		if t.Parameters != nil {
+			toolSchemas[t.Name] = t.Parameters
 		}
+	}
 
-		messages := lo.Map(task.Messages, func(m *vo.UnifiedMessage, _ int) *dbmodel.Message {
-			model := ""
-			if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
-				model = task.Model
-			}
-			return &dbmodel.Message{
-				Model:    model,
-				Message:  m,
-				CheckSum: vo.ComputeMessageChecksum(m, toolSchemas),
-			}
-		})
-
-		tools := lo.Map(task.Tools, func(t *vo.UnifiedTool, _ int) *dbmodel.Tool {
-			return &dbmodel.Tool{
-				Tool:     t,
-				CheckSum: vo.ComputeToolChecksum(t),
-			}
-		})
-
-		err := db.Transaction(func(tx *gorm.DB) error {
-			messageIDs, err := pm.deduplicateAndStoreMessages(tx, messages)
-			if err != nil {
-				log.Error("[StorePool] Failed to store messages", zap.Error(err))
-				return err
-			}
-
-			var questions []uint
-			for i, m := range messages {
-				if m.Message.Role == enum.RoleUser && m.Message.ToolCallID == "" {
-					questions = append(questions, messageIDs[i])
-				}
-			}
-
-			toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
-			if err != nil {
-				log.Error("[StorePool] Failed to store tools", zap.Error(err))
-				return err
-			}
-
-			session := &dbmodel.Session{
-				APIKeyName: task.APIKeyName,
-				MessageIDs: messageIDs,
-				Questions:  questions,
-				ToolIDs:    toolIDs,
-				Metadata:   task.Metadata,
-			}
-			if err := dao.GetSessionDAO().Create(tx, session); err != nil {
-				log.Error("[StorePool] Failed to create session", zap.Error(err))
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			log.Error("[StorePool] Transaction failed", zap.Error(err))
-			return
+	messages := lo.Map(task.Messages, func(m *vo.UnifiedMessage, _ int) *dbmodel.Message {
+		model := ""
+		if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
+			model = task.Model
 		}
-		log.Info("[StorePool] Messages stored successfully")
+		return &dbmodel.Message{
+			Model:    model,
+			Message:  m,
+			CheckSum: vo.ComputeMessageChecksum(m, toolSchemas),
+		}
 	})
+
+	tools := lo.Map(task.Tools, func(t *vo.UnifiedTool, _ int) *dbmodel.Tool {
+		return &dbmodel.Tool{
+			Tool:     t,
+			CheckSum: vo.ComputeToolChecksum(t),
+		}
+	})
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		messageIDs, err := pm.deduplicateAndStoreMessages(tx, messages)
+		if err != nil {
+			log.Error("[StorePool] Failed to store messages", zap.Error(err))
+			return err
+		}
+
+		var questions []uint
+		for i, m := range messages {
+			if m.Message.Role == enum.RoleUser && m.Message.ToolCallID == "" {
+				questions = append(questions, messageIDs[i])
+			}
+		}
+
+		toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
+		if err != nil {
+			log.Error("[StorePool] Failed to store tools", zap.Error(err))
+			return err
+		}
+
+		session := &dbmodel.Session{
+			APIKeyName: task.APIKeyName,
+			MessageIDs: messageIDs,
+			Questions:  questions,
+			ToolIDs:    toolIDs,
+			Metadata:   task.Metadata,
+		}
+		if err := dao.GetSessionDAO().Create(tx, session); err != nil {
+			log.Error("[StorePool] Failed to create session", zap.Error(err))
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Error("[StorePool] Transaction failed", zap.Error(err))
+		return
+	}
+	log.Info("[StorePool] Messages stored successfully")
 }
 
 // SubmitModelCallAuditTask 提交模型调用审计任务到协程池

@@ -24,6 +24,7 @@ import (
 	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -38,7 +39,7 @@ import (
 	"go.uber.org/fx"
 )
 
-var ApplicationModule = fx.Module("application",
+var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 	fx.Provide(
 		apikeycommand.NewUserExistenceChecker,
 		NewIssueAPIKeyHandler,

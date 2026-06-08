@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
@@ -44,11 +45,11 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 		sess, err := h.repo.FindByID(ctx, id)
 		if err != nil {
 			log.Error("[SessionCommand] Delete: FindByID failed", zap.Error(err), zap.Uint("sessionID", id))
-			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "failed to find session"})
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrFindFailed})
 			continue
 		}
 		if sess == nil {
-			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "session not found"})
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrNotFound})
 			continue
 		}
 
@@ -56,14 +57,14 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 			owner := sess.Owner()
 			allowed := slices.Contains(ownerNames, owner.String())
 			if !allowed {
-				result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "no permission"})
+				result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrNoPermission})
 				continue
 			}
 		}
 
 		if err := h.repo.Delete(ctx, id); err != nil {
 			log.Error("[SessionCommand] Delete: delete failed", zap.Error(err), zap.Uint("sessionID", id))
-			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: "failed to delete"})
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrDeleteFailed})
 			continue
 		}
 

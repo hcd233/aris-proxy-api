@@ -30,8 +30,13 @@ const (
 	DataURLPrefix          = "data:"
 	DataURLBase64Separator = ";base64,"
 	// ── dig 容器命名 ──
-	DigNameAccessSigner  = "accessSigner"
-	DigNameRefreshSigner = "refreshSigner"
+	DigNameAccessSigner      = "accessSigner"
+	DigNameRefreshSigner     = "refreshSigner"
+	DigNameApplicationModule = "application"
+	DigNameCronModule        = "cron"
+	DigNameHandlerModule     = "handler"
+	DigNameInfraModule       = "infrastructure"
+	DigNameRepositoryModule  = "repository"
 
 	// ── OpenAPI 路径 ──
 	OpenAPISchemasPrefix = "#/components/schemas/"
@@ -158,4 +163,10 @@ const (
 	FieldAccessToken  = "accessToken"
 	FieldRefreshToken = "refreshToken"
 	WhereIDEquals     = "id = ?"
+
+	// ── Session delete error messages ──
+	SessionDeleteErrFindFailed   = "failed to find session"
+	SessionDeleteErrNotFound     = "session not found"
+	SessionDeleteErrNoPermission = "no permission"
+	SessionDeleteErrDeleteFailed = "failed to delete"
 )
