@@ -187,10 +187,6 @@ var (
 	//	@update 2026-05-01 10:00:00
 	CronSessionDeduplicateEnabled bool
 
-	// CronSessionSummarizeEnabled bool 是否启用 Session 总结定时任务
-	//	@update 2026-05-01 10:00:00
-	CronSessionSummarizeEnabled bool
-
 	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
 	//	@update 2026-05-01 10:00:00
 	CronSoftDeletePurgeEnabled bool
@@ -315,7 +311,6 @@ func initEnvironment() {
 	CLSLevel = config.GetString("cls.level")
 
 	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
-	CronSessionSummarizeEnabled = config.GetBool("cron.session.summarize.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
 

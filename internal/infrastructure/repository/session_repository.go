@@ -66,7 +66,6 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 			ToolCount:    len(s.ToolIDs()),
 			Metadata:     s.Metadata(),
 		}
-		applySummary(record, s.Summary())
 		applyScore(record, s.Score())
 		if err := r.dao.Create(db, record); err != nil {
 			return ierr.Wrap(ierr.ErrDBCreate, err, "create session")
@@ -79,10 +78,6 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 		constant.FieldMessageIDs: s.MessageIDs(),
 		constant.FieldToolIDs:    s.ToolIDs(),
 		constant.FieldMetadata:   s.Metadata(),
-	}
-	if summary := s.Summary(); !summary.IsEmpty() || summary.Failed() {
-		updates[constant.FieldSummary] = summary.Text()
-		updates[constant.FieldSummarizeError] = summary.Error()
 	}
 	if score := s.Score(); !score.IsEmpty() {
 		updates[constant.FieldScore] = *score.Score()
@@ -104,12 +99,6 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session counts")
 	}
 	return nil
-}
-
-// applySummary 将摘要值对象写入 GORM 模型
-func applySummary(record *dbmodel.Session, summary vo.SessionSummary) {
-	record.Summary = summary.Text()
-	record.SummarizeError = summary.Error()
 }
 
 // applyScore 将评分值对象写入 GORM 模型
@@ -187,27 +176,6 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-// UpdateSummary 更新会话摘要
-//
-//	@receiver r *sessionRepository
-//	@param ctx context.Context
-//	@param id uint
-//	@param summary vo.SessionSummary
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-26 14:00:00
-func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary vo.SessionSummary) error {
-	db := r.db.WithContext(ctx)
-	updates := map[string]any{
-		constant.FieldSummary:        summary.Text(),
-		constant.FieldSummarizeError: summary.Error(),
-	}
-	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
-		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session summary")
-	}
-	return nil
-}
-
 // UpdateScore 更新会话评分
 //
 //	@receiver r *sessionRepository
@@ -281,10 +249,10 @@ type sessionSummaryRow struct {
 	ID           uint      `gorm:"column:id"`
 	CreatedAt    time.Time `gorm:"column:created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at"`
-	Summary      string    `gorm:"column:summary"`
 	Score        *int      `gorm:"column:score"`
 	MessageCount int       `gorm:"column:message_count"`
 	ToolCount    int       `gorm:"column:tool_count"`
+	Questions    []uint    `gorm:"column:questions"`
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
@@ -336,7 +304,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
-			Summary:      row.Summary,
+			Questions:    row.Questions,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
@@ -390,7 +358,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
-			Summary:      row.Summary,
+			Questions:    row.Questions,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
@@ -462,56 +430,6 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 	return out, nil
 }
 
-// FindMessagesByIDsChunked 把 IDs 排序去重后按 constant.SessionListINChunkSize 切块，
-// 每块用一条 SELECT ... WHERE id IN (?) 拉取，绕过 GORM FindInBatches 的
-// keyset (id > last_id) 反复重排带来的开销。
-//
-// 该方法专门用于 session 列表的"空 summary fallback"路径：当 200 个 session
-// 全部 summary 为空时需要加载它们的 message_ids 用于预览，把 24 次顺序
-// 600-1000ms 往返压成 3 次单查询。其它读路径仍走 FindMessagesByIDs
-// （单 session 详情，IDs 数量小）。
-//
-// 不走 messageDAO.BatchGetByField：后者内部仍走 FindInBatches(SQLBatchSize=500)，
-// 会在每块 IN 列表上继续 keyset 分页，反而把查询次数从 24 放大到 ~30（3 块 × 10 次）。
-// 这里直接用 db.Where(id IN ?).Find()，每块只发一条单查询。
-//
-//	@receiver r *sessionReadRepository
-//	@param ctx context.Context
-//	@param ids []uint
-//	@return []*session.MessageDetailProjection
-//	@return error
-//	@author centonhuang
-//	@update 2026-06-07 01:40:00
-func (r *sessionReadRepository) FindMessagesByIDsChunked(ctx context.Context, ids []uint) ([]*session.MessageDetailProjection, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	chunks := ChunkSortedUniqueIDs(ids, constant.SessionListINChunkSize)
-	if len(chunks) == 0 {
-		return nil, nil
-	}
-	db := r.db.WithContext(ctx)
-	out := make([]*session.MessageDetailProjection, 0, len(ids))
-	for _, chunk := range chunks {
-		var records []*dbmodel.Message
-		if err := db.Select(constant.MessageRepoFieldsDetail).
-			Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.WhereFieldID), chunk).
-			Where(constant.DBConditionDeletedAtZero).
-			Find(&records).Error; err != nil {
-			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "chunk get messages by ids")
-		}
-		for _, m := range records {
-			out = append(out, &session.MessageDetailProjection{
-				ID:        m.ID,
-				Model:     m.Model,
-				Message:   m.Message,
-				CreatedAt: m.CreatedAt,
-			})
-		}
-	}
-	return out, nil
-}
-
 func (r *sessionReadRepository) FindToolsByIDs(ctx context.Context, ids []uint) ([]*session.ToolDetailProjection, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -552,22 +470,6 @@ func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*s
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
 	}, nil
-}
-
-func (r *sessionReadRepository) FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error) {
-	if len(ids) == 0 {
-		return map[uint][]uint{}, nil
-	}
-	db := r.db.WithContext(ctx)
-	records, err := r.sessionDAO.BatchGetByField(db, constant.WhereFieldID, ids, constant.SessionRepoFieldsSummarize)
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get session message ids")
-	}
-	result := make(map[uint][]uint, len(records))
-	for _, s := range records {
-		result[s.ID] = s.MessageIDs
-	}
-	return result, nil
 }
 
 // BuildOrderedMessageProjections 按 ids 顺序投影消息列表，跳过缺失 ID。
@@ -613,7 +515,6 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 
 // toSessionAggregate 将 GORM 模型映射为 Session 聚合根
 func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
-	summary := vo.NewSessionSummary(m.Summary, m.SummarizeError)
 	score := vo.RestoreSessionScore(m.Score, m.ScoredAt)
 	return aggregate.RestoreSession(
 		m.ID,
@@ -621,7 +522,6 @@ func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 		m.MessageIDs,
 		m.ToolIDs,
 		m.Metadata,
-		summary,
 		score,
 		m.CreatedAt,
 		m.UpdatedAt,

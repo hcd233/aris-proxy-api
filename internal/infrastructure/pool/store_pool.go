@@ -63,6 +63,13 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 				return err
 			}
 
+			var questions []uint
+			for i, m := range messages {
+				if m.Message.Role == enum.RoleUser && m.Message.ToolCallID == "" {
+					questions = append(questions, messageIDs[i])
+				}
+			}
+
 			toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
 			if err != nil {
 				log.Error("[StorePool] Failed to store tools", zap.Error(err))
@@ -72,6 +79,7 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 			session := &dbmodel.Session{
 				APIKeyName: task.APIKeyName,
 				MessageIDs: messageIDs,
+				Questions:  questions,
 				ToolIDs:    toolIDs,
 				Metadata:   task.Metadata,
 			}

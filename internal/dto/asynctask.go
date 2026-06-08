@@ -33,16 +33,6 @@ type MessageStoreTask struct {
 	Metadata     map[string]string    // 请求元数据
 }
 
-// SummarizeTask Session总结任务
-//
-//	@author centonhuang
-//	@update 2026-03-26 10:00:00
-type SummarizeTask struct {
-	Ctx       context.Context
-	SessionID uint
-	Content   string
-}
-
 // ModelCallAuditTask 模型调用审计任务
 //
 //	@author centonhuang

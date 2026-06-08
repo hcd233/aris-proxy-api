@@ -85,13 +85,6 @@ func buildRegistryEntries() []CronRegistryEntry {
 			},
 		},
 		{
-			Name:    constant.CronModuleSessionSummarize,
-			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
-			Factory: func(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
-				return NewSessionSummarizeCron(db, poolManager, cache)
-			},
-		},
-		{
 			Name:    constant.CronModuleSoftDeletePurge,
 			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
