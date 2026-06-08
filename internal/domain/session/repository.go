@@ -23,8 +23,6 @@ type SessionRepository interface {
 	Paginate(ctx context.Context, owner string, param PageParam) ([]*aggregate.Session, *model.PageInfo, error)
 	// Delete 软删除（标记 deleted_at）
 	Delete(ctx context.Context, id uint) error
-	// UpdateSummary 更新会话摘要（由 SummarizeAgent 调用）
-	UpdateSummary(ctx context.Context, id uint, summary sessionvo.SessionSummary) error
 	// UpdateScore 更新会话人工评分
 	UpdateScore(ctx context.Context, id uint, score sessionvo.SessionScore) error
 	// DeleteScore 清除会话人工评分
@@ -47,10 +45,10 @@ type SessionSummaryProjection struct {
 	ID           uint
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
-	Summary      string
 	Score        *int
 	MessageCount int
 	ToolCount    int
+	Questions    []uint
 }
 
 // MessageDetailProjection 消息详情只读投影
@@ -119,11 +117,6 @@ type SessionReadRepository interface {
 	GetSessionMeta(ctx context.Context, id uint) (*SessionMetaProjection, error)
 	// FindMessagesByIDs 批量查询消息投影
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
-	// FindMessagesByIDsChunked 排序去重后按固定大小切块，每块发一条 IN 查询，
-	// 用于 session 列表「空 summary fallback」场景下大量 ID 的高效加载。
-	FindMessagesByIDsChunked(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 	// FindToolsByIDs 批量查询工具投影
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
-	// FindSessionMessageIDsByIDs 按 session ID 列表批量查询 message_ids（用于空摘要回退）
-	FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error)
 }

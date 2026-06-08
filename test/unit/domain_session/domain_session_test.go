@@ -113,7 +113,6 @@ func TestRestoreSession(t *testing.T) {
 	tc := findCase(t, cases, "restore_session_full")
 
 	now := time.Now().UTC()
-	summary := vo.NewSessionSummary(tc.SummaryText, tc.SummaryError)
 	score := vo.RestoreSessionScore(tc.Score, &now)
 
 	s := aggregate.RestoreSession(
@@ -122,7 +121,6 @@ func TestRestoreSession(t *testing.T) {
 		tc.MessageIDs,
 		tc.ToolIDs,
 		tc.Metadata,
-		summary,
 		score,
 		now,
 		now,
@@ -138,61 +136,11 @@ func TestRestoreSession(t *testing.T) {
 	if s.Owner().String() != tc.Owner {
 		t.Errorf("Owner = %q, want %q", s.Owner().String(), tc.Owner)
 	}
-	if s.Summary().Text() != tc.SummaryText {
-		t.Errorf("Summary.Text = %q, want %q", s.Summary().Text(), tc.SummaryText)
-	}
 	if s.Score().IsEmpty() && tc.Score != nil {
 		t.Errorf("Score.IsEmpty() = true, want false")
 	}
 	if *s.Score().Score() != *tc.Score {
 		t.Errorf("Score = %d, want %d", *s.Score().Score(), *tc.Score)
-	}
-}
-
-// TestUpdateSummary_Valid 更新有效摘要应设置摘要并更新时间
-func TestUpdateSummary_Valid(t *testing.T) {
-	t.Parallel()
-	cases := loadCases(t)
-	tc := findCase(t, cases, "update_summary_valid")
-
-	s, err := aggregate.CreateSession(vo.APIKeyOwner(tc.Owner), nil, nil, nil, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("CreateSession() error: %v", err)
-	}
-
-	summary := vo.NewSessionSummary(tc.SummaryText, tc.SummaryError)
-	s.UpdateSummary(summary, time.Now().UTC())
-
-	if s.Summary().Text() != tc.SummaryText {
-		t.Errorf("Summary.Text = %q, want %q", s.Summary().Text(), tc.SummaryText)
-	}
-	if s.Summary().Failed() {
-		t.Error("Summary.Failed() = true, want false")
-	}
-}
-
-// TestUpdateSummary_Failed 更新失败摘要应反映在 Failed() 中
-func TestUpdateSummary_Failed(t *testing.T) {
-	t.Parallel()
-	cases := loadCases(t)
-	tc := findCase(t, cases, "update_summary_failed")
-
-	s, err := aggregate.CreateSession(vo.APIKeyOwner(tc.Owner), nil, nil, nil, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("CreateSession() error: %v", err)
-	}
-
-	summary := vo.NewSessionSummary(tc.SummaryText, tc.SummaryError)
-	s.UpdateSummary(summary, time.Now().UTC())
-
-	if !s.Summary().Failed() {
-		t.Error("Summary.Failed() = false, want true for error summary")
-	}
-	if !s.Summary().IsEmpty() {
-		t.Error("Summary.IsEmpty() = false, want true for empty text")
-	}
-	if s.Summary().Error() != tc.SummaryError {
-		t.Errorf("Summary.Error = %q, want %q", s.Summary().Error(), tc.SummaryError)
 	}
 }
 

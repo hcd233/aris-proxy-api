@@ -14,7 +14,7 @@ import (
 // Session 会话聚合根
 //
 // 封装一次对话会话的核心状态：所有者（APIKeyName）、消息/工具 ID 列表、
-// 元数据、摘要、评分。摘要与评分通过 UpdateSummary / UpdateScore 方法更新，
+// 元数据、评分。评分通过 UpdateScore 方法更新，
 // 替代基础设施直接字段落盘模式，保持聚合的一致性边界。
 //
 // Session 持有 MessageID/ToolID 的弱引用（值对象不跨聚合强引用），
@@ -29,7 +29,6 @@ type Session struct {
 	messageIDs []uint
 	toolIDs    []uint
 	metadata   map[string]string
-	summary    vo.SessionSummary
 	score      vo.SessionScore
 	createdAt  time.Time
 	updatedAt  time.Time
@@ -95,33 +94,19 @@ func hasDuplicateIDs(ids []uint) bool {
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
 func RestoreSession(id uint, owner vo.APIKeyOwner, messageIDs, toolIDs []uint,
-	metadata map[string]string, summary vo.SessionSummary, score vo.SessionScore,
+	metadata map[string]string, score vo.SessionScore,
 	createdAt, updatedAt time.Time) *Session {
 	s := &Session{
 		owner:      owner,
 		messageIDs: messageIDs,
 		toolIDs:    toolIDs,
 		metadata:   metadata,
-		summary:    summary,
 		score:      score,
 		createdAt:  createdAt,
 		updatedAt:  updatedAt,
 	}
 	s.SetID(id)
 	return s
-}
-
-// UpdateSummary 更新会话摘要
-//
-// 由 SummarizeAgent 在完成总结后调用，替代基础设施直接写入 DB 字段。
-//
-//	@receiver s *Session
-//	@param summary vo.SessionSummary
-//	@author centonhuang
-//	@update 2026-04-24 20:00:00
-func (s *Session) UpdateSummary(summary vo.SessionSummary, now time.Time) {
-	s.summary = summary
-	s.updatedAt = now
 }
 
 // UpdateScore 更新会话人工评分
@@ -160,9 +145,6 @@ func (s *Session) ToolIDs() []uint {
 func (s *Session) Metadata() map[string]string {
 	return maps.Clone(s.metadata)
 }
-
-// Summary 返回总结值对象
-func (s *Session) Summary() vo.SessionSummary { return s.summary }
 
 // Score 返回评分值对象
 func (s *Session) Score() vo.SessionScore { return s.score }

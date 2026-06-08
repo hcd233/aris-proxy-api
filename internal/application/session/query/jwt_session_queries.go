@@ -3,7 +3,6 @@ package query
 import (
 	"context"
 	"slices"
-	"unicode/utf8"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -79,25 +78,31 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 
 	views := make([]*sessionport.SessionSummaryView, 0, len(projections))
 
-	var emptySummaryIDs []uint
+	var firstQuestionIDs []uint
 	for _, p := range projections {
-		if p.Summary == "" {
-			emptySummaryIDs = append(emptySummaryIDs, p.ID)
+		if p.Questions != nil && len(p.Questions) > 0 {
+			firstQuestionIDs = append(firstQuestionIDs, p.Questions[0])
 		}
 	}
-
-	var sessionMsgIDs map[uint][]uint
 	var msgByID map[uint]*session.MessageDetailProjection
-	if len(emptySummaryIDs) > 0 {
-		sessionMsgIDs, msgByID = h.loadMessagesForEmptySummaries(ctx, emptySummaryIDs)
+	if len(firstQuestionIDs) > 0 {
+		msgs, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(firstQuestionIDs))
+		if msgErr != nil {
+			log.Warn("[SessionQuery] Failed to load questions[0] messages for summary", zap.Error(msgErr))
+		} else {
+			msgByID = lo.SliceToMap(msgs, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
+				return m.ID, m
+			})
+		}
 	}
 
 	for _, p := range projections {
-		summary := p.Summary
-		if summary == "" {
-			summary = firstUserMessageContent(sessionMsgIDs[p.ID], msgByID)
+		summary := ""
+		if p.Questions != nil && len(p.Questions) > 0 {
+			if m, ok := msgByID[p.Questions[0]]; ok && m.Message != nil {
+				summary = extractMessageText(m.Message.Content)
+			}
 		}
-
 		views = append(views, &sessionport.SessionSummaryView{
 			ID:           p.ID,
 			CreatedAt:    p.CreatedAt,
@@ -148,69 +153,6 @@ type getSessionByUserHandler struct {
 
 func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) GetSessionByUserHandler {
 	return &getSessionByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
-}
-
-// firstUserMessageContent 从消息 ID 列表中提取第一个用户消息的文本内容作为 summary
-func firstUserMessageContent(msgIDs []uint, msgByID map[uint]*session.MessageDetailProjection) string {
-	for _, id := range msgIDs {
-		m, ok := msgByID[id]
-		if !ok || m.Message == nil || m.Message.Role != enum.RoleUser {
-			continue
-		}
-		return truncateSummary(extractTextContent(m.Message.Content))
-	}
-	return ""
-}
-
-func (h *listSessionsByUserHandler) loadMessagesForEmptySummaries(ctx context.Context, sessionIDs []uint) (
-	sessionMsgIDsMap map[uint][]uint, messageProjectionsMap map[uint]*session.MessageDetailProjection,
-) {
-	log := logger.WithCtx(ctx)
-	sessionMsgIDs, err := h.readRepo.FindSessionMessageIDsByIDs(ctx, sessionIDs)
-	if err != nil {
-		log.Error("[SessionQuery] Failed to batch load message IDs for empty summary", zap.Error(err))
-		return sessionMsgIDs, nil
-	}
-	var allMsgIDs []uint
-	for _, ids := range sessionMsgIDs {
-		allMsgIDs = append(allMsgIDs, ids...)
-	}
-	if len(allMsgIDs) == 0 {
-		return sessionMsgIDs, nil
-	}
-	messages, msgErr := h.readRepo.FindMessagesByIDsChunked(ctx, lo.Uniq(allMsgIDs))
-	if msgErr != nil {
-		log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(msgErr))
-		return sessionMsgIDs, nil
-	}
-	msgByID := lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
-		return m.ID, m
-	})
-	return sessionMsgIDs, msgByID
-}
-
-// extractTextContent 从 UnifiedContent 中提取纯文本内容
-func extractTextContent(c *vo.UnifiedContent) string {
-	if c == nil {
-		return ""
-	}
-	if c.Text != "" {
-		return c.Text
-	}
-	for _, p := range c.Parts {
-		if p.Type == enum.ContentPartTypeText && p.Text != "" {
-			return p.Text
-		}
-	}
-	return ""
-}
-
-// truncateSummary 截断 summary 到最大 rune 数
-func truncateSummary(s string) string {
-	if utf8.RuneCountInString(s) <= constant.MaxSummaryRunes {
-		return s
-	}
-	return string([]rune(s)[:constant.MaxSummaryRunes])
 }
 
 func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error) {
@@ -274,4 +216,19 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 		Messages:   messages,
 		Tools:      tools,
 	}, nil
+}
+
+func extractMessageText(c *vo.UnifiedContent) string {
+	if c == nil {
+		return ""
+	}
+	if c.Text != "" {
+		return c.Text
+	}
+	for _, p := range c.Parts {
+		if p.Type == enum.ContentPartTypeText && p.Text != "" {
+			return p.Text
+		}
+	}
+	return ""
 }

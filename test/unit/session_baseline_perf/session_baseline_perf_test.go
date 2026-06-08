@@ -205,8 +205,8 @@ func TestSessionPerfPostMigrateSQLs_HasBaselineIndexes(t *testing.T) {
 	}
 }
 
-// TestSessionPerfPostMigrateSQLs_BackfillIsIdempotent 校验 message_count/tool_count
-// 回填 UPDATE 用 WHERE 限定到未回填行，第二次 migrate Job 不会再扫一次全表。
+// TestSessionPerfPostMigrateSQLs_BackfillIsIdempotent 校验所有回填 UPDATE 都是
+// 幂等的（WHERE 限定到未回填行），第二次 migrate Job 不会再扫一次全表。
 //
 //	@author centonhuang
 //	@update 2026-06-08 00:55:00
@@ -221,19 +221,24 @@ func TestSessionPerfPostMigrateSQLs_BackfillIsIdempotent(t *testing.T) {
 			continue
 		}
 		hasBackfill = true
-		if !strings.Contains(lower, "message_count") || !strings.Contains(lower, "tool_count") {
-			t.Errorf("backfill UPDATE must set both message_count and tool_count: %q", q)
-		}
+
 		if !strings.Contains(lower, "where") {
 			t.Errorf("backfill UPDATE must have WHERE clause to be idempotent (avoid re-scanning all rows on repeated migrate): %q", q)
 		}
-		if !strings.Contains(lower, "message_count = 0") || !strings.Contains(lower, "tool_count = 0") {
-			t.Errorf("backfill UPDATE WHERE must short-circuit on already-backfilled rows (message_count = 0 AND tool_count = 0): %q", q)
+
+		// message_count/tool_count 回填：必须 SET 这两个列且 WHERE 用它们做短路
+		if strings.Contains(lower, "message_count") || strings.Contains(lower, "tool_count") {
+			if !strings.Contains(lower, "message_count") || !strings.Contains(lower, "tool_count") {
+				t.Errorf("backfill UPDATE must set both message_count and tool_count: %q", q)
+			}
+			if !strings.Contains(lower, "message_count = 0") || !strings.Contains(lower, "tool_count = 0") {
+				t.Errorf("backfill UPDATE WHERE must short-circuit on already-backfilled rows (message_count = 0 AND tool_count = 0): %q", q)
+			}
 		}
 	}
 
 	if !hasBackfill {
-		t.Errorf("SessionPerfPostMigrateSQLs must include a one-shot backfill UPDATE for message_count/tool_count")
+		t.Errorf("SessionPerfPostMigrateSQLs must include at least one backfill UPDATE")
 	}
 }
 

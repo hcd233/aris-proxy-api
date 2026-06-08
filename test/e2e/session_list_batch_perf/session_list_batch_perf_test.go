@@ -34,7 +34,7 @@ import (
 const (
 	httpTimeout      = 30 * time.Second
 	latencyBudgetOld = 6100 * time.Millisecond
-	latencyBudgetNew = 3000 * time.Millisecond
+	latencyBudgetNew = 1000 * time.Millisecond
 )
 
 func mustEnv(t *testing.T) (baseURL, jwtToken string) {
@@ -125,8 +125,7 @@ func TestSessionListBatchPerf_NoCrashAndFast(t *testing.T) {
 		elapsed, body.PageInfo, len(body.Sessions))
 
 	if elapsed >= latencyBudgetNew {
-		t.Errorf("elapsed=%v exceeds new latency budget %v (old baseline was %v). "+
-			"regression: chunked loader likely not wired or query count is still high",
+		t.Errorf("elapsed=%v exceeds new latency budget %v (old baseline was %v). performance regression detected",
 			elapsed, latencyBudgetNew, latencyBudgetOld)
 	}
 }
