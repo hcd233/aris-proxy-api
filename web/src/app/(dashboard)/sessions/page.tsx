@@ -280,6 +280,60 @@ export default function SessionsPage() {
           <CardTitle className="font-display">All Sessions</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Filters — always visible */}
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <TimeRangePicker
+                value={timeRange}
+                customStart={customStart}
+                customEnd={customEnd}
+                onChange={(key, cs, ce) => {
+                  setTimeRange(key);
+                  setCustomStart(cs);
+                  setCustomEnd(ce);
+                  if (key !== "custom") {
+                    fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword);
+                  }
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 md:w-64">
+                <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search messages..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch();
+                  }}
+                  className="h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, ""); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    x
+                  </button>
+                )}
+              </div>
+              {selected.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setBatchDeleteConfirmOpen(true)}
+                  className="gap-1.5"
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete {selected.size}
+                </Button>
+              )}
+            </div>
+          </div>
+
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -293,59 +347,6 @@ export default function SessionsPage() {
             </div>
           ) : (
             <>
-              {/* Filters */}
-              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                  <TimeRangePicker
-                    value={timeRange}
-                    customStart={customStart}
-                    customEnd={customEnd}
-                    onChange={(key, cs, ce) => {
-                      setTimeRange(key);
-                      setCustomStart(cs);
-                      setCustomEnd(ce);
-                      if (key !== "custom") {
-                        fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1 md:w-64">
-                    <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Search messages..."
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSearch();
-                      }}
-                      className="h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
-                    />
-                    {searchInput && (
-                      <button
-                        type="button"
-                        onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, ""); }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        x
-                      </button>
-                    )}
-                  </div>
-                  {selected.size > 0 && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setBatchDeleteConfirmOpen(true)}
-                      className="gap-1.5"
-                    >
-                      <Trash2 className="size-3.5" />
-                      Delete {selected.size}
-                    </Button>
-                  )}
-                </div>
-              </div>
 
               {isMobile ? (
               <div className="space-y-3">
