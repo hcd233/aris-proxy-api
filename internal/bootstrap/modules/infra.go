@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
@@ -11,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var InfraModule = fx.Module("infrastructure",
+var InfraModule = fx.Module(constant.DigNameInfraModule,
 	fx.Provide(
 		NewDB,
 		NewCache,

@@ -80,7 +80,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 
 	var firstQuestionIDs []uint
 	for _, p := range projections {
-		if p.Questions != nil && len(p.Questions) > 0 {
+		if len(p.Questions) > 0 {
 			firstQuestionIDs = append(firstQuestionIDs, p.Questions[0])
 		}
 	}
@@ -98,7 +98,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 
 	for _, p := range projections {
 		summary := ""
-		if p.Questions != nil && len(p.Questions) > 0 {
+		if len(p.Questions) > 0 {
 			if m, ok := msgByID[p.Questions[0]]; ok && m.Message != nil {
 				summary = extractMessageText(m.Message.Content)
 			}

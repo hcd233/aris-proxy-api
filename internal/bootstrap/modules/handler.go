@@ -12,13 +12,14 @@ import (
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"go.uber.org/fx"
 )
 
-var HandlerModule = fx.Module("handler",
+var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 	fx.Provide(
 		NewTokenDependencies,
 		NewOauth2Dependencies,

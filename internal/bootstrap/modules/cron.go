@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
@@ -12,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var CronModule = fx.Module("cron",
+var CronModule = fx.Module(constant.DigNameCronModule,
 	fx.Provide(
 		NewThinkExtractRepo,
 		NewCronEntries,

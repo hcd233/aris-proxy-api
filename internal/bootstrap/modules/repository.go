@@ -4,6 +4,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -26,7 +27,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var RepositoryModule = fx.Module("repository",
+var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 	fx.Provide(
 		NewUserRepository,
 		NewAPIKeyRepository,

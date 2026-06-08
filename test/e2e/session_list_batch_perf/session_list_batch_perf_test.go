@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -75,7 +76,7 @@ func doListSessions(t *testing.T, client *http.Client, baseURL, jwtToken string,
 	t.Helper()
 	q := url.Values{}
 	q.Set("page", "1")
-	q.Set("pageSize", fmt.Sprintf("%d", pageSize))
+	q.Set("pageSize", strconv.Itoa(pageSize))
 	endpoint := fmt.Sprintf("%s/api/v1/session/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
