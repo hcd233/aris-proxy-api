@@ -23,8 +23,6 @@ type SessionRepository interface {
 	Paginate(ctx context.Context, owner string, param PageParam) ([]*aggregate.Session, *model.PageInfo, error)
 	// Delete 软删除（标记 deleted_at）
 	Delete(ctx context.Context, id uint) error
-	// UpdateSummary 更新会话摘要（由 SummarizeAgent 调用）
-	UpdateSummary(ctx context.Context, id uint, summary sessionvo.SessionSummary) error
 	// UpdateScore 更新会话人工评分
 	UpdateScore(ctx context.Context, id uint, score sessionvo.SessionScore) error
 	// DeleteScore 清除会话人工评分
@@ -47,10 +45,10 @@ type SessionSummaryProjection struct {
 	ID           uint
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
-	Summary      string
 	Score        *int
 	MessageCount int
 	ToolCount    int
+	Questions    []uint
 }
 
 // MessageDetailProjection 消息详情只读投影

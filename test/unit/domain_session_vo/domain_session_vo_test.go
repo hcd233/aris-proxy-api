@@ -47,59 +47,6 @@ func findCase(t *testing.T, cases []sessionVOCase, name string) sessionVOCase {
 	return sessionVOCase{}
 }
 
-func TestNewSessionSummary_Valid(t *testing.T) {
-	t.Parallel()
-	cases := loadCases(t)
-	tc := findCase(t, cases, "session_summary_valid")
-
-	s := vo.NewSessionSummary(tc.Text, tc.Error)
-	if s.Text() != tc.Text {
-		t.Errorf("Text() = %q, want %q", s.Text(), tc.Text)
-	}
-	if s.Error() != tc.Error {
-		t.Errorf("Error() = %q, want %q", s.Error(), tc.Error)
-	}
-	if s.IsEmpty() != tc.ExpectEmpty {
-		t.Errorf("IsEmpty() = %v, want %v", s.IsEmpty(), tc.ExpectEmpty)
-	}
-}
-
-func TestNewSessionSummary_Failed(t *testing.T) {
-	t.Parallel()
-	cases := loadCases(t)
-	tc := findCase(t, cases, "session_summary_failed")
-
-	s := vo.NewSessionSummary(tc.Text, tc.Error)
-	if !s.Failed() {
-		t.Error("Failed() = false, want true")
-	}
-	if !s.IsEmpty() {
-		t.Error("IsEmpty() = false, want true for empty text")
-	}
-}
-
-func TestNewSessionSummary_EmptyText(t *testing.T) {
-	t.Parallel()
-	cases := loadCases(t)
-	tc := findCase(t, cases, "session_summary_empty_text")
-
-	s := vo.NewSessionSummary(tc.Text, tc.Error)
-	if !s.IsEmpty() {
-		t.Error("IsEmpty() = false, want true for empty text")
-	}
-}
-
-func TestNewSessionSummary_WhitespaceText(t *testing.T) {
-	t.Parallel()
-	cases := loadCases(t)
-	tc := findCase(t, cases, "session_summary_whitespace")
-
-	s := vo.NewSessionSummary(tc.Text, tc.Error)
-	if !s.IsEmpty() {
-		t.Error("IsEmpty() = false, want true for whitespace text")
-	}
-}
-
 func TestNewSessionScore_Valid(t *testing.T) {
 	t.Parallel()
 	cases := loadCases(t)

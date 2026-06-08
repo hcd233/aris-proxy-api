@@ -29,18 +29,15 @@ func (m *mockCron) Stop() {
 // TestInitCronJobs_AllDisabled 验证所有任务关闭时不会注册任何定时任务
 func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron tests share global state
 	origDedup := config.CronSessionDeduplicateEnabled
-	origSum := config.CronSessionSummarizeEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
 	origThink := config.CronThinkExtractEnabled
 	defer func() {
 		config.CronSessionDeduplicateEnabled = origDedup
-		config.CronSessionSummarizeEnabled = origSum
 		config.CronSoftDeletePurgeEnabled = origPurge
 		config.CronThinkExtractEnabled = origThink
 	}()
 
 	config.CronSessionDeduplicateEnabled = false
-	config.CronSessionSummarizeEnabled = false
 	config.CronSoftDeletePurgeEnabled = false
 	config.CronThinkExtractEnabled = false
 
@@ -55,20 +52,17 @@ func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron 
 // TestInitCronJobs_PartialEnabled 验证部分开启时只注册启用的任务
 func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cron tests share global state
 	origDedup := config.CronSessionDeduplicateEnabled
-	origSum := config.CronSessionSummarizeEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
 	origThink := config.CronThinkExtractEnabled
 	origRegistry := cron.DefaultCronRegistry
 	defer func() {
 		config.CronSessionDeduplicateEnabled = origDedup
-		config.CronSessionSummarizeEnabled = origSum
 		config.CronSoftDeletePurgeEnabled = origPurge
 		config.CronThinkExtractEnabled = origThink
 		cron.DefaultCronRegistry = origRegistry
 	}()
 
 	config.CronSessionDeduplicateEnabled = true
-	config.CronSessionSummarizeEnabled = false
 	config.CronSoftDeletePurgeEnabled = false
 	config.CronThinkExtractEnabled = false
 
@@ -76,13 +70,6 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cr
 		{
 			Name:    "SessionDeduplicate",
 			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
-			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
-				return &mockCron{}
-			},
-		},
-		{
-			Name:    "SessionSummarize",
-			Enabled: func() bool { return config.CronSessionSummarizeEnabled },
 			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
 				return &mockCron{}
 			},
@@ -113,20 +100,17 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cr
 // TestInitCronJobs_AllEnabled 验证全部开启时注册所有任务
 func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron tests share global state
 	origDedup := config.CronSessionDeduplicateEnabled
-	origSum := config.CronSessionSummarizeEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
 	origThink := config.CronThinkExtractEnabled
 	origRegistry := cron.DefaultCronRegistry
 	defer func() {
 		config.CronSessionDeduplicateEnabled = origDedup
-		config.CronSessionSummarizeEnabled = origSum
 		config.CronSoftDeletePurgeEnabled = origPurge
 		config.CronThinkExtractEnabled = origThink
 		cron.DefaultCronRegistry = origRegistry
 	}()
 
 	config.CronSessionDeduplicateEnabled = true
-	config.CronSessionSummarizeEnabled = true
 	config.CronSoftDeletePurgeEnabled = true
 	config.CronThinkExtractEnabled = true
 

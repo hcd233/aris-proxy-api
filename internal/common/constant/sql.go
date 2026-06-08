@@ -7,8 +7,6 @@ const (
 	FieldMessageIDs                  = "message_ids"
 	FieldToolIDs                     = "tool_ids"
 	FieldMetadata                    = "metadata"
-	FieldSummary                     = "summary"
-	FieldSummarizeError              = "summarize_error"
 	FieldScoreVersion                = "score_version"
 	FieldScore                       = "score"
 	FieldScoredAt                    = "scored_at"
@@ -61,7 +59,6 @@ const (
 const (
 	WhereFieldID           = "id"
 	WhereFieldCheckSum     = "check_sum"
-	WhereFieldSummary      = "summary"
 	WhereFieldScoreVersion = "score_version"
 	WhereFieldToolIDs      = "tool_ids"
 )
@@ -80,9 +77,9 @@ var (
 	UserRepoFieldsBasic = []string{FieldID, FieldName}
 	UserRepoFieldsAuth  = []string{FieldID, FieldName, FieldPermission}
 
-	SessionRepoFieldsList       = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldSummary, FieldMessageIDs, FieldToolIDs}
-	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldSummary, FieldSummarizeError, FieldScore, FieldScoredAt}
-	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldSummary, FieldScore}
+	SessionRepoFieldsList       = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs}
+	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
+	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldScore}
 	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
@@ -120,7 +117,7 @@ var (
 	//   roundtrip 与一次 WHERE 评估。对带 keyword 的请求尤其受益——EXISTS 子查询
 	//   原来要跑两遍（COUNT 一次、SELECT 一次），现在一次搞定。
 	//   sessionSummaryRow.TotalCount 接收每行（窗口函数对所有行返回相同值）。
-	SessionSummarySelect = "id, created_at, updated_at, summary, score, message_count, tool_count, COUNT(*) OVER () AS total_count"
+	SessionSummarySelect = "id, created_at, updated_at, score, message_count, tool_count, questions, COUNT(*) OVER () AS total_count"
 
 	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段。
 	//
@@ -182,7 +179,6 @@ var (
 		"CREATE INDEX IF NOT EXISTS idx_messages_message_trgm ON messages USING gin ((message::text) gin_trgm_ops)",
 		"UPDATE sessions SET message_count = COALESCE(jsonb_array_length(message_ids::jsonb), 0), tool_count = COALESCE(jsonb_array_length(tool_ids::jsonb), 0) WHERE message_count = 0 AND tool_count = 0 AND (COALESCE(jsonb_array_length(message_ids::jsonb), 0) > 0 OR COALESCE(jsonb_array_length(tool_ids::jsonb), 0) > 0)",
 		"UPDATE sessions SET questions = (SELECT COALESCE(jsonb_agg(m.id ORDER BY m.id), '[]'::jsonb) FROM messages m WHERE m.id IN (SELECT jsonb_array_elements_text(sessions.message_ids::jsonb)::bigint) AND m.message->>'role' = 'user' AND (m.message->>'tool_call_id' IS NULL OR m.message->>'tool_call_id' = '')) WHERE questions IS NULL",
-		"UPDATE sessions s SET summary = (SELECT COALESCE(m.message->'content'->>'text', '') FROM messages m WHERE m.id = (s.questions->>0)::bigint LIMIT 1) WHERE s.summary = '' AND s.questions IS NOT NULL AND s.questions != '[]'::jsonb",
 	}
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"

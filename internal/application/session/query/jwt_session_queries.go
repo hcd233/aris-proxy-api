@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -11,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -76,12 +78,36 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 
 	views := make([]*sessionport.SessionSummaryView, 0, len(projections))
 
+	var firstQuestionIDs []uint
 	for _, p := range projections {
+		if p.Questions != nil && len(p.Questions) > 0 {
+			firstQuestionIDs = append(firstQuestionIDs, p.Questions[0])
+		}
+	}
+	var msgByID map[uint]*session.MessageDetailProjection
+	if len(firstQuestionIDs) > 0 {
+		msgs, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(firstQuestionIDs))
+		if msgErr != nil {
+			log.Warn("[SessionQuery] Failed to load questions[0] messages for summary", zap.Error(msgErr))
+		} else {
+			msgByID = lo.SliceToMap(msgs, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
+				return m.ID, m
+			})
+		}
+	}
+
+	for _, p := range projections {
+		summary := ""
+		if p.Questions != nil && len(p.Questions) > 0 {
+			if m, ok := msgByID[p.Questions[0]]; ok && m.Message != nil {
+				summary = extractMessageText(m.Message.Content)
+			}
+		}
 		views = append(views, &sessionport.SessionSummaryView{
 			ID:           p.ID,
 			CreatedAt:    p.CreatedAt,
 			UpdatedAt:    p.UpdatedAt,
-			Summary:      p.Summary,
+			Summary:      summary,
 			Score:        p.Score,
 			MessageCount: p.MessageCount,
 			ToolCount:    p.ToolCount,
@@ -190,4 +216,19 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 		Messages:   messages,
 		Tools:      tools,
 	}, nil
+}
+
+func extractMessageText(c *vo.UnifiedContent) string {
+	if c == nil {
+		return ""
+	}
+	if c.Text != "" {
+		return c.Text
+	}
+	for _, p := range c.Parts {
+		if p.Type == enum.ContentPartTypeText && p.Text != "" {
+			return p.Text
+		}
+	}
+	return ""
 }

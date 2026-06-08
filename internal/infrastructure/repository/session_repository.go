@@ -66,7 +66,6 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 			ToolCount:    len(s.ToolIDs()),
 			Metadata:     s.Metadata(),
 		}
-		applySummary(record, s.Summary())
 		applyScore(record, s.Score())
 		if err := r.dao.Create(db, record); err != nil {
 			return ierr.Wrap(ierr.ErrDBCreate, err, "create session")
@@ -79,10 +78,6 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 		constant.FieldMessageIDs: s.MessageIDs(),
 		constant.FieldToolIDs:    s.ToolIDs(),
 		constant.FieldMetadata:   s.Metadata(),
-	}
-	if summary := s.Summary(); !summary.IsEmpty() || summary.Failed() {
-		updates[constant.FieldSummary] = summary.Text()
-		updates[constant.FieldSummarizeError] = summary.Error()
 	}
 	if score := s.Score(); !score.IsEmpty() {
 		updates[constant.FieldScore] = *score.Score()
@@ -104,12 +99,6 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session counts")
 	}
 	return nil
-}
-
-// applySummary 将摘要值对象写入 GORM 模型
-func applySummary(record *dbmodel.Session, summary vo.SessionSummary) {
-	record.Summary = summary.Text()
-	record.SummarizeError = summary.Error()
 }
 
 // applyScore 将评分值对象写入 GORM 模型
@@ -187,27 +176,6 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-// UpdateSummary 更新会话摘要
-//
-//	@receiver r *sessionRepository
-//	@param ctx context.Context
-//	@param id uint
-//	@param summary vo.SessionSummary
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-26 14:00:00
-func (r *sessionRepository) UpdateSummary(ctx context.Context, id uint, summary vo.SessionSummary) error {
-	db := r.db.WithContext(ctx)
-	updates := map[string]any{
-		constant.FieldSummary:        summary.Text(),
-		constant.FieldSummarizeError: summary.Error(),
-	}
-	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
-		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session summary")
-	}
-	return nil
-}
-
 // UpdateScore 更新会话评分
 //
 //	@receiver r *sessionRepository
@@ -281,10 +249,10 @@ type sessionSummaryRow struct {
 	ID           uint      `gorm:"column:id"`
 	CreatedAt    time.Time `gorm:"column:created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at"`
-	Summary      string    `gorm:"column:summary"`
 	Score        *int      `gorm:"column:score"`
 	MessageCount int       `gorm:"column:message_count"`
 	ToolCount    int       `gorm:"column:tool_count"`
+	Questions    []uint    `gorm:"column:questions"`
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
@@ -336,7 +304,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
-			Summary:      row.Summary,
+			Questions:    row.Questions,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
@@ -390,7 +358,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
-			Summary:      row.Summary,
+			Questions:    row.Questions,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
@@ -547,7 +515,6 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 
 // toSessionAggregate 将 GORM 模型映射为 Session 聚合根
 func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
-	summary := vo.NewSessionSummary(m.Summary, m.SummarizeError)
 	score := vo.RestoreSessionScore(m.Score, m.ScoredAt)
 	return aggregate.RestoreSession(
 		m.ID,
@@ -555,7 +522,6 @@ func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 		m.MessageIDs,
 		m.ToolIDs,
 		m.Metadata,
-		summary,
 		score,
 		m.CreatedAt,
 		m.UpdatedAt,
