@@ -119,11 +119,6 @@ type SessionReadRepository interface {
 	GetSessionMeta(ctx context.Context, id uint) (*SessionMetaProjection, error)
 	// FindMessagesByIDs 批量查询消息投影
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
-	// FindMessagesByIDsChunked 排序去重后按固定大小切块，每块发一条 IN 查询，
-	// 用于 session 列表「空 summary fallback」场景下大量 ID 的高效加载。
-	FindMessagesByIDsChunked(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 	// FindToolsByIDs 批量查询工具投影
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
-	// FindSessionMessageIDsByIDs 按 session ID 列表批量查询 message_ids（用于空摘要回退）
-	FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error)
 }

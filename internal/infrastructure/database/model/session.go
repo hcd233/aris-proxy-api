@@ -26,6 +26,7 @@ type Session struct {
 	ToolIDs        []uint            `json:"tool_ids" gorm:"column:tool_ids;not null;comment:工具ID列表;serializer:json"`
 	MessageCount   int               `json:"message_count" gorm:"column:message_count;not null;default:0;comment:消息数量(冗余 message_ids 长度)"`
 	ToolCount      int               `json:"tool_count" gorm:"column:tool_count;not null;default:0;comment:工具数量(冗余 tool_ids 长度)"`
+	Questions      []uint            `json:"questions" gorm:"column:questions;comment:用户提问消息ID列表(仅role=user且tool_call_id为空);serializer:json"`
 	Summary        string            `json:"summary" gorm:"column:summary;not null;default:'';comment:会话总结(5-10字)"`
 	Metadata       map[string]string `json:"metadata" gorm:"column:metadata;comment:请求元数据;serializer:json"`
 	Score          *int              `json:"score" gorm:"column:score;comment:人工评分(1-5)"`

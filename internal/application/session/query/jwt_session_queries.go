@@ -3,9 +3,7 @@ package query
 import (
 	"context"
 	"slices"
-	"unicode/utf8"
 
-	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -13,7 +11,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -79,30 +76,12 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 
 	views := make([]*sessionport.SessionSummaryView, 0, len(projections))
 
-	var emptySummaryIDs []uint
 	for _, p := range projections {
-		if p.Summary == "" {
-			emptySummaryIDs = append(emptySummaryIDs, p.ID)
-		}
-	}
-
-	var sessionMsgIDs map[uint][]uint
-	var msgByID map[uint]*session.MessageDetailProjection
-	if len(emptySummaryIDs) > 0 {
-		sessionMsgIDs, msgByID = h.loadMessagesForEmptySummaries(ctx, emptySummaryIDs)
-	}
-
-	for _, p := range projections {
-		summary := p.Summary
-		if summary == "" {
-			summary = firstUserMessageContent(sessionMsgIDs[p.ID], msgByID)
-		}
-
 		views = append(views, &sessionport.SessionSummaryView{
 			ID:           p.ID,
 			CreatedAt:    p.CreatedAt,
 			UpdatedAt:    p.UpdatedAt,
-			Summary:      summary,
+			Summary:      p.Summary,
 			Score:        p.Score,
 			MessageCount: p.MessageCount,
 			ToolCount:    p.ToolCount,
@@ -148,69 +127,6 @@ type getSessionByUserHandler struct {
 
 func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) GetSessionByUserHandler {
 	return &getSessionByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
-}
-
-// firstUserMessageContent 从消息 ID 列表中提取第一个用户消息的文本内容作为 summary
-func firstUserMessageContent(msgIDs []uint, msgByID map[uint]*session.MessageDetailProjection) string {
-	for _, id := range msgIDs {
-		m, ok := msgByID[id]
-		if !ok || m.Message == nil || m.Message.Role != enum.RoleUser {
-			continue
-		}
-		return truncateSummary(extractTextContent(m.Message.Content))
-	}
-	return ""
-}
-
-func (h *listSessionsByUserHandler) loadMessagesForEmptySummaries(ctx context.Context, sessionIDs []uint) (
-	sessionMsgIDsMap map[uint][]uint, messageProjectionsMap map[uint]*session.MessageDetailProjection,
-) {
-	log := logger.WithCtx(ctx)
-	sessionMsgIDs, err := h.readRepo.FindSessionMessageIDsByIDs(ctx, sessionIDs)
-	if err != nil {
-		log.Error("[SessionQuery] Failed to batch load message IDs for empty summary", zap.Error(err))
-		return sessionMsgIDs, nil
-	}
-	var allMsgIDs []uint
-	for _, ids := range sessionMsgIDs {
-		allMsgIDs = append(allMsgIDs, ids...)
-	}
-	if len(allMsgIDs) == 0 {
-		return sessionMsgIDs, nil
-	}
-	messages, msgErr := h.readRepo.FindMessagesByIDsChunked(ctx, lo.Uniq(allMsgIDs))
-	if msgErr != nil {
-		log.Error("[SessionQuery] Failed to batch load messages for empty summary", zap.Error(msgErr))
-		return sessionMsgIDs, nil
-	}
-	msgByID := lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
-		return m.ID, m
-	})
-	return sessionMsgIDs, msgByID
-}
-
-// extractTextContent 从 UnifiedContent 中提取纯文本内容
-func extractTextContent(c *vo.UnifiedContent) string {
-	if c == nil {
-		return ""
-	}
-	if c.Text != "" {
-		return c.Text
-	}
-	for _, p := range c.Parts {
-		if p.Type == enum.ContentPartTypeText && p.Text != "" {
-			return p.Text
-		}
-	}
-	return ""
-}
-
-// truncateSummary 截断 summary 到最大 rune 数
-func truncateSummary(s string) string {
-	if utf8.RuneCountInString(s) <= constant.MaxSummaryRunes {
-		return s
-	}
-	return string([]rune(s)[:constant.MaxSummaryRunes])
 }
 
 func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error) {

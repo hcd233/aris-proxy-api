@@ -462,56 +462,6 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 	return out, nil
 }
 
-// FindMessagesByIDsChunked 把 IDs 排序去重后按 constant.SessionListINChunkSize 切块，
-// 每块用一条 SELECT ... WHERE id IN (?) 拉取，绕过 GORM FindInBatches 的
-// keyset (id > last_id) 反复重排带来的开销。
-//
-// 该方法专门用于 session 列表的"空 summary fallback"路径：当 200 个 session
-// 全部 summary 为空时需要加载它们的 message_ids 用于预览，把 24 次顺序
-// 600-1000ms 往返压成 3 次单查询。其它读路径仍走 FindMessagesByIDs
-// （单 session 详情，IDs 数量小）。
-//
-// 不走 messageDAO.BatchGetByField：后者内部仍走 FindInBatches(SQLBatchSize=500)，
-// 会在每块 IN 列表上继续 keyset 分页，反而把查询次数从 24 放大到 ~30（3 块 × 10 次）。
-// 这里直接用 db.Where(id IN ?).Find()，每块只发一条单查询。
-//
-//	@receiver r *sessionReadRepository
-//	@param ctx context.Context
-//	@param ids []uint
-//	@return []*session.MessageDetailProjection
-//	@return error
-//	@author centonhuang
-//	@update 2026-06-07 01:40:00
-func (r *sessionReadRepository) FindMessagesByIDsChunked(ctx context.Context, ids []uint) ([]*session.MessageDetailProjection, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	chunks := ChunkSortedUniqueIDs(ids, constant.SessionListINChunkSize)
-	if len(chunks) == 0 {
-		return nil, nil
-	}
-	db := r.db.WithContext(ctx)
-	out := make([]*session.MessageDetailProjection, 0, len(ids))
-	for _, chunk := range chunks {
-		var records []*dbmodel.Message
-		if err := db.Select(constant.MessageRepoFieldsDetail).
-			Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.WhereFieldID), chunk).
-			Where(constant.DBConditionDeletedAtZero).
-			Find(&records).Error; err != nil {
-			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "chunk get messages by ids")
-		}
-		for _, m := range records {
-			out = append(out, &session.MessageDetailProjection{
-				ID:        m.ID,
-				Model:     m.Model,
-				Message:   m.Message,
-				CreatedAt: m.CreatedAt,
-			})
-		}
-	}
-	return out, nil
-}
-
 func (r *sessionReadRepository) FindToolsByIDs(ctx context.Context, ids []uint) ([]*session.ToolDetailProjection, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -552,22 +502,6 @@ func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*s
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
 	}, nil
-}
-
-func (r *sessionReadRepository) FindSessionMessageIDsByIDs(ctx context.Context, ids []uint) (map[uint][]uint, error) {
-	if len(ids) == 0 {
-		return map[uint][]uint{}, nil
-	}
-	db := r.db.WithContext(ctx)
-	records, err := r.sessionDAO.BatchGetByField(db, constant.WhereFieldID, ids, constant.SessionRepoFieldsSummarize)
-	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get session message ids")
-	}
-	result := make(map[uint][]uint, len(records))
-	for _, s := range records {
-		result[s.ID] = s.MessageIDs
-	}
-	return result, nil
 }
 
 // BuildOrderedMessageProjections 按 ids 顺序投影消息列表，跳过缺失 ID。

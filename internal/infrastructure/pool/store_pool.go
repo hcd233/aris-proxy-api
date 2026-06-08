@@ -63,6 +63,17 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 				return err
 			}
 
+			var questions []uint
+			var sessionSummary string
+			for i, m := range messages {
+				if m.Message.Role == enum.RoleUser && m.Message.ToolCallID == "" {
+					questions = append(questions, messageIDs[i])
+					if sessionSummary == "" {
+						sessionSummary = extractMessageText(m.Message.Content)
+					}
+				}
+			}
+
 			toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
 			if err != nil {
 				log.Error("[StorePool] Failed to store tools", zap.Error(err))
@@ -72,6 +83,8 @@ func (pm *PoolManager) SubmitMessageStoreTask(task *dto.MessageStoreTask) error 
 			session := &dbmodel.Session{
 				APIKeyName: task.APIKeyName,
 				MessageIDs: messageIDs,
+				Questions:  questions,
+				Summary:    sessionSummary,
 				ToolIDs:    toolIDs,
 				Metadata:   task.Metadata,
 			}
@@ -125,4 +138,19 @@ func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) er
 		}
 		l.Info("[StorePool] Audit record stored successfully")
 	})
+}
+
+func extractMessageText(c *vo.UnifiedContent) string {
+	if c == nil {
+		return ""
+	}
+	if c.Text != "" {
+		return c.Text
+	}
+	for _, p := range c.Parts {
+		if p.Type == enum.ContentPartTypeText && p.Text != "" {
+			return p.Text
+		}
+	}
+	return ""
 }
