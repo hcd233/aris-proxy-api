@@ -79,6 +79,12 @@ func (r *auditRepository) ListAll(ctx context.Context, param model.CommonParam, 
 	return r.paginate(db, param, startTime, endTime)
 }
 
+// ListAllWithFilter 全量分页查询审计记录（支持 filter）
+func (r *auditRepository) ListAllWithFilter(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	return r.paginateWithFilter(db, param, startTime, endTime, filterSQL, filterArgs)
+}
+
 // ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 //
 //	@receiver r *auditRepository
@@ -97,6 +103,64 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 	}
 	db := r.db.WithContext(ctx).Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), apiKeyIDs)
 	return r.paginate(db, param, startTime, endTime)
+}
+
+// ListByAPIKeyIDsWithFilter 按 api_key_id IN (...) 分页查询（支持 filter）
+func (r *auditRepository) ListByAPIKeyIDsWithFilter(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+	if len(apiKeyIDs) == 0 {
+		page, pageSize := param.Page, param.PageSize
+		if page < 1 {
+			page = 1
+		}
+		if pageSize < 1 {
+			pageSize = 20
+		}
+		return nil, &model.PageInfo{Page: page, PageSize: pageSize, Total: 0}, nil
+	}
+	db := r.db.WithContext(ctx).Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), apiKeyIDs)
+	return r.paginateWithFilter(db, param, startTime, endTime, filterSQL, filterArgs)
+}
+
+// ListDistinctUserNames 查询去重的用户名列表
+func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword string) ([]string, error) {
+	db := r.db.WithContext(ctx)
+
+	var names []string
+	query := db.Table("model_call_audits mca").
+		Select("DISTINCT u.name").
+		Joins("JOIN proxy_api_keys pak ON mca.api_key_id = pak.id").
+		Joins("JOIN users u ON pak.user_id = u.id").
+		Where("mca.deleted_at IS NULL")
+
+	if keyword != "" {
+		query = query.Where("u.name LIKE ? OR u.email LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+	}
+
+	if err := query.Limit(50).Scan(&names).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct user names")
+	}
+
+	return names, nil
+}
+
+// ListDistinctModels 查询去重的模型列表
+func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string) ([]string, error) {
+	db := r.db.WithContext(ctx)
+
+	var models []string
+	query := db.Model(&dbmodel.ModelCallAudit{}).
+		Select("DISTINCT model").
+		Where("deleted_at IS NULL")
+
+	if keyword != "" {
+		query = query.Where("model LIKE ?", "%"+keyword+"%")
+	}
+
+	if err := query.Limit(50).Scan(&models).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct models")
+	}
+
+	return models, nil
 }
 
 // BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
@@ -161,6 +225,87 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 	}
 	if !endTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
+	}
+
+	if param.Query != "" && len(constant.AuditQueryFields) > 0 {
+		like := "%" + param.Query + "%"
+		expressions := make([]clause.Expression, 0, len(constant.AuditQueryFields))
+		for _, field := range constant.AuditQueryFields {
+			if field == "" {
+				continue
+			}
+			expressions = append(expressions, clause.Like{Column: clause.Column{Name: field}, Value: like})
+		}
+		if len(expressions) > 0 {
+			sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])
+			for _, expr := range expressions[1:] {
+				sub = sub.Or(expr)
+			}
+			sql = sql.Where(sub)
+		}
+	}
+
+	if param.Sort != "" && param.SortField != "" {
+		param.SortField = safeSortField(param.SortField)
+	}
+	if param.Sort != "" && param.SortField != "" {
+		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
+
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if err := sql.Count(&pageInfo.Total).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count audit logs")
+	}
+
+	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
+	var records []*dbmodel.ModelCallAudit
+	if err := sql.Limit(limit).Offset(offset).Find(&records).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate audit logs")
+	}
+
+	audits := make([]*aggregate.ModelCallAudit, 0, len(records))
+	for _, rec := range records {
+		a := aggregate.ReconstructAudit(aggregate.ReconstructAuditInput{
+			APIKeyID:         rec.APIKeyID,
+			ModelID:          rec.ModelID,
+			Model:            rec.Model,
+			UpstreamProtocol: rec.UpstreamProtocol,
+			APIProtocol:      rec.APIProtocol,
+			Endpoint:         rec.Endpoint,
+			Tokens:           vo.NewTokenBreakdown(rec.InputTokens, rec.OutputTokens, rec.CacheCreationInputTokens, rec.CacheReadInputTokens),
+			Latency:          vo.NewCallLatency(time.Duration(rec.FirstTokenLatencyMs)*time.Millisecond, time.Duration(rec.StreamDurationMs)*time.Millisecond),
+			Status:           vo.NewCallStatus(rec.UpstreamStatusCode, rec.ErrorMessage),
+			UserAgent:        rec.UserAgent,
+			TraceID:          rec.TraceID,
+			CreatedAt:        rec.CreatedAt,
+		})
+		a.SetID(rec.ID)
+		audits = append(audits, a)
+	}
+	return audits, pageInfo, nil
+}
+
+// paginateWithFilter 通用分页（支持 filter）
+func (r *auditRepository) paginateWithFilter(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+	if param.Page < 1 {
+		param.Page = 1
+	}
+	if param.PageSize < 1 {
+		param.PageSize = 20
+	}
+
+	sql := db.Model(&dbmodel.ModelCallAudit{}).Select(constant.AuditRepoFields).Where(constant.DBConditionDeletedAtZero)
+
+	if !startTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
+	}
+	if !endTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
+	}
+
+	// 注入 filter 条件
+	if filterSQL != "" {
+		sql = sql.Where(filterSQL, filterArgs...)
 	}
 
 	if param.Query != "" && len(constant.AuditQueryFields) > 0 {

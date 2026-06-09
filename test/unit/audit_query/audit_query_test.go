@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -66,6 +67,22 @@ func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []ui
 
 func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
 	return nil, nil
+}
+
+func (f *fakeAuditRepo) ListAllWithFilter(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+	return f.ListAll(ctx, param, startTime, endTime)
+}
+
+func (f *fakeAuditRepo) ListByAPIKeyIDsWithFilter(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+	return f.ListByAPIKeyIDs(ctx, apiKeyIDs, param, startTime, endTime)
+}
+
+func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string) ([]string, error) {
+	return []string{}, nil
 }
 
 type fakeAPIKeyIDLookup struct {
@@ -359,6 +376,7 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 	svc := auditquery.NewAuditService(
 		auditquery.NewListAllAuditLogsHandler(repo),
 		auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewListAuditOptionHandler(repo),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewRequestRateHandler(repo),
@@ -373,21 +391,21 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 	)
 
-	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
+	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
 		t.Fatalf("admin ListLogs err: %v", err)
 	}
 	if repo.listAllCalls != 1 {
 		t.Errorf("admin should call listAll, calls = %d", repo.listAllCalls)
 	}
 
-	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionUser, 7, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
+	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionUser, 7, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
 		t.Fatalf("user ListLogs err: %v", err)
 	}
 	if repo.listByAPIKeyIDsCnt != 1 {
 		t.Errorf("user should call listByAPIKeyIDs, calls = %d", repo.listByAPIKeyIDsCnt)
 	}
 
-	if _, _, err := svc.ListLogs(context.Background(), enum.Permission("nope"), 7, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); !errors.Is(err, ierr.ErrUnauthorized) {
+	if _, _, err := svc.ListLogs(context.Background(), enum.Permission("nope"), 7, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); !errors.Is(err, ierr.ErrUnauthorized) {
 		t.Errorf("unknown permission should return ErrUnauthorized, got %v", err)
 	}
 }

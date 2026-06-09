@@ -92,6 +92,7 @@ type ListAllAuditLogsQuery struct {
 	SortField string
 	StartTime time.Time
 	EndTime   time.Time
+	Filter    string
 }
 
 // ListAllAuditLogsHandler 全量审计列表查询处理器
@@ -137,6 +138,7 @@ type ListAuditLogsByUserQuery struct {
 	SortField string
 	StartTime time.Time
 	EndTime   time.Time
+	Filter    string
 }
 
 // ListAuditLogsByUserHandler user 自己名下所有 key 的审计列表查询处理器

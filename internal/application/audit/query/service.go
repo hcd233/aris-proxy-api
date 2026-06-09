@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -11,31 +12,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// AuditService 统一按当前 JWT 权限派发审计查询，handler 只负责 DTO 映射。
-type AuditService interface {
-	ListLogs(ctx context.Context, permission enum.Permission, userID uint, q ListAuditLogsParams) ([]*AuditLogView, *model.PageInfo, error)
-	ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error)
-	RequestRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error)
-	TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
-	TokenRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenRateItem, error)
-	ModelUsage(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.ModelUsageItem, error)
-	FirstTokenLatency(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.FirstTokenLatencyItem, error)
-}
-
-// ListAuditLogsParams 列表查询的通用参数（不带权限相关字段）。
-type ListAuditLogsParams struct {
-	Page      int
-	PageSize  int
-	Query     string
-	Sort      enum.Sort
-	SortField string
-	StartTime time.Time
-	EndTime   time.Time
-}
-
 type auditService struct {
 	listAll                 ListAllAuditLogsHandler
 	listByUser              ListAuditLogsByUserHandler
+	listAuditOption         ListAuditOptionHandler
 	modelTrend              ModelTrendHandler
 	modelTrendByUser        ModelTrendByUserHandler
 	requestRate             RequestRateHandler
@@ -54,6 +34,7 @@ type auditService struct {
 func NewAuditService(
 	listAll ListAllAuditLogsHandler,
 	listByUser ListAuditLogsByUserHandler,
+	listAuditOption ListAuditOptionHandler,
 	modelTrend ModelTrendHandler,
 	modelTrendByUser ModelTrendByUserHandler,
 	requestRate RequestRateHandler,
@@ -66,10 +47,11 @@ func NewAuditService(
 	modelUsageByUser ModelUsageByUserHandler,
 	firstTokenLatency FirstTokenLatencyHandler,
 	firstTokenLatencyByUser FirstTokenLatencyByUserHandler,
-) AuditService {
+) port.AuditService {
 	return &auditService{
 		listAll:                 listAll,
 		listByUser:              listByUser,
+		listAuditOption:         listAuditOption,
 		modelTrend:              modelTrend,
 		modelTrendByUser:        modelTrendByUser,
 		requestRate:             requestRate,
@@ -85,34 +67,74 @@ func NewAuditService(
 	}
 }
 
-// toAllQuery 转换为 admin 全量查询的入参。
-func (p ListAuditLogsParams) toAllQuery() ListAllAuditLogsQuery {
-	return ListAllAuditLogsQuery(p)
-}
-
-// toByUserQuery 转换为 user 维度查询的入参。
-func (p ListAuditLogsParams) toByUserQuery(userID uint) ListAuditLogsByUserQuery {
-	return ListAuditLogsByUserQuery{
-		UserID:    userID,
-		Page:      p.Page,
-		PageSize:  p.PageSize,
-		Query:     p.Query,
-		Sort:      p.Sort,
-		SortField: p.SortField,
-		StartTime: p.StartTime,
-		EndTime:   p.EndTime,
-	}
-}
-
-func (s *auditService) ListLogs(ctx context.Context, permission enum.Permission, userID uint, p ListAuditLogsParams) ([]*AuditLogView, *model.PageInfo, error) {
+func (s *auditService) ListLogs(ctx context.Context, permission enum.Permission, userID uint, p port.ListAuditLogsParams) ([]*port.AuditLogView, *model.PageInfo, error) {
 	switch permission {
 	case enum.PermissionAdmin:
-		return s.listAll.Handle(ctx, p.toAllQuery())
+		views, pageInfo, err := s.listAll.Handle(ctx, ListAllAuditLogsQuery{
+			Page:      p.Page,
+			PageSize:  p.PageSize,
+			Query:     p.Query,
+			Sort:      p.Sort,
+			SortField: p.SortField,
+			StartTime: p.StartTime,
+			EndTime:   p.EndTime,
+			Filter:    p.Filter,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		return toPortAuditLogViews(views), pageInfo, nil
 	case enum.PermissionUser:
-		return s.listByUser.Handle(ctx, p.toByUserQuery(userID))
+		views, pageInfo, err := s.listByUser.Handle(ctx, ListAuditLogsByUserQuery{
+			UserID:    userID,
+			Page:      p.Page,
+			PageSize:  p.PageSize,
+			Query:     p.Query,
+			Sort:      p.Sort,
+			SortField: p.SortField,
+			StartTime: p.StartTime,
+			EndTime:   p.EndTime,
+			Filter:    p.Filter,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		return toPortAuditLogViews(views), pageInfo, nil
 	default:
 		return nil, nil, ierr.ErrUnauthorized
 	}
+}
+
+func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
+	result := make([]*port.AuditLogView, 0, len(views))
+	for _, v := range views {
+		result = append(result, &port.AuditLogView{
+			ID:                       v.ID,
+			CreatedAt:                v.CreatedAt,
+			Model:                    v.Model,
+			UpstreamProtocol:         v.UpstreamProtocol,
+			APIProtocol:              v.APIProtocol,
+			Endpoint:                 v.Endpoint,
+			InputTokens:              v.InputTokens,
+			OutputTokens:             v.OutputTokens,
+			CacheCreationInputTokens: v.CacheCreationInputTokens,
+			CacheReadInputTokens:     v.CacheReadInputTokens,
+			FirstTokenLatencyMs:      v.FirstTokenLatencyMs,
+			StreamDurationMs:         v.StreamDurationMs,
+			UserAgent:                v.UserAgent,
+			UpstreamStatusCode:       v.UpstreamStatusCode,
+			ErrorMessage:             v.ErrorMessage,
+			TraceID:                  v.TraceID,
+			APIKeyName:               v.APIKeyName,
+			UserName:                 v.UserName,
+			UserEmail:                v.UserEmail,
+		})
+	}
+	return result
+}
+
+func (s *auditService) ListAuditOption(ctx context.Context, field, keyword string) ([]string, error) {
+	return s.listAuditOption.Handle(ctx, ListAuditOptionQuery{Field: field, Keyword: keyword})
 }
 
 func (s *auditService) ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {

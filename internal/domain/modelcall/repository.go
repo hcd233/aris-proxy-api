@@ -25,7 +25,7 @@ type AuditRelation struct {
 // AuditRepository ModelCallAudit 聚合仓储接口
 //
 //	@author centonhuang
-//	@update 2026-05-29 14:00:00
+//	@update 2026-06-09 10:00:00
 type AuditRepository interface {
 	// Save 持久化审计聚合（首次 Save 后回填 ID）
 	Save(ctx context.Context, audit *aggregate.ModelCallAudit) error
@@ -36,8 +36,20 @@ type AuditRepository interface {
 	// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
+	// ListAllWithFilter 全量分页查询审计记录（支持 filter）
+	ListAllWithFilter(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+
+	// ListByAPIKeyIDsWithFilter 按 api_key_id IN (...) 分页查询（支持 filter）
+	ListByAPIKeyIDsWithFilter(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)
+
+	// ListDistinctUserNames 查询去重的用户名列表（支持模糊搜索）
+	ListDistinctUserNames(ctx context.Context, keyword string) ([]string, error)
+
+	// ListDistinctModels 查询去重的模型列表（支持模糊搜索）
+	ListDistinctModels(ctx context.Context, keyword string) ([]string, error)
 
 	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
 	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
