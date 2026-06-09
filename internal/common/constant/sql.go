@@ -7,7 +7,6 @@ const (
 	FieldMessageIDs                  = "message_ids"
 	FieldToolIDs                     = "tool_ids"
 	FieldMetadata                    = "metadata"
-	FieldScoreVersion                = "score_version"
 	FieldScore                       = "score"
 	FieldScoredAt                    = "scored_at"
 	FieldName                        = "name"
@@ -57,10 +56,9 @@ const (
 )
 
 const (
-	WhereFieldID           = "id"
-	WhereFieldCheckSum     = "check_sum"
-	WhereFieldScoreVersion = "score_version"
-	WhereFieldToolIDs      = "tool_ids"
+	WhereFieldID       = "id"
+	WhereFieldCheckSum = "check_sum"
+	WhereFieldToolIDs  = "tool_ids"
 )
 
 var (
