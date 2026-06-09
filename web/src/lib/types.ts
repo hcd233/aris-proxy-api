@@ -464,3 +464,30 @@ export interface FirstTokenLatencyItem {
 export interface FirstTokenLatencyRsp extends CommonRsp {
   data?: FirstTokenLatencyItem[];
 }
+
+// ─── Audit Option List ───────────────────────────────────────────────────────
+
+export interface AuditOptionListReq {
+  field: "user" | "model";
+  keyword?: string;
+}
+
+export interface AuditOptionListRsp extends CommonRsp {
+  items: string[];
+}
+
+// ─── Session Option List ─────────────────────────────────────────────────────
+
+export interface SessionOptionListReq {
+  field: "score";
+  keyword?: string;
+}
+
+export interface SessionOptionListRsp extends CommonRsp {
+  items: OptionItem[];
+}
+
+export interface OptionItem {
+  value: string;
+  label: string;
+}

@@ -50,6 +50,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type SortDir = "asc" | "desc";
 
@@ -96,6 +103,12 @@ export default function SessionsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
+  const [filterScore, setFilterScore] = useState<string>("");
+
+  const buildSessionFilter = (score: string): string | undefined => {
+    if (!score) return undefined;
+    return `score:${score}`;
+  };
 
   const fetchSessions = useCallback(
     async (
@@ -106,11 +119,12 @@ export default function SessionsPage() {
       ce: string,
       sortState: { field: string; dir: SortDir },
       kw: string,
+      score: string,
     ) => {
       setLoading(true);
       try {
         const { startTime, endTime } = computeRange(range, cs, ce);
-        const rsp = await api.listSessions({
+        const rsp = await api.listSessionsWithFilter({
           page,
           pageSize,
           sort: sortState.dir,
@@ -118,6 +132,7 @@ export default function SessionsPage() {
           startTime,
           endTime,
           keyword: kw || undefined,
+          filter: buildSessionFilter(score),
         });
         setSessions(rsp.sessions ?? []);
         if (rsp.pageInfo) {
@@ -137,14 +152,14 @@ export default function SessionsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
   useEffect(() => {
-    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "");
+    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "", "");
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword);
+    fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore);
 
   const handleSort = (field: string) => {
     const newSort: { field: string; dir: SortDir } =
@@ -152,14 +167,14 @@ export default function SessionsPage() {
         ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
         : { field, dir: "desc" };
     setSort(newSort);
-    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, newSort, keyword);
+    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, newSort, keyword, filterScore);
   };
 
   const handleSearch = () => {
     const kw = searchInput.trim();
     setKeyword(kw);
     setSelected(new Set());
-    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, kw);
+    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, kw, filterScore);
   };
 
   const renderSortIcon = (field: string) => {
@@ -179,7 +194,7 @@ export default function SessionsPage() {
     try {
       await api.deleteSession(deleteTarget.id);
       toast.success("Session deleted");
-      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword);
+      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete session");
     } finally {
@@ -223,7 +238,7 @@ export default function SessionsPage() {
         toast.success(`${rsp.deletedCount} sessions deleted`);
       }
       setSelected(new Set());
-      fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword);
+      fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to batch delete");
     } finally {
@@ -292,9 +307,44 @@ export default function SessionsPage() {
                   setTimeRange(key);
                   setCustomStart(cs);
                   setCustomEnd(ce);
-                  fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword);
+                  fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword, filterScore);
                 }}
               />
+              <Select
+                value={filterScore || "__all__"}
+                onValueChange={(v) => {
+                  const val = (v as string) === "__all__" ? "" : (v as string);
+                  setFilterScore(val);
+                  fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, val);
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Score" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Scores</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="unscored">Unscored</SelectItem>
+                </SelectContent>
+              </Select>
+              {filterScore && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-muted-foreground"
+                  onClick={() => {
+                    setFilterScore("");
+                    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, "");
+                  }}
+                >
+                  <X className="size-3.5" />
+                  Clear
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <div className="relative flex-1 md:w-64">
@@ -312,7 +362,7 @@ export default function SessionsPage() {
                 {searchInput && (
                   <button
                     type="button"
-                    onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, ""); }}
+                    onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, "", filterScore); }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-4" />
@@ -621,7 +671,7 @@ export default function SessionsPage() {
                       {[20, 50, 100, 200].map((size) => (
                         <DropdownMenuItem
                           key={size}
-                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort, keyword)}
+                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort, keyword, filterScore)}
                         >
                           {size === pageInfo.pageSize && (
                             <Check className="size-4" />
