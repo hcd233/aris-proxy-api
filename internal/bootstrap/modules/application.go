@@ -76,6 +76,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewDeleteSessionHandler,
 		NewScoreSessionHandler,
 		NewDeleteScoreSessionHandler,
+		NewSessionOptionHandler,
 		usecase.NewListOpenAIModels,
 		usecase.NewListAnthropicModels,
 		usecase.NewCountTokens,
@@ -252,4 +253,8 @@ func NewScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo ap
 
 func NewDeleteScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.DeleteScoreSessionHandler {
 	return sessioncommand.NewDeleteScoreSessionHandler(sessionRepo, apiKeyRepo)
+}
+
+func NewSessionOptionHandler() sessionport.ListSessionOptionHandler {
+	return sessionquery.NewListSessionOptionHandler()
 }
