@@ -37,19 +37,18 @@ export function TokenVolumeChart() {
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.tokenVolume.customEnd", "");
-  const [rangeApplyCount, setRangeApplyCount] = useState(0);
   const requestIdRef = useRef(0);
   const [data, setData] = useState<TokenThroughputPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(false);
     try {
-      const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
+      const { startTime, endTime, granularity } = computeRange(range ?? timeRange, cs ?? customStart, ce ?? customEnd);
       const rsp = await api.fetchTokenThroughput({ startTime, endTime, granularity });
       if (requestId !== requestIdRef.current) return;
       setData(rsp.data ?? []);
@@ -66,7 +65,7 @@ export function TokenVolumeChart() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchData();
-  }, [fetchData, rangeApplyCount]);
+  }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const chartConfig = Object.fromEntries(
@@ -105,7 +104,7 @@ export function TokenVolumeChart() {
             setTimeRange(key);
             setCustomStart(cs);
             setCustomEnd(ce);
-            setRangeApplyCount((count) => count + 1);
+            fetchData(key, cs, ce);
           }}
         />
       </CardHeader>
@@ -115,7 +114,7 @@ export function TokenVolumeChart() {
         ) : error ? (
           <div className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
             <p>Failed to load</p>
-            <Button variant="outline" size="sm" onClick={fetchData}>
+            <Button variant="outline" size="sm" onClick={() => fetchData()}>
               Retry
             </Button>
           </div>

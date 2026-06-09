@@ -17,7 +17,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { TimeRangeKey } from "@/lib/time-range";
-import { TIME_RANGE_LABELS } from "@/lib/time-range";
 
 export interface TimeRangePickerProps {
   value: TimeRangeKey;
@@ -27,7 +26,7 @@ export interface TimeRangePickerProps {
   className?: string;
 }
 
-const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
+const ALL_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d", "custom"];
 
 export function TimeRangePicker({
   value,
@@ -63,10 +62,14 @@ export function TimeRangePicker({
 
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const handlePresetChange = useCallback(
+  const handleTabChange = useCallback(
     (key: string) => {
       const rangeKey = key as TimeRangeKey;
-      onChange(rangeKey, "", "");
+      if (rangeKey === "custom") {
+        setOpen(true);
+      } else {
+        onChange(rangeKey, "", "");
+      }
     },
     [onChange]
   );
@@ -135,15 +138,6 @@ export function TimeRangePicker({
     [value, customStart, customEnd]
   );
 
-  const displayLabel = useMemo(() => {
-    if (value === "custom" && customStart && customEnd) {
-      const start = new Date(customStart);
-      const end = new Date(customEnd);
-      return `${format(start, "MMM d")} – ${format(end, "MMM d")}`;
-    }
-    return TIME_RANGE_LABELS[value];
-  }, [value, customStart, customEnd]);
-
   const draftLabel = useMemo(() => {
     if (dateRange?.from && dateRange?.to) {
       if (showTimePicker) {
@@ -160,17 +154,36 @@ export function TimeRangePicker({
   const customRangeError = customRange && !customRange.isValid ? "Start must be before end" : "";
   const canApply = Boolean(customRange?.isValid);
 
+  const customDisplayLabel = useMemo(() => {
+    if (value === "custom" && customStart && customEnd) {
+      const start = new Date(customStart);
+      const end = new Date(customEnd);
+      return `${format(start, "MMM d")} – ${format(end, "MMM d")}`;
+    }
+    return "Custom";
+  }, [value, customStart, customEnd]);
+
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Tabs value={value === "custom" ? undefined : value} onValueChange={handlePresetChange}>
+    <div className={cn("flex items-center", className)}>
+      <Tabs value={value} onValueChange={handleTabChange}>
         <TabsList className="h-9">
-          {PRESET_KEYS.map((key) => (
+          {ALL_KEYS.map((key) => (
             <TabsTrigger
               key={key}
               value={key}
-              className="px-3 text-xs"
+              className={cn(
+                "px-3 text-xs",
+                key === "custom" && "gap-1.5"
+              )}
             >
-              {key.toUpperCase()}
+              {key === "custom" ? (
+                <>
+                  <CalendarIcon className="size-3" />
+                  <span className="hidden sm:inline">{customDisplayLabel}</span>
+                </>
+              ) : (
+                key.toUpperCase()
+              )}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -178,20 +191,8 @@ export function TimeRangePicker({
 
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
-          render={
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                "h-9 gap-1.5 px-3 text-xs font-normal",
-                value === "custom" && "bg-primary/10 text-primary border-primary/30"
-              )}
-            />
-          }
-        >
-          <CalendarIcon className="size-3.5" />
-          <span className="hidden sm:inline">{displayLabel}</span>
-        </PopoverTrigger>
+          render={<span className="hidden" />}
+        />
         <PopoverContent
           className="w-auto p-0 rounded-lg border bg-popover shadow-sm"
           align="end"
