@@ -132,7 +132,6 @@ export function ModelTokenBarChart() {
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTokenBar.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTokenBar.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTokenBar.customEnd", "");
-  const [rangeApplyCount, setRangeApplyCount] = useState(0);
   const requestIdRef = useRef(0);
   const [data, setData] = useState<ModelUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,12 +139,12 @@ export function ModelTokenBarChart() {
   const [sortField, setSortField] = useState<SortField>("total");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(false);
     try {
-      const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
+      const { startTime, endTime, granularity } = computeRange(range ?? timeRange, cs ?? customStart, ce ?? customEnd);
       const rsp = await api.fetchModelUsage({ startTime, endTime, granularity });
       if (requestId !== requestIdRef.current) return;
       setData(rsp.data ?? []);
@@ -162,7 +161,7 @@ export function ModelTokenBarChart() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchData();
-  }, [fetchData, rangeApplyCount]);
+  }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const sorted = useMemo(() => {
@@ -206,7 +205,7 @@ export function ModelTokenBarChart() {
             setTimeRange(key);
             setCustomStart(cs);
             setCustomEnd(ce);
-            setRangeApplyCount((count) => count + 1);
+            fetchData(key, cs, ce);
           }}
         />
       </CardHeader>
@@ -218,7 +217,7 @@ export function ModelTokenBarChart() {
         ) : error ? (
           <div className="flex h-64 flex-col items-center justify-center gap-2 px-6 pb-6 text-sm text-muted-foreground">
             <p>Failed to load</p>
-            <Button variant="outline" size="sm" onClick={fetchData}>
+            <Button variant="outline" size="sm" onClick={() => fetchData()}>
               Retry
             </Button>
           </div>

@@ -24,19 +24,18 @@ export function ModelTrendChart() {
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTrend.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTrend.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTrend.customEnd", "");
-  const [rangeApplyCount, setRangeApplyCount] = useState(0);
   const requestIdRef = useRef(0);
   const [data, setData] = useState<ModelTrendItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(false);
     try {
-      const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
+      const { startTime, endTime, granularity } = computeRange(range ?? timeRange, cs ?? customStart, ce ?? customEnd);
       const rsp = await api.fetchModelTrend({
         startTime,
         endTime,
@@ -57,7 +56,7 @@ export function ModelTrendChart() {
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects */
   useEffect(() => {
     fetchData();
-  }, [fetchData, rangeApplyCount]);
+  }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const models = [...new Set(data.map((d) => d.model))];
@@ -95,7 +94,7 @@ export function ModelTrendChart() {
             setTimeRange(key);
             setCustomStart(cs);
             setCustomEnd(ce);
-            setRangeApplyCount((count) => count + 1);
+            fetchData(key, cs, ce);
           }}
         />
       </CardHeader>
@@ -105,7 +104,7 @@ export function ModelTrendChart() {
         ) : error ? (
           <div className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
             <p>Failed to load</p>
-            <Button variant="outline" size="sm" onClick={fetchData}>
+            <Button variant="outline" size="sm" onClick={() => fetchData()}>
               Retry
             </Button>
           </div>
