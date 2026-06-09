@@ -240,9 +240,17 @@ export default function EndpointsPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">{ep.name}</p>
+                            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                              Key: <code className="rounded bg-muted px-1 py-0.5">{ep.maskedAPIKey}</code>
+                            </p>
                             {ep.openaiBaseURL && (
                               <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                {ep.openaiBaseURL}
+                                OpenAI: {ep.openaiBaseURL}
+                              </p>
+                            )}
+                            {ep.anthropicBaseURL && (
+                              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                                Anthropic: {ep.anthropicBaseURL}
                               </p>
                             )}
                           </div>
@@ -283,7 +291,9 @@ export default function EndpointsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>OpenAI Base URL</TableHead>
+                      <TableHead>Key</TableHead>
+                      <TableHead>Base URL (OpenAI)</TableHead>
+                      <TableHead>Base URL (Anthropic)</TableHead>
                       <TableHead>Supported APIs</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -293,8 +303,14 @@ export default function EndpointsPage() {
                     {endpoints.map((ep) => (
                       <TableRow key={ep.id}>
                         <TableCell className="font-medium">{ep.name}</TableCell>
-                        <TableCell className="max-w-[200px] truncate font-mono text-xs">
+                        <TableCell>
+                          <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-mono">{ep.maskedAPIKey}</code>
+                        </TableCell>
+                        <TableCell className="max-w-[180px] truncate font-mono text-xs">
                           {ep.openaiBaseURL || "—"}
+                        </TableCell>
+                        <TableCell className="max-w-[180px] truncate font-mono text-xs">
+                          {ep.anthropicBaseURL || "—"}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1.5">
