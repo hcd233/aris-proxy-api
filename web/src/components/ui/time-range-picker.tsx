@@ -26,8 +26,11 @@ export interface TimeRangePickerProps {
   onChange: (key: TimeRangeKey, customStart: string, customEnd: string) => void;
 }
 
+const PRESET_KEYS = ["1h", "24h", "7d", "30d"] as const;
+type PresetTimeRangeKey = (typeof PRESET_KEYS)[number];
+
 // Preset ranges with their date calculations
-const PRESET_RANGES: Record<string, () => { start: Date; end: Date }> = {
+const PRESET_RANGES: Record<PresetTimeRangeKey, () => { start: Date; end: Date }> = {
   "1h": () => {
     const end = new Date();
     const start = subHours(end, 1);
@@ -86,52 +89,70 @@ export function TimeRangePicker({
   });
 
   // Selected preset
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(
-    value !== "custom" ? value : null
+  const [selectedPreset, setSelectedPreset] = useState<PresetTimeRangeKey | null>(
+    value === "custom" ? null : value
   );
 
   const handlePresetSelect = useCallback(
-    (key: string) => {
-      const preset = PRESET_RANGES[key];
-      if (preset) {
-        const { start, end } = preset();
-        setDateRange({ from: start, to: end });
-        setSelectedPreset(key);
-        // Don't close popover, let user see the selection
-      }
+    (key: PresetTimeRangeKey) => {
+      const { start, end } = PRESET_RANGES[key]();
+      setDateRange({ from: start, to: end });
+      setSelectedPreset(key);
     },
     []
   );
 
-  const handleCustomApply = useCallback(() => {
-    if (dateRange?.from && dateRange?.to) {
-      let start = dateRange.from;
-      let end = dateRange.to;
-      
-      if (includeTime) {
-        // Apply time to dates
-        const [startHours, startMinutes] = startTime.split(":").map(Number);
-        const [endHours, endMinutes] = endTime.split(":").map(Number);
-        
-        start = new Date(start);
-        start.setHours(startHours, startMinutes, 0, 0);
-        
-        end = new Date(end);
-        end.setHours(endHours, endMinutes, 59, 999);
-      } else {
-        // Use start of day and end of day
-        start = startOfDay(start);
-        end = endOfDay(end);
-      }
-      
-      onChange("custom", start.toISOString(), end.toISOString());
-      setOpen(false);
+  const handleDateRangeSelect = useCallback((range: DateRange | undefined) => {
+    setDateRange(range);
+    setSelectedPreset(null);
+  }, []);
+
+  const handleIncludeTimeChange = useCallback((checked: boolean) => {
+    setIncludeTime(checked);
+    setSelectedPreset(null);
+  }, []);
+
+  const customRange = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) {
+      return null;
     }
-  }, [dateRange, includeTime, startTime, endTime, onChange]);
+
+    let start = dateRange.from;
+    let end = dateRange.to;
+
+    if (includeTime) {
+      const [startHours, startMinutes] = startTime.split(":").map(Number);
+      const [endHours, endMinutes] = endTime.split(":").map(Number);
+
+      start = new Date(start);
+      start.setHours(startHours, startMinutes, 0, 0);
+
+      end = new Date(end);
+      end.setHours(endHours, endMinutes, 59, 999);
+    } else {
+      start = startOfDay(start);
+      end = endOfDay(end);
+    }
+
+    return {
+      start,
+      end,
+      isValid: start.getTime() <= end.getTime(),
+    };
+  }, [dateRange, includeTime, startTime, endTime]);
+
+  const handleCustomApply = useCallback(() => {
+    if (!customRange?.isValid) {
+      return;
+    }
+
+    onChange("custom", customRange.start.toISOString(), customRange.end.toISOString());
+    setOpen(false);
+  }, [customRange, onChange]);
 
   const handlePresetApply = useCallback(() => {
     if (selectedPreset) {
-      onChange(selectedPreset as TimeRangeKey, "", "");
+      onChange(selectedPreset, "", "");
       setOpen(false);
     }
   }, [selectedPreset, onChange]);
@@ -144,6 +165,25 @@ export function TimeRangePicker({
     }
     return TIME_RANGE_LABELS[value];
   }, [value, customStart, customEnd]);
+
+  const draftLabel = useMemo(() => {
+    if (selectedPreset) {
+      return TIME_RANGE_LABELS[selectedPreset];
+    }
+    if (customRange && includeTime) {
+      return `${format(customRange.start, "MMM d, yyyy HH:mm")} – ${format(customRange.end, "MMM d, yyyy HH:mm")}`;
+    }
+    if (dateRange?.from && dateRange?.to) {
+      return `${format(dateRange.from, "MMM d, yyyy")} – ${format(dateRange.to, "MMM d, yyyy")}`;
+    }
+    if (dateRange?.from) {
+      return `${format(dateRange.from, "MMM d, yyyy")} – Select end date`;
+    }
+    return "Select a date range";
+  }, [selectedPreset, customRange, includeTime, dateRange]);
+
+  const customRangeError = customRange && !customRange.isValid ? "Start must be before end." : "";
+  const canApply = Boolean(selectedPreset || customRange?.isValid);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -159,7 +199,7 @@ export function TimeRangePicker({
         setIncludeTime(true);
         setSelectedPreset(null);
       } else {
-        setSelectedPreset(value);
+        setSelectedPreset(value === "custom" ? null : value);
         setDateRange(undefined);
         setIncludeTime(false);
       }
@@ -186,104 +226,128 @@ export function TimeRangePicker({
         <span className="truncate max-w-[200px]">{displayLabel}</span>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-0"
+        className="w-[calc(100vw-2rem)] max-w-[42rem] overflow-hidden rounded-xl border bg-popover p-0 shadow-xl"
         align="start"
-        sideOffset={4}
+        sideOffset={8}
       >
-        <div className="flex flex-col">
-          {/* Quick presets */}
-          <div className="flex flex-col border-b border-border p-2">
-            <div className="text-xs font-medium text-muted-foreground px-2 py-1">
+        <div className="grid md:grid-cols-[11rem_1fr]">
+          <div className="border-b border-border bg-muted/30 p-3 md:border-b-0 md:border-r">
+            <div className="px-1 text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">
               Quick Select
             </div>
-            <div className="flex flex-wrap gap-1">
-              {Object.keys(PRESET_RANGES).map((key) => (
+            <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-1">
+              {PRESET_KEYS.map((key) => (
                 <Button
                   key={key}
                   variant="ghost"
                   size="sm"
+                  aria-pressed={selectedPreset === key}
                   className={cn(
-                    "h-7 px-2 text-xs",
-                    selectedPreset === key && "bg-accent text-accent-foreground"
+                    "h-9 justify-start gap-2 rounded-lg px-2.5 text-xs font-medium transition-colors duration-150",
+                    selectedPreset === key
+                      ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground"
+                      : "text-muted-foreground hover:bg-background hover:text-foreground"
                   )}
                   onClick={() => handlePresetSelect(key)}
                 >
-                  {selectedPreset === key && <Check className="size-3 mr-1" />}
-                  {TIME_RANGE_LABELS[key as TimeRangeKey]}
+                  <span className="flex size-4 items-center justify-center">
+                    {selectedPreset === key && <Check className="size-3" />}
+                  </span>
+                  {TIME_RANGE_LABELS[key]}
                 </Button>
               ))}
             </div>
           </div>
 
-          {/* Calendar */}
-          <div className="p-2">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={1}
-              defaultMonth={dateRange?.from}
-              className="rounded-md border"
-            />
-          </div>
-
-          {/* Time toggle and inputs */}
-          <div className="border-t border-border p-2">
-            <div className="flex items-center space-x-2 mb-2">
-              <Switch
-                id="include-time"
-                checked={includeTime}
-                onCheckedChange={setIncludeTime}
+          <div className="min-w-0">
+            <div className="p-3 pb-2">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={handleDateRangeSelect}
+                numberOfMonths={1}
+                defaultMonth={dateRange?.from}
+                className="mx-auto rounded-lg border bg-background shadow-sm"
               />
-              <Label htmlFor="include-time" className="text-xs">
-                Include time
-              </Label>
             </div>
-            
-            {includeTime && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Start time</Label>
-                  <Input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="h-8 text-xs"
+
+            <div className="border-t border-border bg-muted/20 p-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="include-time"
+                    checked={includeTime}
+                    onCheckedChange={handleIncludeTimeChange}
                   />
+                  <Label htmlFor="include-time" className="text-sm font-medium">
+                    Include time
+                  </Label>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">End time</Label>
-                  <Input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
+
+                {includeTime && (
+                  <div className="grid grid-cols-2 gap-2 sm:w-56">
+                    <div className="space-y-1">
+                      <Label htmlFor="time-range-start-time" className="text-xs text-muted-foreground">Start time</Label>
+                      <Input
+                        id="time-range-start-time"
+                        type="time"
+                        value={startTime}
+                        onChange={(e) => {
+                          setStartTime(e.target.value);
+                          setSelectedPreset(null);
+                        }}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="time-range-end-time" className="text-xs text-muted-foreground">End time</Label>
+                      <Input
+                        id="time-range-end-time"
+                        type="time"
+                        value={endTime}
+                        onChange={(e) => {
+                          setEndTime(e.target.value);
+                          setSelectedPreset(null);
+                        }}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1 text-xs text-muted-foreground">
+            <div className="flex min-w-0">
+              <span className="shrink-0 font-medium text-foreground">Range:&nbsp;</span>
+              <span className="min-w-0 truncate">{draftLabel}</span>
+            </div>
+            {customRangeError && (
+              <div role="alert" className="text-destructive">
+                {customRangeError}
               </div>
             )}
           </div>
-
-          {/* Apply button */}
-          <div className="border-t border-border p-2 flex justify-end gap-2">
-            {selectedPreset ? (
-              <Button
-                size="sm"
-                onClick={handlePresetApply}
-                className="h-7 px-3 text-xs"
-              >
-                Apply
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={handleCustomApply}
-                disabled={!dateRange?.from || !dateRange?.to}
-                className="h-7 px-3 text-xs"
-              >
-                Apply Range
-              </Button>
-            )}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 text-xs"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={selectedPreset ? handlePresetApply : handleCustomApply}
+              disabled={!canApply}
+              className="h-8 px-4 text-xs font-medium"
+            >
+              Apply
+            </Button>
           </div>
         </div>
       </PopoverContent>

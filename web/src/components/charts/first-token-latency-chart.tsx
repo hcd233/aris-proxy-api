@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { FirstTokenLatencyItem } from "@/lib/types";
@@ -26,29 +26,36 @@ export function FirstTokenLatencyChart() {
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.firstTokenLatency.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.firstTokenLatency.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.firstTokenLatency.customEnd", "");
+  const [rangeApplyCount, setRangeApplyCount] = useState(0);
+  const requestIdRef = useRef(0);
   const [data, setData] = useState<FirstTokenLatencyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
   const fetchData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(false);
     try {
       const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
       const rsp = await api.fetchFirstTokenLatency({ startTime, endTime, granularity });
+      if (requestId !== requestIdRef.current) return;
       setData(rsp.data ?? []);
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setError(true);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [timeRange, customStart, customEnd]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, rangeApplyCount]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const models = [...new Set(data.map((d) => d.model))];
@@ -93,6 +100,7 @@ export function FirstTokenLatencyChart() {
             setTimeRange(key);
             setCustomStart(cs);
             setCustomEnd(ce);
+            setRangeApplyCount((count) => count + 1);
           }}
         />
       </CardHeader>
