@@ -165,8 +165,8 @@ const (
 	WhereIDEquals     = "id = ?"
 
 	// ── Session delete error messages ──
-	SessionDeleteErrFindFailed   = "failed to find session"
-	SessionDeleteErrNotFound     = "session not found"
-	SessionDeleteErrNoPermission = "no permission"
-	SessionDeleteErrDeleteFailed = "failed to delete"
+	SessionDeleteErrorFindFailed   = "failed to find session"
+	SessionDeleteErrorNotFound     = "session not found"
+	SessionDeleteErrorNoPermission = "no permission"
+	SessionDeleteErrorDeleteFailed = "failed to delete"
 )

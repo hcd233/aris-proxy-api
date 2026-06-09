@@ -27,6 +27,7 @@ import {
   Trash2,
   AlertTriangle,
   Search,
+  X,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -314,9 +315,9 @@ export default function SessionsPage() {
                   <button
                     type="button"
                     onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, ""); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    x
+                    <X className="size-4" />
                   </button>
                 )}
               </div>
