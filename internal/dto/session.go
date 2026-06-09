@@ -75,7 +75,7 @@ type ListSessionsRsp struct {
 // ListSessionsByUserReq 分页获取当前用户Session列表请求（JWT认证）
 //
 //	@author centonhuang
-//	@update 2026-06-01 10:00:00
+//	@update 2026-06-09 10:00:00
 type ListSessionsByUserReq struct {
 	model.PageParam
 	Sort      enum.Sort `query:"sort" enum:"asc,desc"`
@@ -83,6 +83,7 @@ type ListSessionsByUserReq struct {
 	StartTime time.Time `query:"startTime"`
 	EndTime   time.Time `query:"endTime"`
 	Keyword   string    `query:"keyword" maxLength:"200" doc:"搜索关键词（在消息内容和推理内容中搜索）"`
+	Filter    string    `query:"filter" maxLength:"500" doc:"筛选表达式，格式: field:value"`
 }
 
 // GetSessionByUserReq 获取当前用户Session详情请求（JWT认证）
