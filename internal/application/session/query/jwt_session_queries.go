@@ -12,10 +12,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 var validSessionSortFields = map[string]bool{
@@ -100,7 +100,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 		summary := ""
 		if len(p.Questions) > 0 {
 			if m, ok := msgByID[p.Questions[0]]; ok && m.Message != nil {
-				summary = extractMessageText(m.Message.Content)
+				summary = util.ExtractMessageText(m.Message.Content)
 			}
 		}
 		views = append(views, &sessionport.SessionSummaryView{
@@ -216,19 +216,4 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 		Messages:   messages,
 		Tools:      tools,
 	}, nil
-}
-
-func extractMessageText(c *vo.UnifiedContent) string {
-	if c == nil {
-		return ""
-	}
-	if c.Text != "" {
-		return c.Text
-	}
-	for _, p := range c.Parts {
-		if p.Type == enum.ContentPartTypeText && p.Text != "" {
-			return p.Text
-		}
-	}
-	return ""
 }
