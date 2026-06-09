@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 )
 
 // ToDataURL 将文件转换为 data URL
@@ -69,4 +71,25 @@ func truncateValue(val any, maxLen int) any {
 	default:
 		return val
 	}
+}
+
+// ExtractMessageText 从 UnifiedContent 中提取纯文本内容
+//
+//	@param c *vo.UnifiedContent
+//	@return string
+//	@author centonhuang
+//	@update 2026-06-09 10:00:00
+func ExtractMessageText(c *vo.UnifiedContent) string {
+	if c == nil {
+		return ""
+	}
+	if c.Text != "" {
+		return c.Text
+	}
+	for _, p := range c.Parts {
+		if p.Type == enum.ContentPartTypeText && p.Text != "" {
+			return p.Text
+		}
+	}
+	return ""
 }

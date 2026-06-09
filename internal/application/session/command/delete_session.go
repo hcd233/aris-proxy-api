@@ -45,11 +45,11 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 		sess, err := h.repo.FindByID(ctx, id)
 		if err != nil {
 			log.Error("[SessionCommand] Delete: FindByID failed", zap.Error(err), zap.Uint("sessionID", id))
-			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrFindFailed})
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorFindFailed})
 			continue
 		}
 		if sess == nil {
-			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrNotFound})
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorNotFound})
 			continue
 		}
 
@@ -57,14 +57,14 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 			owner := sess.Owner()
 			allowed := slices.Contains(ownerNames, owner.String())
 			if !allowed {
-				result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrNoPermission})
+				result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorNoPermission})
 				continue
 			}
 		}
 
 		if err := h.repo.Delete(ctx, id); err != nil {
 			log.Error("[SessionCommand] Delete: delete failed", zap.Error(err), zap.Uint("sessionID", id))
-			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrDeleteFailed})
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorDeleteFailed})
 			continue
 		}
 
