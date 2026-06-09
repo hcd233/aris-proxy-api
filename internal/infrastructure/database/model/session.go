@@ -10,8 +10,7 @@ import "time"
 // 列设计说明（refactor/session-list-baseline-perf-2026-06-07）：
 //
 //   - MessageCount / ToolCount 是 message_ids / tool_ids 长度的物化冗余列，
-//     由 sessionRepository.Save 在写入路径同步维护，
-//     存量数据由 database.PostMigrate 一次性回填。
+//     由 sessionRepository.Save 在写入路径同步维护。
 //     原因：旧实现读路径一直走 COALESCE(jsonb_array_length(message_ids::jsonb), 0)，
 //     planner 无法对这类表达式列建索引，sort by message_count/tool_count 永远全表扫；
 //     物化列后投影直接读 int 列，sort 也可以走真实列。

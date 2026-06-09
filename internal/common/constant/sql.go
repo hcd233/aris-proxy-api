@@ -143,44 +143,6 @@ var (
 	//     不是原生数组，会触发 SQLSTATE 42809（参考 fix #58）。
 	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.questions::jsonb) AS arr(mid) JOIN messages ON messages.id = arr.mid::bigint WHERE messages.message::text ILIKE ?)"
 
-	// SessionPerfPostMigrateSQLs database migrate 阶段在 AutoMigrate 完成后跑的幂等 DDL/DML。
-	//
-	// 设计要点：
-	//   1) AutoMigrate 只能把 GORM struct tag 里的字段/索引落到 schema，没法表达
-	//      Session 专有的"复合 BTREE 索引"（CreatedAt 在 BaseModel 里，没法在
-	//      Session 上加 index tag 而不污染所有嵌入了 BaseModel 的表）。这里直接
-	//      用标准 BTREE 复合索引 SQL 兜底（refactor/session-list-baseline-perf-2026-06-07）。
-	//
-	//   2) message_count / tool_count 是 message_ids / tool_ids 长度的物化冗余列，
-	//      新数据由 sessionRepository.Save 在写入路径同步维护，存量数据用一条
-	//      幂等 UPDATE 回填。WHERE 里限定 (message_count = 0 AND tool_count = 0
-	//      AND (jsonb_array_length(...) > 0 OR jsonb_array_length(...) > 0))
-	//      确保第二次 deploy 起没有可更新行（refactor/session-list-baseline-perf-2026-06-07）。
-	//
-	//   3) keyword 路径走 messages.message::text ILIKE '%kw%'，无 trigram 索引时
-	//      ILIKE 是顺序扫描；pg_trgm + GIN ((message::text) gin_trgm_ops) 让 ILIKE
-	//      退化成 trigram bitmap 扫描，2 字符及以上子串都能命中索引
-	//      （perf/session-list-trigram-and-windowcount-2026-06-08）。
-	//
-	// 雷区警告（事故记录：commit 75658e5 -> 11e4602）：
-	//   - 75658e5 写的是 USING gin (message::text gin_trgm_ops)，缺少表达式外层括号，
-	//     PG parser 在 '::' 抛 SQLSTATE 42601，migrate Job 直接红灯卡死整个 deploy。
-	//   - 这次纠正写法是 USING gin ((message::text) gin_trgm_ops)，
-	//     **必须双层括号**：外层 (...) 是 CREATE INDEX 的索引列列表，
-	//     内层 (...) 是表达式本身，缺一不可。单测 test/unit/session_baseline_perf
-	//     钉死这个形态防止再次踩雷。
-	//
-	// 全部 SQL 必须可重入：DDL 用 IF NOT EXISTS，DML 用 WHERE 限定到未回填行。
-	// 顺序很关键：CREATE EXTENSION 必须先于任何使用该扩展的 CREATE INDEX。
-	SessionPerfPostMigrateSQLs = []string{
-		"CREATE EXTENSION IF NOT EXISTS pg_trgm",
-		"CREATE INDEX IF NOT EXISTS idx_sessions_api_key_name_created_at ON sessions (api_key_name, created_at)",
-		"CREATE INDEX IF NOT EXISTS idx_sessions_deleted_at_created_at ON sessions (deleted_at, created_at)",
-		"CREATE INDEX IF NOT EXISTS idx_messages_message_trgm ON messages USING gin ((message::text) gin_trgm_ops)",
-		"UPDATE sessions SET message_count = COALESCE(jsonb_array_length(message_ids::jsonb), 0), tool_count = COALESCE(jsonb_array_length(tool_ids::jsonb), 0) WHERE message_count = 0 AND tool_count = 0 AND (COALESCE(jsonb_array_length(message_ids::jsonb), 0) > 0 OR COALESCE(jsonb_array_length(tool_ids::jsonb), 0) > 0)",
-		"UPDATE sessions SET questions = (SELECT COALESCE(jsonb_agg(m.id ORDER BY m.id), '[]'::jsonb) FROM messages m WHERE m.id IN (SELECT jsonb_array_elements_text(sessions.message_ids::jsonb)::bigint) AND m.message::jsonb->>'role' = 'user' AND (m.message::jsonb->>'tool_call_id' IS NULL OR m.message::jsonb->>'tool_call_id' = '')) WHERE questions IS NULL",
-	}
-
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncDay    = "date_trunc('day', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
