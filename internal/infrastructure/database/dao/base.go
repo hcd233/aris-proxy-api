@@ -169,6 +169,34 @@ func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, valu
 	return
 }
 
+// FindAllSoftDeleted 查询所有被软删除的记录
+//
+//	@receiver dao *baseDAO[ModelT]
+//	@param db *gorm.DB
+//	@return []*ModelT
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-09 10:00:00
+func (dao *baseDAO[ModelT]) FindAllSoftDeleted(db *gorm.DB) ([]*ModelT, error) {
+	var data []*ModelT
+	err := db.Unscoped().Where(constant.DBConditionDeletedAtNotZero).Find(&data).Error
+	return data, err
+}
+
+// FindAll 查询所有未删除的记录
+//
+//	@receiver dao *baseDAO[ModelT]
+//	@param db *gorm.DB
+//	@return []*ModelT
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-09 10:00:00
+func (dao *baseDAO[ModelT]) FindAll(db *gorm.DB) ([]*ModelT, error) {
+	var data []*ModelT
+	err := db.Where(constant.DBConditionDeletedAtZero).Find(&data).Error
+	return data, err
+}
+
 // HardDeleteSoftDeleted 硬删除所有已软删除的记录（deleted_at != 0）
 //
 //	@receiver dao *baseDAO[ModelT]
@@ -180,6 +208,24 @@ func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, valu
 func (dao *baseDAO[ModelT]) HardDeleteSoftDeleted(db *gorm.DB) (int64, error) {
 	var m ModelT
 	result := db.Unscoped().Where(constant.DBConditionDeletedAtNotZero).Delete(&m)
+	return result.RowsAffected, result.Error
+}
+
+// HardDeleteByIDs 根据 ID 列表硬删除记录
+//
+//	@receiver dao *baseDAO[ModelT]
+//	@param db *gorm.DB
+//	@param ids []uint
+//	@return int64 删除的记录数
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-09 10:00:00
+func (dao *baseDAO[ModelT]) HardDeleteByIDs(db *gorm.DB, ids []uint) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var m ModelT
+	result := db.Unscoped().Where("id IN ?", ids).Delete(&m)
 	return result.RowsAffected, result.Error
 }
 
