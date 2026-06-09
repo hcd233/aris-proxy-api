@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, subHours } from "date-fns";
 import { Check, Clock } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,15 +13,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import type { TimeRangeKey } from "@/lib/time-range";
-import { TIME_RANGE_LABELS, TIME_RANGE_PRESETS } from "@/lib/time-range";
+import { TIME_RANGE_LABELS } from "@/lib/time-range";
 
 export interface TimeRangePickerProps {
   value: TimeRangeKey;
@@ -29,6 +26,30 @@ export interface TimeRangePickerProps {
   onChange: (key: TimeRangeKey, customStart: string, customEnd: string) => void;
 }
 
+// Preset ranges with their date calculations
+const PRESET_RANGES: Record<string, () => { start: Date; end: Date }> = {
+  "1h": () => {
+    const end = new Date();
+    const start = subHours(end, 1);
+    return { start, end };
+  },
+  "24h": () => {
+    const end = new Date();
+    const start = subHours(end, 24);
+    return { start, end };
+  },
+  "7d": () => {
+    const end = new Date();
+    const start = subDays(end, 7);
+    return { start, end };
+  },
+  "30d": () => {
+    const end = new Date();
+    const start = subDays(end, 30);
+    return { start, end };
+  },
+};
+
 export function TimeRangePicker({
   value,
   customStart,
@@ -36,47 +57,84 @@ export function TimeRangePicker({
   onChange,
 }: TimeRangePickerProps) {
   const [open, setOpen] = useState(false);
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    customStart ? new Date(customStart) : undefined
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    customEnd ? new Date(customEnd) : undefined
-  );
-  const [startTime, setStartTime] = useState<string>(
-    customStart ? format(new Date(customStart), "HH:mm") : "00:00"
-  );
-  const [endTime, setEndTime] = useState<string>(
-    customEnd ? format(new Date(customEnd), "HH:mm") : "23:59"
+  const [includeTime, setIncludeTime] = useState(false);
+  
+  // Initialize date range from custom values or default
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (value === "custom" && customStart && customEnd) {
+      return {
+        from: new Date(customStart),
+        to: new Date(customEnd),
+      };
+    }
+    return undefined;
+  });
+
+  // Initialize time values
+  const [startTime, setStartTime] = useState<string>(() => {
+    if (value === "custom" && customStart) {
+      return format(new Date(customStart), "HH:mm");
+    }
+    return "00:00";
+  });
+  
+  const [endTime, setEndTime] = useState<string>(() => {
+    if (value === "custom" && customEnd) {
+      return format(new Date(customEnd), "HH:mm");
+    }
+    return "23:59";
+  });
+
+  // Selected preset
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(
+    value !== "custom" ? value : null
   );
 
   const handlePresetSelect = useCallback(
-    (key: TimeRangeKey) => {
-      if (key !== "custom") {
-        onChange(key, "", "");
-        setOpen(false);
-      } else {
-        onChange(key, customStart, customEnd);
+    (key: string) => {
+      const preset = PRESET_RANGES[key];
+      if (preset) {
+        const { start, end } = preset();
+        setDateRange({ from: start, to: end });
+        setSelectedPreset(key);
+        // Don't close popover, let user see the selection
       }
     },
-    [onChange, customStart, customEnd]
+    []
   );
 
   const handleCustomApply = useCallback(() => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+    if (dateRange?.from && dateRange?.to) {
+      let start = dateRange.from;
+      let end = dateRange.to;
       
-      // Apply time
-      const [startHours, startMinutes] = startTime.split(":").map(Number);
-      const [endHours, endMinutes] = endTime.split(":").map(Number);
-      
-      start.setHours(startHours, startMinutes, 0, 0);
-      end.setHours(endHours, endMinutes, 59, 999);
+      if (includeTime) {
+        // Apply time to dates
+        const [startHours, startMinutes] = startTime.split(":").map(Number);
+        const [endHours, endMinutes] = endTime.split(":").map(Number);
+        
+        start = new Date(start);
+        start.setHours(startHours, startMinutes, 0, 0);
+        
+        end = new Date(end);
+        end.setHours(endHours, endMinutes, 59, 999);
+      } else {
+        // Use start of day and end of day
+        start = startOfDay(start);
+        end = endOfDay(end);
+      }
       
       onChange("custom", start.toISOString(), end.toISOString());
       setOpen(false);
     }
-  }, [startDate, endDate, startTime, endTime, onChange]);
+  }, [dateRange, includeTime, startTime, endTime, onChange]);
+
+  const handlePresetApply = useCallback(() => {
+    if (selectedPreset) {
+      onChange(selectedPreset as TimeRangeKey, "", "");
+      setOpen(false);
+    }
+  }, [selectedPreset, onChange]);
 
   const displayLabel = useMemo(() => {
     if (value === "custom" && customStart && customEnd) {
@@ -89,11 +147,22 @@ export function TimeRangePicker({
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (nextOpen && value === "custom" && customStart && customEnd) {
-      setStartDate(new Date(customStart));
-      setEndDate(new Date(customEnd));
-      setStartTime(format(new Date(customStart), "HH:mm"));
-      setEndTime(format(new Date(customEnd), "HH:mm"));
+    if (nextOpen) {
+      // Reset state when opening
+      if (value === "custom" && customStart && customEnd) {
+        setDateRange({
+          from: new Date(customStart),
+          to: new Date(customEnd),
+        });
+        setStartTime(format(new Date(customStart), "HH:mm"));
+        setEndTime(format(new Date(customEnd), "HH:mm"));
+        setIncludeTime(true);
+        setSelectedPreset(null);
+      } else {
+        setSelectedPreset(value);
+        setDateRange(undefined);
+        setIncludeTime(false);
+      }
     }
   }, [value, customStart, customEnd]);
 
@@ -122,146 +191,100 @@ export function TimeRangePicker({
         sideOffset={4}
       >
         <div className="flex flex-col">
-          {/* Preset options */}
+          {/* Quick presets */}
           <div className="flex flex-col border-b border-border p-2">
             <div className="text-xs font-medium text-muted-foreground px-2 py-1">
               Quick Select
             </div>
-            <div className="flex flex-col gap-0.5">
-              {TIME_RANGE_PRESETS.map((key) => (
+            <div className="flex flex-wrap gap-1">
+              {Object.keys(PRESET_RANGES).map((key) => (
                 <Button
                   key={key}
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "justify-start h-8 px-2 text-sm",
-                    value === key && "bg-accent text-accent-foreground"
+                    "h-7 px-2 text-xs",
+                    selectedPreset === key && "bg-accent text-accent-foreground"
                   )}
                   onClick={() => handlePresetSelect(key)}
                 >
-                  {value === key && <Check className="size-3.5 mr-2" />}
-                  <span className={value === key ? "" : "ml-5"}>
-                    {TIME_RANGE_LABELS[key]}
-                  </span>
+                  {selectedPreset === key && <Check className="size-3 mr-1" />}
+                  {TIME_RANGE_LABELS[key as TimeRangeKey]}
                 </Button>
               ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "justify-start h-8 px-2 text-sm",
-                  value === "custom" && "bg-accent text-accent-foreground"
-                )}
-                onClick={() => handlePresetSelect("custom")}
-              >
-                {value === "custom" && <Check className="size-3.5 mr-2" />}
-                <span className={value === "custom" ? "" : "ml-5"}>
-                  Custom Range
-                </span>
-              </Button>
             </div>
           </div>
 
-          {/* Custom range picker */}
-          {value === "custom" && (
-            <div className="p-3">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Start date and time */}
-                <div className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Start
-                  </div>
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    disabled={(date) =>
-                      endDate ? date > endDate : false
-                    }
-                    className="rounded-md border"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Clock className="size-3.5 text-muted-foreground" />
-                    <Select 
-                      value={startTime} 
-                      onValueChange={(value: unknown) => setStartTime(value as string)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 24 }, (_, i) => 
-                          Array.from({ length: 4 }, (_, j) => {
-                            const hour = i.toString().padStart(2, "0");
-                            const minute = (j * 15).toString().padStart(2, "0");
-                            const time = `${hour}:${minute}`;
-                            return (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            );
-                          })
-                        ).flat()}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+          {/* Calendar */}
+          <div className="p-2">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={1}
+              defaultMonth={dateRange?.from}
+              className="rounded-md border"
+            />
+          </div>
 
-                {/* End date and time */}
-                <div className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    End
-                  </div>
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    disabled={(date) =>
-                      startDate ? date < startDate : false
-                    }
-                    className="rounded-md border"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Clock className="size-3.5 text-muted-foreground" />
-                    <Select 
-                      value={endTime} 
-                      onValueChange={(value: unknown) => setEndTime(value as string)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 24 }, (_, i) => 
-                          Array.from({ length: 4 }, (_, j) => {
-                            const hour = i.toString().padStart(2, "0");
-                            const minute = (j * 15).toString().padStart(2, "0");
-                            const time = `${hour}:${minute}`;
-                            return (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            );
-                          })
-                        ).flat()}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Apply button */}
-              <div className="mt-4 flex justify-end">
-                <Button
-                  size="sm"
-                  onClick={handleCustomApply}
-                  disabled={!startDate || !endDate}
-                  className="h-8 px-3 text-xs"
-                >
-                  Apply Range
-                </Button>
-              </div>
+          {/* Time toggle and inputs */}
+          <div className="border-t border-border p-2">
+            <div className="flex items-center space-x-2 mb-2">
+              <Switch
+                id="include-time"
+                checked={includeTime}
+                onCheckedChange={setIncludeTime}
+              />
+              <Label htmlFor="include-time" className="text-xs">
+                Include time
+              </Label>
             </div>
-          )}
+            
+            {includeTime && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Start time</Label>
+                  <Input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">End time</Label>
+                  <Input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Apply button */}
+          <div className="border-t border-border p-2 flex justify-end gap-2">
+            {selectedPreset ? (
+              <Button
+                size="sm"
+                onClick={handlePresetApply}
+                className="h-7 px-3 text-xs"
+              >
+                Apply
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleCustomApply}
+                disabled={!dateRange?.from || !dateRange?.to}
+                className="h-7 px-3 text-xs"
+              >
+                Apply Range
+              </Button>
+            )}
+          </div>
         </div>
       </PopoverContent>
     </Popover>

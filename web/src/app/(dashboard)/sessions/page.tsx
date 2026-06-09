@@ -292,9 +292,7 @@ export default function SessionsPage() {
                   setTimeRange(key);
                   setCustomStart(cs);
                   setCustomEnd(ce);
-                  if (key !== "custom") {
-                    fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword);
-                  }
+                  fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword);
                 }}
               />
             </div>
