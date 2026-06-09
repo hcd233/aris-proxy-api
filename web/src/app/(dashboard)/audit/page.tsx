@@ -23,7 +23,6 @@ import {
   Search,
   ListFilter,
   Check,
-  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -39,34 +38,9 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-
-type TimeRangeKey = "1h" | "24h" | "7d" | "custom";
-
-const TIME_RANGE_LABELS: Record<TimeRangeKey, string> = {
-  "1h": "Last 1 hour",
-  "24h": "Last 24 hours",
-  "7d": "Last 7 days",
-  custom: "Custom",
-};
-
-function computeRange(
-  key: TimeRangeKey,
-  customStart?: string,
-  customEnd?: string,
-): { startTime?: string; endTime?: string } {
-  if (key === "custom") {
-    return {
-      startTime: customStart ? new Date(customStart).toISOString() : undefined,
-      endTime: customEnd ? new Date(customEnd).toISOString() : undefined,
-    };
-  }
-  const now = new Date();
-  const start = new Date(now);
-  if (key === "1h") start.setHours(start.getHours() - 1);
-  else if (key === "24h") start.setHours(start.getHours() - 24);
-  else if (key === "7d") start.setDate(start.getDate() - 7);
-  return { startTime: start.toISOString(), endTime: now.toISOString() };
-}
+import { TimeRangePicker } from "@/components/ui/time-range-picker";
+import type { TimeRangeKey } from "@/lib/time-range";
+import { computeRange } from "@/lib/time-range";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -175,55 +149,17 @@ export default function AuditPage() {
           {/* 筛选区 */}
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={<Button variant="outline" size="sm" className="gap-1.5" />}
-                >
-                  <Clock className="size-3.5" />
-                  {TIME_RANGE_LABELS[timeRange]}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {(Object.keys(TIME_RANGE_LABELS) as TimeRangeKey[]).map((k) => (
-                    <DropdownMenuItem
-                      key={k}
-                      onClick={() => {
-                        setTimeRange(k);
-                        if (k !== "custom") {
-                          fetchLogs(1, pageInfo.pageSize, searchQuery, k, customStart, customEnd);
-                        }
-                      }}
-                    >
-                      {k === timeRange && <Check className="size-4" />}
-                      <span className={k === timeRange ? "ml-0" : "ml-6"}>
-                        {TIME_RANGE_LABELS[k]}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {timeRange === "custom" && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="datetime-local"
-                    value={customStart}
-                    onChange={(e) => setCustomStart(e.target.value)}
-                    onBlur={() =>
-                      fetchLogs(1, pageInfo.pageSize, searchQuery, "custom", customStart, customEnd)
-                    }
-                    className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs"
-                  />
-                  <span className="text-xs text-muted-foreground">–</span>
-                  <input
-                    type="datetime-local"
-                    value={customEnd}
-                    onChange={(e) => setCustomEnd(e.target.value)}
-                    onBlur={() =>
-                      fetchLogs(1, pageInfo.pageSize, searchQuery, "custom", customStart, customEnd)
-                    }
-                    className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs"
-                  />
-                </div>
-              )}
+              <TimeRangePicker
+                value={timeRange}
+                customStart={customStart}
+                customEnd={customEnd}
+                onChange={(key, cs, ce) => {
+                  setTimeRange(key);
+                  setCustomStart(cs);
+                  setCustomEnd(ce);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce);
+                }}
+              />
             </div>
             <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
