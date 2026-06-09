@@ -10,6 +10,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
+	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -94,7 +95,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	db := c.db.WithContext(ctx)
 
 	// 1. 查询所有被软删除的 session
-	softDeletedSessions, err := c.sessionDAO.FindSoftDeleted(db)
+	softDeletedSessions, err := c.sessionDAO.FindAllSoftDeleted(db)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find soft deleted sessions", zap.Error(err))
 		return
@@ -106,30 +107,26 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	}
 
 	// 2. 从被软删除的 session 中提取 message_ids 和 tool_ids 并去重
-	candidateMessageIDs := make([]uint, 0)
-	candidateToolIDs := make([]uint, 0)
-	for _, session := range softDeletedSessions {
-		candidateMessageIDs = append(candidateMessageIDs, session.MessageIDs...)
-		candidateToolIDs = append(candidateToolIDs, session.ToolIDs...)
-	}
-	candidateMessageIDs = lo.Uniq(candidateMessageIDs)
-	candidateToolIDs = lo.Uniq(candidateToolIDs)
+	candidateMessageIDs := lo.Uniq(lo.Flatten(lo.Map(softDeletedSessions, func(s *dbmodel.Session, _ int) []uint {
+		return s.MessageIDs
+	})))
+	candidateToolIDs := lo.Uniq(lo.Flatten(lo.Map(softDeletedSessions, func(s *dbmodel.Session, _ int) []uint {
+		return s.ToolIDs
+	})))
 
 	// 3. 查询所有未删除的 session，收集引用的 message_ids 和 tool_ids
-	activeSessions, err := c.sessionDAO.FindAllActive(db)
+	activeSessions, err := c.sessionDAO.FindAll(db)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find active sessions", zap.Error(err))
 		return
 	}
 
-	usedMessageIDs := make([]uint, 0)
-	usedToolIDs := make([]uint, 0)
-	for _, session := range activeSessions {
-		usedMessageIDs = append(usedMessageIDs, session.MessageIDs...)
-		usedToolIDs = append(usedToolIDs, session.ToolIDs...)
-	}
-	usedMessageIDs = lo.Uniq(usedMessageIDs)
-	usedToolIDs = lo.Uniq(usedToolIDs)
+	usedMessageIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s *dbmodel.Session, _ int) []uint {
+		return s.MessageIDs
+	})))
+	usedToolIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s *dbmodel.Session, _ int) []uint {
+		return s.ToolIDs
+	})))
 
 	// 4. 计算差集：未被引用的 = 候选 - 已使用
 	orphanMessageIDs, _ := lo.Difference(candidateMessageIDs, usedMessageIDs)
