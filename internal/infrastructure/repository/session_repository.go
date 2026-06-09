@@ -38,33 +38,21 @@ func NewSessionRepository(db *gorm.DB) session.SessionRepository {
 
 // Save 持久化 Session 聚合（首次 Save 回填 ID；已有 ID 执行 Update）
 //
-// MessageCount / ToolCount 双写说明（refactor/session-list-baseline-perf-2026-06-07）：
-//
-//   - 新建路径：直接把 len(MessageIDs) / len(ToolIDs) 写到 dbmodel.Session 的列上，
-//     由 r.dao.Create 一并 INSERT。
-//
-//   - 更新路径：r.dao.Update 内部会过滤零值字段（reflect.IsZero），所以即便把
-//     count 塞进 updates map，count=0 也会被过滤掉。这里改用 db.Model(...).
-//     UpdateColumns(map) 单独打一发 UPDATE，确保 count 能被设回 0（理论上写入
-//     语义保持单调递增，但护栏要顶得住 message_ids 长度回退）。
-//
-//     @receiver r *sessionRepository
-//     @param ctx context.Context
-//     @param s *aggregate.Session
-//     @return error
-//     @author centonhuang
-//     @update 2026-06-07 21:50:00
+//	@receiver r *sessionRepository
+//	@param ctx context.Context
+//	@param s *aggregate.Session
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-09 17:10:00
 func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) error {
 	db := r.db.WithContext(ctx)
 
 	if s.AggregateID() == 0 {
 		record := &dbmodel.Session{
-			APIKeyName:   s.Owner().String(),
-			MessageIDs:   s.MessageIDs(),
-			ToolIDs:      s.ToolIDs(),
-			MessageCount: len(s.MessageIDs()),
-			ToolCount:    len(s.ToolIDs()),
-			Metadata:     s.Metadata(),
+			APIKeyName: s.Owner().String(),
+			MessageIDs: s.MessageIDs(),
+			ToolIDs:    s.ToolIDs(),
+			Metadata:   s.Metadata(),
 		}
 		applyScore(record, s.Score())
 		if err := r.dao.Create(db, record); err != nil {
@@ -89,15 +77,6 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session")
 	}
 
-	// count 必须走 UpdateColumns 绕开 dao.Update 的零值过滤（reflect.IsZero），
-	// 否则 len(MessageIDs)=0 时 message_count 列不会被回写。
-	if err := db.Model(&dbmodel.Session{ID: s.AggregateID()}).
-		UpdateColumns(map[string]any{
-			constant.FieldMessageCount: len(s.MessageIDs()),
-			constant.FieldToolCount:    len(s.ToolIDs()),
-		}).Error; err != nil {
-		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session counts")
-	}
 	return nil
 }
 
@@ -245,6 +224,7 @@ func NewSessionReadRepository(db *gorm.DB) session.SessionReadRepository {
 //   - TotalCount 接 SQL 里的 COUNT(*) OVER ()，把分页 SELECT 与 COUNT 折成一条
 //     语句执行，省掉一次独立 COUNT(*) 的 roundtrip 与 WHERE 评估。
 //     窗口函数对所有行返回相同值，所以只需读 rows[0].TotalCount。
+//   - MessageCount 和 ToolCount 从 message_ids / tool_ids 实时计算，不再物化冗余列。
 type sessionSummaryRow struct {
 	ID           uint      `gorm:"column:id"`
 	CreatedAt    time.Time `gorm:"column:created_at"`

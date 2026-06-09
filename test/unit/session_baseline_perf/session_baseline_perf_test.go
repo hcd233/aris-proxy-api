@@ -41,31 +41,28 @@ import (
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
 
-// TestSessionSummarySelect_UsesMaterializedCountColumns 投影 SQL 必须直读物化列，
-// 不能再回去用 jsonb_array_length / ::jsonb 强转。
+// TestSessionSummarySelect_UsesExpressionCountColumns 投影 SQL 必须用表达式从
+// message_ids / tool_ids 实时计算 count，不再依赖物化列。
 //
 //	@author centonhuang
-//	@update 2026-06-08 00:55:00
-func TestSessionSummarySelect_UsesMaterializedCountColumns(t *testing.T) {
+//	@update 2026-06-09 17:10:00
+func TestSessionSummarySelect_UsesExpressionCountColumns(t *testing.T) {
 	t.Parallel()
 	sel := constant.SessionSummarySelect
 
 	if sel == "" {
 		t.Fatal("SessionSummarySelect must be defined")
 	}
-	if strings.Contains(sel, "jsonb_array_length") {
-		t.Errorf("SessionSummarySelect must not call jsonb_array_length; use materialized message_count/tool_count columns, got %q", sel)
+	// 必须包含 jsonb_array_length 来计算 count
+	if !strings.Contains(sel, "jsonb_array_length") {
+		t.Errorf("SessionSummarySelect must use jsonb_array_length to compute count from message_ids/tool_ids, got %q", sel)
 	}
-	// 注意：windowed COUNT 行为是允许的；'::jsonb' 强转才是要禁止的。
-	// 这里特别检查投影里不能再出现 ::jsonb（与窗口函数中的 :: 无关，因为窗口函数没有强转）。
-	if strings.Contains(sel, "::jsonb") {
-		t.Errorf("SessionSummarySelect must not cast message_ids/tool_ids to jsonb in projection; use materialized columns, got %q", sel)
-	}
+	// 必须包含 message_count 和 tool_count 作为别名
 	if !strings.Contains(sel, "message_count") {
-		t.Errorf("SessionSummarySelect must select materialized message_count column, got %q", sel)
+		t.Errorf("SessionSummarySelect must alias computed count as message_count, got %q", sel)
 	}
 	if !strings.Contains(sel, "tool_count") {
-		t.Errorf("SessionSummarySelect must select materialized tool_count column, got %q", sel)
+		t.Errorf("SessionSummarySelect must alias computed count as tool_count, got %q", sel)
 	}
 }
 
@@ -105,42 +102,20 @@ func TestSessionSummaryProjection_DoesNotLeakTotalCount(t *testing.T) {
 	}
 }
 
-// TestSessionModelHasMaterializedCountColumns 校验 GORM 模型把 message_count / tool_count
-// 真的当成实体列写出来，并带 not null + default:0，让 AutoMigrate 在已有大表上做
-// "metadata-only ADD COLUMN"（PG 12+），不会触发表重写或锁。
+// TestSessionModelDoesNotHaveMaterializedCountColumns 校验 GORM 模型不再定义
+// message_count / tool_count 物化列，count 从 message_ids / tool_ids 实时计算。
 //
 //	@author centonhuang
-//	@update 2026-06-08 00:55:00
-func TestSessionModelHasMaterializedCountColumns(t *testing.T) {
+//	@update 2026-06-09 17:10:00
+func TestSessionModelDoesNotHaveMaterializedCountColumns(t *testing.T) {
 	t.Parallel()
 	rt := reflect.TypeOf(dbmodel.Session{})
 
-	checks := []struct {
-		field  string
-		column string
-	}{
-		{field: "MessageCount", column: "message_count"},
-		{field: "ToolCount", column: "tool_count"},
-	}
+	checks := []string{"MessageCount", "ToolCount"}
 
-	for _, c := range checks {
-		f, ok := rt.FieldByName(c.field)
-		if !ok {
-			t.Errorf("dbmodel.Session must define %s field", c.field)
-			continue
-		}
-		if f.Type.Kind() != reflect.Int {
-			t.Errorf("%s must be int (so PG ADD COLUMN with default:0 is metadata-only), got %v", c.field, f.Type)
-		}
-		tag := string(f.Tag)
-		if !strings.Contains(tag, "column:"+c.column) {
-			t.Errorf("%s tag must declare column:%s, got %q", c.field, c.column, tag)
-		}
-		if !strings.Contains(tag, "not null") {
-			t.Errorf("%s tag must be not null (so reads never see NULL), got %q", c.field, tag)
-		}
-		if !strings.Contains(tag, "default:0") {
-			t.Errorf("%s tag must have default:0 (so AutoMigrate ADD COLUMN succeeds on populated table), got %q", c.field, tag)
+	for _, field := range checks {
+		if _, ok := rt.FieldByName(field); ok {
+			t.Errorf("dbmodel.Session must not define %s field; count should be computed from message_ids/tool_ids", field)
 		}
 	}
 }
