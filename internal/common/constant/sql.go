@@ -117,7 +117,9 @@ var (
 	//   roundtrip 与一次 WHERE 评估。对带 keyword 的请求尤其受益——EXISTS 子查询
 	//   原来要跑两遍（COUNT 一次、SELECT 一次），现在一次搞定。
 	//   sessionSummaryRow.TotalCount 接收每行（窗口函数对所有行返回相同值）。
-	SessionSummarySelect = "id, created_at, updated_at, score, message_count, tool_count, questions, COUNT(*) OVER () AS total_count"
+	//
+	//   message_count 和 tool_count 从 message_ids / tool_ids 实时计算，不再物化冗余列。
+	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, COUNT(*) OVER () AS total_count"
 
 	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段。
 	//
