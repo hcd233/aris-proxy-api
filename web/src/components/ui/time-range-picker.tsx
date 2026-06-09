@@ -13,7 +13,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -26,7 +25,15 @@ export interface TimeRangePickerProps {
   className?: string;
 }
 
-const ALL_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d", "custom"];
+const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
+
+const PRESET_LABELS: Record<TimeRangeKey, string> = {
+  "1h": "1H",
+  "24h": "24H",
+  "7d": "7D",
+  "30d": "30D",
+  custom: "Custom",
+};
 
 export function TimeRangePicker({
   value,
@@ -62,17 +69,16 @@ export function TimeRangePicker({
 
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const handleTabChange = useCallback(
-    (key: string) => {
-      const rangeKey = key as TimeRangeKey;
-      if (rangeKey === "custom") {
-        setOpen(true);
-      } else {
-        onChange(rangeKey, "", "");
-      }
+  const handlePresetClick = useCallback(
+    (key: TimeRangeKey) => {
+      onChange(key, "", "");
     },
     [onChange]
   );
+
+  const handleCustomClick = useCallback(() => {
+    setOpen(true);
+  }, []);
 
   const handleDateRangeSelect = useCallback((range: DateRange | undefined) => {
     setDateRange(range);
@@ -164,35 +170,41 @@ export function TimeRangePicker({
   }, [value, customStart, customEnd]);
 
   return (
-    <div className={cn("flex items-center", className)}>
-      <Tabs value={value} onValueChange={handleTabChange}>
-        <TabsList className="h-9">
-          {ALL_KEYS.map((key) => (
-            <TabsTrigger
-              key={key}
-              value={key}
-              className={cn(
-                "px-3 text-xs",
-                key === "custom" && "gap-1.5"
-              )}
-            >
-              {key === "custom" ? (
-                <>
-                  <CalendarIcon className="size-3" />
-                  <span className="hidden sm:inline">{customDisplayLabel}</span>
-                </>
-              ) : (
-                key.toUpperCase()
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+    <div className={cn("flex items-center gap-0.5 rounded-lg bg-muted p-0.5", className)}>
+      {PRESET_KEYS.map((key) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => handlePresetClick(key)}
+          className={cn(
+            "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors",
+            value === key
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {PRESET_LABELS[key]}
+        </button>
+      ))}
 
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
-          render={<span className="hidden" />}
-        />
+          render={
+            <button
+              type="button"
+              onClick={handleCustomClick}
+              className={cn(
+                "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                value === "custom"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            />
+          }
+        >
+          <CalendarIcon className="size-3" />
+          <span className="hidden sm:inline">{customDisplayLabel}</span>
+        </PopoverTrigger>
         <PopoverContent
           className="w-auto p-0 rounded-lg border bg-popover shadow-sm"
           align="end"
