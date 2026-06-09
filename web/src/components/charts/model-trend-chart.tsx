@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { ModelTrendItem } from "@/lib/types";
@@ -24,12 +24,15 @@ export function ModelTrendChart() {
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTrend.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTrend.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTrend.customEnd", "");
+  const [rangeApplyCount, setRangeApplyCount] = useState(0);
+  const requestIdRef = useRef(0);
   const [data, setData] = useState<ModelTrendItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
   const fetchData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(false);
     try {
@@ -39,18 +42,22 @@ export function ModelTrendChart() {
         endTime,
         granularity,
       });
+      if (requestId !== requestIdRef.current) return;
       setData(rsp.data ?? []);
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setError(true);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [timeRange, customStart, customEnd]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects */
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, rangeApplyCount]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const models = [...new Set(data.map((d) => d.model))];
@@ -88,6 +95,7 @@ export function ModelTrendChart() {
             setTimeRange(key);
             setCustomStart(cs);
             setCustomEnd(ce);
+            setRangeApplyCount((count) => count + 1);
           }}
         />
       </CardHeader>

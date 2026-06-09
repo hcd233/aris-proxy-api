@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { TokenThroughputPoint } from "@/lib/types";
@@ -37,29 +37,36 @@ export function TokenVolumeChart() {
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.tokenVolume.customEnd", "");
+  const [rangeApplyCount, setRangeApplyCount] = useState(0);
+  const requestIdRef = useRef(0);
   const [data, setData] = useState<TokenThroughputPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
   const fetchData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(false);
     try {
       const { startTime, endTime, granularity } = computeRange(timeRange, customStart, customEnd);
       const rsp = await api.fetchTokenThroughput({ startTime, endTime, granularity });
+      if (requestId !== requestIdRef.current) return;
       setData(rsp.data ?? []);
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setError(true);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [timeRange, customStart, customEnd]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, rangeApplyCount]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const chartConfig = Object.fromEntries(
@@ -98,6 +105,7 @@ export function TokenVolumeChart() {
             setTimeRange(key);
             setCustomStart(cs);
             setCustomEnd(ce);
+            setRangeApplyCount((count) => count + 1);
           }}
         />
       </CardHeader>
