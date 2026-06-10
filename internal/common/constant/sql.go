@@ -170,6 +170,8 @@ var (
 	AuditDistinctSelectStatus = "DISTINCT upstream_status_code::text"
 	AuditDistinctLimit        = 50
 
+	AuditDistinctWhereDeletedAtZero = "mca.deleted_at = 0"
+
 	AuditDistinctWhereCreatedAtGTE = "mca.created_at >= ?"
 	AuditDistinctWhereCreatedAtLTE = "mca.created_at <= ?"
 
