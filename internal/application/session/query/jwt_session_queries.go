@@ -28,11 +28,11 @@ var validSessionSortFields = map[string]bool{
 
 // sessionFieldConfigs Session filter 字段配置
 var sessionFieldConfigs = map[string]filter.FieldConfig{
-	"score": {
-		SQLColumn: "score",
-		IsNumeric: true,
+	constant.FieldScore: {
+		SQLColumn: constant.FieldScore,
 		ValueMap: map[string]*string{
-			"none": nil, // NULL
+			constant.SessionOptionScoreValueNone:     nil,
+			constant.SessionOptionScoreValueUnscored: nil,
 		},
 	},
 }
