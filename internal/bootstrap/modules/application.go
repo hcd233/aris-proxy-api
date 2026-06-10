@@ -255,6 +255,6 @@ func NewDeleteScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyR
 	return sessioncommand.NewDeleteScoreSessionHandler(sessionRepo, apiKeyRepo)
 }
 
-func NewSessionOptionHandler() sessionport.ListSessionOptionHandler {
-	return sessionquery.NewListSessionOptionHandler()
+func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport.ListSessionOptionHandler {
+	return sessionquery.NewListSessionOptionHandler(readRepo)
 }

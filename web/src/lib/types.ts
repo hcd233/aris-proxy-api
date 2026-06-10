@@ -483,6 +483,8 @@ export interface AuditOptionListRsp extends CommonRsp {
 export interface SessionOptionListReq {
   field: "score";
   keyword?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface SessionOptionListRsp extends CommonRsp {

@@ -236,6 +236,8 @@ class ApiClient {
     const sp = new URLSearchParams();
     sp.set("field", params.field);
     if (params.keyword) sp.set("keyword", params.keyword);
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<SessionOptionListRsp>(`/api/v1/session/option/list?${sp}`);
   }
 

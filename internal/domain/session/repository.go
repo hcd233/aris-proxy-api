@@ -120,4 +120,6 @@ type SessionReadRepository interface {
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 	// FindToolsByIDs 批量查询工具投影
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
+	// ListDistinctScores 查询去重的评分列表（支持时间范围过滤）
+	ListDistinctScores(ctx context.Context, startTime, endTime time.Time) ([]int, error)
 }

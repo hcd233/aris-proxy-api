@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
-import type { SessionSummary, PageInfo } from "@/lib/types";
+import type { SessionSummary, PageInfo, OptionItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -104,6 +104,21 @@ export default function SessionsPage() {
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const [filterScore, setFilterScore] = useState<string>("");
+  const [scoreOptions, setScoreOptions] = useState<OptionItem[]>([]);
+
+  const fetchScoreOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
+    const { startTime, endTime } = computeRange(range, cs, ce);
+    try {
+      const rsp = await api.listSessionOptions({ field: "score", startTime, endTime });
+      if (!rsp.error && rsp.items) setScoreOptions(rsp.items);
+    } catch (err) {
+      console.error("Failed to load score options:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchScoreOptions(timeRange, customStart, customEnd);
+  }, [timeRange, customStart, fetchScoreOptions]);
 
   const buildSessionFilter = (score: string): string | undefined => {
     if (!score) return undefined;
@@ -308,6 +323,7 @@ export default function SessionsPage() {
                   setCustomStart(cs);
                   setCustomEnd(ce);
                   fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword, filterScore);
+                  fetchScoreOptions(key, cs, ce);
                 }}
               />
               <Select
@@ -323,12 +339,9 @@ export default function SessionsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">All Scores</SelectItem>
-                  <SelectItem value="1">1</SelectItem>
-                  <SelectItem value="2">2</SelectItem>
-                  <SelectItem value="3">3</SelectItem>
-                  <SelectItem value="4">4</SelectItem>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="unscored">Unscored</SelectItem>
+                  {scoreOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {filterScore && (

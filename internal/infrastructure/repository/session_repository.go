@@ -516,6 +516,30 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 	return items
 }
 
+// ListDistinctScores 查询去重的评分列表
+func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTime, endTime time.Time) ([]int, error) {
+	db := r.db.WithContext(ctx)
+
+	var scores []int
+	query := db.Model(&dbmodel.Session{}).
+		Select(constant.SessionDistinctScoreSelect).
+		Where(constant.SessionDistinctScoreWhere).
+		Where(constant.DBConditionDeletedAtZero)
+
+	if !startTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtLTE, endTime)
+	}
+
+	if err := query.Order(constant.SessionDistinctScoreOrder).Scan(&scores).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct scores")
+	}
+
+	return scores, nil
+}
+
 // toSessionAggregate 将 GORM 模型映射为 Session 聚合根
 func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 	score := vo.RestoreSessionScore(m.Score, m.ScoredAt)
