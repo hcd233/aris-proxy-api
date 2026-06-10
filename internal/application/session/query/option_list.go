@@ -2,16 +2,20 @@ package query
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 )
 
-type listSessionOptionHandler struct{}
+type listSessionOptionHandler struct {
+	readRepo session.SessionReadRepository
+}
 
-func NewListSessionOptionHandler() sessionport.ListSessionOptionHandler {
-	return &listSessionOptionHandler{}
+func NewListSessionOptionHandler(readRepo session.SessionReadRepository) sessionport.ListSessionOptionHandler {
+	return &listSessionOptionHandler{readRepo: readRepo}
 }
 
 func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.ListSessionOptionQuery) ([]sessionport.OptionItem, error) {
@@ -20,12 +24,29 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 	}
 
 	items := []sessionport.OptionItem{
-		{Value: constant.SessionOptionScoreValue1, Label: constant.SessionOptionScoreLabel1},
-		{Value: constant.SessionOptionScoreValue2, Label: constant.SessionOptionScoreLabel2},
-		{Value: constant.SessionOptionScoreValue3, Label: constant.SessionOptionScoreLabel3},
-		{Value: constant.SessionOptionScoreValue4, Label: constant.SessionOptionScoreLabel4},
-		{Value: constant.SessionOptionScoreValue5, Label: constant.SessionOptionScoreLabel5},
 		{Value: constant.SessionOptionScoreValueNone, Label: constant.SessionOptionScoreLabelNone},
+	}
+
+	scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime)
+	if err != nil {
+		return nil, err
+	}
+
+	scoreLabels := map[int]string{
+		1: constant.SessionOptionScoreLabel1,
+		2: constant.SessionOptionScoreLabel2,
+		3: constant.SessionOptionScoreLabel3,
+		4: constant.SessionOptionScoreLabel4,
+		5: constant.SessionOptionScoreLabel5,
+	}
+
+	for _, s := range scores {
+		if label, ok := scoreLabels[s]; ok {
+			items = append(items, sessionport.OptionItem{
+				Value: strconv.Itoa(s),
+				Label: label,
+			})
+		}
 	}
 
 	if q.Keyword != "" {

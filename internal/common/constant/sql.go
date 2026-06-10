@@ -177,4 +177,9 @@ var (
 
 	WhereCreatedAtGTE = "created_at >= ?"
 	WhereCreatedAtLTE = "created_at <= ?"
+
+	// ── Session distinct score query ──
+	SessionDistinctScoreSelect = "DISTINCT score"
+	SessionDistinctScoreWhere  = "score IS NOT NULL"
+	SessionDistinctScoreOrder  = "score ASC"
 )

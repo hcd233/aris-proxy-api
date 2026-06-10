@@ -759,8 +759,10 @@ func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.S
 	rsp := &dto.SessionOptionListRsp{}
 
 	items, err := h.listOption.Handle(ctx, port.ListSessionOptionQuery{
-		Field:   req.Field,
-		Keyword: req.Keyword,
+		Field:     req.Field,
+		Keyword:   req.Keyword,
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session options failed", zap.Error(err))
