@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 )
 
@@ -29,11 +30,11 @@ func NewListAuditOptionHandler(repo modelcall.AuditRepository) ListAuditOptionHa
 // Handle 执行筛选选项查询
 func (h *listAuditOptionHandler) Handle(ctx context.Context, q ListAuditOptionQuery) ([]string, error) {
 	switch q.Field {
-	case "user":
+	case constant.AuditFilterFieldUser:
 		return h.repo.ListDistinctUserNames(ctx, q.Keyword)
-	case "model":
+	case constant.AuditFilterFieldModel:
 		return h.repo.ListDistinctModels(ctx, q.Keyword)
-	case "status":
+	case constant.AuditFilterFieldStatus:
 		return h.repo.ListDistinctStatusCodes(ctx)
 	default:
 		return []string{}, nil

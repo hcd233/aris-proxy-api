@@ -5,26 +5,17 @@
 package filter
 
 import (
-	"fmt"
 	"strings"
-)
 
-// Operator 操作符
-type Operator string
-
-const (
-	OpEqual    Operator = ":"   // 等于/包含
-	OpNotEqual Operator = ":!"  // 不等于/不包含
-	OpGreater  Operator = ":>"  // 大于
-	OpLess     Operator = ":<"  // 小于
-	OpGTE      Operator = ":>=" // 大于等于
-	OpLTE      Operator = ":<=" // 小于等于
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
 // Filter 表达式
 type Filter struct {
 	Field    string
-	Operator Operator
+	Operator enum.Operator
 	Value    string
 }
 
@@ -36,14 +27,16 @@ type FilterCriteria struct {
 
 // FieldConfig 字段配置
 type FieldConfig struct {
-	// SQLColumn 对应的数据库列名
 	SQLColumn string
-	// IsFuzzy 是否模糊匹配
-	IsFuzzy bool
-	// IsNumeric 是否数值类型
+	IsFuzzy   bool
 	IsNumeric bool
-	// ValueMap 特殊值映射（如 "none" -> nil）
-	ValueMap map[string]*string
+	ValueMap  map[string]*string
+}
+
+// operatorInfo 操作符信息
+type operatorInfo struct {
+	op  enum.Operator
+	len int
 }
 
 // Parse 解析 filter 表达式
@@ -108,16 +101,13 @@ func splitExpression(expr string) []string {
 // parsePart 解析单个 filter 部分
 func parsePart(part string) (Filter, error) {
 	// 尝试匹配操作符（按长度降序）
-	operators := []struct {
-		op  Operator
-		len int
-	}{
-		{OpGTE, 3},
-		{OpLTE, 3},
-		{OpNotEqual, 2},
-		{OpGreater, 2},
-		{OpLess, 2},
-		{OpEqual, 1},
+	operators := []operatorInfo{
+		{enum.OpGTE, 3},
+		{enum.OpLTE, 3},
+		{enum.OpNotEqual, 2},
+		{enum.OpGreater, 2},
+		{enum.OpLess, 2},
+		{enum.OpEqual, 1},
 	}
 
 	for _, opInfo := range operators {
@@ -126,13 +116,11 @@ func parsePart(part string) (Filter, error) {
 			field := part[:idx]
 			value := part[idx+opInfo.len:]
 
-			// 去除引号
 			value = strings.Trim(value, `"`)
 
-			// 验证字段名非空
 			field = strings.TrimSpace(field)
 			if field == "" {
-				return Filter{}, fmt.Errorf("empty field name in filter expression: %s", part)
+				return Filter{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrEmptyFieldName, part)
 			}
 
 			return Filter{
@@ -143,22 +131,21 @@ func parsePart(part string) (Filter, error) {
 		}
 	}
 
-	return Filter{}, fmt.Errorf("invalid filter expression: %s", part)
+	return Filter{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidExpr, part)
 }
 
 // ToSQL 将 filter 转换为 SQL 条件
-func ToSQL(filters []Filter, fieldConfigs map[string]FieldConfig) (string, []any, error) {
+func ToSQL(filters []Filter, fieldConfigs map[string]FieldConfig) (sql string, args []any, err error) {
 	if len(filters) == 0 {
 		return "", nil, nil
 	}
 
 	var conditions []string
-	var args []any
 
 	for _, f := range filters {
 		config, ok := fieldConfigs[f.Field]
 		if !ok {
-			return "", nil, fmt.Errorf("unknown filter field: %s", f.Field)
+			return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnknownField, f.Field)
 		}
 
 		condition, condArgs, err := buildCondition(f, config)
@@ -170,65 +157,59 @@ func ToSQL(filters []Filter, fieldConfigs map[string]FieldConfig) (string, []any
 		args = append(args, condArgs...)
 	}
 
-	return strings.Join(conditions, " AND "), args, nil
+	return strings.Join(conditions, constant.FilterSQLAND), args, nil
 }
 
 // buildCondition 构建单个 SQL 条件
-func buildCondition(f Filter, config FieldConfig) (string, []any, error) {
+func buildCondition(f Filter, config FieldConfig) (sql string, args []any, err error) {
 	column := config.SQLColumn
 
-	// 检查特殊值映射
 	if config.ValueMap != nil {
 		if mapped, ok := config.ValueMap[f.Value]; ok {
 			if mapped == nil {
-				// NULL 值
 				switch f.Operator {
-				case OpEqual:
-					return column + " IS NULL", nil, nil
-				case OpNotEqual:
-					return column + " IS NOT NULL", nil, nil
+				case enum.OpEqual:
+					return column + constant.FilterSQLISNULL, nil, nil
+				case enum.OpNotEqual:
+					return column + constant.FilterSQLISNOTNULL, nil, nil
 				default:
-					return "", nil, fmt.Errorf("operator %s not supported for NULL value", f.Operator)
+					return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrNullValueOp, f.Operator)
 				}
 			}
-			// 使用映射后的值
 			return buildSimpleCondition(column, f.Operator, *mapped)
 		}
 	}
 
-	// 模糊匹配
-	if config.IsFuzzy && f.Operator == OpEqual {
-		return column + " LIKE ?", []any{"%" + f.Value + "%"}, nil
+	if config.IsFuzzy && f.Operator == enum.OpEqual {
+		return column + constant.FilterSQLLIKE, []any{"%" + f.Value + "%"}, nil
 	}
-	if config.IsFuzzy && f.Operator == OpNotEqual {
-		return column + " NOT LIKE ?", []any{"%" + f.Value + "%"}, nil
+	if config.IsFuzzy && f.Operator == enum.OpNotEqual {
+		return column + constant.FilterSQLNOTLIKE, []any{"%" + f.Value + "%"}, nil
 	}
 
-	// 数值比较
 	if config.IsNumeric {
 		return buildSimpleCondition(column, f.Operator, f.Value)
 	}
 
-	// 默认精确匹配
 	return buildSimpleCondition(column, f.Operator, f.Value)
 }
 
 // buildSimpleCondition 构建简单条件
-func buildSimpleCondition(column string, op Operator, value string) (string, []any, error) {
+func buildSimpleCondition(column string, op enum.Operator, value string) (sql string, args []any, err error) {
 	switch op {
-	case OpEqual:
-		return column + " = ?", []any{value}, nil
-	case OpNotEqual:
-		return column + " != ?", []any{value}, nil
-	case OpGreater:
-		return column + " > ?", []any{value}, nil
-	case OpLess:
-		return column + " < ?", []any{value}, nil
-	case OpGTE:
-		return column + " >= ?", []any{value}, nil
-	case OpLTE:
-		return column + " <= ?", []any{value}, nil
+	case enum.OpEqual:
+		return column + constant.FilterSQLEQ, []any{value}, nil
+	case enum.OpNotEqual:
+		return column + constant.FilterSQLNEQ, []any{value}, nil
+	case enum.OpGreater:
+		return column + constant.FilterSQLGT, []any{value}, nil
+	case enum.OpLess:
+		return column + constant.FilterSQLLT, []any{value}, nil
+	case enum.OpGTE:
+		return column + constant.FilterSQLGTE, []any{value}, nil
+	case enum.OpLTE:
+		return column + constant.FilterSQLLTE, []any{value}, nil
 	default:
-		return "", nil, fmt.Errorf("unsupported operator: %s", op)
+		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, op)
 	}
 }

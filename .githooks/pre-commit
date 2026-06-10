@@ -96,8 +96,14 @@ printf "$PASS go test\n"
 # --------------------------------------------------------------------------
 printf "$INFO Running lint...\n"
 
-if ! $GO_BIN run main.go lint ./... 2>&1; then
-    fail "lint failed. Please fix the convention violations above before committing."
+if ! $GO_BIN run main.go lint conv ./... 2>&1; then
+    CONV_FAILED=1
+fi
+if ! $GO_BIN run main.go lint static ./... 2>&1; then
+    STATIC_FAILED=1
+fi
+if [ -n "$CONV_FAILED" ] || [ -n "$STATIC_FAILED" ]; then
+    fail "lint failed. Please fix the issues above before committing."
 fi
 printf "$PASS lint\n"
 
