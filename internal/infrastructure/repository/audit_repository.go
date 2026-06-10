@@ -109,7 +109,7 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 		Select(constant.AuditDistinctSelectUser).
 		Joins(constant.AuditDistinctJoinAPIKey).
 		Joins(constant.AuditDistinctJoinUser).
-		Where(constant.DBConditionDeletedAtZero)
+		Where(constant.AuditDistinctWhereDeletedAtZero)
 
 	if !startTime.IsZero() {
 		query = query.Where(constant.AuditDistinctWhereCreatedAtGTE, startTime)

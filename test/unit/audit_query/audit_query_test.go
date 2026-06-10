@@ -8,6 +8,7 @@ import (
 
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -22,6 +23,10 @@ type fakeAuditRepo struct {
 	listAllFunc            func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 	listByAPIKeyIDsFn      func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 	queryTokenThroughputFn func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
+
+	listDistinctUserNamesFn   func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	listDistinctStatusCodesFn func(ctx context.Context, startTime, endTime time.Time) ([]string, error)
 
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
@@ -71,14 +76,23 @@ func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []
 }
 
 func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	if f.listDistinctUserNamesFn != nil {
+		return f.listDistinctUserNamesFn(ctx, keyword, startTime, endTime)
+	}
 	return []string{}, nil
 }
 
 func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	if f.listDistinctModelsFn != nil {
+		return f.listDistinctModelsFn(ctx, keyword, startTime, endTime)
+	}
 	return []string{}, nil
 }
 
 func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
+	if f.listDistinctStatusCodesFn != nil {
+		return f.listDistinctStatusCodesFn(ctx, startTime, endTime)
+	}
 	return []string{}, nil
 }
 
@@ -216,6 +230,93 @@ func TestListAuditLogsByUser_InvalidSortField(t *testing.T) {
 	if repo.listByAPIKeyIDsCnt != 0 {
 		t.Errorf("repo should NOT be called on validation error, but called %d times", repo.listByAPIKeyIDsCnt)
 	}
+}
+
+// ─── ListAuditOptionHandler 测试 ────────────────────────
+
+func TestListAuditOption_DispatchesByField(t *testing.T) {
+	t.Parallel()
+
+	userNamesCalled, modelsCalled, statusCodesCalled := false, false, false
+	repo := &fakeAuditRepo{
+		listAllFunc:            nil,
+		listByAPIKeyIDsFn:      nil,
+		queryTokenThroughputFn: nil,
+		listDistinctUserNamesFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+			userNamesCalled = true
+			return []string{"user1", "user2"}, nil
+		},
+		listDistinctModelsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+			modelsCalled = true
+			return []string{"gpt-4", "claude"}, nil
+		},
+		listDistinctStatusCodesFn: func(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
+			statusCodesCalled = true
+			return []string{"200", "400", "500"}, nil
+		},
+	}
+	h := auditquery.NewListAuditOptionHandler(repo)
+
+	t.Run("field=user", func(t *testing.T) {
+		t.Parallel()
+		items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+			Field: constant.AuditFilterFieldUser,
+		})
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if !userNamesCalled {
+			t.Error("expected ListDistinctUserNames to be called")
+		}
+		if len(items) != 2 || items[0] != "user1" {
+			t.Errorf("items = %v, want [user1 user2]", items)
+		}
+	})
+
+	t.Run("field=model", func(t *testing.T) {
+		t.Parallel()
+		items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+			Field: constant.AuditFilterFieldModel,
+		})
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if !modelsCalled {
+			t.Error("expected ListDistinctModels to be called")
+		}
+		if len(items) != 2 || items[0] != "gpt-4" {
+			t.Errorf("items = %v, want [gpt-4 claude]", items)
+		}
+	})
+
+	t.Run("field=status", func(t *testing.T) {
+		t.Parallel()
+		items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+			Field: constant.AuditFilterFieldStatus,
+		})
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if !statusCodesCalled {
+			t.Error("expected ListDistinctStatusCodes to be called")
+		}
+		if len(items) != 3 || items[0] != "200" {
+			t.Errorf("items = %v, want [200 400 500]", items)
+		}
+	})
+
+	t.Run("unknown field returns empty", func(t *testing.T) {
+		t.Parallel()
+		items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+			Field: "unknown",
+		})
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if len(items) != 0 {
+			t.Errorf("items = %v, want []", items)
+		}
+	})
 }
 
 // ─── FillTrendSeries / FillRateSeries 测试 ────────────────────────
