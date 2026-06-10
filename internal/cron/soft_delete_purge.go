@@ -10,7 +10,6 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -95,7 +94,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	db := c.db.WithContext(ctx)
 
 	// 1. 查询所有被软删除的 session
-	softDeletedSessions, err := c.sessionDAO.FindAllSoftDeleted(db)
+	softDeletedSessions, err := c.sessionDAO.FindAllForPurge(db, true)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find soft deleted sessions", zap.Error(err))
 		return
@@ -107,24 +106,24 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	}
 
 	// 2. 从被软删除的 session 中提取 message_ids 和 tool_ids 并去重
-	candidateMessageIDs := lo.Uniq(lo.Flatten(lo.Map(softDeletedSessions, func(s *dbmodel.Session, _ int) []uint {
+	candidateMessageIDs := lo.Uniq(lo.Flatten(lo.Map(softDeletedSessions, func(s dao.SessionPurgeView, _ int) []uint {
 		return s.MessageIDs
 	})))
-	candidateToolIDs := lo.Uniq(lo.Flatten(lo.Map(softDeletedSessions, func(s *dbmodel.Session, _ int) []uint {
+	candidateToolIDs := lo.Uniq(lo.Flatten(lo.Map(softDeletedSessions, func(s dao.SessionPurgeView, _ int) []uint {
 		return s.ToolIDs
 	})))
 
 	// 3. 查询所有未删除的 session，收集引用的 message_ids 和 tool_ids
-	activeSessions, err := c.sessionDAO.FindAll(db)
+	activeSessions, err := c.sessionDAO.FindAllForPurge(db, false)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find active sessions", zap.Error(err))
 		return
 	}
 
-	usedMessageIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s *dbmodel.Session, _ int) []uint {
+	usedMessageIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s dao.SessionPurgeView, _ int) []uint {
 		return s.MessageIDs
 	})))
-	usedToolIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s *dbmodel.Session, _ int) []uint {
+	usedToolIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s dao.SessionPurgeView, _ int) []uint {
 		return s.ToolIDs
 	})))
 

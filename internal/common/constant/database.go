@@ -15,6 +15,7 @@ const (
 	DBConditionAPIKeyNameEqual  = "api_key_name = ?"
 	DBConditionAPIKeyNameIn     = "api_key_name IN ?"
 	DBConditionIDGreaterThan    = "id > ?"
+	DBConditionWhereIDIn        = "id IN ?"
 	DBOrderByIDAscLimitOffset   = " ORDER BY id ASC LIMIT ? OFFSET ?"
 	DBOrderByID                 = "id"
 

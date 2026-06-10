@@ -225,7 +225,7 @@ func (dao *baseDAO[ModelT]) HardDeleteByIDs(db *gorm.DB, ids []uint) (int64, err
 		return 0, nil
 	}
 	var m ModelT
-	result := db.Unscoped().Where("id IN ?", ids).Delete(&m)
+	result := db.Unscoped().Where(constant.DBConditionWhereIDIn, ids).Delete(&m)
 	return result.RowsAffected, result.Error
 }
 

@@ -105,17 +105,17 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 	db := r.db.WithContext(ctx)
 
 	var names []string
-	query := db.Table("model_call_audits mca").
-		Select("DISTINCT u.name").
-		Joins("JOIN proxy_api_keys pak ON mca.api_key_id = pak.id").
-		Joins("JOIN users u ON pak.user_id = u.id").
-		Where("mca.deleted_at = 0")
+	query := db.Table(constant.AuditDistinctTableMCA).
+		Select(constant.AuditDistinctSelectUser).
+		Joins(constant.AuditDistinctJoinAPIKey).
+		Joins(constant.AuditDistinctJoinUser).
+		Where(constant.DBConditionDeletedAtZero)
 
 	if keyword != "" {
-		query = query.Where("u.name LIKE ? OR u.email LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		query = query.Where(constant.AuditDistinctWhereUser, "%"+keyword+"%", "%"+keyword+"%")
 	}
 
-	if err := query.Limit(50).Scan(&names).Error; err != nil {
+	if err := query.Limit(constant.AuditDistinctLimit).Scan(&names).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct user names")
 	}
 
@@ -128,14 +128,14 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string
 
 	var models []string
 	query := db.Model(&dbmodel.ModelCallAudit{}).
-		Select("DISTINCT model").
-		Where("deleted_at = 0")
+		Select(constant.AuditDistinctSelectModel).
+		Where(constant.DBConditionDeletedAtZero)
 
 	if keyword != "" {
-		query = query.Where("model LIKE ?", "%"+keyword+"%")
+		query = query.Where(constant.AuditDistinctWhereModel, "%"+keyword+"%")
 	}
 
-	if err := query.Limit(50).Scan(&models).Error; err != nil {
+	if err := query.Limit(constant.AuditDistinctLimit).Scan(&models).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct models")
 	}
 
@@ -148,9 +148,9 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context) ([]string
 
 	var codes []string
 	query := db.Model(&dbmodel.ModelCallAudit{}).
-		Select("DISTINCT upstream_status_code::text").
-		Where("deleted_at = 0").
-		Order("upstream_status_code")
+		Select(constant.AuditDistinctSelectStatus).
+		Where(constant.DBConditionDeletedAtZero).
+		Order(constant.FieldUpstreamStatusCode)
 
 	if err := query.Scan(&codes).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct status codes")
@@ -223,41 +223,12 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
 
-	// 注入 filter 条件
-	if criteria != nil && len(criteria.Filters) > 0 {
-		filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
-		if err != nil {
-			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
-		}
-		if filterSQL != "" {
-			sql = sql.Where(filterSQL, filterArgs...)
-		}
+	sql, filterErr := r.applyFilter(sql, criteria)
+	if filterErr != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, filterErr, "build filter SQL")
 	}
-
-	if param.Query != "" && len(constant.AuditQueryFields) > 0 {
-		like := "%" + param.Query + "%"
-		expressions := make([]clause.Expression, 0, len(constant.AuditQueryFields))
-		for _, field := range constant.AuditQueryFields {
-			if field == "" {
-				continue
-			}
-			expressions = append(expressions, clause.Like{Column: clause.Column{Name: field}, Value: like})
-		}
-		if len(expressions) > 0 {
-			sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])
-			for _, expr := range expressions[1:] {
-				sub = sub.Or(expr)
-			}
-			sql = sql.Where(sub)
-		}
-	}
-
-	if param.Sort != "" && param.SortField != "" {
-		param.SortField = safeSortField(param.SortField)
-	}
-	if param.Sort != "" && param.SortField != "" {
-		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
-	}
+	sql = r.applyKeywordSearch(db, sql, param.Query)
+	sql = r.applySort(sql, param.Sort, param.SortField)
 
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
 	if err := sql.Count(&pageInfo.Total).Error; err != nil {
@@ -290,6 +261,53 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		audits = append(audits, a)
 	}
 	return audits, pageInfo, nil
+}
+
+// applyFilter 注入 filter 条件
+func (r *auditRepository) applyFilter(db *gorm.DB, criteria *filter.FilterCriteria) (*gorm.DB, error) {
+	if criteria == nil || len(criteria.Filters) == 0 {
+		return db, nil
+	}
+	filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+	if err != nil {
+		return nil, err
+	}
+	if filterSQL != "" {
+		db = db.Where(filterSQL, filterArgs...)
+	}
+	return db, nil
+}
+
+// applyKeywordSearch 注入关键词搜索条件（OR 链）
+func (r *auditRepository) applyKeywordSearch(db, sql *gorm.DB, query string) *gorm.DB {
+	if query == "" || len(constant.AuditQueryFields) == 0 {
+		return sql
+	}
+	like := "%" + query + "%"
+	expressions := make([]clause.Expression, 0, len(constant.AuditQueryFields))
+	for _, field := range constant.AuditQueryFields {
+		if field == "" {
+			continue
+		}
+		expressions = append(expressions, clause.Like{Column: clause.Column{Name: field}, Value: like})
+	}
+	if len(expressions) > 0 {
+		sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])
+		for _, expr := range expressions[1:] {
+			sub = sub.Or(expr)
+		}
+		sql = sql.Where(sub)
+	}
+	return sql
+}
+
+// applySort 注入排序条件
+func (r *auditRepository) applySort(db *gorm.DB, sort enum.Sort, sortField string) *gorm.DB {
+	if sort == "" || sortField == "" {
+		return db
+	}
+	sortField = safeSortField(sortField)
+	return db.Order(clause.OrderByColumn{Column: clause.Column{Name: sortField}, Desc: sort == enum.SortDesc})
 }
 
 // dateTruncSQL 根据粒度返回日期截断 SQL 表达式

@@ -96,6 +96,10 @@ var (
 
 	AuditQueryFields = []string{FieldTraceID, FieldModel}
 
+	AuditFilterFieldUser   = "user"
+	AuditFilterFieldModel  = "model"
+	AuditFilterFieldStatus = "status"
+
 	AuditMaxPageSize = 100
 
 	SessionMaxPageSize = 200
@@ -149,4 +153,20 @@ var (
 	DateTruncWeek   = "date_trunc('week', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 
 	SQLConditionUpstreamSuccess = "upstream_status_code = 200"
+
+	// ── Audit filter field SQL column names ──
+	AuditFilterUserSQLColumn   = "u.name"
+	AuditFilterModelSQLColumn  = "model"
+	AuditFilterStatusSQLColumn = "upstream_status_code"
+
+	// ── Audit distinct query constants ──
+	AuditDistinctTableMCA     = "model_call_audits mca"
+	AuditDistinctSelectUser   = "DISTINCT u.name"
+	AuditDistinctJoinAPIKey   = "JOIN proxy_api_keys pak ON mca.api_key_id = pak.id"
+	AuditDistinctJoinUser     = "JOIN users u ON pak.user_id = u.id"
+	AuditDistinctWhereUser    = "u.name LIKE ? OR u.email LIKE ?"
+	AuditDistinctWhereModel   = "model LIKE ?"
+	AuditDistinctSelectModel  = "DISTINCT model"
+	AuditDistinctSelectStatus = "DISTINCT upstream_status_code::text"
+	AuditDistinctLimit        = 50
 )

@@ -27,16 +27,16 @@ var validSortFields = map[string]bool{
 
 // auditFieldConfigs Audit filter 字段配置
 var auditFieldConfigs = map[string]filter.FieldConfig{
-	"user": {
-		SQLColumn: "u.name",
+	constant.AuditFilterFieldUser: {
+		SQLColumn: constant.AuditFilterUserSQLColumn,
 		IsFuzzy:   true,
 	},
-	"model": {
-		SQLColumn: "model",
+	constant.AuditFilterFieldModel: {
+		SQLColumn: constant.AuditFilterModelSQLColumn,
 		IsFuzzy:   true,
 	},
-	"status": {
-		SQLColumn: "upstream_status_code",
+	constant.AuditFilterFieldStatus: {
+		SQLColumn: constant.AuditFilterStatusSQLColumn,
 		IsNumeric: true,
 	},
 }
