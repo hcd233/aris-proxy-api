@@ -40,6 +40,10 @@ import type {
   FirstTokenLatencyRsp,
   Granularity,
   DeleteSessionRsp,
+  AuditOptionListReq,
+  AuditOptionListRsp,
+  SessionOptionListReq,
+  SessionOptionListRsp,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -213,6 +217,7 @@ class ApiClient {
     startTime?: string;
     endTime?: string;
     keyword?: string;
+    filter?: string;
   }): Promise<ListSessionsRsp> {
     const sp = new URLSearchParams({
       page: String(params.page),
@@ -223,7 +228,15 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.keyword) sp.set("keyword", params.keyword);
+    if (params.filter) sp.set("filter", params.filter);
     return this.request<ListSessionsRsp>(`/api/v1/session/list?${sp}`);
+  }
+
+  async listSessionOptions(params: SessionOptionListReq): Promise<SessionOptionListRsp> {
+    const sp = new URLSearchParams();
+    sp.set("field", params.field);
+    if (params.keyword) sp.set("keyword", params.keyword);
+    return this.request<SessionOptionListRsp>(`/api/v1/session/option/list?${sp}`);
   }
 
   async getSession(sessionId: number): Promise<GetSessionRsp> {
@@ -482,6 +495,7 @@ class ApiClient {
     sortField?: string;
     startTime?: string;
     endTime?: string;
+    filter?: string;
   }): Promise<ListAuditLogsRsp> {
     const sp = new URLSearchParams({
       page: String(params.page),
@@ -492,7 +506,15 @@ class ApiClient {
     if (params.sortField) sp.set("sortField", params.sortField);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
+    if (params.filter) sp.set("filter", params.filter);
     return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
+  }
+
+  async listAuditOptions(params: AuditOptionListReq): Promise<AuditOptionListRsp> {
+    const sp = new URLSearchParams();
+    sp.set("field", params.field);
+    if (params.keyword) sp.set("keyword", params.keyword);
+    return this.request<AuditOptionListRsp>(`/api/v1/audit/option/list?${sp}`);
   }
 
   async fetchModelTrend(params: {

@@ -1,9 +1,6 @@
 package modules
 
 import (
-	"context"
-	"time"
-
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
@@ -25,8 +22,6 @@ import (
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
@@ -35,7 +30,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"go.uber.org/fx"
 )
 
@@ -72,6 +66,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewModelUsageByUserHandler,
 		auditquery.NewFirstTokenLatencyHandler,
 		NewFirstTokenLatencyByUserHandler,
+		auditquery.NewListAuditOptionHandler,
 		NewAuditService,
 		NewListSessionsByUserHandler,
 		NewGetSessionByUserHandler,
@@ -81,6 +76,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewDeleteSessionHandler,
 		NewScoreSessionHandler,
 		NewDeleteScoreSessionHandler,
+		NewSessionOptionHandler,
 		usecase.NewListOpenAIModels,
 		usecase.NewListAnthropicModels,
 		usecase.NewCountTokens,
@@ -207,69 +203,10 @@ func NewFirstTokenLatencyByUserHandler(repo modelcall.AuditRepository, apiKeyRep
 	return auditquery.NewFirstTokenLatencyByUserHandler(repo, apiKeyRepo)
 }
 
-type auditServiceAdapter struct {
-	inner auditquery.AuditService
-}
-
-func (a *auditServiceAdapter) ListLogs(ctx context.Context, permission enum.Permission, userID uint, q auditport.ListAuditLogsParams) ([]*auditport.AuditLogView, *model.PageInfo, error) {
-	views, pageInfo, err := a.inner.ListLogs(ctx, permission, userID, auditquery.ListAuditLogsParams(q))
-	if err != nil {
-		return nil, nil, err
-	}
-	result := make([]*auditport.AuditLogView, len(views))
-	for i, v := range views {
-		result[i] = &auditport.AuditLogView{
-			ID:                       v.ID,
-			CreatedAt:                v.CreatedAt,
-			Model:                    v.Model,
-			UpstreamProtocol:         v.UpstreamProtocol,
-			APIProtocol:              v.APIProtocol,
-			Endpoint:                 v.Endpoint,
-			InputTokens:              v.InputTokens,
-			OutputTokens:             v.OutputTokens,
-			CacheCreationInputTokens: v.CacheCreationInputTokens,
-			CacheReadInputTokens:     v.CacheReadInputTokens,
-			FirstTokenLatencyMs:      v.FirstTokenLatencyMs,
-			StreamDurationMs:         v.StreamDurationMs,
-			UserAgent:                v.UserAgent,
-			UpstreamStatusCode:       v.UpstreamStatusCode,
-			ErrorMessage:             v.ErrorMessage,
-			TraceID:                  v.TraceID,
-			APIKeyName:               v.APIKeyName,
-			UserName:                 v.UserName,
-			UserEmail:                v.UserEmail,
-		}
-	}
-	return result, pageInfo, nil
-}
-
-func (a *auditServiceAdapter) ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
-	return a.inner.ModelTrend(ctx, permission, userID, startTime, endTime, granularity)
-}
-
-func (a *auditServiceAdapter) RequestRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
-	return a.inner.RequestRate(ctx, permission, userID, startTime, endTime, granularity)
-}
-
-func (a *auditServiceAdapter) TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
-	return a.inner.TokenThroughput(ctx, permission, userID, startTime, endTime, granularity)
-}
-
-func (a *auditServiceAdapter) TokenRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenRateItem, error) {
-	return a.inner.TokenRate(ctx, permission, userID, startTime, endTime, granularity)
-}
-
-func (a *auditServiceAdapter) ModelUsage(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.ModelUsageItem, error) {
-	return a.inner.ModelUsage(ctx, permission, userID, startTime, endTime, granularity)
-}
-
-func (a *auditServiceAdapter) FirstTokenLatency(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.FirstTokenLatencyItem, error) {
-	return a.inner.FirstTokenLatency(ctx, permission, userID, startTime, endTime, granularity)
-}
-
 func NewAuditService(
 	listAll auditquery.ListAllAuditLogsHandler,
 	listByUser auditquery.ListAuditLogsByUserHandler,
+	listAuditOption auditquery.ListAuditOptionHandler,
 	modelTrend auditquery.ModelTrendHandler,
 	modelTrendByUser auditquery.ModelTrendByUserHandler,
 	requestRate auditquery.RequestRateHandler,
@@ -283,7 +220,7 @@ func NewAuditService(
 	firstTokenLatency auditquery.FirstTokenLatencyHandler,
 	firstTokenLatencyByUser auditquery.FirstTokenLatencyByUserHandler,
 ) auditport.AuditService {
-	return &auditServiceAdapter{inner: auditquery.NewAuditService(listAll, listByUser, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)}
+	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)
 }
 
 func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
@@ -316,4 +253,8 @@ func NewScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo ap
 
 func NewDeleteScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.DeleteScoreSessionHandler {
 	return sessioncommand.NewDeleteScoreSessionHandler(sessionRepo, apiKeyRepo)
+}
+
+func NewSessionOptionHandler() sessionport.ListSessionOptionHandler {
+	return sessionquery.NewListSessionOptionHandler()
 }

@@ -169,4 +169,20 @@ const (
 	SessionDeleteErrorNotFound     = "session not found"
 	SessionDeleteErrorNoPermission = "no permission"
 	SessionDeleteErrorDeleteFailed = "failed to delete"
+
+	// ── Session option values ──
+	SessionOptionScoreValue1    = "1"
+	SessionOptionScoreValue2    = "2"
+	SessionOptionScoreValue3    = "3"
+	SessionOptionScoreValue4    = "4"
+	SessionOptionScoreValue5    = "5"
+	SessionOptionScoreValueNone = "none"
+
+	// ── Session option labels ──
+	SessionOptionScoreLabel1    = "1 分"
+	SessionOptionScoreLabel2    = "2 分"
+	SessionOptionScoreLabel3    = "3 分"
+	SessionOptionScoreLabel4    = "4 分"
+	SessionOptionScoreLabel5    = "5 分"
+	SessionOptionScoreLabelNone = "未标注"
 )

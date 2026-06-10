@@ -6,8 +6,10 @@ import (
 	"testing"
 	"time"
 
+	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -17,8 +19,8 @@ import (
 // ─── fake repository ─────────────────────────────────────
 
 type fakeAuditRepo struct {
-	listAllFunc            func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
-	listByAPIKeyIDsFn      func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	listAllFunc            func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	listByAPIKeyIDsFn      func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 	queryTokenThroughputFn func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
 
 	listAllCalls       int
@@ -28,19 +30,19 @@ type fakeAuditRepo struct {
 
 func (f *fakeAuditRepo) Save(ctx context.Context, a *aggregate.ModelCallAudit) error { return nil }
 
-func (f *fakeAuditRepo) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (f *fakeAuditRepo) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	f.listAllCalls++
 	if f.listAllFunc != nil {
-		return f.listAllFunc(ctx, param, startTime, endTime)
+		return f.listAllFunc(ctx, param, startTime, endTime, criteria)
 	}
 	return nil, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
 }
 
-func (f *fakeAuditRepo) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (f *fakeAuditRepo) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	f.listByAPIKeyIDsCnt++
 	f.lastAPIKeyIDs = apiKeyIDs
 	if f.listByAPIKeyIDsFn != nil {
-		return f.listByAPIKeyIDsFn(ctx, apiKeyIDs, param, startTime, endTime)
+		return f.listByAPIKeyIDsFn(ctx, apiKeyIDs, param, startTime, endTime, criteria)
 	}
 	return nil, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
 }
@@ -68,6 +70,14 @@ func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []
 	return nil, nil
 }
 
+func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string) ([]string, error) {
+	return []string{}, nil
+}
+
 type fakeAPIKeyIDLookup struct {
 	lookupFunc func(ctx context.Context, userID uint) ([]uint, error)
 	calls      int
@@ -88,7 +98,7 @@ var _ modelcall.AuditRepository = (*fakeAuditRepo)(nil)
 func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
 	t.Parallel()
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if param.Page != 1 {
 				t.Errorf("Page = %d, want 1 (default for 0)", param.Page)
 			}
@@ -136,7 +146,7 @@ func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
 	start := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC)
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, param model.CommonParam, s, e time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listAllFunc: func(ctx context.Context, param model.CommonParam, s, e time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if !s.Equal(start) || !e.Equal(end) {
 				t.Errorf("time range mismatch: got [%v, %v], want [%v, %v]", s, e, start, end)
 			}
@@ -156,7 +166,7 @@ func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
 func TestListAuditLogsByUser_LoadsUserAPIKeyIDs(t *testing.T) {
 	t.Parallel()
 	repo := &fakeAuditRepo{
-		listByAPIKeyIDsFn: func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listByAPIKeyIDsFn: func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if len(apiKeyIDs) != 2 || apiKeyIDs[0] != 10 || apiKeyIDs[1] != 20 {
 				t.Errorf("apiKeyIDs = %v, want [10 20]", apiKeyIDs)
 			}
@@ -349,16 +359,17 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 func TestAuditService_DispatchesByPermission(t *testing.T) {
 	t.Parallel()
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, _ model.CommonParam, _, _ time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listAllFunc: func(ctx context.Context, _ model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			return nil, &model.PageInfo{Page: 1, PageSize: 20}, nil
 		},
-		listByAPIKeyIDsFn: func(ctx context.Context, _ []uint, _ model.CommonParam, _, _ time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listByAPIKeyIDsFn: func(ctx context.Context, _ []uint, _ model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			return nil, &model.PageInfo{Page: 1, PageSize: 20}, nil
 		},
 	}
 	svc := auditquery.NewAuditService(
 		auditquery.NewListAllAuditLogsHandler(repo),
 		auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		auditquery.NewListAuditOptionHandler(repo),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewRequestRateHandler(repo),
@@ -373,21 +384,21 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 	)
 
-	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
+	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
 		t.Fatalf("admin ListLogs err: %v", err)
 	}
 	if repo.listAllCalls != 1 {
 		t.Errorf("admin should call listAll, calls = %d", repo.listAllCalls)
 	}
 
-	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionUser, 7, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
+	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionUser, 7, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
 		t.Fatalf("user ListLogs err: %v", err)
 	}
 	if repo.listByAPIKeyIDsCnt != 1 {
 		t.Errorf("user should call listByAPIKeyIDs, calls = %d", repo.listByAPIKeyIDsCnt)
 	}
 
-	if _, _, err := svc.ListLogs(context.Background(), enum.Permission("nope"), 7, auditquery.ListAuditLogsParams{Page: 1, PageSize: 20}); !errors.Is(err, ierr.ErrUnauthorized) {
+	if _, _, err := svc.ListLogs(context.Background(), enum.Permission("nope"), 7, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); !errors.Is(err, ierr.ErrUnauthorized) {
 		t.Errorf("unknown permission should return ErrUnauthorized, got %v", err)
 	}
 }
