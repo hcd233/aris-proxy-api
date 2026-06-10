@@ -12,20 +12,11 @@ const (
 	DBConditionDeletedAtZero    = "deleted_at = 0"
 	DBConditionDeletedAtNotZero = "deleted_at != 0"
 	DBConditionInTemplate       = "%s IN ?"
-	DBConditionAPIKeyNameEqual  = "api_key_name = ?"
-	DBConditionAPIKeyNameIn     = "api_key_name IN ?"
 	DBConditionIDGreaterThan    = "id > ?"
 	DBConditionWhereIDIn        = "id IN ?"
-	DBOrderByIDAscLimitOffset   = " ORDER BY id ASC LIMIT ? OFFSET ?"
 	DBOrderByID                 = "id"
 
 	DBJSONConditionAssistantRole  = "(message::jsonb)->>'role' = 'assistant'"
 	DBJSONConditionHasThinkTag    = "(message::jsonb)->>'content' LIKE '%<think>%'"
 	DBJSONConditionReasoningEmpty = "((message::jsonb)->>'reasoning_content' IS NULL OR (message::jsonb)->>'reasoning_content' = '')"
-
-	DBQueryCountActiveSessions   = "SELECT COUNT(*) FROM sessions WHERE deleted_at = 0"
-	DBQueryListActiveSessionRows = `SELECT id, created_at, updated_at, summary,
-		COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count,
-		COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count
-		FROM sessions WHERE deleted_at = 0`
 )

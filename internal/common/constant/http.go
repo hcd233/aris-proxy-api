@@ -68,5 +68,4 @@ const (
 	InflightStateRunning  int32 = 0
 	InflightStateDraining int32 = 1
 	ServerShuttingDownMsg       = "server is shutting down"
-	ServerErrorType             = "server_error"
 )

@@ -23,7 +23,7 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 		return []string{}, nil
 	}
 
-	items := []string{constant.SessionOptionScoreLabelUnscored}
+	items := []string{constant.SessionOptionScoreValueUnscored}
 
 	scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime)
 	if err != nil {

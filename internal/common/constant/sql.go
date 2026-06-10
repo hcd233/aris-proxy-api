@@ -15,8 +15,6 @@ const (
 	FieldModel                       = "model"
 	FieldAPIKey                      = "api_key"
 	FieldAPIKeyName                  = "api_key_name"
-	FieldBaseURL                     = "base_url"
-	FieldProvider                    = "provider"
 	FieldAlias                       = "alias"
 	FieldOpenaiBaseURL               = "openai_base_url"
 	FieldAnthropicBaseURL            = "anthropic_base_url"
@@ -52,13 +50,11 @@ const (
 	FieldErrorMessage             = "error_message"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
-	FieldQuestions                = "questions"
 )
 
 const (
 	WhereFieldID       = "id"
 	WhereFieldCheckSum = "check_sum"
-	WhereFieldToolIDs  = "tool_ids"
 )
 
 var (
@@ -158,6 +154,10 @@ var (
 	AuditFilterUserSQLColumn   = "u.name"
 	AuditFilterModelSQLColumn  = "model"
 	AuditFilterStatusSQLColumn = "upstream_status_code"
+
+	// ── Audit filter JOIN constants (for paginate queries without alias) ──
+	AuditFilterJoinAPIKey = "JOIN proxy_api_keys ON model_call_audits.api_key_id = proxy_api_keys.id"
+	AuditFilterJoinUser   = "JOIN users u ON proxy_api_keys.user_id = u.id"
 
 	// ── Audit distinct query constants ──
 	AuditDistinctTableMCA     = "model_call_audits mca"

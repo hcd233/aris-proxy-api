@@ -289,6 +289,13 @@ func (r *auditRepository) applyFilter(db *gorm.DB, criteria *filter.FilterCriter
 	if criteria == nil || len(criteria.Filters) == 0 {
 		return db, nil
 	}
+	for _, config := range criteria.FieldConfigs {
+		if config.SQLColumn == constant.AuditFilterUserSQLColumn {
+			db = db.Joins(constant.AuditFilterJoinAPIKey).
+				Joins(constant.AuditFilterJoinUser)
+			break
+		}
+	}
 	filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
 	if err != nil {
 		return nil, err
