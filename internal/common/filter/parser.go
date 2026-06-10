@@ -16,7 +16,7 @@ import (
 type Filter struct {
 	Field    string
 	Operator enum.Operator
-	Value    string
+	Values   []string
 }
 
 // FilterCriteria 筛选条件（用于 Repository 接口）
@@ -113,25 +113,52 @@ func parsePart(part string) (Filter, error) {
 	for _, opInfo := range operators {
 		idx := strings.Index(part, string(opInfo.op))
 		if idx > 0 {
-			field := part[:idx]
-			value := part[idx+opInfo.len:]
+			field := strings.TrimSpace(part[:idx])
+			rawValue := part[idx+opInfo.len:]
 
-			value = strings.Trim(value, `"`)
-
-			field = strings.TrimSpace(field)
 			if field == "" {
 				return Filter{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrEmptyFieldName, part)
+			}
+
+			values := splitValues(rawValue)
+			if len(values) == 0 {
+				return Filter{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidExpr, part)
 			}
 
 			return Filter{
 				Field:    field,
 				Operator: opInfo.op,
-				Value:    value,
+				Values:   values,
 			}, nil
 		}
 	}
 
 	return Filter{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidExpr, part)
+}
+
+// splitValues 解析 value 段：
+//   - 整体引号包裹 → 单值字面量（不按 | 拆）
+//   - 否则按 | 拆分，trim 空白，剔除空项
+func splitValues(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if len(raw) >= 2 && raw[0] == '"' && raw[len(raw)-1] == '"' {
+		return []string{raw[1 : len(raw)-1]}
+	}
+	parts := strings.Split(raw, "|")
+	values := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		// 单段内若仍有引号，统一去掉
+		p = strings.Trim(p, `"`)
+		if p == "" {
+			continue
+		}
+		values = append(values, p)
+	}
+	return values
 }
 
 // ToSQL 将 filter 转换为 SQL 条件
@@ -160,41 +187,178 @@ func ToSQL(filters []Filter, fieldConfigs map[string]FieldConfig) (sql string, a
 	return strings.Join(conditions, constant.FilterSQLAND), args, nil
 }
 
-// buildCondition 构建单个 SQL 条件
+// buildCondition 构建单个 SQL 条件（单值或多值）
 func buildCondition(f Filter, config FieldConfig) (sql string, args []any, err error) {
 	column := config.SQLColumn
 
-	if config.ValueMap != nil {
-		if mapped, ok := config.ValueMap[f.Value]; ok {
-			if mapped == nil {
-				switch f.Operator {
-				case enum.OpEqual:
-					return column + constant.FilterSQLISNULL, nil, nil
-				case enum.OpNotEqual:
-					return column + constant.FilterSQLISNOTNULL, nil, nil
-				default:
-					return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrNullValueOp, f.Operator)
-				}
-			}
-			return buildSimpleCondition(column, f.Operator, *mapped)
-		}
+	if !isMultiValueAllowed(f.Operator) && len(f.Values) > 1 {
+		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrMultiValueWithComparison, f.Operator)
 	}
 
-	if config.IsFuzzy && f.Operator == enum.OpEqual {
-		return column + constant.FilterSQLLIKE, []any{"%" + f.Value + "%"}, nil
+	if config.ValueMap != nil {
+		return buildValueMapCondition(column, f, config)
 	}
-	if config.IsFuzzy && f.Operator == enum.OpNotEqual {
-		return column + constant.FilterSQLNOTLIKE, []any{"%" + f.Value + "%"}, nil
+
+	if config.IsFuzzy {
+		return buildFuzzyCondition(column, f)
 	}
 
 	if config.IsNumeric {
-		return buildSimpleCondition(column, f.Operator, f.Value)
+		return buildNumericCondition(column, f)
 	}
 
-	return buildSimpleCondition(column, f.Operator, f.Value)
+	return buildPlainCondition(column, f)
 }
 
-// buildSimpleCondition 构建简单条件
+// isMultiValueAllowed 判定操作符是否支持多值
+func isMultiValueAllowed(op enum.Operator) bool {
+	return op == enum.OpEqual || op == enum.OpNotEqual
+}
+
+// buildFuzzyCondition LIKE / NOT LIKE 单值或 OR/AND 多值
+func buildFuzzyCondition(column string, f Filter) (sql string, args []any, err error) {
+	if len(f.Values) == 1 {
+		switch f.Operator {
+		case enum.OpEqual:
+			return column + constant.FilterSQLLIKE, []any{"%" + f.Values[0] + "%"}, nil
+		case enum.OpNotEqual:
+			return column + constant.FilterSQLNOTLIKE, []any{"%" + f.Values[0] + "%"}, nil
+		}
+	}
+	parts := make([]string, 0, len(f.Values))
+	args = make([]any, 0, len(f.Values))
+	frag := constant.FilterSQLLIKE
+	joiner := constant.FilterSQLOR
+	if f.Operator == enum.OpNotEqual {
+		frag = constant.FilterSQLNOTLIKE
+		joiner = constant.FilterSQLAND
+	}
+	for _, v := range f.Values {
+		parts = append(parts, column+frag)
+		args = append(args, "%"+v+"%")
+	}
+	return "(" + strings.Join(parts, joiner) + ")", args, nil
+}
+
+// buildNumericCondition = / != 单值或 IN/NOT IN 多值
+func buildNumericCondition(column string, f Filter) (sql string, args []any, err error) {
+	if len(f.Values) == 1 {
+		return buildSimpleCondition(column, f.Operator, f.Values[0])
+	}
+	switch f.Operator {
+	case enum.OpEqual:
+		return column + constant.FilterSQLIN, []any{f.Values}, nil
+	case enum.OpNotEqual:
+		return column + constant.FilterSQLNOTIN, []any{f.Values}, nil
+	}
+	return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, f.Operator)
+}
+
+// buildPlainCondition 无配置标志的字段（既非 fuzzy 也非 numeric 也无 ValueMap）
+func buildPlainCondition(column string, f Filter) (sql string, args []any, err error) {
+	if len(f.Values) == 1 {
+		return buildSimpleCondition(column, f.Operator, f.Values[0])
+	}
+	return buildNumericCondition(column, f)
+}
+
+// resolveValueMapValues 解析 ValueMap 映射，返回 resolved 列表
+type valueMapResolved struct {
+	isNull bool
+	value  string
+}
+
+func resolveValueMapValues(values []string, valueMap map[string]*string) []valueMapResolved {
+	resolved := make([]valueMapResolved, 0, len(values))
+	for _, raw := range values {
+		if mapped, ok := valueMap[raw]; ok {
+			if mapped == nil {
+				resolved = append(resolved, valueMapResolved{isNull: true})
+			} else {
+				resolved = append(resolved, valueMapResolved{value: *mapped})
+			}
+		} else {
+			resolved = append(resolved, valueMapResolved{value: raw})
+		}
+	}
+	return resolved
+}
+
+// buildValueMapCondition 处理含 ValueMap 的字段，支持单值与多值（含 NULL 项混合）
+func buildValueMapCondition(column string, f Filter, config FieldConfig) (sql string, args []any, err error) {
+	resolvedList := resolveValueMapValues(f.Values, config.ValueMap)
+
+	// 单值快速路径，与原行为完全等价
+	if len(resolvedList) == 1 {
+		return buildSingleValueMapCondition(column, resolvedList[0], f, config)
+	}
+
+	// 多值：NULL 与非 NULL 混合
+	return buildMultiValueMapCondition(column, resolvedList, f, config)
+}
+
+// buildSingleValueMapCondition 单值 ValueMap 条件
+func buildSingleValueMapCondition(column string, r valueMapResolved, f Filter, config FieldConfig) (sql string, args []any, err error) {
+	if r.isNull {
+		switch f.Operator {
+		case enum.OpEqual:
+			return column + constant.FilterSQLISNULL, nil, nil
+		case enum.OpNotEqual:
+			return column + constant.FilterSQLISNOTNULL, nil, nil
+		default:
+			return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrNullValueOp, f.Operator)
+		}
+	}
+	// 非 NULL 单值，走 fuzzy / numeric / plain 各自分支
+	single := Filter{Field: f.Field, Operator: f.Operator, Values: []string{r.value}}
+	switch {
+	case config.IsFuzzy:
+		return buildFuzzyCondition(column, single)
+	case config.IsNumeric:
+		return buildNumericCondition(column, single)
+	default:
+		return buildSimpleCondition(column, f.Operator, r.value)
+	}
+}
+
+// buildMultiValueMapCondition 多值 ValueMap 条件（NULL 与非 NULL 混合）
+func buildMultiValueMapCondition(column string, resolvedList []valueMapResolved, f Filter, config FieldConfig) (sql string, args []any, err error) {
+	parts := make([]string, 0, len(resolvedList))
+	args = make([]any, 0, len(resolvedList))
+	joiner := constant.FilterSQLOR
+	if f.Operator == enum.OpNotEqual {
+		joiner = constant.FilterSQLAND
+	}
+	for _, r := range resolvedList {
+		if r.isNull {
+			if f.Operator == enum.OpEqual {
+				parts = append(parts, column+constant.FilterSQLISNULL)
+			} else {
+				parts = append(parts, column+constant.FilterSQLISNOTNULL)
+			}
+			continue
+		}
+		switch {
+		case config.IsFuzzy:
+			if f.Operator == enum.OpEqual {
+				parts = append(parts, column+constant.FilterSQLLIKE)
+			} else {
+				parts = append(parts, column+constant.FilterSQLNOTLIKE)
+			}
+			args = append(args, "%"+r.value+"%")
+		default:
+			if f.Operator == enum.OpEqual {
+				parts = append(parts, column+constant.FilterSQLEQ)
+			} else {
+				parts = append(parts, column+constant.FilterSQLNEQ)
+			}
+			args = append(args, r.value)
+		}
+	}
+	return "(" + strings.Join(parts, joiner) + ")", args, nil
+}
+
+// buildSimpleCondition 构建单值简单条件（保持原逻辑、原行为）
 func buildSimpleCondition(column string, op enum.Operator, value string) (sql string, args []any, err error) {
 	switch op {
 	case enum.OpEqual:
