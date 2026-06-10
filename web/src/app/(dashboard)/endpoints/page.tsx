@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -246,12 +246,12 @@ export default function EndpointsPage() {
                             </p>
                             {ep.openaiBaseURL && (
                               <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                OpenAI: {ep.openaiBaseURL}
+                                O: {ep.openaiBaseURL}
                               </p>
                             )}
                             {ep.anthropicBaseURL && (
                               <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                Anthropic: {ep.anthropicBaseURL}
+                                A: {ep.anthropicBaseURL}
                               </p>
                             )}
                           </div>
@@ -306,27 +306,33 @@ export default function EndpointsPage() {
                         <TableCell>
                           <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-mono">{ep.maskedAPIKey}</code>
                         </TableCell>
-                        <TableCell className="max-w-[260px]">
-                          <TooltipRoot>
-                            <TooltipTrigger className="block w-full text-left">
-                              <div className="space-y-0.5">
-                                <div className="truncate font-mono text-xs text-muted-foreground">
-                                  <span className="text-[11px] font-medium text-foreground">OpenAI: </span>
-                                  {ep.openaiBaseURL || "—"}
+                        <TableCell className="max-w-[400px]">
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <button type="button" className="w-full cursor-default text-left">
+                                    <div className="space-y-0.5">
+                                      <div className="truncate font-mono text-xs text-muted-foreground">
+                                        <span className="text-[11px] font-medium text-foreground">O: </span>
+                                        {ep.openaiBaseURL || "—"}
+                                      </div>
+                                      <div className="truncate font-mono text-xs text-muted-foreground">
+                                        <span className="text-[11px] font-medium text-foreground">A: </span>
+                                        {ep.anthropicBaseURL || "—"}
+                                      </div>
+                                    </div>
+                                  </button>
+                                }
+                              />
+                              <TooltipContent side="top" align="start" className="max-w-md">
+                                <div className="space-y-1 font-mono text-xs">
+                                  <p><span className="font-medium text-foreground">O: </span>{ep.openaiBaseURL || "—"}</p>
+                                  <p><span className="font-medium text-foreground">A: </span>{ep.anthropicBaseURL || "—"}</p>
                                 </div>
-                                <div className="truncate font-mono text-xs text-muted-foreground">
-                                  <span className="text-[11px] font-medium text-foreground">Anthropic: </span>
-                                  {ep.anthropicBaseURL || "—"}
-                                </div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" align="start" className="max-w-md">
-                              <div className="space-y-1 font-mono text-xs">
-                                <p><span className="font-medium text-foreground">OpenAI: </span>{ep.openaiBaseURL || "—"}</p>
-                                <p><span className="font-medium text-foreground">Anthropic: </span>{ep.anthropicBaseURL || "—"}</p>
-                              </div>
-                            </TooltipContent>
-                          </TooltipRoot>
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1.5">
