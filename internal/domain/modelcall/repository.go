@@ -46,6 +46,9 @@ type AuditRepository interface {
 	// ListDistinctModels 查询去重的模型列表（支持模糊搜索）
 	ListDistinctModels(ctx context.Context, keyword string) ([]string, error)
 
+	// ListDistinctStatusCodes æ¥è¯¢å»éçä¸æ¸¸ç¶æç åè¡¨
+	ListDistinctStatusCodes(ctx context.Context) ([]string, error)
+
 	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
 	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
 

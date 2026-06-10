@@ -78,6 +78,10 @@ func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string) 
 	return []string{}, nil
 }
 
+func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context) ([]string, error) {
+	return []string{}, nil
+}
+
 type fakeAPIKeyIDLookup struct {
 	lookupFunc func(ctx context.Context, userID uint) ([]uint, error)
 	calls      int
