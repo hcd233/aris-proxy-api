@@ -488,10 +488,5 @@ export interface SessionOptionListReq {
 }
 
 export interface SessionOptionListRsp extends CommonRsp {
-  items: OptionItem[];
-}
-
-export interface OptionItem {
-  value: string;
-  label: string;
+  items: string[];
 }

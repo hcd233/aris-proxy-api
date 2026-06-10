@@ -18,14 +18,12 @@ func NewListSessionOptionHandler(readRepo session.SessionReadRepository) session
 	return &listSessionOptionHandler{readRepo: readRepo}
 }
 
-func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.ListSessionOptionQuery) ([]sessionport.OptionItem, error) {
+func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.ListSessionOptionQuery) ([]string, error) {
 	if q.Field != constant.FieldScore {
-		return []sessionport.OptionItem{}, nil
+		return []string{}, nil
 	}
 
-	items := []sessionport.OptionItem{
-		{Value: constant.SessionOptionScoreValueNone, Label: constant.SessionOptionScoreLabelUnscored},
-	}
+	items := []string{constant.SessionOptionScoreLabelUnscored}
 
 	scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime)
 	if err != nil {
@@ -34,17 +32,14 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 
 	for _, s := range scores {
 		if s >= 1 && s <= 5 {
-			items = append(items, sessionport.OptionItem{
-				Value: strconv.Itoa(s),
-				Label: strconv.Itoa(s),
-			})
+			items = append(items, strconv.Itoa(s))
 		}
 	}
 
 	if q.Keyword != "" {
-		filtered := make([]sessionport.OptionItem, 0, len(items))
+		filtered := make([]string, 0, len(items))
 		for _, item := range items {
-			if strings.Contains(item.Label, q.Keyword) || strings.Contains(item.Value, q.Keyword) {
+			if strings.Contains(item, q.Keyword) {
 				filtered = append(filtered, item)
 			}
 		}

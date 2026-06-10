@@ -37,10 +37,10 @@ type SessionOptionListReq struct {
 // SessionOptionListRsp 会话筛选选项响应
 //
 //	@author centonhuang
-//	@update 2026-06-09 10:00:00
+//	@update 2026-06-10 12:00:00
 type SessionOptionListRsp struct {
 	CommonRsp
-	Items []OptionItem `json:"items" doc:"选项列表"`
+	Items []string `json:"items" doc:"选项列表"`
 }
 
 // OptionItem 选项项

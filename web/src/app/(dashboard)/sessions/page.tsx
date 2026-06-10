@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
-import type { SessionSummary, PageInfo, OptionItem } from "@/lib/types";
+import type { SessionSummary, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -104,7 +104,7 @@ export default function SessionsPage() {
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const [filterScore, setFilterScore] = useState<string>("");
-  const [scoreOptions, setScoreOptions] = useState<OptionItem[]>([]);
+  const [scoreOptions, setScoreOptions] = useState<string[]>([]);
 
   const fetchScoreOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
     const { startTime, endTime } = computeRange(range, cs, ce);
@@ -340,7 +340,7 @@ export default function SessionsPage() {
                 <SelectContent>
                   <SelectItem value="__all__">All Scores</SelectItem>
                   {scoreOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

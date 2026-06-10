@@ -209,11 +209,5 @@ type ListSessionOptionQuery struct {
 
 // ListSessionOptionHandler 会话筛选选项查询处理器
 type ListSessionOptionHandler interface {
-	Handle(ctx context.Context, q ListSessionOptionQuery) ([]OptionItem, error)
-}
-
-// OptionItem 选项项
-type OptionItem struct {
-	Value string
-	Label string
+	Handle(ctx context.Context, q ListSessionOptionQuery) ([]string, error)
 }
