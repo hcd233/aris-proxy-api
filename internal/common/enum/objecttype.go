@@ -7,10 +7,6 @@ package enum
 type ObjectType string
 
 const (
-	// ObjectTypeImage ObjectType
-	//	update 2025-01-05 17:36:01
-	ObjectTypeImage ObjectType = "image"
-
 	// ObjectTypeAudio ObjectType
 	//	@update 2025-11-12 19:34:18
 	ObjectTypeAudio ObjectType = "audio"

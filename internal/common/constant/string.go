@@ -16,11 +16,7 @@ const (
 	TruncateSuffixPrefix  = "...(truncated, total "
 	TruncateSuffixPostfix = " chars)"
 
-	// MaxSummaryRunes 自动摘要最大 rune 数
-	MaxSummaryRunes = 100
-
 	// ── 运行时字符串字面量（无格式化占位符）──
-	NewlineString          = "\n"
 	NewlineCRLF            = "\r\n"
 	ZeroString             = "0"
 	OneString              = "1"
@@ -30,8 +26,6 @@ const (
 	DataURLPrefix          = "data:"
 	DataURLBase64Separator = ";base64,"
 	// ── dig 容器命名 ──
-	DigNameAccessSigner      = "accessSigner"
-	DigNameRefreshSigner     = "refreshSigner"
 	DigNameApplicationModule = "application"
 	DigNameCronModule        = "cron"
 	DigNameHandlerModule     = "handler"
@@ -154,15 +148,7 @@ const (
 	RoutePathList = "/list"
 
 	// Router path/query/field constants
-	PathWebLogin      = "/web/login"
-	QueryCode         = "code"
-	QueryState        = "state"
-	QueryPlatform     = "platform"
-	QueryParamError   = "error"
-	MsgAuthFailed     = "auth_failed"
-	FieldAccessToken  = "accessToken"
-	FieldRefreshToken = "refreshToken"
-	WhereIDEquals     = "id = ?"
+	WhereIDEquals = "id = ?"
 
 	// ── Session delete error messages ──
 	SessionDeleteErrorFindFailed   = "failed to find session"
@@ -171,14 +157,6 @@ const (
 	SessionDeleteErrorDeleteFailed = "failed to delete"
 
 	// ── Session option values ──
-	SessionOptionScoreValue1        = "1"
-	SessionOptionScoreValue2        = "2"
-	SessionOptionScoreValue3        = "3"
-	SessionOptionScoreValue4        = "4"
-	SessionOptionScoreValue5        = "5"
 	SessionOptionScoreValueNone     = "none"
 	SessionOptionScoreValueUnscored = "unscored"
-
-	// ── Session option labels ──
-	SessionOptionScoreLabelUnscored = "Unscored"
 )

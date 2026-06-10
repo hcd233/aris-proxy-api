@@ -36,7 +36,6 @@ const (
 	ConvCheckRecvDB      = "database"
 	ConvCheckRecvTime    = "time"
 	ConvCheckRecvReflect = "reflect"
-	ConvCheckRecvHTTP    = "http"
 	ConvCheckRecvLog     = "log"
 	ConvCheckRecvModel   = "model"
 )
@@ -134,16 +133,11 @@ const (
 	ConvCheckNameSpecialNameBlackList = "specialNameblackList"
 	ConvCheckNameSpecialNameWhiteList = "specialNamewhiteList"
 
-	ConvCheckSubPathVO = "/vo/"
-
-	ConvCheckMinFunctionBodyLines = 2
-
-	ConvCheckMsgCommentedCode     = "possible dead code in comment, please confirm whether to delete"
-	ConvCheckMsgImplementation    = "variable naming may expose implementation details; consider using plural form"
-	ConvCheckMsgLocalConst        = "local const blocks are prohibited in business packages; move to internal/common/constant or internal/enum"
-	ConvCheckMsgTypeAlias         = "type alias (type X = Y) is only allowed in enum and vo packages"
-	ConvCheckMsgTypeDef           = "type definition from another type (type X Y) is only allowed in enum and vo packages"
-	ConvCheckMsgShortFunctionBody = "function body has fewer than 1 line; avoid empty wrappers and inline the logic instead"
+	ConvCheckMsgCommentedCode  = "possible dead code in comment, please confirm whether to delete"
+	ConvCheckMsgImplementation = "variable naming may expose implementation details; consider using plural form"
+	ConvCheckMsgLocalConst     = "local const blocks are prohibited in business packages; move to internal/common/constant or internal/enum"
+	ConvCheckMsgTypeAlias      = "type alias (type X = Y) is only allowed in enum and vo packages"
+	ConvCheckMsgTypeDef        = "type definition from another type (type X Y) is only allowed in enum and vo packages"
 )
 
 // logging 检查常量
@@ -195,7 +189,6 @@ const (
 	ConvCheckImportInfraCache       = "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	ConvCheckImportDatabaseModel    = "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	ConvCheckPathInfrastructure     = "internal/infrastructure"
-	ConvCheckPathDatabaseModel      = "internal/infrastructure/database/model"
 	ConvCheckMsgDatabaseModelDirect = "database model imports are only allowed in infrastructure layer; expose a domain/application port instead"
 	ConvCheckLegacyCronSessionDedup = "internal/cron/session_dedup.go"
 	ConvCheckLegacyMiddlewareAPIKey = "internal/middleware/apikey.go"
@@ -268,14 +261,8 @@ const (
 
 // diagnostic 常量
 const (
-	ConvCheckSeverityError = "error"
-	ConvCheckSeverityWarn  = "warning"
-
-	ConvCheckDiagnosticFormat = "%s:%d: [%s] %s: %s\n"
-	ConvCheckAllPassed        = "All convention checks passed!"
-	ConvCheckSummaryFormat    = "%d error(s), %d warning(s)\n"
-	ConvCheckLogPrefix        = "[LintConv] "
-	ConvCheckLogViolation     = "convention violation"
-	ConvCheckLogPassed        = "All convention checks passed!"
-	ConvCheckLogSummary       = "convention check summary"
+	ConvCheckLogPrefix    = "[LintConv] "
+	ConvCheckLogViolation = "convention violation"
+	ConvCheckLogPassed    = "All convention checks passed!"
+	ConvCheckLogSummary   = "convention check summary"
 )

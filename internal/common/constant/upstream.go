@@ -35,7 +35,6 @@ const (
 	ResponseStreamFieldStatusCompleted  = "completed"
 	ResponseStreamFieldOutputTextType   = "output_text"
 	OpenAIInvalidRequestErrorType       = "invalid_request_error"
-	OpenAIInvalidRequestBodyMessage     = "invalid request body"
 	OpenAIModelNotFoundCode             = "model_not_found"
 	OpenAIModelNotFoundMessageTemplate  = "The model `%s` does not exist"
 	OpenAIInternalErrorShortMessage     = "Internal error"
@@ -74,8 +73,6 @@ const (
 
 	UpstreamErrorType             = "upstream_error"
 	UpstreamStatusMessageTemplate = "Upstream returned status %d"
-
-	ReasoningContentPlaceholder = " "
 
 	ResponseFailedAuditReason             = "response.failed"
 	ResponseFailedAuditReasonTemplate     = "response.failed: %s"

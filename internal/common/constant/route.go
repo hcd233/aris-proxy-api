@@ -1,24 +1,13 @@
 package constant
 
 const (
-	RoutePathRoot                         = "/"
-	RoutePathHealth                       = "/health"
-	RoutePathReady                        = "/ready"
-	RoutePathSSEHealth                    = "/ssehealth"
-	RoutePathTokenRefresh                 = "/refresh"
-	RoutePathUserCurrent                  = "/current"
-	RoutePathSessionList                  = "/list"
-	RoutePathOAuthLogin                   = "/login"
-	RoutePathOAuthCallback                = "/callback"
-	RoutePathModels                       = "/models"
-	RoutePathAnthropicMessages            = "/messages"
-	RoutePathAnthropicMessagesCountTokens = "/messages/count_tokens"
-	RoutePathOpenAIChatCompletions        = "/chat/completions"
-	RoutePathFavicon                      = "/favicon.ico"
-	RoutePathRobots                       = "/robots.txt"
-	RoutePathAppleTouchIcon               = "/apple-touch-icon.png"
-	RoutePathAppleTouchIconPrecomposed    = "/apple-touch-icon-precomposed.png"
-	RoutePathWellKnownSecurity            = "/.well-known/security.txt"
-
-	RoutePathWebLogin = "/web/login"
+	RoutePathRoot                      = "/"
+	RoutePathHealth                    = "/health"
+	RoutePathReady                     = "/ready"
+	RoutePathSSEHealth                 = "/ssehealth"
+	RoutePathFavicon                   = "/favicon.ico"
+	RoutePathRobots                    = "/robots.txt"
+	RoutePathAppleTouchIcon            = "/apple-touch-icon.png"
+	RoutePathAppleTouchIconPrecomposed = "/apple-touch-icon-precomposed.png"
+	RoutePathWellKnownSecurity         = "/.well-known/security.txt"
 )
