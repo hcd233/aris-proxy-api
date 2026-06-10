@@ -109,7 +109,7 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 		Select("DISTINCT u.name").
 		Joins("JOIN proxy_api_keys pak ON mca.api_key_id = pak.id").
 		Joins("JOIN users u ON pak.user_id = u.id").
-		Where("mca.deleted_at IS NULL")
+		Where("mca.deleted_at = 0")
 
 	if keyword != "" {
 		query = query.Where("u.name LIKE ? OR u.email LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
@@ -129,7 +129,7 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string
 	var models []string
 	query := db.Model(&dbmodel.ModelCallAudit{}).
 		Select("DISTINCT model").
-		Where("deleted_at IS NULL")
+		Where("deleted_at = 0")
 
 	if keyword != "" {
 		query = query.Where("model LIKE ?", "%"+keyword+"%")
