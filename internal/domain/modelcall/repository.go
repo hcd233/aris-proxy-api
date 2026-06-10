@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 )
@@ -31,16 +32,10 @@ type AuditRepository interface {
 	Save(ctx context.Context, audit *aggregate.ModelCallAudit) error
 
 	// ListAll 全量分页查询审计记录，支持时间范围过滤、关键词搜索和多字段排序（admin 用）
-	ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
 	// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
-	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
-
-	// ListAllWithFilter 全量分页查询审计记录（支持 filter）
-	ListAllWithFilter(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
-
-	// ListByAPIKeyIDsWithFilter 按 api_key_id IN (...) 分页查询（支持 filter）
-	ListByAPIKeyIDsWithFilter(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)

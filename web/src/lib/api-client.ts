@@ -217,6 +217,7 @@ class ApiClient {
     startTime?: string;
     endTime?: string;
     keyword?: string;
+    filter?: string;
   }): Promise<ListSessionsRsp> {
     const sp = new URLSearchParams({
       page: String(params.page),
@@ -227,6 +228,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.keyword) sp.set("keyword", params.keyword);
+    if (params.filter) sp.set("filter", params.filter);
     return this.request<ListSessionsRsp>(`/api/v1/session/list?${sp}`);
   }
 
@@ -235,28 +237,6 @@ class ApiClient {
     sp.set("field", params.field);
     if (params.keyword) sp.set("keyword", params.keyword);
     return this.request<SessionOptionListRsp>(`/api/v1/session/option/list?${sp}`);
-  }
-
-  async listSessionsWithFilter(params: {
-    page: number;
-    pageSize: number;
-    sort?: string;
-    sortField?: string;
-    startTime?: string;
-    endTime?: string;
-    keyword?: string;
-    filter?: string;
-  }): Promise<ListSessionsRsp> {
-    const sp = new URLSearchParams();
-    sp.set("page", String(params.page));
-    sp.set("pageSize", String(params.pageSize));
-    if (params.sort) sp.set("sort", params.sort);
-    if (params.sortField) sp.set("sortField", params.sortField);
-    if (params.startTime) sp.set("startTime", params.startTime);
-    if (params.endTime) sp.set("endTime", params.endTime);
-    if (params.keyword) sp.set("keyword", params.keyword);
-    if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListSessionsRsp>(`/api/v1/session/list?${sp}`);
   }
 
   async getSession(sessionId: number): Promise<GetSessionRsp> {
@@ -515,6 +495,7 @@ class ApiClient {
     sortField?: string;
     startTime?: string;
     endTime?: string;
+    filter?: string;
   }): Promise<ListAuditLogsRsp> {
     const sp = new URLSearchParams({
       page: String(params.page),
@@ -525,6 +506,7 @@ class ApiClient {
     if (params.sortField) sp.set("sortField", params.sortField);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
+    if (params.filter) sp.set("filter", params.filter);
     return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
   }
 
@@ -533,28 +515,6 @@ class ApiClient {
     sp.set("field", params.field);
     if (params.keyword) sp.set("keyword", params.keyword);
     return this.request<AuditOptionListRsp>(`/api/v1/audit/option/list?${sp}`);
-  }
-
-  async listAuditLogsWithFilter(params: {
-    page: number;
-    pageSize: number;
-    query?: string;
-    sort?: string;
-    sortField?: string;
-    startTime?: string;
-    endTime?: string;
-    filter?: string;
-  }): Promise<ListAuditLogsRsp> {
-    const sp = new URLSearchParams();
-    sp.set("page", String(params.page));
-    sp.set("pageSize", String(params.pageSize));
-    if (params.query) sp.set("query", params.query);
-    if (params.sort) sp.set("sort", params.sort);
-    if (params.sortField) sp.set("sortField", params.sortField);
-    if (params.startTime) sp.set("startTime", params.startTime);
-    if (params.endTime) sp.set("endTime", params.endTime);
-    if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
   }
 
   async fetchModelTrend(params: {

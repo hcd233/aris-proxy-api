@@ -124,7 +124,7 @@ export default function SessionsPage() {
       setLoading(true);
       try {
         const { startTime, endTime } = computeRange(range, cs, ce);
-        const rsp = await api.listSessionsWithFilter({
+        const rsp = await api.listSessions({
           page,
           pageSize,
           sort: sortState.dir,

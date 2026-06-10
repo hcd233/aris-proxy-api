@@ -10,6 +10,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -73,24 +74,18 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 //
 //	@receiver r *auditRepository
 //	@author centonhuang
-//	@update 2026-05-29 14:00:00
-func (r *auditRepository) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+//	@update 2026-06-09 10:00:00
+func (r *auditRepository) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
-	return r.paginate(db, param, startTime, endTime)
-}
-
-// ListAllWithFilter 全量分页查询审计记录（支持 filter）
-func (r *auditRepository) ListAllWithFilter(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
-	db := r.db.WithContext(ctx)
-	return r.paginateWithFilter(db, param, startTime, endTime, filterSQL, filterArgs)
+	return r.paginate(db, param, startTime, endTime, criteria)
 }
 
 // ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 //
 //	@receiver r *auditRepository
 //	@author centonhuang
-//	@update 2026-05-29 14:00:00
-func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+//	@update 2026-06-09 10:00:00
+func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	if len(apiKeyIDs) == 0 {
 		page, pageSize := param.Page, param.PageSize
 		if page < 1 {
@@ -102,23 +97,7 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 		return nil, &model.PageInfo{Page: page, PageSize: pageSize, Total: 0}, nil
 	}
 	db := r.db.WithContext(ctx).Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), apiKeyIDs)
-	return r.paginate(db, param, startTime, endTime)
-}
-
-// ListByAPIKeyIDsWithFilter 按 api_key_id IN (...) 分页查询（支持 filter）
-func (r *auditRepository) ListByAPIKeyIDsWithFilter(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
-	if len(apiKeyIDs) == 0 {
-		page, pageSize := param.Page, param.PageSize
-		if page < 1 {
-			page = 1
-		}
-		if pageSize < 1 {
-			pageSize = 20
-		}
-		return nil, &model.PageInfo{Page: page, PageSize: pageSize, Total: 0}, nil
-	}
-	db := r.db.WithContext(ctx).Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), apiKeyIDs)
-	return r.paginateWithFilter(db, param, startTime, endTime, filterSQL, filterArgs)
+	return r.paginate(db, param, startTime, endTime, criteria)
 }
 
 // ListDistinctUserNames 查询去重的用户名列表
@@ -210,83 +189,7 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 // paginate 通用分页：在调用方已附加范围过滤的 db 上做时间范围、模糊搜索、排序、count、limit/offset。
 //
 // 不复用 baseDAO.Paginate，因为后者只接受 *ModelT 等值 where 不支持 IN 条件。
-func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
-	if param.Page < 1 {
-		param.Page = 1
-	}
-	if param.PageSize < 1 {
-		param.PageSize = 20
-	}
-
-	sql := db.Model(&dbmodel.ModelCallAudit{}).Select(constant.AuditRepoFields).Where(constant.DBConditionDeletedAtZero)
-
-	if !startTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
-	}
-	if !endTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
-	}
-
-	if param.Query != "" && len(constant.AuditQueryFields) > 0 {
-		like := "%" + param.Query + "%"
-		expressions := make([]clause.Expression, 0, len(constant.AuditQueryFields))
-		for _, field := range constant.AuditQueryFields {
-			if field == "" {
-				continue
-			}
-			expressions = append(expressions, clause.Like{Column: clause.Column{Name: field}, Value: like})
-		}
-		if len(expressions) > 0 {
-			sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])
-			for _, expr := range expressions[1:] {
-				sub = sub.Or(expr)
-			}
-			sql = sql.Where(sub)
-		}
-	}
-
-	if param.Sort != "" && param.SortField != "" {
-		param.SortField = safeSortField(param.SortField)
-	}
-	if param.Sort != "" && param.SortField != "" {
-		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
-	}
-
-	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
-	if err := sql.Count(&pageInfo.Total).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count audit logs")
-	}
-
-	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
-	var records []*dbmodel.ModelCallAudit
-	if err := sql.Limit(limit).Offset(offset).Find(&records).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate audit logs")
-	}
-
-	audits := make([]*aggregate.ModelCallAudit, 0, len(records))
-	for _, rec := range records {
-		a := aggregate.ReconstructAudit(aggregate.ReconstructAuditInput{
-			APIKeyID:         rec.APIKeyID,
-			ModelID:          rec.ModelID,
-			Model:            rec.Model,
-			UpstreamProtocol: rec.UpstreamProtocol,
-			APIProtocol:      rec.APIProtocol,
-			Endpoint:         rec.Endpoint,
-			Tokens:           vo.NewTokenBreakdown(rec.InputTokens, rec.OutputTokens, rec.CacheCreationInputTokens, rec.CacheReadInputTokens),
-			Latency:          vo.NewCallLatency(time.Duration(rec.FirstTokenLatencyMs)*time.Millisecond, time.Duration(rec.StreamDurationMs)*time.Millisecond),
-			Status:           vo.NewCallStatus(rec.UpstreamStatusCode, rec.ErrorMessage),
-			UserAgent:        rec.UserAgent,
-			TraceID:          rec.TraceID,
-			CreatedAt:        rec.CreatedAt,
-		})
-		a.SetID(rec.ID)
-		audits = append(audits, a)
-	}
-	return audits, pageInfo, nil
-}
-
-// paginateWithFilter 通用分页（支持 filter）
-func (r *auditRepository) paginateWithFilter(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time, filterSQL string, filterArgs []any) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	if param.Page < 1 {
 		param.Page = 1
 	}
@@ -304,8 +207,14 @@ func (r *auditRepository) paginateWithFilter(db *gorm.DB, param model.CommonPara
 	}
 
 	// 注入 filter 条件
-	if filterSQL != "" {
-		sql = sql.Where(filterSQL, filterArgs...)
+	if criteria != nil && len(criteria.Filters) > 0 {
+		filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+		if err != nil {
+			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
+		}
+		if filterSQL != "" {
+			sql = sql.Where(filterSQL, filterArgs...)
+		}
 	}
 
 	if param.Query != "" && len(constant.AuditQueryFields) > 0 {
@@ -366,6 +275,7 @@ func (r *auditRepository) paginateWithFilter(db *gorm.DB, param model.CommonPara
 	return audits, pageInfo, nil
 }
 
+// dateTruncSQL 根据粒度返回日期截断 SQL 表达式
 func dateTruncSQL(granularity string) string {
 	switch granularity {
 	case enum.GranularityMinute:

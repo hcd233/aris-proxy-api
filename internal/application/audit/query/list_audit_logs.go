@@ -9,6 +9,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -22,6 +23,22 @@ var validSortFields = map[string]bool{
 	constant.FieldOutputTokens:        true,
 	constant.FieldFirstTokenLatencyMs: true,
 	constant.FieldStreamDurationMs:    true,
+}
+
+// auditFieldConfigs Audit filter 字段配置
+var auditFieldConfigs = map[string]filter.FieldConfig{
+	"user": {
+		SQLColumn: "u.name",
+		IsFuzzy:   true,
+	},
+	"model": {
+		SQLColumn: "model",
+		IsFuzzy:   true,
+	},
+	"status": {
+		SQLColumn: "upstream_status_code",
+		IsNumeric: true,
+	},
 }
 
 // AuditLogView 审计日志列表视图。
@@ -83,6 +100,21 @@ func sanitizeListParam(ctx context.Context, in listAuditLogsParam) (model.Common
 	}, nil
 }
 
+// parseFilterCriteria 解析 filter 表达式为 FilterCriteria
+func parseFilterCriteria(filterExpr string) (*filter.FilterCriteria, error) {
+	if filterExpr == "" {
+		return nil, nil
+	}
+	filters, err := filter.Parse(filterExpr)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrValidation, err, "parse filter expression")
+	}
+	return &filter.FilterCriteria{
+		Filters:      filters,
+		FieldConfigs: auditFieldConfigs,
+	}, nil
+}
+
 // ListAllAuditLogsQuery admin 全量审计列表查询
 type ListAllAuditLogsQuery struct {
 	Page      int
@@ -117,7 +149,11 @@ func (h *listAllAuditLogsHandler) Handle(ctx context.Context, q ListAllAuditLogs
 	if err != nil {
 		return nil, nil, err
 	}
-	audits, pageInfo, err := h.repo.ListAll(ctx, param, q.StartTime, q.EndTime)
+	criteria, err := parseFilterCriteria(q.Filter)
+	if err != nil {
+		return nil, nil, err
+	}
+	audits, pageInfo, err := h.repo.ListAll(ctx, param, q.StartTime, q.EndTime, criteria)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -169,7 +205,11 @@ func (h *listAuditLogsByUserHandler) Handle(ctx context.Context, q ListAuditLogs
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key ids by user id")
 	}
-	audits, pageInfo, err := h.repo.ListByAPIKeyIDs(ctx, keyIDs, param, q.StartTime, q.EndTime)
+	criteria, err := parseFilterCriteria(q.Filter)
+	if err != nil {
+		return nil, nil, err
+	}
+	audits, pageInfo, err := h.repo.ListByAPIKeyIDs(ctx, keyIDs, param, q.StartTime, q.EndTime, criteria)
 	if err != nil {
 		return nil, nil, err
 	}

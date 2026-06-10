@@ -28,6 +28,12 @@ type Filter struct {
 	Value    string
 }
 
+// FilterCriteria 筛选条件（用于 Repository 接口）
+type FilterCriteria struct {
+	Filters      []Filter
+	FieldConfigs map[string]FieldConfig
+}
+
 // FieldConfig 字段配置
 type FieldConfig struct {
 	// SQLColumn 对应的数据库列名
@@ -122,6 +128,12 @@ func parsePart(part string) (Filter, error) {
 
 			// 去除引号
 			value = strings.Trim(value, `"`)
+
+			// 验证字段名非空
+			field = strings.TrimSpace(field)
+			if field == "" {
+				return Filter{}, fmt.Errorf("empty field name in filter expression: %s", part)
+			}
 
 			return Filter{
 				Field:    field,

@@ -72,7 +72,7 @@ function buildAuditFilter(user?: string, model?: string, status?: string): strin
   if (user) parts.push(`user:${user}`);
   if (model) parts.push(`model:${model}`);
   if (status) parts.push(`status:${status}`);
-  return parts.length > 0 ? parts.join(",") : undefined;
+  return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
 export default function AuditPage() {
@@ -108,7 +108,7 @@ export default function AuditPage() {
       try {
         const { startTime, endTime } = computeRange(range, cs, ce);
         const filter = buildAuditFilter(user || undefined, model || undefined, status || undefined);
-        const rsp = await api.listAuditLogsWithFilter({
+        const rsp = await api.listAuditLogs({
           page,
           pageSize,
           query: query || undefined,
@@ -143,10 +143,16 @@ export default function AuditPage() {
   useEffect(() => {
     api.listAuditOptions({ field: "user" }).then((rsp) => {
       if (!rsp.error && rsp.items) setUserOptions(rsp.items);
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error("Failed to load user options:", err);
+      toast.error("Failed to load user filter options");
+    });
     api.listAuditOptions({ field: "model" }).then((rsp) => {
       if (!rsp.error && rsp.items) setModelOptions(rsp.items);
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error("Failed to load model options:", err);
+      toast.error("Failed to load model filter options");
+    });
   }, []);
 
   const totalPages = useMemo(
