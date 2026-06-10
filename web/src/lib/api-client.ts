@@ -419,7 +419,7 @@ class ApiClient {
 
   async listEndpoints(
     page: number = 1,
-    pageSize: number = 1,
+    pageSize: number = 200,
     query?: string
   ): Promise<ListEndpointsRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
