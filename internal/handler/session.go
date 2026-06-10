@@ -124,6 +124,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 		StartTime: req.StartTime,
 		EndTime:   req.EndTime,
 		Keyword:   req.Keyword,
+		Filter:    req.Filter,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List sessions by user failed", zap.Error(err))

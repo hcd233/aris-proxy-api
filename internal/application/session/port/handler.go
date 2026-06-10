@@ -77,6 +77,7 @@ type ListSessionsByUserQuery struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Keyword   string
+	Filter    string
 }
 
 // ListSessionsByUserHandler 列出 session handler 接口

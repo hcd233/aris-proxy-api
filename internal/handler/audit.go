@@ -16,6 +16,7 @@ import (
 
 type AuditHandler interface {
 	HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error)
+	HandleListAuditOption(ctx context.Context, req *dto.AuditOptionListReq) (*dto.HTTPResponse[*dto.AuditOptionListRsp], error)
 	HandleModelTrend(ctx context.Context, req *dto.ModelTrendReq) (*dto.HTTPResponse[*dto.ModelTrendRsp], error)
 	HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error)
 	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
@@ -45,6 +46,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 			Page: req.Page, PageSize: req.PageSize, Query: req.Query,
 			Sort: req.Sort, SortField: req.SortField,
 			StartTime: req.StartTime, EndTime: req.EndTime,
+			Filter: req.Filter,
 		},
 	)
 	if err != nil {
@@ -78,6 +80,29 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 		})
 	}
 	rsp.PageInfo = pageInfo
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleListAuditOption 获取审计筛选选项
+//
+//	@receiver h *auditHandler
+//	@param ctx context.Context
+//	@param req *dto.AuditOptionListReq
+//	@return *dto.HTTPResponse[*dto.AuditOptionListRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-10 12:00:00
+func (h *auditHandler) HandleListAuditOption(ctx context.Context, req *dto.AuditOptionListReq) (*dto.HTTPResponse[*dto.AuditOptionListRsp], error) {
+	rsp := &dto.AuditOptionListRsp{}
+
+	items, err := h.svc.ListAuditOption(ctx, req.Field, req.Keyword)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] List audit options failed", zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.Items = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
