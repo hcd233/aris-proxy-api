@@ -770,15 +770,7 @@ func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.S
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	optionItems := make([]dto.OptionItem, 0, len(items))
-	for _, item := range items {
-		optionItems = append(optionItems, dto.OptionItem{
-			Value: item.Value,
-			Label: item.Label,
-		})
-	}
-
-	rsp.Items = optionItems
+	rsp.Items = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

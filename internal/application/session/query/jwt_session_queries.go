@@ -33,6 +33,7 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 		ValueMap: map[string]*string{
 			constant.SessionOptionScoreValueNone:     nil,
 			constant.SessionOptionScoreValueUnscored: nil,
+			constant.SessionOptionScoreLabelUnscored: nil,
 		},
 	},
 }
