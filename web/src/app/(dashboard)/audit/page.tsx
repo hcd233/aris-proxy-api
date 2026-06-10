@@ -91,6 +91,7 @@ export default function AuditPage() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [userOptions, setUserOptions] = useState<string[]>([]);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
   const fetchLogs = useCallback(
     async (
@@ -152,6 +153,12 @@ export default function AuditPage() {
     }).catch((err) => {
       console.error("Failed to load model options:", err);
       toast.error("Failed to load model filter options");
+    });
+    api.listAuditOptions({ field: "status" }).then((rsp) => {
+      if (!rsp.error && rsp.items) setStatusOptions(rsp.items);
+    }).catch((err) => {
+      console.error("Failed to load status options:", err);
+      toast.error("Failed to load status filter options");
     });
   }, []);
 
@@ -250,8 +257,9 @@ export default function AuditPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">All Status</SelectItem>
-                  <SelectItem value="200">200</SelectItem>
-                  <SelectItem value="error">Non-200</SelectItem>
+                  {statusOptions.map((code) => (
+                    <SelectItem key={code} value={code}>{code}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {(filterUser || filterModel || filterStatus) && (
