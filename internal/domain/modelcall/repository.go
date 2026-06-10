@@ -40,14 +40,14 @@ type AuditRepository interface {
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)
 
-	// ListDistinctUserNames 查询去重的用户名列表（支持模糊搜索）
-	ListDistinctUserNames(ctx context.Context, keyword string) ([]string, error)
+	// ListDistinctUserNames 查询去重的用户名列表（支持模糊搜索和时间范围过滤）
+	ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctModels 查询去重的模型列表（支持模糊搜索）
-	ListDistinctModels(ctx context.Context, keyword string) ([]string, error)
+	// ListDistinctModels 查询去重的模型列表（支持模糊搜索和时间范围过滤）
+	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctStatusCodes æ¥è¯¢å»éçä¸æ¸¸ç¶æç åè¡¨
-	ListDistinctStatusCodes(ctx context.Context) ([]string, error)
+	// ListDistinctStatusCodes 查询去重的上游状态码列表（支持时间范围过滤）
+	ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error)
 
 	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
 	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)

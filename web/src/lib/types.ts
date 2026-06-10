@@ -470,6 +470,8 @@ export interface FirstTokenLatencyRsp extends CommonRsp {
 export interface AuditOptionListReq {
   field: "user" | "model" | "status";
   keyword?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface AuditOptionListRsp extends CommonRsp {
