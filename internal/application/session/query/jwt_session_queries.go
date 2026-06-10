@@ -96,17 +96,17 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 
 	views := make([]*sessionport.SessionSummaryView, 0, len(projections))
 
-	var firstQuestionIDs []uint
+	var lastQuestionIDs []uint
 	for _, p := range projections {
 		if len(p.Questions) > 0 {
-			firstQuestionIDs = append(firstQuestionIDs, p.Questions[0])
+			lastQuestionIDs = append(lastQuestionIDs, p.Questions[len(p.Questions)-1])
 		}
 	}
 	var msgByID map[uint]*session.MessageDetailProjection
-	if len(firstQuestionIDs) > 0 {
-		msgs, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(firstQuestionIDs))
+	if len(lastQuestionIDs) > 0 {
+		msgs, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(lastQuestionIDs))
 		if msgErr != nil {
-			log.Warn("[SessionQuery] Failed to load questions[0] messages for summary", zap.Error(msgErr))
+			log.Warn("[SessionQuery] Failed to load questions[last] messages for summary", zap.Error(msgErr))
 		} else {
 			msgByID = lo.SliceToMap(msgs, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
 				return m.ID, m
@@ -117,7 +117,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	for _, p := range projections {
 		summary := ""
 		if len(p.Questions) > 0 {
-			if m, ok := msgByID[p.Questions[0]]; ok && m.Message != nil {
+			if m, ok := msgByID[p.Questions[len(p.Questions)-1]]; ok && m.Message != nil {
 				summary = util.ExtractMessageText(m.Message.Content)
 			}
 		}
