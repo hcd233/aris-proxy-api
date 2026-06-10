@@ -67,10 +67,7 @@ func (s *logSampler) shouldLog(path string, interval time.Duration) bool {
 	return true
 }
 
-func shouldSuppressLog(samplingIndex map[string]time.Duration, sampler *logSampler, path string, err error) bool {
-	if err != nil {
-		return false
-	}
+func shouldSuppressLog(samplingIndex map[string]time.Duration, sampler *logSampler, path string, _ error) bool {
 	interval, ok := samplingIndex[path]
 	if !ok {
 		return false
