@@ -24,7 +24,7 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 	}
 
 	items := []sessionport.OptionItem{
-		{Value: constant.SessionOptionScoreValueNone, Label: constant.SessionOptionScoreLabelNone},
+		{Value: constant.SessionOptionScoreValueNone, Label: constant.SessionOptionScoreLabelUnscored},
 	}
 
 	scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime)
@@ -32,19 +32,11 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 		return nil, err
 	}
 
-	scoreLabels := map[int]string{
-		1: constant.SessionOptionScoreLabel1,
-		2: constant.SessionOptionScoreLabel2,
-		3: constant.SessionOptionScoreLabel3,
-		4: constant.SessionOptionScoreLabel4,
-		5: constant.SessionOptionScoreLabel5,
-	}
-
 	for _, s := range scores {
-		if label, ok := scoreLabels[s]; ok {
+		if s >= 1 && s <= 5 {
 			items = append(items, sessionport.OptionItem{
 				Value: strconv.Itoa(s),
-				Label: label,
+				Label: strconv.Itoa(s),
 			})
 		}
 	}

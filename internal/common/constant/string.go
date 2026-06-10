@@ -180,10 +180,11 @@ const (
 	SessionOptionScoreValueUnscored = "unscored"
 
 	// ── Session option labels ──
-	SessionOptionScoreLabel1    = "1 分"
-	SessionOptionScoreLabel2    = "2 分"
-	SessionOptionScoreLabel3    = "3 分"
-	SessionOptionScoreLabel4    = "4 分"
-	SessionOptionScoreLabel5    = "5 分"
-	SessionOptionScoreLabelNone = "未标注"
+	SessionOptionScoreLabel1        = "1 分"
+	SessionOptionScoreLabel2        = "2 分"
+	SessionOptionScoreLabel3        = "3 分"
+	SessionOptionScoreLabel4        = "4 分"
+	SessionOptionScoreLabel5        = "5 分"
+	SessionOptionScoreLabelNone     = "未标注"
+	SessionOptionScoreLabelUnscored = "Unscored"
 )
