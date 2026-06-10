@@ -42,6 +42,7 @@ type SessionHandler interface {
 	HandleDeleteSession(ctx context.Context, req *dto.DeleteSessionReq) (*dto.HTTPResponse[*dto.DeleteSessionRsp], error)
 	HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error)
 	HandleDeleteScoreSession(ctx context.Context, req *dto.DeleteScoreSessionReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleListSessionOption(ctx context.Context, req *dto.SessionOptionListReq) (*dto.HTTPResponse[*dto.SessionOptionListRsp], error)
 }
 
 // SessionDependencies SessionHandler 依赖项（用于依赖注入）
@@ -59,6 +60,7 @@ type SessionDependencies struct {
 	ScoreSession       port.ScoreSessionHandler
 	DeleteScoreSession port.DeleteScoreSessionHandler
 	SessionCache       port.SessionDetailCache
+	ListOption         port.ListSessionOptionHandler
 }
 
 type sessionHandler struct {
@@ -72,6 +74,7 @@ type sessionHandler struct {
 	scoreSession       port.ScoreSessionHandler
 	deleteScoreSession port.DeleteScoreSessionHandler
 	sessionCache       port.SessionDetailCache
+	listOption         port.ListSessionOptionHandler
 }
 
 // NewSessionHandler 创建Session处理器
@@ -92,6 +95,7 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 		scoreSession:       deps.ScoreSession,
 		deleteScoreSession: deps.DeleteScoreSession,
 		sessionCache:       deps.SessionCache,
+		listOption:         deps.ListOption,
 	}
 }
 
@@ -738,6 +742,40 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 	logger.WithCtx(ctx).Info("[SessionHandler] Score deleted",
 		zap.Uint("sessionID", req.SessionID))
 
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleListSessionOption 获取会话筛选选项
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param req *dto.SessionOptionListReq
+//	@return *dto.HTTPResponse[*dto.SessionOptionListRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-09 10:00:00
+func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.SessionOptionListReq) (*dto.HTTPResponse[*dto.SessionOptionListRsp], error) {
+	rsp := &dto.SessionOptionListRsp{}
+
+	items, err := h.listOption.Handle(ctx, port.ListSessionOptionQuery{
+		Field:   req.Field,
+		Keyword: req.Keyword,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] List session options failed", zap.Error(err))
+		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	optionItems := make([]dto.OptionItem, 0, len(items))
+	for _, item := range items {
+		optionItems = append(optionItems, dto.OptionItem{
+			Value: item.Value,
+			Label: item.Label,
+		})
+	}
+
+	rsp.Items = optionItems
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

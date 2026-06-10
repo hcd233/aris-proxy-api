@@ -10,7 +10,7 @@ import (
 // ListAuditLogsReq 审计日志列表请求
 //
 //	@author centonhuang
-//	@update 2026-05-11 10:00:00
+//	@update 2026-06-09 10:00:00
 type ListAuditLogsReq struct {
 	Page      int       `query:"page" required:"true" minimum:"1"`
 	PageSize  int       `query:"pageSize" required:"true" minimum:"1" maximum:"100"`
@@ -19,6 +19,7 @@ type ListAuditLogsReq struct {
 	SortField string    `query:"sortField" maxLength:"50"`
 	StartTime time.Time `query:"startTime"`
 	EndTime   time.Time `query:"endTime"`
+	Filter    string    `query:"filter" maxLength:"500" doc:"筛选表达式，格式: field:value field2:!value2"`
 }
 
 // ListAuditLogsRsp 审计日志列表响应

@@ -197,3 +197,20 @@ type DeleteScoreSessionCommand struct {
 type DeleteScoreSessionHandler interface {
 	Handle(ctx context.Context, cmd DeleteScoreSessionCommand) error
 }
+
+// ListSessionOptionQuery 会话筛选选项查询
+type ListSessionOptionQuery struct {
+	Field   string
+	Keyword string
+}
+
+// ListSessionOptionHandler 会话筛选选项查询处理器
+type ListSessionOptionHandler interface {
+	Handle(ctx context.Context, q ListSessionOptionQuery) ([]OptionItem, error)
+}
+
+// OptionItem 选项项
+type OptionItem struct {
+	Value string
+	Label string
+}

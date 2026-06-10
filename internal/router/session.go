@@ -104,6 +104,17 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteScoreSession", enum.PermissionUser)},
 	}, sessionHandler.HandleDeleteScoreSession)
 
+	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "listSessionOptions",
+		Method:      http.MethodGet,
+		Path:        "/option/list",
+		Summary:     "ListSessionOptions",
+		Description: "Get available options for session filter fields (score)",
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionOptions", enum.PermissionUser)},
+	}, sessionHandler.HandleListSessionOption)
+
 	initSessionShareRouter(sessionGroup, sessionHandler)
 }
 

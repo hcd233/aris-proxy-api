@@ -43,11 +43,13 @@ type ListAuditLogsParams struct {
 	SortField string
 	StartTime time.Time
 	EndTime   time.Time
+	Filter    string
 }
 
 // AuditService 统一按当前 JWT 权限派发审计查询，handler 只负责 DTO 映射
 type AuditService interface {
 	ListLogs(ctx context.Context, permission enum.Permission, userID uint, q ListAuditLogsParams) ([]*AuditLogView, *model.PageInfo, error)
+	ListAuditOption(ctx context.Context, field, keyword string) ([]string, error)
 	ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error)
 	RequestRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error)
 	TokenThroughput(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
