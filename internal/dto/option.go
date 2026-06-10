@@ -6,7 +6,7 @@ package dto
 //	@author centonhuang
 //	@update 2026-06-09 10:00:00
 type AuditOptionListReq struct {
-	Field   string `query:"field" required:"true" enum:"user,model" doc:"筛选字段"`
+	Field   string `query:"field" required:"true" enum:"user,model,status" doc:"筛选字段"`
 	Keyword string `query:"keyword" maxLength:"100" doc:"搜索关键词"`
 }
 
