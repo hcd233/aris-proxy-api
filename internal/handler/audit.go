@@ -95,7 +95,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 func (h *auditHandler) HandleListAuditOption(ctx context.Context, req *dto.AuditOptionListReq) (*dto.HTTPResponse[*dto.AuditOptionListRsp], error) {
 	rsp := &dto.AuditOptionListRsp{}
 
-	items, err := h.svc.ListAuditOption(ctx, req.Field, req.Keyword)
+	items, err := h.svc.ListAuditOption(ctx, req.Field, req.Keyword, req.StartTime, req.EndTime)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] List audit options failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())

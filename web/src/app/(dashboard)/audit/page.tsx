@@ -141,26 +141,26 @@ export default function AuditPage() {
   }, [fetchLogs]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  useEffect(() => {
-    api.listAuditOptions({ field: "user" }).then((rsp) => {
-      if (!rsp.error && rsp.items) setUserOptions(rsp.items);
-    }).catch((err) => {
-      console.error("Failed to load user options:", err);
-      toast.error("Failed to load user filter options");
-    });
-    api.listAuditOptions({ field: "model" }).then((rsp) => {
-      if (!rsp.error && rsp.items) setModelOptions(rsp.items);
-    }).catch((err) => {
-      console.error("Failed to load model options:", err);
-      toast.error("Failed to load model filter options");
-    });
-    api.listAuditOptions({ field: "status" }).then((rsp) => {
-      if (!rsp.error && rsp.items) setStatusOptions(rsp.items);
-    }).catch((err) => {
-      console.error("Failed to load status options:", err);
-      toast.error("Failed to load status filter options");
-    });
+  const fetchOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
+    const { startTime, endTime } = computeRange(range, cs, ce);
+    const params = { startTime, endTime };
+    try {
+      const [userRsp, modelRsp, statusRsp] = await Promise.all([
+        api.listAuditOptions({ field: "user", ...params }),
+        api.listAuditOptions({ field: "model", ...params }),
+        api.listAuditOptions({ field: "status", ...params }),
+      ]);
+      if (!userRsp.error && userRsp.items) setUserOptions(userRsp.items);
+      if (!modelRsp.error && modelRsp.items) setModelOptions(modelRsp.items);
+      if (!statusRsp.error && statusRsp.items) setStatusOptions(statusRsp.items);
+    } catch (err) {
+      console.error("Failed to load audit options:", err);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOptions(timeRange, customStart, customEnd);
+  }, [timeRange, customStart, fetchOptions]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),

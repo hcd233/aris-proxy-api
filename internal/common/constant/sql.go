@@ -169,4 +169,10 @@ var (
 	AuditDistinctSelectModel  = "DISTINCT model"
 	AuditDistinctSelectStatus = "DISTINCT upstream_status_code::text"
 	AuditDistinctLimit        = 50
+
+	AuditDistinctWhereCreatedAtGTE = "mca.created_at >= ?"
+	AuditDistinctWhereCreatedAtLTE = "mca.created_at <= ?"
+
+	WhereCreatedAtGTE = "created_at >= ?"
+	WhereCreatedAtLTE = "created_at <= ?"
 )

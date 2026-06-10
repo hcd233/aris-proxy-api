@@ -101,7 +101,7 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 }
 
 // ListDistinctUserNames 查询去重的用户名列表
-func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword string) ([]string, error) {
+func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var names []string
@@ -110,6 +110,13 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 		Joins(constant.AuditDistinctJoinAPIKey).
 		Joins(constant.AuditDistinctJoinUser).
 		Where(constant.DBConditionDeletedAtZero)
+
+	if !startTime.IsZero() {
+		query = query.Where(constant.AuditDistinctWhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.AuditDistinctWhereCreatedAtLTE, endTime)
+	}
 
 	if keyword != "" {
 		query = query.Where(constant.AuditDistinctWhereUser, "%"+keyword+"%", "%"+keyword+"%")
@@ -123,13 +130,20 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 }
 
 // ListDistinctModels 查询去重的模型列表
-func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string) ([]string, error) {
+func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var models []string
 	query := db.Model(&dbmodel.ModelCallAudit{}).
 		Select(constant.AuditDistinctSelectModel).
 		Where(constant.DBConditionDeletedAtZero)
+
+	if !startTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtLTE, endTime)
+	}
 
 	if keyword != "" {
 		query = query.Where(constant.AuditDistinctWhereModel, "%"+keyword+"%")
@@ -143,7 +157,7 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string
 }
 
 // ListDistinctStatusCodes 查询去重的上游状态码列表
-func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context) ([]string, error) {
+func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var codes []string
@@ -151,6 +165,13 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context) ([]string
 		Select(constant.AuditDistinctSelectStatus).
 		Where(constant.DBConditionDeletedAtZero).
 		Order(constant.FieldUpstreamStatusCode)
+
+	if !startTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtLTE, endTime)
+	}
 
 	if err := query.Scan(&codes).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct status codes")

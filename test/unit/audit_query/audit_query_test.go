@@ -70,15 +70,15 @@ func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
 	return []string{}, nil
 }
 
