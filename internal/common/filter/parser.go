@@ -286,15 +286,15 @@ func resolveValueMapValues(values []string, valueMap map[string]*string) []value
 
 // buildValueMapCondition 处理含 ValueMap 的字段，支持单值与多值（含 NULL 项混合）
 func buildValueMapCondition(column string, f Filter, config FieldConfig) (sql string, args []any, err error) {
-	resolvedList := resolveValueMapValues(f.Values, config.ValueMap)
+	resolveds := resolveValueMapValues(f.Values, config.ValueMap)
 
 	// 单值快速路径，与原行为完全等价
-	if len(resolvedList) == 1 {
-		return buildSingleValueMapCondition(column, resolvedList[0], f, config)
+	if len(resolveds) == 1 {
+		return buildSingleValueMapCondition(column, resolveds[0], f, config)
 	}
 
 	// 多值：NULL 与非 NULL 混合
-	return buildMultiValueMapCondition(column, resolvedList, f, config)
+	return buildMultiValueMapCondition(column, resolveds, f, config)
 }
 
 // buildSingleValueMapCondition 单值 ValueMap 条件
@@ -322,14 +322,14 @@ func buildSingleValueMapCondition(column string, r valueMapResolved, f Filter, c
 }
 
 // buildMultiValueMapCondition 多值 ValueMap 条件（NULL 与非 NULL 混合）
-func buildMultiValueMapCondition(column string, resolvedList []valueMapResolved, f Filter, config FieldConfig) (sql string, args []any, err error) {
-	parts := make([]string, 0, len(resolvedList))
-	args = make([]any, 0, len(resolvedList))
+func buildMultiValueMapCondition(column string, resolveds []valueMapResolved, f Filter, config FieldConfig) (sql string, args []any, err error) {
+	parts := make([]string, 0, len(resolveds))
+	args = make([]any, 0, len(resolveds))
 	joiner := constant.FilterSQLOR
 	if f.Operator == enum.OpNotEqual {
 		joiner = constant.FilterSQLAND
 	}
-	for _, r := range resolvedList {
+	for _, r := range resolveds {
 		if r.isNull {
 			if f.Operator == enum.OpEqual {
 				parts = append(parts, column+constant.FilterSQLISNULL)
