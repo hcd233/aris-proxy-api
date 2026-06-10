@@ -142,6 +142,23 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string
 	return models, nil
 }
 
+// ListDistinctStatusCodes 查询去重的上游状态码列表
+func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context) ([]string, error) {
+	db := r.db.WithContext(ctx)
+
+	var codes []string
+	query := db.Model(&dbmodel.ModelCallAudit{}).
+		Select("DISTINCT upstream_status_code::text").
+		Where("deleted_at = 0").
+		Order("upstream_status_code")
+
+	if err := query.Scan(&codes).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct status codes")
+	}
+
+	return codes, nil
+}
+
 // BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error) {
 	relations := make(map[uint]*modelcall.AuditRelation, len(apiKeyIDs))

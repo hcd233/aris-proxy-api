@@ -33,6 +33,8 @@ func (h *listAuditOptionHandler) Handle(ctx context.Context, q ListAuditOptionQu
 		return h.repo.ListDistinctUserNames(ctx, q.Keyword)
 	case "model":
 		return h.repo.ListDistinctModels(ctx, q.Keyword)
+	case "status":
+		return h.repo.ListDistinctStatusCodes(ctx)
 	default:
 		return []string{}, nil
 	}
