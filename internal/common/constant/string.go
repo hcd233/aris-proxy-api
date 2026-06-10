@@ -171,12 +171,13 @@ const (
 	SessionDeleteErrorDeleteFailed = "failed to delete"
 
 	// ── Session option values ──
-	SessionOptionScoreValue1    = "1"
-	SessionOptionScoreValue2    = "2"
-	SessionOptionScoreValue3    = "3"
-	SessionOptionScoreValue4    = "4"
-	SessionOptionScoreValue5    = "5"
-	SessionOptionScoreValueNone = "none"
+	SessionOptionScoreValue1        = "1"
+	SessionOptionScoreValue2        = "2"
+	SessionOptionScoreValue3        = "3"
+	SessionOptionScoreValue4        = "4"
+	SessionOptionScoreValue5        = "5"
+	SessionOptionScoreValueNone     = "none"
+	SessionOptionScoreValueUnscored = "unscored"
 
 	// ── Session option labels ──
 	SessionOptionScoreLabel1    = "1 分"
