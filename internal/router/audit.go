@@ -28,6 +28,17 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, db 
 	}, auditHandler.HandleListAuditLogs)
 
 	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listAuditOptions",
+		Method:      http.MethodGet,
+		Path:        "/option/list",
+		Summary:     "ListAuditOptions",
+		Description: "Get available options for audit filter fields (user, model)",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listAuditOptions", enum.PermissionUser)},
+	}, auditHandler.HandleListAuditOption)
+
+	huma.Register(auditGroup, huma.Operation{
 		OperationID: "queryModelTrend",
 		Method:      http.MethodGet,
 		Path:        "/stats/model/trend",

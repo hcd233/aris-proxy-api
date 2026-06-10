@@ -10,6 +10,7 @@ import (
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -23,6 +24,17 @@ var validSessionSortFields = map[string]bool{
 	constant.FieldUpdatedAt:    true,
 	constant.FieldMessageCount: true,
 	constant.FieldToolCount:    true,
+}
+
+// sessionFieldConfigs Session filter 字段配置
+var sessionFieldConfigs = map[string]filter.FieldConfig{
+	"score": {
+		SQLColumn: "score",
+		IsNumeric: true,
+		ValueMap: map[string]*string{
+			"none": nil, // NULL
+		},
+	},
 }
 
 type ListSessionsByUserHandler interface {
@@ -54,11 +66,17 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 		return nil, nil, err
 	}
 
+	// 解析 filter
+	criteria, err := parseSessionFilterCriteria(q.Filter)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var projections []*session.SessionSummaryProjection
 	var pageInfo *model.PageInfo
 
 	if q.IsAdmin {
-		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword)
+		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword, criteria)
 	} else {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
@@ -68,7 +86,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 		if len(ownerNames) == 0 {
 			return []*sessionport.SessionSummaryView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize, Total: 0}, nil
 		}
-		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, param, q.StartTime, q.EndTime, q.Keyword)
+		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, param, q.StartTime, q.EndTime, q.Keyword, criteria)
 	}
 
 	if err != nil {
@@ -143,6 +161,21 @@ func sanitizeSessionListParam(ctx context.Context, q sessionport.ListSessionsByU
 	return model.CommonParam{
 		PageParam: model.PageParam{Page: page, PageSize: pageSize},
 		SortParam: model.SortParam{Sort: sort, SortField: sortField},
+	}, nil
+}
+
+// parseSessionFilterCriteria 解析 session filter 表达式为 FilterCriteria
+func parseSessionFilterCriteria(filterExpr string) (*filter.FilterCriteria, error) {
+	if filterExpr == "" {
+		return nil, nil
+	}
+	filters, err := filter.Parse(filterExpr)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrValidation, err, "parse filter expression")
+	}
+	return &filter.FilterCriteria{
+		Filters:      filters,
+		FieldConfigs: sessionFieldConfigs,
 	}, nil
 }
 
