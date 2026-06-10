@@ -12,6 +12,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
@@ -236,7 +237,7 @@ type sessionSummaryRow struct {
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
-func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -261,6 +262,17 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	}
 	if keyword != "" {
 		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
+	}
+
+	// 注入 filter 条件
+	if criteria != nil && len(criteria.Filters) > 0 {
+		filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+		if err != nil {
+			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
+		}
+		if filterSQL != "" {
+			sql = sql.Where(filterSQL, filterArgs...)
+		}
 	}
 
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
@@ -293,7 +305,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	return out, pageInfo, nil
 }
 
-func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -319,6 +331,17 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 	}
 	if keyword != "" {
 		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
+	}
+
+	// 注入 filter 条件
+	if criteria != nil && len(criteria.Filters) > 0 {
+		filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+		if err != nil {
+			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
+		}
+		if filterSQL != "" {
+			sql = sql.Where(filterSQL, filterArgs...)
+		}
 	}
 
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
