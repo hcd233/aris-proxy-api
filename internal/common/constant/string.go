@@ -157,6 +157,5 @@ const (
 	SessionDeleteErrorDeleteFailed = "failed to delete"
 
 	// ── Session option values ──
-	SessionOptionScoreValueNone     = "none"
 	SessionOptionScoreValueUnscored = "unscored"
 )

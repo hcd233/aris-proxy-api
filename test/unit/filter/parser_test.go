@@ -51,8 +51,8 @@ func TestParse(t *testing.T) {
 		{name: "trims empty parts", expr: "user:alice||bob|",
 			want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"alice", "bob"}}}},
 		{name: "all empty parts errors out", expr: "user:|", wantErr: true},
-		{name: "score none-or-value mixed", expr: "score:none|3",
-			want: []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"none", "3"}}}},
+		{name: "score unscored-or-value mixed", expr: "score:unscored|3",
+			want: []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"unscored", "3"}}}},
 	}
 
 	for _, tt := range tests {
@@ -92,7 +92,7 @@ func TestToSQL(t *testing.T) {
 		"model":  {SQLColumn: "model", IsFuzzy: true},
 		"status": {SQLColumn: "upstream_status_code", IsNumeric: true},
 		"score": {SQLColumn: "score", IsNumeric: true,
-			ValueMap: map[string]*string{"none": nil},
+			ValueMap: map[string]*string{"unscored": nil},
 		},
 		"priority": {SQLColumn: "priority", IsNumeric: true,
 			ValueMap: map[string]*string{"high": strPtr("1"), "low": strPtr("3")},
@@ -111,8 +111,8 @@ func TestToSQL(t *testing.T) {
 		{name: "user not equal fuzzy", filters: []filter.Filter{{Field: "user", Operator: enum.OpNotEqual, Values: []string{"john"}}}, wantSQL: "user_name NOT LIKE ?", wantArgs: []any{"%john%"}},
 		{name: "status equal 200", filters: []filter.Filter{{Field: "status", Operator: enum.OpEqual, Values: []string{"200"}}}, wantSQL: "upstream_status_code = ?", wantArgs: []any{"200"}},
 		{name: "status not equal 200", filters: []filter.Filter{{Field: "status", Operator: enum.OpNotEqual, Values: []string{"200"}}}, wantSQL: "upstream_status_code != ?", wantArgs: []any{"200"}},
-		{name: "score is null (none)", filters: []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"none"}}}, wantSQL: "score IS NULL", wantArgs: nil},
-		{name: "score is not null", filters: []filter.Filter{{Field: "score", Operator: enum.OpNotEqual, Values: []string{"none"}}}, wantSQL: "score IS NOT NULL", wantArgs: nil},
+		{name: "score is null (unscored)", filters: []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"unscored"}}}, wantSQL: "score IS NULL", wantArgs: nil},
+		{name: "score is not null", filters: []filter.Filter{{Field: "score", Operator: enum.OpNotEqual, Values: []string{"unscored"}}}, wantSQL: "score IS NOT NULL", wantArgs: nil},
 		{name: "score greater than", filters: []filter.Filter{{Field: "score", Operator: enum.OpGreater, Values: []string{"3"}}}, wantSQL: "score > ?", wantArgs: []any{"3"}},
 		{name: "priority mapped value", filters: []filter.Filter{{Field: "priority", Operator: enum.OpEqual, Values: []string{"high"}}}, wantSQL: "priority = ?", wantArgs: []any{"1"}},
 		{
@@ -152,14 +152,14 @@ func TestToSQL(t *testing.T) {
 			wantArgs: []any{[]string{"200", "500"}},
 		},
 		{
-			name:     "valuemap none mixed with score",
-			filters:  []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"none", "3"}}},
+			name:     "valuemap unscored mixed with score",
+			filters:  []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"unscored", "3"}}},
 			wantSQL:  "(score IS NULL OR score = ?)",
 			wantArgs: []any{"3"},
 		},
 		{
-			name:     "valuemap none mixed with score not equal",
-			filters:  []filter.Filter{{Field: "score", Operator: enum.OpNotEqual, Values: []string{"none", "3"}}},
+			name:     "valuemap unscored mixed with score not equal",
+			filters:  []filter.Filter{{Field: "score", Operator: enum.OpNotEqual, Values: []string{"unscored", "3"}}},
 			wantSQL:  "(score IS NOT NULL AND score != ?)",
 			wantArgs: []any{"3"},
 		},

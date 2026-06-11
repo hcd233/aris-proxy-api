@@ -318,7 +318,6 @@ export default function SessionsPage() {
                   setCustomStart(cs);
                   setCustomEnd(ce);
                   fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword, filterScore);
-                  fetchScoreOptions(key, cs, ce);
                 }}
               />
               <MultiSelectPill
