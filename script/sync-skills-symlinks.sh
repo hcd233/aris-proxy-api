@@ -24,12 +24,16 @@ synced=0
 skipped=0
 warned=0
 
-for skill_path in "$SOURCE_DIR"/*; do
+for category in internal external; do
+    category_dir="$SOURCE_DIR/$category"
+    [ -d "$category_dir" ] || continue
+
+for skill_path in "$category_dir"/*; do
     [ -e "$skill_path" ] || continue
     [ -d "$skill_path" ] || continue
 
     skill_name=${skill_path##*/}
-    wanted_target="$RELATIVE_SOURCE_PREFIX/$skill_name"
+    wanted_target="$RELATIVE_SOURCE_PREFIX/$category/$skill_name"
 
     for target_dir in $TARGET_DIRS; do
         link_path="$target_dir/$skill_name"
@@ -51,6 +55,7 @@ for skill_path in "$SOURCE_DIR"/*; do
         printf "$INFO linked %s -> %s\n" "${link_path#$REPO_ROOT/}" "$wanted_target"
         synced=$((synced + 1))
     done
+done
 done
 
 printf "$PASS skills symlink sync complete: linked=%s skipped=%s warnings=%s\n" "$synced" "$skipped" "$warned"
