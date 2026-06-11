@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
@@ -60,10 +61,9 @@ func (u *anthropicUseCase) convertAnthropicRequestMessages(ctx context.Context, 
 	}
 	messages = append(messages, aiMsg)
 
-	tools = make([]*convvo.UnifiedTool, 0, len(req.Body.Tools))
-	for _, tool := range req.Body.Tools {
-		tools = append(tools, dto.FromAnthropicTool(tool))
-	}
+	tools = lo.Map(req.Body.Tools, func(tool *dto.AnthropicTool, _ int) *convvo.UnifiedTool {
+		return dto.FromAnthropicTool(tool)
+	})
 
 	if assistantMsg.Usage != nil {
 		inputTokens = assistantMsg.Usage.InputTokens

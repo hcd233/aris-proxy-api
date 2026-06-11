@@ -97,13 +97,8 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 		}
 	}
 
-	ids := make([]uint, len(messages))
-	for i, m := range messages {
-		id := existingMap[m.Checksum()]
-		ids[i] = id
-		// 回填聚合 ID（便于后续事件发布或引用）
-		m.SetID(id)
-	}
+	ids := lo.Map(messages, func(m *aggregate.Message, _ int) uint { return existingMap[m.Checksum()] })
+	lo.ForEach(messages, func(m *aggregate.Message, _ int) { m.SetID(existingMap[m.Checksum()]) })
 	return ids, nil
 }
 
@@ -125,10 +120,9 @@ func (r *messageRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggre
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by id")
 	}
-	out := make([]*aggregate.Message, 0, len(records))
-	for _, m := range records {
-		out = append(out, aggregate.RestoreMessage(m.ID, m.Message, m.Model, m.CheckSum))
-	}
+	out := lo.Map(records, func(m *dbmodel.Message, _ int) *aggregate.Message {
+		return aggregate.RestoreMessage(m.ID, m.Message, m.Model, m.CheckSum)
+	})
 	return out, nil
 }
 
@@ -154,10 +148,9 @@ func (r *messageRepository) FindThinkExtractCandidates(ctx context.Context, afte
 	if err := query.Order(constant.DBOrderByID).Limit(limit).Find(&records).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query think extract messages")
 	}
-	out := make([]*conversation.ThinkExtractMessage, 0, len(records))
-	for _, record := range records {
-		out = append(out, &conversation.ThinkExtractMessage{ID: record.ID, Message: record.Message})
-	}
+	out := lo.Map(records, func(record *dbmodel.Message, _ int) *conversation.ThinkExtractMessage {
+		return &conversation.ThinkExtractMessage{ID: record.ID, Message: record.Message}
+	})
 	return out, nil
 }
 

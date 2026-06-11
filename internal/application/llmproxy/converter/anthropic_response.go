@@ -350,29 +350,28 @@ func convertResponseReasoningToAnthropic(item *dto.ResponseInputItem) *dto.Anthr
 
 // convertResponseToolsToAnthropic 将 Response API tools 转换为 Anthropic tools
 func convertResponseToolsToAnthropic(tools []*dto.ResponseTool) []*dto.AnthropicTool {
-	anthropicTools := make([]*dto.AnthropicTool, 0, len(tools))
-	for _, tool := range tools {
+	return lo.FilterMap(tools, func(tool *dto.ResponseTool, _ int) (*dto.AnthropicTool, bool) {
 		if tool == nil {
-			continue
+			return nil, false
 		}
 		switch {
 		case tool.Function != nil:
 			name := tool.Function.Name
-			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
+			return &dto.AnthropicTool{
 				Name:        &name,
 				Description: tool.Function.Description,
 				InputSchema: tool.Function.Parameters,
 				Strict:      &tool.Function.Strict,
-			})
+			}, true
 		case tool.Custom != nil:
 			name := tool.Custom.Name
-			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
+			return &dto.AnthropicTool{
 				Name:        &name,
 				Description: tool.Custom.Description,
-			})
+			}, true
 		}
-	}
-	return anthropicTools
+		return nil, false
+	})
 }
 
 // convertResponseToolChoiceToAnthropic 将 Response API tool_choice 转换为 Anthropic tool_choice

@@ -191,10 +191,9 @@ func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.O
 		}
 	}
 
-	cmpl.Choices = make([]*dto.OpenAIChatCompletionChoice, 0, len(choiceOrder))
-	for _, idx := range choiceOrder {
-		cmpl.Choices = append(cmpl.Choices, buildChoice(choiceMap[idx]))
-	}
+	cmpl.Choices = lo.Map(choiceOrder, func(idx int, _ int) *dto.OpenAIChatCompletionChoice {
+		return buildChoice(choiceMap[idx])
+	})
 
 	return cmpl, nil
 }

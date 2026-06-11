@@ -383,19 +383,18 @@ func mergeToolResultIntoLastUser(messages []*dto.AnthropicMessageParam, toolResu
 }
 
 func convertOpenAIToolsToAnthropic(tools []dto.OpenAIChatCompletionTool) []*dto.AnthropicTool {
-	anthropicTools := make([]*dto.AnthropicTool, 0, len(tools))
-	for _, tool := range tools {
-		if tool.Function != nil {
-			name := tool.Function.Name
-			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
-				Name:        &name,
-				Description: tool.Function.Description,
-				InputSchema: tool.Function.Parameters,
-				Strict:      tool.Function.Strict,
-			})
+	return lo.FilterMap(tools, func(tool dto.OpenAIChatCompletionTool, _ int) (*dto.AnthropicTool, bool) {
+		if tool.Function == nil {
+			return nil, false
 		}
-	}
-	return anthropicTools
+		name := tool.Function.Name
+		return &dto.AnthropicTool{
+			Name:        &name,
+			Description: tool.Function.Description,
+			InputSchema: tool.Function.Parameters,
+			Strict:      tool.Function.Strict,
+		}, true
+	})
 }
 
 func convertOpenAIToolChoiceToAnthropic(tc *dto.OpenAIChatCompletionToolChoiceParam) *dto.AnthropicToolChoice {

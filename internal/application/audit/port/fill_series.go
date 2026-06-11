@@ -5,6 +5,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -22,14 +24,12 @@ func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, 
 		func(p *modelcall.ModelTrendPoint) int { return p.Count },
 	)
 	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := make([]*dto.ModelTrendItem, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		pts := make([]*dto.TrendPoint, 0, len(buckets))
-		for _, t := range buckets {
-			pts = append(pts, &dto.TrendPoint{Time: t, Count: byModel[m][t]})
-		}
-		items = append(items, &dto.ModelTrendItem{Model: m, Points: pts})
-	}
+	items := lo.Map(modelOrder, func(m string, _ int) *dto.ModelTrendItem {
+		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TrendPoint {
+			return &dto.TrendPoint{Time: t, Count: byModel[m][t]}
+		})
+		return &dto.ModelTrendItem{Model: m, Points: pts}
+	})
 	return items
 }
 
@@ -42,25 +42,23 @@ func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, 
 		func(p *modelcall.RequestRatePoint) slot { return slot{total: p.Total, success: p.Success} },
 	)
 	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := make([]*dto.RequestRateItem, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		pts := make([]*dto.RatePoint, 0, len(buckets))
-		for _, t := range buckets {
+	items := lo.Map(modelOrder, func(m string, _ int) *dto.RequestRateItem {
+		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.RatePoint {
 			s := byModel[m][t]
 			var rate float64
 			if s.total > 0 {
 				rate = float64(s.success) / float64(s.total)
 			}
-			pts = append(pts, &dto.RatePoint{
+			return &dto.RatePoint{
 				Time:        t,
 				Total:       s.total,
 				Success:     s.success,
 				Failed:      s.total - s.success,
 				SuccessRate: rate,
-			})
-		}
-		items = append(items, &dto.RequestRateItem{Model: m, Points: pts})
-	}
+			}
+		})
+		return &dto.RequestRateItem{Model: m, Points: pts}
+	})
 	return items
 }
 
@@ -91,10 +89,7 @@ func indexSeries[P any, V any](
 
 func buildBuckets(start, end time.Time, granularity enum.Granularity, fallback map[time.Time]struct{}) []time.Time {
 	if start.IsZero() || end.IsZero() || start.After(end) {
-		buckets := make([]time.Time, 0, len(fallback))
-		for t := range fallback {
-			buckets = append(buckets, t)
-		}
+		buckets := lo.Keys(fallback)
 		sort.Slice(buckets, func(i, j int) bool { return buckets[i].Before(buckets[j]) })
 		return buckets
 	}
@@ -161,8 +156,7 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 		s.cacheReadTokens += p.CacheReadTokens
 	}
 	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	pts := make([]*dto.TokenThroughputPoint, 0, len(buckets))
-	for _, t := range buckets {
+	pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TokenThroughputPoint {
 		tp := &dto.TokenThroughputPoint{Time: t}
 		if s, ok := aggregated[t]; ok {
 			tp.InputTokens = s.inputTokens
@@ -170,7 +164,7 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 			tp.CacheCreationTokens = s.cacheCreationTokens
 			tp.CacheReadTokens = s.cacheReadTokens
 		}
-		pts = append(pts, tp)
-	}
+		return tp
+	})
 	return pts
 }

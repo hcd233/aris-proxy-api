@@ -228,8 +228,7 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 		return nil, err
 	}
 
-	views := make([]*AuditLogView, 0, len(audits))
-	for _, audit := range audits {
+	views := lo.Map(audits, func(audit *aggregate.ModelCallAudit, _ int) *AuditLogView {
 		view := &AuditLogView{
 			ID:                       audit.AggregateID(),
 			CreatedAt:                audit.CreatedAt(),
@@ -253,7 +252,7 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			view.UserName = relation.UserName
 			view.UserEmail = relation.UserEmail
 		}
-		views = append(views, view)
-	}
+		return view
+	})
 	return views, nil
 }

@@ -305,17 +305,12 @@ func responseTextFormatToChat(format *dto.ResponseTextFormat) *dto.OpenAIRespons
 }
 
 func responseToolsToChat(tools []*dto.ResponseTool) []dto.OpenAIChatCompletionTool {
-	chatTools := make([]dto.OpenAIChatCompletionTool, 0, len(tools))
-	for _, tool := range tools {
+	return lo.FilterMap(tools, func(tool *dto.ResponseTool, _ int) (dto.OpenAIChatCompletionTool, bool) {
 		if tool == nil {
-			continue
+			return dto.OpenAIChatCompletionTool{}, false
 		}
-		chatTool, ok := convertResponseToolToChat(tool)
-		if ok {
-			chatTools = append(chatTools, chatTool)
-		}
-	}
-	return chatTools
+		return convertResponseToolToChat(tool)
+	})
 }
 
 func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletionTool, bool) {

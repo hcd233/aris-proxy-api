@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
 
@@ -70,10 +71,7 @@ func (pm *PoolManager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmo
 		return []uint{}, nil
 	}
 
-	checksums := make([]string, len(messages))
-	for i, m := range messages {
-		checksums[i] = m.CheckSum
-	}
+	checksums := lo.Map(messages, func(m *dbmodel.Message, _ int) string { return m.CheckSum })
 
 	messageDAO := dao.GetMessageDAO()
 	existingMessages, err := messageDAO.BatchGetByField(tx, constant.WhereFieldCheckSum, checksums, constant.MessageRepoFieldsChecksum)
@@ -81,17 +79,12 @@ func (pm *PoolManager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmo
 		return nil, err
 	}
 
-	existingMap := make(map[string]uint, len(existingMessages))
-	for _, m := range existingMessages {
-		existingMap[m.CheckSum] = m.ID
-	}
+	existingMap := lo.SliceToMap(existingMessages, func(m *dbmodel.Message) (string, uint) { return m.CheckSum, m.ID })
 
-	newMessages := make([]*dbmodel.Message, 0)
-	for _, m := range messages {
-		if _, exists := existingMap[m.CheckSum]; !exists {
-			newMessages = append(newMessages, m)
-		}
-	}
+	newMessages := lo.Filter(messages, func(m *dbmodel.Message, _ int) bool {
+		_, exists := existingMap[m.CheckSum]
+		return !exists
+	})
 
 	if len(newMessages) > 0 {
 		if err := messageDAO.BatchCreate(tx, newMessages); err != nil {
@@ -103,10 +96,7 @@ func (pm *PoolManager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmo
 		}
 	}
 
-	messageIDs := make([]uint, len(messages))
-	for i, m := range messages {
-		messageIDs[i] = existingMap[m.CheckSum]
-	}
+	messageIDs := lo.Map(messages, func(m *dbmodel.Message, _ int) uint { return existingMap[m.CheckSum] })
 
 	return messageIDs, nil
 }
@@ -126,10 +116,7 @@ func (pm *PoolManager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.To
 		return []uint{}, nil
 	}
 
-	checksums := make([]string, len(tools))
-	for i, t := range tools {
-		checksums[i] = t.CheckSum
-	}
+	checksums := lo.Map(tools, func(t *dbmodel.Tool, _ int) string { return t.CheckSum })
 
 	toolDAO := dao.GetToolDAO()
 	existingTools, err := toolDAO.BatchGetByField(tx, constant.WhereFieldCheckSum, checksums, constant.ToolRepoFieldsChecksum)
@@ -137,17 +124,12 @@ func (pm *PoolManager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.To
 		return nil, err
 	}
 
-	existingMap := make(map[string]uint, len(existingTools))
-	for _, t := range existingTools {
-		existingMap[t.CheckSum] = t.ID
-	}
+	existingMap := lo.SliceToMap(existingTools, func(t *dbmodel.Tool) (string, uint) { return t.CheckSum, t.ID })
 
-	newTools := make([]*dbmodel.Tool, 0)
-	for _, t := range tools {
-		if _, exists := existingMap[t.CheckSum]; !exists {
-			newTools = append(newTools, t)
-		}
-	}
+	newTools := lo.Filter(tools, func(t *dbmodel.Tool, _ int) bool {
+		_, exists := existingMap[t.CheckSum]
+		return !exists
+	})
 
 	if len(newTools) > 0 {
 		if err := toolDAO.BatchCreate(tx, newTools); err != nil {
@@ -159,10 +141,7 @@ func (pm *PoolManager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.To
 		}
 	}
 
-	toolIDs := make([]uint, len(tools))
-	for i, t := range tools {
-		toolIDs[i] = existingMap[t.CheckSum]
-	}
+	toolIDs := lo.Map(tools, func(t *dbmodel.Tool, _ int) uint { return existingMap[t.CheckSum] })
 
 	return toolIDs, nil
 }

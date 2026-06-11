@@ -45,17 +45,16 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 		return nil, nil, err
 	}
 
-	views := make([]*modelport.ModelView, 0, len(models))
-	for _, m := range models {
-		views = append(views, &modelport.ModelView{
+	views := lo.Map(models, func(m *aggregate.Model, _ int) *modelport.ModelView {
+		return &modelport.ModelView{
 			ID:        m.AggregateID(),
 			Alias:     m.Alias().String(),
 			ModelName: m.ModelName(),
 			Endpoint:  toEndpointView(endpointsByID[m.EndpointID()]),
 			CreatedAt: m.CreatedAt(),
 			UpdatedAt: m.UpdatedAt(),
-		})
-	}
+		}
+	})
 
 	log.Info("[ModelQuery] List models", zap.Int("count", len(views)))
 	return views, pageInfo, nil
