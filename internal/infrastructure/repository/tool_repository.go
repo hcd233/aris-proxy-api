@@ -111,9 +111,7 @@ func (r *toolRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggregat
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by id")
 	}
-	out := make([]*aggregate.Tool, 0, len(records))
-	for _, t := range records {
-		out = append(out, aggregate.RestoreTool(t.ID, t.Tool, t.CheckSum))
-	}
-	return out, nil
+	return lo.Map(records, func(t *dbmodel.Tool, _ int) *aggregate.Tool {
+		return aggregate.RestoreTool(t.ID, t.Tool, t.CheckSum)
+	}), nil
 }

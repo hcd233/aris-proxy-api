@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -304,12 +305,12 @@ func extractToolResultContent(block *AnthropicContentBlock) (toolUseID string, c
 		return
 	}
 	if len(block.Content.Blocks) > 0 {
-		var nestedTexts []string
-		for _, nested := range block.Content.Blocks {
-			if nested.Type == enum.AnthropicContentBlockTypeText && nested.Text != nil {
-				nestedTexts = append(nestedTexts, *nested.Text)
+		nestedTexts := lo.FilterMap(block.Content.Blocks, func(nested *AnthropicContentBlock, _ int) (string, bool) {
+			if nested.Type != enum.AnthropicContentBlockTypeText || nested.Text == nil {
+				return "", false
 			}
-		}
+			return *nested.Text, true
+		})
 		if len(nestedTexts) > 0 {
 			content = &vo.UnifiedContent{Text: strings.Join(nestedTexts, "\n")}
 		}

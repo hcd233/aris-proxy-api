@@ -133,11 +133,9 @@ func (r *sessionRepository) Paginate(ctx context.Context, owner string, param se
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
 	}
-	out := make([]*aggregate.Session, 0, len(records))
-	for _, rec := range records {
-		out = append(out, toSessionAggregate(rec))
-	}
-	return out, pageInfo, nil
+	return lo.Map(records, func(rec *dbmodel.Session, _ int) *aggregate.Session {
+		return toSessionAggregate(rec)
+	}), pageInfo, nil
 }
 
 // Delete 软删除
@@ -421,15 +419,14 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by ids")
 	}
-	out := make([]*session.MessageDetailProjection, 0, len(records))
-	for _, m := range records {
-		out = append(out, &session.MessageDetailProjection{
+	out := lo.Map(records, func(m *dbmodel.Message, _ int) *session.MessageDetailProjection {
+		return &session.MessageDetailProjection{
 			ID:        m.ID,
 			Model:     m.Model,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
-		})
-	}
+		}
+	})
 	return out, nil
 }
 
@@ -442,14 +439,13 @@ func (r *sessionReadRepository) FindToolsByIDs(ctx context.Context, ids []uint) 
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by ids")
 	}
-	out := make([]*session.ToolDetailProjection, 0, len(records))
-	for _, t := range records {
-		out = append(out, &session.ToolDetailProjection{
+	out := lo.Map(records, func(t *dbmodel.Tool, _ int) *session.ToolDetailProjection {
+		return &session.ToolDetailProjection{
 			ID:        t.ID,
 			Tool:      t.Tool,
 			CreatedAt: t.CreatedAt,
-		})
-	}
+		}
+	})
 	return out, nil
 }
 

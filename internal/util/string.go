@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -63,11 +65,7 @@ func truncateValue(val any, maxLen int) any {
 	case map[string]any:
 		return TruncateMapValues(v, maxLen)
 	case []any:
-		result := make([]any, len(v))
-		for i, item := range v {
-			result[i] = truncateValue(item, maxLen)
-		}
-		return result
+		return lo.Map(v, func(item any, _ int) any { return truncateValue(item, maxLen) })
 	default:
 		return val
 	}
