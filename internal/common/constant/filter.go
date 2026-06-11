@@ -20,4 +20,12 @@ const (
 	FilterSQLLT        = " < ?"
 	FilterSQLGTE       = " >= ?"
 	FilterSQLLTE       = " <= ?"
+
+	// ── Multi-value SQL fragments ──
+	FilterSQLIN    = " IN (?)"
+	FilterSQLNOTIN = " NOT IN (?)"
+	FilterSQLOR    = " OR "
+
+	// ── Multi-value parser errors ──
+	FilterErrMultiValueWithComparison = "multi-value not supported with comparison operator: %s"
 )

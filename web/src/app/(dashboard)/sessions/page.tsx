@@ -50,13 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 
 type SortDir = "asc" | "desc";
 
@@ -103,7 +97,7 @@ export default function SessionsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
-  const [filterScore, setFilterScore] = useState<string>("");
+  const [filterScore, setFilterScore] = useState<string[]>([]);
   const [scoreOptions, setScoreOptions] = useState<string[]>([]);
 
   const fetchScoreOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
@@ -120,9 +114,9 @@ export default function SessionsPage() {
     fetchScoreOptions(timeRange, customStart, customEnd);
   }, [timeRange, customStart, fetchScoreOptions]);
 
-  const buildSessionFilter = (score: string): string | undefined => {
-    if (!score) return undefined;
-    return `score:${score}`;
+  const buildSessionFilter = (scores: string[]): string | undefined => {
+    if (scores.length === 0) return undefined;
+    return `score:${scores.join("|")}`;
   };
 
   const fetchSessions = useCallback(
@@ -134,7 +128,7 @@ export default function SessionsPage() {
       ce: string,
       sortState: { field: string; dir: SortDir },
       kw: string,
-      score: string,
+      score: string[],
     ) => {
       setLoading(true);
       try {
@@ -167,7 +161,7 @@ export default function SessionsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
   useEffect(() => {
-    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "", "");
+    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "", []);
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
@@ -326,32 +320,23 @@ export default function SessionsPage() {
                   fetchScoreOptions(key, cs, ce);
                 }}
               />
-              <Select
-                value={filterScore || "__all__"}
-                onValueChange={(v) => {
-                  const val = (v as string) === "__all__" ? "" : (v as string);
-                  setFilterScore(val);
-                  fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, val);
+              <MultiSelectPill
+                label="Score"
+                options={scoreOptions}
+                value={filterScore}
+                onChange={(v) => {
+                  setFilterScore(v);
+                  fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, v);
                 }}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Score" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All Scores</SelectItem>
-                  {scoreOptions.map((opt) => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {filterScore && (
+              />
+              {filterScore.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="gap-1 text-muted-foreground"
                   onClick={() => {
-                    setFilterScore("");
-                    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, "");
+                    setFilterScore([]);
+                    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, []);
                   }}
                 >
                   <X className="size-3.5" />
