@@ -72,40 +72,49 @@ fi
 printf "$PASS go mod tidy\n"
 
 # --------------------------------------------------------------------------
-# 3. go vet — static analysis
+# 3. Detect code changes — skip vet/test/lint if no Go files changed
 # --------------------------------------------------------------------------
-printf "$INFO Running go vet ./...\n"
+GO_CHANGES=$(git diff --cached --name-only -- '*.go' 'go.mod' 'go.sum')
 
-if ! $GO_BIN vet ./... 2>&1; then
-    fail "go vet failed. Please fix the issues above before committing."
-fi
-printf "$PASS go vet\n"
+if [ -z "$GO_CHANGES" ]; then
+    printf "$INFO No Go file changes detected — skipping vet, test, lint\n"
+else
+    # --------------------------------------------------------------------------
+    # 4. go vet — static analysis
+    # --------------------------------------------------------------------------
+    printf "$INFO Running go vet ./...\n"
 
-# --------------------------------------------------------------------------
-# 4. go test — run all unit tests, block commit on any failure
-# --------------------------------------------------------------------------
-printf "$INFO Running go test -count=1 ./...\n"
+    if ! $GO_BIN vet ./... 2>&1; then
+        fail "go vet failed. Please fix the issues above before committing."
+    fi
+    printf "$PASS go vet\n"
 
-if ! $GO_BIN test -count=1 ./... 2>&1; then
-    fail "go test failed. All tests must pass before committing."
-fi
-printf "$PASS go test\n"
+    # --------------------------------------------------------------------------
+    # 5. go test — run all unit tests, block commit on any failure
+    # --------------------------------------------------------------------------
+    printf "$INFO Running go test -count=1 ./...\n"
 
-# --------------------------------------------------------------------------
-# 5. lint — project convention lint
-# --------------------------------------------------------------------------
-printf "$INFO Running lint...\n"
+    if ! $GO_BIN test -count=1 ./... 2>&1; then
+        fail "go test failed. All tests must pass before committing."
+    fi
+    printf "$PASS go test\n"
 
-if ! $GO_BIN run main.go lint conv ./... 2>&1; then
-    CONV_FAILED=1
+    # --------------------------------------------------------------------------
+    # 6. lint — project convention lint
+    # --------------------------------------------------------------------------
+    printf "$INFO Running lint...\n"
+
+    if ! $GO_BIN run main.go lint conv ./... 2>&1; then
+        CONV_FAILED=1
+    fi
+    if ! $GO_BIN run main.go lint static ./... 2>&1; then
+        STATIC_FAILED=1
+    fi
+    if [ -n "$CONV_FAILED" ] || [ -n "$STATIC_FAILED" ]; then
+        fail "lint failed. Please fix the issues above before committing."
+    fi
+    printf "$PASS lint\n"
 fi
-if ! $GO_BIN run main.go lint static ./... 2>&1; then
-    STATIC_FAILED=1
-fi
-if [ -n "$CONV_FAILED" ] || [ -n "$STATIC_FAILED" ]; then
-    fail "lint failed. Please fix the issues above before committing."
-fi
-printf "$PASS lint\n"
 
 # --------------------------------------------------------------------------
 echo ""
