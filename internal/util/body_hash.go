@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/samber/lo"
 )
 
 func HashJSONBodyExcludingTopLevelModel(body []byte) string {
@@ -37,13 +38,9 @@ func canonicalizeJSONBody(raw []byte, skipTopLevelModel bool) []byte {
 }
 
 func canonicalizeJSONObject(obj map[string]sonic.NoCopyRawMessage, skipTopLevelModel bool) []byte {
-	keys := make([]string, 0, len(obj))
-	for key := range obj {
-		if skipTopLevelModel && key == constant.FieldNameModel {
-			continue
-		}
-		keys = append(keys, key)
-	}
+	keys := lo.Filter(lo.Keys(obj), func(key string, _ int) bool {
+		return !skipTopLevelModel || key != constant.FieldNameModel
+	})
 	sort.Strings(keys)
 
 	out := make([]byte, 0, len(obj)*16)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/samber/lo"
 )
 
 var (
@@ -61,10 +62,8 @@ func validateUserNameSpecialChars(userName string) error {
 }
 
 func validateUserNameSpecialName(userName string) error {
-	for _, specialName := range specialNameblackList {
-		if strings.EqualFold(userName, specialName) {
-			return ierr.Newf(ierr.ErrValidation, "user name can't be %s", specialName)
-		}
+	if found, ok := lo.Find(specialNameblackList, func(n string) bool { return strings.EqualFold(userName, n) }); ok {
+		return ierr.Newf(ierr.ErrValidation, "user name can't be %s", found)
 	}
 	return nil
 }

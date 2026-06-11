@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/samber/lo"
 )
 
 var sensitiveHeadersForLog = []string{
@@ -29,12 +30,7 @@ func MaskHTTPHeadersForLog(headers http.Header) map[string]any {
 }
 
 func isSensitiveHTTPHeaderForLog(key string) bool {
-	for _, header := range sensitiveHeadersForLog {
-		if strings.EqualFold(key, header) {
-			return true
-		}
-	}
-	return false
+	return lo.ContainsBy(sensitiveHeadersForLog, func(h string) bool { return strings.EqualFold(key, h) })
 }
 
 func headerValuesForLog(values []string) any {
