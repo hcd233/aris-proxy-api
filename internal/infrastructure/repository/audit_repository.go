@@ -235,7 +235,7 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		param.PageSize = 20
 	}
 
-	sql := db.Model(&dbmodel.ModelCallAudit{}).Select(constant.AuditRepoFields).Where(constant.DBConditionDeletedAtZero)
+	sql := db.Model(&dbmodel.ModelCallAudit{}).Select(constant.AuditRepoFields).Where(constant.AuditPaginateWhereDeletedAtZero)
 
 	if !startTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
