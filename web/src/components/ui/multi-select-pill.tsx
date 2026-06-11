@@ -62,7 +62,7 @@ export function MultiSelectPill({
             className={cn(
               "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
               active
-                ? "border-foreground bg-foreground text-background hover:bg-foreground/90"
+                ? "border-ring/40 bg-accent/60 text-foreground hover:bg-accent"
                 : "border-input bg-transparent text-muted-foreground hover:text-foreground hover:border-ring",
               className,
             )}
