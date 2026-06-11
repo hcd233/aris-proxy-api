@@ -88,7 +88,9 @@ var (
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
 	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID}
 
-	AuditRepoFields = []string{FieldID, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, FieldCreatedAt}
+	AuditRepoFieldCreatedAtQualified = "model_call_audits.created_at"
+
+	AuditRepoFields = []string{FieldID, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, AuditRepoFieldCreatedAtQualified}
 
 	AuditQueryFields = []string{FieldTraceID, FieldModel}
 
@@ -172,6 +174,9 @@ var (
 
 	AuditDistinctWhereDeletedAtZero = "mca.deleted_at = 0"
 	AuditPaginateWhereDeletedAtZero = "model_call_audits.deleted_at = 0"
+
+	AuditPaginateWhereCreatedAtGTE = "model_call_audits.created_at >= ?"
+	AuditPaginateWhereCreatedAtLTE = "model_call_audits.created_at <= ?"
 
 	AuditDistinctWhereCreatedAtGTE = "mca.created_at >= ?"
 	AuditDistinctWhereCreatedAtLTE = "mca.created_at <= ?"
