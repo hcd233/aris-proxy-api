@@ -140,10 +140,7 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) {
 		}
 
 		// 将集合转换为排序后的切片
-		mergedToolIDs := make([]uint, 0, len(toolIDSet))
-		for tid := range toolIDSet {
-			mergedToolIDs = append(mergedToolIDs, tid)
-		}
+		mergedToolIDs := lo.Keys(toolIDSet)
 		slices.Sort(mergedToolIDs)
 
 		// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
@@ -172,10 +169,7 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) {
 }
 
 func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.DB, sessions []*dbmodel.Session, excludeIDs []uint) ([]*dbmodel.Message, error) {
-	excludeSet := make(map[uint]struct{}, len(excludeIDs))
-	for _, id := range excludeIDs {
-		excludeSet[id] = struct{}{}
-	}
+	excludeSet := lo.SliceToMap(excludeIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
 
 	lastMsgIDs := make([]uint, 0)
 	for _, s := range sessions {
@@ -464,20 +458,9 @@ func isEqualSlice(a, b []uint) bool {
 //	@author centonhuang
 //	@update 2026-05-24 10:00:00
 func FindTerminalToolCallSessions(sessions []*dbmodel.Session, messages []*dbmodel.Message, excludeIDs []uint) MergeResult {
-	excludeSet := make(map[uint]struct{}, len(excludeIDs))
-	for _, id := range excludeIDs {
-		excludeSet[id] = struct{}{}
-	}
-
-	msgMap := make(map[uint]*dbmodel.Message, len(messages))
-	for _, m := range messages {
-		msgMap[m.ID] = m
-	}
-
-	sessionByID := make(map[uint]*dbmodel.Session, len(sessions))
-	for _, s := range sessions {
-		sessionByID[s.ID] = s
-	}
+	excludeSet := lo.SliceToMap(excludeIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
+	msgMap := lo.SliceToMap(messages, func(m *dbmodel.Message) (uint, *dbmodel.Message) { return m.ID, m })
+	sessionByID := lo.SliceToMap(sessions, func(s *dbmodel.Session) (uint, *dbmodel.Session) { return s.ID, s })
 
 	result := MergeResult{
 		RedundantIDs: make([]uint, 0),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -193,16 +194,10 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get proxy api keys")
 	}
 
-	userIDs := make([]uint, 0, len(keys))
-	seenUserIDs := make(map[uint]bool, len(keys))
 	for _, key := range keys {
 		relations[key.ID] = &modelcall.AuditRelation{APIKeyID: key.ID, APIKeyName: key.Name, UserID: key.UserID}
-		if seenUserIDs[key.UserID] {
-			continue
-		}
-		seenUserIDs[key.UserID] = true
-		userIDs = append(userIDs, key.UserID)
 	}
+	userIDs := lo.Uniq(lo.Map(keys, func(key *dbmodel.ProxyAPIKey, _ int) uint { return key.UserID }))
 	if len(userIDs) == 0 {
 		return relations, nil
 	}
@@ -211,10 +206,7 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get users")
 	}
-	userByID := make(map[uint]*dbmodel.User, len(users))
-	for _, user := range users {
-		userByID[user.ID] = user
-	}
+	userByID := lo.SliceToMap(users, func(user *dbmodel.User) (uint, *dbmodel.User) { return user.ID, user })
 	for _, relation := range relations {
 		if user, ok := userByID[relation.UserID]; ok {
 			relation.UserName = user.Name

@@ -15,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/redis/go-redis/v9"
+	"github.com/samber/lo"
 )
 
 // shareRecord 分享记录（存储在 Redis Sorted Set 的 member 中）
@@ -203,25 +204,19 @@ func (s *shareCache) DeleteShare(ctx context.Context, userID uint, shareID strin
 		return ierr.Wrap(ierr.ErrInternal, err, "failed to lookup user shares")
 	}
 
-	found := false
-	var targetMember string
-	var targetRecord shareRecord
-	for _, m := range members {
+	targetMember, found := lo.Find(members, func(m string) bool {
 		var record shareRecord
 		if unmarshalErr := sonic.Unmarshal([]byte(m), &record); unmarshalErr != nil {
-			continue
+			return false
 		}
-		if record.ShareID == shareID {
-			found = true
-			targetMember = m
-			targetRecord = record
-			break
-		}
-	}
-
+		return record.ShareID == shareID
+	})
 	if !found {
 		return ierr.New(ierr.ErrDataNotExists, "share link not found or not owned by user")
 	}
+	var targetRecord shareRecord
+	//nolint:errcheck // already verified by lo.Find predicate above
+	sonic.Unmarshal([]byte(targetMember), &targetRecord)
 
 	sessionSharesKey := fmt.Sprintf(constant.SessionSharesKeyTemplate, targetRecord.SessionID)
 

@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
@@ -62,15 +63,7 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 
 // loadEndpoints 一次性拉取本页所有 model 关联的 endpoint，避免 N+1。
 func (h *listModelsHandler) loadEndpoints(ctx context.Context, models []*aggregate.Model) (map[uint]*aggregate.Endpoint, error) {
-	seen := make(map[uint]struct{}, len(models))
-	ids := make([]uint, 0, len(models))
-	for _, m := range models {
-		if _, ok := seen[m.EndpointID()]; ok {
-			continue
-		}
-		seen[m.EndpointID()] = struct{}{}
-		ids = append(ids, m.EndpointID())
-	}
+	ids := lo.Uniq(lo.Map(models, func(m *aggregate.Model, _ int) uint { return m.EndpointID() }))
 	return h.endpointRepo.BatchFindByIDs(ctx, ids)
 }
 
