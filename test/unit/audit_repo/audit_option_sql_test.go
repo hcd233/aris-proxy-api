@@ -26,3 +26,11 @@ func TestDBConditionDeletedAtZeroIsNotUsedInUserNamesQuery(t *testing.T) {
 		t.Skip("constants are equal, skipping (they serve different contexts)")
 	}
 }
+
+func TestAuditPaginateWhereDeletedAtZeroHasTablePrefix(t *testing.T) {
+	t.Parallel()
+
+	if constant.AuditPaginateWhereDeletedAtZero != "model_call_audits.deleted_at = 0" {
+		t.Errorf("AuditPaginateWhereDeletedAtZero = %q, want \"model_call_audits.deleted_at = 0\"", constant.AuditPaginateWhereDeletedAtZero)
+	}
+}
