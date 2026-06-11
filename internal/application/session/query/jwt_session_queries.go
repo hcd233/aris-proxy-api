@@ -31,7 +31,6 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 	constant.FieldScore: {
 		SQLColumn: constant.FieldScore,
 		ValueMap: map[string]*string{
-			constant.SessionOptionScoreValueNone:     nil,
 			constant.SessionOptionScoreValueUnscored: nil,
 		},
 	},
