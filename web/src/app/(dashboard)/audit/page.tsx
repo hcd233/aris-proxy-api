@@ -42,13 +42,7 @@ import {
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -67,11 +61,11 @@ function formatCacheTokens(write: number, read: number): string | null {
   return `c: ${fmt(read)} / ${fmt(write)}`;
 }
 
-function buildAuditFilter(user?: string, model?: string, status?: string): string | undefined {
+function buildAuditFilter(user: string[], model: string[], status: string[]): string | undefined {
   const parts: string[] = [];
-  if (user) parts.push(`user:${user}`);
-  if (model) parts.push(`model:${model}`);
-  if (status) parts.push(`status:${status}`);
+  if (user.length) parts.push(`user:${user.join("|")}`);
+  if (model.length) parts.push(`model:${model.join("|")}`);
+  if (status.length) parts.push(`status:${status.join("|")}`);
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
@@ -86,9 +80,9 @@ export default function AuditPage() {
   const [customEnd, setCustomEnd] = useState("");
   const [pageInputValue, setPageInputValue] = useState("1");
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [filterUser, setFilterUser] = useState<string>("");
-  const [filterModel, setFilterModel] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterUser, setFilterUser] = useState<string[]>([]);
+  const [filterModel, setFilterModel] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [userOptions, setUserOptions] = useState<string[]>([]);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
@@ -101,14 +95,14 @@ export default function AuditPage() {
       range: TimeRangeKey,
       cs: string,
       ce: string,
-      user: string,
-      model: string,
-      status: string,
+      user: string[],
+      model: string[],
+      status: string[],
     ) => {
       setLoading(true);
       try {
         const { startTime, endTime } = computeRange(range, cs, ce);
-        const filter = buildAuditFilter(user || undefined, model || undefined, status || undefined);
+        const filter = buildAuditFilter(user, model, status);
         const rsp = await api.listAuditLogs({
           page,
           pageSize,
@@ -137,7 +131,7 @@ export default function AuditPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchLogs(1, 20, "", "24h", "", "", "", "", "");
+    fetchLogs(1, 20, "", "24h", "", "", [], [], []);
   }, [fetchLogs]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -208,70 +202,43 @@ export default function AuditPage() {
                   fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce, filterUser, filterModel, filterStatus);
                 }}
               />
-              <Select
-                value={filterUser || "__all__"}
-                onValueChange={(v) => {
-                  const val = (v as string) === "__all__" ? "" : (v as string);
-                  setFilterUser(val);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, val, filterModel, filterStatus);
+              <MultiSelectPill
+                label="User"
+                options={userOptions}
+                value={filterUser}
+                onChange={(v) => {
+                  setFilterUser(v);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, v, filterModel, filterStatus);
                 }}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="User" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All Users</SelectItem>
-                  {userOptions.map((u) => (
-                    <SelectItem key={u} value={u}>{u}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filterModel || "__all__"}
-                onValueChange={(v) => {
-                  const val = (v as string) === "__all__" ? "" : (v as string);
-                  setFilterModel(val);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, val, filterStatus);
+              />
+              <MultiSelectPill
+                label="Model"
+                options={modelOptions}
+                value={filterModel}
+                onChange={(v) => {
+                  setFilterModel(v);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, v, filterStatus);
                 }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Model" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All Models</SelectItem>
-                  {modelOptions.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filterStatus || "__all__"}
-                onValueChange={(v) => {
-                  const val = (v as string) === "__all__" ? "" : (v as string);
-                  setFilterStatus(val);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, val);
+              />
+              <MultiSelectPill
+                label="Status"
+                options={statusOptions}
+                value={filterStatus}
+                onChange={(v) => {
+                  setFilterStatus(v);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, v);
                 }}
-              >
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All Status</SelectItem>
-                  {statusOptions.map((code) => (
-                    <SelectItem key={code} value={code}>{code}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {(filterUser || filterModel || filterStatus) && (
+              />
+              {(filterUser.length > 0 || filterModel.length > 0 || filterStatus.length > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="gap-1 text-muted-foreground"
                   onClick={() => {
-                    setFilterUser("");
-                    setFilterModel("");
-                    setFilterStatus("");
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, "", "", "");
+                    setFilterUser([]);
+                    setFilterModel([]);
+                    setFilterStatus([]);
+                    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, [], [], []);
                   }}
                 >
                   <X className="size-3.5" />

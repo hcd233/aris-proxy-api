@@ -1,6 +1,7 @@
 package filter_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -19,23 +20,39 @@ func TestParse(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "empty expression", expr: "", want: nil},
-		{name: "single filter", expr: "user:john", want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Value: "john"}}},
+		{name: "single filter", expr: "user:john", want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"john"}}}},
 		{
 			name: "multiple filters",
 			expr: "user:john model:gpt-4o status:200",
 			want: []filter.Filter{
-				{Field: "user", Operator: enum.OpEqual, Value: "john"},
-				{Field: "model", Operator: enum.OpEqual, Value: "gpt-4o"},
-				{Field: "status", Operator: enum.OpEqual, Value: "200"},
+				{Field: "user", Operator: enum.OpEqual, Values: []string{"john"}},
+				{Field: "model", Operator: enum.OpEqual, Values: []string{"gpt-4o"}},
+				{Field: "status", Operator: enum.OpEqual, Values: []string{"200"}},
 			},
 		},
-		{name: "not equal operator", expr: "status:!200", want: []filter.Filter{{Field: "status", Operator: enum.OpNotEqual, Value: "200"}}},
-		{name: "greater than operator", expr: "score:>3", want: []filter.Filter{{Field: "score", Operator: enum.OpGreater, Value: "3"}}},
-		{name: "greater than or equal operator", expr: "score:>=3", want: []filter.Filter{{Field: "score", Operator: enum.OpGTE, Value: "3"}}},
-		{name: "less than operator", expr: "score:<3", want: []filter.Filter{{Field: "score", Operator: enum.OpLess, Value: "3"}}},
-		{name: "less than or equal operator", expr: "score:<=3", want: []filter.Filter{{Field: "score", Operator: enum.OpLTE, Value: "3"}}},
-		{name: "quoted value", expr: `user:"john doe"`, want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Value: "john doe"}}},
+		{name: "not equal operator", expr: "status:!200", want: []filter.Filter{{Field: "status", Operator: enum.OpNotEqual, Values: []string{"200"}}}},
+		{name: "greater than operator", expr: "score:>3", want: []filter.Filter{{Field: "score", Operator: enum.OpGreater, Values: []string{"3"}}}},
+		{name: "greater than or equal operator", expr: "score:>=3", want: []filter.Filter{{Field: "score", Operator: enum.OpGTE, Values: []string{"3"}}}},
+		{name: "less than operator", expr: "score:<3", want: []filter.Filter{{Field: "score", Operator: enum.OpLess, Values: []string{"3"}}}},
+		{name: "less than or equal operator", expr: "score:<=3", want: []filter.Filter{{Field: "score", Operator: enum.OpLTE, Values: []string{"3"}}}},
+		{name: "quoted value", expr: `user:"john doe"`, want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"john doe"}}}},
 		{name: "invalid expression", expr: "invalid", wantErr: true},
+
+		// ── multi-value cases ──
+		{name: "multi value pipe", expr: "user:alice|bob",
+			want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"alice", "bob"}}}},
+		{name: "multi value with not equal", expr: "user:!alice|bob",
+			want: []filter.Filter{{Field: "user", Operator: enum.OpNotEqual, Values: []string{"alice", "bob"}}}},
+		{name: "multi value with comparison still parses",
+			expr: "score:>3|5",
+			want: []filter.Filter{{Field: "score", Operator: enum.OpGreater, Values: []string{"3", "5"}}}},
+		{name: "quoted value preserves pipe", expr: `user:"alice|bob"`,
+			want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"alice|bob"}}}},
+		{name: "trims empty parts", expr: "user:alice||bob|",
+			want: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"alice", "bob"}}}},
+		{name: "all empty parts errors out", expr: "user:|", wantErr: true},
+		{name: "score none-or-value mixed", expr: "score:none|3",
+			want: []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"none", "3"}}}},
 	}
 
 	for _, tt := range tests {
@@ -52,8 +69,15 @@ func TestParse(t *testing.T) {
 				return
 			}
 			for i, f := range got {
-				if f != tt.want[i] {
-					t.Errorf("Parse()[%d] = %v, want %v", i, f, tt.want[i])
+				w := tt.want[i]
+				if f.Field != w.Field || f.Operator != w.Operator || len(f.Values) != len(w.Values) {
+					t.Errorf("Parse()[%d] = %+v, want %+v", i, f, w)
+					continue
+				}
+				for j := range f.Values {
+					if f.Values[j] != w.Values[j] {
+						t.Errorf("Parse()[%d].Values[%d] = %q, want %q", i, j, f.Values[j], w.Values[j])
+					}
 				}
 			}
 		})
@@ -83,24 +107,76 @@ func TestToSQL(t *testing.T) {
 		wantErr  bool
 	}{
 		{name: "empty filters", filters: []filter.Filter{}, wantSQL: "", wantArgs: nil},
-		{name: "user fuzzy match", filters: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Value: "john"}}, wantSQL: "user_name LIKE ?", wantArgs: []any{"%john%"}},
-		{name: "user not equal fuzzy", filters: []filter.Filter{{Field: "user", Operator: enum.OpNotEqual, Value: "john"}}, wantSQL: "user_name NOT LIKE ?", wantArgs: []any{"%john%"}},
-		{name: "status equal 200", filters: []filter.Filter{{Field: "status", Operator: enum.OpEqual, Value: "200"}}, wantSQL: "upstream_status_code = ?", wantArgs: []any{"200"}},
-		{name: "status not equal 200", filters: []filter.Filter{{Field: "status", Operator: enum.OpNotEqual, Value: "200"}}, wantSQL: "upstream_status_code != ?", wantArgs: []any{"200"}},
-		{name: "score is null (none)", filters: []filter.Filter{{Field: "score", Operator: enum.OpEqual, Value: "none"}}, wantSQL: "score IS NULL", wantArgs: nil},
-		{name: "score is not null", filters: []filter.Filter{{Field: "score", Operator: enum.OpNotEqual, Value: "none"}}, wantSQL: "score IS NOT NULL", wantArgs: nil},
-		{name: "score greater than", filters: []filter.Filter{{Field: "score", Operator: enum.OpGreater, Value: "3"}}, wantSQL: "score > ?", wantArgs: []any{"3"}},
-		{name: "priority mapped value", filters: []filter.Filter{{Field: "priority", Operator: enum.OpEqual, Value: "high"}}, wantSQL: "priority = ?", wantArgs: []any{"1"}},
+		{name: "user fuzzy match", filters: []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"john"}}}, wantSQL: "user_name LIKE ?", wantArgs: []any{"%john%"}},
+		{name: "user not equal fuzzy", filters: []filter.Filter{{Field: "user", Operator: enum.OpNotEqual, Values: []string{"john"}}}, wantSQL: "user_name NOT LIKE ?", wantArgs: []any{"%john%"}},
+		{name: "status equal 200", filters: []filter.Filter{{Field: "status", Operator: enum.OpEqual, Values: []string{"200"}}}, wantSQL: "upstream_status_code = ?", wantArgs: []any{"200"}},
+		{name: "status not equal 200", filters: []filter.Filter{{Field: "status", Operator: enum.OpNotEqual, Values: []string{"200"}}}, wantSQL: "upstream_status_code != ?", wantArgs: []any{"200"}},
+		{name: "score is null (none)", filters: []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"none"}}}, wantSQL: "score IS NULL", wantArgs: nil},
+		{name: "score is not null", filters: []filter.Filter{{Field: "score", Operator: enum.OpNotEqual, Values: []string{"none"}}}, wantSQL: "score IS NOT NULL", wantArgs: nil},
+		{name: "score greater than", filters: []filter.Filter{{Field: "score", Operator: enum.OpGreater, Values: []string{"3"}}}, wantSQL: "score > ?", wantArgs: []any{"3"}},
+		{name: "priority mapped value", filters: []filter.Filter{{Field: "priority", Operator: enum.OpEqual, Values: []string{"high"}}}, wantSQL: "priority = ?", wantArgs: []any{"1"}},
 		{
 			name: "combined filters",
 			filters: []filter.Filter{
-				{Field: "user", Operator: enum.OpEqual, Value: "john"},
-				{Field: "status", Operator: enum.OpEqual, Value: "200"},
+				{Field: "user", Operator: enum.OpEqual, Values: []string{"john"}},
+				{Field: "status", Operator: enum.OpEqual, Values: []string{"200"}},
 			},
 			wantSQL:  "user_name LIKE ? AND upstream_status_code = ?",
 			wantArgs: []any{"%john%", "200"},
 		},
-		{name: "unknown field", filters: []filter.Filter{{Field: "unknown", Operator: enum.OpEqual, Value: "test"}}, wantErr: true},
+		{name: "unknown field", filters: []filter.Filter{{Field: "unknown", Operator: enum.OpEqual, Values: []string{"test"}}}, wantErr: true},
+
+		// ── multi-value cases ──
+		{
+			name:     "fuzzy multi value OR LIKE",
+			filters:  []filter.Filter{{Field: "user", Operator: enum.OpEqual, Values: []string{"alice", "bob"}}},
+			wantSQL:  "(user_name LIKE ? OR user_name LIKE ?)",
+			wantArgs: []any{"%alice%", "%bob%"},
+		},
+		{
+			name:     "fuzzy multi value AND NOT LIKE",
+			filters:  []filter.Filter{{Field: "user", Operator: enum.OpNotEqual, Values: []string{"alice", "bob"}}},
+			wantSQL:  "(user_name NOT LIKE ? AND user_name NOT LIKE ?)",
+			wantArgs: []any{"%alice%", "%bob%"},
+		},
+		{
+			name:     "numeric multi value IN",
+			filters:  []filter.Filter{{Field: "status", Operator: enum.OpEqual, Values: []string{"200", "500"}}},
+			wantSQL:  "upstream_status_code IN (?)",
+			wantArgs: []any{[]string{"200", "500"}},
+		},
+		{
+			name:     "numeric multi value NOT IN",
+			filters:  []filter.Filter{{Field: "status", Operator: enum.OpNotEqual, Values: []string{"200", "500"}}},
+			wantSQL:  "upstream_status_code NOT IN (?)",
+			wantArgs: []any{[]string{"200", "500"}},
+		},
+		{
+			name:     "valuemap none mixed with score",
+			filters:  []filter.Filter{{Field: "score", Operator: enum.OpEqual, Values: []string{"none", "3"}}},
+			wantSQL:  "(score IS NULL OR score = ?)",
+			wantArgs: []any{"3"},
+		},
+		{
+			name:     "valuemap none mixed with score not equal",
+			filters:  []filter.Filter{{Field: "score", Operator: enum.OpNotEqual, Values: []string{"none", "3"}}},
+			wantSQL:  "(score IS NOT NULL AND score != ?)",
+			wantArgs: []any{"3"},
+		},
+		{
+			name:    "multi value with comparison rejected",
+			filters: []filter.Filter{{Field: "score", Operator: enum.OpGreater, Values: []string{"3", "5"}}},
+			wantErr: true,
+		},
+		{
+			name: "combined cross field AND with multi value",
+			filters: []filter.Filter{
+				{Field: "user", Operator: enum.OpEqual, Values: []string{"alice", "bob"}},
+				{Field: "status", Operator: enum.OpEqual, Values: []string{"200", "500"}},
+			},
+			wantSQL:  "(user_name LIKE ? OR user_name LIKE ?) AND upstream_status_code IN (?)",
+			wantArgs: []any{"%alice%", "%bob%", []string{"200", "500"}},
+		},
 	}
 
 	for _, tt := range tests {
@@ -120,7 +196,7 @@ func TestToSQL(t *testing.T) {
 				return
 			}
 			for i, arg := range gotArgs {
-				if arg != tt.wantArgs[i] {
+				if !reflect.DeepEqual(arg, tt.wantArgs[i]) {
 					t.Errorf("ToSQL() args[%d] = %v, want %v", i, arg, tt.wantArgs[i])
 				}
 			}
