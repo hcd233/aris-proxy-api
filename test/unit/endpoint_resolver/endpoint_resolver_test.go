@@ -87,6 +87,10 @@ func (s *stubModelRepo) Delete(_ context.Context, _ uint) error {
 	return nil
 }
 
+func (s *stubModelRepo) DeleteByEndpointID(_ context.Context, _ uint) error {
+	return nil
+}
+
 func (s *stubModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
@@ -152,6 +156,10 @@ func (s *staticModelRepo) Update(_ context.Context, _ *aggregate.Model) error {
 }
 
 func (s *staticModelRepo) Delete(_ context.Context, _ uint) error {
+	return nil
+}
+
+func (s *staticModelRepo) DeleteByEndpointID(_ context.Context, _ uint) error {
 	return nil
 }
 

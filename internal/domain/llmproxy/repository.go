@@ -26,6 +26,7 @@ type ModelRepository interface {
 	Create(ctx context.Context, model *aggregate.Model) (uint, error)
 	Update(ctx context.Context, model *aggregate.Model) error
 	Delete(ctx context.Context, id uint) error
+	DeleteByEndpointID(ctx context.Context, endpointID uint) error
 	List(ctx context.Context) ([]*aggregate.Model, error)
 	Paginate(ctx context.Context, param model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error)
 }

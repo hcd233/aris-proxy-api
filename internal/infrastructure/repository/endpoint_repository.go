@@ -271,6 +271,15 @@ func (r *modelRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+// DeleteByEndpointID 按 endpointID 批量删除模型
+func (r *modelRepository) DeleteByEndpointID(ctx context.Context, endpointID uint) error {
+	db := r.db.WithContext(ctx)
+	if err := r.dao.BatchDeleteByField(db, constant.FieldEndpointID, []uint{endpointID}); err != nil {
+		return ierr.Wrap(ierr.ErrDBDelete, err, "delete models by endpoint id")
+	}
+	return nil
+}
+
 // List 列出所有模型
 func (r *modelRepository) List(ctx context.Context) ([]*aggregate.Model, error) {
 	db := r.db.WithContext(ctx)

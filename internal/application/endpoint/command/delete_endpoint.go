@@ -36,15 +36,9 @@ func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd port.DeleteEndpo
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
 
-	models, err := h.modelRepo.List(ctx)
-	if err != nil {
-		log.Error("[EndpointCommand] Check model references failed", zap.Error(err))
+	if err := h.modelRepo.DeleteByEndpointID(ctx, cmd.EndpointID); err != nil {
+		log.Error("[EndpointCommand] Cascade delete models failed", zap.Error(err))
 		return err
-	}
-	for _, m := range models {
-		if m.EndpointID() == cmd.EndpointID {
-			return ierr.New(ierr.ErrValidation, "endpoint is still referenced by models, delete models first")
-		}
 	}
 
 	if err := h.endpointRepo.Delete(ctx, cmd.EndpointID); err != nil {
