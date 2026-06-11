@@ -238,10 +238,10 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 	sql := db.Model(&dbmodel.ModelCallAudit{}).Select(constant.AuditRepoFields).Where(constant.AuditPaginateWhereDeletedAtZero)
 
 	if !startTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
+		sql = sql.Where(constant.AuditPaginateWhereCreatedAtGTE, startTime)
 	}
 	if !endTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
+		sql = sql.Where(constant.AuditPaginateWhereCreatedAtLTE, endTime)
 	}
 
 	sql, filterErr := r.applyFilter(sql, criteria)
@@ -335,6 +335,9 @@ func (r *auditRepository) applySort(db *gorm.DB, sort enum.Sort, sortField strin
 		return db
 	}
 	sortField = safeSortField(sortField)
+	if sortField == constant.FieldCreatedAt {
+		sortField = constant.AuditRepoFieldCreatedAtQualified
+	}
 	return db.Order(clause.OrderByColumn{Column: clause.Column{Name: sortField}, Desc: sort == enum.SortDesc})
 }
 
