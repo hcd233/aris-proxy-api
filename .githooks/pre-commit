@@ -43,42 +43,42 @@ fi
 printf "$PASS skills symlink sync\n"
 
 # --------------------------------------------------------------------------
-# 1. gofmt — auto-format source files and re-stage changed files
-# --------------------------------------------------------------------------
-printf "$INFO Running gofmt -w ...\n"
-gofmt -w .
-
-if ! git diff --quiet; then
-    FORMATTED=$(git diff --name-only)
-    printf "$INFO gofmt reformatted the following files (auto-staging):\n"
-    echo "$FORMATTED" | sed 's/^/       /'
-    echo ""
-    git add $FORMATTED
-fi
-printf "$PASS gofmt\n"
-
-# --------------------------------------------------------------------------
-# 2. go mod tidy — verify go.mod / go.sum are consistent and re-stage
-# --------------------------------------------------------------------------
-printf "$INFO Running go mod tidy...\n"
-$GO_BIN mod tidy
-
-if ! git diff --quiet go.mod go.sum; then
-    printf "$INFO go.mod or go.sum changed after 'go mod tidy' (auto-staging):\n"
-    git diff --name-only go.mod go.sum | sed 's/^/       /'
-    echo ""
-    git add go.mod go.sum
-fi
-printf "$PASS go mod tidy\n"
-
-# --------------------------------------------------------------------------
-# 3. Detect code changes — skip vet/test/lint if no Go files changed
+# 1. Detect Go changes in staging area — skip Go checks if none
 # --------------------------------------------------------------------------
 GO_CHANGES=$(git diff --cached --name-only -- '*.go' 'go.mod' 'go.sum')
 
 if [ -z "$GO_CHANGES" ]; then
-    printf "$INFO No Go file changes detected — skipping vet, test, lint\n"
+    printf "$INFO No Go file changes in staging area — skipping gofmt, go mod tidy, vet, test, lint\n"
 else
+    # --------------------------------------------------------------------------
+    # 2. gofmt — auto-format source files and re-stage changed files
+    # --------------------------------------------------------------------------
+    printf "$INFO Running gofmt -w ...\n"
+    gofmt -w .
+
+    if ! git diff --quiet; then
+        FORMATTED=$(git diff --name-only)
+        printf "$INFO gofmt reformatted the following files (auto-staging):\n"
+        echo "$FORMATTED" | sed 's/^/       /'
+        echo ""
+        git add $FORMATTED
+    fi
+    printf "$PASS gofmt\n"
+
+    # --------------------------------------------------------------------------
+    # 3. go mod tidy — verify go.mod / go.sum are consistent and re-stage
+    # --------------------------------------------------------------------------
+    printf "$INFO Running go mod tidy...\n"
+    $GO_BIN mod tidy
+
+    if ! git diff --quiet go.mod go.sum; then
+        printf "$INFO go.mod or go.sum changed after 'go mod tidy' (auto-staging):\n"
+        git diff --name-only go.mod go.sum | sed 's/^/       /'
+        echo ""
+        git add go.mod go.sum
+    fi
+    printf "$PASS go mod tidy\n"
+
     # --------------------------------------------------------------------------
     # 4. go vet — static analysis
     # --------------------------------------------------------------------------
