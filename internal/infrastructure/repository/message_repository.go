@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -67,32 +68,25 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 
 	db := r.db.WithContext(ctx)
 
-	checksums := make([]string, len(messages))
-	for i, m := range messages {
-		checksums[i] = m.Checksum()
-	}
+	checksums := lo.Map(messages, func(m *aggregate.Message, _ int) string { return m.Checksum() })
 
 	existing, err := r.dao.BatchGetByField(db, constant.WhereFieldCheckSum, checksums, messageRepoFieldsChecksum)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by checksum")
 	}
 
-	existingMap := make(map[string]uint, len(existing))
-	for _, m := range existing {
-		existingMap[m.CheckSum] = m.ID
-	}
+	existingMap := lo.SliceToMap(existing, func(m *dbmodel.Message) (string, uint) { return m.CheckSum, m.ID })
 
-	newRecords := make([]*dbmodel.Message, 0, len(messages))
-	for _, m := range messages {
+	newRecords := lo.FilterMap(messages, func(m *aggregate.Message, _ int) (*dbmodel.Message, bool) {
 		if _, ok := existingMap[m.Checksum()]; ok {
-			continue
+			return nil, false
 		}
-		newRecords = append(newRecords, &dbmodel.Message{
+		return &dbmodel.Message{
 			Model:    m.Model(),
 			Message:  m.Content(),
 			CheckSum: m.Checksum(),
-		})
-	}
+		}, true
+	})
 
 	if len(newRecords) > 0 {
 		if err := r.dao.BatchCreate(db, newRecords); err != nil {

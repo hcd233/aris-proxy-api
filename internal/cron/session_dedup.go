@@ -171,16 +171,15 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) {
 func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.DB, sessions []*dbmodel.Session, excludeIDs []uint) ([]*dbmodel.Message, error) {
 	excludeSet := lo.SliceToMap(excludeIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
 
-	lastMsgIDs := make([]uint, 0)
-	for _, s := range sessions {
+	lastMsgIDs := lo.FilterMap(sessions, func(s *dbmodel.Session, _ int) (uint, bool) {
 		if _, excluded := excludeSet[s.ID]; excluded {
-			continue
+			return 0, false
 		}
 		if len(s.MessageIDs) == 0 {
-			continue
+			return 0, false
 		}
-		lastMsgIDs = append(lastMsgIDs, s.MessageIDs[len(s.MessageIDs)-1])
-	}
+		return s.MessageIDs[len(s.MessageIDs)-1], true
+	})
 
 	if len(lastMsgIDs) == 0 {
 		return nil, nil

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -55,31 +56,24 @@ func (r *toolRepository) BatchSaveDedup(ctx context.Context, tools []*aggregate.
 
 	db := r.db.WithContext(ctx)
 
-	checksums := make([]string, len(tools))
-	for i, t := range tools {
-		checksums[i] = t.Checksum()
-	}
+	checksums := lo.Map(tools, func(t *aggregate.Tool, _ int) string { return t.Checksum() })
 
 	existing, err := r.dao.BatchGetByField(db, constant.WhereFieldCheckSum, checksums, toolRepoFieldsChecksum)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by checksum")
 	}
 
-	existingMap := make(map[string]uint, len(existing))
-	for _, t := range existing {
-		existingMap[t.CheckSum] = t.ID
-	}
+	existingMap := lo.SliceToMap(existing, func(t *dbmodel.Tool) (string, uint) { return t.CheckSum, t.ID })
 
-	newRecords := make([]*dbmodel.Tool, 0, len(tools))
-	for _, t := range tools {
+	newRecords := lo.FilterMap(tools, func(t *aggregate.Tool, _ int) (*dbmodel.Tool, bool) {
 		if _, ok := existingMap[t.Checksum()]; ok {
-			continue
+			return nil, false
 		}
-		newRecords = append(newRecords, &dbmodel.Tool{
+		return &dbmodel.Tool{
 			Tool:     t.Content(),
 			CheckSum: t.Checksum(),
-		})
-	}
+		}, true
+	})
 
 	if len(newRecords) > 0 {
 		if err := r.dao.BatchCreate(db, newRecords); err != nil {
