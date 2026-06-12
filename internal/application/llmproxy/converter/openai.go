@@ -454,11 +454,10 @@ func convertAnthropicImageToOpenAIPart(block *dto.AnthropicContentBlock) *dto.Op
 }
 
 func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatCompletionTool {
-	openAITools := make([]dto.OpenAIChatCompletionTool, 0, len(tools))
-	for _, tool := range tools {
+	return lo.FilterMap(tools, func(tool *dto.AnthropicTool, _ int) (dto.OpenAIChatCompletionTool, bool) {
 		// 仅转换自定义工具（有 input_schema 的），跳过内置工具
 		if tool.InputSchema == nil && lo.FromPtr(tool.Name) == "" {
-			continue
+			return dto.OpenAIChatCompletionTool{}, false
 		}
 
 		// 对于无参数工具，OpenAI 要求省略 parameters 字段
@@ -475,7 +474,7 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 		}
 
 		name := lo.FromPtr(tool.Name)
-		openAITools = append(openAITools, dto.OpenAIChatCompletionTool{
+		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
 				Name:        name,
@@ -483,9 +482,8 @@ func convertAnthropicToolsToOpenAI(tools []*dto.AnthropicTool) []dto.OpenAIChatC
 				Parameters:  parameters,
 				Strict:      tool.Strict,
 			},
-		})
-	}
-	return openAITools
+		}, true
+	})
 }
 
 // isEmptyObjectSchema 检查 schema 是否表示空对象（无参数）

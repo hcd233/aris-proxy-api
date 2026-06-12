@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
@@ -44,17 +45,16 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 		return nil, nil, err
 	}
 
-	views := make([]*modelport.ModelView, 0, len(models))
-	for _, m := range models {
-		views = append(views, &modelport.ModelView{
+	views := lo.Map(models, func(m *aggregate.Model, _ int) *modelport.ModelView {
+		return &modelport.ModelView{
 			ID:        m.AggregateID(),
 			Alias:     m.Alias().String(),
 			ModelName: m.ModelName(),
 			Endpoint:  toEndpointView(endpointsByID[m.EndpointID()]),
 			CreatedAt: m.CreatedAt(),
 			UpdatedAt: m.UpdatedAt(),
-		})
-	}
+		}
+	})
 
 	log.Info("[ModelQuery] List models", zap.Int("count", len(views)))
 	return views, pageInfo, nil
@@ -62,15 +62,7 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 
 // loadEndpoints 一次性拉取本页所有 model 关联的 endpoint，避免 N+1。
 func (h *listModelsHandler) loadEndpoints(ctx context.Context, models []*aggregate.Model) (map[uint]*aggregate.Endpoint, error) {
-	seen := make(map[uint]struct{}, len(models))
-	ids := make([]uint, 0, len(models))
-	for _, m := range models {
-		if _, ok := seen[m.EndpointID()]; ok {
-			continue
-		}
-		seen[m.EndpointID()] = struct{}{}
-		ids = append(ids, m.EndpointID())
-	}
+	ids := lo.Uniq(lo.Map(models, func(m *aggregate.Model, _ int) uint { return m.EndpointID() }))
 	return h.endpointRepo.BatchFindByIDs(ctx, ids)
 }
 

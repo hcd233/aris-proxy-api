@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -227,11 +228,7 @@ func (r *apiKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID 
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key names by user id")
 	}
-	names := make([]string, 0, len(records))
-	for _, rec := range records {
-		names = append(names, rec.Name)
-	}
-	return names, nil
+	return lo.Map(records, func(rec *dbmodel.ProxyAPIKey, _ int) string { return rec.Name }), nil
 }
 
 // LookupIDsByUserID 查询指定用户的所有 API Key ID
@@ -241,10 +238,7 @@ func (r *apiKeyRepository) LookupIDsByUserID(ctx context.Context, userID uint) (
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key ids by user id")
 	}
-	ids := make([]uint, 0, len(records))
-	for _, rec := range records {
-		ids = append(ids, rec.ID)
-	}
+	ids := lo.Map(records, func(rec *dbmodel.ProxyAPIKey, _ int) uint { return rec.ID })
 	return ids, nil
 }
 

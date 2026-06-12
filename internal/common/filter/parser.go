@@ -10,6 +10,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/samber/lo"
 )
 
 // Filter 表达式
@@ -144,20 +145,11 @@ func splitValues(raw string) []string {
 	if len(raw) >= 2 && raw[0] == '"' && raw[len(raw)-1] == '"' {
 		return []string{raw[1 : len(raw)-1]}
 	}
-	parts := strings.Split(raw, "|")
-	values := make([]string, 0, len(parts))
-	for _, p := range parts {
+	values := lo.FilterMap(strings.Split(raw, "|"), func(p string, _ int) (string, bool) {
 		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		// 单段内若仍有引号，统一去掉
 		p = strings.Trim(p, `"`)
-		if p == "" {
-			continue
-		}
-		values = append(values, p)
-	}
+		return p, p != ""
+	})
 	return values
 }
 
@@ -269,19 +261,16 @@ type valueMapResolved struct {
 }
 
 func resolveValueMapValues(values []string, valueMap map[string]*string) []valueMapResolved {
-	resolved := make([]valueMapResolved, 0, len(values))
-	for _, raw := range values {
-		if mapped, ok := valueMap[raw]; ok {
-			if mapped == nil {
-				resolved = append(resolved, valueMapResolved{isNull: true})
-			} else {
-				resolved = append(resolved, valueMapResolved{value: *mapped})
-			}
-		} else {
-			resolved = append(resolved, valueMapResolved{value: raw})
+	return lo.Map(values, func(raw string, _ int) valueMapResolved {
+		mapped, ok := valueMap[raw]
+		if !ok {
+			return valueMapResolved{value: raw}
 		}
-	}
-	return resolved
+		if mapped == nil {
+			return valueMapResolved{isNull: true}
+		}
+		return valueMapResolved{value: *mapped}
+	})
 }
 
 // buildValueMapCondition 处理含 ValueMap 的字段，支持单值与多值（含 NULL 项混合）

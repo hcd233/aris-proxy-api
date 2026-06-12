@@ -133,11 +133,9 @@ func (r *sessionRepository) Paginate(ctx context.Context, owner string, param se
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
 	}
-	out := make([]*aggregate.Session, 0, len(records))
-	for _, rec := range records {
-		out = append(out, toSessionAggregate(rec))
-	}
-	return out, pageInfo, nil
+	return lo.Map(records, func(rec *dbmodel.Session, _ int) *aggregate.Session {
+		return toSessionAggregate(rec)
+	}), pageInfo, nil
 }
 
 // Delete 软删除
@@ -290,9 +288,8 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	// 这是合理 fallback：page > 1 且数据缩水的边界情况罕见，前端遇到 total=0 退化为
 	// "no results" 视图，比为了准确性多打一次 COUNT 划得来。
 
-	out := make([]*session.SessionSummaryProjection, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, &session.SessionSummaryProjection{
+	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
+		return &session.SessionSummaryProjection{
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
@@ -300,8 +297,8 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
-		})
-	}
+		}
+	})
 	return out, pageInfo, nil
 }
 
@@ -355,9 +352,8 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 		pageInfo.Total = rows[0].TotalCount
 	}
 
-	out := make([]*session.SessionSummaryProjection, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, &session.SessionSummaryProjection{
+	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
+		return &session.SessionSummaryProjection{
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
@@ -365,8 +361,8 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
-		})
-	}
+		}
+	})
 	return out, pageInfo, nil
 }
 
@@ -421,15 +417,14 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by ids")
 	}
-	out := make([]*session.MessageDetailProjection, 0, len(records))
-	for _, m := range records {
-		out = append(out, &session.MessageDetailProjection{
+	out := lo.Map(records, func(m *dbmodel.Message, _ int) *session.MessageDetailProjection {
+		return &session.MessageDetailProjection{
 			ID:        m.ID,
 			Model:     m.Model,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
-		})
-	}
+		}
+	})
 	return out, nil
 }
 
@@ -442,14 +437,13 @@ func (r *sessionReadRepository) FindToolsByIDs(ctx context.Context, ids []uint) 
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get tools by ids")
 	}
-	out := make([]*session.ToolDetailProjection, 0, len(records))
-	for _, t := range records {
-		out = append(out, &session.ToolDetailProjection{
+	out := lo.Map(records, func(t *dbmodel.Tool, _ int) *session.ToolDetailProjection {
+		return &session.ToolDetailProjection{
 			ID:        t.ID,
 			Tool:      t.Tool,
 			CreatedAt: t.CreatedAt,
-		})
-	}
+		}
+	})
 	return out, nil
 }
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -78,15 +80,12 @@ func fillTokenRateSeries(points []*modelcall.TokenThroughputPoint, start, end ti
 		},
 	)
 	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := make([]*dto.TokenRateItem, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		pts := make([]*dto.TokenRatePoint, 0, len(buckets))
-		for _, t := range buckets {
+	items := lo.Map(modelOrder, func(m string, _ int) *dto.TokenRateItem {
+		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TokenRatePoint {
 			s := byModel[m][t]
-			tp := &dto.TokenRatePoint{Time: t, OutputTokensPerSecond: s.outputTokensPerSec}
-			pts = append(pts, tp)
-		}
-		items = append(items, &dto.TokenRateItem{Model: m, Points: pts})
-	}
+			return &dto.TokenRatePoint{Time: t, OutputTokensPerSecond: s.outputTokensPerSec}
+		})
+		return &dto.TokenRateItem{Model: m, Points: pts}
+	})
 	return items
 }

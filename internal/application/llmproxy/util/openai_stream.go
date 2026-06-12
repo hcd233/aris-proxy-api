@@ -16,10 +16,7 @@ func HasNonEmptyDelta(chunk *dto.OpenAIChatCompletionChunk) bool {
 		return false
 	}
 	d := chunk.Choices[0].Delta
-	if d.Content != nil && *d.Content != "" {
-		return true
-	}
-	if d.ReasoningContent != nil && *d.ReasoningContent != "" {
+	if lo.FromPtr(d.Content) != "" || lo.FromPtr(d.ReasoningContent) != "" {
 		return true
 	}
 	if len(d.ToolCalls) > 0 {

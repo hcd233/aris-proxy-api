@@ -77,34 +77,33 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q sessionport.L
 			return nil, ierr.Wrap(ierr.ErrDBQuery, repoErr, "find messages by ids")
 		}
 
-		fetched := make([]*sessionport.MessageCacheRecord, 0, len(records))
-		for _, m := range records {
-			rec := &sessionport.MessageCacheRecord{
+		fetched := lo.Map(records, func(m *session.MessageDetailProjection, _ int) *sessionport.MessageCacheRecord {
+			return &sessionport.MessageCacheRecord{
 				ID:        m.ID,
 				Model:     m.Model,
 				Message:   m.Message,
 				CreatedAt: m.CreatedAt,
 			}
-			hits[m.ID] = rec
-			fetched = append(fetched, rec)
-		}
+		})
+		hits = lo.Assign(hits, lo.SliceToMap(fetched, func(rec *sessionport.MessageCacheRecord) (uint, *sessionport.MessageCacheRecord) {
+			return rec.ID, rec
+		}))
 		if setErr := h.cache.SetMessages(ctx, fetched); setErr != nil {
 			log.Warn("[SessionQuery] SetMessages cache failed", zap.Error(setErr))
 		}
 	}
 
-	views := make([]*sessionport.MessageView, 0, len(pageIDs))
-	for _, id := range pageIDs {
+	views := lo.FilterMap(pageIDs, func(id uint, _ int) (*sessionport.MessageView, bool) {
 		rec, ok := hits[id]
 		if !ok {
-			continue
+			return nil, false
 		}
-		views = append(views, &sessionport.MessageView{
+		return &sessionport.MessageView{
 			ID:        rec.ID,
 			Model:     rec.Model,
 			Message:   rec.Message,
 			CreatedAt: rec.CreatedAt,
-		})
-	}
+		}, true
+	})
 	return &sessionport.ListSessionMessagesResult{Messages: views, Total: total}, nil
 }

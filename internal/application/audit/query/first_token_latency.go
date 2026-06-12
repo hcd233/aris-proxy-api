@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -78,15 +80,12 @@ func fillFirstTokenLatencySeries(points []*modelcall.FirstTokenLatencyPoint, sta
 		},
 	)
 	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := make([]*dto.FirstTokenLatencyItem, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		pts := make([]*dto.FirstTokenLatencyPoint, 0, len(buckets))
-		for _, t := range buckets {
+	items := lo.Map(modelOrder, func(m string, _ int) *dto.FirstTokenLatencyItem {
+		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.FirstTokenLatencyPoint {
 			s := byModel[m][t]
-			tp := &dto.FirstTokenLatencyPoint{Time: t, AverageLatencyMs: s.avgLatencyMs}
-			pts = append(pts, tp)
-		}
-		items = append(items, &dto.FirstTokenLatencyItem{Model: m, Points: pts})
-	}
+			return &dto.FirstTokenLatencyPoint{Time: t, AverageLatencyMs: s.avgLatencyMs}
+		})
+		return &dto.FirstTokenLatencyItem{Model: m, Points: pts}
+	})
 	return items
 }

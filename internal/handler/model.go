@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
@@ -77,8 +78,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Models = make([]*dto.ModelItem, 0, len(views))
-	for _, v := range views {
+	rsp.Models = lo.Map(views, func(v *port.ModelView, _ int) *dto.ModelItem {
 		item := &dto.ModelItem{
 			ID:        v.ID,
 			Alias:     v.Alias,
@@ -100,8 +100,8 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 				UpdatedAt:                   v.Endpoint.UpdatedAt,
 			}
 		}
-		rsp.Models = append(rsp.Models, item)
-	}
+		return item
+	})
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
