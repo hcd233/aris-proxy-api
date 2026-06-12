@@ -9,7 +9,6 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -58,9 +57,7 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 		SupportOpenAIResponse:       req.Body.SupportOpenAIResponse,
 		SupportAnthropicMessage:     req.Body.SupportAnthropicMessage,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[EndpointHandler] Create endpoint failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[EndpointHandler] Create endpoint failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -76,9 +73,7 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 	views, pageInfo, err := h.list.Handle(ctx, port.ListEndpointsQuery{
 		CommonParam: req.CommonParam,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[EndpointHandler] List endpoints failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[EndpointHandler] List endpoints failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -113,9 +108,7 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 		SupportOpenAIResponse:       req.Body.SupportOpenAIResponse,
 		SupportAnthropicMessage:     req.Body.SupportAnthropicMessage,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[EndpointHandler] Update endpoint failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[EndpointHandler] Update endpoint failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -125,9 +118,7 @@ func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.Del
 	rsp := &dto.EmptyRsp{}
 
 	err := h.delete.Handle(ctx, port.DeleteEndpointCommand{EndpointID: req.ID})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[EndpointHandler] Delete endpoint failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[EndpointHandler] Delete endpoint failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)

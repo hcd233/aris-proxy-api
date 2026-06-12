@@ -126,9 +126,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 		Keyword:   req.Keyword,
 		Filter:    req.Filter,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] List sessions by user failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] List sessions by user failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -167,10 +165,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Get session by user failed",
-			zap.Uint("sessionID", req.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] Get session by user failed", zap.Uint("sessionID", req.SessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -246,10 +241,7 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 		IsAdmin:   isAdmin,
 		SessionID: sessionID,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Create share: verify session failed",
-			zap.Uint("sessionID", sessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] Create share: verify session failed", zap.Uint("sessionID", sessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	if view == nil {
@@ -266,10 +258,7 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 	}
 
 	shareID, expiresAt, shareErr := h.shareCache.CreateShare(ctx, userID, sessionID, ttl)
-	if shareErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Create share failed",
-			zap.Uint("sessionID", sessionID), zap.Error(shareErr))
-		rsp.Error = ierr.ToBizError(shareErr, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, shareErr, "[SessionHandler] Create share failed", zap.Uint("sessionID", sessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -298,9 +287,7 @@ func (h *sessionHandler) HandleListShares(ctx context.Context, req *dto.ListShar
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	shares, pageInfo, err := h.shareCache.ListUserShares(ctx, userID, req.Page, req.PageSize)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] List shares failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] List shares failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -323,10 +310,7 @@ func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteS
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	err := h.shareCache.DeleteShare(ctx, userID, req.ShareID)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Delete share failed",
-			zap.String("shareID", req.ShareID), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] Delete share failed", zap.String("shareID", req.ShareID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -361,9 +345,7 @@ func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.Delet
 		RequesterID:         userID,
 		RequesterPermission: permission,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Delete session failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] Delete session failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -395,10 +377,7 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Get session metadata failed",
-			zap.Uint("sessionID", req.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] Get session metadata failed", zap.Uint("sessionID", req.SessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -448,11 +427,9 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 		Page:      req.Page,
 		PageSize:  req.PageSize,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] List session messages failed",
-			zap.Uint("sessionID", req.SessionID),
-			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] List session messages failed",
+		zap.Uint("sessionID", req.SessionID),
+		zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -489,11 +466,9 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 		Page:      req.Page,
 		PageSize:  req.PageSize,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] List session tools failed",
-			zap.Uint("sessionID", req.SessionID),
-			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] List session tools failed",
+		zap.Uint("sessionID", req.SessionID),
+		zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -532,10 +507,7 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 		IsAdmin:   true,
 		SessionID: sessionID,
 	})
-	if viewErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Get share metadata: fetch meta failed",
-			zap.Uint("sessionID", sessionID), zap.Error(viewErr))
-		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, viewErr, "[SessionHandler] Get share metadata: fetch meta failed", zap.Uint("sessionID", sessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -573,11 +545,9 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 		Page:      req.Page,
 		PageSize:  req.PageSize,
 	})
-	if resultErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] List share messages failed",
-			zap.Uint("sessionID", sessionID),
-			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(resultErr))
-		rsp.Error = ierr.ToBizError(resultErr, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, resultErr, "[SessionHandler] List share messages failed",
+		zap.Uint("sessionID", sessionID),
+		zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -619,11 +589,9 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		Page:      req.Page,
 		PageSize:  req.PageSize,
 	})
-	if resultErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] List share tools failed",
-			zap.Uint("sessionID", sessionID),
-			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(resultErr))
-		rsp.Error = ierr.ToBizError(resultErr, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, resultErr, "[SessionHandler] List share tools failed",
+		zap.Uint("sessionID", sessionID),
+		zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -661,10 +629,7 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 		IsAdmin:   isAdmin,
 		SessionID: req.Body.SessionID,
 	})
-	if viewErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Score session: fetch meta failed",
-			zap.Uint("sessionID", req.Body.SessionID), zap.Error(viewErr))
-		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, viewErr, "[SessionHandler] Score session: fetch meta failed", zap.Uint("sessionID", req.Body.SessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	if view == nil {
@@ -678,10 +643,7 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 		RequesterID:         userID,
 		RequesterPermission: permission,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Score session: update failed",
-			zap.Uint("sessionID", req.Body.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] Score session: update failed", zap.Uint("sessionID", req.Body.SessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -713,10 +675,7 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 		IsAdmin:   isAdmin,
 		SessionID: req.SessionID,
 	})
-	if viewErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: fetch meta failed",
-			zap.Uint("sessionID", req.SessionID), zap.Error(viewErr))
-		rsp.Error = ierr.ToBizError(viewErr, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, viewErr, "[SessionHandler] Delete score: fetch meta failed", zap.Uint("sessionID", req.SessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	if view == nil {
@@ -728,10 +687,7 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 		SessionID:           req.SessionID,
 		RequesterID:         userID,
 		RequesterPermission: permission,
-	}); err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: delete failed",
-			zap.Uint("sessionID", req.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	}); apiutil.HandleError(ctx, rsp, err, "[SessionHandler] Delete score: delete failed", zap.Uint("sessionID", req.SessionID)) {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -764,9 +720,7 @@ func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.S
 		StartTime: req.StartTime,
 		EndTime:   req.EndTime,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] List session options failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[SessionHandler] List session options failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 

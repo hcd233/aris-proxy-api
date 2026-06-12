@@ -9,7 +9,6 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -65,9 +64,7 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	view, err := h.getCurrentUser.Handle(ctx, port.GetCurrentUserQuery{UserID: userID})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[UserHandler] Get current user failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[UserHandler] Get current user failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -112,9 +109,7 @@ func (h *userHandler) HandleUpdateUser(ctx context.Context, req *dto.UpdateUserR
 		Email:  req.Body.User.Email,
 		Avatar: req.Body.User.Avatar,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[UserHandler] Update user failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[UserHandler] Update user failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)

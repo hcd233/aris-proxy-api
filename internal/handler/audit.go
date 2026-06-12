@@ -4,14 +4,11 @@ import (
 	"context"
 
 	"github.com/samber/lo"
-	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -50,9 +47,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 			Filter: req.Filter,
 		},
 	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] List audit logs failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] List audit logs failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -96,9 +91,7 @@ func (h *auditHandler) HandleListAuditOption(ctx context.Context, req *dto.Audit
 	rsp := &dto.AuditOptionListRsp{}
 
 	items, err := h.svc.ListAuditOption(ctx, req.Field, req.Keyword, req.StartTime, req.EndTime)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] List audit options failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] List audit options failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -113,9 +106,7 @@ func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrend
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.StartTime, req.EndTime, req.Granularity,
 	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Model trend failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] Model trend failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = auditport.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
@@ -129,9 +120,7 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.StartTime, req.EndTime, req.Granularity,
 	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Request rate failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] Request rate failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = auditport.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
@@ -145,9 +134,7 @@ func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.Token
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.StartTime, req.EndTime, req.Granularity,
 	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Token throughput failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] Token throughput failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = auditport.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
@@ -161,9 +148,7 @@ func (h *auditHandler) HandleTokenRate(ctx context.Context, req *dto.TokenRateRe
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.StartTime, req.EndTime, req.Granularity,
 	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Token rate failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] Token rate failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = items
@@ -177,9 +162,7 @@ func (h *auditHandler) HandleModelUsage(ctx context.Context, req *dto.ModelUsage
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.StartTime, req.EndTime, req.Granularity,
 	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Token usage failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] Token usage failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = items
@@ -193,9 +176,7 @@ func (h *auditHandler) HandleFirstTokenLatency(ctx context.Context, req *dto.Fir
 		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.StartTime, req.EndTime, req.Granularity,
 	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] First token latency failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[AuditHandler] First token latency failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Data = items

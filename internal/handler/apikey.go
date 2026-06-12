@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
-	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
@@ -81,9 +80,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 		UserID: userID,
 		Name:   req.Body.Name,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[APIKeyHandler] Create api key failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[APIKeyHandler] Create api key failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -115,9 +112,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIK
 		RequesterPermission: permission,
 		CommonParam:         req.CommonParam,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[APIKeyHandler] List api keys failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[APIKeyHandler] List api keys failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -159,9 +154,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 		RequesterID:         userID,
 		RequesterPermission: permission,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[APIKeyHandler] Delete api key failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[APIKeyHandler] Delete api key failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)

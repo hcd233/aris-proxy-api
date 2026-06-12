@@ -9,7 +9,6 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -54,9 +53,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 		ModelName:  req.Body.ModelName,
 		EndpointID: req.Body.EndpointID,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[ModelHandler] Create model failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[ModelHandler] Create model failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -72,9 +69,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 	views, pageInfo, err := h.list.Handle(ctx, port.ListModelsQuery{
 		CommonParam: req.CommonParam,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[ModelHandler] List models failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -117,9 +112,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		EndpointID: req.Body.EndpointID,
 		Enabled:    req.Body.Enabled,
 	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[ModelHandler] Update model failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -129,9 +122,7 @@ func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteMod
 	rsp := &dto.EmptyRsp{}
 
 	err := h.delete.Handle(ctx, port.DeleteModelCommand{ModelID: req.ID})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[ModelHandler] Delete model failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if apiutil.HandleError(ctx, rsp, err, "[ModelHandler] Delete model failed") {
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)

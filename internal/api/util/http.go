@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -25,6 +26,23 @@ func WrapHTTPResponse[rspT any](rsp rspT, err error) (*dto.HTTPResponse[rspT], e
 	return &dto.HTTPResponse[rspT]{
 		Body: rsp,
 	}, err
+}
+
+// hasError 包含 Error 字段的响应体接口
+type hasError interface {
+	SetError(err *model.Error)
+}
+
+// HandleError 处理 handler 层业务错误
+//
+// 返回 true 表示 err 非 nil，已设置 rsp.Error；调用方应直接 return WrapHTTPResponse(rsp, nil)。
+func HandleError(ctx context.Context, rsp hasError, err error, msg string, extra ...zap.Field) bool {
+	if err == nil {
+		return false
+	}
+	logger.WithCtx(ctx).Error(msg, append(extra, zap.Error(err))...)
+	rsp.SetError(ierr.ToBizError(err, ierr.ErrInternal.BizError()))
+	return true
 }
 
 func WriteErrorResponse(bodyWriter io.Writer, err *model.Error) error {

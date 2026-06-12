@@ -10,6 +10,10 @@ type CommonRsp struct {
 	Error *model.Error `json:"error,omitempty" doc:"Error body"`
 }
 
+func (r *CommonRsp) SetError(err *model.Error) {
+	r.Error = err
+}
+
 // EmptyReq 空请求
 //
 //	@author centonhuang
