@@ -69,12 +69,12 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const [keysRsp, sessionsRsp] = await Promise.all([
-        api.listAPIKeys(),
+        api.listAPIKeys(1, 1),
         api.listSessions({ page: 1, pageSize: 1 }),
       ]);
 
-      const endpointsRsp = isAdmin() ? await api.listEndpoints().catch(() => null) : null;
-      const modelsRsp = isAdmin() ? await api.listModels().catch(() => null) : null;
+      const endpointsRsp = isAdmin() ? await api.listEndpoints(1, 1).catch(() => null) : null;
+      const modelsRsp = isAdmin() ? await api.listModels(1, 1).catch(() => null) : null;
 
       setStats({
         apiKeys: keysRsp.pageInfo?.total ?? 0,
