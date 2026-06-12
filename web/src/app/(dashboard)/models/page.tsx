@@ -106,7 +106,7 @@ export default function ModelsPage() {
 
   const fetchEndpoints = useCallback(async () => {
     try {
-      const endpointsRsp = await api.listEndpoints(1, 200);
+      const endpointsRsp = await api.listEndpoints(1, 100);
       const list = endpointsRsp.endpoints ?? [];
       setEndpoints(list);
       return list;
