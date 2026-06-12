@@ -257,28 +257,30 @@ func responseOutputText(output *dto.ResponseInputItemOutput) string {
 	if output.FunctionOutput.Text != "" {
 		return output.FunctionOutput.Text
 	}
-	var texts []string
-	for _, part := range output.FunctionOutput.Parts {
-		if part != nil && (part.Type == enum.ResponseContentTypeInputText || part.Type == enum.ResponseContentTypeOutputText) {
-			texts = append(texts, lo.FromPtr(part.Text))
+	texts := lo.FilterMap(output.FunctionOutput.Parts, func(part *dto.ResponseInputContent, _ int) (string, bool) {
+		if part == nil {
+			return "", false
 		}
-	}
+		isTextType := part.Type == enum.ResponseContentTypeInputText || part.Type == enum.ResponseContentTypeOutputText
+		return lo.FromPtr(part.Text), isTextType
+	})
 	return strings.Join(texts, "\n")
 }
 
 func responseReasoningText(item *dto.ResponseInputItem) string {
-	var texts []string
-	for _, summary := range item.Summary {
-		if summary != nil && summary.Text != "" {
-			texts = append(texts, summary.Text)
+	summaryTexts := lo.FilterMap(item.Summary, func(s *dto.ResponseReasoningSummary, _ int) (string, bool) {
+		if s == nil || s.Text == "" {
+			return "", false
 		}
-	}
-	for _, content := range item.ReasoningContent {
-		if content != nil && content.Text != "" {
-			texts = append(texts, content.Text)
+		return s.Text, true
+	})
+	reasoningTexts := lo.FilterMap(item.ReasoningContent, func(c *dto.ResponseReasoningTextContent, _ int) (string, bool) {
+		if c == nil || c.Text == "" {
+			return "", false
 		}
-	}
-	return strings.Join(texts, "\n")
+		return c.Text, true
+	})
+	return strings.Join(append(summaryTexts, reasoningTexts...), "\n")
 }
 
 func responseTextFormatToChat(format *dto.ResponseTextFormat) *dto.OpenAIResponseFormat {

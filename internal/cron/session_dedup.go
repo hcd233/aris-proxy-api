@@ -427,22 +427,8 @@ func IsSubArray(sub, arr []uint) bool {
 }
 
 // isEqualSlice 判断两个 uint 切片是否完全相等
-//
-//	@param a []uint
-//	@param b []uint
-//	@return bool
-//	@author centonhuang
-//	@update 2026-03-19 10:00:00
 func isEqualSlice(a, b []uint) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(a, b)
 }
 
 // FindTerminalToolCallSessions 查找最后一条消息是assistant且有tool_calls的session
