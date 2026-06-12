@@ -19,6 +19,7 @@ import (
 )
 
 var validSortFields = map[string]bool{
+	constant.FieldID:                  true,
 	constant.FieldCreatedAt:           true,
 	constant.FieldInputTokens:         true,
 	constant.FieldOutputTokens:        true,
@@ -92,7 +93,7 @@ func sanitizeListParam(ctx context.Context, in listAuditLogsParam) (model.Common
 		in.Sort = enum.SortDesc
 	}
 	if in.SortField == "" {
-		in.SortField = constant.FieldCreatedAt
+		in.SortField = constant.FieldID
 	}
 	return model.CommonParam{
 		PageParam:  model.PageParam{Page: in.Page, PageSize: in.PageSize},
