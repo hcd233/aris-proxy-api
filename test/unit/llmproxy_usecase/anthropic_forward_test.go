@@ -67,7 +67,7 @@ func buildAnthropicTestEndpoint() *aggregate.Endpoint {
 }
 
 func buildAnthropicTestModel() *aggregate.Model {
-	m, _ := aggregate.CreateModel(2, "claude-alias", "claude-sonnet-4-20250514", 2)
+	m, _ := aggregate.CreateModel(2, "claude-alias", "claude-sonnet-4-20250514", 2, true)
 	return m
 }
 

@@ -133,6 +133,7 @@ const (
 	FieldModelAlias                          = "alias"
 	FieldModelModelName                      = "model"
 	FieldModelEndpointID                     = "endpoint_id"
+	FieldModelEnabled                        = "enabled"
 
 	// Router tag names
 	TagAnthropic = "Anthropic"

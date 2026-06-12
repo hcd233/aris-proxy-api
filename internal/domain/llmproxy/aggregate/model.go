@@ -19,12 +19,13 @@ type Model struct {
 	alias      vo.EndpointAlias
 	model      string
 	endpointID uint
+	enabled    bool
 	createdAt  time.Time
 	updatedAt  time.Time
 }
 
 // CreateModel 构造 Model 聚合根
-func CreateModel(id uint, alias vo.EndpointAlias, model string, endpointID uint) (*Model, error) {
+func CreateModel(id uint, alias vo.EndpointAlias, model string, endpointID uint, enabled bool) (*Model, error) {
 	if alias.IsEmpty() {
 		return nil, ierr.New(ierr.ErrValidation, "model alias cannot be empty")
 	}
@@ -38,6 +39,7 @@ func CreateModel(id uint, alias vo.EndpointAlias, model string, endpointID uint)
 		alias:      alias,
 		model:      model,
 		endpointID: endpointID,
+		enabled:    enabled,
 	}
 	m.SetID(id)
 	return m, nil
@@ -48,6 +50,7 @@ func (*Model) AggregateType() string { return enum.AggregateTypeModel }
 func (m *Model) Alias() vo.EndpointAlias { return m.alias }
 func (m *Model) ModelName() string       { return m.model }
 func (m *Model) EndpointID() uint        { return m.endpointID }
+func (m *Model) Enabled() bool           { return m.enabled }
 func (m *Model) CreatedAt() time.Time    { return m.createdAt }
 func (m *Model) UpdatedAt() time.Time    { return m.updatedAt }
 
@@ -57,7 +60,7 @@ func (m *Model) SetTimestamps(createdAt, updatedAt time.Time) {
 }
 
 // Update 更新 Model 字段（仅非 nil 字段更新）
-func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint) {
+func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint, enabled *bool) {
 	if alias != nil {
 		m.alias = *alias
 	}
@@ -66,5 +69,8 @@ func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint)
 	}
 	if endpointID != nil {
 		m.endpointID = *endpointID
+	}
+	if enabled != nil {
+		m.enabled = *enabled
 	}
 }

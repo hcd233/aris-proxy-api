@@ -30,6 +30,7 @@ type UpdateModelReqBody struct {
 	Alias      *string `json:"alias,omitempty" doc:"模型别名"`
 	ModelName  *string `json:"modelName,omitempty" doc:"上游实际模型名"`
 	EndpointID *uint   `json:"endpointID,omitempty" minimum:"1" doc:"关联 Endpoint ID"`
+	Enabled    *bool   `json:"enabled,omitempty" doc:"是否启用"`
 }
 
 // DeleteModelReq 删除 Model 请求
@@ -57,6 +58,7 @@ type ModelItem struct {
 	ID        uint          `json:"id" doc:"Model ID"`
 	Alias     string        `json:"alias" doc:"模型别名"`
 	ModelName string        `json:"modelName" doc:"上游实际模型名"`
+	Enabled   bool          `json:"enabled" doc:"是否启用"`
 	Endpoint  *EndpointItem `json:"endpoint,omitempty" doc:"关联 Endpoint 详细信息"`
 	CreatedAt time.Time     `json:"createdAt" doc:"创建时间"`
 	UpdatedAt time.Time     `json:"updatedAt" doc:"更新时间"`

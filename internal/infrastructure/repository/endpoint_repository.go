@@ -209,7 +209,7 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 }
 
 func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
-	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID)
+	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID, m.Enabled)
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +223,7 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 		Alias:      m.Alias().String(),
 		ModelName:  m.ModelName(),
 		EndpointID: m.EndpointID(),
+		Enabled:    m.Enabled(),
 	}
 }
 
@@ -256,6 +257,7 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 		constant.FieldModelAlias:      m.Alias().String(),
 		constant.FieldModelModelName:  m.ModelName(),
 		constant.FieldModelEndpointID: m.EndpointID(),
+		constant.FieldModelEnabled:    m.Enabled(),
 	}
 	if err := db.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update model")
@@ -346,10 +348,10 @@ func NewEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
 	}
 }
 
-// ListAliases 查询所有不重复的模型别名
+// ListAliases 查询所有不重复的模型别名（仅已启用的模型）
 func (r *endpointReadRepository) ListAliases(ctx context.Context) ([]*llmproxy.ModelAliasProjection, error) {
 	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{}, constant.ModelRepoFieldsAlias)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true}, constant.ModelRepoFieldsAlias)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list model aliases")
 	}
@@ -360,9 +362,10 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context) ([]*llmproxy.M
 }
 
 // FindEndpointByAlias 按 alias 随机选满足 matcher 的 endpoint，返回端点信息 + 上游模型名。
+// 仅查询已启用的模型。
 func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, alias string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
 	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias}, constant.ModelRepoFieldsFull)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias, Enabled: true}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}

@@ -60,7 +60,7 @@ func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) (
 	}
 	switch b {
 	case "hit":
-		m, _ := aggregate.CreateModel(1, alias, "test-model", 1)
+		m, _ := aggregate.CreateModel(1, alias, "test-model", 1, true)
 		return []*aggregate.Model{m}, nil
 	case "miss":
 		return nil, nil
@@ -215,8 +215,8 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 	alias := vo.EndpointAlias("test-model")
 	anthropicOnly, _ := aggregate.CreateEndpoint(1, "anthropic-only", "", "https://api.anthropic.com", "sk-ant", false, false, true)
 	openAIOnly, _ := aggregate.CreateEndpoint(2, "openai-only", "https://api.openai.com", "", "sk-openai", true, false, false)
-	anthropicModel, _ := aggregate.CreateModel(1, alias, "claude-upstream", 1)
-	openAIModel, _ := aggregate.CreateModel(2, alias, "gpt-upstream", 2)
+	anthropicModel, _ := aggregate.CreateModel(1, alias, "claude-upstream", 1, true)
+	openAIModel, _ := aggregate.CreateModel(2, alias, "gpt-upstream", 2, true)
 	resolver := service.NewEndpointResolver(
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: anthropicOnly, 2: openAIOnly}},
 		&staticModelRepo{models: []*aggregate.Model{anthropicModel, openAIModel}},

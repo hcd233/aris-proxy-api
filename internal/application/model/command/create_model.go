@@ -42,7 +42,7 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 		return nil, ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
 
-	m, err := aggregate.CreateModel(0, vo.EndpointAlias(cmd.Alias), cmd.ModelName, cmd.EndpointID)
+	m, err := aggregate.CreateModel(0, vo.EndpointAlias(cmd.Alias), cmd.ModelName, cmd.EndpointID, true)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate model")
 	}

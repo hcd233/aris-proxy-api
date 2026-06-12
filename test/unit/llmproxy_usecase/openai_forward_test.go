@@ -157,7 +157,7 @@ func (p *mockAnthropicProxyForOpenAI) ForwardCountTokens(_ context.Context, _ vo
 }
 
 func buildTestModel() *aggregate.Model {
-	m, _ := aggregate.CreateModel(1, "test-alias", "test-model", 1)
+	m, _ := aggregate.CreateModel(1, "test-alias", "test-model", 1, true)
 	return m
 }
 
