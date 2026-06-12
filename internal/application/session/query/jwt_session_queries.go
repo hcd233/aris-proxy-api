@@ -20,6 +20,7 @@ import (
 )
 
 var validSessionSortFields = map[string]bool{
+	constant.FieldID:           true,
 	constant.FieldCreatedAt:    true,
 	constant.FieldUpdatedAt:    true,
 	constant.FieldMessageCount: true,
@@ -155,7 +156,7 @@ func sanitizeSessionListParam(ctx context.Context, q sessionport.ListSessionsByU
 		sort = enum.SortDesc
 	}
 	if sortField == "" {
-		sortField = constant.FieldCreatedAt
+		sortField = constant.FieldID
 	}
 	return model.CommonParam{
 		PageParam: model.PageParam{Page: page, PageSize: pageSize},

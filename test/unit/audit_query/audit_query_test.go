@@ -126,8 +126,8 @@ func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
 			if param.Sort != enum.SortDesc {
 				t.Errorf("Sort = %q, want desc (default)", param.Sort)
 			}
-			if param.SortField != "created_at" {
-				t.Errorf("SortField = %q, want created_at (default)", param.SortField)
+			if param.SortField != "id" {
+				t.Errorf("SortField = %q, want id (default)", param.SortField)
 			}
 			return nil, &model.PageInfo{Page: 1, PageSize: 100}, nil
 		},
