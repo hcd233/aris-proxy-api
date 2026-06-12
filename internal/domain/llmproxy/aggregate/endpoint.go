@@ -6,6 +6,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonagg "github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
+	"github.com/samber/mo"
 )
 
 // Endpoint 上游端点聚合根
@@ -74,27 +75,13 @@ func (e *Endpoint) SetTimestamps(createdAt, updatedAt time.Time) {
 	e.updatedAt = updatedAt
 }
 
-// Update 更新 Endpoint 字段（仅非 nil 字段更新）
-func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string, supportChatCompletion, supportResponse, supportMessage *bool) {
-	if name != nil {
-		e.name = *name
-	}
-	if openaiBaseURL != nil {
-		e.openaiBaseURL = *openaiBaseURL
-	}
-	if anthropicBaseURL != nil {
-		e.anthropicBaseURL = *anthropicBaseURL
-	}
-	if apiKey != nil {
-		e.apiKey = *apiKey
-	}
-	if supportChatCompletion != nil {
-		e.supportOpenAIChatCompletion = *supportChatCompletion
-	}
-	if supportResponse != nil {
-		e.supportOpenAIResponse = *supportResponse
-	}
-	if supportMessage != nil {
-		e.supportAnthropicMessage = *supportMessage
-	}
+// Update 更新 Endpoint 字段（仅 Some 字段更新）
+func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey mo.Option[string], supportChatCompletion, supportResponse, supportMessage mo.Option[bool]) {
+	name.ForEach(func(v string) { e.name = v })
+	openaiBaseURL.ForEach(func(v string) { e.openaiBaseURL = v })
+	anthropicBaseURL.ForEach(func(v string) { e.anthropicBaseURL = v })
+	apiKey.ForEach(func(v string) { e.apiKey = v })
+	supportChatCompletion.ForEach(func(v bool) { e.supportOpenAIChatCompletion = v })
+	supportResponse.ForEach(func(v bool) { e.supportOpenAIResponse = v })
+	supportMessage.ForEach(func(v bool) { e.supportAnthropicMessage = v })
 }

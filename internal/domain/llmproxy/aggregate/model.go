@@ -7,6 +7,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonagg "github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/samber/mo"
 )
 
 // Model 模型关联聚合根
@@ -59,18 +60,10 @@ func (m *Model) SetTimestamps(createdAt, updatedAt time.Time) {
 	m.updatedAt = updatedAt
 }
 
-// Update 更新 Model 字段（仅非 nil 字段更新）
-func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint, enabled *bool) {
-	if alias != nil {
-		m.alias = *alias
-	}
-	if model != nil {
-		m.model = *model
-	}
-	if endpointID != nil {
-		m.endpointID = *endpointID
-	}
-	if enabled != nil {
-		m.enabled = *enabled
-	}
+// Update 更新 Model 字段（仅 Some 字段更新）
+func (m *Model) Update(alias mo.Option[vo.EndpointAlias], model mo.Option[string], endpointID mo.Option[uint], enabled mo.Option[bool]) {
+	alias.ForEach(func(v vo.EndpointAlias) { m.alias = v })
+	model.ForEach(func(v string) { m.model = v })
+	endpointID.ForEach(func(v uint) { m.endpointID = v })
+	enabled.ForEach(func(v bool) { m.enabled = v })
 }

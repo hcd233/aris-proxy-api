@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 
+	"github.com/samber/mo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
@@ -25,6 +26,13 @@ func NewUpdateModelHandler(repo llmproxy.ModelRepository) UpdateModelHandler {
 	return &updateModelHandler{repo: repo}
 }
 
+func ptrToOption[T any](ptr *T) mo.Option[T] {
+	if ptr == nil {
+		return mo.None[T]()
+	}
+	return mo.Some(*ptr)
+}
+
 // Handle 执行更新命令
 func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCommand) error {
 	log := logger.WithCtx(ctx)
@@ -36,13 +44,12 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 	}
 	m := mResult.MustGet()
 
-	var aliasPtr *vo.EndpointAlias
+	aliasOpt := mo.None[vo.EndpointAlias]()
 	if cmd.Alias != nil {
-		a := vo.EndpointAlias(*cmd.Alias)
-		aliasPtr = &a
+		aliasOpt = mo.Some(vo.EndpointAlias(*cmd.Alias))
 	}
 
-	m.Update(aliasPtr, cmd.ModelName, cmd.EndpointID, cmd.Enabled)
+	m.Update(aliasOpt, ptrToOption(cmd.ModelName), ptrToOption(cmd.EndpointID), ptrToOption(cmd.Enabled))
 
 	if err := h.repo.Update(ctx, m); err != nil {
 		log.Error("[ModelCommand] Update model failed", zap.Error(err))

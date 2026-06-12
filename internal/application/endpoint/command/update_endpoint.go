@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 
+	"github.com/samber/mo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
@@ -24,6 +25,13 @@ func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) UpdateEndpointHa
 	return &updateEndpointHandler{repo: repo}
 }
 
+func ptrToOption[T any](ptr *T) mo.Option[T] {
+	if ptr == nil {
+		return mo.None[T]()
+	}
+	return mo.Some(*ptr)
+}
+
 // Handle 执行更新命令
 func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error {
 	log := logger.WithCtx(ctx)
@@ -35,7 +43,15 @@ func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpo
 	}
 	ep := epResult.MustGet()
 
-	ep.Update(cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage)
+	ep.Update(
+		ptrToOption(cmd.Name),
+		ptrToOption(cmd.OpenaiBaseURL),
+		ptrToOption(cmd.AnthropicBaseURL),
+		ptrToOption(cmd.APIKey),
+		ptrToOption(cmd.SupportOpenAIChatCompletion),
+		ptrToOption(cmd.SupportOpenAIResponse),
+		ptrToOption(cmd.SupportAnthropicMessage),
+	)
 
 	if err := h.repo.Update(ctx, ep); err != nil {
 		log.Error("[EndpointCommand] Update endpoint failed", zap.Error(err))
