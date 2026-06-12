@@ -556,7 +556,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-muted-foreground">评分</span>
+              <span className="text-[11px] text-muted-foreground">Rating</span>
               {score != null ? (
                 <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums">
                   {score}
@@ -807,7 +807,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
               <span>{new Date(metadata.createdAt).toLocaleString()}</span>
             </div>
-            <span className="hidden text-[11px] text-muted-foreground sm:inline">评分</span>
+            <span className="hidden text-[11px] text-muted-foreground sm:inline">Rating</span>
             {score != null ? (
               <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums">
                 {score}
