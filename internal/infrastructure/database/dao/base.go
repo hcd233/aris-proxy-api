@@ -265,7 +265,7 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 	}
 
 	if param.Sort == "" {
-		param.Sort = enum.SortDesc
+		param.Sort = enum.SortAsc
 	}
 	if param.SortField == "" {
 		param.SortField = constant.FieldID
@@ -275,8 +275,6 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 	}
 	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
-	} else {
-		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: constant.FieldID}, Desc: false})
 	}
 
 	pageInfo = &model.PageInfo{
