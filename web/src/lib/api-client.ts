@@ -392,7 +392,7 @@ class ApiClient {
 
   async listAPIKeys(
     page: number = 1,
-    pageSize: number = 1,
+    pageSize: number = 20,
     query?: string
   ): Promise<ListAPIKeysRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -419,7 +419,7 @@ class ApiClient {
 
   async listEndpoints(
     page: number = 1,
-    pageSize: number = 1,
+    pageSize: number = 20,
     query?: string
   ): Promise<ListEndpointsRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -456,7 +456,7 @@ class ApiClient {
 
   async listModels(
     page: number = 1,
-    pageSize: number = 1,
+    pageSize: number = 20,
     query?: string
   ): Promise<ListModelsRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
