@@ -273,9 +273,7 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 	if !isValidSortField(param.SortField) {
 		param.SortField = ""
 	}
-	if param.Sort != "" && param.SortField != "" {
-		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
-	}
+	sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 
 	pageInfo = &model.PageInfo{
 		Page:     param.Page,
