@@ -23,6 +23,18 @@ done
 synced=0
 skipped=0
 warned=0
+cleaned=0
+
+# Clean up dangling symlinks in target directories that no longer have a source
+for target_dir in $TARGET_DIRS; do
+    for link_path in "$target_dir"/*; do
+        [ -L "$link_path" ] || continue
+        [ -e "$link_path" ] && continue
+        rm "$link_path"
+        printf "$INFO removed dangling symlink %s\n" "${link_path#$REPO_ROOT/}"
+        cleaned=$((cleaned + 1))
+    done
+done
 
 for category in internal external; do
     category_dir="$SOURCE_DIR/$category"
@@ -58,4 +70,4 @@ for skill_path in "$category_dir"/*; do
 done
 done
 
-printf "$PASS skills symlink sync complete: linked=%s skipped=%s warnings=%s\n" "$synced" "$skipped" "$warned"
+printf "$PASS skills symlink sync complete: linked=%s skipped=%s warnings=%s cleaned=%s\n" "$synced" "$skipped" "$warned" "$cleaned"
