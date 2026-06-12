@@ -86,15 +86,19 @@ export default function EndpointsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const fetchEndpoints = useCallback(async (page: number, pageSize: number, query?: string) => {
+    const validSizes = [20, 50, 100];
+    const safeSize = validSizes.includes(pageSize) ? pageSize : 20;
     setLoading(true);
     try {
-      const rsp = await api.listEndpoints(page, pageSize, query);
+      const rsp = await api.listEndpoints(page, safeSize, query);
       setEndpoints(rsp.endpoints ?? []);
       if (rsp.pageInfo) {
         setPageInfo(rsp.pageInfo);
         setPageInputValue(String(rsp.pageInfo.page));
         setPersistedPage(rsp.pageInfo.page);
-        setPersistedPageSize(rsp.pageInfo.pageSize);
+        if (validSizes.includes(rsp.pageInfo.pageSize)) {
+          setPersistedPageSize(rsp.pageInfo.pageSize);
+        }
       }
     } catch {
       toast.error("Failed to load endpoints");
