@@ -146,13 +146,8 @@ func (*AnthropicProtocolConverter) ToOpenAISSEResponse(event dto.AnthropicSSEEve
 // ==================== Internal Helpers ====================
 
 func resolveMaxTokens(req *dto.OpenAIChatCompletionReq) int {
-	if req.MaxCompletionTokens != nil {
-		return *req.MaxCompletionTokens
-	}
-	if req.MaxTokens != nil {
-		return *req.MaxTokens
-	}
-	return 0
+	val, _ := lo.Coalesce(lo.FromPtr(req.MaxCompletionTokens), lo.FromPtr(req.MaxTokens))
+	return val
 }
 
 func resolveStopSequences(stop *dto.OpenAIStopSequence) []string {
@@ -244,24 +239,22 @@ func convertOpenAIUserMessageToAnthropic(msg *dto.OpenAIChatCompletionMessagePar
 }
 
 func convertOpenAIPartsToAnthropicBlocks(parts []*dto.OpenAIChatCompletionContentPart) []*dto.AnthropicContentBlock {
-	var blocks []*dto.AnthropicContentBlock
-	for _, part := range parts {
+	return lo.FilterMap(parts, func(part *dto.OpenAIChatCompletionContentPart, _ int) (*dto.AnthropicContentBlock, bool) {
 		switch part.Type {
 		case enum.ContentPartTypeText:
-			blocks = append(blocks, &dto.AnthropicContentBlock{
+			return &dto.AnthropicContentBlock{
 				Type: enum.AnthropicContentBlockTypeText,
 				Text: part.Text,
-			})
+			}, true
 		case enum.ContentPartTypeImageURL:
-			if part.ImageURL != nil {
-				block := convertOpenAIImageURLToAnthropicBlock(part.ImageURL)
-				blocks = append(blocks, block)
+			if part.ImageURL == nil {
+				return nil, false
 			}
+			return convertOpenAIImageURLToAnthropicBlock(part.ImageURL), true
 		default:
-			continue
+			return nil, false
 		}
-	}
-	return blocks
+	})
 }
 
 func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL) *dto.AnthropicContentBlock {
@@ -383,19 +376,18 @@ func mergeToolResultIntoLastUser(messages []*dto.AnthropicMessageParam, toolResu
 }
 
 func convertOpenAIToolsToAnthropic(tools []dto.OpenAIChatCompletionTool) []*dto.AnthropicTool {
-	anthropicTools := make([]*dto.AnthropicTool, 0, len(tools))
-	for _, tool := range tools {
-		if tool.Function != nil {
-			name := tool.Function.Name
-			anthropicTools = append(anthropicTools, &dto.AnthropicTool{
-				Name:        &name,
-				Description: tool.Function.Description,
-				InputSchema: tool.Function.Parameters,
-				Strict:      tool.Function.Strict,
-			})
+	return lo.FilterMap(tools, func(tool dto.OpenAIChatCompletionTool, _ int) (*dto.AnthropicTool, bool) {
+		if tool.Function == nil {
+			return nil, false
 		}
-	}
-	return anthropicTools
+		name := tool.Function.Name
+		return &dto.AnthropicTool{
+			Name:        &name,
+			Description: tool.Function.Description,
+			InputSchema: tool.Function.Parameters,
+			Strict:      tool.Function.Strict,
+		}, true
+	})
 }
 
 func convertOpenAIToolChoiceToAnthropic(tc *dto.OpenAIChatCompletionToolChoiceParam) *dto.AnthropicToolChoice {

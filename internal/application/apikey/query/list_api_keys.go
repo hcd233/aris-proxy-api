@@ -4,6 +4,7 @@ package query
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
@@ -64,15 +65,14 @@ func (h *listAPIKeysHandler) Handle(ctx context.Context, q port.ListAPIKeysQuery
 		return nil, nil, err
 	}
 
-	views := make([]*port.APIKeyView, 0, len(keys))
-	for _, k := range keys {
-		views = append(views, &port.APIKeyView{
+	views := lo.Map(keys, func(k *aggregate.ProxyAPIKey, _ int) *port.APIKeyView {
+		return &port.APIKeyView{
 			ID:        k.AggregateID(),
 			Name:      k.Name().String(),
 			MaskedKey: k.Secret().Masked(),
 			CreatedAt: k.CreatedAt(),
-		})
-	}
+		}
+	})
 
 	log.Info("[APIKeyQuery] List api keys",
 		zap.Uint("requesterID", q.RequesterID),

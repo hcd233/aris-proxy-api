@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/rand"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -352,15 +353,9 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context) ([]*llmproxy.M
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list model aliases")
 	}
-	seen := make(map[string]struct{})
-	out := make([]*llmproxy.ModelAliasProjection, 0, len(models))
-	for _, m := range models {
-		if _, ok := seen[m.Alias]; ok {
-			continue
-		}
-		seen[m.Alias] = struct{}{}
-		out = append(out, &llmproxy.ModelAliasProjection{Alias: m.Alias})
-	}
+	out := lo.Map(lo.UniqBy(models, func(m *dbmodel.Model) string { return m.Alias }), func(m *dbmodel.Model, _ int) *llmproxy.ModelAliasProjection {
+		return &llmproxy.ModelAliasProjection{Alias: m.Alias}
+	})
 	return out, nil
 }
 

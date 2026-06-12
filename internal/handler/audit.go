@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
@@ -55,9 +56,8 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Logs = make([]*dto.AuditLogItem, 0, len(logs))
-	for _, log := range logs {
-		rsp.Logs = append(rsp.Logs, &dto.AuditLogItem{
+	rsp.Logs = lo.Map(logs, func(log *auditport.AuditLogView, _ int) *dto.AuditLogItem {
+		return &dto.AuditLogItem{
 			ID:                       log.ID,
 			CreatedAt:                log.CreatedAt,
 			Model:                    log.Model,
@@ -77,8 +77,8 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 			APIKeyName:               log.APIKeyName,
 			UserName:                 log.UserName,
 			UserEmail:                log.UserEmail,
-		})
-	}
+		}
+	})
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

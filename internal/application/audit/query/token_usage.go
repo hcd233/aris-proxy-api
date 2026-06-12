@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -82,9 +84,6 @@ func aggregateModelUsage(points []*modelcall.TokenThroughputPoint) []*dto.ModelU
 		t.CacheReadTokens += p.CacheReadTokens
 		t.CacheCreationTokens += p.CacheCreationTokens
 	}
-	items := make([]*dto.ModelUsageItem, 0, len(order))
-	for _, m := range order {
-		items = append(items, totals[m])
-	}
+	items := lo.Map(order, func(m string, _ int) *dto.ModelUsageItem { return totals[m] })
 	return items
 }

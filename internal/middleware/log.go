@@ -47,12 +47,7 @@ var sensitiveHeaders = []string{
 
 // isSensitiveHeader 判断是否为需要掩码的敏感请求头
 func isSensitiveHeader(key string) bool {
-	for _, h := range sensitiveHeaders {
-		if strings.EqualFold(key, h) {
-			return true
-		}
-	}
-	return false
+	return lo.ContainsBy(sensitiveHeaders, func(h string) bool { return strings.EqualFold(key, h) })
 }
 
 func (s *logSampler) shouldLog(path string, interval time.Duration) bool {

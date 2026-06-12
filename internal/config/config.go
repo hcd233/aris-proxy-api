@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/samber/lo"
 	"github.com/spf13/viper"
 )
 
@@ -326,12 +327,9 @@ func initEnvironment() {
 	}
 
 	if raw := config.GetString("trusted.proxies"); raw != "" {
-		parts := strings.Split(raw, ",")
-		TrustedProxies = make([]string, 0, len(parts))
-		for _, p := range parts {
-			if trimmed := strings.TrimSpace(p); trimmed != "" {
-				TrustedProxies = append(TrustedProxies, trimmed)
-			}
-		}
+		TrustedProxies = lo.FilterMap(strings.Split(raw, ","), func(p string, _ int) (string, bool) {
+			trimmed := strings.TrimSpace(p)
+			return trimmed, trimmed != ""
+		})
 	}
 }

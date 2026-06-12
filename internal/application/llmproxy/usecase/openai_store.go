@@ -120,12 +120,12 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenA
 
 	outputMsgs, ok := convertResponseOutput(rsp)
 	if !ok {
-		outputTypes := make([]string, 0, len(rsp.Output))
-		for _, item := range rsp.Output {
-			if item != nil && item.Type != nil {
-				outputTypes = append(outputTypes, *item.Type)
+		outputTypes := lo.FilterMap(rsp.Output, func(item *dto.ResponseInputItem, _ int) (string, bool) {
+			if item == nil || item.Type == nil {
+				return "", false
 			}
-		}
+			return *item.Type, true
+		})
 		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: convertResponseOutput failed",
 			zap.String("responseID", rsp.ID),
 			zap.Int("outputCount", len(rsp.Output)),
@@ -158,12 +158,12 @@ func convertResponseOutput(rsp *dto.OpenAICreateResponseRsp) ([]*vo.UnifiedMessa
 		return nil, false
 	}
 	if len(outputMsgs) == 0 {
-		outputTypes := make([]string, 0, len(rsp.Output))
-		for _, item := range rsp.Output {
-			if item != nil && item.Type != nil {
-				outputTypes = append(outputTypes, *item.Type)
+		outputTypes := lo.FilterMap(rsp.Output, func(item *dto.ResponseInputItem, _ int) (string, bool) {
+			if item == nil || item.Type == nil {
+				return "", false
 			}
-		}
+			return *item.Type, true
+		})
 		log.Warn("[OpenAIUseCase] convertResponseOutput: no storable messages from output",
 			zap.Int("outputCount", len(rsp.Output)),
 			zap.Strings("outputTypes", outputTypes))
@@ -207,13 +207,10 @@ func buildResponseRequestUnifiedMessages(ctx context.Context, req *dto.OpenAICre
 
 // buildResponseUnifiedTools Response API 请求 tools → UnifiedTool
 func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*vo.UnifiedTool {
-	result := make([]*vo.UnifiedTool, 0, len(tools))
-	for _, tool := range tools {
-		if ut := dto.FromResponseAPITool(tool); ut != nil {
-			result = append(result, ut)
-		}
-	}
-	return result
+	return lo.FilterMap(tools, func(tool *dto.ResponseTool, _ int) (*vo.UnifiedTool, bool) {
+		ut := dto.FromResponseAPITool(tool)
+		return ut, ut != nil
+	})
 }
 
 // submitResponseMessageStoreTask Response API 路径统一的消息存储投递

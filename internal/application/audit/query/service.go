@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -106,9 +108,8 @@ func (s *auditService) ListLogs(ctx context.Context, permission enum.Permission,
 }
 
 func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
-	result := make([]*port.AuditLogView, 0, len(views))
-	for _, v := range views {
-		result = append(result, &port.AuditLogView{
+	return lo.Map(views, func(v *AuditLogView, _ int) *port.AuditLogView {
+		return &port.AuditLogView{
 			ID:                       v.ID,
 			CreatedAt:                v.CreatedAt,
 			Model:                    v.Model,
@@ -128,9 +129,8 @@ func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
 			APIKeyName:               v.APIKeyName,
 			UserName:                 v.UserName,
 			UserEmail:                v.UserEmail,
-		})
-	}
-	return result
+		}
+	})
 }
 
 func (s *auditService) ListAuditOption(ctx context.Context, field, keyword string, startTime, endTime time.Time) ([]string, error) {

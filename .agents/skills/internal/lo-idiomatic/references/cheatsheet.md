@@ -19,13 +19,15 @@
 | `FindOrElse` | `FindOrElse[T any]([]T, T, func(T) bool) T` | 查找，未找到返回默认值 |
 | `IndexOf` | `IndexOf[T comparable]([]T, T) int` | 查找索引 |
 | `LastIndexOf` | `LastIndexOf[T comparable]([]T, T) int` | 最后出现的索引 |
-| `Some` | `Some[T any]([]T, func(T, int) bool) bool` | 至少一个满足 |
-| `Every` | `Every[T any]([]T, func(T, int) bool) bool` | 全部满足 |
-| `EveryBy` | `EveryBy[T any]([]T, func(T) bool) bool` | 全部满足（无索引版） |
-| `None` | `None[T any]([]T, func(T, int) bool) bool` | 全部不满足 |
+| `Some` | `Some[T comparable]([]T, []T) bool` | **子集判断**：第二个切片是否有元素在第一个里 |
+| `SomeBy` | `SomeBy[T any]([]T, func(T) bool) bool` | 至少一个满足谓词（无 index） |
+| `Every` | `Every[T comparable]([]T, []T) bool` | **子集判断**：第二个切片是否全部在第一个里 |
+| `EveryBy` | `EveryBy[T any]([]T, func(T) bool) bool` | 全部满足谓词（无 index） |
+| `None` | `None[T comparable]([]T, []T) bool` | **子集判断**：第二个切片是否都不在第一个里 |
+| `NoneBy` | `NoneBy[T any]([]T, func(T) bool) bool` | 全部不满足谓词（无 index） |
 | `GroupBy` | `GroupBy[T any, U comparable]([]T, func(T) U) map[U][]T` | 按键分组 |
 | `Chunk` | `Chunk[T any]([]T, int) [][]T` | 分块 |
-| `Partition` | `Partition[T any]([]T, func(T, int) bool) ([]T, []T)` | 二分区分 |
+| `PartitionBy` | `PartitionBy[T any, K comparable]([]T, func(T) K) [][]T` | 按 key 分区，组顺序=key 首次出现顺序 |
 | `Reverse` | `Reverse[T any]([]T) []T` | 反转（返回新切片） |
 | `Shuffle` | `Shuffle[T any]([]T) []T` | 随机打乱 |
 | `Sample` | `Sample[T any]([]T) T` | 随机取一个 |
@@ -67,8 +69,8 @@
 | `ToPtr` | `ToPtr[T any](T) *T` | 取指针 |
 | `FromPtr` | `FromPtr[T any](*T) T` | 解引用，nil 返回零值 |
 | `FromPtrOr` | `FromPtrOr[T any](*T, T) T` | 解引用，nil 返回默认值 |
-| `Coalesce` | `Coalesce[T any](...T) T` | 第一个非零值 |
-| `CoalesceOrEmpty` | `CoalesceOrEmpty[T any](...*T) *T` | 第一个非 nil 指针 |
+| `Coalesce` | `Coalesce[T comparable](...T) (T, bool)` | 第一个非零值 + 是否找到（两个返回值） |
+| `EmptyableToPtr` | `EmptyableToPtr[T any](T) *T` | 零值返回 nil，否则返回指针 |
 
 ## 错误处理 / Must
 

@@ -15,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/redis/go-redis/v9"
+	"github.com/samber/lo"
 )
 
 // shareRecord 分享记录（存储在 Redis Sorted Set 的 member 中）
@@ -203,25 +204,19 @@ func (s *shareCache) DeleteShare(ctx context.Context, userID uint, shareID strin
 		return ierr.Wrap(ierr.ErrInternal, err, "failed to lookup user shares")
 	}
 
-	found := false
-	var targetMember string
-	var targetRecord shareRecord
-	for _, m := range members {
+	targetMember, found := lo.Find(members, func(m string) bool {
 		var record shareRecord
 		if unmarshalErr := sonic.Unmarshal([]byte(m), &record); unmarshalErr != nil {
-			continue
+			return false
 		}
-		if record.ShareID == shareID {
-			found = true
-			targetMember = m
-			targetRecord = record
-			break
-		}
-	}
-
+		return record.ShareID == shareID
+	})
 	if !found {
 		return ierr.New(ierr.ErrDataNotExists, "share link not found or not owned by user")
 	}
+	var targetRecord shareRecord
+	//nolint:errcheck // already verified by lo.Find predicate above
+	sonic.Unmarshal([]byte(targetMember), &targetRecord)
 
 	sessionSharesKey := fmt.Sprintf(constant.SessionSharesKeyTemplate, targetRecord.SessionID)
 
@@ -319,14 +314,13 @@ func (s *shareCache) collectUserShares(ctx context.Context, userSharesKey, minSc
 			fullyScanned = true
 		}
 
-		records := make([]shareRecord, 0, len(results))
-		for _, result := range results {
+		records := lo.FilterMap(results, func(result string, _ int) (shareRecord, bool) {
 			var record shareRecord
 			if unmarshalErr := sonic.Unmarshal([]byte(result), &record); unmarshalErr != nil {
-				continue
+				return shareRecord{}, false
 			}
-			records = append(records, record)
-		}
+			return record, true
+		})
 
 		if batchErr := s.batchFilterShares(ctx, records, &validItems, now, retentionStart); batchErr != nil {
 			return nil, false, batchErr
@@ -347,13 +341,11 @@ func (s *shareCache) batchFilterShares(ctx context.Context, records []shareRecor
 		return ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
 	}
 
-	for i, r := range records {
+	newItems := lo.FilterMap(records, func(r shareRecord, i int) (*dto.ShareItem, bool) {
 		item := shareRecordToItem(r, existsCmds[i].Val(), now, retentionStart)
-		if item == nil {
-			continue
-		}
-		*validItems = append(*validItems, item)
-	}
+		return item, item != nil
+	})
+	*validItems = append(*validItems, newItems...)
 	return nil
 }
 

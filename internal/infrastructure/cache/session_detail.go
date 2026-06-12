@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
+	"github.com/samber/lo"
 
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -71,10 +72,7 @@ func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (resul
 	if len(ids) == 0 {
 		return map[uint]*sessionport.MessageCacheRecord{}, nil, nil
 	}
-	keys := make([]string, len(ids))
-	for i, id := range ids {
-		keys[i] = fmt.Sprintf(constant.MessageKeyTemplate, id)
-	}
+	keys := lo.Map(ids, func(id uint, _ int) string { return fmt.Sprintf(constant.MessageKeyTemplate, id) })
 	values, err := s.cache.MGet(ctx, keys...).Result()
 	if err != nil {
 		return nil, ids, ierr.Wrap(ierr.ErrInternal, err, "failed to mget messages cache")
@@ -127,10 +125,7 @@ func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (results 
 	if len(ids) == 0 {
 		return map[uint]*sessionport.ToolCacheRecord{}, nil, nil
 	}
-	keys := make([]string, len(ids))
-	for i, id := range ids {
-		keys[i] = fmt.Sprintf(constant.ToolKeyTemplate, id)
-	}
+	keys := lo.Map(ids, func(id uint, _ int) string { return fmt.Sprintf(constant.ToolKeyTemplate, id) })
 	values, err := s.cache.MGet(ctx, keys...).Result()
 	if err != nil {
 		return nil, ids, ierr.Wrap(ierr.ErrInternal, err, "failed to mget tools cache")

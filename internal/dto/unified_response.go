@@ -218,15 +218,15 @@ func fromResponseAPIFunctionCallOutput(item *ResponseInputItem) *vo.UnifiedMessa
 	switch {
 	case out.FunctionOutput != nil:
 		if len(out.FunctionOutput.Parts) > 0 {
-			parts := make([]*vo.UnifiedContentPart, 0, len(out.FunctionOutput.Parts))
-			for _, p := range out.FunctionOutput.Parts {
+			parts := lo.FilterMap(out.FunctionOutput.Parts, func(p *ResponseInputContent, _ int) (*vo.UnifiedContentPart, bool) {
 				if p == nil {
-					continue
+					return nil, false
 				}
-				if p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText {
-					parts = append(parts, &vo.UnifiedContentPart{Type: enum.ContentPartTypeText, Text: lo.FromPtr(p.Text)})
+				if p.Type != enum.ResponseContentTypeInputText && p.Type != enum.ResponseContentTypeOutputText {
+					return nil, false
 				}
-			}
+				return &vo.UnifiedContentPart{Type: enum.ContentPartTypeText, Text: lo.FromPtr(p.Text)}, true
+			})
 			if len(parts) > 0 {
 				um.Content = &vo.UnifiedContent{Parts: parts}
 				return um
@@ -249,18 +249,19 @@ func fromResponseAPIReasoning(item *ResponseInputItem) *vo.UnifiedMessage {
 
 // collectReasoningText 合并 reasoning item 的 summary / content 文本
 func collectReasoningText(item *ResponseInputItem) string {
-	var parts []string
-	for _, s := range item.Summary {
-		if s != nil && s.Text != "" {
-			parts = append(parts, s.Text)
+	summaries := lo.FilterMap(item.Summary, func(s *ResponseReasoningSummary, _ int) (string, bool) {
+		if s == nil || s.Text == "" {
+			return "", false
 		}
-	}
-	for _, c := range item.ReasoningContent {
-		if c != nil && c.Text != "" {
-			parts = append(parts, c.Text)
+		return s.Text, true
+	})
+	contents := lo.FilterMap(item.ReasoningContent, func(c *ResponseReasoningTextContent, _ int) (string, bool) {
+		if c == nil || c.Text == "" {
+			return "", false
 		}
-	}
-	return strings.Join(parts, "\n")
+		return c.Text, true
+	})
+	return strings.Join(append(summaries, contents...), "\n")
 }
 
 // resolveRole 将 Response API 角色字符串解析为 enum.Role，未知值按 user 处理

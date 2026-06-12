@@ -7,6 +7,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
 
@@ -37,13 +38,7 @@ type Result struct {
 //	@author centonhuang
 //	@update 2026-04-28 20:30:34
 func (r Result) ErrorCount() int {
-	count := 0
-	for _, diagnostic := range r.Diagnostics {
-		if diagnostic.Severity == enum.SeverityError {
-			count++
-		}
-	}
-	return count
+	return lo.CountBy(r.Diagnostics, func(d Diagnostic) bool { return d.Severity == enum.SeverityError })
 }
 
 // WarningCount 警告数量
@@ -53,13 +48,7 @@ func (r Result) ErrorCount() int {
 //	@author centonhuang
 //	@update 2026-04-28 20:30:39
 func (r Result) WarningCount() int {
-	count := 0
-	for _, diagnostic := range r.Diagnostics {
-		if diagnostic.Severity == enum.SeverityWarning {
-			count++
-		}
-	}
-	return count
+	return lo.CountBy(r.Diagnostics, func(d Diagnostic) bool { return d.Severity == enum.SeverityWarning })
 }
 
 // Log 使用 zap logger 输出诊断结果，替代 Print 的 fmt 输出。

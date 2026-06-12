@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -67,32 +68,25 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 
 	db := r.db.WithContext(ctx)
 
-	checksums := make([]string, len(messages))
-	for i, m := range messages {
-		checksums[i] = m.Checksum()
-	}
+	checksums := lo.Map(messages, func(m *aggregate.Message, _ int) string { return m.Checksum() })
 
 	existing, err := r.dao.BatchGetByField(db, constant.WhereFieldCheckSum, checksums, messageRepoFieldsChecksum)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by checksum")
 	}
 
-	existingMap := make(map[string]uint, len(existing))
-	for _, m := range existing {
-		existingMap[m.CheckSum] = m.ID
-	}
+	existingMap := lo.SliceToMap(existing, func(m *dbmodel.Message) (string, uint) { return m.CheckSum, m.ID })
 
-	newRecords := make([]*dbmodel.Message, 0, len(messages))
-	for _, m := range messages {
+	newRecords := lo.FilterMap(messages, func(m *aggregate.Message, _ int) (*dbmodel.Message, bool) {
 		if _, ok := existingMap[m.Checksum()]; ok {
-			continue
+			return nil, false
 		}
-		newRecords = append(newRecords, &dbmodel.Message{
+		return &dbmodel.Message{
 			Model:    m.Model(),
 			Message:  m.Content(),
 			CheckSum: m.Checksum(),
-		})
-	}
+		}, true
+	})
 
 	if len(newRecords) > 0 {
 		if err := r.dao.BatchCreate(db, newRecords); err != nil {
@@ -103,13 +97,8 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 		}
 	}
 
-	ids := make([]uint, len(messages))
-	for i, m := range messages {
-		id := existingMap[m.Checksum()]
-		ids[i] = id
-		// 回填聚合 ID（便于后续事件发布或引用）
-		m.SetID(id)
-	}
+	ids := lo.Map(messages, func(m *aggregate.Message, _ int) uint { return existingMap[m.Checksum()] })
+	lo.ForEach(messages, func(m *aggregate.Message, _ int) { m.SetID(existingMap[m.Checksum()]) })
 	return ids, nil
 }
 
@@ -131,10 +120,9 @@ func (r *messageRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggre
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by id")
 	}
-	out := make([]*aggregate.Message, 0, len(records))
-	for _, m := range records {
-		out = append(out, aggregate.RestoreMessage(m.ID, m.Message, m.Model, m.CheckSum))
-	}
+	out := lo.Map(records, func(m *dbmodel.Message, _ int) *aggregate.Message {
+		return aggregate.RestoreMessage(m.ID, m.Message, m.Model, m.CheckSum)
+	})
 	return out, nil
 }
 
@@ -160,10 +148,9 @@ func (r *messageRepository) FindThinkExtractCandidates(ctx context.Context, afte
 	if err := query.Order(constant.DBOrderByID).Limit(limit).Find(&records).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query think extract messages")
 	}
-	out := make([]*conversation.ThinkExtractMessage, 0, len(records))
-	for _, record := range records {
-		out = append(out, &conversation.ThinkExtractMessage{ID: record.ID, Message: record.Message})
-	}
+	out := lo.Map(records, func(record *dbmodel.Message, _ int) *conversation.ThinkExtractMessage {
+		return &conversation.ThinkExtractMessage{ID: record.ID, Message: record.Message}
+	})
 	return out, nil
 }
 

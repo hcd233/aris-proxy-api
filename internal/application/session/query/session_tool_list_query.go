@@ -77,32 +77,31 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q sessionport.List
 			return nil, ierr.Wrap(ierr.ErrDBQuery, repoErr, "find tools by ids")
 		}
 
-		fetched := make([]*sessionport.ToolCacheRecord, 0, len(records))
-		for _, t := range records {
-			rec := &sessionport.ToolCacheRecord{
+		fetched := lo.Map(records, func(t *session.ToolDetailProjection, _ int) *sessionport.ToolCacheRecord {
+			return &sessionport.ToolCacheRecord{
 				ID:        t.ID,
 				Tool:      t.Tool,
 				CreatedAt: t.CreatedAt,
 			}
-			hits[t.ID] = rec
-			fetched = append(fetched, rec)
-		}
+		})
+		hits = lo.Assign(hits, lo.SliceToMap(fetched, func(rec *sessionport.ToolCacheRecord) (uint, *sessionport.ToolCacheRecord) {
+			return rec.ID, rec
+		}))
 		if setErr := h.cache.SetTools(ctx, fetched); setErr != nil {
 			log.Warn("[SessionQuery] SetTools cache failed", zap.Error(setErr))
 		}
 	}
 
-	views := make([]*sessionport.ToolView, 0, len(pageIDs))
-	for _, id := range pageIDs {
+	views := lo.FilterMap(pageIDs, func(id uint, _ int) (*sessionport.ToolView, bool) {
 		rec, ok := hits[id]
 		if !ok {
-			continue
+			return nil, false
 		}
-		views = append(views, &sessionport.ToolView{
+		return &sessionport.ToolView{
 			ID:        rec.ID,
 			Tool:      rec.Tool,
 			CreatedAt: rec.CreatedAt,
-		})
-	}
+		}, true
+	})
 	return &sessionport.ListSessionToolsResult{Tools: views, Total: total}, nil
 }

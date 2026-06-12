@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
@@ -81,9 +82,8 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Endpoints = make([]*dto.EndpointItem, 0, len(views))
-	for _, v := range views {
-		rsp.Endpoints = append(rsp.Endpoints, &dto.EndpointItem{
+	rsp.Endpoints = lo.Map(views, func(v *port.EndpointView, _ int) *dto.EndpointItem {
+		return &dto.EndpointItem{
 			ID:                          v.ID,
 			Name:                        v.Name,
 			OpenaiBaseURL:               v.OpenaiBaseURL,
@@ -94,8 +94,8 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 			SupportAnthropicMessage:     v.SupportAnthropicMessage,
 			CreatedAt:                   v.CreatedAt,
 			UpdatedAt:                   v.UpdatedAt,
-		})
-	}
+		}
+	})
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

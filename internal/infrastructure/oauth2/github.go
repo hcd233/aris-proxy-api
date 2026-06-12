@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
@@ -126,11 +128,8 @@ func (p *githubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	}
 
 	// 选择主邮箱
-	for _, email := range emails {
-		if email.Primary {
-			userInfo.Email = email.Email
-			break
-		}
+	if primary, found := lo.Find(emails, func(e GithubEmail) bool { return e.Primary }); found {
+		userInfo.Email = primary.Email
 	}
 
 	return vo.NewOAuthUserInfo(

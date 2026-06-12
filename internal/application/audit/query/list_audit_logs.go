@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
@@ -221,23 +222,13 @@ func (h *listAuditLogsByUserHandler) Handle(ctx context.Context, q ListAuditLogs
 }
 
 func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits []*aggregate.ModelCallAudit) ([]*AuditLogView, error) {
-	apiKeyIDs := make([]uint, 0, len(audits))
-	seen := make(map[uint]bool, len(audits))
-	for _, audit := range audits {
-		id := audit.APIKeyID()
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		apiKeyIDs = append(apiKeyIDs, id)
-	}
+	apiKeyIDs := lo.Uniq(lo.Map(audits, func(audit *aggregate.ModelCallAudit, _ int) uint { return audit.APIKeyID() }))
 	relations, err := repo.BatchGetRelations(ctx, apiKeyIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	views := make([]*AuditLogView, 0, len(audits))
-	for _, audit := range audits {
+	views := lo.Map(audits, func(audit *aggregate.ModelCallAudit, _ int) *AuditLogView {
 		view := &AuditLogView{
 			ID:                       audit.AggregateID(),
 			CreatedAt:                audit.CreatedAt(),
@@ -261,7 +252,7 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			view.UserName = relation.UserName
 			view.UserEmail = relation.UserEmail
 		}
-		views = append(views, view)
-	}
+		return view
+	})
 	return views, nil
 }

@@ -8,6 +8,8 @@ import (
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"gorm.io/gorm"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
@@ -38,9 +40,8 @@ func (dao *SessionDAO) FindAllForPurge(db *gorm.DB, softDeleted bool) ([]Session
 	if err := query.Find(&models).Error; err != nil {
 		return nil, err
 	}
-	views := make([]SessionPurgeView, len(models))
-	for i, m := range models {
-		views[i] = SessionPurgeView{ID: m.ID, MessageIDs: m.MessageIDs, ToolIDs: m.ToolIDs}
-	}
+	views := lo.Map(models, func(m *dbmodel.Session, _ int) SessionPurgeView {
+		return SessionPurgeView{ID: m.ID, MessageIDs: m.MessageIDs, ToolIDs: m.ToolIDs}
+	})
 	return views, nil
 }

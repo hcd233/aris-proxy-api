@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/samber/lo"
+
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
@@ -37,12 +39,9 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 	}
 
 	if q.Keyword != "" {
-		filtered := make([]string, 0, len(items))
-		for _, item := range items {
-			if strings.Contains(item, q.Keyword) {
-				filtered = append(filtered, item)
-			}
-		}
+		filtered := lo.Filter(items, func(item string, _ int) bool {
+			return strings.Contains(item, q.Keyword)
+		})
 		return filtered, nil
 	}
 

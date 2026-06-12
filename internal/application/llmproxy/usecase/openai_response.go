@@ -103,12 +103,12 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 				} else {
 					finalResponse = ev.Response
 					if finalResponse != nil {
-						outputTypes := make([]string, 0, len(finalResponse.Output))
-						for _, item := range finalResponse.Output {
-							if item != nil {
-								outputTypes = append(outputTypes, lo.FromPtr(item.Type))
+						outputTypes := lo.FilterMap(finalResponse.Output, func(item *dto.ResponseInputItem, _ int) (string, bool) {
+							if item == nil {
+								return "", false
 							}
-						}
+							return lo.FromPtr(item.Type), true
+						})
 						log.Info("[OpenAIUseCase] Native response terminal event parsed",
 							zap.String("event", event),
 							zap.String("responseID", finalResponse.ID),

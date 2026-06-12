@@ -3,12 +3,14 @@ package query
 import (
 	"context"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -36,9 +38,8 @@ func (h *listEndpointsHandler) Handle(ctx context.Context, q port.ListEndpointsQ
 		return nil, nil, err
 	}
 
-	views := make([]*port.EndpointView, 0, len(endpoints))
-	for _, ep := range endpoints {
-		views = append(views, &port.EndpointView{
+	views := lo.Map(endpoints, func(ep *aggregate.Endpoint, _ int) *port.EndpointView {
+		return &port.EndpointView{
 			ID:                          ep.AggregateID(),
 			Name:                        ep.Name(),
 			OpenaiBaseURL:               ep.OpenaiBaseURL(),
@@ -49,8 +50,8 @@ func (h *listEndpointsHandler) Handle(ctx context.Context, q port.ListEndpointsQ
 			SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 			CreatedAt:                   ep.CreatedAt(),
 			UpdatedAt:                   ep.UpdatedAt(),
-		})
-	}
+		}
+	})
 
 	log.Info("[EndpointQuery] List endpoints", zap.Int("count", len(views)))
 	return views, pageInfo, nil

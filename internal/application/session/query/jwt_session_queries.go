@@ -216,24 +216,22 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 		}
 	}
 
-	messages := make([]*sessionport.MessageView, 0, len(detail.Messages))
-	for _, m := range detail.Messages {
-		messages = append(messages, &sessionport.MessageView{
+	messages := lo.Map(detail.Messages, func(m *session.MessageDetailProjection, _ int) *sessionport.MessageView {
+		return &sessionport.MessageView{
 			ID:        m.ID,
 			Model:     m.Model,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
-		})
-	}
+		}
+	})
 
-	tools := make([]*sessionport.ToolView, 0, len(detail.Tools))
-	for _, t := range detail.Tools {
-		tools = append(tools, &sessionport.ToolView{
+	tools := lo.Map(detail.Tools, func(t *session.ToolDetailProjection, _ int) *sessionport.ToolView {
+		return &sessionport.ToolView{
 			ID:        t.ID,
 			Tool:      t.Tool,
 			CreatedAt: t.CreatedAt,
-		})
-	}
+		}
+	})
 
 	return &sessionport.SessionDetailView{
 		ID:         detail.ID,

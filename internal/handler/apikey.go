@@ -5,6 +5,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
@@ -120,15 +121,14 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIK
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	rsp.Keys = make([]*dto.APIKeyItem, 0, len(views))
-	for _, v := range views {
-		rsp.Keys = append(rsp.Keys, &dto.APIKeyItem{
+	rsp.Keys = lo.Map(views, func(v *port.APIKeyView, _ int) *dto.APIKeyItem {
+		return &dto.APIKeyItem{
 			ID:        v.ID,
 			Name:      v.Name,
 			Key:       v.MaskedKey,
 			CreatedAt: v.CreatedAt,
-		})
-	}
+		}
+	})
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

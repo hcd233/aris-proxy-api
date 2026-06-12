@@ -1,11 +1,9 @@
 ---
 name: lo-idiomatic
 description: |
-  使用 samber/lo 泛型工具库简化 Go 代码风格，替代手写 for 循环、if 判断和样板代码。
-  在编写或审查 Go 代码时自动加载此 skill，识别可以用 lo 简化的冗长模式，并给出惯用写法。
-  当用户进行 Go 开发、编写或审查 Go 代码、重构冗长的切片/Map/指针/错误处理逻辑时，
-  或提到 "lo"、"samber/lo"、"简化代码"、"Go 泛型工具" 时触发。
-  即使用户没有显式提到 lo，只要你在写 Go 代码且发现有冗长的 for+if 模式，就应该主动应用此 skill。
+  编写或审查 Go 代码时使用，识别可用 samber/lo 泛型工具替代的冗长模式：
+  手写 for range 循环、if+append 过滤、make(map[..]) 切片/Map 互转、指针 nil 判断与解引用、
+  初始化 if err != nil panic、去重、集合差集/交集、分组、Map 合并等，并给出 lo 惯用写法。
 ---
 
 # lo-idiomatic: 用 samber/lo 写出惯用 Go 代码
@@ -134,7 +132,7 @@ onlyInA, onlyInB := lo.Difference(a, b)  // A-B, B-A
 common := lo.Intersect(a, b)              // A∩B
 ```
 
-### 8. 查找/判断：手写循环 → lo.Contains / lo.Find / lo.Some / lo.Every
+### 8. 查找/判断：手写循环 → lo.Contains / lo.Find / lo.SomeBy / lo.EveryBy
 
 ```go
 // ❌ 冗长
@@ -149,15 +147,17 @@ for _, s := range items {
 // ✅ 惯用
 found := lo.Contains(items, target)
 
-// 按条件查找
+// 按条件查找（谓词无 index）
 user, ok := lo.Find(users, func(u User) bool { return u.ID == id })
 
-// 至少一个满足
-hasAdmin := lo.Some(users, func(u User, _ int) bool { return u.Role == "admin" })
+// 至少一个满足（谓词版是 SomeBy，谓词无 index）
+hasAdmin := lo.SomeBy(users, func(u User) bool { return u.Role == "admin" })
 
-// 全部满足
+// 全部满足（谓词版是 EveryBy，谓词无 index）
 allActive := lo.EveryBy(users, func(u User) bool { return u.Active })
 ```
+
+> 注意：`lo.Some` / `lo.Every` / `lo.None`（不带 `By`）是**子集判断**——判断一个切片是否被另一个切片包含，签名是 `([]T, []T) bool`，**不接受谓词**。按条件判断必须用谓词版 `SomeBy` / `EveryBy` / `NoneBy`，且它们的回调**只有 `(item)`，没有 index**。
 
 ### 9. 指针零值处理：if nil → lo.FromPtr / lo.ToPtr / lo.Coalesce
 
@@ -174,8 +174,11 @@ name := lo.FromPtr(req.Name)
 // 反向：取指针
 model := lo.ToPtr("gpt-4o")
 
-// 链式回退：第一个非零值
-val := lo.Coalesce(ptr1, ptr2, lo.ToPtr("default"))
+// nil 时给默认值（FromPtrOr，避免零值与"未设置"混淆）
+limit := lo.FromPtrOr(req.Limit, 20)
+
+// 链式回退：返回第一个非零值 + 是否找到（注意是两个返回值，且按"非零值"而非"非 nil"判断）
+val, ok := lo.Coalesce(s1, s2, "default")
 ```
 
 ### 10. 初始化必须成功：if err != nil { panic } → lo.Must
@@ -266,18 +269,71 @@ result := lo.If(cond1, val1).
     Else(defaultVal)
 ```
 
-### 15. 分区：两次 Filter → lo.Partition
+### 15. 多路分区：多个 Filter → lo.PartitionBy
 
 ```go
-// ❌ 两次遍历
-active := lo.Filter(users, func(u User, _ int) bool { return u.Active })
-inactive := lo.Filter(users, func(u User, _ int) bool { return !u.Active })
+// ❌ 每个分类写一个 Filter，多次遍历
+pending := lo.Filter(orders, func(o Order, _ int) bool { return o.Status == "pending" })
+paid    := lo.Filter(orders, func(o Order, _ int) bool { return o.Status == "paid" })
 
-// ✅ 一次遍历
-active, inactive := lo.Partition(users, func(u User, _ int) bool { return u.Active })
+// ✅ 一次遍历，按字段分区，返回 [][]Order
+//    组的顺序 = 各 key 首次出现的顺序（不是固定的"pending 在前"）
+parts := lo.PartitionBy(orders, func(o Order) string { return o.Status })
 ```
 
-## 链式调用指南
+> `lo` v1.39 没有返回 `(matched, unmatched)` 的 `Partition`。简单的布尔二分用 `lo.GroupBy` 更直观：
+> `g := lo.GroupBy(users, func(u User) bool { return u.Active }); active, inactive := g[true], g[false]`。
+
+## 常见陷阱
+
+这些是用 `lo` 时最容易写错、编译报错或行为不符预期的点。
+
+### 陷阱 1：回调签名带不带 index 不统一（最高频）
+
+`lo` 的回调签名并不一致，写错会直接编译失败：
+
+- **带 `index`**：`Map` / `Filter` / `FilterMap` / `FlatMap` / `Reject` / `ForEach`，回调是 `func(item T, index int) ...`
+- **不带 `index`**：所有 `XxxBy` 谓词（`FindBy`/`SomeBy`/`EveryBy`/`NoneBy`/`UniqBy`/`GroupBy`/`KeyBy`/`CountBy`/`PartitionBy`…）以及 `SliceToMap` / `Find` / `ContainsBy`，回调是 `func(item T) ...`
+
+```go
+lo.Filter(xs, func(x T, _ int) bool { ... })  // ✅ 带 index
+lo.SomeBy(xs, func(x T) bool { ... })          // ✅ 不带 index
+lo.SomeBy(xs, func(x T, _ int) bool { ... })   // ❌ 编译错误
+```
+
+**口诀**：只有 `Map/Filter/FilterMap/FlatMap/Reject/ForEach` 带 `index`，其余谓词都只有 `(item)`。
+
+### 陷阱 2：Some/Every/None 不是谓词函数
+
+`lo.Some` / `lo.Every` / `lo.None`（不带 `By`）是**子集判断**，签名 `([]T, []T) bool`，判断切片间的包含关系。按条件判断必须用 `SomeBy` / `EveryBy` / `NoneBy`。
+
+### 陷阱 3：lo.Ternary 两个分支都会求值
+
+`lo.Ternary(cond, a, b)` 是普通函数调用，`a` 和 `b` **都会先求值**再选一个。如果分支有副作用、开销大、或可能 panic（如对 nil 解引用），必须用延迟求值的 `lo.TernaryF`。
+
+```go
+// ❌ 即使 user 为 nil，user.Name 也会被求值 → panic
+name := lo.Ternary(user != nil, user.Name, "anonymous")
+
+// ✅ 延迟求值
+name := lo.TernaryF(user != nil, func() string { return user.Name }, func() string { return "anonymous" })
+```
+
+### 陷阱 4：返回多值的函数别漏接
+
+- `lo.Difference(a, b)` 返回**两个**值 `(A-B, B-A)`，只要差集也要写 `onlyInA, _ := ...`。
+- `lo.Coalesce(...)` 返回 `(T, bool)`，第二个值表示是否找到非零值。
+- `lo.Find(...)` 返回 `(T, bool)`，务必检查第二个返回值再用结果。
+
+### 陷阱 5：lo.Keys / lo.Values 顺序不保证
+
+它们遍历 map，顺序是**随机**的。需要稳定输出时要对结果再排序（如 `slices.Sort`），不要假设顺序与插入一致。
+
+### 陷阱 6：lo.FromPtr 把 nil 和零值混为一谈
+
+`lo.FromPtr(nil)` 返回类型零值，无法区分"指针为 nil"和"指针指向零值"。当默认值不是零值、或需要区分"未设置"时，用 `lo.FromPtrOr(ptr, fallback)`。
+
+
 
 `lo` 函数可以链式组合，但注意可读性：
 

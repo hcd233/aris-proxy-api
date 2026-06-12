@@ -5,6 +5,8 @@ import (
 	"maps"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
@@ -69,14 +71,7 @@ func CreateSession(owner vo.APIKeyOwner, messageIDs, toolIDs []uint, metadata ma
 //	@param ids []uint
 //	@return bool
 func hasDuplicateIDs(ids []uint) bool {
-	seen := make(map[uint]struct{}, len(ids))
-	for _, id := range ids {
-		if _, exists := seen[id]; exists {
-			return true
-		}
-		seen[id] = struct{}{}
-	}
-	return false
+	return len(lo.Uniq(ids)) < len(ids)
 }
 
 // RestoreSession 从仓储重建聚合

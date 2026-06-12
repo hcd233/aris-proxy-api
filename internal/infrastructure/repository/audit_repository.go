@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -182,9 +183,8 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime
 
 // BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error) {
-	relations := make(map[uint]*modelcall.AuditRelation, len(apiKeyIDs))
 	if len(apiKeyIDs) == 0 {
-		return relations, nil
+		return map[uint]*modelcall.AuditRelation{}, nil
 	}
 
 	db := r.db.WithContext(ctx)
@@ -193,16 +193,10 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get proxy api keys")
 	}
 
-	userIDs := make([]uint, 0, len(keys))
-	seenUserIDs := make(map[uint]bool, len(keys))
-	for _, key := range keys {
-		relations[key.ID] = &modelcall.AuditRelation{APIKeyID: key.ID, APIKeyName: key.Name, UserID: key.UserID}
-		if seenUserIDs[key.UserID] {
-			continue
-		}
-		seenUserIDs[key.UserID] = true
-		userIDs = append(userIDs, key.UserID)
-	}
+	relations := lo.SliceToMap(keys, func(key *dbmodel.ProxyAPIKey) (uint, *modelcall.AuditRelation) {
+		return key.ID, &modelcall.AuditRelation{APIKeyID: key.ID, APIKeyName: key.Name, UserID: key.UserID}
+	})
+	userIDs := lo.Uniq(lo.Map(keys, func(key *dbmodel.ProxyAPIKey, _ int) uint { return key.UserID }))
 	if len(userIDs) == 0 {
 		return relations, nil
 	}
@@ -211,10 +205,7 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get users")
 	}
-	userByID := make(map[uint]*dbmodel.User, len(users))
-	for _, user := range users {
-		userByID[user.ID] = user
-	}
+	userByID := lo.SliceToMap(users, func(user *dbmodel.User) (uint, *dbmodel.User) { return user.ID, user })
 	for _, relation := range relations {
 		if user, ok := userByID[relation.UserID]; ok {
 			relation.UserName = user.Name
@@ -262,8 +253,7 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate audit logs")
 	}
 
-	audits := make([]*aggregate.ModelCallAudit, 0, len(records))
-	for _, rec := range records {
+	audits := lo.Map(records, func(rec *dbmodel.ModelCallAudit, _ int) *aggregate.ModelCallAudit {
 		a := aggregate.ReconstructAudit(aggregate.ReconstructAuditInput{
 			APIKeyID:         rec.APIKeyID,
 			ModelID:          rec.ModelID,
@@ -279,8 +269,8 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 			CreatedAt:        rec.CreatedAt,
 		})
 		a.SetID(rec.ID)
-		audits = append(audits, a)
-	}
+		return a
+	})
 	return audits, pageInfo, nil
 }
 
