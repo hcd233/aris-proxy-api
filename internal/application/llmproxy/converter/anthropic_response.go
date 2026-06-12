@@ -201,32 +201,28 @@ func resolveResponseAPIRole(role string) string {
 
 // convertResponseContentPartsToAnthropicBlocks 将 Response API content parts 转换为 Anthropic content blocks
 func convertResponseContentPartsToAnthropicBlocks(parts []*dto.ResponseInputContent) []*dto.AnthropicContentBlock {
-	var blocks []*dto.AnthropicContentBlock
-	for _, p := range parts {
+	return lo.FilterMap(parts, func(p *dto.ResponseInputContent, _ int) (*dto.AnthropicContentBlock, bool) {
 		if p == nil {
-			continue
+			return nil, false
 		}
 		switch p.Type {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
-			if p.Text != nil {
-				blocks = append(blocks, &dto.AnthropicContentBlock{
-					Type: enum.AnthropicContentBlockTypeText,
-					Text: p.Text,
-				})
+			if p.Text == nil {
+				return nil, false
 			}
+			return &dto.AnthropicContentBlock{
+				Type: enum.AnthropicContentBlockTypeText,
+				Text: p.Text,
+			}, true
 		case enum.ResponseContentTypeInputImage:
-			block := &dto.AnthropicContentBlock{
+			return &dto.AnthropicContentBlock{
 				Type:   enum.AnthropicContentBlockTypeImage,
 				Source: buildImageSource(p.ImageURL),
-			}
-			blocks = append(blocks, block)
-		case enum.ResponseContentTypeRefusal:
-			// refusal 暂时忽略（Anthropic 不支持）
+			}, true
 		default:
-			// 其他类型忽略
+			return nil, false
 		}
-	}
-	return blocks
+	})
 }
 
 // buildImageSource 根据图片 URL 构建 Anthropic content source

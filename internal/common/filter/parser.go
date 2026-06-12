@@ -261,19 +261,16 @@ type valueMapResolved struct {
 }
 
 func resolveValueMapValues(values []string, valueMap map[string]*string) []valueMapResolved {
-	resolved := make([]valueMapResolved, 0, len(values))
-	for _, raw := range values {
-		if mapped, ok := valueMap[raw]; ok {
-			if mapped == nil {
-				resolved = append(resolved, valueMapResolved{isNull: true})
-			} else {
-				resolved = append(resolved, valueMapResolved{value: *mapped})
-			}
-		} else {
-			resolved = append(resolved, valueMapResolved{value: raw})
+	return lo.Map(values, func(raw string, _ int) valueMapResolved {
+		mapped, ok := valueMap[raw]
+		if !ok {
+			return valueMapResolved{value: raw}
 		}
-	}
-	return resolved
+		if mapped == nil {
+			return valueMapResolved{isNull: true}
+		}
+		return valueMapResolved{value: *mapped}
+	})
 }
 
 // buildValueMapCondition 处理含 ValueMap 的字段，支持单值与多值（含 NULL 项混合）

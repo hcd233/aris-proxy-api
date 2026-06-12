@@ -314,14 +314,13 @@ func (s *shareCache) collectUserShares(ctx context.Context, userSharesKey, minSc
 			fullyScanned = true
 		}
 
-		records := make([]shareRecord, 0, len(results))
-		for _, result := range results {
+		records := lo.FilterMap(results, func(result string, _ int) (shareRecord, bool) {
 			var record shareRecord
 			if unmarshalErr := sonic.Unmarshal([]byte(result), &record); unmarshalErr != nil {
-				continue
+				return shareRecord{}, false
 			}
-			records = append(records, record)
-		}
+			return record, true
+		})
 
 		if batchErr := s.batchFilterShares(ctx, records, &validItems, now, retentionStart); batchErr != nil {
 			return nil, false, batchErr
@@ -342,13 +341,11 @@ func (s *shareCache) batchFilterShares(ctx context.Context, records []shareRecor
 		return ierr.Wrap(ierr.ErrInternal, pipeErr, "failed to batch check share keys")
 	}
 
-	for i, r := range records {
+	newItems := lo.FilterMap(records, func(r shareRecord, i int) (*dto.ShareItem, bool) {
 		item := shareRecordToItem(r, existsCmds[i].Val(), now, retentionStart)
-		if item == nil {
-			continue
-		}
-		*validItems = append(*validItems, item)
-	}
+		return item, item != nil
+	})
+	*validItems = append(*validItems, newItems...)
 	return nil
 }
 
