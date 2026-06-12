@@ -37,12 +37,8 @@ func (c *ResponseProtocolConverter) FromResponseRequest(req *dto.OpenAICreateRes
 	if req.MaxOutputTokens != nil {
 		chatReq.MaxCompletionTokens = lo.ToPtr(int(*req.MaxOutputTokens))
 	}
-	if req.PromptCacheRetention != nil {
-		chatReq.PromptCacheRetention = *req.PromptCacheRetention
-	}
-	if req.ServiceTier != nil {
-		chatReq.ServiceTier = *req.ServiceTier
-	}
+	chatReq.PromptCacheRetention = lo.FromPtr(req.PromptCacheRetention)
+	chatReq.ServiceTier = lo.FromPtr(req.ServiceTier)
 	if req.Reasoning != nil && req.Reasoning.Effort != nil {
 		chatReq.ReasoningEffort = *req.Reasoning.Effort
 	}
@@ -137,10 +133,10 @@ func responseInputToChatMessages(req *dto.OpenAICreateResponseReq) []*dto.OpenAI
 		}
 		return messages
 	}
-	for _, item := range req.Input.Items {
-		chatMsgs := responseInputItemToChatMessages(item)
-		messages = append(messages, chatMsgs...)
-	}
+	chatMsgs := lo.Flatten(lo.Map(req.Input.Items, func(item *dto.ResponseInputItem, _ int) []*dto.OpenAIChatCompletionMessageParam {
+		return responseInputItemToChatMessages(item)
+	}))
+	messages = append(messages, chatMsgs...)
 	return messages
 }
 

@@ -511,13 +511,10 @@ func processTerminalToolCallSession(s *dbmodel.Session, sessions []*dbmodel.Sess
 		return
 	}
 
-	parentToolIDSet := make(map[uint]struct{})
-	for _, tid := range sessionByID[parentID].ToolIDs {
-		parentToolIDSet[tid] = struct{}{}
-	}
-	for _, tid := range s.ToolIDs {
-		parentToolIDSet[tid] = struct{}{}
-	}
+	parentToolIDSet := lo.Assign(
+		lo.SliceToMap(sessionByID[parentID].ToolIDs, func(tid uint) (uint, struct{}) { return tid, struct{}{} }),
+		lo.SliceToMap(s.ToolIDs, func(tid uint) (uint, struct{}) { return tid, struct{}{} }),
+	)
 	result.MergeMapping[parentID] = parentToolIDSet
 }
 

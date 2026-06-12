@@ -176,11 +176,7 @@ func encodeFields(fields []zapcore.Field) map[string]string {
 		f.AddTo(enc)
 	}
 
-	result := make(map[string]string, len(enc.Fields))
-	for k, v := range enc.Fields {
-		result[k] = valueToString(v)
-	}
-	return result
+	return lo.MapValues(enc.Fields, func(v any, _ string) string { return valueToString(v) })
 }
 
 // valueToString 将任意值转换为字符串表示。

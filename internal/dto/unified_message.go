@@ -48,8 +48,7 @@ func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*vo.UnifiedMessag
 
 	// 转换 OpenAI ToolCalls -> UnifiedToolCall
 	if len(msg.ToolCalls) > 0 {
-		um.ToolCalls = make([]*vo.UnifiedToolCall, 0, len(msg.ToolCalls))
-		for _, tc := range msg.ToolCalls {
+		um.ToolCalls = lo.Map(msg.ToolCalls, func(tc *OpenAIChatCompletionMessageToolCall, _ int) *vo.UnifiedToolCall {
 			utc := &vo.UnifiedToolCall{}
 			if tc.ID != nil {
 				utc.ID = *tc.ID
@@ -61,8 +60,8 @@ func FromOpenAIMessage(msg *OpenAIChatCompletionMessageParam) (*vo.UnifiedMessag
 				utc.Name = tc.Custom.Name
 				utc.Arguments = tc.Custom.Input
 			}
-			um.ToolCalls = append(um.ToolCalls, utc)
-		}
+			return utc
+		})
 	}
 
 	return um, nil

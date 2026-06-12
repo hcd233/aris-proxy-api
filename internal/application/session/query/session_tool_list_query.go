@@ -84,7 +84,9 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q sessionport.List
 				CreatedAt: t.CreatedAt,
 			}
 		})
-		lo.ForEach(fetched, func(rec *sessionport.ToolCacheRecord, _ int) { hits[rec.ID] = rec })
+		hits = lo.Assign(hits, lo.SliceToMap(fetched, func(rec *sessionport.ToolCacheRecord) (uint, *sessionport.ToolCacheRecord) {
+			return rec.ID, rec
+		}))
 		if setErr := h.cache.SetTools(ctx, fetched); setErr != nil {
 			log.Warn("[SessionQuery] SetTools cache failed", zap.Error(setErr))
 		}

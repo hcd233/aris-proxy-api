@@ -77,20 +77,20 @@ func (cs *choiceState) mergeDelta(choice *dto.OpenAIChatCompletionChunkChoice) {
 	if cs.role == "" && choice.Delta.Role != "" {
 		cs.role = choice.Delta.Role
 	}
-	if choice.Delta.Content != nil && *choice.Delta.Content != "" {
-		cs.contentParts = append(cs.contentParts, *choice.Delta.Content)
+	if v := lo.FromPtr(choice.Delta.Content); v != "" {
+		cs.contentParts = append(cs.contentParts, v)
 	}
-	if choice.Delta.ReasoningContent != nil && *choice.Delta.ReasoningContent != "" {
-		cs.reasoningContentParts = append(cs.reasoningContentParts, *choice.Delta.ReasoningContent)
+	if v := lo.FromPtr(choice.Delta.ReasoningContent); v != "" {
+		cs.reasoningContentParts = append(cs.reasoningContentParts, v)
 	}
-	if choice.Delta.Refusal != nil && *choice.Delta.Refusal != "" {
-		cs.refusalParts = append(cs.refusalParts, *choice.Delta.Refusal)
+	if v := lo.FromPtr(choice.Delta.Refusal); v != "" {
+		cs.refusalParts = append(cs.refusalParts, v)
 	}
 	for _, tc := range choice.Delta.ToolCalls {
 		cs.mergeToolCallDelta(tc)
 	}
-	if choice.FinishReason != nil && *choice.FinishReason != "" {
-		cs.finishReason = *choice.FinishReason
+	if v := lo.FromPtr(choice.FinishReason); v != "" {
+		cs.finishReason = v
 	}
 	if choice.Logprobs != nil {
 		if cs.logprobs == nil {

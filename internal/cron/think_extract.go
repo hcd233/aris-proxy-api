@@ -20,6 +20,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
 
@@ -194,12 +195,10 @@ func extractAndRemoveThinkTags(text string) (thinking, remaining string) {
 		return "", text
 	}
 
-	var innerParts []string
-	for _, m := range matches {
-		if trimmed := strings.TrimSpace(m[1]); trimmed != "" {
-			innerParts = append(innerParts, trimmed)
-		}
-	}
+	innerParts := lo.FilterMap(matches, func(m []string, _ int) (string, bool) {
+		trimmed := strings.TrimSpace(m[1])
+		return trimmed, trimmed != ""
+	})
 
 	modified := thinkRegexp.ReplaceAllString(text, "")
 	return strings.Join(innerParts, "\n"), strings.TrimSpace(modified)

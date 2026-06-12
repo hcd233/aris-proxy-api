@@ -85,7 +85,9 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q sessionport.L
 				CreatedAt: m.CreatedAt,
 			}
 		})
-		lo.ForEach(fetched, func(rec *sessionport.MessageCacheRecord, _ int) { hits[rec.ID] = rec })
+		hits = lo.Assign(hits, lo.SliceToMap(fetched, func(rec *sessionport.MessageCacheRecord) (uint, *sessionport.MessageCacheRecord) {
+			return rec.ID, rec
+		}))
 		if setErr := h.cache.SetMessages(ctx, fetched); setErr != nil {
 			log.Warn("[SessionQuery] SetMessages cache failed", zap.Error(setErr))
 		}

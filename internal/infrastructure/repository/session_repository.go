@@ -288,9 +288,8 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	// 这是合理 fallback：page > 1 且数据缩水的边界情况罕见，前端遇到 total=0 退化为
 	// "no results" 视图，比为了准确性多打一次 COUNT 划得来。
 
-	out := make([]*session.SessionSummaryProjection, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, &session.SessionSummaryProjection{
+	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
+		return &session.SessionSummaryProjection{
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
@@ -298,8 +297,8 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
-		})
-	}
+		}
+	})
 	return out, pageInfo, nil
 }
 
@@ -353,9 +352,8 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 		pageInfo.Total = rows[0].TotalCount
 	}
 
-	out := make([]*session.SessionSummaryProjection, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, &session.SessionSummaryProjection{
+	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
+		return &session.SessionSummaryProjection{
 			ID:           row.ID,
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
@@ -363,8 +361,8 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
-		})
-	}
+		}
+	})
 	return out, pageInfo, nil
 }
 

@@ -51,11 +51,7 @@ func TruncateFieldValue(val string, maxLen int) string {
 //	@author centonhuang
 //	@update 2026-04-09 15:00:00
 func TruncateMapValues(m map[string]any, maxLen int) map[string]any {
-	result := make(map[string]any, len(m))
-	for k, v := range m {
-		result[k] = truncateValue(v, maxLen)
-	}
-	return result
+	return lo.MapValues(m, func(v any, _ string) any { return truncateValue(v, maxLen) })
 }
 
 func truncateValue(val any, maxLen int) any {
@@ -84,10 +80,10 @@ func ExtractMessageText(c *vo.UnifiedContent) string {
 	if c.Text != "" {
 		return c.Text
 	}
-	for _, p := range c.Parts {
-		if p.Type == enum.ContentPartTypeText && p.Text != "" {
-			return p.Text
-		}
+	if part, found := lo.Find(c.Parts, func(p *vo.UnifiedContentPart) bool {
+		return p.Type == enum.ContentPartTypeText && p.Text != ""
+	}); found {
+		return part.Text
 	}
 	return ""
 }

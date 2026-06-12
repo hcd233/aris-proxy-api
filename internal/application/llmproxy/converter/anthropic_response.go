@@ -26,9 +26,7 @@ func (*AnthropicProtocolConverter) FromResponseAPIRequest(req *dto.OpenAICreateR
 	}
 
 	// 转换 max_tokens
-	if req.MaxOutputTokens != nil {
-		anthropicReq.MaxTokens = int(*req.MaxOutputTokens)
-	}
+	anthropicReq.MaxTokens = int(lo.FromPtr(req.MaxOutputTokens))
 
 	// 转换 temperature/top_p
 	anthropicReq.Temperature = req.Temperature
