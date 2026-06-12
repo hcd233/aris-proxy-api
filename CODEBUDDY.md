@@ -240,6 +240,12 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - **生产配置更新 / api.env / K8s ConfigMap**：使用 `update-prod-config`；SSH 到 `api.lvlvko.top` 修改配置，禁止使用裸 IP 地址。
 - **发布 / 部署**：推送到 `master` 或合并 PR 到 `master` 自动触发 `docker-publish.yml` 构建镜像并部署到 K8s；不需要额外手动部署步骤。
 - **写或改 `internal/dto/**` / 新增 huma 路由 / 排查 "field 总是零值" 类问题**：使用 `huma-dto-conventions`；它沉淀了 huma 的 path/query/body 绑定规则、Body 包装模板、响应 unwrap 行为和反模式速查。
+- **编写 Go 代码**：使用 `golang-code-style`（代码风格）、`golang-naming`（命名规范）、`golang-modernize`（现代 Go 特性）、`golang-design-patterns`（设计模式）。
+- **修改 `go.uber.org/fx` 相关代码**：使用 `golang-uber-fx`。
+- **修改 `github.com/spf13/cobra` 相关代码**：使用 `golang-spf13-cobra`。
+- **修改 `github.com/spf13/viper` 相关代码**：使用 `golang-spf13-viper`。
+- **使用 `github.com/samber/lo` 函数式编程**：使用 `golang-samber-lo`。
+- **使用 `github.com/samber/mo` Monadic 类型**：使用 `golang-samber-mo`。
 - 专项流程细节放在对应 skill，主文档只保留触发条件和项目级硬约束。
 
 ## 3. 项目模型
