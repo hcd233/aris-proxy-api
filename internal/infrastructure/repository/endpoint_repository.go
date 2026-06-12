@@ -6,6 +6,7 @@ import (
 	"math/rand"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -30,16 +31,17 @@ func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
 }
 
 // FindByID 按 ID 查询端点
-func (r *endpointRepository) FindByID(ctx context.Context, id uint) (*aggregate.Endpoint, error) {
+func (r *endpointRepository) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.Endpoint] {
 	db := r.db.WithContext(ctx)
 	ep, err := r.endpointDAO.Get(db, &dbmodel.Endpoint{ID: id}, constant.EndpointRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return mo.Err[*aggregate.Endpoint](ierr.New(ierr.ErrDataNotExists, "endpoint not found"))
 		}
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find endpoint by id")
+		return mo.Err[*aggregate.Endpoint](ierr.Wrap(ierr.ErrDBQuery, err, "find endpoint by id"))
 	}
-	return toEndpointAggregate(ep)
+	v, convErr := toEndpointAggregate(ep)
+	return mo.TupleToResult(v, convErr)
 }
 
 // BatchFindByIDs 按 ID 集合一次性查询端点，返回以 ID 索引的 map；ids 为空时返回空 map 且不打 SQL。
@@ -228,16 +230,17 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 }
 
 // FindByID 按 ID 查询模型
-func (r *modelRepository) FindByID(ctx context.Context, id uint) (*aggregate.Model, error) {
+func (r *modelRepository) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.Model] {
 	db := r.db.WithContext(ctx)
 	m, err := r.dao.Get(db, &dbmodel.Model{ID: id}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return mo.Err[*aggregate.Model](ierr.New(ierr.ErrDataNotExists, "model not found"))
 		}
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find model by id")
+		return mo.Err[*aggregate.Model](ierr.Wrap(ierr.ErrDBQuery, err, "find model by id"))
 	}
-	return toModelAggregate(m)
+	v, convErr := toModelAggregate(m)
+	return mo.TupleToResult(v, convErr)
 }
 
 // Create 创建模型

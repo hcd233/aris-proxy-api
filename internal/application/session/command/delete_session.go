@@ -42,16 +42,13 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 	result := &port.DeleteSessionResult{}
 
 	for _, id := range cmd.SessionIDs {
-		sess, err := h.repo.FindByID(ctx, id)
-		if err != nil {
-			log.Error("[SessionCommand] Delete: FindByID failed", zap.Error(err), zap.Uint("sessionID", id))
+		sessResult := h.repo.FindByID(ctx, id)
+		if sessResult.IsError() {
+			log.Error("[SessionCommand] Delete: FindByID failed", zap.Error(sessResult.Error()), zap.Uint("sessionID", id))
 			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorFindFailed})
 			continue
 		}
-		if sess == nil {
-			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorNotFound})
-			continue
-		}
+		sess := sessResult.MustGet()
 
 		if !isAdmin {
 			owner := sess.Owner()

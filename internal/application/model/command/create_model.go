@@ -33,13 +33,9 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 	log := logger.WithCtx(ctx)
 
 	// Verify endpoint exists
-	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID)
-	if err != nil {
-		log.Error("[ModelCommand] Find endpoint for model creation failed", zap.Error(err))
-		return nil, err
-	}
-	if ep == nil {
-		return nil, ierr.New(ierr.ErrDataNotExists, "endpoint not found")
+	if epResult := h.endpointRepo.FindByID(ctx, cmd.EndpointID); epResult.IsError() {
+		log.Error("[ModelCommand] Find endpoint for model creation failed", zap.Error(epResult.Error()))
+		return nil, epResult.Error()
 	}
 
 	m, err := aggregate.CreateModel(0, vo.EndpointAlias(cmd.Alias), cmd.ModelName, cmd.EndpointID, true)

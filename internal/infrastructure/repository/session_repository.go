@@ -99,16 +99,16 @@ func applyScore(record *dbmodel.Session, s mo.Option[vo.SessionScore]) {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func (r *sessionRepository) FindByID(ctx context.Context, id uint) (*aggregate.Session, error) {
+func (r *sessionRepository) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.Session] {
 	db := r.db.WithContext(ctx)
 	record, err := r.dao.Get(db, &dbmodel.Session{ID: id}, constant.SessionRepoFieldsDetail)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return mo.Err[*aggregate.Session](ierr.New(ierr.ErrDataNotExists, "session not found"))
 		}
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get session by id")
+		return mo.Err[*aggregate.Session](ierr.Wrap(ierr.ErrDBQuery, err, "get session by id"))
 	}
-	return toSessionAggregate(record), nil
+	return mo.Ok(toSessionAggregate(record))
 }
 
 // Paginate 按 owner 分页查询会话列表（对齐原 service.ListSessions 字段/排序）

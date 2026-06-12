@@ -20,8 +20,8 @@ import (
 type SessionRepository interface {
 	// Save 持久化聚合（首次 Save 后回填 ID）
 	Save(ctx context.Context, session *aggregate.Session) error
-	// FindByID 按 ID 查询；未找到返回 (nil, nil)
-	FindByID(ctx context.Context, id uint) (*aggregate.Session, error)
+	// FindByID 按 ID 查询；未找到返回 ErrDataNotExists
+	FindByID(ctx context.Context, id uint) mo.Result[*aggregate.Session]
 	// Paginate 按 owner 分页查询（用于 List 接口）
 	Paginate(ctx context.Context, owner string, param PageParam) ([]*aggregate.Session, *model.PageInfo, error)
 	// Delete 软删除（标记 deleted_at）

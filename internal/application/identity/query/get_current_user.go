@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -43,14 +42,12 @@ func NewGetCurrentUserHandler(repo identity.UserRepository) GetCurrentUserHandle
 func (h *getCurrentUserHandler) Handle(ctx context.Context, q port.GetCurrentUserQuery) (*port.UserView, error) {
 	log := logger.WithCtx(ctx)
 
-	user, err := h.repo.FindByID(ctx, q.UserID)
-	if err != nil {
-		log.Error("[IdentityQuery] FindByID failed", zap.Error(err), zap.Uint("userID", q.UserID))
-		return nil, err
+	userResult := h.repo.FindByID(ctx, q.UserID)
+	if userResult.IsError() {
+		log.Error("[IdentityQuery] FindByID failed", zap.Error(userResult.Error()), zap.Uint("userID", q.UserID))
+		return nil, userResult.Error()
 	}
-	if user == nil {
-		return nil, ierr.New(ierr.ErrDataNotExists, "user not found")
-	}
+	user := userResult.MustGet()
 	return &port.UserView{
 		ID:         user.AggregateID(),
 		Name:       user.Name().String(),

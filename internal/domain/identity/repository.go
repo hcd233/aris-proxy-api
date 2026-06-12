@@ -4,6 +4,8 @@ package identity
 import (
 	"context"
 
+	"github.com/samber/mo"
+
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 )
 
@@ -14,12 +16,12 @@ import (
 type UserRepository interface {
 	// Save 持久化聚合（首次 Save 后回填 ID）
 	Save(ctx context.Context, user *aggregate.User) error
-	// FindByID 按 ID 查询；未找到返回 (nil, nil)
-	FindByID(ctx context.Context, id uint) (*aggregate.User, error)
+	// FindByID 按 ID 查询；未找到返回 ErrDataNotExists
+	FindByID(ctx context.Context, id uint) mo.Result[*aggregate.User]
 	// FindByGithubBindID 按 github 绑定 ID 查询
-	FindByGithubBindID(ctx context.Context, bindID string) (*aggregate.User, error)
+	FindByGithubBindID(ctx context.Context, bindID string) mo.Result[*aggregate.User]
 	// FindByGoogleBindID 按 google 绑定 ID 查询
-	FindByGoogleBindID(ctx context.Context, bindID string) (*aggregate.User, error)
+	FindByGoogleBindID(ctx context.Context, bindID string) mo.Result[*aggregate.User]
 	// TouchLastLogin 仅更新指定用户的 last_login 字段为当前时间
 	// 提供此方法的原因：OAuth2 回调登录只需更新登录时间，避免全字段 Save
 	// 导致 name/email/avatar/permission 的意外覆盖。

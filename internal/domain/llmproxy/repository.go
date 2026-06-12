@@ -3,6 +3,8 @@ package llmproxy
 import (
 	"context"
 
+	"github.com/samber/mo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -10,7 +12,7 @@ import (
 
 // EndpointRepository Endpoint 聚合根仓储接口
 type EndpointRepository interface {
-	FindByID(ctx context.Context, id uint) (*aggregate.Endpoint, error)
+	FindByID(ctx context.Context, id uint) mo.Result[*aggregate.Endpoint]
 	BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.Endpoint, error)
 	Create(ctx context.Context, endpoint *aggregate.Endpoint) (uint, error)
 	Update(ctx context.Context, endpoint *aggregate.Endpoint) error
@@ -22,7 +24,7 @@ type EndpointRepository interface {
 // ModelRepository Model 聚合根仓储接口
 type ModelRepository interface {
 	FindByAlias(ctx context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error)
-	FindByID(ctx context.Context, id uint) (*aggregate.Model, error)
+	FindByID(ctx context.Context, id uint) mo.Result[*aggregate.Model]
 	Create(ctx context.Context, model *aggregate.Model) (uint, error)
 	Update(ctx context.Context, model *aggregate.Model) error
 	Delete(ctx context.Context, id uint) error

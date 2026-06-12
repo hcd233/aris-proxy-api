@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/mo"
 
 	xoauth2 "golang.org/x/oauth2"
 
@@ -130,9 +131,9 @@ func (p *stubPlatform) GetUserInfo(ctx context.Context, token *xoauth2.Token) (v
 
 // stubUserRepo 模拟用户仓储
 type stubUserRepo struct {
-	findByID           func(ctx context.Context, id uint) (*aggregate.User, error)
-	findByGithubBindID func(ctx context.Context, bindID string) (*aggregate.User, error)
-	findByGoogleBindID func(ctx context.Context, bindID string) (*aggregate.User, error)
+	findByID           func(ctx context.Context, id uint) mo.Result[*aggregate.User]
+	findByGithubBindID func(ctx context.Context, bindID string) mo.Result[*aggregate.User]
+	findByGoogleBindID func(ctx context.Context, bindID string) mo.Result[*aggregate.User]
 	save               func(ctx context.Context, user *aggregate.User) error
 	touchLastLogin     func(ctx context.Context, userID uint) error
 }
@@ -141,25 +142,25 @@ func newStubUserRepo() *stubUserRepo {
 	return &stubUserRepo{}
 }
 
-func (r *stubUserRepo) FindByID(ctx context.Context, id uint) (*aggregate.User, error) {
+func (r *stubUserRepo) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.User] {
 	if r.findByID != nil {
 		return r.findByID(ctx, id)
 	}
-	return nil, nil
+	return mo.Err[*aggregate.User](ierr.New(ierr.ErrDataNotExists, "user not found"))
 }
 
-func (r *stubUserRepo) FindByGithubBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
+func (r *stubUserRepo) FindByGithubBindID(ctx context.Context, bindID string) mo.Result[*aggregate.User] {
 	if r.findByGithubBindID != nil {
 		return r.findByGithubBindID(ctx, bindID)
 	}
-	return nil, nil
+	return mo.Err[*aggregate.User](ierr.New(ierr.ErrDataNotExists, "user not found by github bind id"))
 }
 
-func (r *stubUserRepo) FindByGoogleBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
+func (r *stubUserRepo) FindByGoogleBindID(ctx context.Context, bindID string) mo.Result[*aggregate.User] {
 	if r.findByGoogleBindID != nil {
 		return r.findByGoogleBindID(ctx, bindID)
 	}
-	return nil, nil
+	return mo.Err[*aggregate.User](ierr.New(ierr.ErrDataNotExists, "user not found by google bind id"))
 }
 
 func (r *stubUserRepo) Save(ctx context.Context, user *aggregate.User) error {
@@ -309,7 +310,7 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 	createdAt, _ := tc.StubExistingUser.CreatedAtTime()
 
 	repo := newStubUserRepo()
-	repo.findByGithubBindID = func(_ context.Context, ghBindID string) (*aggregate.User, error) {
+	repo.findByGithubBindID = func(_ context.Context, ghBindID string) mo.Result[*aggregate.User] {
 		if ghBindID == bindID {
 			user := aggregate.RestoreUser(
 				uint(existingUserID),
@@ -322,9 +323,9 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 				bindID,
 				"",
 			)
-			return user, nil
+			return mo.Ok(user)
 		}
-		return nil, nil
+		return mo.Err[*aggregate.User](ierr.New(ierr.ErrDataNotExists, "user not found"))
 	}
 
 	touchCalled := false

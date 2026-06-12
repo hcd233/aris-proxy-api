@@ -4,6 +4,8 @@ package apikey
 import (
 	"context"
 
+	"github.com/samber/mo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 )
@@ -17,8 +19,8 @@ import (
 type APIKeyRepository interface {
 	// Save 新建或更新聚合根（首次 Save 后回填 ID）
 	Save(ctx context.Context, key *aggregate.ProxyAPIKey) error
-	// FindByID 按 ID 查询聚合；未找到返回 (nil, nil)
-	FindByID(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error)
+	// FindByID 按 ID 查询聚合；未找到返回 ErrDataNotExists
+	FindByID(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey]
 	// ListByUser 查询指定用户的 Key 列表
 	ListByUser(ctx context.Context, userID uint) ([]*aggregate.ProxyAPIKey, error)
 	// ListAll 查询所有 Key（admin 视图）

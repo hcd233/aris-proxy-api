@@ -7,9 +7,11 @@ package command
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
+	"github.com/samber/mo"
 	"go.uber.org/zap"
 	xoauth2 "golang.org/x/oauth2"
 
@@ -250,20 +252,20 @@ func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName st
 	thirdPartyID := userInfo.ID()
 	userName, email, avatar := userInfo.Name(), userInfo.Email(), userInfo.Avatar()
 
-	existing, err := h.findByBindID(ctx, platformName, thirdPartyID)
-	if err != nil {
-		log.Error("[OAuth2Command] Failed to find user by third party bind id",
-			zap.String("platform", platformName), zap.String("thirdPartyID", thirdPartyID), zap.Error(err))
-		return 0, false, err
-	}
-
-	if existing != nil {
+	existingResult := h.findByBindID(ctx, platformName, thirdPartyID)
+	if existingResult.IsOk() {
+		existing := existingResult.MustGet()
 		if err := h.userRepo.TouchLastLogin(ctx, existing.AggregateID()); err != nil {
 			log.Error("[OAuth2Command] Failed to update user login time",
 				zap.String("platform", platformName), zap.Error(err))
 			return 0, false, err
 		}
 		return existing.AggregateID(), false, nil
+	}
+	if !errors.Is(existingResult.Error(), ierr.ErrDataNotExists) {
+		log.Error("[OAuth2Command] Failed to find user by third party bind id",
+			zap.String("platform", platformName), zap.String("thirdPartyID", thirdPartyID), zap.Error(existingResult.Error()))
+		return 0, false, existingResult.Error()
 	}
 
 	if validateErr := util.ValidateUserName(userName); validateErr != nil {
@@ -338,14 +340,14 @@ func (h *handleCallbackHandler) signTokenPair(ctx context.Context, userID uint) 
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
-func (h *handleCallbackHandler) findByBindID(ctx context.Context, platform, bindID string) (*identityaggregate.User, error) {
+func (h *handleCallbackHandler) findByBindID(ctx context.Context, platform, bindID string) mo.Result[*identityaggregate.User] {
 	switch platform {
 	case enum.Oauth2PlatformGithub:
 		return h.userRepo.FindByGithubBindID(ctx, bindID)
 	case enum.Oauth2PlatformGoogle:
 		return h.userRepo.FindByGoogleBindID(ctx, bindID)
 	default:
-		return nil, ierr.New(ierr.ErrBadRequest, "invalid oauth platform")
+		return mo.Err[*identityaggregate.User](ierr.New(ierr.ErrBadRequest, "invalid oauth platform"))
 	}
 }
 

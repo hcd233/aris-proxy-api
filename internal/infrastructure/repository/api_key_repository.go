@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -75,16 +76,17 @@ func (r *apiKeyRepository) Save(ctx context.Context, key *aggregate.ProxyAPIKey)
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func (r *apiKeyRepository) FindByID(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
+func (r *apiKeyRepository) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
 	db := r.db.WithContext(ctx)
 	record, err := r.dao.Get(db, &dbmodel.ProxyAPIKey{ID: id}, constant.ProxyAPIKeyRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return mo.Err[*aggregate.ProxyAPIKey](ierr.New(ierr.ErrDataNotExists, "api key not found"))
 		}
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get api key by id")
+		return mo.Err[*aggregate.ProxyAPIKey](ierr.Wrap(ierr.ErrDBQuery, err, "get api key by id"))
 	}
-	return toAPIKeyAggregate(record)
+	v, convErr := toAPIKeyAggregate(record)
+	return mo.TupleToResult(v, convErr)
 }
 
 // ListByUser 查询用户持有的 Key 列表

@@ -56,14 +56,9 @@ func (h *refreshTokensHandler) Handle(ctx context.Context, cmd port.RefreshToken
 		return nil, ierr.Wrap(ierr.ErrJWTDecode, err, "decode refresh token")
 	}
 
-	user, err := h.repo.FindByID(ctx, userID)
-	if err != nil {
-		log.Error("[IdentityCommand] FindByID failed", zap.Error(err), zap.Uint("userID", userID))
-		return nil, err
-	}
-	if user == nil {
-		log.Warn("[IdentityCommand] User not found during refresh", zap.Uint("userID", userID))
-		return nil, ierr.New(ierr.ErrDataNotExists, "user not found")
+	if userResult := h.repo.FindByID(ctx, userID); userResult.IsError() {
+		log.Error("[IdentityCommand] FindByID failed", zap.Error(userResult.Error()), zap.Uint("userID", userID))
+		return nil, userResult.Error()
 	}
 
 	access, err := h.access.EncodeToken(userID)

@@ -54,15 +54,12 @@ func NewRevokeAPIKeyHandler(repo apikey.APIKeyRepository) RevokeAPIKeyHandler {
 func (h *revokeAPIKeyHandler) Handle(ctx context.Context, cmd port.RevokeAPIKeyCommand) error {
 	log := logger.WithCtx(ctx)
 
-	key, err := h.repo.FindByID(ctx, cmd.KeyID)
-	if err != nil {
-		log.Error("[APIKeyCommand] FindByID failed", zap.Error(err), zap.Uint("keyID", cmd.KeyID))
-		return err
+	keyResult := h.repo.FindByID(ctx, cmd.KeyID)
+	if keyResult.IsError() {
+		log.Error("[APIKeyCommand] FindByID failed", zap.Error(keyResult.Error()), zap.Uint("keyID", cmd.KeyID))
+		return keyResult.Error()
 	}
-	if key == nil {
-		log.Warn("[APIKeyCommand] API key not found", zap.Uint("keyID", cmd.KeyID))
-		return ierr.New(ierr.ErrDataNotExists, "api key not found")
-	}
+	key := keyResult.MustGet()
 
 	if cmd.RequesterPermission != enum.PermissionAdmin && !key.IsOwnedBy(cmd.RequesterID) {
 		log.Warn("[APIKeyCommand] No permission to revoke api key",

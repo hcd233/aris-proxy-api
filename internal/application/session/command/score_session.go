@@ -30,15 +30,12 @@ type scoreSessionHandler struct {
 func (h *scoreSessionHandler) Handle(ctx context.Context, cmd port.ScoreSessionCommand) (*time.Time, error) {
 	log := logger.WithCtx(ctx)
 
-	sess, err := h.repo.FindByID(ctx, cmd.SessionID)
-	if err != nil {
-		log.Error("[SessionCommand] Score: FindByID failed", zap.Error(err), zap.Uint("sessionID", cmd.SessionID))
-		return nil, err
+	sessResult := h.repo.FindByID(ctx, cmd.SessionID)
+	if sessResult.IsError() {
+		log.Error("[SessionCommand] Score: FindByID failed", zap.Error(sessResult.Error()), zap.Uint("sessionID", cmd.SessionID))
+		return nil, sessResult.Error()
 	}
-	if sess == nil {
-		log.Warn("[SessionCommand] Score: Session not found", zap.Uint("sessionID", cmd.SessionID))
-		return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
-	}
+	sess := sessResult.MustGet()
 
 	if cmd.RequesterPermission != enum.PermissionAdmin {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.RequesterID)
@@ -85,15 +82,12 @@ type deleteScoreSessionHandler struct {
 func (h *deleteScoreSessionHandler) Handle(ctx context.Context, cmd port.DeleteScoreSessionCommand) error {
 	log := logger.WithCtx(ctx)
 
-	sess, err := h.repo.FindByID(ctx, cmd.SessionID)
-	if err != nil {
-		log.Error("[SessionCommand] DeleteScore: FindByID failed", zap.Error(err), zap.Uint("sessionID", cmd.SessionID))
-		return err
+	sessResult := h.repo.FindByID(ctx, cmd.SessionID)
+	if sessResult.IsError() {
+		log.Error("[SessionCommand] DeleteScore: FindByID failed", zap.Error(sessResult.Error()), zap.Uint("sessionID", cmd.SessionID))
+		return sessResult.Error()
 	}
-	if sess == nil {
-		log.Warn("[SessionCommand] DeleteScore: Session not found", zap.Uint("sessionID", cmd.SessionID))
-		return ierr.New(ierr.ErrDataNotExists, "session not found")
-	}
+	sess := sessResult.MustGet()
 
 	if cmd.RequesterPermission != enum.PermissionAdmin {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.RequesterID)

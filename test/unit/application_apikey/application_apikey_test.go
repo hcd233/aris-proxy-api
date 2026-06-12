@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/mo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -45,8 +47,8 @@ func (m *mockAPIKeyRepository) Save(ctx context.Context, key *aggregate.ProxyAPI
 	return nil
 }
 
-func (m *mockAPIKeyRepository) FindByID(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-	return nil, nil
+func (m *mockAPIKeyRepository) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+	return mo.Err[*aggregate.ProxyAPIKey](ierr.New(ierr.ErrDataNotExists, "not found"))
 }
 
 func (m *mockAPIKeyRepository) ListByUser(ctx context.Context, userID uint) ([]*aggregate.ProxyAPIKey, error) {
@@ -410,7 +412,7 @@ func nowTime() time.Time {
 
 // mockRevokeAPIKeyRepository mock Repository for revoke tests
 type mockRevokeAPIKeyRepository struct {
-	findByIDFunc func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error)
+	findByIDFunc func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey]
 	deleteFunc   func(ctx context.Context, id uint) error
 	deleteCalled bool
 }
@@ -419,11 +421,11 @@ func (m *mockRevokeAPIKeyRepository) Save(ctx context.Context, key *aggregate.Pr
 	return nil
 }
 
-func (m *mockRevokeAPIKeyRepository) FindByID(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
+func (m *mockRevokeAPIKeyRepository) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
 	if m.findByIDFunc != nil {
 		return m.findByIDFunc(ctx, id)
 	}
-	return nil, nil
+	return mo.Err[*aggregate.ProxyAPIKey](ierr.New(ierr.ErrDataNotExists, "not found"))
 }
 
 func (m *mockRevokeAPIKeyRepository) ListByUser(ctx context.Context, userID uint) ([]*aggregate.ProxyAPIKey, error) {
@@ -466,8 +468,8 @@ func (m *mockRevokeAPIKeyRepository) PaginateAll(ctx context.Context, param mode
 func TestRevokeAPIKeyHandler_OwnerSuccess(t *testing.T) {
 	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
-		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(101, "my-key", "sk-aris-test", nowTime()), nil
+		findByIDFunc: func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+			return mo.Ok(restoreProxyAPIKeyForTest(101, "my-key", "sk-aris-test", nowTime()))
 		},
 	}
 
@@ -491,8 +493,8 @@ func TestRevokeAPIKeyHandler_OwnerSuccess(t *testing.T) {
 func TestRevokeAPIKeyHandler_AdminSuccess(t *testing.T) {
 	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
-		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(999, "other-key", "sk-aris-other", nowTime()), nil
+		findByIDFunc: func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+			return mo.Ok(restoreProxyAPIKeyForTest(999, "other-key", "sk-aris-other", nowTime()))
 		},
 	}
 
@@ -513,8 +515,8 @@ func TestRevokeAPIKeyHandler_AdminSuccess(t *testing.T) {
 func TestRevokeAPIKeyHandler_NotFound(t *testing.T) {
 	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
-		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return nil, nil // not found
+		findByIDFunc: func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+			return mo.Err[*aggregate.ProxyAPIKey](ierr.New(ierr.ErrDataNotExists, "not found"))
 		},
 	}
 
@@ -538,8 +540,8 @@ func TestRevokeAPIKeyHandler_NotFound(t *testing.T) {
 func TestRevokeAPIKeyHandler_NoPermission(t *testing.T) {
 	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
-		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(999, "other-key", "sk-aris-other", nowTime()), nil
+		findByIDFunc: func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+			return mo.Ok(restoreProxyAPIKeyForTest(999, "other-key", "sk-aris-other", nowTime()))
 		},
 	}
 
@@ -563,8 +565,8 @@ func TestRevokeAPIKeyHandler_NoPermission(t *testing.T) {
 func TestRevokeAPIKeyHandler_LegacyKeyNoPermission(t *testing.T) {
 	t.Parallel()
 	repo := &mockRevokeAPIKeyRepository{
-		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(0, "legacy-key", "sk-aris-legacy", nowTime()), nil
+		findByIDFunc: func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+			return mo.Ok(restoreProxyAPIKeyForTest(0, "legacy-key", "sk-aris-legacy", nowTime()))
 		},
 	}
 
@@ -589,8 +591,8 @@ func TestRevokeAPIKeyHandler_RepoError(t *testing.T) {
 	t.Parallel()
 	repoErr := ierr.New(ierr.ErrInternal, "database error")
 	repo := &mockRevokeAPIKeyRepository{
-		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return nil, repoErr
+		findByIDFunc: func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+			return mo.Err[*aggregate.ProxyAPIKey](repoErr)
 		},
 	}
 
@@ -615,8 +617,8 @@ func TestRevokeAPIKeyHandler_DeleteError(t *testing.T) {
 	t.Parallel()
 	deleteErr := ierr.New(ierr.ErrInternal, "delete failed")
 	repo := &mockRevokeAPIKeyRepository{
-		findByIDFunc: func(ctx context.Context, id uint) (*aggregate.ProxyAPIKey, error) {
-			return restoreProxyAPIKeyForTest(101, "my-key", "sk-aris-test", nowTime()), nil
+		findByIDFunc: func(ctx context.Context, id uint) mo.Result[*aggregate.ProxyAPIKey] {
+			return mo.Ok(restoreProxyAPIKeyForTest(101, "my-key", "sk-aris-test", nowTime()))
 		},
 		deleteFunc: func(ctx context.Context, id uint) error {
 			return deleteErr

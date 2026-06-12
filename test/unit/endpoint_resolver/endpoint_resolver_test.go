@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/mo"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -71,8 +72,8 @@ func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) (
 	}
 }
 
-func (s *stubModelRepo) FindByID(_ context.Context, _ uint) (*aggregate.Model, error) {
-	return nil, nil
+func (s *stubModelRepo) FindByID(_ context.Context, _ uint) mo.Result[*aggregate.Model] {
+	return mo.Err[*aggregate.Model](ierr.New(ierr.ErrDataNotExists, "not found"))
 }
 
 func (s *stubModelRepo) Create(_ context.Context, _ *aggregate.Model) (uint, error) {
@@ -103,12 +104,13 @@ type stubEndpointRepo struct {
 	findByIDCalled bool
 }
 
-func (s *stubEndpointRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
+func (s *stubEndpointRepo) FindByID(_ context.Context, id uint) mo.Result[*aggregate.Endpoint] {
 	s.findByIDCalled = true
 	if id == 0 {
-		return nil, nil
+		return mo.Err[*aggregate.Endpoint](ierr.New(ierr.ErrDataNotExists, "not found"))
 	}
-	return aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true)
+	ep, _ := aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true)
+	return mo.Ok(ep)
 }
 
 func (s *stubEndpointRepo) BatchFindByIDs(_ context.Context, _ []uint) (map[uint]*aggregate.Endpoint, error) {
@@ -143,8 +145,8 @@ func (s *staticModelRepo) FindByAlias(_ context.Context, _ vo.EndpointAlias) ([]
 	return s.models, nil
 }
 
-func (s *staticModelRepo) FindByID(_ context.Context, _ uint) (*aggregate.Model, error) {
-	return nil, nil
+func (s *staticModelRepo) FindByID(_ context.Context, _ uint) mo.Result[*aggregate.Model] {
+	return mo.Err[*aggregate.Model](ierr.New(ierr.ErrDataNotExists, "not found"))
 }
 
 func (s *staticModelRepo) Create(_ context.Context, _ *aggregate.Model) (uint, error) {
@@ -175,8 +177,12 @@ type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
 }
 
-func (s *endpointByIDRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
-	return s.endpoints[id], nil
+func (s *endpointByIDRepo) FindByID(_ context.Context, id uint) mo.Result[*aggregate.Endpoint] {
+	ep, ok := s.endpoints[id]
+	if !ok {
+		return mo.Err[*aggregate.Endpoint](ierr.New(ierr.ErrDataNotExists, "not found"))
+	}
+	return mo.Ok(ep)
 }
 
 func (s *endpointByIDRepo) BatchFindByIDs(_ context.Context, ids []uint) (map[uint]*aggregate.Endpoint, error) {

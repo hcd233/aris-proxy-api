@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -50,15 +49,12 @@ func NewUpdateProfileHandler(repo identity.UserRepository) UpdateProfileHandler 
 func (h *updateProfileHandler) Handle(ctx context.Context, cmd port.UpdateProfileCommand) error {
 	log := logger.WithCtx(ctx)
 
-	user, err := h.repo.FindByID(ctx, cmd.UserID)
-	if err != nil {
-		log.Error("[IdentityCommand] FindByID failed", zap.Error(err), zap.Uint("userID", cmd.UserID))
-		return err
+	userResult := h.repo.FindByID(ctx, cmd.UserID)
+	if userResult.IsError() {
+		log.Error("[IdentityCommand] FindByID failed", zap.Error(userResult.Error()), zap.Uint("userID", cmd.UserID))
+		return userResult.Error()
 	}
-	if user == nil {
-		log.Warn("[IdentityCommand] Target user not found for profile update", zap.Uint("userID", cmd.UserID))
-		return ierr.New(ierr.ErrDataNotExists, "user not found")
-	}
+	user := userResult.MustGet()
 	if err := user.UpdateProfile(vo.UserName(cmd.Name), vo.Email(cmd.Email), vo.Avatar(cmd.Avatar)); err != nil {
 		log.Warn("[IdentityCommand] UpdateProfile validation failed", zap.Error(err), zap.Uint("userID", cmd.UserID))
 		return err

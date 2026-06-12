@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -28,12 +27,8 @@ func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRep
 func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd port.DeleteEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
-	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID)
-	if err != nil {
-		return err
-	}
-	if ep == nil {
-		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
+	if epResult := h.endpointRepo.FindByID(ctx, cmd.EndpointID); epResult.IsError() {
+		return epResult.Error()
 	}
 
 	if err := h.modelRepo.DeleteByEndpointID(ctx, cmd.EndpointID); err != nil {

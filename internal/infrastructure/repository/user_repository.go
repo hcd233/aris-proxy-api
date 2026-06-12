@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/samber/mo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -99,16 +100,16 @@ func (r *userRepository) TouchLastLogin(ctx context.Context, userID uint) error 
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func (r *userRepository) FindByID(ctx context.Context, id uint) (*aggregate.User, error) {
+func (r *userRepository) FindByID(ctx context.Context, id uint) mo.Result[*aggregate.User] {
 	db := r.db.WithContext(ctx)
 	record, err := r.dao.Get(db, &dbmodel.User{ID: id}, constant.UserRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return mo.Err[*aggregate.User](ierr.New(ierr.ErrDataNotExists, "user not found"))
 		}
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get user by id")
+		return mo.Err[*aggregate.User](ierr.Wrap(ierr.ErrDBQuery, err, "get user by id"))
 	}
-	return toUserAggregate(record), nil
+	return mo.Ok(toUserAggregate(record))
 }
 
 // FindByGithubBindID 按 github 绑定 ID 查询
@@ -120,16 +121,16 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*aggregate.User
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func (r *userRepository) FindByGithubBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
+func (r *userRepository) FindByGithubBindID(ctx context.Context, bindID string) mo.Result[*aggregate.User] {
 	db := r.db.WithContext(ctx)
 	record, err := r.dao.Get(db, &dbmodel.User{GithubBindID: bindID}, constant.UserRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return mo.Err[*aggregate.User](ierr.New(ierr.ErrDataNotExists, "user not found by github bind id"))
 		}
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get user by github bind id")
+		return mo.Err[*aggregate.User](ierr.Wrap(ierr.ErrDBQuery, err, "get user by github bind id"))
 	}
-	return toUserAggregate(record), nil
+	return mo.Ok(toUserAggregate(record))
 }
 
 // FindByGoogleBindID 按 google 绑定 ID 查询
@@ -141,16 +142,16 @@ func (r *userRepository) FindByGithubBindID(ctx context.Context, bindID string) 
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func (r *userRepository) FindByGoogleBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
+func (r *userRepository) FindByGoogleBindID(ctx context.Context, bindID string) mo.Result[*aggregate.User] {
 	db := r.db.WithContext(ctx)
 	record, err := r.dao.Get(db, &dbmodel.User{GoogleBindID: bindID}, constant.UserRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return mo.Err[*aggregate.User](ierr.New(ierr.ErrDataNotExists, "user not found by google bind id"))
 		}
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get user by google bind id")
+		return mo.Err[*aggregate.User](ierr.Wrap(ierr.ErrDBQuery, err, "get user by google bind id"))
 	}
-	return toUserAggregate(record), nil
+	return mo.Ok(toUserAggregate(record))
 }
 
 // toUserAggregate 将 GORM 模型映射为聚合根

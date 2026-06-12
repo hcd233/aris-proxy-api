@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -29,14 +28,12 @@ func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) UpdateEndpointHa
 func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
-	ep, err := h.repo.FindByID(ctx, cmd.EndpointID)
-	if err != nil {
-		log.Error("[EndpointCommand] Find endpoint for update failed", zap.Error(err))
-		return err
+	epResult := h.repo.FindByID(ctx, cmd.EndpointID)
+	if epResult.IsError() {
+		log.Error("[EndpointCommand] Find endpoint for update failed", zap.Error(epResult.Error()))
+		return epResult.Error()
 	}
-	if ep == nil {
-		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
-	}
+	ep := epResult.MustGet()
 
 	ep.Update(cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage)
 

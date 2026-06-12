@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -52,13 +53,14 @@ func (r *endpointResolver) Resolve(ctx context.Context, alias vo.EndpointAlias, 
 	}
 	for _, idx := range rand.Perm(len(models)) {
 		m := models[idx]
-		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID())
-		if findErr != nil {
-			return nil, nil, findErr
+		epResult := r.endpointRepo.FindByID(ctx, m.EndpointID())
+		if epResult.IsError() {
+			if errors.Is(epResult.Error(), ierr.ErrDataNotExists) {
+				continue
+			}
+			return nil, nil, epResult.Error()
 		}
-		if ep == nil {
-			continue
-		}
+		ep := epResult.MustGet()
 		if matcher == nil || matcher(ep) {
 			return ep, m, nil
 		}

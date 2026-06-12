@@ -3,7 +3,9 @@ package command
 
 import (
 	"context"
+	"errors"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 )
 
@@ -32,9 +34,12 @@ func NewUserExistenceChecker(repo identity.UserRepository) UserExistenceChecker 
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
 func (c *userExistenceChecker) Exists(ctx context.Context, userID uint) (bool, error) {
-	user, err := c.repo.FindByID(ctx, userID)
-	if err != nil {
-		return false, err
+	r := c.repo.FindByID(ctx, userID)
+	if r.IsOk() {
+		return true, nil
 	}
-	return user != nil, nil
+	if errors.Is(r.Error(), ierr.ErrDataNotExists) {
+		return false, nil
+	}
+	return false, r.Error()
 }

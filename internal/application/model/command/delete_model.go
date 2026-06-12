@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -29,12 +28,8 @@ func NewDeleteModelHandler(repo llmproxy.ModelRepository) DeleteModelHandler {
 func (h *deleteModelHandler) Handle(ctx context.Context, cmd port.DeleteModelCommand) error {
 	log := logger.WithCtx(ctx)
 
-	m, err := h.repo.FindByID(ctx, cmd.ModelID)
-	if err != nil {
-		return err
-	}
-	if m == nil {
-		return ierr.New(ierr.ErrDataNotExists, "model not found")
+	if mResult := h.repo.FindByID(ctx, cmd.ModelID); mResult.IsError() {
+		return mResult.Error()
 	}
 
 	if err := h.repo.Delete(ctx, cmd.ModelID); err != nil {
