@@ -44,6 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Pencil, Cpu, AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -187,6 +188,16 @@ export default function ModelsPage() {
     }
   };
 
+  const handleToggleEnabled = async (model: ModelItem) => {
+    try {
+      await api.updateModel(model.id, { enabled: !model.enabled });
+      toast.success(model.enabled ? "Model disabled" : "Model enabled");
+      fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to toggle model");
+    }
+  };
+
   const getEndpointName = (model: ModelItem) => {
     return model.endpoint?.name ?? `Endpoint #${model.endpoint?.id}`;
   };
@@ -270,7 +281,17 @@ export default function ModelsPage() {
                             </Button>
                           </div>
                         </div>
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        <div className="mt-2 flex items-center gap-2">
+                          <Switch
+                            size="sm"
+                            checked={model.enabled}
+                            onCheckedChange={() => handleToggleEnabled(model)}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {model.enabled ? "Enabled" : "Disabled"}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
                           Endpoint: {getEndpointName(model)}
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -285,6 +306,7 @@ export default function ModelsPage() {
                       <TableRow>
                         <TableHead>Alias</TableHead>
                         <TableHead>Model Name</TableHead>
+                        <TableHead>Enabled</TableHead>
                         <TableHead>Endpoint</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -295,6 +317,18 @@ export default function ModelsPage() {
                         <TableRow key={model.id}>
                           <TableCell className="font-medium">{model.alias}</TableCell>
                           <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                size="sm"
+                                checked={model.enabled}
+                                onCheckedChange={() => handleToggleEnabled(model)}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {model.enabled ? "Enabled" : "Disabled"}
+                              </span>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <button
                               onClick={() => router.push("/endpoints")}

@@ -31,6 +31,7 @@ type UpdateModelCommand struct {
 	Alias      *string
 	ModelName  *string
 	EndpointID *uint
+	Enabled    *bool
 }
 
 // UpdateModelHandler 更新命令处理器
@@ -67,6 +68,7 @@ type ModelView struct {
 	ID        uint
 	Alias     string
 	ModelName string
+	Enabled   bool
 	Endpoint  *EndpointView
 	CreatedAt time.Time
 	UpdatedAt time.Time

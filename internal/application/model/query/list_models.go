@@ -50,6 +50,7 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 			ID:        m.AggregateID(),
 			Alias:     m.Alias().String(),
 			ModelName: m.ModelName(),
+			Enabled:   m.Enabled(),
 			Endpoint:  toEndpointView(endpointsByID[m.EndpointID()]),
 			CreatedAt: m.CreatedAt(),
 			UpdatedAt: m.UpdatedAt(),

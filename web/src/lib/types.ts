@@ -327,6 +327,7 @@ export interface ModelItem {
   id: number;
   alias: string;
   modelName: string;
+  enabled: boolean;
   endpoint: EndpointItem;
   createdAt: string;
   updatedAt: string;
@@ -342,6 +343,7 @@ export interface UpdateModelReqBody {
   alias?: string;
   modelName?: string;
   endpointID?: number;
+  enabled?: boolean;
 }
 
 export interface ListModelsRsp extends CommonRsp {

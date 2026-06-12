@@ -48,6 +48,7 @@ const (
 	FieldUserAgent                = "user_agent"
 	FieldUpstreamStatusCode       = "upstream_status_code"
 	FieldErrorMessage             = "error_message"
+	FieldEnabled                  = "enabled"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
 )
@@ -82,7 +83,7 @@ var (
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage,
 		FieldCreatedAt, FieldUpdatedAt}
 
-	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModel, FieldEndpointID, FieldCreatedAt, FieldUpdatedAt}
+	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModel, FieldEndpointID, FieldEnabled, FieldCreatedAt, FieldUpdatedAt}
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}

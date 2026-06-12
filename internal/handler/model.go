@@ -83,6 +83,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 			ID:        v.ID,
 			Alias:     v.Alias,
 			ModelName: v.ModelName,
+			Enabled:   v.Enabled,
 			CreatedAt: v.CreatedAt,
 			UpdatedAt: v.UpdatedAt,
 		}
@@ -114,6 +115,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		Alias:      req.Body.Alias,
 		ModelName:  req.Body.ModelName,
 		EndpointID: req.Body.EndpointID,
+		Enabled:    req.Body.Enabled,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
