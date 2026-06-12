@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/mo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	conversationvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -24,8 +26,8 @@ type SessionRepository interface {
 	Paginate(ctx context.Context, owner string, param PageParam) ([]*aggregate.Session, *model.PageInfo, error)
 	// Delete 软删除（标记 deleted_at）
 	Delete(ctx context.Context, id uint) error
-	// UpdateScore 更新会话人工评分
-	UpdateScore(ctx context.Context, id uint, score sessionvo.SessionScore) error
+	// UpdateScore 更新会话人工评分；Some 设置评分，None 清除评分
+	UpdateScore(ctx context.Context, id uint, score mo.Option[sessionvo.SessionScore]) error
 	// DeleteScore 清除会话人工评分
 	DeleteScore(ctx context.Context, id uint) error
 }

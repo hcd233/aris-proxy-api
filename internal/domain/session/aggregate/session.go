@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -31,7 +32,7 @@ type Session struct {
 	messageIDs []uint
 	toolIDs    []uint
 	metadata   map[string]string
-	score      vo.SessionScore
+	score      mo.Option[vo.SessionScore]
 	createdAt  time.Time
 	updatedAt  time.Time
 }
@@ -89,7 +90,7 @@ func hasDuplicateIDs(ids []uint) bool {
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
 func RestoreSession(id uint, owner vo.APIKeyOwner, messageIDs, toolIDs []uint,
-	metadata map[string]string, score vo.SessionScore,
+	metadata map[string]string, score mo.Option[vo.SessionScore],
 	createdAt, updatedAt time.Time) *Session {
 	s := &Session{
 		owner:      owner,
@@ -112,7 +113,7 @@ func RestoreSession(id uint, owner vo.APIKeyOwner, messageIDs, toolIDs []uint,
 //	@author centonhuang
 //	@update 2026-06-03 10:00:00
 func (s *Session) UpdateScore(score vo.SessionScore, now time.Time) {
-	s.score = score
+	s.score = mo.Some(score)
 	s.updatedAt = now
 }
 
@@ -141,8 +142,8 @@ func (s *Session) Metadata() map[string]string {
 	return maps.Clone(s.metadata)
 }
 
-// Score 返回评分值对象
-func (s *Session) Score() vo.SessionScore { return s.score }
+// Score 返回评分值对象；None 表示未评分
+func (s *Session) Score() mo.Option[vo.SessionScore] { return s.score }
 
 // CreatedAt 返回创建时间
 func (s *Session) CreatedAt() time.Time { return s.createdAt }

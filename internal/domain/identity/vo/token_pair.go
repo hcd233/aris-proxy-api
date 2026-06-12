@@ -35,11 +35,3 @@ func (p TokenPair) AccessToken() string { return p.accessToken }
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func (p TokenPair) RefreshToken() string { return p.refreshToken }
-
-// IsEmpty 判断是否为空
-//
-//	@receiver p TokenPair
-//	@return bool
-//	@author centonhuang
-//	@update 2026-04-26 10:00:00
-func (p TokenPair) IsEmpty() bool { return p.accessToken == "" && p.refreshToken == "" }

@@ -4,29 +4,29 @@ package vo
 import (
 	"time"
 
+	"github.com/samber/mo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
 // SessionScore 会话评分值对象
 //
-// 人工评分，范围 1-5（整数），nil 表示未评分。
+// 人工评分，范围 1-5（整数）。
 // 字段私有以保证值对象不可变。
+// 可选性由 mo.Option[SessionScore] 表达。
 //
 //	@author centonhuang
 //	@update 2026-06-03 10:00:00
 type SessionScore struct {
-	score *int
-	at    *time.Time
+	score int
+	at    time.Time
 }
 
-// Score 返回评分值；未评分返回 nil
-func (s SessionScore) Score() *int { return s.score }
+// Score 返回评分值
+func (s SessionScore) Score() int { return s.score }
 
-// At 返回评分时间；未评分返回 nil
-func (s SessionScore) At() *time.Time { return s.at }
-
-// IsEmpty 判断是否未评分
-func (s SessionScore) IsEmpty() bool { return s.score == nil }
+// At 返回评分时间
+func (s SessionScore) At() time.Time { return s.at }
 
 // NewSessionScore 构造人工评分值对象
 //
@@ -41,16 +41,20 @@ func NewSessionScore(score int, at time.Time) (SessionScore, error) {
 	if at.IsZero() {
 		return SessionScore{}, ierr.New(ierr.ErrValidation, "scoredAt must not be zero")
 	}
-	return SessionScore{
-		score: &score,
-		at:    &at,
-	}, nil
+	return SessionScore{score: score, at: at}, nil
 }
 
 // RestoreSessionScore 从持久化字段重建评分值对象
-func RestoreSessionScore(score *int, at *time.Time) SessionScore {
-	return SessionScore{
-		score: score,
-		at:    at,
+//
+// DB 中 score/scored_at 为 nullable，返回 mo.Option：
+// Some — 有评分；None — 未评分。
+func RestoreSessionScore(score *int, at *time.Time) mo.Option[SessionScore] {
+	if score == nil {
+		return mo.None[SessionScore]()
 	}
+	v := SessionScore{score: *score}
+	if at != nil {
+		v.at = *at
+	}
+	return mo.Some(v)
 }

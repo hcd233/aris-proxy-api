@@ -136,11 +136,11 @@ func TestRestoreSession(t *testing.T) {
 	if s.Owner().String() != tc.Owner {
 		t.Errorf("Owner = %q, want %q", s.Owner().String(), tc.Owner)
 	}
-	if s.Score().IsEmpty() && tc.Score != nil {
-		t.Errorf("Score.IsEmpty() = true, want false")
+	if s.Score().IsAbsent() && tc.Score != nil {
+		t.Errorf("Score.IsAbsent() = true, want false")
 	}
-	if *s.Score().Score() != *tc.Score {
-		t.Errorf("Score = %d, want %d", *s.Score().Score(), *tc.Score)
+	if v, ok := s.Score().Get(); ok && v.Score() != *tc.Score {
+		t.Errorf("Score = %d, want %d", v.Score(), *tc.Score)
 	}
 }
 
@@ -161,11 +161,11 @@ func TestUpdateScore_Valid(t *testing.T) {
 	}
 	s.UpdateScore(score, time.Now().UTC())
 
-	if s.Score().IsEmpty() {
-		t.Error("Score.IsEmpty() = true, want false")
+	if s.Score().IsAbsent() {
+		t.Error("Score.IsAbsent() = true, want false")
 	}
-	if *s.Score().Score() != *tc.Score {
-		t.Errorf("Score = %d, want %d", *s.Score().Score(), *tc.Score)
+	if v, ok := s.Score().Get(); ok && v.Score() != *tc.Score {
+		t.Errorf("Score = %d, want %d", v.Score(), *tc.Score)
 	}
 }
 

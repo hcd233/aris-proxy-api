@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/samber/mo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -61,13 +62,14 @@ func (h *scoreSessionHandler) Handle(ctx context.Context, cmd port.ScoreSessionC
 		return nil, err
 	}
 
-	if err := h.repo.UpdateScore(ctx, cmd.SessionID, sv); err != nil {
+	if err := h.repo.UpdateScore(ctx, cmd.SessionID, mo.Some(sv)); err != nil {
 		log.Error("[SessionCommand] UpdateScore failed",
 			zap.Uint("sessionID", cmd.SessionID), zap.Error(err))
 		return nil, err
 	}
 
-	return sv.At(), nil
+	at := sv.At()
+	return &at, nil
 }
 
 // NewDeleteScoreSessionHandler 构造删除评分命令处理器

@@ -55,11 +55,3 @@ func (u OAuthUserInfo) Email() string { return u.email }
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func (u OAuthUserInfo) Avatar() string { return u.avatar }
-
-// IsEmpty 判断是否为空
-//
-//	@receiver u OAuthUserInfo
-//	@return bool
-//	@author centonhuang
-//	@update 2026-04-26 10:00:00
-func (u OAuthUserInfo) IsEmpty() bool { return u.id == "" }

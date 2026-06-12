@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -68,12 +69,10 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 		constant.FieldToolIDs:    s.ToolIDs(),
 		constant.FieldMetadata:   s.Metadata(),
 	}
-	if score := s.Score(); !score.IsEmpty() {
-		updates[constant.FieldScore] = *score.Score()
-		if at := score.At(); at != nil {
-			updates[constant.FieldScoredAt] = *at
-		}
-	}
+	s.Score().ForEach(func(score vo.SessionScore) {
+		updates[constant.FieldScore] = score.Score()
+		updates[constant.FieldScoredAt] = score.At()
+	})
 	if err := r.dao.Update(db, &dbmodel.Session{ID: s.AggregateID()}, updates); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session")
 	}
@@ -82,9 +81,13 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 }
 
 // applyScore 将评分值对象写入 GORM 模型
-func applyScore(record *dbmodel.Session, score vo.SessionScore) {
-	record.Score = score.Score()
-	record.ScoredAt = score.At()
+func applyScore(record *dbmodel.Session, s mo.Option[vo.SessionScore]) {
+	s.ForEach(func(score vo.SessionScore) {
+		v := score.Score()
+		record.Score = &v
+		at := score.At()
+		record.ScoredAt = &at
+	})
 }
 
 // FindByID 按 ID 查询 Session 聚合
@@ -163,24 +166,22 @@ func (r *sessionRepository) Delete(ctx context.Context, id uint) error {
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 14:00:00
-func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score vo.SessionScore) error {
+func (r *sessionRepository) UpdateScore(ctx context.Context, id uint, score mo.Option[vo.SessionScore]) error {
 	db := r.db.WithContext(ctx)
 	updates := map[string]any{
 		constant.FieldScore:    nil,
 		constant.FieldScoredAt: nil,
 	}
-	if !score.IsEmpty() {
-		updates[constant.FieldScore] = *score.Score()
-		if at := score.At(); at != nil {
-			updates[constant.FieldScoredAt] = *at
-		}
-	}
+	score.ForEach(func(s vo.SessionScore) {
+		updates[constant.FieldScore] = s.Score()
+		updates[constant.FieldScoredAt] = s.At()
+	})
 	if err := r.dao.Update(db, &dbmodel.Session{ID: id}, updates); err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update session score")
 	}
+
 	return nil
 }
-
 func (r *sessionRepository) DeleteScore(ctx context.Context, id uint) error {
 	db := r.db.WithContext(ctx)
 	updates := map[string]any{

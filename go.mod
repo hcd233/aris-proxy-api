@@ -11,6 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/minio/minio-go/v7 v7.0.80
 	github.com/samber/lo v1.39.0
+	github.com/samber/mo v1.17.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.19.0
 	github.com/tencentcloud/tencentcloud-cls-sdk-go v1.0.14

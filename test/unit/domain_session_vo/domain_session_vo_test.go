@@ -1,4 +1,3 @@
-// Package domain_session_vo 验证 domain/session/vo 值对象的行为
 package domain_session_vo
 
 import (
@@ -13,14 +12,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 )
 
-// sessionVOCase 会话值对象测试用例结构
 type sessionVOCase struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Text        string `json:"text"`
 	Error       string `json:"error"`
 	Score       *int   `json:"score"`
-	ExpectEmpty bool   `json:"expect_empty"`
 }
 
 func loadCases(t *testing.T) []sessionVOCase {
@@ -58,14 +55,11 @@ func TestNewSessionScore_Valid(t *testing.T) {
 		t.Fatalf("NewSessionScore() error: %v", err)
 	}
 
-	if *s.Score() != *tc.Score {
-		t.Errorf("Score() = %d, want %d", *s.Score(), *tc.Score)
+	if s.Score() != *tc.Score {
+		t.Errorf("Score() = %d, want %d", s.Score(), *tc.Score)
 	}
-	if s.At() == nil {
-		t.Fatal("At() should not be nil for NewSessionScore")
-	}
-	if s.IsEmpty() {
-		t.Error("IsEmpty() = true, want false")
+	if s.At().IsZero() {
+		t.Fatal("At() should not be zero for NewSessionScore")
 	}
 }
 
@@ -97,14 +91,18 @@ func TestRestoreSessionScore(t *testing.T) {
 	now := time.Now().UTC()
 	s := vo.RestoreSessionScore(tc.Score, &now)
 
-	if *s.Score() != *tc.Score {
-		t.Errorf("Score() = %d, want %d", *s.Score(), *tc.Score)
+	if s.IsAbsent() {
+		t.Fatal("RestoreSessionScore() should return Some for non-nil score")
 	}
-	if s.At() == nil {
-		t.Fatal("At() should not be nil for RestoreSessionScore")
+	score, ok := s.Get()
+	if !ok {
+		t.Fatal("expected Some")
 	}
-	if s.IsEmpty() {
-		t.Error("IsEmpty() = true, want false")
+	if score.Score() != *tc.Score {
+		t.Errorf("Score() = %d, want %d", score.Score(), *tc.Score)
+	}
+	if score.At().IsZero() {
+		t.Fatal("At() should not be zero for RestoreSessionScore")
 	}
 }
 
@@ -112,13 +110,7 @@ func TestRestoreSessionScore_Nil(t *testing.T) {
 	t.Parallel()
 	s := vo.RestoreSessionScore(nil, nil)
 
-	if s.Score() != nil {
-		t.Error("Score() should be nil for nil parameter")
-	}
-	if s.At() != nil {
-		t.Error("At() should be nil for nil parameter")
-	}
-	if !s.IsEmpty() {
-		t.Error("IsEmpty() = false, want true for nil score")
+	if s.IsPresent() {
+		t.Error("RestoreSessionScore(nil) should return None")
 	}
 }
