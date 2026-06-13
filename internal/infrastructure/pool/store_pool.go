@@ -5,6 +5,8 @@
 package pool
 
 import (
+	"time"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -75,6 +77,10 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 			}
 		}
 
+		if err := pm.upgradeReasoningContent(tx, messages, messageIDs, log); err != nil {
+			return err
+		}
+
 		toolIDs, err := pm.deduplicateAndStoreTools(tx, tools)
 		if err != nil {
 			log.Error("[StorePool] Failed to store tools", zap.Error(err))
@@ -99,6 +105,54 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		return
 	}
 	log.Info("[StorePool] Messages stored successfully")
+}
+
+// upgradeReasoningContent 补充存量消息的 reasoning_content
+//
+//	@receiver pm *PoolManager
+//	@param tx *gorm.DB
+//	@param messages []*dbmodel.Message
+//	@param messageIDs []uint 与 messages 顺序对齐的 ID 列表
+//	@param log *zap.Logger
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-13 10:00:00
+func (pm *PoolManager) upgradeReasoningContent(tx *gorm.DB, messages []*dbmodel.Message, messageIDs []uint, log *zap.Logger) error {
+	var needsUpgradeIDs []uint
+	msgByID := make(map[uint]*vo.UnifiedMessage)
+	for i, m := range messages {
+		if m.Message.ReasoningContent != "" {
+			needsUpgradeIDs = append(needsUpgradeIDs, messageIDs[i])
+			msgByID[messageIDs[i]] = m.Message
+		}
+	}
+	if len(needsUpgradeIDs) == 0 {
+		return nil
+	}
+	var missing []*dbmodel.Message
+	if err := tx.Model(&dbmodel.Message{}).
+		Where("id IN ? AND (message::jsonb->>'reasoning_content' IS NULL OR message::jsonb->>'reasoning_content' = '')", needsUpgradeIDs).
+		Select("id").
+		Find(&missing).Error; err != nil {
+		return err
+	}
+	for _, mr := range missing {
+		if msg, ok := msgByID[mr.ID]; ok {
+			if err := tx.Model(&dbmodel.Message{ID: mr.ID}).
+				Select("message", "updated_at").
+				Updates(map[string]any{
+					"message":    msg,
+					"updated_at": time.Now().UTC(),
+				}).Error; err != nil {
+				return err
+			}
+		}
+	}
+	if len(missing) > 0 {
+		log.Info("[StorePool] Upgraded reasoning_content for existing messages",
+			zap.Int("count", len(missing)))
+	}
+	return nil
 }
 
 // SubmitModelCallAuditTask 提交模型调用审计任务到协程池
