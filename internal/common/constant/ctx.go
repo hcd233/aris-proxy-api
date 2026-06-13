@@ -41,4 +41,8 @@ const (
 	CtxKeyPassthroughResponseHeaders enum.CtxKey = "passthroughResponseHeaders"
 
 	CtxKeyRawRequestBody enum.CtxKey = "rawRequestBody"
+
+	// CtxKeyCompressResult 压缩结果（originLen, compressedLen, strategies）
+	//	@update 2026-06-14 10:00:00
+	CtxKeyCompressResult enum.CtxKey = "compressResult"
 )

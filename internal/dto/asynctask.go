@@ -52,6 +52,9 @@ type ModelCallAuditTask struct {
 	StreamDurationMs         int64
 	UpstreamStatusCode       int
 	ErrorMessage             string
+	CompressionEnabled       bool   // 是否启用了压缩
+	CompressedTokens         int    // 压缩节省的 token 数
+	CompressionStrategy      string // 压缩策略名称
 }
 
 // SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数
@@ -139,4 +142,22 @@ func (t *ModelCallAuditTask) SetErrorFromResponseStatus(rsp *OpenAICreateRespons
 		}
 		t.ErrorMessage = constant.ResponseIncompleteAuditReason
 	}
+}
+
+// SetCompressionResult 设置压缩结果
+//
+//	@receiver t *ModelCallAuditTask
+//	@param originalLen int 原始内容字符长度
+//	@param compressedLen int 压缩后内容字符长度
+//	@param strategy string 压缩策略
+//	@author centonhuang
+//	@update 2026-06-14 10:00:00
+func (t *ModelCallAuditTask) SetCompressionResult(originalLen, compressedLen int, strategy string) {
+	if originalLen <= compressedLen {
+		return
+	}
+	ratio := 1.0 - float64(compressedLen)/float64(originalLen)
+	t.CompressionEnabled = true
+	t.CompressedTokens = int(float64(t.InputTokens) * ratio)
+	t.CompressionStrategy = strategy
 }

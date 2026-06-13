@@ -6,6 +6,8 @@ import (
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
+	"github.com/hcd233/aris-proxy-api/internal/config"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
@@ -82,6 +84,12 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		usecase.NewCountTokens,
 		usecase.NewOpenAIUseCase,
 		usecase.NewAnthropicUseCase,
+		func() compression.Pipeline {
+			if config.CompressionEnabled {
+				return compression.NewPipeline(compression.DefaultPipelineConfig())
+			}
+			return compression.NewNoopPipeline()
+		},
 	),
 )
 

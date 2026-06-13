@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -75,7 +76,7 @@ func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{}, compression.NewNoopPipeline())
 
 	stream := true
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -100,7 +101,7 @@ func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{}, compression.NewNoopPipeline())
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -124,7 +125,7 @@ func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 	t.Parallel()
 	mockResolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockAnthropicProxyForAnthropic{}, &mockOpenAIProxy{}, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockAnthropicProxyForAnthropic{}, &mockOpenAIProxy{}, &mockTaskSubmitter{}, compression.NewNoopPipeline())
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -149,7 +150,7 @@ func TestAnthropicCreateMessage_NativeStream_UpstreamError(t *testing.T) {
 	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{}, compression.NewNoopPipeline())
 
 	stream := true
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -174,7 +175,7 @@ func TestAnthropicCreateMessage_NativeUnary_UpstreamError(t *testing.T) {
 	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
 	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, mockProxy, &mockOpenAIProxy{}, &mockTaskSubmitter{}, compression.NewNoopPipeline())
 
 	stream := false
 	userContent := &dto.AnthropicMessageContent{Text: "Hello"}
@@ -203,7 +204,7 @@ func TestAnthropicCreateMessage_ChatResponseEndpointUsesChatCompatibility(t *tes
 		resolveEndpoint: buildCompatEndpoint("chat-response", true, true, false),
 		resolveModel:    buildAnthropicTestModel(),
 	}
-	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, anthropicProxy, openAIProxy, &mockTaskSubmitter{})
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, anthropicProxy, openAIProxy, &mockTaskSubmitter{}, compression.NewNoopPipeline())
 
 	stream := false
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{

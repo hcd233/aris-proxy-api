@@ -8,6 +8,7 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -29,11 +30,12 @@ type OpenAIUseCase interface {
 }
 
 type openAIUseCase struct {
-	resolver       service.EndpointResolver
-	modelsQuery    ListOpenAIModels
-	openAIProxy    OpenAIProxyPort
-	anthropicProxy AnthropicProxyPort
-	taskSubmitter  TaskSubmitter
+	resolver         service.EndpointResolver
+	modelsQuery      ListOpenAIModels
+	openAIProxy      OpenAIProxyPort
+	anthropicProxy   AnthropicProxyPort
+	taskSubmitter    TaskSubmitter
+	compressPipeline compression.Pipeline
 }
 
 func NewOpenAIUseCase(
@@ -42,13 +44,15 @@ func NewOpenAIUseCase(
 	openAIProxy OpenAIProxyPort,
 	anthropicProxy AnthropicProxyPort,
 	taskSubmitter TaskSubmitter,
+	compressPipeline compression.Pipeline,
 ) OpenAIUseCase {
 	return &openAIUseCase{
-		resolver:       resolver,
-		modelsQuery:    modelsQuery,
-		openAIProxy:    openAIProxy,
-		anthropicProxy: anthropicProxy,
-		taskSubmitter:  taskSubmitter,
+		resolver:         resolver,
+		modelsQuery:      modelsQuery,
+		openAIProxy:      openAIProxy,
+		anthropicProxy:   anthropicProxy,
+		taskSubmitter:    taskSubmitter,
+		compressPipeline: compressPipeline,
 	}
 }
 

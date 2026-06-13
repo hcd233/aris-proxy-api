@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -11,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -22,11 +24,12 @@ import (
 )
 
 func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+	compressResult, origLen, compLen := compressAnthropicMessages(u.compressPipeline, req.Body.Messages)
 	body := proxyutil.MarshalAnthropicMessageBodyForModel(req.Body, upstream.Model)
 	if stream {
-		return u.forwardMessageNativeStream(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+		return u.forwardMessageNativeStream(ctx, req, m, upstream, exposedModel, ep.Name(), body, compressResult, origLen, compLen)
 	}
-	return u.forwardMessageNativeUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+	return u.forwardMessageNativeUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body, compressResult, origLen, compLen)
 }
 
 func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, ep *aggregate.Endpoint, exposedModel string) *huma.StreamResponse {
@@ -36,16 +39,17 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 		logger.WithCtx(ctx).Error("[AnthropicUseCase] Failed to convert anthropic request to chat", zap.Error(convErr))
 		return proxyutil.SendAnthropicModelNotFoundError(exposedModel)
 	}
+	compressResult, origLen, compLen := compressOpenAIMessages(u.compressPipeline, chatReq.Messages)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	upstream := toTransportEndpoint(m, ep, false)
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(chatReq, upstream.Model)
 	if stream {
-		return u.forwardMessageViaChatStream(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+		return u.forwardMessageViaChatStream(ctx, req, m, upstream, exposedModel, ep.Name(), body, compressResult, origLen, compLen)
 	}
-	return u.forwardMessageViaChatUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+	return u.forwardMessageViaChatUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body, compressResult, origLen, compLen)
 }
 
-func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compressResult *compression.PipelineResult, origLen, compLen int) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
@@ -81,11 +85,12 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
+		task.SetCompressionResult(origLen, compLen, strings.Join(compressResult.Strategies, ","))
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
 
-func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compressResult *compression.PipelineResult, origLen, compLen int) *huma.StreamResponse {
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
@@ -103,15 +108,16 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		task.SetCompressionResult(origLen, compLen, strings.Join(compressResult.Strategies, ","))
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
 
-func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
+func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compressResult *compression.PipelineResult, origLen, compLen int) *huma.StreamResponse {
+	return apiutil.WrapStreamResponse(u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body, compressResult, origLen, compLen))
 }
 
-func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) func(w *bufio.Writer) {
+func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compressResult *compression.PipelineResult, origLen, compLen int) func(w *bufio.Writer) {
 	conv := &converter.OpenAIProtocolConverter{}
 	tracker := converter.NewSSEContentBlockTracker()
 	return func(w *bufio.Writer) {
@@ -132,6 +138,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, 
 			task.SetTokensFromOpenAIUsage(completion.Usage)
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
+		task.SetCompressionResult(origLen, compLen, strings.Join(compressResult.Strategies, ","))
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	}
 }
@@ -171,7 +178,7 @@ func (u *anthropicUseCase) finalizeAnthropicChatStream(ctx context.Context, conv
 	return anthropicMsg
 }
 
-func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compressResult *compression.PipelineResult, origLen, compLen int) *huma.StreamResponse {
 	conv := &converter.OpenAIProtocolConverter{}
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
@@ -194,6 +201,7 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromOpenAIUsage(completion.Usage)
+		task.SetCompressionResult(origLen, compLen, strings.Join(compressResult.Strategies, ","))
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }

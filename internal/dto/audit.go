@@ -52,6 +52,9 @@ type AuditLogItem struct {
 	UserAgent                string    `json:"userAgent" doc:"User-Agent"`
 	UpstreamStatusCode       int       `json:"upstreamStatusCode" doc:"上游状态码"`
 	ErrorMessage             string    `json:"errorMessage" doc:"错误信息"`
+	CompressionEnabled       bool      `json:"compressionEnabled" doc:"是否启用了压缩"`
+	CompressedTokens         int       `json:"compressedTokens" doc:"压缩节省的token数"`
+	CompressionStrategy      string    `json:"compressionStrategy" doc:"压缩策略"`
 	TraceID                  string    `json:"traceId" doc:"Trace ID"`
 	APIKeyName               string    `json:"apiKeyName" doc:"调用所用 API Key 名称"`
 	UserName                 string    `json:"userName" doc:"调用方用户名"`

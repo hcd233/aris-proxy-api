@@ -8,6 +8,7 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -37,6 +38,7 @@ type anthropicUseCase struct {
 	anthropicProxy   AnthropicProxyPort
 	openAIProxy      OpenAIProxyPort
 	taskSubmitter    TaskSubmitter
+	compressPipeline compression.Pipeline
 }
 
 func NewAnthropicUseCase(
@@ -46,6 +48,7 @@ func NewAnthropicUseCase(
 	anthropicProxy AnthropicProxyPort,
 	openAIProxy OpenAIProxyPort,
 	taskSubmitter TaskSubmitter,
+	compressPipeline compression.Pipeline,
 ) AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -54,6 +57,7 @@ func NewAnthropicUseCase(
 		anthropicProxy:   anthropicProxy,
 		openAIProxy:      openAIProxy,
 		taskSubmitter:    taskSubmitter,
+		compressPipeline: compressPipeline,
 	}
 }
 
