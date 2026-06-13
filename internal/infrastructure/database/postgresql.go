@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"go.uber.org/zap"
-
 	"github.com/samber/lo"
+	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -45,7 +46,10 @@ func CloseDatabase(db *gorm.DB) error {
 //	update 2024-09-22 10:04:36
 func AutoMigrate(ctx context.Context) error {
 	db := InitDatabase().WithContext(ctx)
-	return db.AutoMigrate(model.Models...)
+	if err := db.AutoMigrate(model.Models...); err != nil {
+		return err
+	}
+	return migrateMessageChecksums(db.WithContext(ctx))
 }
 
 func InitDatabase() *gorm.DB {
@@ -170,4 +174,116 @@ func (l *GormLoggerAdapter) Trace(ctx context.Context, begin time.Time, fc func(
 	}
 
 	logger.WithCtx(ctx).Info("[GORM] Trace", fields...)
+}
+
+// migrateMessageChecksums 三阶段数据迁移
+//
+// Phase 1: 刷新有 reasoning_content 的消息 check_sum 为 content-only
+// Phase 2: 合并 checksum 重复的消息，更新会话引用，删除冗余
+//
+//	@param db *gorm.DB
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-13 10:00:00
+func migrateMessageChecksums(db *gorm.DB) error {
+	log := logger.Logger()
+	const batchSize = 1000
+
+	// ── Phase 1: 刷新 checksum ──
+	log.Info("[Database] Phase 1: refreshing message checksums for reasoning_content")
+	offset := 0
+	for {
+		var messages []*model.Message
+		if err := db.Where("message::jsonb->>'reasoning_content' IS NOT NULL").
+			Select("id, message").
+			Order("id").
+			Limit(batchSize).
+			Offset(offset).
+			Find(&messages).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBQuery, err, "phase 1: select messages with reasoning")
+		}
+		if len(messages) == 0 {
+			break
+		}
+		for _, m := range messages {
+			newCS := vo.ComputeMessageChecksum(m.Message, nil)
+			if err := db.Model(&model.Message{ID: m.ID}).
+				Where("check_sum != ?", newCS).
+				Update("check_sum", newCS).Error; err != nil {
+				return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 1: update checksum")
+			}
+		}
+		offset += len(messages)
+		log.Info("[Database] Phase 1 progress", zap.Int("processed", offset))
+	}
+	log.Info("[Database] Phase 1 complete")
+
+	// ── Phase 2: 合并重复消息 ──
+	log.Info("[Database] Phase 2: merging duplicate messages by content checksum")
+	phase2Offset := 0
+	for {
+		type dupRow struct {
+			CheckSum string `gorm:"column:check_sum"`
+			IDs      string `gorm:"column:ids"`
+		}
+		var groups []dupRow
+		if err := db.Raw(`
+			SELECT check_sum, json_agg(id ORDER BY
+				CASE WHEN message::jsonb->>'reasoning_content' IS NOT NULL THEN 0 ELSE 1 END,
+				id DESC
+			) AS ids
+			FROM messages
+			WHERE check_sum != ''
+			GROUP BY check_sum
+			HAVING count(*) > 1
+			LIMIT ? OFFSET ?
+		`, batchSize, phase2Offset).Scan(&groups).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: find duplicate groups")
+		}
+		if len(groups) == 0 {
+			break
+		}
+		for _, g := range groups {
+			var ids []uint
+			if err := sonic.UnmarshalString(g.IDs, &ids); err != nil {
+				return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: unmarshal ids")
+			}
+			if len(ids) < 2 {
+				continue
+			}
+			keepID := ids[0]
+			for _, oldID := range ids[1:] {
+				if err := db.Exec(`
+					UPDATE sessions SET message_ids = (
+						SELECT COALESCE(jsonb_agg(
+							CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
+						), '[]'::jsonb)
+						FROM jsonb_array_elements(COALESCE(message_ids::jsonb, '[]'::jsonb)) AS t(value)
+					)
+					WHERE message_ids::jsonb @> ?::jsonb
+				`, oldID, keepID, oldID).Error; err != nil {
+					return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session message_ids")
+				}
+				if err := db.Exec(`
+					UPDATE sessions SET questions = (
+						SELECT COALESCE(jsonb_agg(
+							CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
+						), '[]'::jsonb)
+						FROM jsonb_array_elements(COALESCE(questions::jsonb, '[]'::jsonb)) AS t(value)
+					)
+					WHERE questions IS NOT NULL AND questions::jsonb @> ?::jsonb
+				`, oldID, keepID, oldID).Error; err != nil {
+					return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session questions")
+				}
+				if err := db.Delete(&model.Message{ID: oldID}).Error; err != nil {
+					return ierr.Wrap(ierr.ErrDBDelete, err, "phase 2: delete redundant message")
+				}
+			}
+		}
+		phase2Offset += len(groups)
+		log.Info("[Database] Phase 2 progress", zap.Int("groups_processed", phase2Offset))
+	}
+	log.Info("[Database] Phase 2 complete")
+
+	return nil
 }
