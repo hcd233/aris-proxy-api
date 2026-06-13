@@ -219,7 +219,7 @@ func migrateMessageChecksums(db *gorm.DB) error {
 
 	// ── Phase 2: 合并重复消息 ──
 	log.Info("[Database] Phase 2: merging duplicate messages by content checksum")
-	phase2Offset := 0
+	totalPhase2 := 0
 	for {
 		type dupRow struct {
 			CheckSum string `gorm:"column:check_sum"`
@@ -234,11 +234,11 @@ func migrateMessageChecksums(db *gorm.DB) error {
 		WHERE %s != ''
 		GROUP BY %s
 		HAVING count(*) > 1
-		LIMIT ? OFFSET ?`,
+		LIMIT ?`,
 			constant.FieldCheckSum, constant.FieldID,
 			constant.FieldMessage, constant.FieldID,
 			constant.FieldCheckSum, constant.FieldCheckSum)
-		if err := db.Raw(findDupSQL, constant.MigrateMessageBatchSize, phase2Offset).Scan(&groups).Error; err != nil {
+		if err := db.Raw(findDupSQL, constant.MigrateMessageBatchSize).Scan(&groups).Error; err != nil {
 			return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: find duplicate groups")
 		}
 		if len(groups) == 0 {
@@ -279,8 +279,8 @@ func migrateMessageChecksums(db *gorm.DB) error {
 				}
 			}
 		}
-		phase2Offset += len(groups)
-		log.Info("[Database] Phase 2 progress", zap.Int("groups_processed", phase2Offset))
+		totalPhase2 += len(groups)
+		log.Info("[Database] Phase 2 progress", zap.Int("groups_processed", totalPhase2))
 	}
 	log.Info("[Database] Phase 2 complete")
 
