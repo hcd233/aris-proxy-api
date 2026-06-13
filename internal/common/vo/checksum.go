@@ -36,6 +36,7 @@ type ToolSchemaMap map[string]*JSONSchemaProperty
 //     @update 2026-04-22 14:15:00
 func ComputeMessageChecksum(msg *UnifiedMessage, toolSchemas ToolSchemaMap) string {
 	normalized := *msg
+	normalized.ReasoningContent = ""
 
 	if len(normalized.ToolCalls) > 0 {
 		cleanedCalls := make([]*UnifiedToolCall, len(normalized.ToolCalls))
