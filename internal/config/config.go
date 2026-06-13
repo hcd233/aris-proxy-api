@@ -195,6 +195,10 @@ var (
 	// CronThinkExtractEnabled bool 是否启用 Think 内容提取定时任务
 	//	@update 2026-06-02 10:00:00
 	CronThinkExtractEnabled bool
+
+	// CompressionEnabled bool 是否启用请求内容压缩（减少上游 token 消耗）
+	//	@update 2026-06-14 10:00:00
+	CompressionEnabled bool
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -249,6 +253,8 @@ func initEnvironment() {
 	config.SetDefault("cron.session.summarize.enabled", false)
 	config.SetDefault("cron.session.score.enabled", false)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
+
+	config.SetDefault("compression.enabled", false)
 
 	config.AutomaticEnv()
 
@@ -314,6 +320,7 @@ func initEnvironment() {
 	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
+	CompressionEnabled = config.GetBool("compression.enabled")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{
