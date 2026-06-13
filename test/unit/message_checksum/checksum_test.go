@@ -345,3 +345,48 @@ func TestComputeMessageChecksum_SchemaMultipleDefaultsRemoved(t *testing.T) {
 		t.Errorf("ComputeMessageChecksum() with schema should remove multiple optional fields at default values: got %s and %s", checksumA, checksumB)
 	}
 }
+
+func TestComputeMessageChecksum_ReasoningContentIgnored(t *testing.T) {
+	t.Parallel()
+
+	withReasoning := &vo.UnifiedMessage{
+		Role:             "assistant",
+		Content:          &vo.UnifiedContent{Text: "Hello, world!"},
+		ReasoningContent: "step 1: think deeply...",
+	}
+	withoutReasoning := &vo.UnifiedMessage{
+		Role:    "assistant",
+		Content: &vo.UnifiedContent{Text: "Hello, world!"},
+	}
+
+	cs1 := vo.ComputeMessageChecksum(withReasoning, nil)
+	cs2 := vo.ComputeMessageChecksum(withoutReasoning, nil)
+
+	t.Logf("with reasoning: %s, without: %s", cs1, cs2)
+
+	if cs1 != cs2 {
+		t.Errorf("ComputeMessageChecksum should ignore reasoning_content: got %s and %s", cs1, cs2)
+	}
+}
+
+func TestComputeMessageChecksum_DifferentContentStillDiffers(t *testing.T) {
+	t.Parallel()
+
+	msgA := &vo.UnifiedMessage{
+		Role:             "assistant",
+		Content:          &vo.UnifiedContent{Text: "Hello"},
+		ReasoningContent: "thinking A",
+	}
+	msgB := &vo.UnifiedMessage{
+		Role:             "assistant",
+		Content:          &vo.UnifiedContent{Text: "World"},
+		ReasoningContent: "thinking B",
+	}
+
+	csA := vo.ComputeMessageChecksum(msgA, nil)
+	csB := vo.ComputeMessageChecksum(msgB, nil)
+
+	if csA == csB {
+		t.Errorf("ComputeMessageChecksum should produce different checksums for different content: both got %s", csA)
+	}
+}
