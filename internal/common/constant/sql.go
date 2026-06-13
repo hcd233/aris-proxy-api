@@ -190,4 +190,7 @@ var (
 	SessionDistinctScoreSelect = "DISTINCT score"
 	SessionDistinctScoreWhere  = "score IS NOT NULL"
 	SessionDistinctScoreOrder  = "score ASC"
+
+	// MigrateMessageBatchSize checksum 迁移与 dedup 每批处理记录数
+	MigrateMessageBatchSize = 1000
 )

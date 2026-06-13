@@ -187,17 +187,16 @@ func (l *GormLoggerAdapter) Trace(ctx context.Context, begin time.Time, fc func(
 //	@update 2026-06-13 10:00:00
 func migrateMessageChecksums(db *gorm.DB) error {
 	log := logger.Logger()
-	const batchSize = 1000
 
 	// ── Phase 1: 刷新 checksum ──
 	log.Info("[Database] Phase 1: refreshing message checksums for reasoning_content")
 	offset := 0
 	for {
 		var messages []*model.Message
-		if err := db.Where("message::jsonb->>'reasoning_content' IS NOT NULL").
-			Select("id, message").
-			Order("id").
-			Limit(batchSize).
+		if err := db.Where(constant.FieldMessage + "::jsonb->>'reasoning_content' IS NOT NULL").
+			Select(constant.FieldID + ", " + constant.FieldMessage).
+			Order(constant.FieldID).
+			Limit(constant.MigrateMessageBatchSize).
 			Offset(offset).
 			Find(&messages).Error; err != nil {
 			return ierr.Wrap(ierr.ErrDBQuery, err, "phase 1: select messages with reasoning")
@@ -208,8 +207,8 @@ func migrateMessageChecksums(db *gorm.DB) error {
 		for _, m := range messages {
 			newCS := vo.ComputeMessageChecksum(m.Message, nil)
 			if err := db.Model(&model.Message{ID: m.ID}).
-				Where("check_sum != ?", newCS).
-				Update("check_sum", newCS).Error; err != nil {
+				Where(constant.FieldCheckSum+" != ?", newCS).
+				Update(constant.FieldCheckSum, newCS).Error; err != nil {
 				return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 1: update checksum")
 			}
 		}
@@ -227,17 +226,19 @@ func migrateMessageChecksums(db *gorm.DB) error {
 			IDs      string `gorm:"column:ids"`
 		}
 		var groups []dupRow
-		if err := db.Raw(`
-			SELECT check_sum, json_agg(id ORDER BY
-				CASE WHEN message::jsonb->>'reasoning_content' IS NOT NULL THEN 0 ELSE 1 END,
-				id DESC
-			) AS ids
-			FROM messages
-			WHERE check_sum != ''
-			GROUP BY check_sum
-			HAVING count(*) > 1
-			LIMIT ? OFFSET ?
-		`, batchSize, phase2Offset).Scan(&groups).Error; err != nil {
+		findDupSQL := fmt.Sprintf(`SELECT %s, json_agg(%s ORDER BY
+			CASE WHEN %s::jsonb->>'reasoning_content' IS NOT NULL THEN 0 ELSE 1 END,
+			%s DESC
+		) AS ids
+		FROM messages
+		WHERE %s != ''
+		GROUP BY %s
+		HAVING count(*) > 1
+		LIMIT ? OFFSET ?`,
+			constant.FieldCheckSum, constant.FieldID,
+			constant.FieldMessage, constant.FieldID,
+			constant.FieldCheckSum, constant.FieldCheckSum)
+		if err := db.Raw(findDupSQL, constant.MigrateMessageBatchSize, phase2Offset).Scan(&groups).Error; err != nil {
 			return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: find duplicate groups")
 		}
 		if len(groups) == 0 {
@@ -253,26 +254,24 @@ func migrateMessageChecksums(db *gorm.DB) error {
 			}
 			keepID := ids[0]
 			for _, oldID := range ids[1:] {
-				if err := db.Exec(`
-					UPDATE sessions SET message_ids = (
-						SELECT COALESCE(jsonb_agg(
-							CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
-						), '[]'::jsonb)
-						FROM jsonb_array_elements(COALESCE(message_ids::jsonb, '[]'::jsonb)) AS t(value)
-					)
-					WHERE message_ids::jsonb @> ?::jsonb
-				`, oldID, keepID, oldID).Error; err != nil {
+				updateMessageIDsSQL := `UPDATE sessions SET message_ids = (
+					SELECT COALESCE(jsonb_agg(
+						CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
+					), '[]'::jsonb)
+					FROM jsonb_array_elements(COALESCE(message_ids::jsonb, '[]'::jsonb)) AS t(value)
+				)
+				WHERE message_ids::jsonb @> ?::jsonb`
+				if err := db.Exec(updateMessageIDsSQL, oldID, keepID, oldID).Error; err != nil {
 					return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session message_ids")
 				}
-				if err := db.Exec(`
-					UPDATE sessions SET questions = (
-						SELECT COALESCE(jsonb_agg(
-							CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
-						), '[]'::jsonb)
-						FROM jsonb_array_elements(COALESCE(questions::jsonb, '[]'::jsonb)) AS t(value)
-					)
-					WHERE questions IS NOT NULL AND questions::jsonb @> ?::jsonb
-				`, oldID, keepID, oldID).Error; err != nil {
+				updateQuestionsSQL := `UPDATE sessions SET questions = (
+					SELECT COALESCE(jsonb_agg(
+						CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
+					), '[]'::jsonb)
+					FROM jsonb_array_elements(COALESCE(questions::jsonb, '[]'::jsonb)) AS t(value)
+				)
+				WHERE questions IS NOT NULL AND questions::jsonb @> ?::jsonb`
+				if err := db.Exec(updateQuestionsSQL, oldID, keepID, oldID).Error; err != nil {
 					return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session questions")
 				}
 				if err := db.Delete(&model.Message{ID: oldID}).Error; err != nil {
