@@ -1,8 +1,6 @@
 package modules
 
 import (
-	"context"
-
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
@@ -272,9 +270,7 @@ func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport
 }
 
 func NewBlockedService(repo blockeddomain.BlockedRepository) *blockedapp.BlockedService {
-	svc := blockedapp.NewBlockedService(repo)
-	svc.Rebuild(context.Background())
-	return svc
+	return blockedapp.NewBlockedService(repo)
 }
 
 func NewBlockedChecker(svc *blockedapp.BlockedService) usecase.BlockedChecker {

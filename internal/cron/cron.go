@@ -102,7 +102,7 @@ func buildRegistryEntries() []CronRegistryEntry {
 		},
 		{
 			Name:    constant.CronModuleBlockedHitSync,
-			Enabled: func() bool { return config.CronBlockedHitSyncEnabled },
+			Enabled: func() bool { return true },
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
 				blockedRepo := repository.NewBlockedRepository(db)
 				hitCache := cachepkg.NewBlockedHitCache(cache)

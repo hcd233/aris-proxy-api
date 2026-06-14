@@ -15,7 +15,7 @@ type BlockedService struct {
 }
 
 func NewBlockedService(repo blocked.BlockedRepository) *BlockedService {
-	return &BlockedService{repo: repo}
+	return &BlockedService{repo: repo, matcher: NewACmatcher(make(map[uint]string))}
 }
 
 func (s *BlockedService) rebuild(words map[uint]string) {
