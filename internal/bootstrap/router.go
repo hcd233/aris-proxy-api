@@ -33,6 +33,7 @@ type routeParams struct {
 	AuditHandler     handler.AuditHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
+	BlockedHandler   handler.BlockedHandler
 }
 
 func registerRoutes(params routeParams) {
@@ -54,6 +55,7 @@ func registerRoutes(params routeParams) {
 		AuditHandler:     params.AuditHandler,
 		OpenAIHandler:    params.OpenAIHandler,
 		AnthropicHandler: params.AnthropicHandler,
+		BlockedHandler:   params.BlockedHandler,
 	})
 
 	router.RegisterWebRouter(params.App, web.DistFS)

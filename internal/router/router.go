@@ -29,6 +29,7 @@ type APIRouterDependencies struct {
 	AuditHandler     handler.AuditHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
+	BlockedHandler   handler.BlockedHandler
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -93,6 +94,9 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
 	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB, deps.Cache, deps.AccessSigner)
+
+	blockedGroup := huma.NewGroup(v1Group, "/block")
+	initBlockedRouter(blockedGroup, deps.BlockedHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)

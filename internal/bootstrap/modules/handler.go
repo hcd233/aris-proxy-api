@@ -6,6 +6,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
+	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
@@ -42,6 +43,8 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewAuditHandler,
 		handler.NewOpenAIHandler,
 		handler.NewAnthropicHandler,
+		NewBlockedDependencies,
+		handler.NewBlockedHandler,
 	),
 )
 
@@ -145,4 +148,8 @@ func NewEndpointDependencies(create endpointport.CreateEndpointHandler, update e
 
 func NewModelDependencies(create modelport.CreateModelHandler, update modelport.UpdateModelHandler, deleteHandler modelport.DeleteModelHandler, list modelport.ListModelsHandler) handler.ModelDependencies {
 	return handler.ModelDependencies{Create: create, Update: update, Delete: deleteHandler, List: list}
+}
+
+func NewBlockedDependencies(create blockedport.CreateBlockedHandler, del blockedport.DeleteBlockedHandler, list blockedport.ListBlockedHandler) handler.BlockedDependencies {
+	return handler.BlockedDependencies{Create: create, Delete: del, List: list}
 }

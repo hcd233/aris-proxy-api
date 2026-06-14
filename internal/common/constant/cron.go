@@ -9,6 +9,8 @@ const (
 	CronSpecSoftDeletePurge   = "0 4 * * 0"
 	CronModuleThinkExtract    = "ThinkExtractCron"
 	CronSpecThinkExtract      = "0 0 * * *"
+	CronModuleBlockedHitSync  = "BlockedHitSyncCron"
+	CronSpecBlockedHitSync    = "*/5 * * * *"
 
 	// CronLockDefaultTTL 默认 cron 任务分布式锁 TTL
 	CronLockDefaultTTL = 5 * time.Minute

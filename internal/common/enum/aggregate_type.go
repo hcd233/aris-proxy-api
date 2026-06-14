@@ -12,4 +12,5 @@ const (
 	AggregateTypeMessage        AggregateType = "conversation.message"
 	AggregateTypeTool           AggregateType = "conversation.tool"
 	AggregateTypeSession        AggregateType = "session.session"
+	AggregateTypeBlocked        AggregateType = "blocked.blocked"
 )
