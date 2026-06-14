@@ -148,3 +148,35 @@ func SendOpenAIInternalError() (rsp *huma.StreamResponse) {
 		},
 	}
 }
+
+// SendOpenAIContentBlockedError 发送OpenAI内容被拦截错误 (403)
+func SendOpenAIContentBlockedError() *huma.StreamResponse {
+	return &huma.StreamResponse{
+		Body: func(humaCtx huma.Context) {
+			humaCtx.SetStatus(http.StatusForbidden)
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write in error handler
+				Message: constant.BlockedContentBlockedErrorMessage,
+				Type:    constant.BlockedContentBlockedErrorType,
+				Code:    constant.BlockedContentBlockedErrorCode,
+			}))) //nolint:errcheck // best-effort write in error handler
+		},
+	}
+}
+
+// SendAnthropicContentBlockedError 发送Anthropic内容被拦截错误 (403)
+func SendAnthropicContentBlockedError() *huma.StreamResponse {
+	return &huma.StreamResponse{
+		Body: func(humaCtx huma.Context) {
+			humaCtx.SetStatus(http.StatusForbidden)
+			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write in error handler
+				Type: constant.AnthropicInternalErrorBodyType,
+				Error: &dto.AnthropicError{
+					Type:    constant.BlockedContentBlockedErrorType,
+					Message: constant.BlockedContentBlockedErrorMessage,
+				},
+			})))
+		},
+	}
+}

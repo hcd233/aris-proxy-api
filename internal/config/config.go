@@ -195,6 +195,9 @@ var (
 	// CronThinkExtractEnabled bool 是否启用 Think 内容提取定时任务
 	//	@update 2026-06-02 10:00:00
 	CronThinkExtractEnabled bool
+
+	// CronBlockedHitSyncEnabled bool 是否启用敏感词命中计数同步定时任务
+	CronBlockedHitSyncEnabled bool
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -314,6 +317,7 @@ func initEnvironment() {
 	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
+	CronBlockedHitSyncEnabled = config.GetBool("cron.blocked.hit.sync.enabled")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{

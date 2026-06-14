@@ -14,7 +14,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
+	cachepkg "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
@@ -96,6 +98,15 @@ func buildRegistryEntries() []CronRegistryEntry {
 			Enabled: func() bool { return config.CronThinkExtractEnabled },
 			Factory: func(_ *gorm.DB, _ *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) Cron {
 				return NewThinkExtractCron(thinkRepo, cache)
+			},
+		},
+		{
+			Name:    constant.CronModuleBlockedHitSync,
+			Enabled: func() bool { return config.CronBlockedHitSyncEnabled },
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
+				blockedRepo := repository.NewBlockedRepository(db)
+				hitCache := cachepkg.NewBlockedHitCache(cache)
+				return NewBlockedHitSyncCron(db, blockedRepo, hitCache, cache)
 			},
 		},
 	}

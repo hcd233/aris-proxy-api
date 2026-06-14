@@ -34,6 +34,7 @@ type openAIUseCase struct {
 	openAIProxy    OpenAIProxyPort
 	anthropicProxy AnthropicProxyPort
 	taskSubmitter  TaskSubmitter
+	blockedChecker BlockedChecker
 }
 
 func NewOpenAIUseCase(
@@ -42,6 +43,7 @@ func NewOpenAIUseCase(
 	openAIProxy OpenAIProxyPort,
 	anthropicProxy AnthropicProxyPort,
 	taskSubmitter TaskSubmitter,
+	blockedChecker BlockedChecker,
 ) OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
@@ -49,6 +51,7 @@ func NewOpenAIUseCase(
 		openAIProxy:    openAIProxy,
 		anthropicProxy: anthropicProxy,
 		taskSubmitter:  taskSubmitter,
+		blockedChecker: blockedChecker,
 	}
 }
 
@@ -58,6 +61,10 @@ func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRs
 
 func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
+
+	if err := u.checkContent(ctx, req); err != nil {
+		return proxyutil.SendOpenAIContentBlockedError(), nil //nolint:nilerr // error returned in response body
+	}
 
 	var compatRoute enum.CompatRoute
 	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
