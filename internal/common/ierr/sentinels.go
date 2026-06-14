@@ -49,6 +49,9 @@ var (
 	// ErrResourceLocked 资源锁定
 	ErrResourceLocked = newFromSentinel(newSentinel("resource_locked", model.NewError(10009, "ResourceLocked")))
 
+	// ErrContentBlocked 内容违反策略
+	ErrContentBlocked = newFromSentinel(newSentinel("content_blocked", model.NewError(10010, "ContentBlocked")))
+
 	// ==================== 数据库错误 ====================
 
 	// ErrDBQuery 数据库查询错误

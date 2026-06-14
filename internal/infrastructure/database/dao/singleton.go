@@ -9,6 +9,7 @@ var (
 	modelDAOSingleton          *ModelDAO
 	proxyAPIKeyDAOSingleton    *ProxyAPIKeyDAO
 	modelCallAuditDAOSingleton *ModelCallAuditDAO
+	blockedDAOSingleton        *BlockedDAO
 )
 
 func init() {
@@ -20,6 +21,7 @@ func init() {
 	modelDAOSingleton = &ModelDAO{}
 	proxyAPIKeyDAOSingleton = &ProxyAPIKeyDAO{}
 	modelCallAuditDAOSingleton = &ModelCallAuditDAO{}
+	blockedDAOSingleton = &BlockedDAO{}
 }
 
 // GetUserDAO 获取用户DAO
@@ -84,4 +86,8 @@ func GetProxyAPIKeyDAO() *ProxyAPIKeyDAO {
 //	@update 2026-04-09 10:00:00
 func GetModelCallAuditDAO() *ModelCallAuditDAO {
 	return modelCallAuditDAOSingleton
+}
+
+func GetBlockedDAO() *BlockedDAO {
+	return blockedDAOSingleton
 }

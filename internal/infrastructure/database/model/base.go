@@ -27,4 +27,5 @@ var Models = []any{
 	&Model{},
 	&ProxyAPIKey{},
 	&ModelCallAudit{},
+	&Blocked{},
 }

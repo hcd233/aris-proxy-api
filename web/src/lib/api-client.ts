@@ -44,6 +44,8 @@ import type {
   AuditOptionListRsp,
   SessionOptionListReq,
   SessionOptionListRsp,
+  CreateBlockedReqBody,
+  ListBlockedRsp,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -573,6 +575,25 @@ class ApiClient {
   }): Promise<FirstTokenLatencyRsp> {
     const sp = new URLSearchParams(params);
     return this.request<FirstTokenLatencyRsp>(`/api/v1/audit/stats/token/latency?${sp}`);
+  }
+
+  // ─── Blocked Words ─────────────────────────────────────────────────────
+
+  async createBlocked(body: CreateBlockedReqBody): Promise<CommonRsp> {
+    return this.request<CommonRsp>("/api/v1/block", {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    });
+  }
+
+  async listBlocked(page: number, pageSize: number, query?: string): Promise<ListBlockedRsp> {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (query) params.set("query", query);
+    return this.request<ListBlockedRsp>(`/api/v1/block/list?${params}`);
+  }
+
+  async deleteBlocked(id: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/block/${id}`, { method: "DELETE" });
   }
 }
 

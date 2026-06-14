@@ -9,6 +9,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
+	"github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -47,6 +48,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewStateManager,
 		NewTaskSubmitter,
 		NewEndpointResolver,
+		NewBlockedCache,
 		fx.Annotate(
 			NewAccessTokenSignerImpl,
 			fx.ResultTags(`name:"accessSigner"`),
@@ -137,6 +139,14 @@ func NewEndpointResolver(
 	modelRepo llmproxy.ModelRepository,
 ) llmproxyservice.EndpointResolver {
 	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo)
+}
+
+func NewBlockedRepository(db *gorm.DB) blocked.BlockedRepository {
+	return repository.NewBlockedRepository(db)
+}
+
+func NewBlockedCache(c *redis.Client) *cache.BlockedHitCache {
+	return cache.NewBlockedHitCache(c)
 }
 
 func NewAccessTokenSignerImpl() identityservice.TokenSigner {

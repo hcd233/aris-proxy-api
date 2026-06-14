@@ -144,6 +144,7 @@ const (
 	TagModel     = "Model"
 	TagOpenAI    = "OpenAI"
 	TagSession   = "Session"
+	TagBlocked   = "Blocked"
 
 	// Router sub-paths
 	RoutePathList = "/list"
@@ -159,4 +160,13 @@ const (
 
 	// ── Session option values ──
 	SessionOptionScoreValueUnscored = "unscored"
+
+	// ── Blocked Word constants ──
+	BlockedContentBlockedErrorMessage = "ContentBlocked"
+	BlockedContentBlockedErrorType    = "forbidden"
+	BlockedContentBlockedErrorCode    = "content_blocked"
+	BlockedAuditRemark                = "trigger blocked word"
+	BlockedTableName                  = "blocked_words"
+	BlockedHitKeyPrefix               = "blocked:hit:%d"
+	BlockedHitKeyScanPattern          = "blocked:hit:*"
 )

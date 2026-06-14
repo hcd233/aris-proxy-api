@@ -6,6 +6,10 @@ import (
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
+	blockedapp "github.com/hcd233/aris-proxy-api/internal/application/blocked"
+	blockedcommand "github.com/hcd233/aris-proxy-api/internal/application/blocked/command"
+	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
+	blockedquery "github.com/hcd233/aris-proxy-api/internal/application/blocked/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
@@ -24,6 +28,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
+	blockeddomain "github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -82,6 +87,11 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		usecase.NewCountTokens,
 		usecase.NewOpenAIUseCase,
 		usecase.NewAnthropicUseCase,
+		NewBlockedService,
+		NewBlockedChecker,
+		NewCreateBlockedHandler,
+		NewDeleteBlockedHandler,
+		NewListBlockedHandler,
 	),
 )
 
@@ -257,4 +267,24 @@ func NewDeleteScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyR
 
 func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport.ListSessionOptionHandler {
 	return sessionquery.NewListSessionOptionHandler(readRepo)
+}
+
+func NewBlockedService(repo blockeddomain.BlockedRepository) *blockedapp.BlockedService {
+	return blockedapp.NewBlockedService(repo)
+}
+
+func NewBlockedChecker(svc *blockedapp.BlockedService) usecase.BlockedChecker {
+	return svc
+}
+
+func NewCreateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.CreateBlockedHandler {
+	return blockedcommand.NewCreateBlockedHandler(repo, svc.Rebuild)
+}
+
+func NewDeleteBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.DeleteBlockedHandler {
+	return blockedcommand.NewDeleteBlockedHandler(repo, svc.Rebuild)
+}
+
+func NewListBlockedHandler(repo blockeddomain.BlockedRepository) blockedport.ListBlockedHandler {
+	return blockedquery.NewListBlockedHandler(repo)
 }

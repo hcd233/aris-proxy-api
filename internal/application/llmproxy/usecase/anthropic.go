@@ -37,6 +37,7 @@ type anthropicUseCase struct {
 	anthropicProxy   AnthropicProxyPort
 	openAIProxy      OpenAIProxyPort
 	taskSubmitter    TaskSubmitter
+	blockedChecker   BlockedChecker
 }
 
 func NewAnthropicUseCase(
@@ -46,6 +47,7 @@ func NewAnthropicUseCase(
 	anthropicProxy AnthropicProxyPort,
 	openAIProxy OpenAIProxyPort,
 	taskSubmitter TaskSubmitter,
+	blockedChecker BlockedChecker,
 ) AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -54,6 +56,7 @@ func NewAnthropicUseCase(
 		anthropicProxy:   anthropicProxy,
 		openAIProxy:      openAIProxy,
 		taskSubmitter:    taskSubmitter,
+		blockedChecker:   blockedChecker,
 	}
 }
 
@@ -67,6 +70,10 @@ func (u *anthropicUseCase) CountTokens(ctx context.Context, req *dto.AnthropicCo
 
 func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
+
+	if err := u.checkContent(ctx, req); err != nil {
+		return proxyutil.SendAnthropicContentBlockedError(), nil //nolint:nilerr // error returned in response body
+	}
 
 	var compatRoute enum.CompatRoute
 	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {

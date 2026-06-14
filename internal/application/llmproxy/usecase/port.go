@@ -37,3 +37,8 @@ type OpenAIProxyPort interface {
 	ForwardCreateResponse(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)
 	ForwardCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error
 }
+
+// BlockedChecker 敏感词检查端口
+type BlockedChecker interface {
+	Check(text string) []uint
+}

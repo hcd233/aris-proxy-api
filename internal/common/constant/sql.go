@@ -49,6 +49,8 @@ const (
 	FieldUpstreamStatusCode       = "upstream_status_code"
 	FieldErrorMessage             = "error_message"
 	FieldEnabled                  = "enabled"
+	FieldWord                     = "word"
+	FieldHitCount                 = "hit_count"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
 )
@@ -99,6 +101,8 @@ var (
 	AuditFilterFieldUser   = "user"
 	AuditFilterFieldModel  = "model"
 	AuditFilterFieldStatus = "status"
+
+	BlockedRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldCreatedAt, FieldUpdatedAt}
 
 	AuditMaxPageSize = 100
 

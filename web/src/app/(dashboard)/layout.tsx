@@ -27,6 +27,7 @@ import {
   Menu,
   Share2,
   ScrollText,
+  Ban,
 } from "lucide-react";
 
 interface NavItem {
@@ -67,6 +68,12 @@ const navItems: NavItem[] = [
     label: "Models",
     href: "/models/",
     icon: <Cpu className="size-4" />,
+    adminOnly: true,
+  },
+  {
+    label: "Blocked",
+    href: "/block/",
+    icon: <Ban className="size-4" />,
     adminOnly: true,
   },
   {

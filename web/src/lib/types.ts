@@ -492,3 +492,21 @@ export interface SessionOptionListReq {
 export interface SessionOptionListRsp extends CommonRsp {
   items: string[];
 }
+
+// ─── Blocked Words ─────────────────────────────────────────────────────────
+
+export interface CreateBlockedReqBody {
+  word: string;
+}
+
+export interface BlockedItem {
+  id: number;
+  word: string;
+  hitCount: number;
+  createdAt: string;
+}
+
+export interface ListBlockedRsp extends CommonRsp {
+  blocked?: BlockedItem[];
+  pageInfo?: PageInfo;
+}
