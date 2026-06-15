@@ -1,5 +1,10 @@
 package blocked
 
+import (
+	"strings"
+	"unicode"
+)
+
 type acNode struct {
 	children map[rune]*acNode
 	fail     *acNode
@@ -13,6 +18,7 @@ type ACmatcher struct {
 func NewACmatcher(words map[uint]string) *ACmatcher {
 	m := &ACmatcher{root: &acNode{children: make(map[rune]*acNode)}}
 	for id, word := range words {
+		word = strings.ToLower(word)
 		node := m.root
 		for _, r := range word {
 			child, ok := node.children[r]
@@ -55,6 +61,7 @@ func (m *ACmatcher) Match(text string) []uint {
 	matched := make(map[uint]struct{})
 	node := m.root
 	for _, r := range text {
+		r = unicode.ToLower(r)
 		for node != m.root && node.children[r] == nil {
 			node = node.fail
 		}
