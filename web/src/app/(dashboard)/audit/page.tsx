@@ -254,7 +254,7 @@ export default function AuditPage() {
                     fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, [], [], []);
                   }}
                 >
-                  <X className="size-3.5" />
+                  <X size={14} />
                   Clear filters
                 </Button>
               )}
@@ -393,7 +393,7 @@ export default function AuditPage() {
                             <div>
                               <span className="text-muted-foreground">Upstream</span>
                               <p className="flex items-center gap-1.5">
-                                <ProviderIcon protocol={log.upstreamProtocol} className="size-3.5" />
+                                <ProviderIcon protocol={log.upstreamProtocol} size={14} />
                                 {formatProtocol(log.upstreamProtocol)}
                               </p>
                             </div>
@@ -408,7 +408,7 @@ export default function AuditPage() {
                             <div>
                               <span className="text-muted-foreground">API Protocol</span>
                               <p className="flex items-center gap-1.5">
-                                <ProviderIcon protocol={log.apiProtocol} className="size-3.5" />
+                                <ProviderIcon protocol={log.apiProtocol} size={14} />
                                 {formatProtocol(log.apiProtocol)}
                               </p>
                             </div>
@@ -471,11 +471,11 @@ export default function AuditPage() {
                       <TableCell className="max-w-[140px] truncate text-muted-foreground">{log.endpoint || "—"}</TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         <div className="flex items-center gap-1.5 text-xs">
-                          <ProviderIcon protocol={log.apiProtocol} className="size-3.5" />
+                          <ProviderIcon protocol={log.apiProtocol} size={14} />
                           {formatProtocol(log.apiProtocol)}
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
-                          <ProviderIcon protocol={log.upstreamProtocol} className="size-3.5" />
+                          <ProviderIcon protocol={log.upstreamProtocol} size={14} />
                           {formatProtocol(log.upstreamProtocol)}
                         </div>
                       </TableCell>
@@ -566,7 +566,7 @@ export default function AuditPage() {
                   <DropdownMenuTrigger
                     render={<Button variant="outline" size="sm" className="gap-1.5" />}
                   >
-                    <ListFilter className="size-3.5" />
+                    <ListFilter size={14} />
                     {pageInfo.pageSize} / page
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">

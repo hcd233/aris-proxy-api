@@ -278,7 +278,7 @@ export default function EndpointsPage() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
-                              <Pencil className="size-3.5" />
+                              <Pencil size={14} />
                             </Button>
                             <Button
                               variant="destructive"
@@ -294,19 +294,19 @@ export default function EndpointsPage() {
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {ep.supportOpenAIChatCompletion && (
                             <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                              <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
+                              <ProviderIcon protocol="openai-chat-completion" size={14} />
                               OpenAI / Chat
                             </Badge>
                           )}
                           {ep.supportOpenAIResponse && (
                             <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                              <ProviderIcon protocol="openai-response" className="size-3.5" />
+                              <ProviderIcon protocol="openai-response" size={14} />
                               OpenAI / Response
                             </Badge>
                           )}
                           {ep.supportAnthropicMessage && (
                             <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                              <ProviderIcon protocol="anthropic-message" className="size-3.5" />
+                              <ProviderIcon protocol="anthropic-message" size={14} />
                               Anthropic / Messages
                             </Badge>
                           )}
@@ -344,11 +344,11 @@ export default function EndpointsPage() {
                                   <button type="button" className="w-full cursor-default text-left">
                                     <div className="space-y-0.5">
                                       <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
-                                        <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
+                                        <ProviderIcon protocol="openai-chat-completion" size={14} />
                                         {ep.openaiBaseURL || "—"}
                                       </div>
                                       <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
-                                        <ProviderIcon protocol="anthropic-message" className="size-3.5" />
+                                        <ProviderIcon protocol="anthropic-message" size={14} />
                                         {ep.anthropicBaseURL || "—"}
                                       </div>
                                     </div>
@@ -358,11 +358,11 @@ export default function EndpointsPage() {
                               <TooltipContent side="top" align="start" className="max-w-md">
                                 <div className="space-y-1 font-mono text-xs">
                                   <p className="flex items-center gap-1.5">
-                                    <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
+                                    <ProviderIcon protocol="openai-chat-completion" size={14} />
                                     {ep.openaiBaseURL || "—"}
                                   </p>
                                   <p className="flex items-center gap-1.5">
-                                    <ProviderIcon protocol="anthropic-message" className="size-3.5" />
+                                    <ProviderIcon protocol="anthropic-message" size={14} />
                                     {ep.anthropicBaseURL || "—"}
                                   </p>
                                 </div>
@@ -374,19 +374,19 @@ export default function EndpointsPage() {
                           <div className="flex flex-wrap gap-1.5">
                             {ep.supportOpenAIChatCompletion && (
                               <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                                <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
+                                <ProviderIcon protocol="openai-chat-completion" size={14} />
                                 Chat Completions
                               </Badge>
                             )}
                             {ep.supportOpenAIResponse && (
                               <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                                <ProviderIcon protocol="openai-response" className="size-3.5" />
+                                <ProviderIcon protocol="openai-response" size={14} />
                                 Response
                               </Badge>
                             )}
                             {ep.supportAnthropicMessage && (
                               <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                                <ProviderIcon protocol="anthropic-message" className="size-3.5" />
+                                <ProviderIcon protocol="anthropic-message" size={14} />
                                 Messages
                               </Badge>
                             )}
@@ -398,7 +398,7 @@ export default function EndpointsPage() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
-                              <Pencil className="size-3.5" />
+                              <Pencil size={14} />
                             </Button>
                             <Button
                               variant="destructive"
@@ -424,7 +424,7 @@ export default function EndpointsPage() {
                         <DropdownMenuTrigger
                           render={<Button variant="outline" size="sm" className="gap-1.5" />}
                         >
-                          <ListFilter className="size-3.5" />
+                          <ListFilter size={14} />
                           {pageInfo.pageSize} / page
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">

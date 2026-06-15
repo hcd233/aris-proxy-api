@@ -51,6 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ProviderIcon } from "@/components/provider-icon";
 import { Plus, Trash2, Pencil, Cpu, AlertTriangle, ChevronLeft, ChevronRight, Search, ListFilter, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -277,7 +278,10 @@ export default function ModelsPage() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">{model.alias}</p>
+                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                              <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
+                              {model.alias}
+                            </p>
                             <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
                               {model.modelName}
                             </p>
@@ -331,7 +335,12 @@ export default function ModelsPage() {
                     <TableBody>
                       {models.map((model) => (
                         <TableRow key={model.id}>
-                          <TableCell className="font-medium">{model.alias}</TableCell>
+                          <TableCell>
+                            <span className="flex items-center gap-1.5 font-medium">
+                              <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
+                              {model.alias}
+                            </span>
+                          </TableCell>
                           <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
