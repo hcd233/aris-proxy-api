@@ -186,9 +186,14 @@ func (l *GormLoggerAdapter) Trace(ctx context.Context, begin time.Time, fc func(
 //	@author centonhuang
 //	@update 2026-06-13 10:00:00
 func migrateMessageChecksums(db *gorm.DB) error {
-	log := logger.Logger()
+	if err := migratePhase1RefreshChecksums(db); err != nil {
+		return err
+	}
+	return migratePhase2MergeDuplicates(db)
+}
 
-	// ── Phase 1: 刷新 checksum ──
+func migratePhase1RefreshChecksums(db *gorm.DB) error {
+	log := logger.Logger()
 	log.Info("[Database] Phase 1: refreshing message checksums for reasoning_content")
 	offset := 0
 	for {
@@ -216,15 +221,19 @@ func migrateMessageChecksums(db *gorm.DB) error {
 		log.Info("[Database] Phase 1 progress", zap.Int("processed", offset))
 	}
 	log.Info("[Database] Phase 1 complete")
+	return nil
+}
 
-	// ── Phase 2: 合并重复消息 ──
+type dupRow struct {
+	CheckSum string `gorm:"column:check_sum"`
+	IDs      string `gorm:"column:ids"`
+}
+
+func migratePhase2MergeDuplicates(db *gorm.DB) error {
+	log := logger.Logger()
 	log.Info("[Database] Phase 2: merging duplicate messages by content checksum")
 	totalPhase2 := 0
 	for {
-		type dupRow struct {
-			CheckSum string `gorm:"column:check_sum"`
-			IDs      string `gorm:"column:ids"`
-		}
 		var groups []dupRow
 		findDupSQL := fmt.Sprintf(`SELECT %s, json_agg(%s ORDER BY
 			CASE WHEN %s::jsonb->>'reasoning_content' IS NOT NULL THEN 0 ELSE 1 END,
@@ -245,44 +254,50 @@ func migrateMessageChecksums(db *gorm.DB) error {
 			break
 		}
 		for _, g := range groups {
-			var ids []uint
-			if err := sonic.UnmarshalString(g.IDs, &ids); err != nil {
-				return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: unmarshal ids")
-			}
-			if len(ids) < 2 {
-				continue
-			}
-			keepID := ids[0]
-			for _, oldID := range ids[1:] {
-				updateMessageIDsSQL := `UPDATE sessions SET message_ids = (
-					SELECT COALESCE(jsonb_agg(
-						CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
-					), '[]'::jsonb)
-					FROM jsonb_array_elements(COALESCE(message_ids::jsonb, '[]'::jsonb)) AS t(value)
-				)
-				WHERE message_ids::jsonb @> ?::jsonb`
-				if err := db.Exec(updateMessageIDsSQL, oldID, keepID, oldID).Error; err != nil {
-					return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session message_ids")
-				}
-				updateQuestionsSQL := `UPDATE sessions SET questions = (
-					SELECT COALESCE(jsonb_agg(
-						CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
-					), '[]'::jsonb)
-					FROM jsonb_array_elements(COALESCE(questions::jsonb, '[]'::jsonb)) AS t(value)
-				)
-				WHERE questions IS NOT NULL AND questions::jsonb @> ?::jsonb`
-				if err := db.Exec(updateQuestionsSQL, oldID, keepID, oldID).Error; err != nil {
-					return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session questions")
-				}
-				if err := db.Delete(&model.Message{ID: oldID}).Error; err != nil {
-					return ierr.Wrap(ierr.ErrDBDelete, err, "phase 2: delete redundant message")
-				}
+			if err := mergeDuplicateGroup(db, g); err != nil {
+				return err
 			}
 		}
 		totalPhase2 += len(groups)
 		log.Info("[Database] Phase 2 progress", zap.Int("groups_processed", totalPhase2))
 	}
 	log.Info("[Database] Phase 2 complete")
+	return nil
+}
 
+func mergeDuplicateGroup(db *gorm.DB, g dupRow) error {
+	var ids []uint
+	if err := sonic.UnmarshalString(g.IDs, &ids); err != nil {
+		return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: unmarshal ids")
+	}
+	if len(ids) < 2 {
+		return nil
+	}
+	keepID := ids[0]
+	for _, oldID := range ids[1:] {
+		updateMessageIDsSQL := `UPDATE sessions SET message_ids = (
+			SELECT COALESCE(jsonb_agg(
+				CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
+			), '[]'::jsonb)
+			FROM jsonb_array_elements(COALESCE(message_ids::jsonb, '[]'::jsonb)) AS t(value)
+		)
+		WHERE message_ids::jsonb @> ?::jsonb`
+		if err := db.Exec(updateMessageIDsSQL, oldID, keepID, oldID).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session message_ids")
+		}
+		updateQuestionsSQL := `UPDATE sessions SET questions = (
+			SELECT COALESCE(jsonb_agg(
+				CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
+			), '[]'::jsonb)
+			FROM jsonb_array_elements(COALESCE(questions::jsonb, '[]'::jsonb)) AS t(value)
+		)
+		WHERE questions IS NOT NULL AND questions::jsonb @> ?::jsonb`
+		if err := db.Exec(updateQuestionsSQL, oldID, keepID, oldID).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session questions")
+		}
+		if err := db.Delete(&model.Message{ID: oldID}).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "phase 2: delete redundant message")
+		}
+	}
 	return nil
 }

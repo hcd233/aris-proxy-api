@@ -31,15 +31,41 @@ func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron 
 	origDedup := config.CronSessionDeduplicateEnabled
 	origPurge := config.CronSoftDeletePurgeEnabled
 	origThink := config.CronThinkExtractEnabled
+	origRegistry := cron.DefaultCronRegistry
 	defer func() {
 		config.CronSessionDeduplicateEnabled = origDedup
 		config.CronSoftDeletePurgeEnabled = origPurge
 		config.CronThinkExtractEnabled = origThink
+		cron.DefaultCronRegistry = origRegistry
 	}()
 
 	config.CronSessionDeduplicateEnabled = false
 	config.CronSoftDeletePurgeEnabled = false
 	config.CronThinkExtractEnabled = false
+
+	cron.DefaultCronRegistry = []cron.CronRegistryEntry{
+		{
+			Name:    "SessionDeduplicate",
+			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
+		},
+		{
+			Name:    "SoftDeletePurge",
+			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
+		},
+		{
+			Name:    "ThinkExtract",
+			Enabled: func() bool { return config.CronThinkExtractEnabled },
+			Factory: func(_ *gorm.DB, _ *pool.PoolManager, _ *redis.Client, _ conversation.ThinkExtractRepository) cron.Cron {
+				return &mockCron{}
+			},
+		},
+	}
 
 	cron.StopCronJobsWithContext(context.Background(), nil)
 	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)

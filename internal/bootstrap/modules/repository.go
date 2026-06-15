@@ -48,6 +48,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewStateManager,
 		NewTaskSubmitter,
 		NewEndpointResolver,
+		NewBlockedRepository,
 		NewBlockedCache,
 		fx.Annotate(
 			NewAccessTokenSignerImpl,
