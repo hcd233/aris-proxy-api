@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
+	blockedapp "github.com/hcd233/aris-proxy-api/internal/application/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
@@ -28,6 +29,7 @@ type lifecycleParams struct {
 	PoolManager     *pool.PoolManager
 	InflightTracker *inflight.Tracker
 	CronEntries     []cron.Cron
+	BlockedService  *blockedapp.BlockedService
 	ListenHost      string `name:"listenHost"`
 	ListenPort      string `name:"listenPort"`
 }
@@ -49,6 +51,14 @@ func registerLifecycleHooks(params lifecycleParams) {
 		OnStop: func(ctx context.Context) error {
 			return database.CloseDatabase(params.DB)
 		},
+	})
+
+	params.Lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			params.BlockedService.Rebuild(ctx)
+			return nil
+		},
+		OnStop: func(ctx context.Context) error { return nil },
 	})
 
 	params.Lifecycle.Append(fx.Hook{
