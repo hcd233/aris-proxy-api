@@ -274,30 +274,32 @@ func mergeDuplicateGroup(db *gorm.DB, g dupRow) error {
 		return nil
 	}
 	keepID := ids[0]
-	for _, oldID := range ids[1:] {
-		updateMessageIDsSQL := `UPDATE sessions SET message_ids = (
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, oldID := range ids[1:] {
+			updateMessageIDsSQL := `UPDATE sessions SET message_ids = (
 			SELECT COALESCE(jsonb_agg(
 				CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
 			), '[]'::jsonb)
 			FROM jsonb_array_elements(COALESCE(message_ids::jsonb, '[]'::jsonb)) AS t(value)
 		)
 		WHERE message_ids::jsonb @> ?::jsonb`
-		if err := db.Exec(updateMessageIDsSQL, oldID, keepID, oldID).Error; err != nil {
-			return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session message_ids")
-		}
-		updateQuestionsSQL := `UPDATE sessions SET questions = (
+			if err := tx.Exec(updateMessageIDsSQL, oldID, keepID, oldID).Error; err != nil {
+				return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session message_ids")
+			}
+			updateQuestionsSQL := `UPDATE sessions SET questions = (
 			SELECT COALESCE(jsonb_agg(
 				CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
 			), '[]'::jsonb)
 			FROM jsonb_array_elements(COALESCE(questions::jsonb, '[]'::jsonb)) AS t(value)
 		)
 		WHERE questions IS NOT NULL AND questions::jsonb @> ?::jsonb`
-		if err := db.Exec(updateQuestionsSQL, oldID, keepID, oldID).Error; err != nil {
-			return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session questions")
+			if err := tx.Exec(updateQuestionsSQL, oldID, keepID, oldID).Error; err != nil {
+				return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session questions")
+			}
+			if err := tx.Delete(&model.Message{ID: oldID}).Error; err != nil {
+				return ierr.Wrap(ierr.ErrDBDelete, err, "phase 2: delete redundant message")
+			}
 		}
-		if err := db.Delete(&model.Message{ID: oldID}).Error; err != nil {
-			return ierr.Wrap(ierr.ErrDBDelete, err, "phase 2: delete redundant message")
-		}
-	}
-	return nil
+		return nil
+	})
 }

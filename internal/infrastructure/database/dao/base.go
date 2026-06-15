@@ -240,7 +240,7 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 		param.Page = 1
 	}
 	if param.PageSize < 1 {
-		param.PageSize = 10
+		param.PageSize = 20
 	}
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 
@@ -263,12 +263,11 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 		}
 	}
 
-	param.Sort = lo.Ternary(param.Sort != "", param.Sort, enum.SortAsc)
+	param.Sort = lo.Ternary(param.Sort != "", param.Sort, enum.SortDesc)
 	param.SortField = lo.Ternary(param.SortField != "", param.SortField, constant.FieldID)
-	if !isValidSortField(param.SortField) {
-		param.SortField = ""
+	if isValidSortField(param.SortField) {
+		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
-	sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 
 	pageInfo = &model.PageInfo{
 		Page:     param.Page,

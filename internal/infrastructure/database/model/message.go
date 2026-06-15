@@ -14,5 +14,5 @@ type Message struct {
 	ID       uint               `json:"id" gorm:"column:id;primary_key;auto_increment;comment:消息ID"`
 	Model    string             `json:"model" gorm:"column:model;not null;default:'';comment:模型"`
 	Message  *vo.UnifiedMessage `json:"message" gorm:"column:message;not null;comment:消息;serializer:json"`
-	CheckSum string             `json:"check_sum" gorm:"column:check_sum;not null;default:'';comment:校验和"`
+	CheckSum string             `json:"check_sum" gorm:"column:check_sum;not null;default:'';uniqueIndex:idx_message_checksum,comment:校验和"`
 }

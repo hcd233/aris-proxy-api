@@ -127,6 +127,10 @@ func (s *stubEndpointRepo) Delete(_ context.Context, _ uint) error {
 	return nil
 }
 
+func (s *stubEndpointRepo) DeleteCascade(_ context.Context, _ uint) error {
+	return nil
+}
+
 func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error) {
 	return nil, nil
 }
@@ -198,6 +202,10 @@ func (s *endpointByIDRepo) Update(_ context.Context, _ *aggregate.Endpoint) erro
 }
 
 func (s *endpointByIDRepo) Delete(_ context.Context, _ uint) error {
+	return nil
+}
+
+func (s *endpointByIDRepo) DeleteCascade(_ context.Context, _ uint) error {
 	return nil
 }
 
