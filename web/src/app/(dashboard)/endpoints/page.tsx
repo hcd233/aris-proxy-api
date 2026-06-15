@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Trash2, Pencil, Server, AlertTriangle, ChevronLeft, ChevronRight, Search, ListFilter, Check } from "lucide-react";
+import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -292,13 +293,22 @@ export default function EndpointsPage() {
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {ep.supportOpenAIChatCompletion && (
-                            <Badge variant="secondary" className="text-[11px] font-normal">OpenAI / Chat</Badge>
+                            <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
+                              <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
+                              OpenAI / Chat
+                            </Badge>
                           )}
                           {ep.supportOpenAIResponse && (
-                            <Badge variant="secondary" className="text-[11px] font-normal">OpenAI / Response</Badge>
+                            <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
+                              <ProviderIcon protocol="openai-response" className="size-3.5" />
+                              OpenAI / Response
+                            </Badge>
                           )}
                           {ep.supportAnthropicMessage && (
-                            <Badge variant="secondary" className="text-[11px] font-normal">Anthropic / Messages</Badge>
+                            <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
+                              <ProviderIcon protocol="anthropic-message" className="size-3.5" />
+                              Anthropic / Messages
+                            </Badge>
                           )}
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground">
@@ -333,12 +343,12 @@ export default function EndpointsPage() {
                                 render={
                                   <button type="button" className="w-full cursor-default text-left">
                                     <div className="space-y-0.5">
-                                      <div className="truncate font-mono text-xs text-muted-foreground">
-                                        <span className="text-[11px] font-medium text-foreground">O: </span>
+                                      <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
+                                        <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
                                         {ep.openaiBaseURL || "—"}
                                       </div>
-                                      <div className="truncate font-mono text-xs text-muted-foreground">
-                                        <span className="text-[11px] font-medium text-foreground">A: </span>
+                                      <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
+                                        <ProviderIcon protocol="anthropic-message" className="size-3.5" />
                                         {ep.anthropicBaseURL || "—"}
                                       </div>
                                     </div>
@@ -347,8 +357,14 @@ export default function EndpointsPage() {
                               />
                               <TooltipContent side="top" align="start" className="max-w-md">
                                 <div className="space-y-1 font-mono text-xs">
-                                  <p><span className="font-medium text-foreground">O: </span>{ep.openaiBaseURL || "—"}</p>
-                                  <p><span className="font-medium text-foreground">A: </span>{ep.anthropicBaseURL || "—"}</p>
+                                  <p className="flex items-center gap-1.5">
+                                    <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
+                                    {ep.openaiBaseURL || "—"}
+                                  </p>
+                                  <p className="flex items-center gap-1.5">
+                                    <ProviderIcon protocol="anthropic-message" className="size-3.5" />
+                                    {ep.anthropicBaseURL || "—"}
+                                  </p>
                                 </div>
                               </TooltipContent>
                             </TooltipRoot>
@@ -357,18 +373,21 @@ export default function EndpointsPage() {
                         <TableCell>
                           <div className="flex flex-wrap gap-1.5">
                             {ep.supportOpenAIChatCompletion && (
-                              <Badge variant="secondary" className="text-[11px] font-normal">
-                                OpenAI / Chat Completions
+                              <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
+                                <ProviderIcon protocol="openai-chat-completion" className="size-3.5" />
+                                Chat Completions
                               </Badge>
                             )}
                             {ep.supportOpenAIResponse && (
-                              <Badge variant="secondary" className="text-[11px] font-normal">
-                                OpenAI / Response
+                              <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
+                                <ProviderIcon protocol="openai-response" className="size-3.5" />
+                                Response
                               </Badge>
                             )}
                             {ep.supportAnthropicMessage && (
-                              <Badge variant="secondary" className="text-[11px] font-normal">
-                                Anthropic / Messages
+                              <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
+                                <ProviderIcon protocol="anthropic-message" className="size-3.5" />
+                                Messages
                               </Badge>
                             )}
                           </div>
