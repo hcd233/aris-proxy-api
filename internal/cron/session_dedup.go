@@ -19,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -477,8 +478,15 @@ func processTerminalToolCallSession(s *dbmodel.Session, sessions []*dbmodel.Sess
 	}
 
 	lastMsgID := s.MessageIDs[len(s.MessageIDs)-1]
-	msg, ok := msgMap[lastMsgID]
-	if !ok || msg.Message == nil {
+	msg, msgOk := msgMap[lastMsgID]
+	hasMsg := mo.TupleToOption(msg, msgOk).
+		FlatMap(func(m *dbmodel.Message) mo.Option[*dbmodel.Message] {
+			if m.Message == nil {
+				return mo.None[*dbmodel.Message]()
+			}
+			return mo.Some(m)
+		}).IsPresent()
+	if !hasMsg {
 		return
 	}
 

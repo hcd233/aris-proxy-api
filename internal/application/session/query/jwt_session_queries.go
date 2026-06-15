@@ -94,14 +94,12 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 		return nil, nil, err
 	}
 
-	views := make([]*sessionport.SessionSummaryView, 0, len(projections))
-
-	var lastQuestionIDs []uint
-	for _, p := range projections {
+	lastQuestionIDs := lo.FilterMap(projections, func(p *session.SessionSummaryProjection, _ int) (uint, bool) {
 		if len(p.Questions) > 0 {
-			lastQuestionIDs = append(lastQuestionIDs, p.Questions[len(p.Questions)-1])
+			return p.Questions[len(p.Questions)-1], true
 		}
-	}
+		return 0, false
+	})
 	var msgByID map[uint]*session.MessageDetailProjection
 	if len(lastQuestionIDs) > 0 {
 		msgs, msgErr := h.readRepo.FindMessagesByIDs(ctx, lo.Uniq(lastQuestionIDs))
@@ -114,14 +112,14 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 		}
 	}
 
-	for _, p := range projections {
+	views := lo.Map(projections, func(p *session.SessionSummaryProjection, _ int) *sessionport.SessionSummaryView {
 		summary := ""
 		if len(p.Questions) > 0 {
 			if m, ok := msgByID[p.Questions[len(p.Questions)-1]]; ok && m.Message != nil {
 				summary = util.ExtractMessageText(m.Message.Content)
 			}
 		}
-		views = append(views, &sessionport.SessionSummaryView{
+		return &sessionport.SessionSummaryView{
 			ID:           p.ID,
 			CreatedAt:    p.CreatedAt,
 			UpdatedAt:    p.UpdatedAt,
@@ -129,8 +127,8 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 			Score:        p.Score,
 			MessageCount: p.MessageCount,
 			ToolCount:    p.ToolCount,
-		})
-	}
+		}
+	})
 	return views, pageInfo, nil
 }
 

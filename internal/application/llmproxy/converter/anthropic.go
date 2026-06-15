@@ -201,12 +201,12 @@ func resolveOpenAIContentText(content *dto.OpenAIMessageContent) string {
 		return content.Text
 	}
 	if len(content.Parts) > 0 {
-		var texts []string
-		for _, part := range content.Parts {
+		texts := lo.FilterMap(content.Parts, func(part *dto.OpenAIChatCompletionContentPart, _ int) (string, bool) {
 			if part.Type == enum.ContentPartTypeText {
-				texts = append(texts, lo.FromPtr(part.Text))
+				return lo.FromPtr(part.Text), true
 			}
-		}
+			return "", false
+		})
 		return strings.Join(texts, "\n")
 	}
 	return ""
@@ -430,39 +430,36 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 		Role: enum.RoleAssistant,
 	}
 
-	var textParts []string
-	var thinkingParts []string
+	textParts := lo.FilterMap(blocks, func(block *dto.AnthropicContentBlock, _ int) (string, bool) {
+		if block.Type == enum.AnthropicContentBlockTypeText {
+			return lo.FromPtr(block.Text), true
+		}
+		return "", false
+	})
+	thinkingParts := lo.FilterMap(blocks, func(block *dto.AnthropicContentBlock, _ int) (string, bool) {
+		if block.Type == enum.AnthropicContentBlockTypeThinking {
+			return lo.FromPtr(block.Thinking), true
+		}
+		return "", false
+	})
 	var toolCalls []*dto.OpenAIChatCompletionMessageToolCall
-
 	for i, block := range blocks {
-		switch block.Type {
-		case enum.AnthropicContentBlockTypeText:
-			textParts = append(textParts, lo.FromPtr(block.Text))
-
-		case enum.AnthropicContentBlockTypeThinking:
-			thinkingParts = append(thinkingParts, lo.FromPtr(block.Thinking))
-
-		case enum.AnthropicContentBlockTypeToolUse:
-			args, err := sonic.MarshalString(block.Input)
-			if err != nil {
-				return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
-			}
-			name := lo.FromPtr(block.Name)
-			toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
-				ID:   block.ID,
-				Type: enum.ToolTypeFunction,
-				Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
-					Name:      name,
-					Arguments: args,
-				},
-			})
-
-		case enum.AnthropicContentBlockTypeRedactedThinking:
-			continue
-
-		default:
+		if block.Type != enum.AnthropicContentBlockTypeToolUse {
 			continue
 		}
+		args, err := sonic.MarshalString(block.Input)
+		if err != nil {
+			return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
+		}
+		name := lo.FromPtr(block.Name)
+		toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
+			ID:   block.ID,
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
+				Name:      name,
+				Arguments: args,
+			},
+		})
 	}
 
 	if joined := strings.Join(textParts, "\n"); joined != "" {
