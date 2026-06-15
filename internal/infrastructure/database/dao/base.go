@@ -263,7 +263,7 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 		}
 	}
 
-	param.Sort = lo.Ternary(param.Sort != "", param.Sort, enum.SortDesc)
+	param.Sort = lo.Ternary(param.Sort != "", param.Sort, enum.SortAsc)
 	param.SortField = lo.Ternary(param.SortField != "", param.SortField, constant.FieldID)
 	if isValidSortField(param.SortField) {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})

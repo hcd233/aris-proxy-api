@@ -15,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
 // ─── fake repository ─────────────────────────────────────
@@ -123,8 +124,8 @@ func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
 			if param.PageSize != 100 {
 				t.Errorf("PageSize = %d, want 100 (clamped from 999)", param.PageSize)
 			}
-			if param.Sort != enum.SortDesc {
-				t.Errorf("Sort = %q, want desc (default)", param.Sort)
+			if param.Sort != enum.SortAsc {
+				t.Errorf("Sort = %q, want asc (default)", param.Sort)
 			}
 			if param.SortField != "id" {
 				t.Errorf("SortField = %q, want id (default)", param.SortField)
@@ -533,11 +534,21 @@ func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
 	if len(items) != 2 {
 		t.Fatalf("len(items) = %d, want 2", len(items))
 	}
-	gpt := items[0]
+	byModel := make(map[string]*dto.ModelUsageItem, len(items))
+	for _, it := range items {
+		byModel[it.Model] = it
+	}
+	gpt, ok := byModel["gpt-4"]
+	if !ok {
+		t.Fatal("missing gpt-4 in aggregated items")
+	}
 	if gpt.InputTokens != 300 || gpt.OutputTokens != 200 || gpt.CacheReadTokens != 50 || gpt.CacheCreationTokens != 15 {
 		t.Errorf("gpt-4 totals mismatch: %+v", gpt)
 	}
-	claude := items[1]
+	claude, ok := byModel["claude"]
+	if !ok {
+		t.Fatal("missing claude in aggregated items")
+	}
 	if claude.InputTokens != 300 || claude.OutputTokens != 250 || claude.CacheReadTokens != 50 || claude.CacheCreationTokens != 15 {
 		t.Errorf("claude totals mismatch: %+v", claude)
 	}

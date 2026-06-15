@@ -151,7 +151,7 @@ func sanitizeSessionListParam(ctx context.Context, q sessionport.ListSessionsByU
 	sort := q.Sort
 	sortField := q.SortField
 	if sort == "" {
-		sort = enum.SortDesc
+		sort = enum.SortAsc
 	}
 	if sortField == "" {
 		sortField = constant.FieldID
