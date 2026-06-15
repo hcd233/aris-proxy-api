@@ -90,7 +90,7 @@ func sanitizeListParam(ctx context.Context, in listAuditLogsParam) (model.Common
 		return model.CommonParam{}, ierr.New(ierr.ErrValidation, "invalid sort field: "+in.SortField)
 	}
 	if in.Sort == "" {
-		in.Sort = enum.SortDesc
+		in.Sort = enum.SortAsc
 	}
 	if in.SortField == "" {
 		in.SortField = constant.FieldID
