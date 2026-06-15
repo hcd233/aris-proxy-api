@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
@@ -16,6 +17,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
@@ -62,10 +64,6 @@ func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRs
 func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
 
-	if err := u.checkContent(ctx, req); err != nil {
-		return proxyutil.SendOpenAIContentBlockedError(), nil //nolint:nilerr // error returned in response body
-	}
-
 	var compatRoute enum.CompatRoute
 	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
 		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
@@ -74,6 +72,28 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	if err != nil {
 		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
 		return proxyutil.SendOpenAIModelNotFoundError(req.Body.Model), nil
+	}
+
+	if matched := u.checkContent(req); len(matched) > 0 {
+		var upstreamProtocol enum.ProtocolType
+		switch compatRoute {
+		case enum.CompatRouteNative:
+			upstreamProtocol = enum.ProtocolOpenAIChatCompletion
+		case enum.CompatRouteViaAnthropicMessage:
+			upstreamProtocol = enum.ProtocolAnthropicMessage
+		}
+		words := u.blockedChecker.MatchedWords(matched)
+		auditTask := &dto.ModelCallAuditTask{
+			Ctx:              util.CopyContextValues(ctx),
+			ModelID:          m.AggregateID(),
+			Model:            req.Body.Model,
+			Endpoint:         ep.Name(),
+			UpstreamProtocol: upstreamProtocol,
+			APIProtocol:      enum.ProtocolOpenAIChatCompletion,
+			ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
+		}
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
+		return proxyutil.SendOpenAIContentBlockedError(), nil   //nolint:nilerr // error returned in response body
 	}
 
 	switch compatRoute {

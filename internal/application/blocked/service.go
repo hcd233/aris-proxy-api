@@ -8,10 +8,11 @@ import (
 )
 
 type BlockedService struct {
-	mu      sync.RWMutex
-	matcher *ACmatcher
-	wordIDs map[string]uint
-	repo    blocked.BlockedRepository
+	mu       sync.RWMutex
+	matcher  *ACmatcher
+	wordIDs  map[string]uint
+	wordByID map[uint]string
+	repo     blocked.BlockedRepository
 }
 
 func NewBlockedService(repo blocked.BlockedRepository) *BlockedService {
@@ -20,11 +21,14 @@ func NewBlockedService(repo blocked.BlockedRepository) *BlockedService {
 
 func (s *BlockedService) rebuild(words map[uint]string) {
 	ids := make(map[string]uint, len(words))
+	byID := make(map[uint]string, len(words))
 	for id, word := range words {
 		ids[word] = id
+		byID[id] = word
 	}
 	s.matcher = NewACmatcher(words)
 	s.wordIDs = ids
+	s.wordByID = byID
 }
 
 func (s *BlockedService) Rebuild(ctx context.Context) {
@@ -46,4 +50,16 @@ func (s *BlockedService) Check(text string) []uint {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.matcher.Match(text)
+}
+
+func (s *BlockedService) MatchedWords(ids []uint) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	words := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if w, ok := s.wordByID[id]; ok {
+			words = append(words, w)
+		}
+	}
+	return words
 }

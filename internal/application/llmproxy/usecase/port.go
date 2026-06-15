@@ -41,4 +41,5 @@ type OpenAIProxyPort interface {
 // BlockedChecker 敏感词检查端口
 type BlockedChecker interface {
 	Check(text string) []uint
+	MatchedWords(ids []uint) []string
 }
