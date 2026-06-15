@@ -62,6 +62,16 @@ function formatCacheTokens(write: number, read: number): string | null {
   return `c: ${fmt(read)} / ${fmt(write)}`;
 }
 
+function formatProtocol(protocol: string): string {
+  if (!protocol) return "—";
+  const labels: Record<string, string> = {
+    "openai-chat-completion": "Chat Completions",
+    "openai-response": "Response",
+    "anthropic-message": "Messages",
+  };
+  return labels[protocol] || protocol;
+}
+
 function buildAuditFilter(user: string[], model: string[], status: string[]): string | undefined {
   const parts: string[] = [];
   if (user.length) parts.push(`user:${user.join("|")}`);
@@ -384,7 +394,7 @@ export default function AuditPage() {
                               <span className="text-muted-foreground">Upstream</span>
                               <p className="flex items-center gap-1.5">
                                 <ProviderIcon protocol={log.upstreamProtocol} className="size-3.5" />
-                                {log.upstreamProtocol || "—"}
+                                {formatProtocol(log.upstreamProtocol)}
                               </p>
                             </div>
                             <div>
@@ -399,7 +409,7 @@ export default function AuditPage() {
                               <span className="text-muted-foreground">API Protocol</span>
                               <p className="flex items-center gap-1.5">
                                 <ProviderIcon protocol={log.apiProtocol} className="size-3.5" />
-                                {log.apiProtocol || "—"}
+                                {formatProtocol(log.apiProtocol)}
                               </p>
                             </div>
                           </div>
@@ -462,11 +472,11 @@ export default function AuditPage() {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         <div className="flex items-center gap-1.5 text-xs">
                           <ProviderIcon protocol={log.apiProtocol} className="size-3.5" />
-                          {log.apiProtocol || "—"}
+                          {formatProtocol(log.apiProtocol)}
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
                           <ProviderIcon protocol={log.upstreamProtocol} className="size-3.5" />
-                          {log.upstreamProtocol || "—"}
+                          {formatProtocol(log.upstreamProtocol)}
                         </div>
                       </TableCell>
                       <TableCell>
