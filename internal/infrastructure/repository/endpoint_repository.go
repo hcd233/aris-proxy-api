@@ -193,7 +193,7 @@ func NewModelRepository(db *gorm.DB) llmproxy.ModelRepository {
 // FindByAlias 按 alias 查询所有关联的模型记录
 func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error) {
 	db := r.db.WithContext(ctx)
-	models, err := r.dao.BatchGet(db, &dbmodel.Model{Alias: alias.String()}, constant.ModelRepoFieldsFull)
+	models, err := r.dao.BatchGet(db, &dbmodel.Model{Alias: alias.String(), Enabled: true}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}

@@ -3,7 +3,7 @@ package constant
 import "time"
 
 const (
-	PeriodCallProxyLLM = 1 * time.Second
+	PeriodCallProxyLLM = 1 * time.Minute
 	LimitCallProxyLLM  = 100
 
 	PeriodRefreshToken = 1 * time.Minute
