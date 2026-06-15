@@ -25,6 +25,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -379,7 +380,10 @@ export default function AuditPage() {
                             </div>
                             <div>
                               <span className="text-muted-foreground">Upstream</span>
-                              <p>{log.upstreamProtocol || "—"}</p>
+                              <p className="flex items-center gap-1.5">
+                                <ProviderIcon protocol={log.upstreamProtocol} className="size-3.5" />
+                                {log.upstreamProtocol || "—"}
+                              </p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Endpoint</span>
@@ -391,7 +395,10 @@ export default function AuditPage() {
                             </div>
                             <div>
                               <span className="text-muted-foreground">API Protocol</span>
-                              <p>{log.apiProtocol || "—"}</p>
+                              <p className="flex items-center gap-1.5">
+                                <ProviderIcon protocol={log.apiProtocol} className="size-3.5" />
+                                {log.apiProtocol || "—"}
+                              </p>
                             </div>
                           </div>
 
@@ -451,8 +458,14 @@ export default function AuditPage() {
                       <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
                       <TableCell className="max-w-[140px] truncate text-muted-foreground">{log.endpoint || "—"}</TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        <div className="text-xs">{log.apiProtocol || "—"}</div>
-                        <div className="text-xs text-muted-foreground/70">{log.upstreamProtocol || "—"}</div>
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <ProviderIcon protocol={log.apiProtocol} className="size-3.5" />
+                          {log.apiProtocol || "—"}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                          <ProviderIcon protocol={log.upstreamProtocol} className="size-3.5" />
+                          {log.upstreamProtocol || "—"}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">{log.userName || "—"}</div>
