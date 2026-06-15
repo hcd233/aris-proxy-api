@@ -166,6 +166,8 @@ const (
 	BlockedContentBlockedErrorType    = "forbidden"
 	BlockedContentBlockedErrorCode    = "content_blocked"
 	BlockedAuditRemark                = "trigger blocked word"
+	BlockedAuditRemarkTemplate        = "trigger blocked word: %s"
+	BlockedWordSeparator              = ", "
 	BlockedTableName                  = "blocked_words"
 	BlockedHitKeyPrefix               = "blocked:hit:%d"
 	BlockedHitKeyScanPattern          = "blocked:hit:*"

@@ -1,13 +1,10 @@
 package usecase
 
 import (
-	"context"
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 func extractOpenAIChatText(req *dto.OpenAIChatCompletionRequest) string {
@@ -50,36 +47,29 @@ func extractAnthropicMessageText(req *dto.AnthropicCreateMessageRequest) string 
 	return buf.String()
 }
 
-func (u *openAIUseCase) checkContent(ctx context.Context, req *dto.OpenAIChatCompletionRequest) error {
+func (u *openAIUseCase) checkContent(req *dto.OpenAIChatCompletionRequest) []uint {
 	if u.blockedChecker == nil {
 		return nil
 	}
 	content := extractOpenAIChatText(req)
-	matched := u.blockedChecker.Check(content)
-	if len(matched) > 0 {
-		auditTask := &dto.ModelCallAuditTask{
-			Ctx:          util.CopyContextValues(ctx),
-			ErrorMessage: constant.BlockedAuditRemark,
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
-		return ierr.New(ierr.ErrContentBlocked, "ContentBlocked")
-	}
-	return nil
+	return u.blockedChecker.Check(content)
 }
 
-func (u *anthropicUseCase) checkContent(ctx context.Context, req *dto.AnthropicCreateMessageRequest) error {
+func (u *anthropicUseCase) checkContent(req *dto.AnthropicCreateMessageRequest) []uint {
 	if u.blockedChecker == nil {
 		return nil
 	}
 	content := extractAnthropicMessageText(req)
-	matched := u.blockedChecker.Check(content)
-	if len(matched) > 0 {
-		auditTask := &dto.ModelCallAuditTask{
-			Ctx:          util.CopyContextValues(ctx),
-			ErrorMessage: constant.BlockedAuditRemark,
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
-		return ierr.New(ierr.ErrContentBlocked, "ContentBlocked")
+	return u.blockedChecker.Check(content)
+}
+
+func formatBlockedWords(words []string) string {
+	if len(words) == 0 {
+		return ""
 	}
-	return nil
+	quoted := make([]string, len(words))
+	for i, w := range words {
+		quoted[i] = "`" + w + "`"
+	}
+	return strings.Join(quoted, constant.BlockedWordSeparator)
 }

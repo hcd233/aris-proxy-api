@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
@@ -14,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -71,10 +73,6 @@ func (u *anthropicUseCase) CountTokens(ctx context.Context, req *dto.AnthropicCo
 func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
 	log := logger.WithCtx(ctx)
 
-	if err := u.checkContent(ctx, req); err != nil {
-		return proxyutil.SendAnthropicContentBlockedError(), nil //nolint:nilerr // error returned in response body
-	}
-
 	var compatRoute enum.CompatRoute
 	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
 		compatRoute = SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep)
@@ -83,6 +81,28 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	if err != nil {
 		log.Error("[AnthropicUseCase] Model not found or unsupported for messages API", zap.String("model", req.Body.Model), zap.Error(err))
 		return proxyutil.SendAnthropicModelNotFoundError(req.Body.Model), nil
+	}
+
+	if matched := u.checkContent(req); len(matched) > 0 {
+		var upstreamProtocol enum.ProtocolType
+		switch compatRoute {
+		case enum.CompatRouteNative:
+			upstreamProtocol = enum.ProtocolAnthropicMessage
+		case enum.CompatRouteViaOpenAIChat:
+			upstreamProtocol = enum.ProtocolOpenAIChatCompletion
+		}
+		words := u.blockedChecker.MatchedWords(matched)
+		auditTask := &dto.ModelCallAuditTask{
+			Ctx:              util.CopyContextValues(ctx),
+			ModelID:          m.AggregateID(),
+			Model:            req.Body.Model,
+			Endpoint:         ep.Name(),
+			UpstreamProtocol: upstreamProtocol,
+			APIProtocol:      enum.ProtocolAnthropicMessage,
+			ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
+		}
+		_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask)  //nolint:errcheck // best-effort audit
+		return proxyutil.SendAnthropicContentBlockedError(), nil //nolint:nilerr // error returned in response body
 	}
 
 	exposedModel := req.Body.Model
