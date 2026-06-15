@@ -8,10 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -39,19 +37,24 @@ func CloseDatabase(db *gorm.DB) error {
 	return sqlDB.Close()
 }
 
-// InitDatabase 初始化数据库
+// AutoMigrate 自动迁移数据库表
 //
 //	return *gorm.DB
 //	author centonhuang
 //	update 2024-09-22 10:04:36
+//	@param ctx
+//	@return error
+//	@author centonhuang
+//	@update 2026-06-15 21:52:16
 func AutoMigrate(ctx context.Context) error {
-	db := InitDatabase().WithContext(ctx)
-	if err := db.AutoMigrate(model.Models...); err != nil {
-		return err
-	}
-	return migrateMessageChecksums(db.WithContext(ctx))
+	return InitDatabase().WithContext(ctx).AutoMigrate(model.Models...)
 }
 
+// InitDatabase 初始化数据库
+//
+//	@return *gorm.DB
+//	@author centonhuang
+//	@update 2026-06-15 21:52:09
 func InitDatabase() *gorm.DB {
 	var dialector gorm.Dialector
 	var dbHost, dbPort, dbName string
@@ -174,132 +177,4 @@ func (l *GormLoggerAdapter) Trace(ctx context.Context, begin time.Time, fc func(
 	}
 
 	logger.WithCtx(ctx).Info("[GORM] Trace", fields...)
-}
-
-// migrateMessageChecksums 三阶段数据迁移
-//
-// Phase 1: 刷新有 reasoning_content 的消息 check_sum 为 content-only
-// Phase 2: 合并 checksum 重复的消息，更新会话引用，删除冗余
-//
-//	@param db *gorm.DB
-//	@return error
-//	@author centonhuang
-//	@update 2026-06-13 10:00:00
-func migrateMessageChecksums(db *gorm.DB) error {
-	if err := migratePhase1RefreshChecksums(db); err != nil {
-		return err
-	}
-	return migratePhase2MergeDuplicates(db)
-}
-
-func migratePhase1RefreshChecksums(db *gorm.DB) error {
-	log := logger.Logger()
-	log.Info("[Database] Phase 1: refreshing message checksums for reasoning_content")
-	offset := 0
-	for {
-		var messages []*model.Message
-		if err := db.Where(constant.FieldMessage + "::jsonb->>'reasoning_content' IS NOT NULL").
-			Select(constant.FieldID + ", " + constant.FieldMessage).
-			Order(constant.FieldID).
-			Limit(constant.MigrateMessageBatchSize).
-			Offset(offset).
-			Find(&messages).Error; err != nil {
-			return ierr.Wrap(ierr.ErrDBQuery, err, "phase 1: select messages with reasoning")
-		}
-		if len(messages) == 0 {
-			break
-		}
-		for _, m := range messages {
-			newCS := vo.ComputeMessageChecksum(m.Message, nil)
-			if err := db.Model(&model.Message{ID: m.ID}).
-				Where(constant.FieldCheckSum+" != ?", newCS).
-				Update(constant.FieldCheckSum, newCS).Error; err != nil {
-				return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 1: update checksum")
-			}
-		}
-		offset += len(messages)
-		log.Info("[Database] Phase 1 progress", zap.Int("processed", offset))
-	}
-	log.Info("[Database] Phase 1 complete")
-	return nil
-}
-
-type dupRow struct {
-	CheckSum string `gorm:"column:check_sum"`
-	IDs      string `gorm:"column:ids"`
-}
-
-func migratePhase2MergeDuplicates(db *gorm.DB) error {
-	log := logger.Logger()
-	log.Info("[Database] Phase 2: merging duplicate messages by content checksum")
-	totalPhase2 := 0
-	for {
-		var groups []dupRow
-		findDupSQL := fmt.Sprintf(`SELECT %s, json_agg(%s ORDER BY
-			CASE WHEN %s::jsonb->>'reasoning_content' IS NOT NULL THEN 0 ELSE 1 END,
-			%s DESC
-		) AS ids
-		FROM messages
-		WHERE %s != ''
-		GROUP BY %s
-		HAVING count(*) > 1
-		LIMIT ?`,
-			constant.FieldCheckSum, constant.FieldID,
-			constant.FieldMessage, constant.FieldID,
-			constant.FieldCheckSum, constant.FieldCheckSum)
-		if err := db.Raw(findDupSQL, constant.MigrateMessageBatchSize).Scan(&groups).Error; err != nil {
-			return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: find duplicate groups")
-		}
-		if len(groups) == 0 {
-			break
-		}
-		for _, g := range groups {
-			if err := mergeDuplicateGroup(db, g); err != nil {
-				return err
-			}
-		}
-		totalPhase2 += len(groups)
-		log.Info("[Database] Phase 2 progress", zap.Int("groups_processed", totalPhase2))
-	}
-	log.Info("[Database] Phase 2 complete")
-	return nil
-}
-
-func mergeDuplicateGroup(db *gorm.DB, g dupRow) error {
-	var ids []uint
-	if err := sonic.UnmarshalString(g.IDs, &ids); err != nil {
-		return ierr.Wrap(ierr.ErrDBQuery, err, "phase 2: unmarshal ids")
-	}
-	if len(ids) < 2 {
-		return nil
-	}
-	keepID := ids[0]
-	return db.Transaction(func(tx *gorm.DB) error {
-		for _, oldID := range ids[1:] {
-			updateMessageIDsSQL := `UPDATE sessions SET message_ids = (
-			SELECT COALESCE(jsonb_agg(
-				CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
-			), '[]'::jsonb)
-			FROM jsonb_array_elements(COALESCE(message_ids::jsonb, '[]'::jsonb)) AS t(value)
-		)
-		WHERE message_ids::jsonb @> ?::jsonb`
-			if err := tx.Exec(updateMessageIDsSQL, oldID, keepID, oldID).Error; err != nil {
-				return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session message_ids")
-			}
-			updateQuestionsSQL := `UPDATE sessions SET questions = (
-			SELECT COALESCE(jsonb_agg(
-				CASE WHEN value = ?::jsonb THEN ?::jsonb ELSE value END
-			), '[]'::jsonb)
-			FROM jsonb_array_elements(COALESCE(questions::jsonb, '[]'::jsonb)) AS t(value)
-		)
-		WHERE questions IS NOT NULL AND questions::jsonb @> ?::jsonb`
-			if err := tx.Exec(updateQuestionsSQL, oldID, keepID, oldID).Error; err != nil {
-				return ierr.Wrap(ierr.ErrDBUpdate, err, "phase 2: update session questions")
-			}
-			if err := tx.Delete(&model.Message{ID: oldID}).Error; err != nil {
-				return ierr.Wrap(ierr.ErrDBDelete, err, "phase 2: delete redundant message")
-			}
-		}
-		return nil
-	})
 }
