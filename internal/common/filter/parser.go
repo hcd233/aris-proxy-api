@@ -52,15 +52,11 @@ func Parse(expr string) ([]Filter, error) {
 		return nil, nil
 	}
 
-	parts := splitExpression(expr)
+	parts := lo.Filter(splitExpression(expr), func(part string, _ int) bool {
+		return strings.TrimSpace(part) != ""
+	})
 	filters := make([]Filter, 0, len(parts))
-
 	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-
 		f, err := parsePart(part)
 		if err != nil {
 			return nil, err

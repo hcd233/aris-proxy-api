@@ -268,12 +268,12 @@ func convertAnthropicSystemToOpenAI(system *dto.AnthropicMessageContent) []*dto.
 	}
 
 	if len(system.Blocks) > 0 {
-		var texts []string
-		for _, block := range system.Blocks {
+		texts := lo.FilterMap(system.Blocks, func(block *dto.AnthropicContentBlock, _ int) (string, bool) {
 			if block.Type == enum.AnthropicContentBlockTypeText {
-				texts = append(texts, lo.FromPtr(block.Text))
+				return lo.FromPtr(block.Text), true
 			}
-		}
+			return "", false
+		})
 		if len(texts) > 0 {
 			return []*dto.OpenAIChatCompletionMessageParam{{
 				Role:    enum.RoleSystem,
@@ -395,10 +395,9 @@ func buildOpenAIMainMessage(role string, contentParts []*dto.OpenAIChatCompletio
 		if hasMultiModal {
 			msg.Content = &dto.OpenAIMessageContent{Parts: contentParts}
 		} else {
-			var texts []string
-			for _, p := range contentParts {
-				texts = append(texts, lo.FromPtr(p.Text))
-			}
+			texts := lo.Map(contentParts, func(p *dto.OpenAIChatCompletionContentPart, _ int) string {
+				return lo.FromPtr(p.Text)
+			})
 			msg.Content = &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")}
 		}
 	}
@@ -419,12 +418,12 @@ func extractAnthropicToolResultText(content *dto.AnthropicToolResultContent) str
 		return content.Text
 	}
 	if len(content.Blocks) > 0 {
-		var texts []string
-		for _, block := range content.Blocks {
+		texts := lo.FilterMap(content.Blocks, func(block *dto.AnthropicContentBlock, _ int) (string, bool) {
 			if block.Type == enum.AnthropicContentBlockTypeText {
-				texts = append(texts, lo.FromPtr(block.Text))
+				return lo.FromPtr(block.Text), true
 			}
-		}
+			return "", false
+		})
 		return strings.Join(texts, "\n")
 	}
 	return ""

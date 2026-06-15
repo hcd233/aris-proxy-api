@@ -18,15 +18,12 @@ var sensitiveHeadersForLog = []string{
 
 // MaskHTTPHeadersForLog 返回可安全写入日志的 HTTP 请求头副本。
 func MaskHTTPHeadersForLog(headers http.Header) map[string]any {
-	masked := make(map[string]any, len(headers))
-	for key, values := range headers {
+	return lo.MapValues(headers, func(values []string, key string) any {
 		if isSensitiveHTTPHeaderForLog(key) {
-			masked[key] = constant.MaskSecretPlaceholder
-			continue
+			return constant.MaskSecretPlaceholder
 		}
-		masked[key] = headerValuesForLog(values)
-	}
-	return masked
+		return headerValuesForLog(values)
+	})
 }
 
 func isSensitiveHTTPHeaderForLog(key string) bool {

@@ -117,14 +117,14 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 //	@author centonhuang
 //	@update 2026-06-13 10:00:00
 func (pm *PoolManager) upgradeReasoningContent(tx *gorm.DB, messages []*dbmodel.Message, messageIDs []uint) error {
-	var needsUpgradeIDs []uint
 	msgByID := make(map[uint]*vo.UnifiedMessage)
-	for i, m := range messages {
+	needsUpgradeIDs := lo.FilterMap(messages, func(m *dbmodel.Message, i int) (uint, bool) {
 		if m.Message.ReasoningContent != "" {
-			needsUpgradeIDs = append(needsUpgradeIDs, messageIDs[i])
 			msgByID[messageIDs[i]] = m.Message
+			return messageIDs[i], true
 		}
-	}
+		return 0, false
+	})
 	if len(needsUpgradeIDs) == 0 {
 		return nil
 	}

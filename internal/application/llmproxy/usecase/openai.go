@@ -100,7 +100,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 
 	switch compatRoute {
 	case enum.CompatRouteNative:
-		stream := req.Body.Stream != nil && *req.Body.Stream
+		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
 		return u.forwardChatNative(ctx, req, m, ep, upstream, stream), nil
 	case enum.CompatRouteViaAnthropicMessage:
@@ -127,7 +127,7 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 
 	switch compatRoute {
 	case enum.CompatRouteNative:
-		stream := req.Body.Stream != nil && *req.Body.Stream
+		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
 		return u.forwardResponseNative(ctx, req, m, ep, upstream, stream), nil
 	case enum.CompatRouteViaOpenAIChat:
@@ -141,11 +141,6 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 }
 
 func toTransportEndpoint(m *aggregate.Model, ep *aggregate.Endpoint, isAnthropic bool) vo.UpstreamEndpoint {
-	var baseURL string
-	if isAnthropic {
-		baseURL = ep.AnthropicBaseURL()
-	} else {
-		baseURL = ep.OpenaiBaseURL()
-	}
+	baseURL := lo.Ternary(isAnthropic, ep.AnthropicBaseURL(), ep.OpenaiBaseURL())
 	return vo.NewUpstreamEndpointFromCredential(m.ModelName(), ep.APIKey(), baseURL)
 }
