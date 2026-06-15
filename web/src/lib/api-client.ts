@@ -582,7 +582,7 @@ class ApiClient {
   async createBlocked(body: CreateBlockedReqBody): Promise<CommonRsp> {
     return this.request<CommonRsp>("/api/v1/block", {
       method: "POST",
-      body: JSON.stringify({ body }),
+      body: JSON.stringify(body),
     });
   }
 
