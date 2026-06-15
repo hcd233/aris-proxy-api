@@ -73,7 +73,9 @@ export default function BlockPage() {
     }
   }, [setPersistedPage, setPersistedPageSize]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch list when the persisted page or size changes */
   useEffect(() => { fetchItems(persistedPage, persistedPageSize); }, [fetchItems, persistedPage, persistedPageSize]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSearch = useCallback(() => {
     setPersistedPage(1);

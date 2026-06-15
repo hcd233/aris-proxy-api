@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { SessionSummary, PageInfo } from "@/lib/types";
@@ -111,9 +111,11 @@ export default function SessionsPage() {
     }
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch score options when the time range changes */
   useEffect(() => {
     fetchScoreOptions(timeRange, customStart, customEnd);
-  }, [timeRange, customStart, fetchScoreOptions]);
+  }, [timeRange, customStart, customEnd, fetchScoreOptions]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const buildSessionFilter = (scores: string[]): string | undefined => {
     if (scores.length === 0) return undefined;

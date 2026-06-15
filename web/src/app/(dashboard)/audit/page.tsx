@@ -153,9 +153,11 @@ export default function AuditPage() {
     }
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch filter options when the time range changes */
   useEffect(() => {
     fetchOptions(timeRange, customStart, customEnd);
-  }, [timeRange, customStart, fetchOptions]);
+  }, [timeRange, customStart, customEnd, fetchOptions]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),
