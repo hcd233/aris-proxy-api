@@ -225,11 +225,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const headerSentinelRef = useRef<HTMLDivElement | null>(null);
   const messagesScrollRootRef = useRef<HTMLDivElement | null>(null);
   const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
-  const toolsScrollRootRef = useRef<HTMLDivElement | null>(null);
   const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
-  const setToolsScrollRoot = useCallback((node: HTMLDivElement | null) => {
-    toolsScrollRootRef.current = node;
-  }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
