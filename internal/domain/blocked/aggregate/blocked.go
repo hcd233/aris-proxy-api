@@ -27,10 +27,11 @@ func CreateBlocked(id uint, word string) (*Blocked, error) {
 
 func (*Blocked) AggregateType() string { return enum.AggregateTypeBlocked }
 
-func (b *Blocked) Word() string         { return b.word }
-func (b *Blocked) HitCount() uint       { return b.hitCount }
-func (b *Blocked) CreatedAt() time.Time { return b.createdAt }
-func (b *Blocked) UpdatedAt() time.Time { return b.updatedAt }
+func (b *Blocked) Word() string              { return b.word }
+func (b *Blocked) HitCount() uint            { return b.hitCount }
+func (b *Blocked) CreatedAt() time.Time      { return b.createdAt }
+func (b *Blocked) UpdatedAt() time.Time      { return b.updatedAt }
+func (b *Blocked) SetHitCount(hitCount uint) { b.hitCount = hitCount }
 func (b *Blocked) SetTimestamps(createdAt, updatedAt time.Time) {
 	b.createdAt = createdAt
 	b.updatedAt = updatedAt

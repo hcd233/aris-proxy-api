@@ -94,6 +94,7 @@ func toBlockedAggregate(m *dbmodel.Blocked) *aggregate.Blocked {
 	if err != nil {
 		return nil
 	}
+	b.SetHitCount(m.HitCount)
 	b.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return b
 }
