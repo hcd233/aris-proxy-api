@@ -209,6 +209,32 @@ func (s *endpointByIDRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*
 	return nil, nil, nil
 }
 
+func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	alias := vo.EndpointAlias("test-model")
+	ep, _ := aggregate.CreateEndpoint(1, "test-endpoint", "https://api.openai.com", "", "sk-test", true, false, false)
+	disabledModel, _ := aggregate.CreateModel(1, alias, "disabled-upstream", 1, false)
+	enabledModel, _ := aggregate.CreateModel(2, alias, "enabled-upstream", 1, true)
+	resolver := service.NewEndpointResolver(
+		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: ep}},
+		&staticModelRepo{models: []*aggregate.Model{disabledModel, enabledModel}},
+	)
+
+	_, m, err := resolver.Resolve(ctx, alias, func(ep *aggregate.Endpoint) bool {
+		return ep.SupportOpenAIChatCompletion()
+	})
+	if err != nil {
+		t.Fatalf("Resolve() error: %v", err)
+	}
+	if m.ModelName() != "enabled-upstream" {
+		t.Fatalf("model name = %q, want %q", m.ModelName(), "enabled-upstream")
+	}
+	if m.Enabled() {
+		t.Log("resolved to enabled model as expected")
+	}
+}
+
 func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

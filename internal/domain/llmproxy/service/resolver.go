@@ -52,6 +52,9 @@ func (r *endpointResolver) Resolve(ctx context.Context, alias vo.EndpointAlias, 
 	}
 	for _, idx := range rand.Perm(len(models)) {
 		m := models[idx]
+		if !m.Enabled() {
+			continue
+		}
 		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID())
 		if findErr != nil {
 			return nil, nil, findErr
