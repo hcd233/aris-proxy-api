@@ -21,12 +21,13 @@ import (
 // endpointRepository EndpointRepository 的 GORM 实现
 type endpointRepository struct {
 	endpointDAO *dao.EndpointDAO
+	modelDAO    *dao.ModelDAO
 	db          *gorm.DB
 }
 
 // NewEndpointRepository 构造 EndpointRepository
 func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
-	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), db: db}
+	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db}
 }
 
 // FindByID 按 ID 查询端点
@@ -122,13 +123,27 @@ func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint)
 	return nil
 }
 
-// Delete 删除端点
+// Delete 删除端点（软删除）
 func (r *endpointRepository) Delete(ctx context.Context, id uint) error {
 	db := r.db.WithContext(ctx)
-	if err := db.Delete(&dbmodel.Endpoint{}, id).Error; err != nil {
+	if err := r.endpointDAO.Delete(db, &dbmodel.Endpoint{ID: id}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
 	}
 	return nil
+}
+
+// DeleteCascade 级联删除端点及其关联模型（事务保护）
+func (r *endpointRepository) DeleteCascade(ctx context.Context, id uint) error {
+	db := r.db.WithContext(ctx)
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := r.modelDAO.BatchDeleteByField(tx, constant.FieldEndpointID, []uint{id}); err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete models by endpoint id")
+		}
+		if err := r.endpointDAO.Delete(tx, &dbmodel.Endpoint{ID: id}); err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
+		}
+		return nil
+	})
 }
 
 // List 列出所有端点
@@ -265,10 +280,10 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 	return nil
 }
 
-// Delete 删除模型
+// Delete 删除模型（软删除）
 func (r *modelRepository) Delete(ctx context.Context, id uint) error {
 	db := r.db.WithContext(ctx)
-	if err := db.Delete(&dbmodel.Model{}, id).Error; err != nil {
+	if err := r.dao.Delete(db, &dbmodel.Model{ID: id}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete model")
 	}
 	return nil

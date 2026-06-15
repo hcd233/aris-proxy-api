@@ -15,6 +15,7 @@ type EndpointRepository interface {
 	Create(ctx context.Context, endpoint *aggregate.Endpoint) (uint, error)
 	Update(ctx context.Context, endpoint *aggregate.Endpoint) error
 	Delete(ctx context.Context, id uint) error
+	DeleteCascade(ctx context.Context, id uint) error
 	List(ctx context.Context) ([]*aggregate.Endpoint, error)
 	Paginate(ctx context.Context, param model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error)
 }

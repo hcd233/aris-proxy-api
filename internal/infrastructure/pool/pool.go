@@ -88,11 +88,18 @@ func (pm *PoolManager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmo
 
 	if len(newMessages) > 0 {
 		if err := messageDAO.BatchCreate(tx, newMessages); err != nil {
-			return nil, err
-		}
-		// BatchCreate 后 GORM 已填充 ID，更新 map
-		for _, nm := range newMessages {
-			existingMap[nm.CheckSum] = nm.ID
+			// unique constraint 冲突（并发去重）：重新查询已存在的记录
+			existingMessages, retryErr := messageDAO.BatchGetByField(tx, constant.WhereFieldCheckSum, checksums, constant.MessageRepoFieldsChecksum)
+			if retryErr != nil {
+				return nil, retryErr
+			}
+			existingMap = lo.SliceToMap(existingMessages, func(m *dbmodel.Message) (string, uint) { return m.CheckSum, m.ID })
+			// 用 existingMap 重新填充结果即可，无需再插入
+			_ = err
+		} else {
+			for _, nm := range newMessages {
+				existingMap[nm.CheckSum] = nm.ID
+			}
 		}
 	}
 
@@ -133,11 +140,17 @@ func (pm *PoolManager) deduplicateAndStoreTools(tx *gorm.DB, tools []*dbmodel.To
 
 	if len(newTools) > 0 {
 		if err := toolDAO.BatchCreate(tx, newTools); err != nil {
-			return nil, err
-		}
-		// BatchCreate 后 GORM 已填充 ID，更新 map
-		for _, nt := range newTools {
-			existingMap[nt.CheckSum] = nt.ID
+			// unique constraint 冲突（并发去重）：重新查询已存在的记录
+			existingTools, retryErr := toolDAO.BatchGetByField(tx, constant.WhereFieldCheckSum, checksums, constant.ToolRepoFieldsChecksum)
+			if retryErr != nil {
+				return nil, retryErr
+			}
+			existingMap = lo.SliceToMap(existingTools, func(t *dbmodel.Tool) (string, uint) { return t.CheckSum, t.ID })
+			_ = err
+		} else {
+			for _, nt := range newTools {
+				existingMap[nt.CheckSum] = nt.ID
+			}
 		}
 	}
 

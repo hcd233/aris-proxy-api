@@ -155,8 +155,8 @@ func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) endpointport.Upd
 	return endpointcommand.NewUpdateEndpointHandler(repo)
 }
 
-func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) endpointport.DeleteEndpointHandler {
-	return endpointcommand.NewDeleteEndpointHandler(endpointRepo, modelRepo)
+func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository) endpointport.DeleteEndpointHandler {
+	return endpointcommand.NewDeleteEndpointHandler(endpointRepo)
 }
 
 func NewListEndpointsHandler(repo llmproxy.EndpointRepository) endpointport.ListEndpointsHandler {
