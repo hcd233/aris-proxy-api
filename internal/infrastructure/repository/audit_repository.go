@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -207,10 +208,11 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 	}
 	userByID := lo.SliceToMap(users, func(user *dbmodel.User) (uint, *dbmodel.User) { return user.ID, user })
 	for _, relation := range relations {
-		if user, ok := userByID[relation.UserID]; ok {
+		user, userOK := userByID[relation.UserID]
+		mo.TupleToOption(user, userOK).ForEach(func(user *dbmodel.User) {
 			relation.UserName = user.Name
 			relation.UserEmail = user.Email
-		}
+		})
 	}
 	return relations, nil
 }
@@ -302,13 +304,12 @@ func (r *auditRepository) applyKeywordSearch(db, sql *gorm.DB, query string) *go
 		return sql
 	}
 	like := "%" + query + "%"
-	expressions := make([]clause.Expression, 0, len(constant.AuditQueryFields))
-	for _, field := range constant.AuditQueryFields {
+	expressions := lo.FilterMap(constant.AuditQueryFields, func(field string, _ int) (clause.Expression, bool) {
 		if field == "" {
-			continue
+			return nil, false
 		}
-		expressions = append(expressions, clause.Like{Column: clause.Column{Name: field}, Value: like})
-	}
+		return clause.Like{Column: clause.Column{Name: field}, Value: like}, true
+	})
 	if len(expressions) > 0 {
 		sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])
 		for _, expr := range expressions[1:] {

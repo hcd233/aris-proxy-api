@@ -305,28 +305,30 @@ func extractResponseFunctionCallOutputText(output *dto.ResponseInputItemOutput) 
 	if len(output.FunctionOutput.Parts) == 0 {
 		return ""
 	}
-	var parts []string
-	for _, p := range output.FunctionOutput.Parts {
+	parts := lo.FilterMap(output.FunctionOutput.Parts, func(p *dto.ResponseInputContent, _ int) (string, bool) {
 		if p != nil && (p.Type == enum.ResponseContentTypeInputText || p.Type == enum.ResponseContentTypeOutputText) && p.Text != nil {
-			parts = append(parts, lo.FromPtr(p.Text))
+			return lo.FromPtr(p.Text), true
 		}
-	}
+		return "", false
+	})
 	return strings.Join(parts, "\n")
 }
 
 // convertResponseReasoningToAnthropic 将 reasoning item 转换为 Anthropic thinking block
 func convertResponseReasoningToAnthropic(item *dto.ResponseInputItem) *dto.AnthropicMessageParam {
 	var thinkingParts []string
-	for _, s := range item.Summary {
+	thinkingParts = append(thinkingParts, lo.FilterMap(item.Summary, func(s *dto.ResponseReasoningSummary, _ int) (string, bool) {
 		if s != nil && s.Text != "" {
-			thinkingParts = append(thinkingParts, s.Text)
+			return s.Text, true
 		}
-	}
-	for _, c := range item.ReasoningContent {
+		return "", false
+	})...)
+	thinkingParts = append(thinkingParts, lo.FilterMap(item.ReasoningContent, func(c *dto.ResponseReasoningTextContent, _ int) (string, bool) {
 		if c != nil && c.Text != "" {
-			thinkingParts = append(thinkingParts, c.Text)
+			return c.Text, true
 		}
-	}
+		return "", false
+	})...)
 	thinking := strings.Join(thinkingParts, "\n")
 	if thinking == "" {
 		return nil

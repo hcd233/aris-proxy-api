@@ -3,6 +3,8 @@ package blocked
 import (
 	"strings"
 	"unicode"
+
+	"github.com/samber/lo"
 )
 
 type acNode struct {
@@ -72,9 +74,5 @@ func (m *ACmatcher) Match(text string) []uint {
 			matched[id] = struct{}{}
 		}
 	}
-	result := make([]uint, 0, len(matched))
-	for id := range matched {
-		result = append(result, id)
-	}
-	return result
+	return lo.Keys(matched)
 }

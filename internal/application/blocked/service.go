@@ -4,8 +4,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/samber/lo"
+
+	domain "github.com/hcd233/aris-proxy-api/internal/domain/blocked"
+	"github.com/hcd233/aris-proxy-api/internal/domain/blocked/aggregate"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
-	"github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 )
 
 type BlockedService struct {
@@ -13,24 +17,18 @@ type BlockedService struct {
 	matcher     *ACmatcher
 	wordIDs     map[string]uint
 	wordByID    map[uint]string
-	repo        blocked.BlockedRepository
+	repo        domain.BlockedRepository
 	hitRecorder port.HitRecorder
 }
 
-func NewBlockedService(repo blocked.BlockedRepository, hitRecorder port.HitRecorder) *BlockedService {
+func NewBlockedService(repo domain.BlockedRepository, hitRecorder port.HitRecorder) *BlockedService {
 	return &BlockedService{repo: repo, matcher: NewACmatcher(make(map[uint]string)), hitRecorder: hitRecorder}
 }
 
 func (s *BlockedService) rebuild(words map[uint]string) {
-	ids := make(map[string]uint, len(words))
-	byID := make(map[uint]string, len(words))
-	for id, word := range words {
-		ids[word] = id
-		byID[id] = word
-	}
 	s.matcher = NewACmatcher(words)
-	s.wordIDs = ids
-	s.wordByID = byID
+	s.wordIDs = lo.Invert(words)
+	s.wordByID = words
 }
 
 func (s *BlockedService) Rebuild(ctx context.Context) {
@@ -41,10 +39,9 @@ func (s *BlockedService) Rebuild(ctx context.Context) {
 		s.rebuild(make(map[uint]string))
 		return
 	}
-	words := make(map[uint]string, len(all))
-	for _, b := range all {
-		words[b.AggregateID()] = b.Word()
-	}
+	words := lo.SliceToMap(all, func(b *aggregate.Blocked) (uint, string) {
+		return b.AggregateID(), b.Word()
+	})
 	s.rebuild(words)
 }
 
@@ -57,13 +54,10 @@ func (s *BlockedService) Check(text string) []uint {
 func (s *BlockedService) MatchedWords(ids []uint) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	words := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if w, ok := s.wordByID[id]; ok {
-			words = append(words, w)
-		}
-	}
-	return words
+	return lo.FilterMap(ids, func(id uint, _ int) (string, bool) {
+		w, ok := s.wordByID[id]
+		return w, ok
+	})
 }
 
 func (s *BlockedService) IncrementHits(ctx context.Context, ids []uint) error {

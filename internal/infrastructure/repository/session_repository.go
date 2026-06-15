@@ -474,19 +474,18 @@ func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*s
 // 导出供测试断言内部排序逻辑（通过 GetSessionDetail 间接覆盖）。
 func BuildOrderedMessageProjections(ids []uint, records []*dbmodel.Message) []*session.MessageDetailProjection {
 	msgMap := lo.SliceToMap(records, func(m *dbmodel.Message) (uint, *dbmodel.Message) { return m.ID, m })
-	items := make([]*session.MessageDetailProjection, 0, len(ids))
-	for _, id := range ids {
+	items := lo.FilterMap(ids, func(id uint, _ int) (*session.MessageDetailProjection, bool) {
 		m, ok := msgMap[id]
 		if !ok {
-			continue
+			return nil, false
 		}
-		items = append(items, &session.MessageDetailProjection{
+		return &session.MessageDetailProjection{
 			ID:        m.ID,
 			Model:     m.Model,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
-		})
-	}
+		}, true
+	})
 	return items
 }
 
@@ -495,18 +494,17 @@ func BuildOrderedMessageProjections(ids []uint, records []*dbmodel.Message) []*s
 // 导出供测试断言内部排序逻辑（通过 GetSessionDetail 间接覆盖）。
 func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session.ToolDetailProjection {
 	toolMap := lo.SliceToMap(records, func(t *dbmodel.Tool) (uint, *dbmodel.Tool) { return t.ID, t })
-	items := make([]*session.ToolDetailProjection, 0, len(ids))
-	for _, id := range ids {
+	items := lo.FilterMap(ids, func(id uint, _ int) (*session.ToolDetailProjection, bool) {
 		t, ok := toolMap[id]
 		if !ok {
-			continue
+			return nil, false
 		}
-		items = append(items, &session.ToolDetailProjection{
+		return &session.ToolDetailProjection{
 			ID:        t.ID,
 			Tool:      t.Tool,
 			CreatedAt: t.CreatedAt,
-		})
-	}
+		}, true
+	})
 	return items
 }
 

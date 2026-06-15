@@ -248,13 +248,12 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 
 	if param.Query != "" && len(param.QueryFields) > 0 {
 		like := "%" + param.Query + "%"
-		expressions := make([]clause.Expression, 0, len(param.QueryFields))
-		for _, field := range param.QueryFields {
+		expressions := lo.FilterMap(param.QueryFields, func(field string, _ int) (clause.Expression, bool) {
 			if field == "" {
-				continue
+				return nil, false
 			}
-			expressions = append(expressions, clause.Like{Column: clause.Column{Name: field}, Value: like})
-		}
+			return clause.Like{Column: clause.Column{Name: field}, Value: like}, true
+		})
 
 		if len(expressions) > 0 {
 			sql = sql.Where(expressions[0])
@@ -264,12 +263,8 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 		}
 	}
 
-	if param.Sort == "" {
-		param.Sort = enum.SortAsc
-	}
-	if param.SortField == "" {
-		param.SortField = constant.FieldID
-	}
+	param.Sort = lo.Ternary(param.Sort != "", param.Sort, enum.SortAsc)
+	param.SortField = lo.Ternary(param.SortField != "", param.SortField, constant.FieldID)
 	if !isValidSortField(param.SortField) {
 		param.SortField = ""
 	}

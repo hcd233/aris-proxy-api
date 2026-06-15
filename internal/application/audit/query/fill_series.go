@@ -143,11 +143,10 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 	for _, p := range points {
 		t := p.Time.UTC()
 		timeSet[t] = struct{}{}
-		s := aggregated[t]
-		if s == nil {
-			s = &throughputSlot{}
-			aggregated[t] = s
+		if aggregated[t] == nil {
+			aggregated[t] = &throughputSlot{}
 		}
+		s := aggregated[t]
 		s.inputTokens += p.InputTokens
 		s.outputTokens += p.OutputTokens
 		s.cacheCreationTokens += p.CacheCreationTokens
