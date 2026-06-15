@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/redis/go-redis/v9"
@@ -55,13 +56,25 @@ func (c *BlockedHitCache) PopAll(ctx context.Context) (map[uint]uint, error) {
 		if vals[i] == nil {
 			continue
 		}
-		val, ok := vals[i].(int64)
-		if !ok || val <= 0 {
+		var n int64
+		switch v := vals[i].(type) {
+		case int64:
+			n = v
+		case string:
+			parsed, err := strconv.ParseInt(v, constant.DecimalBase, constant.ParseFloat64BitSize)
+			if err != nil {
+				continue
+			}
+			n = parsed
+		default:
+			continue
+		}
+		if n <= 0 {
 			continue
 		}
 		var id uint
 		fmt.Sscanf(key, constant.BlockedHitKeyPrefix, &id) //nolint:errcheck // best-effort parse
-		result[id] = uint(val)
+		result[id] = uint(n)
 	}
 
 	if len(result) > 0 {
