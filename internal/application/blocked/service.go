@@ -4,19 +4,21 @@ import (
 	"context"
 	"sync"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
 	"github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 )
 
 type BlockedService struct {
-	mu       sync.RWMutex
-	matcher  *ACmatcher
-	wordIDs  map[string]uint
-	wordByID map[uint]string
-	repo     blocked.BlockedRepository
+	mu          sync.RWMutex
+	matcher     *ACmatcher
+	wordIDs     map[string]uint
+	wordByID    map[uint]string
+	repo        blocked.BlockedRepository
+	hitRecorder port.HitRecorder
 }
 
-func NewBlockedService(repo blocked.BlockedRepository) *BlockedService {
-	return &BlockedService{repo: repo, matcher: NewACmatcher(make(map[uint]string))}
+func NewBlockedService(repo blocked.BlockedRepository, hitRecorder port.HitRecorder) *BlockedService {
+	return &BlockedService{repo: repo, matcher: NewACmatcher(make(map[uint]string)), hitRecorder: hitRecorder}
 }
 
 func (s *BlockedService) rebuild(words map[uint]string) {
@@ -62,4 +64,11 @@ func (s *BlockedService) MatchedWords(ids []uint) []string {
 		}
 	}
 	return words
+}
+
+func (s *BlockedService) IncrementHits(ctx context.Context, ids []uint) error {
+	if s.hitRecorder == nil {
+		return nil
+	}
+	return s.hitRecorder.IncrementHits(ctx, ids)
 }

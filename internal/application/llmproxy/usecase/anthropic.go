@@ -84,6 +84,8 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	}
 
 	if matched := u.checkContent(req); len(matched) > 0 {
+		_ = u.blockedChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
+
 		var upstreamProtocol enum.ProtocolType
 		switch compatRoute {
 		case enum.CompatRouteNative:
