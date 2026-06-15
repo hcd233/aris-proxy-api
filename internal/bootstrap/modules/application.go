@@ -35,6 +35,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"go.uber.org/fx"
 )
 
@@ -89,6 +90,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		usecase.NewAnthropicUseCase,
 		NewBlockedService,
 		NewBlockedChecker,
+		NewBlockedHitRecorder,
 		NewCreateBlockedHandler,
 		NewDeleteBlockedHandler,
 		NewListBlockedHandler,
@@ -269,12 +271,16 @@ func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport
 	return sessionquery.NewListSessionOptionHandler(readRepo)
 }
 
-func NewBlockedService(repo blockeddomain.BlockedRepository) *blockedapp.BlockedService {
-	return blockedapp.NewBlockedService(repo)
+func NewBlockedService(repo blockeddomain.BlockedRepository, hitRecorder blockedport.HitRecorder) *blockedapp.BlockedService {
+	return blockedapp.NewBlockedService(repo, hitRecorder)
 }
 
 func NewBlockedChecker(svc *blockedapp.BlockedService) usecase.BlockedChecker {
 	return svc
+}
+
+func NewBlockedHitRecorder(blockedCache *cache.BlockedHitCache) blockedport.HitRecorder {
+	return blockedCache
 }
 
 func NewCreateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.CreateBlockedHandler {

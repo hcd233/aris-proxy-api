@@ -42,4 +42,5 @@ type OpenAIProxyPort interface {
 type BlockedChecker interface {
 	Check(text string) []uint
 	MatchedWords(ids []uint) []string
+	IncrementHits(ctx context.Context, ids []uint) error
 }

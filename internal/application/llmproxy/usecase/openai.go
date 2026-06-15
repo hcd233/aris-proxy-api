@@ -75,6 +75,8 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	}
 
 	if matched := u.checkContent(req); len(matched) > 0 {
+		_ = u.blockedChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
+
 		var upstreamProtocol enum.ProtocolType
 		switch compatRoute {
 		case enum.CompatRouteNative:
