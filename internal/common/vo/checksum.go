@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/encoder"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/samber/lo"
 )
 
@@ -16,9 +17,29 @@ import (
 //	@update 2026-04-22 14:15:00
 type ToolSchemaMap map[string]*JSONSchemaProperty
 
+// messageChecksumWire 用于稳定 message checksum 序列化的内部结构体
+//
+//	@author centonhuang
+//	@update 2026-06-16 10:00:00
+type messageChecksumWire struct {
+	Model            string             `json:"model"`
+	Role             enum.Role          `json:"role"`
+	Content          *UnifiedContent    `json:"content,omitempty"`
+	ReasoningContent string             `json:"reasoning_content,omitempty"`
+	Name             string             `json:"name,omitempty"`
+	ToolCalls        []*UnifiedToolCall `json:"tool_calls,omitempty"`
+	ToolCallID       string             `json:"tool_call_id,omitempty"`
+	Refusal          string             `json:"refusal,omitempty"`
+}
+
 // ComputeMessageChecksum 计算统一消息校验和
 //
 // 对 UnifiedMessage 做规范化处理，确保语义相同但表示不同的消息产生相同的 checksum：
+//
+//   - 纳入 model：相同内容由不同模型生成时产生不同 checksum
+//
+//   - 兼容 Content / ReasoningContent 空值：当 Content 为空且 ReasoningContent 非空时，
+//     将 ReasoningContent 视为 Content；两者均非空时保持区分
 //
 //   - 清除 ToolCalls 中的 ID（上游分配的标识符，不影响消息语义，
 //     且同一条消息在流式和非流式路径中可能产生不同的 ID 格式）
@@ -30,13 +51,20 @@ type ToolSchemaMap map[string]*JSONSchemaProperty
 //   - 序列化规范化后的结构体，计算 SHA256
 //
 //     @param msg *UnifiedMessage
+//     @param model string 上游模型名（非 assistant 消息可为空字符串）
 //     @param toolSchemas ToolSchemaMap 工具 Schema 映射表（可为 nil，nil 时退化为无 schema 模式）
 //     @return string
 //     @author centonhuang
-//     @update 2026-04-22 14:15:00
-func ComputeMessageChecksum(msg *UnifiedMessage, toolSchemas ToolSchemaMap) string {
+//     @update 2026-06-16 10:00:00
+func ComputeMessageChecksum(msg *UnifiedMessage, model string, toolSchemas ToolSchemaMap) string {
 	normalized := *msg
-	normalized.ReasoningContent = ""
+
+	// 规范化 Content / ReasoningContent：
+	// 当 Content 为空且 ReasoningContent 非空时，将 ReasoningContent 视为 Content。
+	if isUnifiedContentEmpty(normalized.Content) && normalized.ReasoningContent != "" {
+		normalized.Content = &UnifiedContent{Text: normalized.ReasoningContent}
+		normalized.ReasoningContent = ""
+	}
 
 	if len(normalized.ToolCalls) > 0 {
 		cleanedCalls := make([]*UnifiedToolCall, len(normalized.ToolCalls))
@@ -53,8 +81,32 @@ func ComputeMessageChecksum(msg *UnifiedMessage, toolSchemas ToolSchemaMap) stri
 		normalized.ToolCalls = cleanedCalls
 	}
 
-	hash := sha256.Sum256(lo.Must1(encoder.Encode(normalized, encoder.SortMapKeys)))
+	wire := messageChecksumWire{
+		Model:            model,
+		Role:             normalized.Role,
+		Content:          normalized.Content,
+		ReasoningContent: normalized.ReasoningContent,
+		Name:             normalized.Name,
+		ToolCalls:        normalized.ToolCalls,
+		ToolCallID:       normalized.ToolCallID,
+		Refusal:          normalized.Refusal,
+	}
+
+	hash := sha256.Sum256(lo.Must1(encoder.Encode(wire, encoder.SortMapKeys)))
 	return hex.EncodeToString(hash[:])
+}
+
+// isUnifiedContentEmpty 判断 UnifiedContent 是否为空
+//
+//	@param content *UnifiedContent
+//	@return bool
+//	@author centonhuang
+//	@update 2026-06-16 10:00:00
+func isUnifiedContentEmpty(content *UnifiedContent) bool {
+	if content == nil {
+		return true
+	}
+	return content.Text == "" && len(content.Parts) == 0
 }
 
 // normalizeArgumentsWithSchema 根据 tool schema 规范化 arguments JSON 字符串
