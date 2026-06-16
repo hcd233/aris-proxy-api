@@ -9,6 +9,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/gofiber/fiber/v3"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -210,6 +211,7 @@ func TokenBucketTokenRateLimiterMiddleware(
 			ctx.SetHeader(constant.HTTPHeaderXRateLimitLimit, limitStr)
 			ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, constant.ZeroString)
 			ctx.SetHeader(constant.HTTPHeaderRetryAfter, strconv.Itoa(retryAfterSeconds))
+			ctx.SetStatus(fiber.StatusTooManyRequests)
 			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError()))
 			return
 		}
