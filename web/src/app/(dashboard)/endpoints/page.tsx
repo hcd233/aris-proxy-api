@@ -548,7 +548,7 @@ export default function EndpointsPage() {
                 <Label htmlFor="ep-anthropic-url">Anthropic Base URL</Label>
                 <Input
                   id="ep-anthropic-url"
-                  placeholder="https://api.anthropic.com"
+                  placeholder="https://api.anthropic.com/v1"
                   value={form.anthropicBaseURL}
                   onChange={(e) => setForm((f) => ({ ...f, anthropicBaseURL: e.target.value }))}
                 />
