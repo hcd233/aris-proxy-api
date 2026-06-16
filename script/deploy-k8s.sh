@@ -205,7 +205,7 @@ git -C "${REPO_DIR}" fetch --prune origin
 git -C "${REPO_DIR}" pull --ff-only origin "${BRANCH_NAME}"
 
 COMMIT_SHA=$(git -C "${REPO_DIR}" rev-parse --short=7 HEAD)
-IMAGE_TAG="${DEPLOY_IMAGE_TAG:-sha-${COMMIT_SHA}}"
+IMAGE_TAG="${DEPLOY_IMAGE_TAG:-master}"
 IMAGE="ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}"
 log "Deploying to k3s (branch: ${BRANCH_NAME}, commit: ${COMMIT_SHA}, image: ${IMAGE})"
 

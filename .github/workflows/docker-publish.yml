@@ -208,13 +208,11 @@ jobs:
           username: ${{ secrets.PRODUCTION_USERNAME }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           command_timeout: 10m
-          envs: DEPLOY_IMAGE_TAG
           script: |
             set -euo pipefail
             cd ${{ secrets.PRODUCTION_REPO_PATH }}
             git fetch --prune origin
             git reset --hard origin/master
-            export DEPLOY_IMAGE_TAG=sha-${{ github.sha }}
             bash script/deploy-k8s.sh
             for i in $(seq 1 60); do
               if curl -kfsS --max-time 5 https://api.lvlvko.top/health; then
