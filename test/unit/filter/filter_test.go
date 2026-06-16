@@ -23,7 +23,7 @@ func TestJSONBArrayCondition_SingleEqual(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	want := "models::jsonb @> jsonb_build_array(?)"
+	want := "models::jsonb @> jsonb_build_array(?::text)"
 	if sql != want {
 		t.Errorf("sql mismatch\nwant: %q\ngot:  %q", want, sql)
 	}
@@ -46,7 +46,7 @@ func TestJSONBArrayCondition_MultiEqual(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(sql, "models::jsonb @> jsonb_build_array(?)") {
+	if !strings.Contains(sql, "models::jsonb @> jsonb_build_array(?::text)") {
 		t.Errorf("sql should contain jsonb_build_array condition, got %q", sql)
 	}
 	if !strings.Contains(sql, " OR ") {
@@ -71,7 +71,7 @@ func TestJSONBArrayCondition_SingleNotEqual(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	want := "NOT models::jsonb @> jsonb_build_array(?)"
+	want := "NOT models::jsonb @> jsonb_build_array(?::text)"
 	if sql != want {
 		t.Errorf("sql mismatch\nwant: %q\ngot:  %q", want, sql)
 	}
@@ -94,7 +94,7 @@ func TestJSONBArrayCondition_MultiNotEqual(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(sql, "NOT models::jsonb @> jsonb_build_array(?)") {
+	if !strings.Contains(sql, "NOT models::jsonb @> jsonb_build_array(?::text)") {
 		t.Errorf("sql should contain NOT condition, got %q", sql)
 	}
 	if !strings.Contains(sql, " AND ") {
@@ -140,7 +140,7 @@ func TestJSONBArrayCondition_CombinedWithOtherField(t *testing.T) {
 	if !strings.Contains(sql, "score = ?") {
 		t.Errorf("sql should contain score condition, got %q", sql)
 	}
-	if !strings.Contains(sql, "models::jsonb @> jsonb_build_array(?)") {
+	if !strings.Contains(sql, "models::jsonb @> jsonb_build_array(?::text)") {
 		t.Errorf("sql should contain model condition, got %q", sql)
 	}
 	if len(args) != 2 {
