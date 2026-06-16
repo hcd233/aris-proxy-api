@@ -141,6 +141,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 			MessageCount: v.MessageCount,
 			ToolCount:    v.ToolCount,
 			Score:        v.Score,
+			Models:       v.Models,
 		}
 	})
 	rsp.PageInfo = pageInfo

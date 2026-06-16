@@ -232,6 +232,7 @@ type sessionSummaryRow struct {
 	MessageCount int       `gorm:"column:message_count"`
 	ToolCount    int       `gorm:"column:tool_count"`
 	Questions    []uint    `gorm:"column:questions;serializer:json"`
+	Models       []string  `gorm:"column:models;serializer:json"`
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
@@ -294,6 +295,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
 			Questions:    row.Questions,
+			Models:       row.Models,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
@@ -358,6 +360,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
 			Questions:    row.Questions,
+			Models:       row.Models,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
