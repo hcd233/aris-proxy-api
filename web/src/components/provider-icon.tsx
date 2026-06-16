@@ -124,7 +124,7 @@ export function ProviderIcon({
     return normalized.startsWith(key + "-") || normalized.startsWith(key + "_");
   });
 
-  if (!providerKey) return null;
+  if (!providerKey) return <HuggingFace size={size} className={cn("shrink-0", className)} />;
 
   const Icon = providerMap[providerKey];
   return <Icon size={size} className={cn("shrink-0", className)} />;
