@@ -80,6 +80,9 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolAnthropicMessage, firstTokenLatencyMs)
 		task.StreamDurationMs = streamDurationMs
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		if anthropicMsg != nil && anthropicMsg.Usage != nil {
+			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
+		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
@@ -103,6 +106,9 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		if anthropicMsg.Usage != nil {
+			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
@@ -130,6 +136,9 @@ func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, 
 		task.StreamDurationMs = streamDurationMs
 		if completion != nil {
 			task.SetTokensFromOpenAIUsage(completion.Usage)
+			if completion.Usage != nil {
+				reportTokenUsage(ctx, completion.Usage.InputOutputTokens())
+			}
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
@@ -194,6 +203,9 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromOpenAIUsage(completion.Usage)
+		if completion.Usage != nil {
+			reportTokenUsage(ctx, completion.Usage.InputOutputTokens())
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
