@@ -209,7 +209,7 @@ func isMultiValueAllowed(op enum.Operator) bool {
 }
 
 // buildJSONBArrayCondition 构建 JSONB 数组精确包含条件
-// 单值：column::jsonb @> jsonb_build_array(?)
+// 单值：column::jsonb @> jsonb_build_array(?::text)
 // 多值 equal：OR 连接多个 @> 条件
 // 多值 not equal：AND 连接多个 NOT @> 条件
 func buildJSONBArrayCondition(column string, f Filter) (sql string, args []any, err error) {
@@ -218,7 +218,7 @@ func buildJSONBArrayCondition(column string, f Filter) (sql string, args []any, 
 	}
 
 	jsonbColumn := column + "::jsonb"
-	frag := jsonbColumn + " @> jsonb_build_array(?)"
+	frag := jsonbColumn + " @> jsonb_build_array(?::text)"
 
 	switch f.Operator {
 	case enum.OpEqual:
