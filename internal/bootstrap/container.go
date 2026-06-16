@@ -60,6 +60,9 @@ func registerMiddlewares(params middlewareParams) {
 			BanDuration:     constant.GuardBanDuration,
 			IgnoredPaths: []string{
 				constant.RoutePathRoot,
+				constant.RoutePathHealth,
+				constant.RoutePathReady,
+				constant.RoutePathSSEHealth,
 				constant.RoutePathFavicon,
 				constant.RoutePathRobots,
 				constant.RoutePathAppleTouchIcon,
