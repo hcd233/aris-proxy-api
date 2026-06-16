@@ -118,6 +118,8 @@ export default function AuditPage() {
           page,
           pageSize,
           query: query || undefined,
+          sort: "desc",
+          sortField: "created_at",
           startTime,
           endTime,
           filter,
