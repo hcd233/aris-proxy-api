@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import type { SessionSummary } from "@/lib/types";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
@@ -95,7 +94,7 @@ export function SessionHistoryList({
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <div className="px-2 pb-4">
           {items.length === 0 && !loading && (
             <p className="px-3 py-4 text-center text-sm text-muted-foreground">
@@ -135,7 +134,7 @@ export function SessionHistoryList({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

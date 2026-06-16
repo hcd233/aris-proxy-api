@@ -9,7 +9,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 export interface ToolDrawerProps {
@@ -17,6 +16,8 @@ export interface ToolDrawerProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   toolCount?: number;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  scrollRef?: React.Ref<HTMLDivElement>;
 }
 
 export function ToolDrawer({
@@ -24,6 +25,8 @@ export function ToolDrawer({
   open,
   onOpenChange,
   toolCount,
+  onScroll,
+  scrollRef,
 }: ToolDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -57,7 +60,13 @@ export function ToolDrawer({
           <SheetHeader className="border-b border-border/60 px-4 py-3 text-left">
             <SheetTitle>Available Tools</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="flex-1 p-4">{children}</ScrollArea>
+          <div
+            ref={scrollRef}
+            onScroll={onScroll}
+            className="flex-1 space-y-2 overflow-y-auto p-4"
+          >
+            {children}
+          </div>
         </div>
       </SheetContent>
     </Sheet>
