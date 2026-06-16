@@ -59,17 +59,18 @@ type ModelCallAuditTask struct {
 //	@receiver t *ModelCallAuditTask
 //	@param usage *OpenAICompletionUsage
 //	@author centonhuang
-//	@update 2026-04-29 10:00:00
+//	@update 2026-06-16 23:30:00
 func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsage) {
 	if usage == nil {
 		return
 	}
 	t.InputTokens = usage.PromptTokens
 	t.OutputTokens = usage.CompletionTokens
-	if usage.PromptCacheHitTokens != nil {
-		t.CacheReadInputTokens = lo.FromPtr(usage.PromptCacheHitTokens)
-	} else if usage.PromptTokensDetails != nil && usage.PromptTokensDetails.CachedTokens != nil {
-		t.CacheReadInputTokens = lo.FromPtr(usage.PromptTokensDetails.CachedTokens)
+	switch {
+	case usage.PromptCacheHitTokens != nil && *usage.PromptCacheHitTokens > 0:
+		t.CacheReadInputTokens = *usage.PromptCacheHitTokens
+	case usage.PromptTokensDetails != nil && usage.PromptTokensDetails.CachedTokens != nil && *usage.PromptTokensDetails.CachedTokens > 0:
+		t.CacheReadInputTokens = *usage.PromptTokensDetails.CachedTokens
 	}
 }
 
@@ -78,7 +79,7 @@ func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsa
 //	@receiver t *ModelCallAuditTask
 //	@param msg *AnthropicMessage
 //	@author centonhuang
-//	@update 2026-04-29 10:00:00
+//	@update 2026-06-16 23:30:00
 func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) {
 	if msg == nil || msg.Usage == nil {
 		return
@@ -86,9 +87,11 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	t.InputTokens = msg.Usage.InputTokens
 	t.OutputTokens = msg.Usage.OutputTokens
 	t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
-	t.CacheReadInputTokens = lo.FromPtr(msg.Usage.CacheReadInputTokens)
-	if msg.Usage.PromptCacheHitTokens != nil {
-		t.CacheReadInputTokens = lo.FromPtr(msg.Usage.PromptCacheHitTokens)
+	switch {
+	case msg.Usage.PromptCacheHitTokens != nil && *msg.Usage.PromptCacheHitTokens > 0:
+		t.CacheReadInputTokens = *msg.Usage.PromptCacheHitTokens
+	case msg.Usage.CacheReadInputTokens != nil && *msg.Usage.CacheReadInputTokens > 0:
+		t.CacheReadInputTokens = *msg.Usage.CacheReadInputTokens
 	}
 }
 
@@ -97,16 +100,17 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 //	@receiver t *ModelCallAuditTask
 //	@param rsp *OpenAICreateResponseRsp
 //	@author centonhuang
-//	@update 2026-04-29 15:00:00
+//	@update 2026-06-16 23:30:00
 func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateResponseRsp) {
 	if rsp == nil || rsp.Usage == nil {
 		return
 	}
 	t.InputTokens = rsp.Usage.InputTokens
 	t.OutputTokens = rsp.Usage.OutputTokens
-	if rsp.Usage.PromptCacheHitTokens != nil {
-		t.CacheReadInputTokens = lo.FromPtr(rsp.Usage.PromptCacheHitTokens)
-	} else if rsp.Usage.InputTokensDetails != nil {
+	switch {
+	case rsp.Usage.PromptCacheHitTokens != nil && *rsp.Usage.PromptCacheHitTokens > 0:
+		t.CacheReadInputTokens = *rsp.Usage.PromptCacheHitTokens
+	case rsp.Usage.InputTokensDetails != nil && rsp.Usage.InputTokensDetails.CachedTokens > 0:
 		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
 	}
 }
