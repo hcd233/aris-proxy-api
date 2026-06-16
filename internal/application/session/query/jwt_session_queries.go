@@ -35,6 +35,10 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 			constant.SessionOptionScoreValueUnscored: nil,
 		},
 	},
+	constant.SessionFilterFieldModel: {
+		SQLColumn:    constant.SessionFilterModelSQLColumn,
+		IsJSONBArray: true,
+	},
 }
 
 type ListSessionsByUserHandler interface {

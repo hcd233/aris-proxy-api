@@ -109,7 +109,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Method:      http.MethodGet,
 		Path:        "/option/list",
 		Summary:     "ListSessionOptions",
-		Description: "Get available options for session filter fields (score)",
+		Description: "Get available options for session filter fields (score, model)",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listSessionOptions", enum.PermissionUser)},

@@ -100,7 +100,9 @@ export default function SessionsPage() {
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const [filterScore, setFilterScore] = useState<string[]>([]);
+  const [filterModel, setFilterModel] = useState<string[]>([]);
   const [scoreOptions, setScoreOptions] = useState<string[]>([]);
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
 
   const fetchScoreOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
     const { startTime, endTime } = computeRange(range, cs, ce);
@@ -112,15 +114,28 @@ export default function SessionsPage() {
     }
   }, []);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch score options when the time range changes */
+  const fetchModelOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
+    const { startTime, endTime } = computeRange(range, cs, ce);
+    try {
+      const rsp = await api.listSessionOptions({ field: "model", startTime, endTime });
+      if (!rsp.error && rsp.items) setModelOptions(rsp.items);
+    } catch (err) {
+      console.error("Failed to load model options:", err);
+    }
+  }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch filter options when the time range changes */
   useEffect(() => {
     fetchScoreOptions(timeRange, customStart, customEnd);
-  }, [timeRange, customStart, customEnd, fetchScoreOptions]);
+    fetchModelOptions(timeRange, customStart, customEnd);
+  }, [timeRange, customStart, customEnd, fetchScoreOptions, fetchModelOptions]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const buildSessionFilter = (scores: string[]): string | undefined => {
-    if (scores.length === 0) return undefined;
-    return `score:${scores.join("|")}`;
+  const buildSessionFilter = (scores: string[], models: string[]): string | undefined => {
+    const parts: string[] = [];
+    if (scores.length > 0) parts.push(`score:${scores.join("|")}`);
+    if (models.length > 0) parts.push(`model:${models.join("|")}`);
+    return parts.length > 0 ? parts.join(" ") : undefined;
   };
 
   const fetchSessions = useCallback(
@@ -133,6 +148,7 @@ export default function SessionsPage() {
       sortState: { field: string; dir: SortDir },
       kw: string,
       score: string[],
+      models: string[],
     ) => {
       setLoading(true);
       try {
@@ -145,7 +161,7 @@ export default function SessionsPage() {
           startTime,
           endTime,
           keyword: kw || undefined,
-          filter: buildSessionFilter(score),
+          filter: buildSessionFilter(score, models),
         });
         setSessions(rsp.sessions ?? []);
         if (rsp.pageInfo) {
@@ -165,14 +181,14 @@ export default function SessionsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
   useEffect(() => {
-    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "", []);
+    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "", [], []);
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore);
+    fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel);
 
   const handleSort = (field: string) => {
     const newSort: { field: string; dir: SortDir } =
@@ -180,14 +196,14 @@ export default function SessionsPage() {
         ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
         : { field, dir: "desc" };
     setSort(newSort);
-    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, newSort, keyword, filterScore);
+    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, newSort, keyword, filterScore, filterModel);
   };
 
   const handleSearch = () => {
     const kw = searchInput.trim();
     setKeyword(kw);
     setSelected(new Set());
-    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, kw, filterScore);
+    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, kw, filterScore, filterModel);
   };
 
   const renderSortIcon = (field: string) => {
@@ -207,7 +223,7 @@ export default function SessionsPage() {
     try {
       await api.deleteSession(deleteTarget.id);
       toast.success("Session deleted");
-      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore);
+      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete session");
     } finally {
@@ -251,7 +267,7 @@ export default function SessionsPage() {
         toast.success(`${rsp.deletedCount} sessions deleted`);
       }
       setSelected(new Set());
-      fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore);
+      fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to batch delete");
     } finally {
@@ -320,7 +336,7 @@ export default function SessionsPage() {
                   setTimeRange(key);
                   setCustomStart(cs);
                   setCustomEnd(ce);
-                  fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword, filterScore);
+                  fetchSessions(1, pageInfo.pageSize, key, cs, ce, sort, keyword, filterScore, filterModel);
                 }}
               />
               <MultiSelectPill
@@ -329,17 +345,27 @@ export default function SessionsPage() {
                 value={filterScore}
                 onChange={(v) => {
                   setFilterScore(v);
-                  fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, v);
+                  fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, v, filterModel);
                 }}
               />
-              {filterScore.length > 0 && (
+              <MultiSelectPill
+                label="Model"
+                options={modelOptions}
+                value={filterModel}
+                onChange={(v) => {
+                  setFilterModel(v);
+                  fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, v);
+                }}
+              />
+              {(filterScore.length > 0 || filterModel.length > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="gap-1 text-muted-foreground"
                   onClick={() => {
                     setFilterScore([]);
-                    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, []);
+                    setFilterModel([]);
+                    fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, [], []);
                   }}
                 >
                   <X className="size-3.5" />
@@ -362,7 +388,7 @@ export default function SessionsPage() {
                 {searchInput && (
                   <button
                     type="button"
-                    onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, "", filterScore); }}
+                    onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, "", filterScore, filterModel); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-4" />
@@ -691,7 +717,7 @@ export default function SessionsPage() {
                       {[20, 50, 100, 200].map((size) => (
                         <DropdownMenuItem
                           key={size}
-                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort, keyword, filterScore)}
+                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel)}
                         >
                           {size === pageInfo.pageSize && (
                             <Check className="size-4" />

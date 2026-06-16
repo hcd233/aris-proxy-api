@@ -28,10 +28,11 @@ type FilterCriteria struct {
 
 // FieldConfig 字段配置
 type FieldConfig struct {
-	SQLColumn string
-	IsFuzzy   bool
-	IsNumeric bool
-	ValueMap  map[string]*string
+	SQLColumn    string
+	IsFuzzy      bool
+	IsNumeric    bool
+	IsJSONBArray bool
+	ValueMap     map[string]*string
 }
 
 // operatorInfo 操作符信息
@@ -183,6 +184,10 @@ func buildCondition(f Filter, config FieldConfig) (sql string, args []any, err e
 		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrMultiValueWithComparison, f.Operator)
 	}
 
+	if config.IsJSONBArray {
+		return buildJSONBArrayCondition(column, f)
+	}
+
 	if config.ValueMap != nil {
 		return buildValueMapCondition(column, f, config)
 	}
@@ -201,6 +206,46 @@ func buildCondition(f Filter, config FieldConfig) (sql string, args []any, err e
 // isMultiValueAllowed 判定操作符是否支持多值
 func isMultiValueAllowed(op enum.Operator) bool {
 	return op == enum.OpEqual || op == enum.OpNotEqual
+}
+
+// buildJSONBArrayCondition 构建 JSONB 数组精确包含条件
+// 单值：column::jsonb @> jsonb_build_array(?)
+// 多值 equal：OR 连接多个 @> 条件
+// 多值 not equal：AND 连接多个 NOT @> 条件
+func buildJSONBArrayCondition(column string, f Filter) (sql string, args []any, err error) {
+	if !isMultiValueAllowed(f.Operator) {
+		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, f.Operator)
+	}
+
+	jsonbColumn := column + "::jsonb"
+	frag := jsonbColumn + " @> jsonb_build_array(?)"
+
+	switch f.Operator {
+	case enum.OpEqual:
+		if len(f.Values) == 1 {
+			return frag, []any{f.Values[0]}, nil
+		}
+		parts := make([]string, len(f.Values))
+		args = make([]any, len(f.Values))
+		for i, v := range f.Values {
+			parts[i] = frag
+			args[i] = v
+		}
+		return "(" + strings.Join(parts, constant.FilterSQLOR) + ")", args, nil
+	case enum.OpNotEqual:
+		if len(f.Values) == 1 {
+			return "NOT " + frag, []any{f.Values[0]}, nil
+		}
+		parts := make([]string, len(f.Values))
+		args = make([]any, len(f.Values))
+		for i, v := range f.Values {
+			parts[i] = "NOT " + frag
+			args[i] = v
+		}
+		return "(" + strings.Join(parts, constant.FilterSQLAND) + ")", args, nil
+	default:
+		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, f.Operator)
+	}
 }
 
 // buildFuzzyCondition LIKE / NOT LIKE 单值或 OR/AND 多值

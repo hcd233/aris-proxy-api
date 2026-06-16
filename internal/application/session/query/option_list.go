@@ -21,29 +21,32 @@ func NewListSessionOptionHandler(readRepo session.SessionReadRepository) session
 }
 
 func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.ListSessionOptionQuery) ([]string, error) {
-	if q.Field != constant.FieldScore {
+	switch q.Field {
+	case constant.FieldScore:
+		items := []string{constant.SessionOptionScoreValueUnscored}
+
+		scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, s := range scores {
+			if s >= 1 && s <= 5 {
+				items = append(items, strconv.Itoa(s))
+			}
+		}
+
+		if q.Keyword != "" {
+			filtered := lo.Filter(items, func(item string, _ int) bool {
+				return strings.Contains(item, q.Keyword)
+			})
+			return filtered, nil
+		}
+
+		return items, nil
+	case constant.SessionFilterFieldModel:
+		return h.readRepo.ListDistinctModels(ctx, q.Keyword, q.StartTime, q.EndTime)
+	default:
 		return []string{}, nil
 	}
-
-	items := []string{constant.SessionOptionScoreValueUnscored}
-
-	scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, s := range scores {
-		if s >= 1 && s <= 5 {
-			items = append(items, strconv.Itoa(s))
-		}
-	}
-
-	if q.Keyword != "" {
-		filtered := lo.Filter(items, func(item string, _ int) bool {
-			return strings.Contains(item, q.Keyword)
-		})
-		return filtered, nil
-	}
-
-	return items, nil
 }

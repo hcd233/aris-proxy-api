@@ -26,9 +26,9 @@ type AuditOptionListRsp struct {
 // SessionOptionListReq 会话筛选选项请求
 //
 //	@author centonhuang
-//	@update 2026-06-10 12:00:00
+//	@update 2026-06-16 14:00:00
 type SessionOptionListReq struct {
-	Field     string    `query:"field" required:"true" enum:"score" doc:"筛选字段"`
+	Field     string    `query:"field" required:"true" enum:"score,model" doc:"筛选字段"`
 	Keyword   string    `query:"keyword" maxLength:"100" doc:"搜索关键词"`
 	StartTime time.Time `query:"startTime" doc:"筛选起始时间"`
 	EndTime   time.Time `query:"endTime" doc:"筛选结束时间"`

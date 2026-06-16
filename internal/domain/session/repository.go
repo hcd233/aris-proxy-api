@@ -123,4 +123,6 @@ type SessionReadRepository interface {
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
 	// ListDistinctScores 查询去重的评分列表（支持时间范围过滤）
 	ListDistinctScores(ctx context.Context, startTime, endTime time.Time) ([]int, error)
+	// ListDistinctModels 查询去重的模型列表（支持时间范围与关键字过滤）
+	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 }
