@@ -875,7 +875,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
                 onOpenChange={setToolsDrawerOpen}
                 toolCount={metadata.toolCount}
                 onScroll={handleToolsScroll}
-                scrollRef={toolsScrollRef}
+                scrollRootRef={toolsScrollRef}
               >
                 <div className="space-y-2">
                   {tools.map((t) => (

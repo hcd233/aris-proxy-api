@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,7 +22,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { SessionHistoryList } from "@/components/session-detail/session-history-list";
+import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -182,13 +188,10 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   const isSessionDetail = pathname.startsWith("/sessions/detail");
-  const activeSessionId = Number(searchParams.get("id") ?? NaN);
 
   const closeMobileSidebar = useCallback(() => setSidebarOpen(false), []);
 
@@ -213,13 +216,6 @@ export default function DashboardLayout({
       return next;
     });
   }, []);
-
-  const navigateToSession = useCallback(
-    (sessionId: number) => {
-      router.push(`/sessions/detail?id=${sessionId}`);
-    },
-    [router],
-  );
 
   return (
     <PermissionGuard>
@@ -248,21 +244,10 @@ export default function DashboardLayout({
           </div>
           <div className="flex-1 overflow-y-auto py-3">
             <SidebarNav items={navItems} collapsed={collapsed} />
-            {!collapsed && isSessionDetail && !Number.isNaN(activeSessionId) && (
-              <>
-                <Separator className="my-3 bg-sidebar-border/50" />
-                <div className="px-3 pb-2">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                    History
-                  </h3>
-                </div>
-                <div className="px-2">
-                  <SessionHistoryList
-                    activeSessionId={activeSessionId}
-                    onSelect={navigateToSession}
-                  />
-                </div>
-              </>
+            {!collapsed && isSessionDetail && (
+              <Suspense fallback={null}>
+                <SessionHistorySidebar />
+              </Suspense>
             )}
           </div>
           <Separator className="bg-sidebar-border/50" />

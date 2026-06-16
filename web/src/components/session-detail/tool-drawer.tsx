@@ -17,7 +17,7 @@ export interface ToolDrawerProps {
   onOpenChange?: (open: boolean) => void;
   toolCount?: number;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
-  scrollRef?: React.Ref<HTMLDivElement>;
+  scrollRootRef?: React.Ref<HTMLDivElement>;
 }
 
 export function ToolDrawer({
@@ -26,28 +26,30 @@ export function ToolDrawer({
   onOpenChange,
   toolCount,
   onScroll,
-  scrollRef,
+  scrollRootRef,
 }: ToolDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Available tools"
-          title="Available tools"
-          className="relative"
-        >
-          <Wrench className="size-5" />
-          {toolCount ? (
-            <span
-              className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
-              aria-hidden
-            >
-              {toolCount}
-            </span>
-          ) : null}
-        </Button>
+      <SheetTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Available tools"
+            title="Available tools"
+            className="relative"
+          />
+        }
+      >
+        <Wrench className="size-5" />
+        {toolCount ? (
+          <span
+            className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
+            aria-hidden
+          >
+            {toolCount}
+          </span>
+        ) : null}
       </SheetTrigger>
       <SheetContent
         side="right"
@@ -61,7 +63,7 @@ export function ToolDrawer({
             <SheetTitle>Available Tools</SheetTitle>
           </SheetHeader>
           <div
-            ref={scrollRef}
+            ref={scrollRootRef}
             onScroll={onScroll}
             className="flex-1 space-y-2 overflow-y-auto p-4"
           >

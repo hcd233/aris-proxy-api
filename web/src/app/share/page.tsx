@@ -348,7 +348,7 @@ function SharedSessionView() {
     io.observe(sentinel);
     return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are read at bind time; re-bind when panel/sheet or loader changes
-  }, [isMobile, sidebarOpen, toolsSheetOpen, toolsList.hasMore, toolsList.loadMore]);
+  }, [isMobile, toolsDrawerOpen, toolsSheetOpen, toolsList.hasMore, toolsList.loadMore]);
 
   const messages = messagesList.items;
   const tools = toolsList.items;
@@ -563,7 +563,7 @@ function SharedSessionView() {
                     onOpenChange={setToolsDrawerOpen}
                     toolCount={metadata.toolCount}
                     onScroll={handleToolsScroll}
-                    scrollRef={toolsScrollRef}
+                    scrollRootRef={toolsScrollRootRef}
                   >
                     <div className="space-y-2">
                       {tools.map((t) => (

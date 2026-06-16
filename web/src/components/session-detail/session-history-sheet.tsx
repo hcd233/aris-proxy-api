@@ -30,10 +30,16 @@ export function SessionHistorySheet({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Session history">
-          <History className="size-5" />
-        </Button>
+      <SheetTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Session history"
+          />
+        }
+      >
+        <History className="size-5" />
       </SheetTrigger>
       <SheetContent
         side="bottom"
