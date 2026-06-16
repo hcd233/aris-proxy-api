@@ -53,12 +53,6 @@ import {
 import { toast } from "sonner";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { ProviderIcon } from "@/components/provider-icon";
-import {
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 
 type SortDir = "asc" | "desc";
 
@@ -77,28 +71,6 @@ function formatDateTime(dateStr: string): string {
   const minutes = String(d.getMinutes()).padStart(2, "0");
   const seconds = String(d.getSeconds()).padStart(2, "0");
   return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-}
-
-function ModelBadge({ model }: { model: string }) {
-  return (
-    <TooltipProvider>
-      <TooltipRoot>
-        <TooltipTrigger
-          render={
-            <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
-              <ProviderIcon protocol={model} size={14} />
-              <span className="max-w-[160px] truncate text-xs text-muted-foreground">
-                {model}
-              </span>
-            </div>
-          }
-        />
-        <TooltipContent side="top">
-          <p className="text-xs">{model}</p>
-        </TooltipContent>
-      </TooltipRoot>
-    </TooltipProvider>
-  );
 }
 
 export default function SessionsPage() {
@@ -673,9 +645,14 @@ export default function SessionsPage() {
                         <TableCell>{s.messageCount ?? 0}</TableCell>
                         <TableCell>{s.toolCount ?? 0}</TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap items-center gap-1">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                             {s.models && s.models.length > 0 ? (
-                              s.models.map((m) => <ModelBadge key={m} model={m} />)
+                              s.models.map((m) => (
+                                <span key={m} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                  <ProviderIcon protocol={m} size={14} />
+                                  {m}
+                                </span>
+                              ))
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
