@@ -87,7 +87,7 @@ function ModelBadge({ model }: { model: string }) {
           render={
             <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
               <ProviderIcon protocol={model} size={14} />
-              <span className="max-w-[80px] truncate text-xs text-muted-foreground">
+              <span className="max-w-[160px] truncate text-xs text-muted-foreground">
                 {model}
               </span>
             </div>
@@ -616,7 +616,7 @@ export default function SessionsPage() {
                         <TableCell className="text-muted-foreground">
                           {formatDateTime(s.createdAt)}
                         </TableCell>
-                        <TableCell className="max-w-[300px] truncate">
+                        <TableCell className="max-w-[200px] truncate">
                           {s.summary || "—"}
                         </TableCell>
                         <TableCell>
