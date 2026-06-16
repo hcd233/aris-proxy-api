@@ -167,7 +167,7 @@ spec:
       containers:
       - name: db-migrate
         image: ${IMAGE}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         command: ["/app/aris-proxy-api", "database", "migrate"]
         envFrom:
         - configMapRef:
