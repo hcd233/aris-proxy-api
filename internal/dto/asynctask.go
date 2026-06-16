@@ -66,7 +66,11 @@ func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsa
 	}
 	t.InputTokens = usage.PromptTokens
 	t.OutputTokens = usage.CompletionTokens
-	t.CacheReadInputTokens = lo.FromPtr(usage.PromptCacheHitTokens)
+	if usage.PromptCacheHitTokens != nil {
+		t.CacheReadInputTokens = lo.FromPtr(usage.PromptCacheHitTokens)
+	} else if usage.PromptTokensDetails != nil && usage.PromptTokensDetails.CachedTokens != nil {
+		t.CacheReadInputTokens = lo.FromPtr(usage.PromptTokensDetails.CachedTokens)
+	}
 }
 
 // SetTokensFromAnthropicUsage 从 Anthropic Message Usage 设置 token 计数
@@ -100,11 +104,10 @@ func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateRespons
 	}
 	t.InputTokens = rsp.Usage.InputTokens
 	t.OutputTokens = rsp.Usage.OutputTokens
-	if rsp.Usage.InputTokensDetails != nil {
-		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
-	}
 	if rsp.Usage.PromptCacheHitTokens != nil {
 		t.CacheReadInputTokens = lo.FromPtr(rsp.Usage.PromptCacheHitTokens)
+	} else if rsp.Usage.InputTokensDetails != nil {
+		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
 	}
 }
 
