@@ -85,6 +85,7 @@ func (pm *PoolManager) deduplicateAndStoreMessages(tx *gorm.DB, messages []*dbmo
 		_, exists := existingMap[m.CheckSum]
 		return !exists
 	})
+	newMessages = lo.UniqBy(newMessages, func(m *dbmodel.Message) string { return m.CheckSum })
 
 	if len(newMessages) > 0 {
 		if err := messageDAO.BatchCreate(tx, newMessages); err != nil {
