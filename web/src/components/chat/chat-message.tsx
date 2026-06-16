@@ -32,6 +32,7 @@ import type {
   UnifiedToolCall,
 } from "@/lib/types";
 
+import { ProviderIcon } from "@/components/provider-icon";
 import { MarkdownLite } from "./markdown-lite";
 
 // ─── Helpers: extract text + multimodal parts ────────────────────────────────
@@ -328,7 +329,11 @@ function ToolCallCard({ call, result }: ToolCallCardProps) {
 
 // ─── Message renderers (per role) ────────────────────────────────────────────
 
-function Avatar({ kind }: { kind: "user" | "assistant" | "system" }) {
+function modelIcon(model: string) {
+  return <ProviderIcon protocol={model} size={14} className="shrink-0" />;
+}
+
+function Avatar({ kind, model }: { kind: "user" | "assistant" | "system"; model?: string }) {
   if (kind === "user") return null; // user messages use card background, no avatar
   if (kind === "system") {
     return (
@@ -337,10 +342,10 @@ function Avatar({ kind }: { kind: "user" | "assistant" | "system" }) {
       </div>
     );
   }
-  // assistant: Claude-style circular dot with sparkles icon
+  // assistant
   return (
-    <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-[hsl(25,95%,53%)]/15 text-[hsl(25,95%,53%)]">
-      <Sparkles className="size-3.5" />
+    <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+      {model ? modelIcon(model) ?? <Sparkles className="size-3.5" /> : <Sparkles className="size-3.5" />}
     </div>
   );
 }
@@ -452,7 +457,7 @@ export function ChatMessage({
       style={style}
       className="animate-in fade-in slide-in-from-bottom-1 flex gap-3 duration-300"
     >
-      <Avatar kind={isAssistant ? "assistant" : "system"} />
+      <Avatar kind={isAssistant ? "assistant" : "system"} model={message.model} />
       <div className="min-w-0 flex-1">
         <MetaLine
           label={isAssistant ? "AI" : role}
