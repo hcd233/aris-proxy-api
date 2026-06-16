@@ -332,14 +332,14 @@ function Avatar({ kind }: { kind: "user" | "assistant" | "system" }) {
   if (kind === "user") return null; // user messages use card background, no avatar
   if (kind === "system") {
     return (
-      <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <ShieldAlert className="size-3.5" />
       </div>
     );
   }
-  // assistant
+  // assistant: Claude-style circular dot with sparkles icon
   return (
-    <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+    <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-[hsl(25,95%,53%)]/15 text-[hsl(25,95%,53%)]">
       <Sparkles className="size-3.5" />
     </div>
   );
@@ -411,16 +411,15 @@ export function ChatMessage({
   if (isToolResult) return null;
 
   if (role === "user") {
-    // claude.ai iOS user bubble: right-aligned, evenly rounded (no sharpened
-    // corner), borderless tinted surface; slightly tighter on mobile.
+    // claude.ai user bubble: right-aligned, softly rounded, muted surface.
     return (
       <div
         style={style}
         className="animate-in fade-in slide-in-from-bottom-1 flex justify-end duration-300"
       >
-        <div className="w-full max-w-[85%] md:max-w-[88%]">
+        <div className="w-full max-w-[85%] md:max-w-[80%]">
           <MetaLine label="You" time={time} />
-          <div className="rounded-3xl bg-secondary/80 px-4 py-3 text-[15px] leading-relaxed md:rounded-2xl md:rounded-tr-md md:border md:border-border/60 md:bg-secondary/70 md:px-5 md:py-3.5 md:text-base">
+          <div className="rounded-2xl rounded-br-sm bg-muted px-4 py-3 text-[15px] leading-relaxed md:px-5 md:py-3.5 md:text-base">
             {parts.length > 0 && <MultimodalParts parts={parts} />}
             {text && <MarkdownLite text={text} raw />}
             {!text && parts.length === 0 && (

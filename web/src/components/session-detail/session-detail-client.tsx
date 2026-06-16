@@ -38,7 +38,6 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import {
   ChatMessage,
   buildToolResultsByID,
@@ -50,6 +49,8 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
+import { SessionHistorySheet } from "@/components/session-detail/session-history-sheet";
+import { ToolDrawer } from "@/components/session-detail/tool-drawer";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { toast } from "sonner";
 import {
@@ -209,9 +210,8 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const isMobile = useIsMobile();
   const [metadata, setMetadata] = useState<SessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
-  // Desktop: tools panel docked open by default. Mobile: closed; user opens
-  // the bottom sheet on demand.
-  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
+  // Desktop: tools rendered inside a right-side drawer. Mobile: bottom sheet.
+  const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -226,6 +226,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const messagesScrollRootRef = useRef<HTMLDivElement | null>(null);
   const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
   const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
+  const toolsScrollRef = useRef<HTMLDivElement | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
@@ -318,7 +319,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const toolsListEnabled =
     listEnabled &&
     (metadata?.toolCount ?? 0) > 0 &&
-    ((!isMobile && toolsPanelOpen) || (isMobile && toolsSheetOpen));
+    ((!isMobile && toolsDrawerOpen) || (isMobile && toolsSheetOpen));
 
   const messagesList = useInfiniteList<MessageItem>({
     fetcher: useCallback(
@@ -392,6 +393,22 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const toolResultsByID = useMemo(
     () => buildToolResultsByID(messages),
     [messages],
+  );
+
+  const isNearScrollBottom = useCallback(
+    (el: HTMLDivElement) =>
+      el.scrollHeight - el.scrollTop - el.clientHeight <= 240,
+    [],
+  );
+
+  const handleToolsScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (!toolsList.hasMore || toolsList.loading) return;
+      if (isNearScrollBottom(e.currentTarget)) {
+        void toolsList.loadMore();
+      }
+    },
+    [isNearScrollBottom, toolsList],
   );
 
   if (!sessionId || Number.isNaN(sessionId)) {
@@ -527,6 +544,11 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             >
               <ArrowLeft className="size-5" />
             </Button>
+
+            <SessionHistorySheet
+              activeSessionId={sessionId}
+              onSelect={(id) => router.push(`/sessions/detail?id=${id}`)}
+            />
 
             <div className="flex min-w-0 flex-1 flex-col items-center px-1 leading-tight">
               <h1
@@ -771,39 +793,15 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     );
   }
 
-  // ── Desktop layout (unchanged behaviour) ────────────────────────────────
+  // ── Desktop layout ─────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-6rem)] gap-0 overflow-hidden">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-3 border-b border-border/70 pb-4">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => router.push("/sessions/")}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Back to sessions"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div className="flex min-w-0 items-center gap-3">
-            <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight text-foreground">
-              Session #{metadata.id}
-            </h1>
-            {metadata.apiKeyName && (
-              <Badge variant="secondary" className="text-xs">
-                {metadata.apiKeyName}
-              </Badge>
-            )}
-            <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
-              <MessagesSquare className="size-3.5" />
-              {messageCount} message{messageCount === 1 ? "" : "s"}
-            </span>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
-              <span>{new Date(metadata.createdAt).toLocaleString()}</span>
-            </div>
-            <span className="hidden text-[11px] text-muted-foreground sm:inline">Rating</span>
+    <div className="flex min-h-[calc(100vh-6rem)] flex-col">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 px-4 py-3 supports-[backdrop-filter]:backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+          <h1 className="flex-1 truncate text-center text-sm font-semibold text-foreground">
+            Session #{metadata.id}
+          </h1>
+          <div className="flex items-center gap-1">
             {score != null ? (
               <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums">
                 {score}
@@ -872,88 +870,65 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               <Trash2 className="size-4" />
             </Button>
             {metadata.toolCount > 0 && (
-              <Button
-                variant={toolsPanelOpen ? "secondary" : "ghost"}
-                size="icon-sm"
-                onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
-                title={toolsPanelOpen ? "Hide tools panel" : "Show tools panel"}
-                aria-label={toolsPanelOpen ? "Hide tools panel" : "Show tools panel"}
+              <ToolDrawer
+                open={toolsDrawerOpen}
+                onOpenChange={setToolsDrawerOpen}
+                toolCount={metadata.toolCount}
+                onScroll={handleToolsScroll}
+                scrollRootRef={toolsScrollRef}
               >
-                <Wrench className="size-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-            {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <MessagesSquare className="mb-3 size-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  No messages in this session
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-7">
-                {messages.map((msg, idx) => (
-                  <ChatMessage
-                    key={msg.id}
-                    message={msg}
-                    index={idx}
-                    toolResultsByID={toolResultsByID}
-                  />
-                ))}
-                {messagesList.hasMore && (
-                  <div
-                    ref={messagesSentinelRef}
-                    className="flex justify-center py-4"
-                  >
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                )}
-                {!messagesList.hasMore && messages.length > 0 && (
-                  <div className="pt-4 pb-2 text-center">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                      end of conversation
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {toolsPanelOpen && metadata.toolCount > 0 && (
-        <>
-          <Separator orientation="vertical" className="mx-0 h-auto" />
-          <aside className="flex w-80 shrink-0 flex-col overflow-hidden bg-sidebar/40">
-            <div className="flex items-center gap-2 border-b border-border/70 px-4 py-3.5">
-              <Wrench className="size-4 text-muted-foreground" />
-              <h2 className="font-display text-sm font-semibold text-foreground">
-                Available Tools
-              </h2>
-              <Badge variant="secondary" className="ml-auto text-[10px]">
-                {metadata.toolCount}
-              </Badge>
-            </div>
-            <div className="flex-1 space-y-2 overflow-y-auto p-3">
-              {tools.map((t) => (
-                <ToolSidebarItem key={t.id} tool={t} />
-              ))}
-              {toolsList.hasMore && (
-                <div
-                  ref={toolsSentinelRef}
-                  className="flex justify-center py-3"
-                >
-                  <Skeleton className="h-4 w-24" />
+                <div className="space-y-2">
+                  {tools.map((t) => (
+                    <ToolSidebarItem key={t.id} tool={t} />
+                  ))}
+                  {toolsList.hasMore && (
+                    <div className="flex justify-center py-3">
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </aside>
-        </>
-      )}
+              </ToolDrawer>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <MessagesSquare className="mb-3 size-10 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">
+              No messages in this session
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-7">
+            {messages.map((msg, idx) => (
+              <ChatMessage
+                key={msg.id}
+                message={msg}
+                index={idx}
+                toolResultsByID={toolResultsByID}
+              />
+            ))}
+            {messagesList.hasMore && (
+              <div
+                ref={messagesSentinelRef}
+                className="flex justify-center py-4"
+              >
+                <Skeleton className="h-4 w-32" />
+              </div>
+            )}
+            {!messagesList.hasMore && messages.length > 0 && (
+              <div className="pt-4 pb-2 text-center">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
+                  end of conversation
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <ShareDialog
         sessionId={metadata.id}
