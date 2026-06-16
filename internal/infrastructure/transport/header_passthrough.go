@@ -6,6 +6,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/samber/lo"
 )
 
 // responsePassthroughExcludedHeaders 不从上游透传到客户端的响应头
@@ -38,11 +39,10 @@ func applyPassthroughRequestHeaders(ctx context.Context, header http.Header) {
 
 // capturePassthroughResponseHeaders 从上游响应中提取需要透传的响应头
 func capturePassthroughResponseHeaders(header http.Header) map[string]string {
-	headers := make(map[string]string, 4)
-	for k := range header {
-		if isPassthroughResponseHeader(k) {
-			headers[k] = header.Get(k)
-		}
+	picked := lo.PickBy(header, func(k string, _ []string) bool { return isPassthroughResponseHeader(k) })
+	headers := make(map[string]string, len(picked))
+	for k, v := range picked {
+		headers[k] = v[0]
 	}
 	return headers
 }
@@ -50,10 +50,9 @@ func capturePassthroughResponseHeaders(header http.Header) map[string]string {
 // storePassthroughResponseHeaders 将响应头存入 context 的 map 中
 func storePassthroughResponseHeaders(ctx context.Context, header http.Header) {
 	if m := util.GetPassthroughResponseHeaders(ctx); m != nil {
-		for k := range header {
-			if isPassthroughResponseHeader(k) {
-				m[k] = header.Get(k)
-			}
+		picked := lo.PickBy(header, func(k string, _ []string) bool { return isPassthroughResponseHeader(k) })
+		for k, v := range picked {
+			m[k] = v[0]
 		}
 	}
 }

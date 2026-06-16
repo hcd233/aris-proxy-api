@@ -5,6 +5,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/samber/lo"
 )
 
 func extractOpenAIChatText(req *dto.OpenAIChatCompletionRequest) string {
@@ -67,9 +68,6 @@ func formatBlockedWords(words []string) string {
 	if len(words) == 0 {
 		return ""
 	}
-	quoted := make([]string, len(words))
-	for i, w := range words {
-		quoted[i] = "`" + w + "`"
-	}
+	quoted := lo.Map(words, func(w string, _ int) string { return "`" + w + "`" })
 	return strings.Join(quoted, constant.BlockedWordSeparator)
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/samber/mo"
 
 	usecase "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 )
@@ -81,11 +82,10 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 			break
 		}
 
-		chunk, skip := parseSSEDataLine(line)
-		if skip || chunk == nil {
+		chunk, ok := parseSSEDataLine(line).Get()
+		if !ok {
 			continue
 		}
-
 		collectedChunks = append(collectedChunks, chunk)
 		if err := onChunk(chunk); err != nil {
 			log.Warn("[OpenAIProxy] OnChunk callback error", zap.Error(err))
@@ -100,26 +100,20 @@ func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.Ups
 	return proxyutil.ConcatChatCompletionChunks(collectedChunks)
 }
 
-func parseSSEDataLine(line string) (chunk *dto.OpenAIChatCompletionChunk, skip bool) {
-	if line == "" {
-		skip = true
-		return
-	}
+func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {
 	if !strings.HasPrefix(line, constant.SSEDataPrefix) {
-		skip = true
-		return
+		return mo.None[*dto.OpenAIChatCompletionChunk]()
 	}
 	payload := line[len(constant.SSEDataPrefix):]
-	if payload == constant.SSEDoneSignal {
-		return
+	if payload == "" || payload == constant.SSEDoneSignal {
+		return mo.None[*dto.OpenAIChatCompletionChunk]()
 	}
-	chunk = &dto.OpenAIChatCompletionChunk{}
+	chunk := &dto.OpenAIChatCompletionChunk{}
 	if err := sonic.UnmarshalString(payload, chunk); err != nil {
 		zap.L().Warn("[OpenAIProxy] Unmarshal sse chunk error", zap.String("payload", payload), zap.Error(err))
-		skip = true
-		return
+		return mo.None[*dto.OpenAIChatCompletionChunk]()
 	}
-	return
+	return mo.Some(chunk)
 }
 
 // doUpstreamRequest 构建并发送上游 HTTP 请求的公共逻辑

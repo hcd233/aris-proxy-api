@@ -32,10 +32,9 @@ func NewACmatcher(words map[uint]string) *ACmatcher {
 		}
 		node.output = append(node.output, id)
 	}
-	queue := make([]*acNode, 0)
-	for _, child := range m.root.children {
+	queue := lo.Values(m.root.children)
+	for _, child := range queue {
 		child.fail = m.root
-		queue = append(queue, child)
 	}
 	for len(queue) > 0 {
 		parent := queue[0]

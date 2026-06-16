@@ -106,28 +106,23 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 
 // extractQuestionIDs 从消息中提取用户提问的 message ID 列表
 func extractQuestionIDs(messages []*dbmodel.Message, messageIDs []uint) []uint {
-	var questions []uint
-	for i, m := range messages {
+	return lo.FilterMap(messages, func(m *dbmodel.Message, i int) (uint, bool) {
 		if m.Message.Role == enum.RoleUser && m.Message.ToolCallID == "" {
-			questions = append(questions, messageIDs[i])
+			return messageIDs[i], true
 		}
-	}
-	return questions
+		return 0, false
+	})
 }
 
 // extractAssistantModels 从 assistant 消息中抽取去重后的模型名列表
 func extractAssistantModels(messages []*dbmodel.Message) []string {
-	var models []string
-	seen := make(map[string]struct{})
-	for _, m := range messages {
+	candidates := lo.FilterMap(messages, func(m *dbmodel.Message, _ int) (string, bool) {
 		if m.Message.Role == enum.RoleAssistant && m.Model != "" {
-			if _, ok := seen[m.Model]; !ok {
-				seen[m.Model] = struct{}{}
-				models = append(models, m.Model)
-			}
+			return m.Model, true
 		}
-	}
-	return models
+		return "", false
+	})
+	return lo.Uniq(candidates)
 }
 
 // upgradeReasoningContent 补充存量消息的 reasoning_content
