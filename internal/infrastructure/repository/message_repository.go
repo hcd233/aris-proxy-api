@@ -87,6 +87,7 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 			CheckSum: m.Checksum(),
 		}, true
 	})
+	newRecords = lo.UniqBy(newRecords, func(m *dbmodel.Message) string { return m.CheckSum })
 
 	if len(newRecords) > 0 {
 		if err := r.dao.BatchCreate(db, newRecords); err != nil {

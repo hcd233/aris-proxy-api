@@ -52,7 +52,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		return &dbmodel.Message{
 			Model:    model,
 			Message:  m,
-			CheckSum: vo.ComputeMessageChecksum(m, task.Model, toolSchemas),
+			CheckSum: vo.ComputeMessageChecksum(m, model, toolSchemas),
 		}
 	})
 
