@@ -108,6 +108,14 @@ const providerMap: Record<string, IconComponent> = {
   command: Cohere,
 };
 
+function findProviderKey(protocol: string): string | undefined {
+  const normalized = protocol.toLowerCase();
+  return Object.keys(providerMap).find((key) => {
+    if (normalized === key) return true;
+    return normalized.startsWith(key + "-") || normalized.startsWith(key + "_");
+  });
+}
+
 export function ProviderIcon({
   protocol,
   size = 14,
@@ -117,13 +125,7 @@ export function ProviderIcon({
   size?: number;
   className?: string;
 }) {
-  const normalized = protocol.toLowerCase();
-
-  const providerKey = Object.keys(providerMap).find((key) => {
-    if (normalized === key) return true;
-    return normalized.startsWith(key + "-") || normalized.startsWith(key + "_");
-  });
-
+  const providerKey = findProviderKey(protocol);
   if (!providerKey) return <HuggingFace size={size} className={cn("shrink-0", className)} />;
 
   const Icon = providerMap[providerKey];

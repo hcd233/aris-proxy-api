@@ -16,6 +16,7 @@ type Session struct {
 	MessageIDs []uint            `json:"message_ids" gorm:"column:message_ids;not null;comment:消息ID列表;serializer:json"`
 	ToolIDs    []uint            `json:"tool_ids" gorm:"column:tool_ids;not null;comment:工具ID列表;serializer:json"`
 	Questions  []uint            `json:"questions" gorm:"column:questions;comment:用户提问消息ID列表(仅role=user且tool_call_id为空);serializer:json"`
+	Models     []string          `json:"models" gorm:"column:models;comment:回答模型列表;serializer:json"`
 	Metadata   map[string]string `json:"metadata" gorm:"column:metadata;comment:请求元数据;serializer:json"`
 	Score      *int              `json:"score" gorm:"column:score;comment:人工评分(1-5)"`
 	ScoredAt   *time.Time        `json:"scored_at" gorm:"column:scored_at;comment:评分时间"`

@@ -52,6 +52,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
+import { ProviderIcon } from "@/components/provider-icon";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 type SortDir = "asc" | "desc";
 
@@ -70,6 +77,28 @@ function formatDateTime(dateStr: string): string {
   const minutes = String(d.getMinutes()).padStart(2, "0");
   const seconds = String(d.getSeconds()).padStart(2, "0");
   return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+}
+
+function ModelBadge({ model }: { model: string }) {
+  return (
+    <TooltipProvider>
+      <TooltipRoot>
+        <TooltipTrigger
+          render={
+            <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
+              <ProviderIcon protocol={model} size={14} />
+              <span className="max-w-[80px] truncate text-xs text-muted-foreground">
+                {model}
+              </span>
+            </div>
+          }
+        />
+        <TooltipContent side="top">
+          <p className="text-xs">{model}</p>
+        </TooltipContent>
+      </TooltipRoot>
+    </TooltipProvider>
+  );
 }
 
 export default function SessionsPage() {
@@ -495,9 +524,14 @@ export default function SessionsPage() {
                           </Button>
                         </div>
                       </div>
-                      <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         <span>ID: {s.id}</span>
                         <span>{s.toolCount ?? 0} tools</span>
+                        {s.models && s.models.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            {s.models.map((m) => <ProviderIcon key={m} protocol={m} size={12} />)}
+                          </div>
+                        )}
                         <span>{formatDateTime(s.createdAt)}</span>
                       </div>
                     </div>
@@ -545,6 +579,7 @@ export default function SessionsPage() {
                     >
                       <span className="inline-flex items-center gap-1">Tools {renderSortIcon(SORTABLE_COLUMNS.toolCount)}</span>
                     </TableHead>
+                    <TableHead className="w-[140px]">Models</TableHead>
                     <TableHead className="w-16 sr-only">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -637,6 +672,15 @@ export default function SessionsPage() {
                         </TableCell>
                         <TableCell>{s.messageCount ?? 0}</TableCell>
                         <TableCell>{s.toolCount ?? 0}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap items-center gap-1">
+                            {s.models && s.models.length > 0 ? (
+                              s.models.map((m) => <ModelBadge key={m} model={m} />)
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="w-16">
                           <div className="flex justify-center">
                             <Button
