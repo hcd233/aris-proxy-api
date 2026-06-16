@@ -20,6 +20,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -175,12 +176,9 @@ func convertZapKeyValues(keysAndValues ...any) []zap.Field {
 	kvLen := len(keysAndValues) / 2
 	zapKeyValues := make([]zap.Field, 0, kvLen)
 	for i := range kvLen {
-		key, ok := keysAndValues[i*2].(string)
-		if !ok {
-			key = constant.CronInvalidKey
-		}
-		value := keysAndValues[i*2+1]
-		zapKeyValues = append(zapKeyValues, zap.Any(key, value))
+		raw, ok := keysAndValues[i*2].(string)
+		key := mo.TupleToOption(raw, ok).OrElse(constant.CronInvalidKey)
+		zapKeyValues = append(zapKeyValues, zap.Any(key, keysAndValues[i*2+1]))
 	}
 	return zapKeyValues
 }

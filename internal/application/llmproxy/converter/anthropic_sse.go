@@ -47,14 +47,15 @@ func convertOpenAIMessageToAnthropicContent(msg *dto.OpenAIChatCompletionMessage
 				Text: &t,
 			})
 		} else if len(msg.Content.Parts) > 0 {
-			for _, part := range msg.Content.Parts {
+			blocks = append(blocks, lo.FilterMap(msg.Content.Parts, func(part *dto.OpenAIChatCompletionContentPart, _ int) (*dto.AnthropicContentBlock, bool) {
 				if part.Type == enum.ContentPartTypeText && lo.FromPtr(part.Text) != "" {
-					blocks = append(blocks, &dto.AnthropicContentBlock{
+					return &dto.AnthropicContentBlock{
 						Type: enum.AnthropicContentBlockTypeText,
 						Text: part.Text,
-					})
+					}, true
 				}
-			}
+				return nil, false
+			})...)
 		}
 	}
 
