@@ -149,8 +149,9 @@ export default function SessionsPage() {
       kw: string,
       score: string[],
       models: string[],
+      silent?: boolean,
     ) => {
-      setLoading(true);
+      if (!silent) setLoading(true);
       try {
         const { startTime, endTime } = computeRange(range, cs, ce);
         const rsp = await api.listSessions({
@@ -223,7 +224,7 @@ export default function SessionsPage() {
     try {
       await api.deleteSession(deleteTarget.id);
       toast.success("Session deleted");
-      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel);
+      fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel, true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete session");
     } finally {
@@ -267,7 +268,7 @@ export default function SessionsPage() {
         toast.success(`${rsp.deletedCount} sessions deleted`);
       }
       setSelected(new Set());
-      fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel);
+      fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel, true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to batch delete");
     } finally {
