@@ -474,6 +474,16 @@ type AnthropicUsage struct {
 	PromptCacheMissTokens    *int `json:"prompt_cache_miss_tokens,omitempty"`
 }
 
+// InputOutputTokens 返回 input + output token 总数，不包含 cache。
+//
+//	@receiver u *AnthropicUsage
+//	@return int64
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func (u *AnthropicUsage) InputOutputTokens() int64 {
+	return int64(u.InputTokens + u.OutputTokens)
+}
+
 // ==================== Anthropic List Models DTOs ====================
 
 // AnthropicModelInfo Anthropic 模型信息
