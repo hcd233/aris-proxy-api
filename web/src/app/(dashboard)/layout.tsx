@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -16,6 +22,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -180,17 +187,26 @@ export default function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
+  const isSessionDetail = pathname.startsWith("/sessions/detail");
+
   const closeMobileSidebar = useCallback(() => setSidebarOpen(false), []);
 
-  // Persist collapsed state
+  // Persist collapsed state; auto-expand on session detail so history is visible.
   /* eslint-disable react-hooks/set-state-in-effect -- Reading localStorage requires setting state in effect on mount */
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved !== null) setCollapsed(saved === "true");
   }, []);
+
+  useEffect(() => {
+    if (isSessionDetail) {
+      setCollapsed(false);
+    }
+  }, [isSessionDetail]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const toggleCollapsed = useCallback(() => {
@@ -220,6 +236,7 @@ export default function DashboardLayout({
               variant="ghost"
               size="icon-sm"
               onClick={toggleCollapsed}
+              disabled={isSessionDetail}
               className={collapsed ? "mx-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent" : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"}
             >
               <Menu className="size-4" />
@@ -227,6 +244,11 @@ export default function DashboardLayout({
           </div>
           <div className="flex-1 overflow-y-auto py-3">
             <SidebarNav items={navItems} collapsed={collapsed} />
+            {!collapsed && isSessionDetail && (
+              <Suspense fallback={null}>
+                <SessionHistorySidebar />
+              </Suspense>
+            )}
           </div>
           <Separator className="bg-sidebar-border/50" />
           <div className="p-2">
