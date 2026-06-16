@@ -70,12 +70,8 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 			return err
 		}
 
-		var questions []uint
-		for i, m := range messages {
-			if m.Message.Role == enum.RoleUser && m.Message.ToolCallID == "" {
-				questions = append(questions, messageIDs[i])
-			}
-		}
+		questions := extractQuestionIDs(messages, messageIDs)
+		models := extractAssistantModels(messages)
 
 		if err := pm.upgradeReasoningContent(tx, messages, messageIDs); err != nil {
 			return err
@@ -91,6 +87,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 			APIKeyName: task.APIKeyName,
 			MessageIDs: messageIDs,
 			Questions:  questions,
+			Models:     models,
 			ToolIDs:    toolIDs,
 			Metadata:   task.Metadata,
 		}
@@ -105,6 +102,32 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		return
 	}
 	log.Info("[StorePool] Messages stored successfully")
+}
+
+// extractQuestionIDs 从消息中提取用户提问的 message ID 列表
+func extractQuestionIDs(messages []*dbmodel.Message, messageIDs []uint) []uint {
+	var questions []uint
+	for i, m := range messages {
+		if m.Message.Role == enum.RoleUser && m.Message.ToolCallID == "" {
+			questions = append(questions, messageIDs[i])
+		}
+	}
+	return questions
+}
+
+// extractAssistantModels 从 assistant 消息中抽取去重后的模型名列表
+func extractAssistantModels(messages []*dbmodel.Message) []string {
+	var models []string
+	seen := make(map[string]struct{})
+	for _, m := range messages {
+		if m.Message.Role == enum.RoleAssistant && m.Model != "" {
+			if _, ok := seen[m.Model]; !ok {
+				seen[m.Model] = struct{}{}
+				models = append(models, m.Model)
+			}
+		}
+	}
+	return models
 }
 
 // upgradeReasoningContent 补充存量消息的 reasoning_content

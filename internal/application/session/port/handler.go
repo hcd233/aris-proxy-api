@@ -19,6 +19,7 @@ type SessionSummaryView struct {
 	Score        *int
 	MessageCount int
 	ToolCount    int
+	Models       []string
 }
 
 // MessageView 消息视图

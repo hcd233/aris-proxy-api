@@ -86,6 +86,7 @@ export interface SessionSummary {
   messageCount: number;
   toolCount: number;
   metadata?: Record<string, string>;
+  models?: string[];
 }
 
 export interface SessionDetail {
