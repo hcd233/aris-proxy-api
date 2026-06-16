@@ -604,6 +604,16 @@ type OpenAICompletionUsage struct {
 	PromptCacheMissTokens   *int                           `json:"prompt_cache_miss_tokens,omitempty" doc:"缓存未命中的token数"`
 }
 
+// InputOutputTokens 返回 input + output token 总数，不包含 cache。
+//
+//	@receiver u *OpenAICompletionUsage
+//	@return int64
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func (u *OpenAICompletionUsage) InputOutputTokens() int64 {
+	return int64(u.PromptTokens + u.CompletionTokens)
+}
+
 // OpenAICompletionTokensDetails 完成Token详细信息
 //
 //	@author centonhuang

@@ -46,6 +46,16 @@ type ResponseUsage struct {
 	PromptCacheMissTokens *int                        `json:"prompt_cache_miss_tokens,omitempty" doc:"缓存未命中的token数"`
 }
 
+// InputOutputTokens 返回 input + output token 总数，不包含 cache。
+//
+//	@receiver u *ResponseUsage
+//	@return int64
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func (u *ResponseUsage) InputOutputTokens() int64 {
+	return int64(u.InputTokens + u.OutputTokens)
+}
+
 // ResponseInputTokensDetail Response API 输入 token 明细
 type ResponseInputTokensDetail struct {
 	CachedTokens int `json:"cached_tokens" doc:"命中缓存的 token 数"`

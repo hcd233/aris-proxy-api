@@ -24,6 +24,10 @@ const (
 	//	@update 2025-09-30 15:57:14
 	CtxKeyLimiter enum.CtxKey = "limiter"
 
+	// CtxKeyTokenUsageReporter 注入 token 用量上报器
+	//	@update 2026-06-17 10:00:00
+	CtxKeyTokenUsageReporter enum.CtxKey = "tokenUsageReporter"
+
 	// CtxKeyClient 请求客户端User-Agent
 	//	@update 2026-03-29 10:00:00
 	CtxKeyClient enum.CtxKey = "client"

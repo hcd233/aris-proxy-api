@@ -167,6 +167,9 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 			StreamDurationMs:    streamDurationMs,
 		}
 		task.SetTokensFromResponseUsage(finalResponse)
+		if finalResponse != nil && finalResponse.Usage != nil {
+			reportTokenUsage(ctx, finalResponse.Usage.InputOutputTokens())
+		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(proxyErr)
 		task.SetErrorFromResponseStatus(finalResponse)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
@@ -215,6 +218,9 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		}
 		if parseErr == nil {
 			task.SetTokensFromResponseUsage(&rsp)
+			if rsp.Usage != nil {
+				reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
+			}
 			task.SetErrorFromResponseStatus(&rsp)
 		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
@@ -289,6 +295,9 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 			StreamDurationMs:    streamDurationMs,
 		}
 		task.SetTokensFromResponseUsage(rsp)
+		if rsp != nil && rsp.Usage != nil {
+			reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
+		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
@@ -326,6 +335,9 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromResponseUsage(rsp)
+		if rsp != nil && rsp.Usage != nil {
+			reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }
@@ -412,6 +424,9 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 			StreamDurationMs:    streamDurationMs,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		if anthropicMsg != nil && anthropicMsg.Usage != nil {
+			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
+		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	}
@@ -457,6 +472,9 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 			UpstreamStatusCode:  fiber.StatusOK,
 		}
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
+		if anthropicMsg != nil && anthropicMsg.Usage != nil {
+			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }

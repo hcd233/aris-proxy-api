@@ -4,7 +4,9 @@ import (
 	"context"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ratelimit"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -38,4 +40,16 @@ func newAuditTask(ctx context.Context, m *aggregate.Model, exposedModel, endpoin
 		APIProtocol:         apiProtocol,
 		FirstTokenLatencyMs: firstTokenLatencyMs,
 	}
+}
+
+// reportTokenUsage 从 context 取出 TokenUsageReporter 并上报实际 token 用量。
+func reportTokenUsage(ctx context.Context, tokens int64) {
+	if tokens <= 0 {
+		return
+	}
+	reporter, ok := ctx.Value(constant.CtxKeyTokenUsageReporter).(ratelimit.TokenUsageReporter)
+	if !ok || reporter == nil {
+		return
+	}
+	reporter.Report(ctx, tokens)
 }

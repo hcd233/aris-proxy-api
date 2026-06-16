@@ -38,7 +38,10 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 		Summary:     "Create chat completion",
 		Description: "Creates a model response for the given chat conversation.",
 		Tags:        []string{"OpenAI"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{
+			middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM),
+			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
+		},
 		Security: []map[string][]string{
 			{"apiKeyAuth": {}},
 		},
@@ -51,7 +54,10 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 		Summary:     "Create response",
 		Description: "Creates a model response for the given input.",
 		Tags:        []string{"OpenAI"},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{
+			middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM),
+			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
+		},
 		Security: []map[string][]string{
 			{"apiKeyAuth": {}},
 		},

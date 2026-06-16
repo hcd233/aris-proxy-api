@@ -6,6 +6,9 @@ const (
 	PeriodCallProxyLLM = 1 * time.Minute
 	LimitCallProxyLLM  = 100
 
+	PeriodCallProxyLLMToken = 1 * time.Minute
+	LimitCallProxyLLMToken  = 1000000
+
 	PeriodRefreshToken = 1 * time.Minute
 	LimitRefreshToken  = 10
 
