@@ -101,26 +101,28 @@ func (dao *MinioObjDAO) ListObjects(ctx context.Context, userID uint) (objectInf
 		StartAfter: dirName,
 	})
 
+	raws := make([]minio.ObjectInfo, 0)
 	for object := range objectCh {
 		if object.Err != nil {
 			err = object.Err
 			return
 		}
+		raws = append(raws, object)
+	}
 
-		// 跳过目录本身
+	objectInfos = lo.FilterMap(raws, func(object minio.ObjectInfo, _ int) (ObjectInfo, bool) {
 		if object.Key == dirName {
-			continue
+			return ObjectInfo{}, false
 		}
-
-		objectInfos = append(objectInfos, ObjectInfo{
+		return ObjectInfo{
 			ObjectName:   strings.TrimPrefix(object.Key, dirName),
 			ContentType:  object.ContentType,
 			Size:         object.Size,
 			LastModified: object.LastModified,
 			Expires:      object.Expires,
 			ETag:         object.ETag,
-		})
-	}
+		}, true
+	})
 	return
 }
 

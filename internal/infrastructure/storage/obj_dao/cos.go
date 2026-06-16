@@ -91,23 +91,19 @@ func (dao *CosObjDAO) ListObjects(ctx context.Context, userID uint) (objectInfos
 		return
 	}
 
-	for _, object := range result.Contents {
-		// 跳过目录本身
+	objectInfos = lo.FilterMap(result.Contents, func(object cos.Object, _ int) (ObjectInfo, bool) {
 		if object.Key == dirName {
-			continue
+			return ObjectInfo{}, false
 		}
-
-		lastModified := lo.Must1(time.ParseInLocation(time.RFC3339, object.LastModified, time.UTC))
-
-		objectInfos = append(objectInfos, ObjectInfo{
+		return ObjectInfo{
 			ObjectName:   strings.TrimPrefix(object.Key, dirName),
 			ContentType:  "",
 			Size:         object.Size,
-			LastModified: lastModified,
+			LastModified: lo.Must1(time.ParseInLocation(time.RFC3339, object.LastModified, time.UTC)),
 			Expires:      time.Time{},
 			ETag:         strings.Trim(object.ETag, "\""),
-		})
-	}
+		}, true
+	})
 
 	return
 }

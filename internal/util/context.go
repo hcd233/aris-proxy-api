@@ -5,6 +5,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/samber/mo"
 )
 
 // CopyContextValues 复制上下文值
@@ -33,12 +34,8 @@ func CopyContextValues(src context.Context) (dst context.Context) {
 //	@author centonhuang
 //	@update 2026-04-29 10:00:00
 func GetPassthroughResponseHeaders(ctx context.Context) map[string]string {
-	if v := ctx.Value(constant.CtxKeyPassthroughResponseHeaders); v != nil {
-		if m, ok := v.(map[string]string); ok {
-			return m
-		}
-	}
-	return nil
+	v, ok := ctx.Value(constant.CtxKeyPassthroughResponseHeaders).(map[string]string)
+	return mo.TupleToOption(v, ok).OrElse(nil)
 }
 
 // GetPassthroughHeaders 从上下文中获取透传的请求头
@@ -48,12 +45,8 @@ func GetPassthroughResponseHeaders(ctx context.Context) map[string]string {
 //	@author centonhuang
 //	@update 2026-04-28 10:00:00
 func GetPassthroughHeaders(ctx context.Context) map[string]string {
-	if v := ctx.Value(constant.CtxKeyPassthroughHeaders); v != nil {
-		if m, ok := v.(map[string]string); ok {
-			return m
-		}
-	}
-	return nil
+	v, ok := ctx.Value(constant.CtxKeyPassthroughHeaders).(map[string]string)
+	return mo.TupleToOption(v, ok).OrElse(nil)
 }
 
 // CtxValueString 安全获取上下文中的字符串值
@@ -64,12 +57,8 @@ func GetPassthroughHeaders(ctx context.Context) map[string]string {
 //	@author centonhuang
 //	@update 2026-03-29 10:00:00
 func CtxValueString(ctx context.Context, key enum.CtxKey) string {
-	if v := ctx.Value(key); v != nil {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-	return ""
+	v, ok := ctx.Value(key).(string)
+	return mo.TupleToOption(v, ok).OrElse("")
 }
 
 // CtxValueUint 安全获取上下文中的uint值
@@ -80,15 +69,11 @@ func CtxValueString(ctx context.Context, key enum.CtxKey) string {
 //	@author centonhuang
 //	@update 2026-03-31 10:00:00
 func CtxValueUint(ctx context.Context, key enum.CtxKey) uint {
-	if v := ctx.Value(key); v != nil {
-		switch n := v.(type) {
-		case uint:
-			return n
-		case int:
-			if n >= 0 {
-				return uint(n)
-			}
-		}
+	if v, ok := ctx.Value(key).(uint); ok {
+		return v
+	}
+	if n, ok := ctx.Value(key).(int); ok && n >= 0 {
+		return uint(n)
 	}
 	return 0
 }
@@ -102,13 +87,12 @@ func CtxValueUint(ctx context.Context, key enum.CtxKey) uint {
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 func CtxValuePermission(ctx context.Context) enum.Permission {
-	if v := ctx.Value(constant.CtxKeyPermission); v != nil {
-		if p, ok := v.(enum.Permission); ok {
-			return p
-		}
-		if s, ok := v.(string); ok {
-			return enum.Permission(s)
-		}
+	v := ctx.Value(constant.CtxKeyPermission)
+	if p, ok := v.(enum.Permission); ok {
+		return p
+	}
+	if s, ok := v.(string); ok {
+		return enum.Permission(s)
 	}
 	return ""
 }
