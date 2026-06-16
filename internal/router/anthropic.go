@@ -38,7 +38,10 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 		Summary:     "Create a Message",
 		Description: "Send a structured list of input messages and the model will return the next message in the conversation.",
 		Tags:        []string{constant.TagAnthropic},
-		Middlewares: huma.Middlewares{middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM)},
+		Middlewares: huma.Middlewares{
+			middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM),
+			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
+		},
 		Security: []map[string][]string{
 			{constant.SecuritySchemeAPIKey: {}},
 		},
