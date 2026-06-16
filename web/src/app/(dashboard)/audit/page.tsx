@@ -306,7 +306,12 @@ export default function AuditPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{log.model || "—"}</p>
+                          <p className="truncate text-sm font-medium">
+                            <span className="inline-flex items-center gap-1.5">
+                              <ProviderIcon protocol={log.model} size={14} />
+                              {log.model || "—"}
+                            </span>
+                          </p>
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">
                             {log.userName || "—"} · {log.apiKeyName || "—"}
                           </p>
@@ -469,7 +474,12 @@ export default function AuditPage() {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {formatTime(log.createdAt)}
                       </TableCell>
-                      <TableCell className="max-w-[180px] truncate">{log.model || "—"}</TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        <span className="inline-flex items-center gap-1.5">
+                          <ProviderIcon protocol={log.model} size={14} />
+                          {log.model || "—"}
+                        </span>
+                      </TableCell>
                       <TableCell className="max-w-[140px] truncate text-muted-foreground">{log.endpoint || "—"}</TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         <div className="flex items-center gap-1.5 text-xs">
