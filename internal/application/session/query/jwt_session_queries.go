@@ -127,6 +127,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 			Score:        p.Score,
 			MessageCount: p.MessageCount,
 			ToolCount:    p.ToolCount,
+			Models:       p.Models,
 		}
 	})
 	return views, pageInfo, nil
