@@ -21,6 +21,7 @@ type SessionSummary struct {
 	Score        *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
 	MessageCount int               `json:"messageCount" doc:"消息数量"`
 	ToolCount    int               `json:"toolCount" doc:"工具数量"`
+	Models       []string          `json:"models,omitempty" doc:"回答模型列表"`
 	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
 }
 

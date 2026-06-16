@@ -50,6 +50,7 @@ type SessionSummaryProjection struct {
 	MessageCount int
 	ToolCount    int
 	Questions    []uint
+	Models       []string
 }
 
 // MessageDetailProjection 消息详情只读投影
