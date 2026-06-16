@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 )
 
@@ -126,8 +127,8 @@ func TestComputeMessageChecksum_DifferentKeyOrder(t *testing.T) {
 			msgA := toUnifiedMessage(t, tcA)
 			msgB := toUnifiedMessage(t, tcB)
 
-			checksumA := vo.ComputeMessageChecksum(msgA, nil)
-			checksumB := vo.ComputeMessageChecksum(msgB, nil)
+			checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+			checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
 
 			t.Logf("caseA=%s arguments: %s", tt.caseA, tcA.ToolCalls[0].Arguments)
 			t.Logf("caseB=%s arguments: %s", tt.caseB, tcB.ToolCalls[0].Arguments)
@@ -149,8 +150,8 @@ func TestComputeMessageChecksum_ToolCallIDIgnored(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
 
 	t.Logf("checksumA (ID=call_001): %s", checksumA)
 	t.Logf("checksumB (ID=call_999): %s", checksumB)
@@ -169,8 +170,8 @@ func TestComputeMessageChecksum_DifferentToolCallIDOnMessage(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
 
 	t.Logf("checksumA (ToolCallID=call_001): %s", checksumA)
 	t.Logf("checksumB (ToolCallID=call_999): %s", checksumB)
@@ -189,8 +190,8 @@ func TestComputeMessageChecksum_DifferentMessages(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
 
 	t.Logf("checksumA: %s", checksumA)
 	t.Logf("checksumB: %s", checksumB)
@@ -207,7 +208,7 @@ func TestComputeMessageChecksum_EmptyToolCalls(t *testing.T) {
 	tc := findCase(t, cases, "empty_tool_calls")
 	msg := toUnifiedMessage(t, tc)
 
-	checksum := vo.ComputeMessageChecksum(msg, nil)
+	checksum := vo.ComputeMessageChecksum(msg, "", nil)
 	t.Logf("checksum: %s", checksum)
 
 	if checksum == "" {
@@ -224,8 +225,8 @@ func TestComputeMessageChecksum_MultipleToolCallsKeyOrder(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
 
 	t.Logf("checksumA: %s", checksumA)
 	t.Logf("checksumB: %s", checksumB)
@@ -247,8 +248,8 @@ func TestComputeMessageChecksum_SchemaDefaultRemoved(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", schemas)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", schemas)
 
 	t.Logf("caseA args: %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args: %s", tcB.ToolCalls[0].Arguments)
@@ -269,8 +270,8 @@ func TestComputeMessageChecksum_SchemaNonDefaultKept(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", schemas)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", schemas)
 
 	t.Logf("caseA args (no replace_all): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (replace_all:true): %s", tcB.ToolCalls[0].Arguments)
@@ -291,8 +292,8 @@ func TestComputeMessageChecksum_SchemaRequiredFieldKept(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", schemas)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", schemas)
 
 	t.Logf("caseA args (verbose:false, required): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (no verbose, required field): %s", tcB.ToolCalls[0].Arguments)
@@ -312,8 +313,8 @@ func TestComputeMessageChecksum_NoSchemaFallback(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, nil)
-	checksumB := vo.ComputeMessageChecksum(msgB, nil)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
 
 	t.Logf("caseA args (no replace_all): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (replace_all:false): %s", tcB.ToolCalls[0].Arguments)
@@ -334,8 +335,8 @@ func TestComputeMessageChecksum_SchemaMultipleDefaultsRemoved(t *testing.T) {
 	msgA := toUnifiedMessage(t, tcA)
 	msgB := toUnifiedMessage(t, tcB)
 
-	checksumA := vo.ComputeMessageChecksum(msgA, schemas)
-	checksumB := vo.ComputeMessageChecksum(msgB, schemas)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", schemas)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", schemas)
 
 	t.Logf("caseA args (with defaults): %s", tcA.ToolCalls[0].Arguments)
 	t.Logf("caseB args (without defaults): %s", tcB.ToolCalls[0].Arguments)
@@ -346,26 +347,53 @@ func TestComputeMessageChecksum_SchemaMultipleDefaultsRemoved(t *testing.T) {
 	}
 }
 
-func TestComputeMessageChecksum_ReasoningContentIgnored(t *testing.T) {
+func TestComputeMessageChecksum_ReasoningContentSwap(t *testing.T) {
 	t.Parallel()
 
-	withReasoning := &vo.UnifiedMessage{
-		Role:             "assistant",
-		Content:          &vo.UnifiedContent{Text: "Hello, world!"},
-		ReasoningContent: "step 1: think deeply...",
+	msgA := &vo.UnifiedMessage{
+		Role:             enum.RoleAssistant,
+		Content:          &vo.UnifiedContent{Text: ""},
+		ReasoningContent: "a",
 	}
-	withoutReasoning := &vo.UnifiedMessage{
-		Role:    "assistant",
-		Content: &vo.UnifiedContent{Text: "Hello, world!"},
+	msgB := &vo.UnifiedMessage{
+		Role:             enum.RoleAssistant,
+		Content:          &vo.UnifiedContent{Text: "a"},
+		ReasoningContent: "",
 	}
 
-	cs1 := vo.ComputeMessageChecksum(withReasoning, nil)
-	cs2 := vo.ComputeMessageChecksum(withoutReasoning, nil)
+	checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
 
-	t.Logf("with reasoning: %s, without: %s", cs1, cs2)
+	t.Logf("checksumA (rc=a, c=empty): %s", checksumA)
+	t.Logf("checksumB (rc=empty, c=a): %s", checksumB)
 
-	if cs1 != cs2 {
-		t.Errorf("ComputeMessageChecksum should ignore reasoning_content: got %s and %s", cs1, cs2)
+	if checksumA != checksumB {
+		t.Errorf("ComputeMessageChecksum should swap reasoning_content into empty content: got %s and %s", checksumA, checksumB)
+	}
+}
+
+func TestComputeMessageChecksum_ReasoningContentBothNonEmpty(t *testing.T) {
+	t.Parallel()
+
+	msgA := &vo.UnifiedMessage{
+		Role:             enum.RoleAssistant,
+		Content:          &vo.UnifiedContent{Text: "a"},
+		ReasoningContent: "b",
+	}
+	msgB := &vo.UnifiedMessage{
+		Role:             enum.RoleAssistant,
+		Content:          &vo.UnifiedContent{Text: "b"},
+		ReasoningContent: "a",
+	}
+
+	checksumA := vo.ComputeMessageChecksum(msgA, "", nil)
+	checksumB := vo.ComputeMessageChecksum(msgB, "", nil)
+
+	t.Logf("checksumA (rc=b, c=a): %s", checksumA)
+	t.Logf("checksumB (rc=a, c=b): %s", checksumB)
+
+	if checksumA == checksumB {
+		t.Errorf("ComputeMessageChecksum should produce different checksums when both content and reasoning_content are non-empty: both got %s", checksumA)
 	}
 }
 
@@ -383,10 +411,29 @@ func TestComputeMessageChecksum_DifferentContentStillDiffers(t *testing.T) {
 		ReasoningContent: "thinking B",
 	}
 
-	csA := vo.ComputeMessageChecksum(msgA, nil)
-	csB := vo.ComputeMessageChecksum(msgB, nil)
+	csA := vo.ComputeMessageChecksum(msgA, "", nil)
+	csB := vo.ComputeMessageChecksum(msgB, "", nil)
 
 	if csA == csB {
 		t.Errorf("ComputeMessageChecksum should produce different checksums for different content: both got %s", csA)
+	}
+}
+
+func TestComputeMessageChecksum_ModelIncluded(t *testing.T) {
+	t.Parallel()
+
+	msg := &vo.UnifiedMessage{
+		Role:    enum.RoleAssistant,
+		Content: &vo.UnifiedContent{Text: "hello"},
+	}
+
+	checksumA := vo.ComputeMessageChecksum(msg, "gpt-4", nil)
+	checksumB := vo.ComputeMessageChecksum(msg, "claude-3", nil)
+
+	t.Logf("checksumA (model=gpt-4): %s", checksumA)
+	t.Logf("checksumB (model=claude-3): %s", checksumB)
+
+	if checksumA == checksumB {
+		t.Errorf("ComputeMessageChecksum should include model: expected different checksums, both got %s", checksumA)
 	}
 }
