@@ -202,6 +202,7 @@ var (
 	// ── Session distinct model query ──
 	SessionDistinctModelSelect = "DISTINCT jsonb_array_elements_text(models::jsonb) AS model"
 	SessionDistinctModelWhere  = "models IS NOT NULL AND models::jsonb <> '[]'::jsonb"
+	SessionDistinctModelLike   = "jsonb_array_elements_text(models::jsonb) ILIKE ?"
 	SessionDistinctModelOrder  = "model ASC"
 	SessionDistinctModelLimit  = 50
 

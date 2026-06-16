@@ -535,6 +535,33 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTim
 	return scores, nil
 }
 
+// ListDistinctModels 查询去重的模型列表
+func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	db := r.db.WithContext(ctx)
+
+	var models []string
+	query := db.Model(&dbmodel.Session{}).
+		Select(constant.SessionDistinctModelSelect).
+		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.SessionDistinctModelWhere)
+
+	if !startTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtLTE, endTime)
+	}
+	if keyword != "" {
+		query = query.Where(constant.SessionDistinctModelLike, "%"+keyword+"%")
+	}
+
+	if err := query.Order(constant.SessionDistinctModelOrder).Limit(constant.SessionDistinctModelLimit).Scan(&models).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct models")
+	}
+
+	return models, nil
+}
+
 // toSessionAggregate 将 GORM 模型映射为 Session 聚合根
 func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 	score := vo.RestoreSessionScore(m.Score, m.ScoredAt)
