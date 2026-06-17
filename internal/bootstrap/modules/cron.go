@@ -28,12 +28,14 @@ func NewThinkExtractRepo(db *gorm.DB) conversation.ThinkExtractRepository {
 }
 
 func NewCronManager(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) *cron.CronManager {
-	return cron.NewCronManager(cron.CronDeps{
+	m := cron.NewCronManager(cron.CronDeps{
 		DB:          db,
 		PoolManager: poolManager,
 		Cache:       cache,
 		ThinkRepo:   thinkRepo,
 	})
+	m.StartListener(context.Background())
+	return m
 }
 
 func NewCronEntries(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository, cronJobRepo cronmgmtport.CronJobRepository, cronCallAuditRepo cronauditport.CronCallAuditRepository, manager *cron.CronManager) []cron.Cron {
