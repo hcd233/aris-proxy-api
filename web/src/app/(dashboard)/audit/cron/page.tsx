@@ -278,7 +278,7 @@ export default function CronAuditPage() {
                     <TableHead>Cron Name</TableHead>
                     <TableHead>TraceID</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Duration (ms)</TableHead>
+                    <TableHead>Duration</TableHead>
                     <TableHead>Metadata</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -320,7 +320,7 @@ export default function CronAuditPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{log.durationMs}</TableCell>
+                      <TableCell className="text-muted-foreground">{log.durationMs} ms</TableCell>
                       <TableCell className="max-w-[250px] truncate text-xs text-muted-foreground">
                         {formatMetadata(log.metadata)}
                       </TableCell>
