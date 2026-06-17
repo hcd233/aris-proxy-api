@@ -598,7 +598,7 @@ class ApiClient {
   }
 
   async deleteBlocked(id: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/block/${id}`, { method: "DELETE" });
+    return this.request<CommonRsp>(`/api/v1/block?id=${id}`, { method: "DELETE" });
   }
 
   // ─── Cron (admin) ──────────────────────────────────────────────────────────
@@ -621,7 +621,7 @@ class ApiClient {
   }
 
   async updateCronJob(body: UpdateCronJobReqBody): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/cron/${encodeURIComponent(body.name)}`, {
+    return this.request<CommonRsp>(`/api/v1/cron?name=${encodeURIComponent(body.name)}`, {
       method: "PATCH",
       body: JSON.stringify({ enabled: body.enabled }),
     });
