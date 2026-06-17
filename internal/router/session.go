@@ -107,7 +107,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessionOptions",
 		Method:      http.MethodGet,
-		Path:        "/option" + constant.RoutePathOptionList,
+		Path:        "/option/list",
 		Summary:     "ListSessionOptions",
 		Description: "Get available options for session filter fields (score, model)",
 		Tags:        []string{constant.TagSession},
