@@ -32,7 +32,10 @@ func NewCronRepository(db *gorm.DB) port.CronJobRepository {
 	return &cronRepository{db: db, dao: dao.GetCronJobDAO()}
 }
 
-// Sync 同步定时任务元数据（只插入不存在记录，或更新 type/spec/description）
+// Sync 同步定时任务元数据（只插入不存在记录，或更新 type/description）。
+//
+// 注意：不会覆盖已有记录的 spec，因为 spec 是用户通过 API 可配置的字段。
+// 代码升级导致的 default spec 变更只影响新插入的记录。
 //
 //	@receiver r *cronRepository
 //	@param ctx context.Context
@@ -58,13 +61,13 @@ func (r *cronRepository) Sync(ctx context.Context, jobs []*port.CronJobView) err
 				}
 				continue
 			}
-			if existing.Type != job.Type || existing.Spec != job.Spec || existing.Description != job.Description {
+			// 已有记录仅同步 type/description，不覆盖用户通过 API 设置的 spec
+			if existing.Type != job.Type || existing.Description != job.Description {
 				if err := tx.Model(&existing).Updates(map[string]any{
 					constant.FieldCronType:    job.Type,
-					constant.FieldSpec:        job.Spec,
 					constant.FieldDescription: job.Description,
 				}).Error; err != nil {
-					return ierr.Wrap(ierr.ErrDBQuery, err, "update cron job spec")
+					return ierr.Wrap(ierr.ErrDBQuery, err, "update cron job")
 				}
 			}
 		}
