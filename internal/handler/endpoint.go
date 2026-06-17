@@ -51,12 +51,12 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 
 	result, err := h.create.Handle(ctx, port.CreateEndpointCommand{
 		Name:                        req.Body.Name,
-		OpenaiBaseURL:               req.Body.OpenaiBaseURL,
-		AnthropicBaseURL:            req.Body.AnthropicBaseURL,
+		OpenaiBaseURL:               lo.FromPtr(req.Body.OpenaiBaseURL),
+		AnthropicBaseURL:            lo.FromPtr(req.Body.AnthropicBaseURL),
 		APIKey:                      req.Body.APIKey,
-		SupportOpenAIChatCompletion: req.Body.SupportOpenAIChatCompletion,
-		SupportOpenAIResponse:       req.Body.SupportOpenAIResponse,
-		SupportAnthropicMessage:     req.Body.SupportAnthropicMessage,
+		SupportOpenAIChatCompletion: lo.FromPtr(req.Body.SupportOpenAIChatCompletion),
+		SupportOpenAIResponse:       lo.FromPtr(req.Body.SupportOpenAIResponse),
+		SupportAnthropicMessage:     lo.FromPtr(req.Body.SupportAnthropicMessage),
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Create endpoint failed", zap.Error(err))
