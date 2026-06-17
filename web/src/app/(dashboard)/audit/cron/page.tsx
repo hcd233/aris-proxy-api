@@ -37,7 +37,12 @@ function buildCronAuditFilter(type: string[], status: string[]): string | undefi
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
-const statusOptions = ["success", "failed", "panic", "skipped"];
+const statusLabelMap: Record<string, string> = {
+  success: "Success",
+  failed: "Failed",
+  panic: "Panic",
+  skipped: "Skipped",
+};
 
 export default function CronAuditPage() {
   const [logs, setLogs] = useState<CronCallAuditItem[]>([]);
@@ -51,6 +56,7 @@ export default function CronAuditPage() {
   const [filterType, setFilterType] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [typeOptions, setTypeOptions] = useState<string[]>([]);
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
   const fetchLogs = useCallback(
     async (
@@ -104,8 +110,12 @@ export default function CronAuditPage() {
   const fetchOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
     const { startTime, endTime } = computeRange(range, cs, ce);
     try {
-      const typeRsp = await api.listCronCallAuditOptions({ field: "type", startTime, endTime });
+      const [typeRsp, statusRsp] = await Promise.all([
+        api.listCronCallAuditOptions({ field: "type", startTime, endTime }),
+        api.listCronCallAuditOptions({ field: "status", startTime, endTime }),
+      ]);
       if (!typeRsp.error && typeRsp.items) setTypeOptions(typeRsp.items);
+      if (!statusRsp.error && statusRsp.items) setStatusOptions(statusRsp.items);
     } catch (err) {
       console.error("Failed to load cron audit options:", err);
     }
@@ -190,6 +200,7 @@ export default function CronAuditPage() {
                   label="Status"
                   options={statusOptions}
                   value={filterStatus}
+                  formatOption={(v) => statusLabelMap[v] ?? v}
                   onChange={(v) => {
                     setFilterStatus(v);
                     fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterType, v);

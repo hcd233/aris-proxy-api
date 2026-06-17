@@ -228,10 +228,13 @@ var (
 	CronAuditDistinctWhereCreatedAtGTE = "cca.created_at >= ?"
 	CronAuditDistinctWhereCreatedAtLTE = "cca.created_at <= ?"
 
-	CronAuditDistinctSelectType = "DISTINCT cron_name"
-	CronAuditDistinctWhereType  = "cron_name LIKE ?"
-	CronAuditDistinctOrderType  = "cron_name ASC"
-	CronAuditDistinctLimit      = 50
+	CronAuditDistinctSelectType   = "DISTINCT cron_name"
+	CronAuditDistinctWhereType    = "cron_name LIKE ?"
+	CronAuditDistinctOrderType    = "cron_name ASC"
+	CronAuditDistinctSelectStatus = "DISTINCT status"
+	CronAuditDistinctWhereStatus  = "status LIKE ?"
+	CronAuditDistinctOrderStatus  = "status ASC"
+	CronAuditDistinctLimit        = 50
 
 	CronCallAuditRepoFieldIDQualified        = "cron_call_audits.id"
 	CronCallAuditRepoFieldCreatedAtQualified = "cron_call_audits.created_at"
