@@ -148,8 +148,8 @@ func TestRunWithLock_RenewFailure_StopsRenewal_KeepsFnRunning(t *testing.T) {
 	if m.refreshCnt.Load() < 3 {
 		t.Fatalf("expected at least 3 refresh attempts, got %d", m.refreshCnt.Load())
 	}
-	if got := m.unlockCnt.Load(); got != 1 {
-		t.Fatalf("expected exactly 1 unlock, got %d", got)
+	if got := m.unlockCnt.Load(); got != 0 {
+		t.Fatalf("expected 0 unlock after fn returns, got %d", got)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestRunWithLock_LockLost_StopsRenewal_KeepsFnRunning(t *testing.T) {
 	}
 }
 
-func TestRunWithLock_DeferUnlockAlways(t *testing.T) {
+func TestRunWithLock_NoUnlockAfterFnReturns(t *testing.T) {
 	t.Parallel()
 	m := &mockLocker{refreshOK: true}
 	key := "test:unlock"
@@ -183,12 +183,41 @@ func TestRunWithLock_DeferUnlockAlways(t *testing.T) {
 		RenewInterval: 500 * time.Millisecond,
 	}, func(ctx context.Context) {})
 
-	if got := m.unlockCnt.Load(); got != 1 {
-		t.Fatalf("expected 1 unlock after fn returns, got %d", got)
+	if got := m.unlockCnt.Load(); got != 0 {
+		t.Fatalf("expected 0 unlock after fn returns, got %d", got)
 	}
 }
 
-func TestRunWithLock_ContextCancelReleasesLock(t *testing.T) {
+func TestRunWithLock_FnReturnsLockHeldByTTL(t *testing.T) {
+	t.Parallel()
+	locker, mr := newRealLocker(t)
+	key := "test:ttl-held"
+	opts := cron.LockOptions{
+		TTL:           500 * time.Millisecond,
+		RenewInterval: 100 * time.Millisecond,
+	}
+
+	firstRan := cron.RunWithLock(context.Background(), locker, key, opts, func(ctx context.Context) {})
+	if !firstRan {
+		t.Fatal("first call must acquire lock and run fn")
+	}
+
+	secondRan := cron.RunWithLock(context.Background(), locker, key, opts, func(ctx context.Context) {
+		t.Fatal("fn must not run when lock is still held by TTL")
+	})
+	if secondRan {
+		t.Fatal("second call must not acquire lock while TTL has not expired")
+	}
+
+	mr.FastForward(600 * time.Millisecond)
+
+	thirdRan := cron.RunWithLock(context.Background(), locker, key, opts, func(ctx context.Context) {})
+	if !thirdRan {
+		t.Fatal("third call must acquire lock after TTL expired")
+	}
+}
+
+func TestRunWithLock_ContextCancelStopsRenewal(t *testing.T) {
 	t.Parallel()
 	m := &mockLocker{refreshOK: true, refreshAtCnt: make(chan struct{}, 16)}
 	key := "test:cancel"
@@ -221,7 +250,7 @@ func TestRunWithLock_ContextCancelReleasesLock(t *testing.T) {
 		t.Fatal("RunWithLock should return after context cancel")
 	}
 
-	if got := m.unlockCnt.Load(); got != 1 {
-		t.Fatalf("expected exactly 1 unlock, got %d", got)
+	if got := m.unlockCnt.Load(); got != 0 {
+		t.Fatalf("expected 0 unlock after context cancel, got %d", got)
 	}
 }
