@@ -47,7 +47,7 @@ type CronJobItem struct {
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 type UpdateCronJobReq struct {
-	Name string                `path:"name" required:"true" maxLength:"100" doc:"任务名"`
+	Name string                `query:"name" required:"true" maxLength:"100" doc:"任务名"`
 	Body *UpdateCronJobReqBody `json:"body" doc:"请求体"`
 }
 

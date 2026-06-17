@@ -43,7 +43,7 @@ func initBlockedRouter(group huma.API, handler handler.BlockedHandler, db *gorm.
 	huma.Register(group, huma.Operation{
 		OperationID: "deleteBlocked",
 		Method:      http.MethodDelete,
-		Path:        "/{id}",
+		Path:        "",
 		Summary:     "DeleteBlocked",
 		Tags:        []string{constant.TagBlocked},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
