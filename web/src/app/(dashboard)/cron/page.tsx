@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import cronstrue from "cronstrue";
 import { api } from "@/lib/api-client";
 import type { CronJobItem, PageInfo } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -16,15 +18,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Search, Timer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Timer, Pencil, Lock } from "lucide-react";
 
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
+import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function specToHuman(spec: string): string {
+  try {
+    return cronstrue.toString(spec, { locale: "en" });
+  } catch {
+    return spec;
+  }
 }
 
 export default function CronPage() {
@@ -34,6 +45,7 @@ export default function CronPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [pageInputValue, setPageInputValue] = useState("1");
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
+  const [editingJob, setEditingJob] = useState<CronJobItem | null>(null);
 
   const fetchJobs = useCallback(async (page: number, pageSize: number, query: string) => {
     setLoading(true);
@@ -62,6 +74,10 @@ export default function CronPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleToggle = async (job: CronJobItem) => {
+    if (job.type === "core") {
+      toast.error("Core cron job cannot be disabled");
+      return;
+    }
     setUpdating((prev) => ({ ...prev, [job.name]: true }));
     try {
       const rsp = await api.updateCronJob({ name: job.name, enabled: !job.enabled });
@@ -80,6 +96,19 @@ export default function CronPage() {
     }
   };
 
+  const handleSaveSpec = useCallback(async (spec: string) => {
+    if (!editingJob) return;
+    const rsp = await api.updateCronJob({ name: editingJob.name, spec });
+    if (rsp.error) {
+      toast.error(rsp.error.message ?? "Failed to update schedule");
+      return;
+    }
+    setJobs((prev) =>
+      prev.map((j) => (j.name === editingJob.name ? { ...j, spec } : j))
+    );
+    toast.success(`${editingJob.name} schedule updated`);
+  }, [editingJob]);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),
     [pageInfo]
@@ -96,7 +125,7 @@ export default function CronPage() {
             Cron Jobs
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            View and enable or disable scheduled cron jobs.
+            View and manage scheduled cron jobs.
           </p>
         </div>
 
@@ -139,7 +168,8 @@ export default function CronPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Spec</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Schedule</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Enabled</TableHead>
                     <TableHead>Updated At</TableHead>
@@ -149,14 +179,39 @@ export default function CronPage() {
                   {jobs.map((job) => (
                     <TableRow key={job.name}>
                       <TableCell className="font-medium">{job.name}</TableCell>
-                      <TableCell className="font-mono text-muted-foreground">{job.spec}</TableCell>
+                      <TableCell>
+                        <Badge variant={job.type === "core" ? "default" : "secondary"}>
+                          {job.type === "core" ? "Core" : "Functional"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm">{specToHuman(job.spec)}</p>
+                            <p className="font-mono text-xs text-muted-foreground">{job.spec}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 shrink-0"
+                            onClick={() => setEditingJob(job)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{job.description || "—"}</TableCell>
                       <TableCell>
-                        <Switch
-                          checked={job.enabled}
-                          disabled={updating[job.name]}
-                          onCheckedChange={() => handleToggle(job)}
-                        />
+                        <div className="flex items-center gap-1.5">
+                          <Switch
+                            checked={job.enabled}
+                            disabled={updating[job.name] || job.type === "core"}
+                            onCheckedChange={() => handleToggle(job)}
+                          />
+                          {job.type === "core" && (
+                            <Lock className="size-3.5 text-muted-foreground" />
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatTime(job.updatedAt)}
@@ -220,6 +275,13 @@ export default function CronPage() {
             )}
           </CardContent>
         </Card>
+
+        <ScheduleEditorDialog
+          open={editingJob !== null}
+          onOpenChange={(open) => { if (!open) setEditingJob(null); }}
+          job={editingJob}
+          onSave={handleSaveSpec}
+        />
       </div>
     </PermissionGuard>
   );

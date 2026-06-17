@@ -30,18 +30,20 @@ import (
 // Cron 定时任务接口
 //
 //	@author centonhuang
-//	@update 2026-03-20 10:00:00
+//	@update 2026-06-17 10:00:00
 type Cron interface {
-	Start() error
+	Start(spec string) error
 	Stop()
+	StopGracefully()
 }
 
 // CronRegistryEntry 单个定时任务注册项
 //
 //	@author centonhuang
-//	@update 2026-06-01 10:00:00
+//	@update 2026-06-17 10:00:00
 type CronRegistryEntry struct {
 	Name              string
+	Type              string
 	Spec              string
 	Description       string
 	Enabled           func() bool
@@ -88,7 +90,7 @@ func SetCronStores(jobStore CronJobStore, auditStore CronCallAuditStore) {
 var DefaultCronRegistry []CronRegistryEntry
 
 // InitCronJobs 初始化定时任务（每个 cron 自带分布式锁），返回创建的 cron 列表。
-func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository, jobStore CronJobStore, auditStore CronCallAuditStore) []Cron {
+func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository, jobStore CronJobStore, auditStore CronCallAuditStore, manager *CronManager) []Cron {
 	SetBootstrapContext(parentCtx)
 	SetCronStores(jobStore, auditStore)
 	var entries []CronRegistryEntry
@@ -102,6 +104,7 @@ func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.Pool
 		jobs := lo.Map(entries, func(entry CronRegistryEntry, _ int) *cronmgmtport.CronJobView {
 			return &cronmgmtport.CronJobView{
 				Name:        entry.Name,
+				Type:        entry.Type,
 				Spec:        entry.Spec,
 				Description: entry.Description,
 			}
@@ -118,10 +121,25 @@ func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.Pool
 			continue
 		}
 
+		// 从 DB 读取实际 spec（允许与常量不同）
+		actualSpec := entry.Spec
+		if cronJobStore != nil {
+			job, err := cronJobStore.Get(parentCtx, entry.Name)
+			if err == nil && job != nil && job.Spec != "" {
+				actualSpec = job.Spec
+			}
+		}
+
 		c := entry.Factory(db, poolManager, cache, thinkRepo)
-		lo.Must0(c.Start())
+		lo.Must0(c.Start(actualSpec))
 		crons = append(crons, c)
-		logger.Logger().Info("[Cron] Cron job started", zap.String("name", entry.Name))
+
+		// 注册到 CronManager
+		if manager != nil {
+			manager.Register(entry.Name, c, actualSpec, entry.Factory)
+		}
+
+		logger.Logger().Info("[Cron] Cron job started", zap.String("name", entry.Name), zap.String("spec", actualSpec))
 	}
 
 	logger.Logger().Info("[Cron] Init cron jobs", zap.Int("count", len(crons)))
@@ -132,6 +150,7 @@ func buildRegistryEntries() []CronRegistryEntry {
 	return []CronRegistryEntry{
 		{
 			Name:        constant.CronModuleSessionDeduplicate,
+			Type:        constant.CronTypeFunctional,
 			Spec:        constant.CronSpecSessionDeduplicate,
 			Description: constant.CronDescriptionSessionDeduplicate,
 			Enabled:     func() bool { return config.CronSessionDeduplicateEnabled },
@@ -141,6 +160,7 @@ func buildRegistryEntries() []CronRegistryEntry {
 		},
 		{
 			Name:        constant.CronModuleSoftDeletePurge,
+			Type:        constant.CronTypeFunctional,
 			Spec:        constant.CronSpecSoftDeletePurge,
 			Description: constant.CronDescriptionSoftDeletePurge,
 			Enabled:     func() bool { return config.CronSoftDeletePurgeEnabled },
@@ -150,6 +170,7 @@ func buildRegistryEntries() []CronRegistryEntry {
 		},
 		{
 			Name:        constant.CronModuleThinkExtract,
+			Type:        constant.CronTypeFunctional,
 			Spec:        constant.CronSpecThinkExtract,
 			Description: constant.CronDescriptionThinkExtract,
 			Enabled:     func() bool { return config.CronThinkExtractEnabled },
@@ -159,6 +180,7 @@ func buildRegistryEntries() []CronRegistryEntry {
 		},
 		{
 			Name:        constant.CronModuleBlockedHitSync,
+			Type:        constant.CronTypeCore,
 			Spec:        constant.CronSpecBlockedHitSync,
 			Description: constant.CronDescriptionBlockedHitSync,
 			Enabled:     func() bool { return true },

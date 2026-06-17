@@ -12,6 +12,11 @@ const (
 	CronModuleBlockedHitSync  = "BlockedHitSyncCron"
 	CronSpecBlockedHitSync    = "*/5 * * * *"
 
+	CronTypeFunctional = "functional"
+	CronTypeCore       = "core"
+
+	FieldCronType = "type"
+
 	CronAuditFilterFieldType   = "type"
 	CronAuditFilterFieldStatus = "status"
 
