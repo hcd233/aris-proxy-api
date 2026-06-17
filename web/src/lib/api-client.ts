@@ -621,9 +621,12 @@ class ApiClient {
   }
 
   async updateCronJob(body: UpdateCronJobReqBody): Promise<CommonRsp> {
+    const payload: Record<string, unknown> = {};
+    if (body.enabled !== undefined) payload.enabled = body.enabled;
+    if (body.spec !== undefined) payload.spec = body.spec;
     return this.request<CommonRsp>(`/api/v1/cron?name=${encodeURIComponent(body.name)}`, {
       method: "PATCH",
-      body: JSON.stringify({ enabled: body.enabled }),
+      body: JSON.stringify(payload),
     });
   }
 

@@ -498,6 +498,7 @@ export interface SessionOptionListRsp extends CommonRsp {
 
 export interface CronJobItem {
   name: string;
+  type: "functional" | "core";
   spec: string;
   description: string;
   enabled: boolean;
@@ -512,7 +513,8 @@ export interface ListCronJobsRsp extends CommonRsp {
 
 export interface UpdateCronJobReqBody {
   name: string;
-  enabled: boolean;
+  enabled?: boolean;
+  spec?: string;
 }
 
 // ─── Cron Call Audit ───────────────────────────────────────────────────────────

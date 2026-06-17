@@ -54,7 +54,7 @@ func NewSoftDeletePurgeCron(db *gorm.DB, cache *redis.Client) Cron {
 //
 //	@receiver c *SoftDeletePurgeCron
 //	@author centonhuang
-//	@update 2026-03-29 10:00:00
+//	@update 2026-06-17 10:00:00
 func (c *SoftDeletePurgeCron) Stop() {
 	if c.cron != nil {
 		ctx := c.cron.Stop()
@@ -62,16 +62,27 @@ func (c *SoftDeletePurgeCron) Stop() {
 	}
 }
 
+// StopGracefully 仅停止调度，不等待运行中任务完成
+//
+//	@receiver c *SoftDeletePurgeCron
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func (c *SoftDeletePurgeCron) StopGracefully() {
+	if c.cron != nil {
+		c.cron.Stop()
+	}
+}
+
 // Start 启动软删除数据清理定时任务
 //
 //	@receiver c *SoftDeletePurgeCron
+//	@param spec string cron 表达式
 //	@return error
 //	@author centonhuang
-//	@update 2026-06-01 10:00:00
-func (c *SoftDeletePurgeCron) Start() error {
-	// 每周日凌晨4:00执行，确保所有任务完成后再清理
+//	@update 2026-06-17 10:00:00
+func (c *SoftDeletePurgeCron) Start(spec string) error {
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSoftDeletePurge)
-	entryID, err := c.cron.AddFunc(constant.CronSpecSoftDeletePurge, wrapCronFunc(constant.CronModuleSoftDeletePurge, c.locker, key, LockOptions{}, c.purge))
+	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleSoftDeletePurge, c.locker, key, LockOptions{}, c.purge))
 	if err != nil {
 		logger.Logger().Error("[SoftDeletePurgeCron] Add func error", zap.Error(err))
 		return err

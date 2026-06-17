@@ -57,7 +57,7 @@ func NewSessionDeduplicateCron(db *gorm.DB, cache *redis.Client) Cron {
 //
 //	@receiver c *SessionDeduplicateCron
 //	@author centonhuang
-//	@update 2026-03-20 10:00:00
+//	@update 2026-06-17 10:00:00
 func (c *SessionDeduplicateCron) Stop() {
 	if c.cron != nil {
 		ctx := c.cron.Stop()
@@ -65,16 +65,27 @@ func (c *SessionDeduplicateCron) Stop() {
 	}
 }
 
+// StopGracefully 仅停止调度，不等待运行中任务完成
+//
+//	@receiver c *SessionDeduplicateCron
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func (c *SessionDeduplicateCron) StopGracefully() {
+	if c.cron != nil {
+		c.cron.Stop()
+	}
+}
+
 // Start 启动Session去重定时任务
 //
 //	@receiver c *SessionDeduplicateCron
+//	@param spec string cron 表达式
 //	@return error
 //	@author centonhuang
-//	@update 2026-06-01 10:00:00
-func (c *SessionDeduplicateCron) Start() error {
-	// 每小时执行一次，定期清理冗余Session
+//	@update 2026-06-17 10:00:00
+func (c *SessionDeduplicateCron) Start(spec string) error {
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSessionDeduplicate)
-	entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, wrapCronFunc(constant.CronModuleSessionDeduplicate, c.locker, key, LockOptions{}, c.deduplicate))
+	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleSessionDeduplicate, c.locker, key, LockOptions{}, c.deduplicate))
 	if err != nil {
 		logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
 		return err

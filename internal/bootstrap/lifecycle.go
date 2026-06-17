@@ -29,6 +29,7 @@ type lifecycleParams struct {
 	PoolManager     *pool.PoolManager
 	InflightTracker *inflight.Tracker
 	CronEntries     []cron.Cron
+	CronManager     *cron.CronManager
 	BlockedService  *blockedapp.BlockedService
 	ListenHost      string `name:"listenHost"`
 	ListenPort      string `name:"listenPort"`
@@ -115,7 +116,7 @@ func registerLifecycleHooks(params lifecycleParams) {
 		OnStop: func(ctx context.Context) error {
 			cronCtx, cancel := context.WithTimeout(context.Background(), constant.CronStopTimeout)
 			defer cancel()
-			if err := cron.StopCronJobsWithContext(cronCtx, params.CronEntries); err != nil {
+			if err := params.CronManager.StopAll(cronCtx); err != nil {
 				logger.Logger().Warn("[Server] Cron stop error", zap.Error(err))
 			}
 			return nil

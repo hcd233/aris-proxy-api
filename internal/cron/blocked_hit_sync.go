@@ -36,9 +36,9 @@ func NewBlockedHitSyncCron(db *gorm.DB, blockedRepo blocked.BlockedRepository, h
 	}
 }
 
-func (c *blockedHitSyncCron) Start() error {
+func (c *blockedHitSyncCron) Start(spec string) error {
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleBlockedHitSync)
-	_, err := c.cron.AddFunc(constant.CronSpecBlockedHitSync, wrapCronFunc(constant.CronModuleBlockedHitSync, c.locker, key, LockOptions{}, c.sync))
+	_, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleBlockedHitSync, c.locker, key, LockOptions{}, c.sync))
 	if err != nil {
 		return err
 	}
@@ -48,6 +48,15 @@ func (c *blockedHitSyncCron) Start() error {
 
 func (c *blockedHitSyncCron) Stop() {
 	<-c.cron.Stop().Done()
+}
+
+// StopGracefully 仅停止调度，不等待运行中任务完成
+//
+//	@receiver c *blockedHitSyncCron
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func (c *blockedHitSyncCron) StopGracefully() {
+	c.cron.Stop()
 }
 
 func (c *blockedHitSyncCron) sync(ctx context.Context) {

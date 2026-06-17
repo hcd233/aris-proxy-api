@@ -55,7 +55,7 @@ func NewThinkExtractCron(repo conversation.ThinkExtractRepository, cache *redis.
 //
 //	@receiver c *ThinkExtractCron
 //	@author centonhuang
-//	@update 2026-06-02 10:00:00
+//	@update 2026-06-17 10:00:00
 func (c *ThinkExtractCron) Stop() {
 	if c.cron != nil {
 		ctx := c.cron.Stop()
@@ -63,15 +63,27 @@ func (c *ThinkExtractCron) Stop() {
 	}
 }
 
-// Start 启动消息推理内容提取定时任务，每天凌晨00:00执行
+// StopGracefully 仅停止调度，不等待运行中任务完成
 //
 //	@receiver c *ThinkExtractCron
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func (c *ThinkExtractCron) StopGracefully() {
+	if c.cron != nil {
+		c.cron.Stop()
+	}
+}
+
+// Start 启动消息推理内容提取定时任务
+//
+//	@receiver c *ThinkExtractCron
+//	@param spec string cron 表达式
 //	@return error
 //	@author centonhuang
-//	@update 2026-06-02 10:00:00
-func (c *ThinkExtractCron) Start() error {
+//	@update 2026-06-17 10:00:00
+func (c *ThinkExtractCron) Start(spec string) error {
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleThinkExtract)
-	entryID, err := c.cron.AddFunc(constant.CronSpecThinkExtract, wrapCronFunc(constant.CronModuleThinkExtract, c.locker, key, LockOptions{}, c.extract))
+	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleThinkExtract, c.locker, key, LockOptions{}, c.extract))
 	if err != nil {
 		logger.Logger().Error("[ThinkExtractCron] Add func error", zap.Error(err))
 		return err

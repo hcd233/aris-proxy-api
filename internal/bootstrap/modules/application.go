@@ -31,6 +31,7 @@ import (
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	cronpkg "github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	blockeddomain "github.com/hcd233/aris-proxy-api/internal/domain/blocked"
@@ -308,8 +309,8 @@ func NewListCronJobsHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.Li
 	return cronmgmtquery.NewListCronJobsHandler(repo)
 }
 
-func NewUpdateCronJobHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.UpdateCronJobHandler {
-	return cronmgmtcommand.NewUpdateCronJobHandler(repo)
+func NewUpdateCronJobHandler(repo cronmgmtport.CronJobRepository, manager *cronpkg.CronManager) cronmgmtport.UpdateCronJobHandler {
+	return cronmgmtcommand.NewUpdateCronJobHandler(repo, manager)
 }
 
 func NewListCronCallAuditsHandler(repo cronauditport.CronCallAuditRepository) cronauditport.ListCronCallAuditsHandler {
