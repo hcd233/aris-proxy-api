@@ -528,6 +528,7 @@ export interface CronCallAuditItem {
   durationMs: number;
   status: string;
   message: string;
+  metadata: Record<string, number>;
   createdAt: string;
 }
 

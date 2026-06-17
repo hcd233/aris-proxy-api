@@ -136,6 +136,7 @@ func (h *cronHandler) HandleListCronCallAudits(ctx context.Context, req *dto.Lis
 			DurationMs: log.DurationMs,
 			Status:     log.Status,
 			Message:    log.Message,
+			Metadata:   log.Metadata,
 			CreatedAt:  log.CreatedAt,
 		}
 	})

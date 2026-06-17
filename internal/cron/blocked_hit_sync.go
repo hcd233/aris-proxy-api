@@ -59,20 +59,25 @@ func (c *blockedHitSyncCron) StopGracefully() {
 	c.cron.Stop()
 }
 
-func (c *blockedHitSyncCron) sync(ctx context.Context) {
+func (c *blockedHitSyncCron) sync(ctx context.Context) map[string]any {
 	hits, err := c.hitCache.PopAll(ctx)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHitSync] Failed to pop hit counts", zap.Error(err))
-		return
+		return nil
 	}
 	if len(hits) == 0 {
-		return
+		return map[string]any{
+			constant.CronMetadataKeySyncedHits: 0,
+		}
 	}
 	err = c.blockedRepo.BatchIncrementHitCount(ctx, hits)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHitSync] Failed to batch increment hit counts", zap.Error(err))
-		return
+		return nil
 	}
 	logger.WithCtx(ctx).Info("[BlockedHitSync] Synced hit counts",
 		zap.Int("count", len(hits)))
+	return map[string]any{
+		constant.CronMetadataKeySyncedHits: len(hits),
+	}
 }

@@ -136,11 +136,12 @@ func renewLoop(ctx context.Context, locker lock.Locker, key, value string, ttl, 
 // parentCtx 取自 SetBootstrapContext；未设置时退化为 context.Background()。
 //
 //	@author centonhuang
-//	@update 2026-06-17 10:00:00
-func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context)) func() {
+//	@update 2026-06-18 10:00:00
+func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context) map[string]any) func() {
 	return func() {
 		ctx := context.WithValue(getBootstrapContext(), constant.CtxKeyTraceID, uuid.New().String())
 		start := time.Now()
+		var metadata map[string]any
 		defer func() {
 			if r := recover(); r != nil {
 				cronPanicHandler(ctx, name, r)
@@ -151,20 +152,22 @@ func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions,
 			job, err := cronJobStore.Get(ctx, name)
 			if err == nil && job != nil && !job.Enabled {
 				logger.WithCtx(ctx).Info("[Cron] Cron job is disabled in DB, skip", zap.String("name", name))
-				saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSkipped, 0, "")
+				saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSkipped, 0, "", nil)
 				return
 			}
 		}
 
-		if !RunWithLock(ctx, locker, key, opts, fn) {
+		if !RunWithLock(ctx, locker, key, opts, func(lockCtx context.Context) {
+			metadata = fn(lockCtx)
+		}) {
 			return
 		}
 		durationMs := time.Since(start).Milliseconds()
-		saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSuccess, durationMs, "")
+		saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSuccess, durationMs, "", metadata)
 	}
 }
 
-func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string) {
+func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string, metadata map[string]any) {
 	if cronCallAuditStore == nil {
 		return
 	}
@@ -177,6 +180,7 @@ func saveCronCallAudit(ctx context.Context, name, status string, durationMs int6
 		DurationMs: durationMs,
 		Status:     status,
 		Message:    message,
+		Metadata:   metadata,
 	}
 	if err := cronCallAuditStore.Save(ctx, audit); err != nil {
 		logger.WithCtx(ctx).Error("[Cron] Save cron call audit failed",
@@ -192,5 +196,5 @@ func cronPanicHandler(ctx context.Context, name string, r any) {
 		zap.Any("panic", r),
 		zap.Stack("stack"),
 	)
-	saveCronCallAudit(ctx, name, constant.CronCallAuditStatusPanic, 0, fmt.Sprintf(constant.CronPanicMessageTemplate, r))
+	saveCronCallAudit(ctx, name, constant.CronCallAuditStatusPanic, 0, fmt.Sprintf(constant.CronPanicMessageTemplate, r), nil)
 }

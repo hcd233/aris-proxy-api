@@ -103,19 +103,24 @@ func (c *SessionDeduplicateCron) Start(spec string) error {
 //	@receiver c *SessionDeduplicateCron
 //	@author centonhuang
 //	@update 2026-06-01 10:00:00
-func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) {
+func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]any {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
 	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, constant.SessionRepoFieldsDedup)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to load sessions", zap.Error(err))
-		return
+		return nil
 	}
 
+	checkedCount := len(sessions)
+
 	if len(sessions) < 2 {
-		log.Info("[SessionDeduplicateCron] Skip deduplication, not enough sessions", zap.Int("count", len(sessions)))
-		return
+		log.Info("[SessionDeduplicateCron] Skip deduplication, not enough sessions", zap.Int("count", checkedCount))
+		return map[string]any{
+			constant.CronMetadataKeyCheckedSessions: checkedCount,
+			constant.CronMetadataKeyDedupedSessions: 0,
+		}
 	}
 
 	mergeResult := FindRedundantSessionsWithMerge(sessions)
@@ -140,8 +145,11 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) {
 	}
 
 	if len(mergeResult.RedundantIDs) == 0 {
-		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", len(sessions)))
-		return
+		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", checkedCount))
+		return map[string]any{
+			constant.CronMetadataKeyCheckedSessions: checkedCount,
+			constant.CronMetadataKeyDedupedSessions: 0,
+		}
 	}
 
 	// 合并ToolIDs到保留的Session
@@ -171,13 +179,18 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) {
 	err = c.sessionDAO.BatchDeleteByField(db, constant.WhereFieldID, mergeResult.RedundantIDs)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to delete redundant sessions", zap.Error(err))
-		return
+		return nil
 	}
 
 	log.Info("[SessionDeduplicateCron] Deduplication completed",
-		zap.Int("total", len(sessions)),
+		zap.Int("total", checkedCount),
 		zap.Int("deleted", len(mergeResult.RedundantIDs)),
 		zap.Int("merged", mergedCount))
+
+	return map[string]any{
+		constant.CronMetadataKeyCheckedSessions: checkedCount,
+		constant.CronMetadataKeyDedupedSessions: len(mergeResult.RedundantIDs),
+	}
 }
 
 func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.DB, sessions []*dbmodel.Session, excludeIDs []uint) ([]*dbmodel.Message, error) {

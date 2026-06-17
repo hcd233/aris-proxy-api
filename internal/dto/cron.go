@@ -97,17 +97,18 @@ type ListCronCallAuditsRsp struct {
 // CronCallAuditItem CronCallAudit 条目
 //
 //	@author centonhuang
-//	@update 2026-06-17 10:00:00
+//	@update 2026-06-18 10:00:00
 type CronCallAuditItem struct {
-	ID         uint      `json:"id" doc:"记录ID"`
-	CronName   string    `json:"cronName" doc:"任务名"`
-	TraceID    string    `json:"traceId" doc:"Trace ID"`
-	StartedAt  time.Time `json:"startedAt" doc:"开始时间"`
-	EndedAt    time.Time `json:"endedAt" doc:"结束时间"`
-	DurationMs int64     `json:"durationMs" doc:"执行耗时(ms)"`
-	Status     string    `json:"status" doc:"执行状态"`
-	Message    string    `json:"message" doc:"附加信息"`
-	CreatedAt  time.Time `json:"createdAt" doc:"创建时间"`
+	ID         uint           `json:"id" doc:"记录ID"`
+	CronName   string         `json:"cronName" doc:"任务名"`
+	TraceID    string         `json:"traceId" doc:"Trace ID"`
+	StartedAt  time.Time      `json:"startedAt" doc:"开始时间"`
+	EndedAt    time.Time      `json:"endedAt" doc:"结束时间"`
+	DurationMs int64          `json:"durationMs" doc:"执行耗时(ms)"`
+	Status     string         `json:"status" doc:"执行状态"`
+	Message    string         `json:"message" doc:"附加信息"`
+	Metadata   map[string]any `json:"metadata" doc:"执行元数据"`
+	CreatedAt  time.Time      `json:"createdAt" doc:"创建时间"`
 }
 
 // CronCallAuditOptionListReq CronCallAudit 筛选项请求
