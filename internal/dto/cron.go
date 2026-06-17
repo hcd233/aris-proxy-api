@@ -35,6 +35,7 @@ type ListCronJobsRsp struct {
 //	@update 2026-06-17 10:00:00
 type CronJobItem struct {
 	Name        string    `json:"name" doc:"任务名"`
+	Type        string    `json:"type" doc:"任务类型: functional/core"`
 	Spec        string    `json:"spec" doc:"cron 表达式"`
 	Description string    `json:"description" doc:"任务描述"`
 	Enabled     bool      `json:"enabled" doc:"是否启用"`
@@ -56,7 +57,8 @@ type UpdateCronJobReq struct {
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 type UpdateCronJobReqBody struct {
-	Enabled bool `json:"enabled" doc:"是否启用"`
+	Enabled *bool   `json:"enabled,omitempty" doc:"是否启用"`
+	Spec    *string `json:"spec,omitempty" doc:"cron 表达式，如 */5 * * * *"`
 }
 
 // UpdateCronJobRsp 更新 CronJob 响应

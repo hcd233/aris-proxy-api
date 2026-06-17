@@ -33,13 +33,18 @@ func (r *fakeCronJobRepo) List(ctx context.Context, param dao.CommonParam) ([]*c
 	return r.jobs, &model.PageInfo{Page: 1, PageSize: 20, Total: int64(len(r.jobs))}, nil
 }
 
-func (r *fakeCronJobRepo) Update(ctx context.Context, name string, enabled bool) error {
+func (r *fakeCronJobRepo) Update(ctx context.Context, name string, params cronmgmtport.UpdateCronJobParams) error {
 	if r.err != nil {
 		return r.err
 	}
 	for _, job := range r.jobs {
 		if job.Name == name {
-			job.Enabled = enabled
+			if params.Enabled != nil {
+				job.Enabled = *params.Enabled
+			}
+			if params.Spec != nil {
+				job.Spec = *params.Spec
+			}
 			return nil
 		}
 	}
@@ -85,13 +90,13 @@ func (r *fakeCronCallAuditRepo) ListDistinctTypes(ctx context.Context, keyword s
 func newCronHandlerForTest() (handler.CronHandler, *fakeCronJobRepo, *fakeCronCallAuditRepo) {
 	jobRepo := &fakeCronJobRepo{
 		jobs: []*cronmgmtport.CronJobView{
-			{Name: "SessionDeduplicateCron", Spec: "0 * * * *", Description: "dedup", Enabled: true},
+			{Name: "SessionDeduplicateCron", Type: "functional", Spec: "0 * * * *", Description: "dedup", Enabled: true},
 		},
 	}
 	auditRepo := &fakeCronCallAuditRepo{}
 	return handler.NewCronHandler(handler.CronDependencies{
 		ListCronJobs:             cronmgmtquery.NewListCronJobsHandler(jobRepo),
-		UpdateCronJob:            cronmgmtcommand.NewUpdateCronJobHandler(jobRepo),
+		UpdateCronJob:            cronmgmtcommand.NewUpdateCronJobHandler(jobRepo, nil),
 		ListCronCallAudits:       cronauditquery.NewListCronCallAuditsHandler(auditRepo),
 		ListCronCallAuditOptions: cronauditquery.NewListCronCallAuditOptionsHandler(auditRepo),
 	}), jobRepo, auditRepo
@@ -118,9 +123,10 @@ func TestCronHandler_ListCronJobs_Success(t *testing.T) {
 func TestCronHandler_UpdateCronJob_Success(t *testing.T) {
 	t.Parallel()
 	h, jobRepo, _ := newCronHandlerForTest()
+	disabled := false
 	rsp, err := h.HandleUpdateCronJob(context.Background(), &dto.UpdateCronJobReq{
 		Name: "SessionDeduplicateCron",
-		Body: &dto.UpdateCronJobReqBody{Enabled: false},
+		Body: &dto.UpdateCronJobReqBody{Enabled: &disabled},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

@@ -17,12 +17,16 @@ type mockCron struct {
 	stopped bool
 }
 
-func (m *mockCron) Start() error {
+func (m *mockCron) Start(_ string) error {
 	m.started = true
 	return nil
 }
 
 func (m *mockCron) Stop() {
+	m.stopped = true
+}
+
+func (m *mockCron) StopGracefully() {
 	m.stopped = true
 }
 
@@ -67,8 +71,7 @@ func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron 
 		},
 	}
 
-	cron.StopCronJobsWithContext(context.Background(), nil)
-	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil, nil)
 
 	if cron.CronInstanceCount(crons) != 0 {
 		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount(crons))
@@ -116,7 +119,7 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cr
 		},
 	}
 
-	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil, nil)
 
 	if cron.CronInstanceCount(crons) != 1 {
 		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
@@ -140,8 +143,6 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 	config.CronSoftDeletePurgeEnabled = true
 	config.CronThinkExtractEnabled = true
 
-	cron.StopCronJobsWithContext(context.Background(), nil)
-
 	mock := &mockCron{}
 	cron.DefaultCronRegistry = []cron.CronRegistryEntry{
 		{
@@ -153,7 +154,7 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 		},
 	}
 
-	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil, nil)
 
 	if cron.CronInstanceCount(crons) != 1 {
 		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
@@ -162,7 +163,9 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 		t.Fatal("expected mock cron to be started")
 	}
 
-	cron.StopCronJobsWithContext(context.Background(), crons)
+	for _, c := range crons {
+		c.Stop()
+	}
 
 	if !mock.stopped {
 		t.Fatal("expected mock cron to be stopped")

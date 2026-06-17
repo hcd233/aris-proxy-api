@@ -73,6 +73,7 @@ func (h *cronHandler) HandleListCronJobs(ctx context.Context, req *dto.ListCronJ
 	rsp.Jobs = lo.Map(jobs, func(job *cronmgmtport.CronJobView, _ int) *dto.CronJobItem {
 		return &dto.CronJobItem{
 			Name:        job.Name,
+			Type:        job.Type,
 			Spec:        job.Spec,
 			Description: job.Description,
 			Enabled:     job.Enabled,
@@ -90,7 +91,18 @@ func (h *cronHandler) HandleUpdateCronJob(ctx context.Context, req *dto.UpdateCr
 		rsp.Error = ierr.ErrValidation.BizError()
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	if err := h.updateCronJob.Handle(ctx, req.Name, req.Body.Enabled); err != nil {
+
+	// 至少传一个字段
+	if req.Body.Enabled == nil && req.Body.Spec == nil {
+		rsp.Error = ierr.ErrValidation.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	params := cronmgmtport.UpdateCronJobParams{
+		Enabled: req.Body.Enabled,
+		Spec:    req.Body.Spec,
+	}
+	if err := h.updateCronJob.Handle(ctx, req.Name, params); err != nil {
 		logger.WithCtx(ctx).Error("[CronHandler] Update cron job failed", zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)

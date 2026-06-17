@@ -12,6 +12,7 @@ import (
 //	@update 2026-06-17 10:00:00
 type CronJob struct {
 	Name        string    `gorm:"column:name;primary_key;comment:任务名"`
+	Type        string    `gorm:"column:type;not null;default:functional;comment:任务类型:functional/core" json:"type"`
 	Spec        string    `gorm:"column:spec;not null;comment:cron 表达式"`
 	Description string    `gorm:"column:description;comment:任务描述"`
 	Enabled     bool      `gorm:"column:enabled;default:true;comment:是否启用"`

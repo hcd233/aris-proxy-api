@@ -32,7 +32,7 @@ func NewCronRepository(db *gorm.DB) port.CronJobRepository {
 	return &cronRepository{db: db, dao: dao.GetCronJobDAO()}
 }
 
-// Sync 同步定时任务元数据（只插入不存在记录，或更新 spec/description）
+// Sync 同步定时任务元数据（只插入不存在记录，或更新 type/spec/description）
 //
 //	@receiver r *cronRepository
 //	@param ctx context.Context
@@ -49,6 +49,7 @@ func (r *cronRepository) Sync(ctx context.Context, jobs []*port.CronJobView) err
 				}
 				if err := tx.Create(&dbmodel.CronJob{
 					Name:        job.Name,
+					Type:        job.Type,
 					Spec:        job.Spec,
 					Description: job.Description,
 					Enabled:     true,
@@ -57,8 +58,9 @@ func (r *cronRepository) Sync(ctx context.Context, jobs []*port.CronJobView) err
 				}
 				continue
 			}
-			if existing.Spec != job.Spec || existing.Description != job.Description {
+			if existing.Type != job.Type || existing.Spec != job.Spec || existing.Description != job.Description {
 				if err := tx.Model(&existing).Updates(map[string]any{
+					constant.FieldCronType:    job.Type,
 					constant.FieldSpec:        job.Spec,
 					constant.FieldDescription: job.Description,
 				}).Error; err != nil {
@@ -86,6 +88,7 @@ func (r *cronRepository) List(ctx context.Context, param dao.CommonParam) ([]*po
 	views := lo.Map(rows, func(row *dbmodel.CronJob, _ int) *port.CronJobView {
 		return &port.CronJobView{
 			Name:        row.Name,
+			Type:        row.Type,
 			Spec:        row.Spec,
 			Description: row.Description,
 			Enabled:     row.Enabled,
@@ -96,17 +99,28 @@ func (r *cronRepository) List(ctx context.Context, param dao.CommonParam) ([]*po
 	return views, pageInfo, nil
 }
 
-// Update 更新 CronJob 启用状态
+// Update 更新 CronJob（部分更新，非 nil 字段才更新）
 //
 //	@receiver r *cronRepository
 //	@param ctx context.Context
 //	@param name string
-//	@param enabled bool
+//	@param params port.UpdateCronJobParams
 //	@return error
-func (r *cronRepository) Update(ctx context.Context, name string, enabled bool) error {
+func (r *cronRepository) Update(ctx context.Context, name string, params port.UpdateCronJobParams) error {
+	updates := map[string]any{}
+	if params.Enabled != nil {
+		updates[constant.FieldEnabled] = *params.Enabled
+	}
+	if params.Spec != nil {
+		updates[constant.FieldSpec] = *params.Spec
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+
 	result := r.db.WithContext(ctx).Model(&dbmodel.CronJob{}).
 		Where(constant.CronJobWhereNameEquals, name).
-		Update(constant.FieldEnabled, enabled)
+		Updates(updates)
 	if result.Error != nil {
 		return ierr.Wrap(ierr.ErrDBQuery, result.Error, "update cron job")
 	}
@@ -134,6 +148,7 @@ func (r *cronRepository) Get(ctx context.Context, name string) (*port.CronJobVie
 	}
 	return &port.CronJobView{
 		Name:        row.Name,
+		Type:        row.Type,
 		Spec:        row.Spec,
 		Description: row.Description,
 		Enabled:     row.Enabled,
