@@ -46,6 +46,11 @@ import type {
   SessionOptionListRsp,
   CreateBlockedReqBody,
   ListBlockedRsp,
+  ListCronJobsRsp,
+  UpdateCronJobReqBody,
+  ListCronCallAuditsRsp,
+  CronCallAuditOptionListReq,
+  CronCallAuditOptionListRsp,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -594,6 +599,64 @@ class ApiClient {
 
   async deleteBlocked(id: number): Promise<CommonRsp> {
     return this.request<CommonRsp>(`/api/v1/block/${id}`, { method: "DELETE" });
+  }
+
+  // ─── Cron (admin) ──────────────────────────────────────────────────────────
+
+  async listCronJobs(params: {
+    page: number;
+    pageSize: number;
+    query?: string;
+    sort?: string;
+    sortField?: string;
+  }): Promise<ListCronJobsRsp> {
+    const sp = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
+    if (params.query) sp.set("query", params.query);
+    if (params.sort) sp.set("sort", params.sort);
+    if (params.sortField) sp.set("sortField", params.sortField);
+    return this.request<ListCronJobsRsp>(`/api/v1/cron/list?${sp}`);
+  }
+
+  async updateCronJob(body: UpdateCronJobReqBody): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/cron/${encodeURIComponent(body.name)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled: body.enabled }),
+    });
+  }
+
+  async listCronCallAudits(params: {
+    page: number;
+    pageSize: number;
+    query?: string;
+    sort?: string;
+    sortField?: string;
+    startTime?: string;
+    endTime?: string;
+    filter?: string;
+  }): Promise<ListCronCallAuditsRsp> {
+    const sp = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
+    if (params.query) sp.set("query", params.query);
+    if (params.sort) sp.set("sort", params.sort);
+    if (params.sortField) sp.set("sortField", params.sortField);
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    if (params.filter) sp.set("filter", params.filter);
+    return this.request<ListCronCallAuditsRsp>(`/api/v1/cron-audit/log/list?${sp}`);
+  }
+
+  async listCronCallAuditOptions(params: CronCallAuditOptionListReq): Promise<CronCallAuditOptionListRsp> {
+    const sp = new URLSearchParams();
+    sp.set("field", params.field);
+    if (params.keyword) sp.set("keyword", params.keyword);
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    return this.request<CronCallAuditOptionListRsp>(`/api/v1/cron-audit/option/list?${sp}`);
   }
 }
 

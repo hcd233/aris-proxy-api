@@ -71,7 +71,7 @@ func (c *ThinkExtractCron) Stop() {
 //	@update 2026-06-02 10:00:00
 func (c *ThinkExtractCron) Start() error {
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleThinkExtract)
-	entryID, err := c.cron.AddFunc(constant.CronSpecThinkExtract, wrapCronFunc(c.locker, key, LockOptions{}, c.extract))
+	entryID, err := c.cron.AddFunc(constant.CronSpecThinkExtract, wrapCronFunc(constant.CronModuleThinkExtract, c.locker, key, LockOptions{}, c.extract))
 	if err != nil {
 		logger.Logger().Error("[ThinkExtractCron] Add func error", zap.Error(err))
 		return err
