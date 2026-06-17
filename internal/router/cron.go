@@ -38,29 +38,3 @@ func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gor
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("updateCronJob", enum.PermissionAdmin)},
 	}, cronHandler.HandleUpdateCronJob)
 }
-
-func initCronAuditRouter(auditGroup huma.API, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
-	auditGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
-
-	huma.Register(auditGroup, huma.Operation{
-		OperationID: "listCronCallAudits",
-		Method:      http.MethodGet,
-		Path:        "/log" + constant.RoutePathList,
-		Summary:     "ListCronCallAudits",
-		Description: "Paginate cron call audit records",
-		Tags:        []string{constant.TagCronAudit},
-		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listCronCallAudits", enum.PermissionAdmin)},
-	}, cronHandler.HandleListCronCallAudits)
-
-	huma.Register(auditGroup, huma.Operation{
-		OperationID: "listCronCallAuditOptions",
-		Method:      http.MethodGet,
-		Path:        "/option" + constant.RoutePathOptionList,
-		Summary:     "ListCronCallAuditOptions",
-		Description: "Get available filter options for cron call audit (cron type)",
-		Tags:        []string{constant.TagCronAudit},
-		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listCronCallAuditOptions", enum.PermissionAdmin)},
-	}, cronHandler.HandleListCronCallAuditOptions)
-}

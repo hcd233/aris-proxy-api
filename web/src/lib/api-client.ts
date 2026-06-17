@@ -516,7 +516,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListAuditLogsRsp>(`/api/v1/audit/log/list?${sp}`);
+    return this.request<ListAuditLogsRsp>(`/api/v1/audit/model/log/list?${sp}`);
   }
 
   async listAuditOptions(params: AuditOptionListReq): Promise<AuditOptionListRsp> {
@@ -525,7 +525,7 @@ class ApiClient {
     if (params.keyword) sp.set("keyword", params.keyword);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<AuditOptionListRsp>(`/api/v1/audit/option/list?${sp}`);
+    return this.request<AuditOptionListRsp>(`/api/v1/audit/model/option/list?${sp}`);
   }
 
   async fetchModelTrend(params: {
@@ -650,7 +650,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListCronCallAuditsRsp>(`/api/v1/cron-audit/log/list?${sp}`);
+    return this.request<ListCronCallAuditsRsp>(`/api/v1/audit/cron/log/list?${sp}`);
   }
 
   async listCronCallAuditOptions(params: CronCallAuditOptionListReq): Promise<CronCallAuditOptionListRsp> {
@@ -659,7 +659,7 @@ class ApiClient {
     if (params.keyword) sp.set("keyword", params.keyword);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<CronCallAuditOptionListRsp>(`/api/v1/cron-audit/option/list?${sp}`);
+    return this.request<CronCallAuditOptionListRsp>(`/api/v1/audit/cron/option/list?${sp}`);
   }
 }
 

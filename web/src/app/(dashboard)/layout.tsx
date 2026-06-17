@@ -97,7 +97,7 @@ const navItems: NavItem[] = [
   },
   {
     label: "Cron Audit",
-    href: "/cron-audit/",
+    href: "/audit/cron/",
     icon: <ScrollText className="size-4" />,
     adminOnly: true,
   },
