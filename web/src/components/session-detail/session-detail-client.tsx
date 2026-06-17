@@ -795,12 +795,19 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
 
   // ── Desktop layout ─────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-[calc(100vh-6rem)] flex-col">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 px-4 py-3 supports-[backdrop-filter]:backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <h1 className="flex-1 truncate text-center text-sm font-semibold text-foreground">
-            Session #{metadata.id}
-          </h1>
+    <div className="-mx-4 -mt-4 flex min-h-[calc(100vh-6rem)] flex-col bg-background md:-mx-8 md:-mt-8 lg:-mx-10 lg:-mt-10">
+      <header className="sticky top-[-1rem] z-30 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:backdrop-blur md:top-[-2rem] lg:top-[-2.5rem]">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 pt-[calc(1rem+0.25rem)] pb-3 md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]">
+          <div className="flex min-w-0 flex-1 flex-col items-center">
+            <h1 className="truncate font-display text-[15px] font-semibold tracking-tight text-foreground">
+              Session #{metadata.id}
+            </h1>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {messageCount} message{messageCount === 1 ? "" : "s"}
+              {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
+              {score != null ? ` · ${score}` : ""}
+            </p>
+          </div>
           <div className="flex items-center gap-1">
             {score != null ? (
               <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums">

@@ -79,10 +79,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
   const createShare = useCallback(async () => {
     setCreating(true);
     try {
-      const body: CreateShareReqBody = { sessionId };
-      if (expireOption !== "1d") {
-        body.expiresIn = expireOption;
-      }
+      const body: CreateShareReqBody = { sessionId, expiresIn: expireOption };
       if (expireOption === "custom" && customDate) {
         body.expiresAt = Math.floor(customDate.getTime() / 1000);
       }
