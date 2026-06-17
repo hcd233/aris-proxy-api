@@ -50,6 +50,7 @@ func (r *cronCallAuditRepository) Save(ctx context.Context, audit *port.CronCall
 		DurationMs: audit.DurationMs,
 		Status:     audit.Status,
 		Message:    audit.Message,
+		Metadata:   audit.Metadata,
 	}
 	if err := r.dao.Create(r.db.WithContext(ctx), record); err != nil {
 		return ierr.Wrap(ierr.ErrDBCreate, err, "create cron call audit")
@@ -116,6 +117,7 @@ func (r *cronCallAuditRepository) List(ctx context.Context, param dao.CommonPara
 			DurationMs: rec.DurationMs,
 			Status:     rec.Status,
 			Message:    rec.Message,
+			Metadata:   rec.Metadata,
 			CreatedAt:  rec.CreatedAt,
 		}
 	})

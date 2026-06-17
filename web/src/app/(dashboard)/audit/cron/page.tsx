@@ -44,6 +44,23 @@ const statusLabelMap: Record<string, string> = {
   skipped: "Skipped",
 };
 
+const metadataLabelMap: Record<string, string> = {
+  checked_sessions_count: "Checked",
+  deduped_sessions_count: "Deduped",
+  purged_messages_count: "Messages",
+  purged_tools_count: "Tools",
+  scanned_messages_count: "Scanned",
+  extracted_messages_count: "Extracted",
+  synced_hits_count: "Synced Hits",
+};
+
+function formatMetadata(metadata: Record<string, number> | undefined | null): string {
+  if (!metadata || Object.keys(metadata).length === 0) return "—";
+  return Object.entries(metadata)
+    .map(([key, val]) => `${metadataLabelMap[key] ?? key}: ${val}`)
+    .join(" | ");
+}
+
 export default function CronAuditPage() {
   const [logs, setLogs] = useState<CronCallAuditItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
@@ -257,6 +274,7 @@ export default function CronAuditPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Duration (ms)</TableHead>
                     <TableHead>Error Message</TableHead>
+                    <TableHead>Metadata</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -281,6 +299,9 @@ export default function CronAuditPage() {
                       <TableCell className="text-muted-foreground">{log.durationMs}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-xs text-destructive">
                         {log.message || "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[250px] truncate text-xs text-muted-foreground">
+                        {formatMetadata(log.metadata)}
                       </TableCell>
                     </TableRow>
                   ))}

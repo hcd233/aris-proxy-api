@@ -100,7 +100,7 @@ func (c *SoftDeletePurgeCron) Start(spec string) error {
 //	@receiver c *SoftDeletePurgeCron
 //	@author centonhuang
 //	@update 2026-06-09 10:00:00
-func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
+func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]any {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
@@ -108,12 +108,15 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	softDeletedSessions, err := c.sessionDAO.FindAllForPurge(db, true)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find soft deleted sessions", zap.Error(err))
-		return
+		return nil
 	}
 
 	if len(softDeletedSessions) == 0 {
 		log.Info("[SoftDeletePurgeCron] No soft deleted sessions found")
-		return
+		return map[string]any{
+			constant.CronMetadataKeyPurgedMessages: 0,
+			constant.CronMetadataKeyPurgedTools:    0,
+		}
 	}
 
 	// 2. 从被软删除的 session 中提取 message_ids 和 tool_ids 并去重
@@ -128,7 +131,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	activeSessions, err := c.sessionDAO.FindAllForPurge(db, false)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find active sessions", zap.Error(err))
-		return
+		return nil
 	}
 
 	usedMessageIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s dao.SessionPurgeView, _ int) []uint {
@@ -148,7 +151,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 		msgCount, err = c.messageDAO.HardDeleteByIDs(db, orphanMessageIDs)
 		if err != nil {
 			log.Error("[SoftDeletePurgeCron] Failed to purge messages", zap.Error(err))
-			return
+			return nil
 		}
 	}
 
@@ -156,7 +159,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 		toolCount, err = c.toolDAO.HardDeleteByIDs(db, orphanToolIDs)
 		if err != nil {
 			log.Error("[SoftDeletePurgeCron] Failed to purge tools", zap.Error(err))
-			return
+			return nil
 		}
 	}
 
@@ -164,11 +167,16 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) {
 	sessionCount, err := c.sessionDAO.HardDeleteSoftDeleted(db)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to purge sessions", zap.Error(err))
-		return
+		return nil
 	}
 
 	log.Info("[SoftDeletePurgeCron] Purge completed",
 		zap.Int64("sessionsDeleted", sessionCount),
 		zap.Int64("messagesDeleted", msgCount),
 		zap.Int64("toolsDeleted", toolCount))
+
+	return map[string]any{
+		constant.CronMetadataKeyPurgedMessages: msgCount,
+		constant.CronMetadataKeyPurgedTools:    toolCount,
+	}
 }

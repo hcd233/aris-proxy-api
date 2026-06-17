@@ -248,6 +248,7 @@ var (
 		FieldDurationMs,
 		FieldStatus,
 		FieldMessage,
+		FieldMetadata,
 		CronCallAuditRepoFieldCreatedAtQualified,
 	}
 

@@ -102,23 +102,26 @@ func (c *ThinkExtractCron) Start(spec string) error {
 //	@param ctx context.Context
 //	@author centonhuang
 //	@update 2026-06-02 10:00:00
-func (c *ThinkExtractCron) extract(ctx context.Context) {
+func (c *ThinkExtractCron) extract(ctx context.Context) map[string]any {
 	log := logger.WithCtx(ctx)
 	startTime, endTime := currentDayRange(time.Now().UTC())
 
 	var lastID uint
+	totalScanned := 0
 	totalProcessed := 0
 
 	for {
 		messages, err := c.repo.FindThinkExtractCandidates(ctx, lastID, startTime, endTime, config.SQLBatchSize)
 		if err != nil {
 			log.Error("[ThinkExtractCron] Query error", zap.Error(err))
-			return
+			return nil
 		}
 
 		if len(messages) == 0 {
 			break
 		}
+
+		totalScanned += len(messages)
 
 		for _, msg := range messages {
 			lastID = msg.ID
@@ -150,6 +153,11 @@ func (c *ThinkExtractCron) extract(ctx context.Context) {
 	}
 
 	log.Info("[ThinkExtractCron] Extract completed", zap.Int("totalProcessed", totalProcessed))
+
+	return map[string]any{
+		constant.CronMetadataKeyScannedMessages:   totalScanned,
+		constant.CronMetadataKeyExtractedMessages: totalProcessed,
+	}
 }
 
 func currentDayRange(now time.Time) (start, end time.Time) {

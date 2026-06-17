@@ -11,7 +11,7 @@ import (
 // CronCallAuditView CronCallAudit 展示视图
 //
 //	@author centonhuang
-//	@update 2026-06-17 10:00:00
+//	@update 2026-06-18 10:00:00
 type CronCallAuditView struct {
 	ID         uint
 	CronName   string
@@ -21,6 +21,7 @@ type CronCallAuditView struct {
 	DurationMs int64
 	Status     string
 	Message    string
+	Metadata   map[string]any
 	CreatedAt  time.Time
 }
 
