@@ -38,6 +38,12 @@ func CreateEndpoint(
 	if apiKey == "" {
 		return nil, ierr.New(ierr.ErrValidation, "endpoint apiKey cannot be empty")
 	}
+	if openaiBaseURL == "" && anthropicBaseURL == "" {
+		return nil, ierr.New(ierr.ErrValidation, "at least one base URL must be provided")
+	}
+	if !supportChatCompletion && !supportResponse && !supportMessage {
+		return nil, ierr.New(ierr.ErrValidation, "at least one capability must be enabled")
+	}
 	if (supportChatCompletion || supportResponse) && openaiBaseURL == "" {
 		return nil, ierr.New(ierr.ErrValidation, "endpoint openai baseURL cannot be empty when OpenAI APIs are supported")
 	}

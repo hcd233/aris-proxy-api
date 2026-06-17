@@ -98,3 +98,25 @@ func TestCreateEndpoint_RejectsMissingSupportedProtocolBaseURL(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateEndpoint_RejectsBothEmptyBaseURL(t *testing.T) {
+	t.Parallel()
+	_, err := aggregate.CreateEndpoint(
+		1, "test", "", "", "sk-test",
+		false, false, false,
+	)
+	if !errors.Is(err, ierr.ErrValidation) {
+		t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)
+	}
+}
+
+func TestCreateEndpoint_RejectsNoCapability(t *testing.T) {
+	t.Parallel()
+	_, err := aggregate.CreateEndpoint(
+		1, "test", "https://api.openai.com", "https://api.anthropic.com", "sk-test",
+		false, false, false,
+	)
+	if !errors.Is(err, ierr.ErrValidation) {
+		t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)
+	}
+}
