@@ -74,7 +74,7 @@ func (c *SessionDeduplicateCron) Stop() {
 func (c *SessionDeduplicateCron) Start() error {
 	// 每小时执行一次，定期清理冗余Session
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSessionDeduplicate)
-	entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, wrapCronFunc(c.locker, key, LockOptions{}, c.deduplicate))
+	entryID, err := c.cron.AddFunc(constant.CronSpecSessionDeduplicate, wrapCronFunc(constant.CronModuleSessionDeduplicate, c.locker, key, LockOptions{}, c.deduplicate))
 	if err != nil {
 		logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
 		return err

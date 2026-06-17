@@ -494,6 +494,57 @@ export interface SessionOptionListRsp extends CommonRsp {
   items: string[];
 }
 
+// ─── Cron ──────────────────────────────────────────────────────────────────────
+
+export interface CronJobItem {
+  name: string;
+  spec: string;
+  description: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListCronJobsRsp extends CommonRsp {
+  jobs?: CronJobItem[];
+  pageInfo?: PageInfo;
+}
+
+export interface UpdateCronJobReqBody {
+  name: string;
+  enabled: boolean;
+}
+
+// ─── Cron Call Audit ───────────────────────────────────────────────────────────
+
+export interface CronCallAuditItem {
+  id: number;
+  cronName: string;
+  traceId: string;
+  startedAt: string;
+  endedAt: string;
+  durationMs: number;
+  status: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface ListCronCallAuditsRsp extends CommonRsp {
+  logs?: CronCallAuditItem[];
+  pageInfo?: PageInfo;
+}
+
+export interface CronCallAuditOptionListReq {
+  field: "type";
+  keyword?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface CronCallAuditOptionListRsp extends CommonRsp {
+  items: string[];
+}
+
 // ─── Blocked Words ─────────────────────────────────────────────────────────
 
 export interface CreateBlockedReqBody {

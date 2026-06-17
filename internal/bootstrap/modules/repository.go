@@ -1,6 +1,8 @@
 package modules
 
 import (
+	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
+	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -50,6 +52,8 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewEndpointResolver,
 		NewBlockedRepository,
 		NewBlockedCache,
+		NewCronRepository,
+		NewCronCallAuditRepository,
 		fx.Annotate(
 			NewAccessTokenSignerImpl,
 			fx.ResultTags(`name:"accessSigner"`),
@@ -148,6 +152,14 @@ func NewBlockedRepository(db *gorm.DB) blocked.BlockedRepository {
 
 func NewBlockedCache(c *redis.Client) *cache.BlockedHitCache {
 	return cache.NewBlockedHitCache(c)
+}
+
+func NewCronRepository(db *gorm.DB) cronmgmtport.CronJobRepository {
+	return repository.NewCronRepository(db)
+}
+
+func NewCronCallAuditRepository(db *gorm.DB) cronauditport.CronCallAuditRepository {
+	return repository.NewCronCallAuditRepository(db)
 }
 
 func NewAccessTokenSignerImpl() identityservice.TokenSigner {
