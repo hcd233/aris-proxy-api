@@ -149,8 +149,7 @@ const (
 	TagBlocked   = "Blocked"
 
 	// Router sub-paths
-	RoutePathList       = "/list"
-	RoutePathOptionList = "/option/list"
+	RoutePathList = "/list"
 
 	// Router path/query/field constants
 	WhereIDEquals = "id = ?"

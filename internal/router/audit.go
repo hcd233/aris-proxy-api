@@ -118,7 +118,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 	huma.Register(auditGroup, huma.Operation{
 		OperationID: "listCronCallAuditOptions",
 		Method:      http.MethodGet,
-		Path:        "/cron/option" + constant.RoutePathOptionList,
+		Path:        "/cron/option/list",
 		Summary:     "ListCronCallAuditOptions",
 		Description: "Get available filter options for cron call audit (cron type)",
 		Tags:        []string{constant.TagCronAudit},
