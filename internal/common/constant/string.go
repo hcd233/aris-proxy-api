@@ -173,4 +173,7 @@ const (
 	BlockedTableName                  = "blocked_words"
 	BlockedHitKeyPrefix               = "blocked:hit:%d"
 	BlockedHitKeyScanPattern          = "blocked:hit:*"
+
+	// ── Cron Pub/Sub ──
+	CronReloadChannel = "cron:reload"
 )

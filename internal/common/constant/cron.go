@@ -39,4 +39,9 @@ const (
 	CronLockDefaultRenewDivisor = 3
 	// CronLockMaxConsecutiveRenewFailures 续期连续失败最大次数
 	CronLockMaxConsecutiveRenewFailures = 3
+
+	// ── Cron Pub/Sub action ──
+	CronReloadActionRestart = "restart"
+	CronReloadActionDisable = "disable"
+	CronReloadActionEnable  = "enable"
 )

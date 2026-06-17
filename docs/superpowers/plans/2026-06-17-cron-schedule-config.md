@@ -942,6 +942,53 @@ cd web && npm run lint
 
 ---
 
+### Task 16b: CronManager 多 Pod 同步（Redis Pub/Sub）
+
+**问题**：K8s 部署有 2 个副本，每个 Pod 独立运行 cron 调度器。`PATCH /api/v1/cron` 请求只命中一个 Pod，`CronManager.Restart()` 仅重启本地实例，另一 Pod 继续使用旧 schedule。
+
+**Files:**
+- Modify: `internal/common/constant/string.go`
+- Modify: `internal/cron/manager.go`
+- Modify: `internal/bootstrap/modules/cron.go`
+
+- [ ] **Step 1: 在 string.go 新增 Redis 频道常量**
+
+```go
+CronReloadChannel = "cron:reload"
+```
+
+- [ ] **Step 2: CronManager 新增 podID、pubSub 字段和广播逻辑**
+
+```go
+type CronManager struct {
+    mu      sync.RWMutex
+    entries map[string]*managedEntry
+    deps    CronDeps
+    podID   string
+    pubSub  *redis.PubSub
+}
+```
+
+- `NewCronManager`: 从 `os.Hostname()` 获取 `podID`
+- `StartListener(ctx)`: 订阅 `cron:reload`，goroutine 处理消息
+- `publish(action, name)`: 向 `cron:reload` 发布 JSON 消息 `{"action":"restart","name":"x","pod":"y"}`
+- `handleMessage(msg)`: 解析消息，跳过自身发出的，从 `cronJobStore.Get()` 读最新状态，调用对应的 `restartLocked`/`disableLocked`/`enableLocked`
+- `Restart` → 调用 `restartLocked` → 成功后 `publish("restart", name)`
+- `Disable` → 调用 `disableLocked` → 成功后 `publish("disable", name)`
+- `Enable` → 调用 `enableLocked` → 成功后 `publish("enable", name)`
+
+- [ ] **Step 3: bootstrap 中启动 listener**
+
+```go
+func NewCronManager(...) *cron.CronManager {
+    m := cron.NewCronManager(cron.CronDeps{...})
+    m.StartListener(context.Background())
+    return m
+}
+```
+
+---
+
 ### Task 17: 端到端验证
 
 - [ ] **Step 1: 启动服务**
