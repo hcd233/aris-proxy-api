@@ -28,10 +28,10 @@ const (
 	CronAuditFilterTypeSQLColumn   = "cron_name"
 	CronAuditFilterStatusSQLColumn = "status"
 
-	CronDescriptionSessionDeduplicate = "清理 MessageIDs 被其他 Session 包含的冗余 Session"
-	CronDescriptionSoftDeletePurge    = "硬删除已软删除超过保留期的记录"
-	CronDescriptionThinkExtract       = "提取并缓存会话中的 think 内容"
-	CronDescriptionBlockedHitSync     = "同步敏感词命中计数到数据库"
+	CronDescriptionSessionDeduplicate = "Clean up redundant sessions whose message IDs are contained by other sessions"
+	CronDescriptionSoftDeletePurge    = "Permanently delete soft-deleted records past retention period"
+	CronDescriptionThinkExtract       = "Extract and cache think content from sessions"
+	CronDescriptionBlockedHitSync     = "Sync blocked word hit counts to database"
 
 	// CronLockDefaultTTL 默认 cron 任务分布式锁 TTL
 	CronLockDefaultTTL = 5 * time.Minute
