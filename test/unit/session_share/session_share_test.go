@@ -509,8 +509,9 @@ func TestCreateShareReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	if !ok {
 		t.Fatal("CreateShareReqBody must have ExpiresIn field")
 	}
-	if expiresInField.Tag.Get("json") != "expiresIn" {
-		t.Errorf(`CreateShareReqBody.ExpiresIn json tag = %q, want "expiresIn"`, expiresInField.Tag.Get("json"))
+	// must have omitempty so Huma treats it as optional (body fields are required by default in Huma v2)
+	if expiresInField.Tag.Get("json") != "expiresIn,omitempty" {
+		t.Errorf(`CreateShareReqBody.ExpiresIn json tag = %q, want "expiresIn,omitempty"`, expiresInField.Tag.Get("json"))
 	}
 
 	expiresAtField, ok := bodyType.FieldByName("ExpiresAt")

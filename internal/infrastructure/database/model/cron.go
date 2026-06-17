@@ -17,6 +17,7 @@ type CronJob struct {
 	Enabled     bool      `gorm:"column:enabled;default:true;comment:是否启用"`
 	CreatedAt   time.Time `gorm:"comment:创建时间"`
 	UpdatedAt   time.Time `gorm:"comment:更新时间"`
+	DeletedAt   int64     `gorm:"column:deleted_at;default:0;comment:删除时间，默认为0"`
 }
 
 // TableName 返回表名

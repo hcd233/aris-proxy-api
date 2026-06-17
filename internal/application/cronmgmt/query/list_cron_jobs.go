@@ -32,10 +32,14 @@ func NewListCronJobsHandler(repo port.CronJobRepository) port.ListCronJobsHandle
 //	@return *model.PageInfo
 //	@return error
 func (h *listCronJobsHandler) Handle(ctx context.Context, param model.CommonParam) ([]*port.CronJobView, *model.PageInfo, error) {
+	sortField := param.SortField
+	if sortField == "" {
+		sortField = constant.FieldName
+	}
 	daoParam := dao.CommonParam{
 		PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
 		QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName, constant.FieldSpec}},
-		SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
+		SortParam:  dao.SortParam{Sort: param.Sort, SortField: sortField},
 	}
 	return h.repo.List(ctx, daoParam)
 }

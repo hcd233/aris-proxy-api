@@ -21,7 +21,7 @@ type CreateShareReq struct {
 //	@update 2026-06-02 10:00:00
 type CreateShareReqBody struct {
 	SessionID uint   `json:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
-	ExpiresIn string `json:"expiresIn" doc:"过期选项: 1d | 7d | 30d | never | custom，默认 1d"`
+	ExpiresIn string `json:"expiresIn,omitempty" doc:"过期选项: 1d | 7d | 30d | never | custom，默认 1d"`
 	ExpiresAt *int64 `json:"expiresAt,omitempty" doc:"自定义过期 Unix 秒级时间戳，expiresIn=custom 时必填"`
 }
 
