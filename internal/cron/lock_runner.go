@@ -52,6 +52,7 @@ type LockOptions struct {
 
 // RunWithLock 拿 Redis 分布式锁后执行 fn；执行期间 ticker 续期；返回前 defer 释放。
 // 续期失败不中断 fn（业务任务均幂等）。
+// 返回 true 表示 fn 被执行，false 表示未获取到锁（跳过）。
 //
 //	@author centonhuang
 //	@update 2026-06-01 10:00:00
@@ -61,7 +62,7 @@ func RunWithLock(
 	key string,
 	opts LockOptions,
 	fn func(ctx context.Context),
-) {
+) (executed bool) {
 	ttl := opts.TTL
 	if ttl <= 0 {
 		ttl = constant.CronLockDefaultTTL
@@ -80,11 +81,11 @@ func RunWithLock(
 	locked, err := locker.Lock(childCtx, key, value, ttl)
 	if err != nil {
 		log.Error("[CronLock] Lock acquire error", zap.String("key", key), zap.Error(err))
-		return
+		return false
 	}
 	if !locked {
 		log.Info("[CronLock] Lock held by another instance, skip this run", zap.String("key", key))
-		return
+		return false
 	}
 	defer func() {
 		if err := locker.Unlock(childCtx, key, value); err != nil {
@@ -94,6 +95,7 @@ func RunWithLock(
 
 	go renewLoop(childCtx, locker, key, value, ttl, renew)
 	fn(childCtx)
+	return true
 }
 
 func renewLoop(ctx context.Context, locker lock.Locker, key, value string, ttl, renew time.Duration) {
@@ -154,7 +156,9 @@ func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions,
 			}
 		}
 
-		RunWithLock(ctx, locker, key, opts, fn)
+		if !RunWithLock(ctx, locker, key, opts, fn) {
+			return
+		}
 		durationMs := time.Since(start).Milliseconds()
 		saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSuccess, durationMs, "")
 	}
