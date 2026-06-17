@@ -87,6 +87,13 @@ func (r *fakeCronCallAuditRepo) ListDistinctTypes(ctx context.Context, keyword s
 	return []string{"SessionDeduplicateCron"}, nil
 }
 
+func (r *fakeCronCallAuditRepo) ListDistinctStatuses(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return []string{"success", "failed", "panic", "skipped"}, nil
+}
+
 func newCronHandlerForTest() (handler.CronHandler, *fakeCronJobRepo, *fakeCronCallAuditRepo) {
 	jobRepo := &fakeCronJobRepo{
 		jobs: []*cronmgmtport.CronJobView{
@@ -172,7 +179,7 @@ func TestCronHandler_ListCronCallAudits_Success(t *testing.T) {
 	}
 }
 
-func TestCronHandler_ListCronCallAuditOptions_Success(t *testing.T) {
+func TestCronHandler_ListCronCallAuditOptions_TypeField(t *testing.T) {
 	t.Parallel()
 	h, _, _ := newCronHandlerForTest()
 	rsp, err := h.HandleListCronCallAuditOptions(context.Background(), &dto.CronCallAuditOptionListReq{Field: "type"})
@@ -184,5 +191,23 @@ func TestCronHandler_ListCronCallAuditOptions_Success(t *testing.T) {
 	}
 	if len(rsp.Body.Items) != 1 {
 		t.Fatalf("expected 1 option, got %d", len(rsp.Body.Items))
+	}
+	if rsp.Body.Items[0] != "SessionDeduplicateCron" {
+		t.Errorf("unexpected type option: %s", rsp.Body.Items[0])
+	}
+}
+
+func TestCronHandler_ListCronCallAuditOptions_StatusField(t *testing.T) {
+	t.Parallel()
+	h, _, _ := newCronHandlerForTest()
+	rsp, err := h.HandleListCronCallAuditOptions(context.Background(), &dto.CronCallAuditOptionListReq{Field: "status"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rsp.Body.Error != nil {
+		t.Fatalf("unexpected business error: %v", rsp.Body.Error)
+	}
+	if len(rsp.Body.Items) != 4 {
+		t.Fatalf("expected 4 status options, got %d", len(rsp.Body.Items))
 	}
 }

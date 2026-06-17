@@ -115,7 +115,7 @@ type CronCallAuditItem struct {
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 type CronCallAuditOptionListReq struct {
-	Field     string    `query:"field" required:"true" enum:"type" doc:"筛选字段"`
+	Field     string    `query:"field" required:"true" enum:"type,status" doc:"筛选字段"`
 	Keyword   string    `query:"keyword" maxLength:"100" doc:"关键词"`
 	StartTime time.Time `query:"startTime" doc:"开始时间"`
 	EndTime   time.Time `query:"endTime" doc:"结束时间"`

@@ -153,6 +153,37 @@ func (r *cronCallAuditRepository) ListDistinctTypes(ctx context.Context, keyword
 	return types, nil
 }
 
+// ListDistinctStatuses 列出 distinct status
+//
+//	@receiver r *cronCallAuditRepository
+//	@param ctx context.Context
+//	@param keyword string
+//	@param startTime time.Time
+//	@param endTime time.Time
+//	@return []string
+//	@return error
+func (r *cronCallAuditRepository) ListDistinctStatuses(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	var statuses []string
+	query := r.db.WithContext(ctx).Model(&dbmodel.CronCallAudit{}).
+		Select(constant.CronAuditDistinctSelectStatus).
+		Where(constant.DBConditionDeletedAtZero)
+
+	if !startTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtLTE, endTime)
+	}
+	if keyword != "" {
+		query = query.Where(constant.CronAuditDistinctWhereStatus, "%"+keyword+"%")
+	}
+
+	if err := query.Order(constant.CronAuditDistinctOrderStatus).Limit(constant.CronAuditDistinctLimit).Scan(&statuses).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct cron statuses")
+	}
+	return statuses, nil
+}
+
 // applyFilter 注入 filter 条件
 func (r *cronCallAuditRepository) applyFilter(db *gorm.DB, filterExp string) (*gorm.DB, error) {
 	if filterExp == "" {

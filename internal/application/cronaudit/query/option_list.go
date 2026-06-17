@@ -36,6 +36,8 @@ func (h *listCronCallAuditOptionsHandler) Handle(ctx context.Context, field, key
 	switch field {
 	case constant.CronAuditFilterFieldType:
 		return h.repo.ListDistinctTypes(ctx, keyword, startTime, endTime)
+	case constant.CronAuditFilterFieldStatus:
+		return h.repo.ListDistinctStatuses(ctx, keyword, startTime, endTime)
 	default:
 		return []string{}, nil
 	}

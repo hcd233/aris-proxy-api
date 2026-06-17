@@ -537,7 +537,7 @@ export interface ListCronCallAuditsRsp extends CommonRsp {
 }
 
 export interface CronCallAuditOptionListReq {
-  field: "type";
+  field: "type" | "status";
   keyword?: string;
   startTime?: string;
   endTime?: string;

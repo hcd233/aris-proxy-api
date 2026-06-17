@@ -48,4 +48,5 @@ type CronCallAuditRepository interface {
 	Save(ctx context.Context, audit *CronCallAuditView) error
 	List(ctx context.Context, param dao.CommonParam, startTime, endTime time.Time, filterExp string) ([]*CronCallAuditView, *model.PageInfo, error)
 	ListDistinctTypes(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	ListDistinctStatuses(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 }
