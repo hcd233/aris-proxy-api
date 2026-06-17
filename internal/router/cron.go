@@ -30,7 +30,7 @@ func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gor
 	huma.Register(cronGroup, huma.Operation{
 		OperationID: "updateCronJob",
 		Method:      http.MethodPatch,
-		Path:        "/{name}",
+		Path:        "",
 		Summary:     "UpdateCronJob",
 		Description: "Enable or disable a cron job",
 		Tags:        []string{constant.TagCron},
