@@ -31,7 +31,7 @@ func initBlockedRouter(group huma.API, handler handler.BlockedHandler, db *gorm.
 	huma.Register(group, huma.Operation{
 		OperationID: "listBlocked",
 		Method:      http.MethodGet,
-		Path:        "/list",
+		Path:        constant.RoutePathList,
 		Summary:     "ListBlocked",
 		Tags:        []string{constant.TagBlocked},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},

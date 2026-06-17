@@ -7,6 +7,8 @@ import (
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
+	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
+	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
@@ -30,6 +32,7 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		NewModelDependencies,
 		NewSessionDependencies,
 		NewAuditDependencies,
+		NewCronDependencies,
 		NewOpenAIDependencies,
 		NewAnthropicDependencies,
 		handler.NewPingHandler,
@@ -41,6 +44,7 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewModelHandler,
 		handler.NewSessionHandler,
 		handler.NewAuditHandler,
+		handler.NewCronHandler,
 		handler.NewOpenAIHandler,
 		handler.NewAnthropicHandler,
 		NewBlockedDependencies,
@@ -140,6 +144,20 @@ func (a *anthropicUseCaseAdapter) CountTokens(ctx context.Context, req *dto.Anth
 
 func NewAuditDependencies(svc auditport.AuditService) handler.AuditDependencies {
 	return handler.AuditDependencies{Service: svc}
+}
+
+func NewCronDependencies(
+	listJobs cronmgmtport.ListCronJobsHandler,
+	updateJob cronmgmtport.UpdateCronJobHandler,
+	listAudits cronauditport.ListCronCallAuditsHandler,
+	listAuditOpts cronauditport.ListCronCallAuditOptionsHandler,
+) handler.CronDependencies {
+	return handler.CronDependencies{
+		ListCronJobs:             listJobs,
+		UpdateCronJob:            updateJob,
+		ListCronCallAudits:       listAudits,
+		ListCronCallAuditOptions: listAuditOpts,
+	}
 }
 
 func NewEndpointDependencies(create endpointport.CreateEndpointHandler, update endpointport.UpdateEndpointHandler, deleteHandler endpointport.DeleteEndpointHandler, list endpointport.ListEndpointsHandler) handler.EndpointDependencies {

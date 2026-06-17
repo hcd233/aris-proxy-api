@@ -31,6 +31,7 @@ type routeParams struct {
 	EndpointHandler  handler.EndpointHandler
 	ModelHandler     handler.ModelHandler
 	AuditHandler     handler.AuditHandler
+	CronHandler      handler.CronHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
 	BlockedHandler   handler.BlockedHandler
@@ -53,6 +54,7 @@ func registerRoutes(params routeParams) {
 		EndpointHandler:  params.EndpointHandler,
 		ModelHandler:     params.ModelHandler,
 		AuditHandler:     params.AuditHandler,
+		CronHandler:      params.CronHandler,
 		OpenAIHandler:    params.OpenAIHandler,
 		AnthropicHandler: params.AnthropicHandler,
 		BlockedHandler:   params.BlockedHandler,

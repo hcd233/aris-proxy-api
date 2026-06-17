@@ -10,6 +10,8 @@ var (
 	proxyAPIKeyDAOSingleton    *ProxyAPIKeyDAO
 	modelCallAuditDAOSingleton *ModelCallAuditDAO
 	blockedDAOSingleton        *BlockedDAO
+	cronJobDAOSingleton        *CronJobDAO
+	cronCallAuditDAOSingleton  *CronCallAuditDAO
 )
 
 func init() {
@@ -22,6 +24,8 @@ func init() {
 	proxyAPIKeyDAOSingleton = &ProxyAPIKeyDAO{}
 	modelCallAuditDAOSingleton = &ModelCallAuditDAO{}
 	blockedDAOSingleton = &BlockedDAO{}
+	cronJobDAOSingleton = &CronJobDAO{}
+	cronCallAuditDAOSingleton = &CronCallAuditDAO{}
 }
 
 // GetUserDAO 获取用户DAO
@@ -90,4 +94,22 @@ func GetModelCallAuditDAO() *ModelCallAuditDAO {
 
 func GetBlockedDAO() *BlockedDAO {
 	return blockedDAOSingleton
+}
+
+// GetCronJobDAO 获取 CronJob DAO
+//
+//	@return *CronJobDAO
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func GetCronJobDAO() *CronJobDAO {
+	return cronJobDAOSingleton
+}
+
+// GetCronCallAuditDAO 获取 CronCallAudit DAO
+//
+//	@return *CronCallAuditDAO
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func GetCronCallAuditDAO() *CronCallAuditDAO {
+	return cronCallAuditDAOSingleton
 }

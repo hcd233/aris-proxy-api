@@ -11,6 +11,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
+	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
@@ -40,10 +42,43 @@ type Cron interface {
 //	@update 2026-06-01 10:00:00
 type CronRegistryEntry struct {
 	Name              string
+	Spec              string
+	Description       string
 	Enabled           func() bool
 	Factory           func(db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) Cron
 	LockTTL           time.Duration // 0 → constant.CronLockDefaultTTL
 	LockRenewInterval time.Duration // 0 → ttl / constant.CronLockDefaultRenewDivisor
+}
+
+// CronJobStore 定时任务元数据存储接口
+//
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+type CronJobStore interface {
+	Sync(ctx context.Context, jobs []*cronmgmtport.CronJobView) error
+	Get(ctx context.Context, name string) (*cronmgmtport.CronJobView, error)
+}
+
+// CronCallAuditStore 定时任务执行审计存储接口
+//
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+type CronCallAuditStore interface {
+	Save(ctx context.Context, audit *cronauditport.CronCallAuditView) error
+}
+
+var (
+	cronJobStore       CronJobStore
+	cronCallAuditStore CronCallAuditStore
+)
+
+// SetCronStores 设置 cron 任务元数据和审计存储
+//
+//	@author centonhuang
+//	@update 2026-06-17 10:00:00
+func SetCronStores(jobStore CronJobStore, auditStore CronCallAuditStore) {
+	cronJobStore = jobStore
+	cronCallAuditStore = auditStore
 }
 
 // DefaultCronRegistry 默认定时任务注册表，保留用于测试覆盖。生产由 buildRegistryEntries 构造
@@ -53,14 +88,29 @@ type CronRegistryEntry struct {
 var DefaultCronRegistry []CronRegistryEntry
 
 // InitCronJobs 初始化定时任务（每个 cron 自带分布式锁），返回创建的 cron 列表。
-func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) []Cron {
+func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository, jobStore CronJobStore, auditStore CronCallAuditStore) []Cron {
 	SetBootstrapContext(parentCtx)
+	SetCronStores(jobStore, auditStore)
 	var entries []CronRegistryEntry
 	if len(DefaultCronRegistry) > 0 {
 		entries = DefaultCronRegistry
 	} else {
 		entries = buildRegistryEntries()
 	}
+
+	if cronJobStore != nil {
+		jobs := lo.Map(entries, func(entry CronRegistryEntry, _ int) *cronmgmtport.CronJobView {
+			return &cronmgmtport.CronJobView{
+				Name:        entry.Name,
+				Spec:        entry.Spec,
+				Description: entry.Description,
+			}
+		})
+		if err := cronJobStore.Sync(parentCtx, jobs); err != nil {
+			logger.Logger().Error("[Cron] Sync cron jobs failed", zap.Error(err))
+		}
+	}
+
 	var crons []Cron
 	for _, entry := range entries {
 		if !entry.Enabled() {
@@ -81,29 +131,37 @@ func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.Pool
 func buildRegistryEntries() []CronRegistryEntry {
 	return []CronRegistryEntry{
 		{
-			Name:    constant.CronModuleSessionDeduplicate,
-			Enabled: func() bool { return config.CronSessionDeduplicateEnabled },
+			Name:        constant.CronModuleSessionDeduplicate,
+			Spec:        constant.CronSpecSessionDeduplicate,
+			Description: constant.CronDescriptionSessionDeduplicate,
+			Enabled:     func() bool { return config.CronSessionDeduplicateEnabled },
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
 				return NewSessionDeduplicateCron(db, cache)
 			},
 		},
 		{
-			Name:    constant.CronModuleSoftDeletePurge,
-			Enabled: func() bool { return config.CronSoftDeletePurgeEnabled },
+			Name:        constant.CronModuleSoftDeletePurge,
+			Spec:        constant.CronSpecSoftDeletePurge,
+			Description: constant.CronDescriptionSoftDeletePurge,
+			Enabled:     func() bool { return config.CronSoftDeletePurgeEnabled },
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
 				return NewSoftDeletePurgeCron(db, cache)
 			},
 		},
 		{
-			Name:    constant.CronModuleThinkExtract,
-			Enabled: func() bool { return config.CronThinkExtractEnabled },
+			Name:        constant.CronModuleThinkExtract,
+			Spec:        constant.CronSpecThinkExtract,
+			Description: constant.CronDescriptionThinkExtract,
+			Enabled:     func() bool { return config.CronThinkExtractEnabled },
 			Factory: func(_ *gorm.DB, _ *pool.PoolManager, cache *redis.Client, thinkRepo conversation.ThinkExtractRepository) Cron {
 				return NewThinkExtractCron(thinkRepo, cache)
 			},
 		},
 		{
-			Name:    constant.CronModuleBlockedHitSync,
-			Enabled: func() bool { return true },
+			Name:        constant.CronModuleBlockedHitSync,
+			Spec:        constant.CronSpecBlockedHitSync,
+			Description: constant.CronDescriptionBlockedHitSync,
+			Enabled:     func() bool { return true },
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
 				blockedRepo := repository.NewBlockedRepository(db)
 				hitCache := cachepkg.NewBlockedHitCache(cache)

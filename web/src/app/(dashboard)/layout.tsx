@@ -35,6 +35,7 @@ import {
   Share2,
   ScrollText,
   Ban,
+  Timer,
 } from "lucide-react";
 
 interface NavItem {
@@ -84,9 +85,21 @@ const navItems: NavItem[] = [
     adminOnly: true,
   },
   {
-    label: "Audit",
-    href: "/audit/",
+    label: "Model Call Audit",
+    href: "/model-call-audit/",
     icon: <ScrollText className="size-4" />,
+  },
+  {
+    label: "Cron",
+    href: "/cron/",
+    icon: <Timer className="size-4" />,
+    adminOnly: true,
+  },
+  {
+    label: "Cron Audit",
+    href: "/cron-audit/",
+    icon: <ScrollText className="size-4" />,
+    adminOnly: true,
   },
   {
     label: "Profile",

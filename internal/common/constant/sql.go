@@ -33,6 +33,14 @@ const (
 	FieldGithubBindID                = "github_bind_id"
 	FieldGoogleBindID                = "google_bind_id"
 
+	FieldSpec        = "spec"
+	FieldCronName    = "cron_name"
+	FieldStartedAt   = "started_at"
+	FieldEndedAt     = "ended_at"
+	FieldDurationMs  = "duration_ms"
+	FieldStatus      = "status"
+	FieldDescription = "description"
+
 	FieldTraceID                  = "trace_id"
 	FieldInputTokens              = "input_tokens"
 	FieldOutputTokens             = "output_tokens"
@@ -208,4 +216,40 @@ var (
 
 	// MigrateMessageBatchSize checksum 迁移与 dedup 每批处理记录数
 	MigrateMessageBatchSize = 1000
+
+	FieldTableCronJob       = "cron_jobs"
+	FieldTableCronCallAudit = "cron_call_audits"
+
+	CronAuditPaginateWhereDeletedAtZero = "cron_call_audits.deleted_at = 0"
+	CronAuditDistinctWhereDeletedAtZero = "cca.deleted_at = 0"
+
+	CronAuditPaginateWhereCreatedAtGTE = "cron_call_audits.created_at >= ?"
+	CronAuditPaginateWhereCreatedAtLTE = "cron_call_audits.created_at <= ?"
+	CronAuditDistinctWhereCreatedAtGTE = "cca.created_at >= ?"
+	CronAuditDistinctWhereCreatedAtLTE = "cca.created_at <= ?"
+
+	CronAuditDistinctSelectType = "DISTINCT cron_name"
+	CronAuditDistinctWhereType  = "cron_name LIKE ?"
+	CronAuditDistinctOrderType  = "cron_name ASC"
+	CronAuditDistinctLimit      = 50
+
+	CronCallAuditRepoFieldIDQualified        = "cron_call_audits.id"
+	CronCallAuditRepoFieldCreatedAtQualified = "cron_call_audits.created_at"
+
+	CronCallAuditRepoFields = []string{
+		CronCallAuditRepoFieldIDQualified,
+		FieldCronName,
+		FieldTraceID,
+		FieldStartedAt,
+		FieldEndedAt,
+		FieldDurationMs,
+		FieldStatus,
+		FieldMessage,
+		CronCallAuditRepoFieldCreatedAtQualified,
+	}
+
+	CronJobWhereNameEquals = "name = ?"
+
+	CronPanicMessageTemplate = "panic: %v"
+	CronJobNotFoundMessage   = "cron job not found: "
 )

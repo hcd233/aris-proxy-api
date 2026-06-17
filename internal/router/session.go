@@ -19,7 +19,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessions",
 		Method:      http.MethodGet,
-		Path:        "/list",
+		Path:        constant.RoutePathList,
 		Summary:     "ListSessions",
 		Description: "Paginate session list for current user (JWT auth)",
 		Tags:        []string{constant.TagSession},
@@ -107,7 +107,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessionOptions",
 		Method:      http.MethodGet,
-		Path:        "/option/list",
+		Path:        "/option" + constant.RoutePathOptionList,
 		Summary:     "ListSessionOptions",
 		Description: "Get available options for session filter fields (score, model)",
 		Tags:        []string{constant.TagSession},

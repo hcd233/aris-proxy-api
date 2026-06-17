@@ -38,7 +38,7 @@ func NewBlockedHitSyncCron(db *gorm.DB, blockedRepo blocked.BlockedRepository, h
 
 func (c *blockedHitSyncCron) Start() error {
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleBlockedHitSync)
-	_, err := c.cron.AddFunc(constant.CronSpecBlockedHitSync, wrapCronFunc(c.locker, key, LockOptions{}, c.sync))
+	_, err := c.cron.AddFunc(constant.CronSpecBlockedHitSync, wrapCronFunc(constant.CronModuleBlockedHitSync, c.locker, key, LockOptions{}, c.sync))
 	if err != nil {
 		return err
 	}

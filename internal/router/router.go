@@ -27,6 +27,7 @@ type APIRouterDependencies struct {
 	EndpointHandler  handler.EndpointHandler
 	ModelHandler     handler.ModelHandler
 	AuditHandler     handler.AuditHandler
+	CronHandler      handler.CronHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
 	BlockedHandler   handler.BlockedHandler
@@ -94,6 +95,12 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
 	initAuditRouter(auditGroup, deps.AuditHandler, deps.DB, deps.Cache, deps.AccessSigner)
+
+	cronGroup := huma.NewGroup(v1Group, "/cron")
+	initCronRouter(cronGroup, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner)
+
+	cronAuditGroup := huma.NewGroup(v1Group, "/cron-audit")
+	initCronAuditRouter(cronAuditGroup, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	blockedGroup := huma.NewGroup(v1Group, "/block")
 	initBlockedRouter(blockedGroup, deps.BlockedHandler, deps.DB, deps.Cache, deps.AccessSigner)

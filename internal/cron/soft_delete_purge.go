@@ -71,7 +71,7 @@ func (c *SoftDeletePurgeCron) Stop() {
 func (c *SoftDeletePurgeCron) Start() error {
 	// 每周日凌晨4:00执行，确保所有任务完成后再清理
 	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSoftDeletePurge)
-	entryID, err := c.cron.AddFunc(constant.CronSpecSoftDeletePurge, wrapCronFunc(c.locker, key, LockOptions{}, c.purge))
+	entryID, err := c.cron.AddFunc(constant.CronSpecSoftDeletePurge, wrapCronFunc(constant.CronModuleSoftDeletePurge, c.locker, key, LockOptions{}, c.purge))
 	if err != nil {
 		logger.Logger().Error("[SoftDeletePurgeCron] Add func error", zap.Error(err))
 		return err

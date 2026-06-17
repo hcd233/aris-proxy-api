@@ -139,6 +139,8 @@ const (
 	TagAnthropic = "Anthropic"
 	TagAPIKey    = "APIKey"
 	TagAudit     = "Audit"
+	TagCron      = "Cron"
+	TagCronAudit = "CronAudit"
 	TagEndpoint  = "Endpoint"
 	TagHealth    = "Health"
 	TagModel     = "Model"
@@ -147,7 +149,8 @@ const (
 	TagBlocked   = "Blocked"
 
 	// Router sub-paths
-	RoutePathList = "/list"
+	RoutePathList       = "/list"
+	RoutePathOptionList = "/option/list"
 
 	// Router path/query/field constants
 	WhereIDEquals = "id = ?"

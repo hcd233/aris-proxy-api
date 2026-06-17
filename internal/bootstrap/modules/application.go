@@ -10,6 +10,11 @@ import (
 	blockedcommand "github.com/hcd233/aris-proxy-api/internal/application/blocked/command"
 	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
 	blockedquery "github.com/hcd233/aris-proxy-api/internal/application/blocked/query"
+	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
+	cronauditquery "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/query"
+	cronmgmtcommand "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/command"
+	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
+	cronmgmtquery "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
@@ -74,6 +79,10 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewFirstTokenLatencyByUserHandler,
 		auditquery.NewListAuditOptionHandler,
 		NewAuditService,
+		NewListCronJobsHandler,
+		NewUpdateCronJobHandler,
+		NewListCronCallAuditsHandler,
+		NewListCronCallAuditOptionsHandler,
 		NewListSessionsByUserHandler,
 		NewGetSessionByUserHandler,
 		NewGetSessionMetaByUserHandler,
@@ -293,4 +302,20 @@ func NewDeleteBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockeda
 
 func NewListBlockedHandler(repo blockeddomain.BlockedRepository) blockedport.ListBlockedHandler {
 	return blockedquery.NewListBlockedHandler(repo)
+}
+
+func NewListCronJobsHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.ListCronJobsHandler {
+	return cronmgmtquery.NewListCronJobsHandler(repo)
+}
+
+func NewUpdateCronJobHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.UpdateCronJobHandler {
+	return cronmgmtcommand.NewUpdateCronJobHandler(repo)
+}
+
+func NewListCronCallAuditsHandler(repo cronauditport.CronCallAuditRepository) cronauditport.ListCronCallAuditsHandler {
+	return cronauditquery.NewListCronCallAuditsHandler(repo)
+}
+
+func NewListCronCallAuditOptionsHandler(repo cronauditport.CronCallAuditRepository) cronauditport.ListCronCallAuditOptionsHandler {
+	return cronauditquery.NewListCronCallAuditOptionsHandler(repo)
 }

@@ -28,4 +28,6 @@ var Models = []any{
 	&ProxyAPIKey{},
 	&ModelCallAudit{},
 	&Blocked{},
+	&CronJob{},
+	&CronCallAudit{},
 }

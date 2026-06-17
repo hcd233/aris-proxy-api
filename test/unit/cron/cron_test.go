@@ -68,7 +68,7 @@ func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron 
 	}
 
 	cron.StopCronJobsWithContext(context.Background(), nil)
-	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil)
 
 	if cron.CronInstanceCount(crons) != 0 {
 		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount(crons))
@@ -116,7 +116,7 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cr
 		},
 	}
 
-	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil)
 
 	if cron.CronInstanceCount(crons) != 1 {
 		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
@@ -153,7 +153,7 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 		},
 	}
 
-	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil)
+	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil)
 
 	if cron.CronInstanceCount(crons) != 1 {
 		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
