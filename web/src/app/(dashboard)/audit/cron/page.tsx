@@ -23,6 +23,12 @@ import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -273,7 +279,6 @@ export default function CronAuditPage() {
                     <TableHead>TraceID</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Duration (ms)</TableHead>
-                    <TableHead>Error Message</TableHead>
                     <TableHead>Metadata</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -292,14 +297,30 @@ export default function CronAuditPage() {
                         {log.traceId.slice(-6) || "—"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusBadgeVariant(log.status)} className="text-xs">
-                          {log.status}
-                        </Badge>
+                        {log.status !== "success" && log.message ? (
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <button type="button">
+                                    <Badge variant={statusBadgeVariant(log.status)} className="text-xs">
+                                      {log.status}
+                                    </Badge>
+                                  </button>
+                                }
+                              />
+                              <TooltipContent side="top" className="max-w-xs">
+                                <span>{log.message}</span>
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        ) : (
+                          <Badge variant={statusBadgeVariant(log.status)} className="text-xs">
+                            {log.status}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{log.durationMs}</TableCell>
-                      <TableCell className="max-w-[200px] truncate text-xs text-destructive">
-                        {log.message || "—"}
-                      </TableCell>
                       <TableCell className="max-w-[250px] truncate text-xs text-muted-foreground">
                         {formatMetadata(log.metadata)}
                       </TableCell>
