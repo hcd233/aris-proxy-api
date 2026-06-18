@@ -63,11 +63,6 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
               </span>
             )}
           </div>
-          {call.id && open && (
-            <span className="font-mono text-[10px] text-muted-foreground/60">
-              {call.id}
-            </span>
-          )}
         </div>
         {open ? (
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
@@ -77,6 +72,13 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
       </button>
       {open && (
         <div className="border-t border-border bg-background/40 min-w-0">
+          {call.id && (
+            <div className="border-b border-border/50 px-3 py-1.5">
+              <span className="font-mono text-[10px] text-muted-foreground/60">
+                {call.id}
+              </span>
+            </div>
+          )}
           <div className="px-3 py-2.5">
             <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               Input
