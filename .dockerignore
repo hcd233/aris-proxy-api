@@ -34,3 +34,7 @@ coverage.html
 .codebuddy/
 CODEBUDDY.md
 CLAUDE.md
+
+# Frontend build artifacts (CI downloads web/out/ separately, must NOT exclude it)
+web/node_modules/
+web/.next/
