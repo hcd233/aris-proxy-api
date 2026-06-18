@@ -76,12 +76,12 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
         )}
       </button>
       {open && (
-        <div className="border-t border-border bg-background/40">
+        <div className="border-t border-border bg-background/40 min-w-0">
           <div className="px-3 py-2.5">
             <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               Input
             </p>
-            <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90">
+            <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
               {args || "{}"}
             </pre>
           </div>
@@ -90,7 +90,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
               <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                 Output
               </p>
-              <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90">
+              <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
                 {out}
               </pre>
             </div>

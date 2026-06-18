@@ -33,17 +33,6 @@ import { ScoreStars } from "./score-stars";
 import { ToolsRail } from "./tools-rail";
 import { ReadingLayout } from "@/components/shared/reading-layout";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { AlertTriangle } from "lucide-react";
 
 export default function SessionDetailClient({
   sessionId,
@@ -251,7 +240,7 @@ export default function SessionDetailClient({
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[680px] space-y-5 py-6">
+      <div className="mx-auto w-full max-w-[768px] space-y-5 py-6">
         <Skeleton className="h-8 w-48" />
         <div className="space-y-5">
           <Skeleton className="ml-auto h-20 w-3/4 rounded-[20px]" />
@@ -372,16 +361,38 @@ export default function SessionDetailClient({
         <Share2 className="size-5" />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => setDeleteConfirmOpen(true)}
-        className="size-10 text-foreground/70 hover:text-destructive"
-        aria-label="Delete session"
-        title="Delete session"
-      >
-        <Trash2 className="size-5" />
-      </Button>
+      {deleteConfirmOpen ? (
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/50 px-2 py-1">
+          <span className="text-xs text-muted-foreground">Delete?</span>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="rounded px-1.5 py-0.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+          >
+            {deleting ? "..." : "Yes"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteConfirmOpen(false)}
+            disabled={deleting}
+            className="rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            No
+          </button>
+        </div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setDeleteConfirmOpen(true)}
+          className="size-10 text-foreground/70 hover:text-destructive"
+          aria-label="Delete session"
+          title="Delete session"
+        >
+          <Trash2 className="size-5" />
+        </Button>
+      )}
 
       {metadata.toolCount > 0 && (
         <Button
@@ -479,33 +490,6 @@ export default function SessionDetailClient({
         onOpenChange={setShareOpen}
       />
 
-      <AlertDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-destructive" />
-              Are you sure?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this session and all its messages.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
