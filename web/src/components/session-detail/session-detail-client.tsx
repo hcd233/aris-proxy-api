@@ -180,7 +180,7 @@ export default function SessionDetailClient({
   });
 
   useEffect(() => {
-    const root = isMobile ? messagesScrollRootRef.current : null;
+    const root = messagesScrollRootRef.current;
     const sentinel = messagesSentinelRef.current;
     if (!sentinel || !messagesList.hasMore) return;
     const io = new IntersectionObserver(
@@ -361,27 +361,7 @@ export default function SessionDetailClient({
         <Share2 className="size-5" />
       </Button>
 
-      {deleteConfirmOpen ? (
-        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/50 px-2 py-1">
-          <span className="text-xs text-muted-foreground">Delete?</span>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="rounded px-1.5 py-0.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
-          >
-            {deleting ? "..." : "Yes"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteConfirmOpen(false)}
-            disabled={deleting}
-            className="rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-          >
-            No
-          </button>
-        </div>
-      ) : (
+      <div className="relative">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -392,7 +372,28 @@ export default function SessionDetailClient({
         >
           <Trash2 className="size-5" />
         </Button>
-      )}
+        {deleteConfirmOpen && (
+          <div className="absolute right-0 top-full z-50 mt-1 inline-flex items-center gap-1 rounded-md border border-border bg-popover p-1 shadow-md">
+            <span className="px-1 text-xs text-muted-foreground">Delete?</span>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded px-1.5 py-0.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+            >
+              {deleting ? "..." : "Yes"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={deleting}
+              className="rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              No
+            </button>
+          </div>
+        )}
+      </div>
 
       {metadata.toolCount > 0 && (
         <Button
