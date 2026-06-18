@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScoreDotInput } from "@/components/session-detail/score-dot-input";
 import { PaginationBar } from "@/components/pagination-bar";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -488,18 +489,11 @@ export default function SessionsPage() {
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map((v) => (
-                                <button
-                                  key={v}
-                                  type="button"
-                                  disabled={scoring === s.id}
-                                  onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
-                                  className="rounded-full bg-muted-foreground/30 transition-colors hover:bg-primary disabled:opacity-30 size-2"
-                                  aria-label={`Rate ${v}`}
-                                />
-                              ))}
-                            </div>
+                            <ScoreDotInput
+                              onPick={(v) => setScoreConfirm({ id: s.id, value: v })}
+                              disabled={scoring === s.id}
+                              size={8}
+                            />
                           )}
                           <Badge variant="secondary" className="text-xs">
                             {s.messageCount ?? 0} msgs
@@ -654,18 +648,11 @@ export default function SessionsPage() {
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-0.5">
-                                {[1, 2, 3, 4, 5].map((v) => (
-                                  <button
-                                    key={v}
-                                    type="button"
-                                    disabled={scoring === s.id}
-                                    onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
-                                    className="rounded-full bg-muted-foreground/30 transition-colors hover:bg-primary disabled:opacity-30 size-2"
-                                    aria-label={`Rate ${v}`}
-                                  />
-                                ))}
-                              </div>
+                              <ScoreDotInput
+                                onPick={(v) => setScoreConfirm({ id: s.id, value: v })}
+                                disabled={scoring === s.id}
+                                size={8}
+                              />
                             )}
                           </div>
                         </TableCell>

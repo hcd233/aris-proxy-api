@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ScoreDotInput } from "./score-dot-input";
 
 interface ScoreStarsProps {
   score: number | undefined;
@@ -78,18 +79,6 @@ export function ScoreStars({
   }
 
   return (
-    <span className="inline-flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((v) => (
-        <button
-          key={v}
-          type="button"
-          disabled={scoring}
-          onClick={() => setConfirmValue(v)}
-          className="rounded-full bg-muted-foreground/30 transition-colors hover:bg-primary disabled:opacity-30"
-          style={{ width: `${size}px`, height: `${size}px` }}
-          aria-label={`Rate ${v}`}
-        />
-      ))}
-    </span>
+    <ScoreDotInput onPick={setConfirmValue} disabled={scoring} size={size} />
   );
 }
