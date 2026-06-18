@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ScoreStarsProps {
   score: number | undefined;
@@ -26,12 +27,13 @@ export function ScoreStars({
           {[1, 2, 3, 4, 5].map((v) => (
             <span
               key={v}
-              className={v <= score ? "text-primary" : "text-muted-foreground/30"}
-              style={{ fontSize: `${size}px`, lineHeight: 1 }}
+              className={cn(
+                "inline-block rounded-full",
+                v <= score ? "bg-primary" : "bg-muted-foreground/30",
+              )}
+              style={{ width: `${size}px`, height: `${size}px` }}
               aria-hidden
-            >
-              ★
-            </span>
+            />
           ))}
         </span>
         <button
@@ -83,12 +85,10 @@ export function ScoreStars({
           type="button"
           disabled={scoring}
           onClick={() => setConfirmValue(v)}
-          className="text-muted-foreground/30 transition-colors hover:text-primary disabled:opacity-30"
-          style={{ fontSize: `${size}px`, lineHeight: 1 }}
-          aria-label={`Rate ${v} star${v > 1 ? "s" : ""}`}
-        >
-          ★
-        </button>
+          className="rounded-full bg-muted-foreground/30 transition-colors hover:bg-primary disabled:opacity-30"
+          style={{ width: `${size}px`, height: `${size}px` }}
+          aria-label={`Rate ${v}`}
+        />
       ))}
     </span>
   );
