@@ -449,9 +449,15 @@ export default function SessionsPage() {
                         <div className="flex items-center gap-2 shrink-0">
                           {s.score != null ? (
                             <div className="flex items-center gap-1">
-                              <Badge variant="secondary" className="text-xs tabular-nums">
-                                {s.score}
-                              </Badge>
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((v) => (
+                                  <span
+                                    key={v}
+                                    className={`inline-block size-2 rounded-full ${v <= (s.score ?? 0) ? "bg-primary" : "bg-muted-foreground/30"}`}
+                                    aria-hidden
+                                  />
+                                ))}
+                              </div>
                               <button
                                 type="button"
                                 disabled={scoring === s.id}
@@ -489,10 +495,9 @@ export default function SessionsPage() {
                                   type="button"
                                   disabled={scoring === s.id}
                                   onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
-                                  className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/50 transition-colors hover:text-foreground disabled:opacity-30"
-                                >
-                                  {v}
-                                </button>
+                                  className="rounded-full bg-muted-foreground/30 transition-colors hover:bg-primary disabled:opacity-30 size-2"
+                                  aria-label={`Rate ${v}`}
+                                />
                               ))}
                             </div>
                           )}
@@ -610,7 +615,15 @@ export default function SessionsPage() {
                           <div className="flex justify-center">
                             {s.score != null ? (
                               <div className="flex items-center gap-1">
-                                <span className="text-sm font-medium tabular-nums">{s.score}</span>
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((v) => (
+                                    <span
+                                      key={v}
+                                      className={`inline-block size-2 rounded-full ${v <= (s.score ?? 0) ? "bg-primary" : "bg-muted-foreground/30"}`}
+                                      aria-hidden
+                                    />
+                                  ))}
+                                </div>
                                 <button
                                   type="button"
                                   disabled={scoring === s.id}
@@ -648,10 +661,9 @@ export default function SessionsPage() {
                                     type="button"
                                     disabled={scoring === s.id}
                                     onClick={(e) => { e.stopPropagation(); setScoreConfirm({ id: s.id, value: v }); }}
-                                    className="rounded px-1 py-0.5 text-xs tabular-nums text-muted-foreground/30 transition-colors hover:text-foreground disabled:opacity-30"
-                                  >
-                                    {v}
-                                  </button>
+                                    className="rounded-full bg-muted-foreground/30 transition-colors hover:bg-primary disabled:opacity-30 size-2"
+                                    aria-label={`Rate ${v}`}
+                                  />
                                 ))}
                               </div>
                             )}

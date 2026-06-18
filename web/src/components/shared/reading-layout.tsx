@@ -110,20 +110,20 @@ export function ReadingLayout({
   return (
     <div className="-mx-4 -mt-4 flex min-h-[calc(100vh-6rem)] flex-col bg-background md:-mx-8 md:-mt-8 lg:-mx-10 lg:-mt-10">
       <header className="sticky top-[-1rem] z-30 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:backdrop-blur md:top-[-2rem] lg:top-[-2.5rem]">
-        <div className="mx-auto flex max-w-[680px] items-center gap-3 px-4 pt-[calc(1rem+0.25rem)] pb-3 md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]">
+        <div className="mx-auto flex max-w-[768px] items-center gap-3 px-4 pt-[calc(1rem+0.25rem)] pb-3 md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]">
           {header}
         </div>
       </header>
 
-      <div className="flex flex-1">
-        <div className="mx-auto w-full max-w-[680px] flex-1 px-4 py-6 sm:px-6">
+      <div className="flex flex-1 min-h-0">
+        <div className="mx-auto w-full max-w-[768px] flex-1 px-4 py-6 sm:px-6">
           {children}
         </div>
 
         {toolsCount > 0 && (
           <aside
             className={cn(
-              "border-l border-border/70 bg-card overflow-hidden transition-[width] duration-200 ease-out",
+              "h-full border-l border-border/70 bg-card overflow-hidden transition-[width] duration-200 ease-out shrink-0",
               toolsOpen ? "w-[280px]" : "w-0",
             )}
           >

@@ -79,7 +79,7 @@ function ShareErrorView({ error }: { error: ShareError }) {
 
 function ShareLoading() {
   return (
-    <div className="mx-auto w-full max-w-[680px] space-y-5 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-[768px] space-y-5 px-4 py-10 sm:px-6">
       <Skeleton className="h-8 w-48" />
       <div className="space-y-5">
         <Skeleton className="ml-auto h-20 w-3/4 rounded-[20px]" />
