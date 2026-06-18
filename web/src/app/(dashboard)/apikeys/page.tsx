@@ -26,7 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Key, Plus, Trash2, Copy, Check, AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Key, Plus, Trash2, Copy, Check, AlertTriangle, Search } from "lucide-react";
+import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -316,34 +317,11 @@ export default function APIKeysPage() {
               </Table>
               )}
 
-              {pageInfo.total > 0 && (
-                <div className="mt-4 flex items-center justify-between gap-4">
-                  <p className="hidden text-sm text-muted-foreground md:block">
-                    {pageInfo.total} key{pageInfo.total !== 1 ? "s" : ""} total
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pageInfo.page <= 1}
-                      onClick={() => fetchKeys(pageInfo.page - 1, pageInfo.pageSize, searchQuery || undefined)}
-                    >
-                      <ChevronLeft className="size-4" />
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {pageInfo.page} / {Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize))}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pageInfo.page >= Math.ceil(pageInfo.total / pageInfo.pageSize)}
-                      onClick={() => fetchKeys(pageInfo.page + 1, pageInfo.pageSize, searchQuery || undefined)}
-                    >
-                      <ChevronRight className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <PaginationBar
+                pageInfo={pageInfo}
+                onChange={(page, pageSize) => fetchKeys(page, pageSize, searchQuery || undefined)}
+                totalLabel="keys"
+              />
             </>
           )}
         </CardContent>

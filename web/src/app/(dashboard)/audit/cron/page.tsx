@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import type { CronCallAuditItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, ScrollText, Search, X } from "lucide-react";
+import { ScrollText, Search, X } from "lucide-react";
+import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
@@ -68,14 +70,15 @@ function formatMetadata(metadata: Record<string, number> | undefined | null): st
 }
 
 export default function CronAuditPage() {
+  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cronAudit.page", 1);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.cronAudit.pageSize", 20);
   const [logs, setLogs] = useState<CronCallAuditItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [pageInputValue, setPageInputValue] = useState("1");
   const [filterType, setFilterType] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [typeOptions, setTypeOptions] = useState<string[]>([]);
@@ -113,7 +116,8 @@ export default function CronAuditPage() {
         setLogs(rsp.logs ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
-          setPageInputValue(String(rsp.pageInfo.page));
+          setPersistedPage(rsp.pageInfo.page);
+          setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to load cron audit logs");
@@ -121,14 +125,14 @@ export default function CronAuditPage() {
         setLoading(false);
       }
     },
-    [],
+    [setPersistedPage, setPersistedPageSize],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchLogs(1, 20, "", "24h", "", "", [], []);
+    fetchLogs(persistedPage, persistedPageSize, "", "24h", "", "", [], []);
   }, [fetchLogs]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const fetchOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
     const { startTime, endTime } = computeRange(range, cs, ce);
@@ -149,11 +153,6 @@ export default function CronAuditPage() {
     fetchOptions(timeRange, customStart, customEnd);
   }, [timeRange, customStart, customEnd, fetchOptions]);
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),
-    [pageInfo],
-  );
 
   const refresh = (page: number, pageSize?: number) =>
     fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterType, filterStatus);
@@ -330,67 +329,11 @@ export default function CronAuditPage() {
               </Table>
             )}
 
-            {pageInfo.total > 0 && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <div className="hidden items-center gap-3 md:flex">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page <= 1}
-                    onClick={() => refresh(pageInfo.page - 1)}
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <p className="hidden text-sm text-muted-foreground md:block">
-                    {pageInfo.total} log{pageInfo.total !== 1 ? "s" : ""} total
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page <= 1}
-                    onClick={() => refresh(pageInfo.page - 1)}
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="text-muted-foreground">Page</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={totalPages}
-                      value={pageInputValue}
-                      onChange={(e) => setPageInputValue(e.target.value)}
-                      className="h-8 w-14 rounded-md border border-input bg-transparent px-2 py-1 text-center text-sm tabular-nums focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          let page = parseInt(pageInputValue, 10);
-                          if (Number.isNaN(page)) page = 1;
-                          page = Math.max(1, Math.min(page, totalPages));
-                          refresh(page);
-                        }
-                      }}
-                      onBlur={() => {
-                        let page = parseInt(pageInputValue, 10);
-                        if (Number.isNaN(page)) page = 1;
-                        page = Math.max(1, Math.min(page, totalPages));
-                        refresh(page);
-                      }}
-                    />
-                    <span className="text-muted-foreground">/ {totalPages}</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page >= totalPages}
-                    onClick={() => refresh(pageInfo.page + 1)}
-                  >
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <PaginationBar
+              pageInfo={pageInfo}
+              onChange={(page, pageSize) => refresh(page, pageSize)}
+              totalLabel="logs"
+            />
           </CardContent>
         </Card>
       </div>

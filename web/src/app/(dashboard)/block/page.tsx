@@ -34,7 +34,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Ban, Plus, Search, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Ban, Plus, Search, Trash2, AlertTriangle } from "lucide-react";
+import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -45,7 +46,7 @@ export default function BlockPage() {
   const [items, setItems] = useState<BlockedItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.blocked.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.blocked.pageSize", 20);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -110,8 +111,6 @@ export default function BlockPage() {
       toast.error("Failed to delete blocked word");
     }
   }, [deleteTarget, fetchItems, persistedPage, persistedPageSize]);
-
-  const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
 
   return (
     <PermissionGuard adminOnly>
@@ -202,22 +201,11 @@ export default function BlockPage() {
                     </TableBody>
                   </Table>
                 )}
-                {totalPages > 1 && (
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{pageInfo.total} items total</span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" disabled={pageInfo.page <= 1}
-                        onClick={() => fetchItems(pageInfo.page - 1, pageInfo.pageSize, searchQuery || undefined)}>
-                        <ChevronLeft className="size-4" />
-                      </Button>
-                      <span className="text-sm tabular-nums text-muted-foreground">Page {pageInfo.page} / {totalPages}</span>
-                      <Button variant="outline" size="sm" disabled={pageInfo.page >= totalPages}
-                        onClick={() => fetchItems(pageInfo.page + 1, pageInfo.pageSize, searchQuery || undefined)}>
-                        <ChevronRight className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <PaginationBar
+                  pageInfo={pageInfo}
+                  onChange={(page, pageSize) => fetchItems(page, pageSize, searchQuery || undefined)}
+                  totalLabel="items"
+                />
               </>
             )}
           </CardContent>

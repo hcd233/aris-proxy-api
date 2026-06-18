@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, Server, AlertTriangle, ChevronLeft, ChevronRight, Search, ListFilter, Check } from "lucide-react";
+import { Plus, Trash2, Pencil, Server, AlertTriangle, Search } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import {
@@ -41,12 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { PaginationBar } from "@/components/pagination-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EndpointForm {
@@ -77,7 +72,6 @@ export default function EndpointsPage() {
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pageInputValue, setPageInputValue] = useState(String(persistedPage));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<EndpointForm>(emptyForm);
@@ -95,8 +89,7 @@ export default function EndpointsPage() {
       setEndpoints(rsp.endpoints ?? []);
       if (rsp.pageInfo) {
         setPageInfo(rsp.pageInfo);
-        setPageInputValue(String(rsp.pageInfo.page));
-        setPersistedPage(rsp.pageInfo.page);
+          setPersistedPage(rsp.pageInfo.page);
         if (validSizes.includes(rsp.pageInfo.pageSize)) {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
@@ -113,11 +106,6 @@ export default function EndpointsPage() {
     fetchEndpoints(persistedPage, persistedPageSize);
   }, [fetchEndpoints]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),
-    [pageInfo],
-  );
 
   const refresh = (page: number, pageSize?: number) =>
     fetchEndpoints(page, pageSize ?? pageInfo.pageSize, searchQuery || undefined);
@@ -417,77 +405,11 @@ export default function EndpointsPage() {
                 </Table>
                 )}
 
-                {pageInfo.total > 0 && (
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                    <div className="hidden items-center gap-3 md:flex">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={<Button variant="outline" size="sm" className="gap-1.5" />}
-                        >
-                          <ListFilter size={14} />
-                          {pageInfo.pageSize} / page
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          {[20, 50, 100].map((size) => (
-                            <DropdownMenuItem key={size} onClick={() => refresh(1, size)}>
-                              {size === pageInfo.pageSize && <Check className="size-4" />}
-                              <span className={size === pageInfo.pageSize ? "ml-0" : "ml-6"}>
-                                {size} per page
-                              </span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <p className="hidden text-sm text-muted-foreground md:block">
-                        {pageInfo.total} endpoint{pageInfo.total !== 1 ? "s" : ""} total
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pageInfo.page <= 1}
-                        onClick={() => fetchEndpoints(pageInfo.page - 1, pageInfo.pageSize, searchQuery || undefined)}
-                      >
-                        <ChevronLeft className="size-4" />
-                      </Button>
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <span className="text-muted-foreground">Page</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={totalPages}
-                          value={pageInputValue}
-                          onChange={(e) => setPageInputValue(e.target.value)}
-                          className="h-8 w-14 rounded-md border border-input bg-transparent px-2 py-1 text-center text-sm tabular-nums focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              let page = parseInt(pageInputValue, 10);
-                              if (Number.isNaN(page)) page = 1;
-                              page = Math.max(1, Math.min(page, totalPages));
-                              refresh(page);
-                            }
-                          }}
-                          onBlur={() => {
-                            let page = parseInt(pageInputValue, 10);
-                            if (Number.isNaN(page)) page = 1;
-                            page = Math.max(1, Math.min(page, totalPages));
-                            refresh(page);
-                          }}
-                        />
-                        <span className="text-muted-foreground">/ {totalPages}</span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pageInfo.page >= totalPages}
-                        onClick={() => fetchEndpoints(pageInfo.page + 1, pageInfo.pageSize, searchQuery || undefined)}
-                      >
-                        <ChevronRight className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <PaginationBar
+                  pageInfo={pageInfo}
+                  onChange={(page, pageSize) => refresh(page, pageSize)}
+                  totalLabel="endpoints"
+                />
               </>
             )}
           </CardContent>

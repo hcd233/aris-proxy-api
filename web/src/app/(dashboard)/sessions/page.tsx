@@ -18,10 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  ChevronLeft,
-  ChevronRight,
   MessageSquare,
-  ListFilter,
   Check,
   ArrowUp,
   ArrowDown,
@@ -31,12 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { PaginationBar } from "@/components/pagination-bar";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
@@ -84,7 +76,6 @@ export default function SessionsPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [pageInputValue, setPageInputValue] = useState(String(persistedPage));
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.sessions.timeRange", "30d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.sessions.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.sessions.customEnd", "");
@@ -167,7 +158,6 @@ export default function SessionsPage() {
         setSessions(rsp.sessions ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
-          setPageInputValue(String(rsp.pageInfo.page));
           setPersistedPage(rsp.pageInfo.page);
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
@@ -185,8 +175,6 @@ export default function SessionsPage() {
     fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "", [], []);
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-
-  const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
 
   const refresh = (page: number, pageSize?: number) =>
     fetchSessions(page, pageSize ?? pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel);
@@ -706,80 +694,11 @@ export default function SessionsPage() {
               </Table>
             )}
 
-              {/* Pagination */}
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <div className="hidden items-center gap-3 md:flex">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
-                      <ListFilter className="size-3.5" />
-                      {pageInfo.pageSize} / page
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      {[20, 50, 100, 200].map((size) => (
-                        <DropdownMenuItem
-                          key={size}
-                          onClick={() => fetchSessions(1, size, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel)}
-                        >
-                          {size === pageInfo.pageSize && (
-                            <Check className="size-4" />
-                          )}
-                          <span className={size === pageInfo.pageSize ? "ml-0" : "ml-6"}>
-                            {size} per page
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-<p className="hidden text-sm text-muted-foreground md:block">
-                      {pageInfo.total} session{pageInfo.total !== 1 ? "s" : ""} total
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page <= 1}
-                    onClick={() => refresh(pageInfo.page - 1)}
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="text-muted-foreground">Page</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={totalPages}
-                      value={pageInputValue}
-                      onChange={(e) => setPageInputValue(e.target.value)}
-                      className="h-8 w-14 rounded-md border border-input bg-transparent px-2 py-1 text-center text-sm tabular-nums focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          let page = parseInt(pageInputValue, 10);
-                          if (Number.isNaN(page)) page = 1;
-                          page = Math.max(1, Math.min(page, totalPages));
-                          refresh(page);
-                        }
-                      }}
-                      onBlur={() => {
-                        let page = parseInt(pageInputValue, 10);
-                        if (Number.isNaN(page)) page = 1;
-                        page = Math.max(1, Math.min(page, totalPages));
-                        refresh(page);
-                      }}
-                    />
-                    <span className="text-muted-foreground">/ {totalPages}</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page >= totalPages}
-                    onClick={() => refresh(pageInfo.page + 1)}
-                  >
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
+              <PaginationBar
+                pageInfo={pageInfo}
+                onChange={(page, pageSize) => refresh(page, pageSize)}
+                totalLabel="sessions"
+              />
             </>
           )}
           </CardContent>

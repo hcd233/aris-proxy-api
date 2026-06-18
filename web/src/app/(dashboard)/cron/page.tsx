@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import cronstrue from "cronstrue";
 import { api } from "@/lib/api-client";
 import type { CronJobItem, PageInfo } from "@/lib/types";
@@ -18,8 +19,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Search, Timer, Pencil, Lock } from "lucide-react";
+import { Search, Timer, Pencil, Lock } from "lucide-react";
 
+import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
@@ -39,11 +41,12 @@ function specToHuman(spec: string): string {
 }
 
 export default function CronPage() {
+  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cron.page", 1);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.cron.pageSize", 20);
   const [jobs, setJobs] = useState<CronJobItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pageInputValue, setPageInputValue] = useState("1");
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [editingJob, setEditingJob] = useState<CronJobItem | null>(null);
 
@@ -58,20 +61,21 @@ export default function CronPage() {
       setJobs(rsp.jobs ?? []);
       if (rsp.pageInfo) {
         setPageInfo(rsp.pageInfo);
-        setPageInputValue(String(rsp.pageInfo.page));
+        setPersistedPage(rsp.pageInfo.page);
+        setPersistedPageSize(rsp.pageInfo.pageSize);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load cron jobs");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setPersistedPage, setPersistedPageSize]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchJobs(1, 20, "");
+    fetchJobs(persistedPage, persistedPageSize, "");
   }, [fetchJobs]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleToggle = async (job: CronJobItem) => {
     if (job.type === "core") {
@@ -108,11 +112,6 @@ export default function CronPage() {
     );
     toast.success(`${editingJob.name} schedule updated`);
   }, [editingJob]);
-
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize)),
-    [pageInfo]
-  );
 
   const refresh = (page: number, pageSize?: number) =>
     fetchJobs(page, pageSize ?? pageInfo.pageSize, searchQuery);
@@ -222,57 +221,11 @@ export default function CronPage() {
               </Table>
             )}
 
-            {pageInfo.total > 0 && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <p className="hidden text-sm text-muted-foreground md:block">
-                  {pageInfo.total} job{pageInfo.total !== 1 ? "s" : ""} total
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page <= 1}
-                    onClick={() => refresh(pageInfo.page - 1)}
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="text-muted-foreground">Page</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={totalPages}
-                      value={pageInputValue}
-                      onChange={(e) => setPageInputValue(e.target.value)}
-                      className="h-8 w-14 rounded-md border border-input bg-transparent px-2 py-1 text-center text-sm tabular-nums focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          let page = parseInt(pageInputValue, 10);
-                          if (Number.isNaN(page)) page = 1;
-                          page = Math.max(1, Math.min(page, totalPages));
-                          refresh(page);
-                        }
-                      }}
-                      onBlur={() => {
-                        let page = parseInt(pageInputValue, 10);
-                        if (Number.isNaN(page)) page = 1;
-                        page = Math.max(1, Math.min(page, totalPages));
-                        refresh(page);
-                      }}
-                    />
-                    <span className="text-muted-foreground">/ {totalPages}</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page >= totalPages}
-                    onClick={() => refresh(pageInfo.page + 1)}
-                  >
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <PaginationBar
+              pageInfo={pageInfo}
+              onChange={(page, pageSize) => refresh(page, pageSize)}
+              totalLabel="jobs"
+            />
           </CardContent>
         </Card>
 
