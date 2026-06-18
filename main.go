@@ -4,6 +4,8 @@
 package main
 
 import (
+	_ "time/tzdata"
+
 	"github.com/hcd233/aris-proxy-api/cmd"
 )
 
