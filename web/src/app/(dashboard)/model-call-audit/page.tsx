@@ -542,7 +542,7 @@ export default function AuditPage() {
                             <TooltipRoot>
                               <TooltipTrigger
                                 render={
-                                  <button type="button" className="max-w-[160px] cursor-default truncate text-xs text-muted-foreground">
+                                  <button type="button" className="max-w-[80px] cursor-default truncate text-xs text-muted-foreground">
                                     {uaShort}
                                   </button>
                                 }
