@@ -20,11 +20,11 @@ export function ScoreDots({
 }: ScoreDotsProps) {
   const [hover, setHover] = useState<number | null>(null);
 
-  const gap = Math.round(size * 0.5);
-  const clearBtn = Math.round(size * 1.25);
-  const reserved = clearBtn + gap + 4;
-  const dotsWidth = 5 * size + 4 * gap;
-  const containerWidth = dotsWidth + reserved;
+  const dotSize = Math.round(size * 0.625);
+  const gap = Math.round(size * 0.25);
+  const dotsWidth = 5 * dotSize + 4 * gap;
+  const clearReserved = size + gap;
+  const containerWidth = dotsWidth + clearReserved;
 
   const displayScore = hover != null ? hover : score;
   const isRated = score != null;
@@ -50,16 +50,15 @@ export function ScoreDots({
             onMouseEnter={() => setHover(v)}
             aria-label={`Rate ${v}`}
             className={cn(
-              "rounded-full transition-colors duration-150 disabled:opacity-30",
+              "relative rounded-full transition-all duration-150 disabled:opacity-30 active:scale-90",
+              "before:absolute before:-inset-1 before:content-['']",
               displayScore != null && v <= displayScore
                 ? "bg-primary"
-                : "bg-muted-foreground/30 hover:bg-primary",
+                : "bg-muted-foreground/30 hover:bg-primary/70",
             )}
             style={{
-              width: `${size}px`,
-              height: `${size}px`,
-              padding: `${Math.round(size * 0.25)}px`,
-              backgroundClip: "content-box",
+              width: `${dotSize}px`,
+              height: `${dotSize}px`,
             }}
           />
         ))}
@@ -71,18 +70,15 @@ export function ScoreDots({
           onClick={onClear}
           disabled={scoring}
           aria-label="Remove rating"
-          className="absolute rounded text-muted-foreground/40 transition-colors hover:text-destructive disabled:opacity-30"
+          className={cn(
+            "absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:text-destructive disabled:opacity-30",
+            "before:absolute before:-inset-1 before:content-['']",
+          )}
           style={{
-            right: "4px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: `${clearBtn}px`,
-            height: `${clearBtn}px`,
+            width: `${size}px`,
+            height: `${size}px`,
             fontSize: `${Math.round(size * 0.9)}px`,
             lineHeight: 1,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
           ×
