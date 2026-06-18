@@ -107,14 +107,14 @@ export function ReadingLayout({
   }
 
   return (
-    <div className="-mx-4 -mt-4 -mb-4 flex h-[100dvh] flex-col overflow-hidden bg-background md:-mx-8 md:-mt-8 md:-mb-8 lg:-mx-10 lg:-mt-10 lg:-mb-10">
-      <header className="relative z-30 shrink-0 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:backdrop-blur">
-        <div className="mx-auto flex max-w-[768px] items-center gap-3 px-4 pt-[calc(1rem+0.25rem)] pb-3 md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]">
-          {header}
-        </div>
-      </header>
+    <div className="-mx-4 -mt-4 -mb-4 flex h-[100dvh] overflow-hidden bg-background md:-mx-8 md:-mt-8 md:-mb-8 lg:-mx-10 lg:-mt-10 lg:-mb-10">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="relative z-30 shrink-0 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:backdrop-blur">
+          <div className="mx-auto flex max-w-[768px] items-center gap-3 px-4 pt-[calc(1rem+0.25rem)] pb-3 md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]">
+            {header}
+          </div>
+        </header>
 
-      <div className="flex min-h-0 flex-1">
         <div
           ref={messagesScrollRootRef}
           onScroll={onMessagesScroll}
@@ -122,48 +122,48 @@ export function ReadingLayout({
         >
           {children}
         </div>
-
-        {toolsCount > 0 && (
-          <aside
-            className={cn(
-              "h-full shrink-0 overflow-hidden border-l border-border/70 bg-card transition-[width] duration-200 ease-out",
-              toolsOpen ? "w-[280px]" : "w-0",
-            )}
-          >
-            <div
-              className="flex h-full w-[280px] flex-col"
-              style={{ visibility: toolsOpen ? "visible" : "hidden" }}
-            >
-              <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Wrench className="size-4 text-muted-foreground" />
-                  <span className="font-display text-[14px] font-semibold text-foreground">
-                    Available Tools
-                  </span>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {toolsCount}
-                  </Badge>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onToolsOpenChange(false)}
-                  className="text-[14px] text-muted-foreground transition-colors hover:text-foreground"
-                  aria-label="Close tools panel"
-                >
-                  ✕
-                </button>
-              </div>
-              <div
-                ref={(node) => onToolsScrollRootChange?.(node)}
-                onScroll={onToolsScroll}
-                className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4"
-              >
-                {toolsPanel}
-              </div>
-            </div>
-          </aside>
-        )}
       </div>
+
+      {toolsCount > 0 && (
+        <aside
+          className={cn(
+            "h-full shrink-0 overflow-hidden border-l border-border/70 bg-card transition-[width] duration-200 ease-out",
+            toolsOpen ? "w-[280px]" : "w-0",
+          )}
+        >
+          <div
+            className="flex h-full w-[280px] flex-col"
+            style={{ visibility: toolsOpen ? "visible" : "hidden" }}
+          >
+            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Wrench className="size-4 text-muted-foreground" />
+                <span className="font-display text-[14px] font-semibold text-foreground">
+                  Available Tools
+                </span>
+                <Badge variant="secondary" className="text-[10px]">
+                  {toolsCount}
+                </Badge>
+              </div>
+              <button
+                type="button"
+                onClick={() => onToolsOpenChange(false)}
+                className="text-[14px] text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Close tools panel"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              ref={(node) => onToolsScrollRootChange?.(node)}
+              onScroll={onToolsScroll}
+              className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4"
+            >
+              {toolsPanel}
+            </div>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
