@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   History,
   MessagesSquare,
@@ -28,8 +29,18 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SessionHistoryList } from "./session-history-list";
-import { ScoreStars } from "./score-stars";
+import { ScoreDots } from "./score-dots";
 import { ToolsRail } from "./tools-rail";
 import { ReadingLayout } from "@/components/shared/reading-layout";
 import { toast } from "sonner";
@@ -337,12 +348,12 @@ export default function SessionDetailClient({
         </p>
       </div>
 
-      <ScoreStars
+      <ScoreDots
         score={score}
         scoring={scoring}
         onScore={handleScore}
         onClear={handleDeleteScore}
-        size={isMobile ? 9 : 11}
+        size={isMobile ? 20 : 16}
       />
 
       <Button
@@ -361,39 +372,16 @@ export default function SessionDetailClient({
         <Share2 className="size-5" />
       </Button>
 
-      <div className="relative">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setDeleteConfirmOpen(true)}
-          className="size-10 text-foreground/70 hover:text-destructive"
-          aria-label="Delete session"
-          title="Delete session"
-        >
-          <Trash2 className="size-5" />
-        </Button>
-        {deleteConfirmOpen && (
-          <div className="absolute right-0 top-full z-50 mt-1 inline-flex items-center gap-1 rounded-md border border-border bg-popover p-1 shadow-md">
-            <span className="px-1 text-xs text-muted-foreground">Delete?</span>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="rounded px-1.5 py-0.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
-            >
-              {deleting ? "..." : "Yes"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeleteConfirmOpen(false)}
-              disabled={deleting}
-              className="rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-            >
-              No
-            </button>
-          </div>
-        )}
-      </div>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setDeleteConfirmOpen(true)}
+        className="size-10 text-foreground/70 hover:text-destructive"
+        aria-label="Delete session"
+        title="Delete session"
+      >
+        <Trash2 className="size-5" />
+      </Button>
 
       {metadata.toolCount > 0 && (
         <Button
@@ -490,6 +478,32 @@ export default function SessionDetailClient({
         open={shareOpen}
         onOpenChange={setShareOpen}
       />
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-5 text-destructive" />
+              Delete session?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              <strong>Session #{metadata.id}</strong> and all its messages. This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </>
   );

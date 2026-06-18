@@ -28,7 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ScoreDotInput } from "@/components/session-detail/score-dot-input";
+import { ScoreDots } from "@/components/session-detail/score-dots";
 import { PaginationBar } from "@/components/pagination-bar";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -85,7 +85,6 @@ export default function SessionsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; summary: string } | null>(null);
   const [scoring, setScoring] = useState<number | null>(null);
-  const [scoreConfirm, setScoreConfirm] = useState<{ id: number; value: number } | null>(null);
   const [keyword, setKeyword] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -266,11 +265,9 @@ export default function SessionsPage() {
     }
   };
 
-  const handleScoreSession = async (e: React.MouseEvent, sessionId: number, score: number) => {
-    e.stopPropagation();
+  const handleScoreSession = async (sessionId: number, score: number) => {
     if (scoring !== null) return;
     setScoring(sessionId);
-    setScoreConfirm(null);
     try {
       await api.scoreSession({ sessionId, score });
       setSessions((prev) =>
@@ -284,8 +281,7 @@ export default function SessionsPage() {
     }
   };
 
-  const handleDeleteScore = async (e: React.MouseEvent, sessionId: number) => {
-    e.stopPropagation();
+  const handleDeleteScore = async (sessionId: number) => {
     if (scoring !== null) return;
     setScoring(sessionId);
     try {
@@ -448,53 +444,13 @@ export default function SessionsPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {s.score != null ? (
-                            <div className="flex items-center gap-1">
-                              <div className="flex items-center gap-0.5">
-                                {[1, 2, 3, 4, 5].map((v) => (
-                                  <span
-                                    key={v}
-                                    className={`inline-block size-2 rounded-full ${v <= (s.score ?? 0) ? "bg-primary" : "bg-muted-foreground/30"}`}
-                                    aria-hidden
-                                  />
-                                ))}
-                              </div>
-                              <button
-                                type="button"
-                                disabled={scoring === s.id}
-                                onClick={(e) => handleDeleteScore(e, s.id)}
-                                className="text-xs text-muted-foreground/30 hover:text-destructive disabled:opacity-30"
-                                aria-label="Remove score"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ) : scoreConfirm?.id === s.id ? (
-                            <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
-                              <span className="text-xs text-muted-foreground">{scoreConfirm.value}?</span>
-                              <button
-                                type="button"
-                                onClick={(e) => handleScoreSession(e, s.id, scoreConfirm.value)}
-                                disabled={scoring === s.id}
-                                className="rounded px-1 text-xs font-medium text-foreground hover:text-green-600 disabled:opacity-50"
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setScoreConfirm(null); }}
-                                className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <ScoreDotInput
-                              onPick={(v) => setScoreConfirm({ id: s.id, value: v })}
-                              disabled={scoring === s.id}
-                              size={8}
-                            />
-                          )}
+                          <ScoreDots
+                            score={s.score}
+                            scoring={scoring === s.id}
+                            onScore={(v) => handleScoreSession(s.id, v)}
+                            onClear={() => handleDeleteScore(s.id)}
+                            size={isMobile ? 20 : 16}
+                          />
                           <Badge variant="secondary" className="text-xs">
                             {s.messageCount ?? 0} msgs
                           </Badge>
@@ -552,7 +508,7 @@ export default function SessionsPage() {
                       <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
                     </TableHead>
                     <TableHead>Summary</TableHead>
-                    <TableHead className="w-[80px] text-center">Score</TableHead>
+                    <TableHead className="w-[160px] text-center">Score</TableHead>
                     <TableHead
                       className="cursor-pointer select-none whitespace-nowrap"
                       onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
@@ -605,55 +561,15 @@ export default function SessionsPage() {
                         <TableCell className="max-w-[200px] truncate">
                           {s.summary || "—"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="w-[160px]">
                           <div className="flex justify-center">
-                            {s.score != null ? (
-                              <div className="flex items-center gap-1">
-                                <div className="flex items-center gap-0.5">
-                                  {[1, 2, 3, 4, 5].map((v) => (
-                                    <span
-                                      key={v}
-                                      className={`inline-block size-2 rounded-full ${v <= (s.score ?? 0) ? "bg-primary" : "bg-muted-foreground/30"}`}
-                                      aria-hidden
-                                    />
-                                  ))}
-                                </div>
-                                <button
-                                  type="button"
-                                  disabled={scoring === s.id}
-                                  onClick={(e) => handleDeleteScore(e, s.id)}
-                                  className="text-xs text-muted-foreground/20 hover:text-destructive disabled:opacity-30"
-                                  aria-label="Remove score"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ) : scoreConfirm?.id === s.id ? (
-                              <div className="flex items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5">
-                                <span className="text-xs text-muted-foreground">{scoreConfirm.value}?</span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleScoreSession(e, s.id, scoreConfirm.value)}
-                                  disabled={scoring === s.id}
-                                  className="rounded px-1 text-xs font-medium text-foreground hover:text-green-600 disabled:opacity-50"
-                                >
-                                  Yes
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); setScoreConfirm(null); }}
-                                  className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
-                                >
-                                  No
-                                </button>
-                              </div>
-                            ) : (
-                              <ScoreDotInput
-                                onPick={(v) => setScoreConfirm({ id: s.id, value: v })}
-                                disabled={scoring === s.id}
-                                size={8}
-                              />
-                            )}
+                            <ScoreDots
+                              score={s.score}
+                              scoring={scoring === s.id}
+                              onScore={(v) => handleScoreSession(s.id, v)}
+                              onClear={() => handleDeleteScore(s.id)}
+                              size={16}
+                            />
                           </div>
                         </TableCell>
                         <TableCell>{s.messageCount ?? 0}</TableCell>
