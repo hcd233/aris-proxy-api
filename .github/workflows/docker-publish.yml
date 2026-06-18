@@ -41,7 +41,39 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute web hash
+        id: hash
+        run: echo "key=frontend-${{ hashFiles('web/**') }}" >> $GITHUB_OUTPUT
+
+      - name: Cache frontend build
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: web/out
+          key: ${{ steps.hash.outputs.key }}
+
+      - name: Build frontend (on cache miss)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cd web && npm ci && npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-out
+          path: web/out
+          retention-days: 1
+
   build:
+    needs:
+      - frontend
     env:
       BRANCH_TAG: ""
       PLATFORM_PAIR: ""
@@ -63,6 +95,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-out
+          path: web/out
 
       - name: Prepare
         run: |
@@ -120,6 +158,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: true
+          build-args: FRONTEND_SOURCE=frontend-prebuilt
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform-pair }}

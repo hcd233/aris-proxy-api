@@ -21,6 +21,8 @@ spec:
       labels:
         app: aris-proxy-api
     spec:
+      securityContext:
+        fsGroup: 65532
       terminationGracePeriodSeconds: 660
       containers:
       - name: app
@@ -40,8 +42,8 @@ spec:
           mountPath: /app/logs
         lifecycle:
           preStop:
-            exec:
-              command: ["/bin/sh", "-c", "sleep 10"]
+            sleep:
+              seconds: 10
         livenessProbe:
           httpGet:
             path: /health
