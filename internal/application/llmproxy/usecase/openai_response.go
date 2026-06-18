@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -27,10 +28,11 @@ import (
 
 func (u *openAIUseCase) forwardResponseNative(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
 	body := proxyutil.MarshalOpenAIResponseBodyForModel(req.Body, upstream.Model)
+	body, compStats := u.compressBodyIfNeeded(ctx, body, enum.ProtocolOpenAIResponse)
 	if stream {
-		return u.forwardResponseNativeStream(ctx, req, m, ep, upstream, body)
+		return u.forwardResponseNativeStream(ctx, req, m, ep, upstream, body, compStats)
 	}
-	return u.forwardResponseNativeUnary(ctx, req, m, ep, upstream, body)
+	return u.forwardResponseNativeUnary(ctx, req, m, ep, upstream, body, compStats)
 }
 
 func (u *openAIUseCase) forwardResponseViaChat(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) *huma.StreamResponse {
@@ -65,7 +67,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, ep.Name(), body)
 }
 
-func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse { //nolint:gocognit // this function orchestrates streaming response forwarding which inherently involves multiple concerns
+func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse { //nolint:gocognit // this function orchestrates streaming response forwarding which inherently involves multiple concerns
 	log := logger.WithCtx(ctx)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
@@ -172,11 +174,15 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(proxyErr)
 		task.SetErrorFromResponseStatus(finalResponse)
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }
 
-func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
@@ -222,6 +228,10 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 				reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
 			}
 			task.SetErrorFromResponseStatus(&rsp)
+		}
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
 		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
