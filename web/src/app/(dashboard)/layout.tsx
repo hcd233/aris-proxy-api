@@ -80,13 +80,13 @@ const navItems: NavItem[] = [
   },
   {
     label: "Blocked",
-    href: "/block/",
+    href: "/blocked/",
     icon: <Ban className="size-4" />,
     adminOnly: true,
   },
   {
     label: "Model Call Audit",
-    href: "/model-call-audit/",
+    href: "/audit/model/",
     icon: <ScrollText className="size-4" />,
   },
   {
