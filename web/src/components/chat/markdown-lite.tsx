@@ -138,15 +138,15 @@ function CodeBlock({
   };
 
   return (
-    <div className="group/code my-3 overflow-hidden rounded-lg border border-border/60 bg-[#1F1A14] dark:bg-[#15110d]">
-      <div className="flex items-center justify-between border-b border-white/5 px-3 py-1.5">
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/40">
+    <div className="group/code my-3 overflow-hidden rounded-xl border border-[#3A322B] bg-[#26211C] dark:bg-[#1F1A14] dark:border-[#2A2520]">
+      <div className="flex items-center justify-between border-b border-[#3A322B] px-3.5 py-1.5 dark:border-[#2A2520]">
+        <span className="font-mono text-[10px] tracking-[0.12em] text-[#E8DDD3]/35">
           {lang || "text"}
         </span>
         <button
           type="button"
           onClick={onCopy}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
+          className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-[#E8DDD3]/35 transition-colors hover:bg-white/5 hover:text-[#E8DDD3]/70"
           aria-label="Copy code"
         >
           {copied ? (
@@ -162,7 +162,7 @@ function CodeBlock({
           )}
         </button>
       </div>
-      <pre className="overflow-x-auto px-4 py-3 font-mono text-[12.5px] leading-relaxed text-[#E8DDD3]">
+      <pre className="overflow-x-auto px-4 py-3 font-mono text-[12.5px] leading-[1.55] text-[#E8DDD3]">
         <code className={cn("hljs bg-transparent !p-0", highlightedClassName)}>
           {children ?? value}
         </code>
