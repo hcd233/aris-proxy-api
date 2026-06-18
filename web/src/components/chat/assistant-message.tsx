@@ -32,8 +32,9 @@ export function AssistantMessage({
   index,
   toolResultsByID,
 }: AssistantMessageProps) {
-  const { role, content, tool_calls, reasoning_content, refusal, model } =
+  const { role, content, tool_calls, reasoning_content, refusal } =
     message.message;
+  const { model } = message;
   const { text, parts } = extractContent(content);
   const isAssistant = role === "assistant";
 
