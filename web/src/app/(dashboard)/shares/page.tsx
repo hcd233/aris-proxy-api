@@ -10,11 +10,8 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import {
   AlertTriangle,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Copy,
   ExternalLink,
-  ListFilter,
   Share2,
   Trash2,
 } from "lucide-react";
@@ -36,12 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { PaginationBar } from "@/components/pagination-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -145,11 +137,6 @@ export default function SharesPage() {
       setDeleteTarget(null);
     }
   }, [deleteTarget, fetchShares, pageInfo.page, pageInfo.pageSize]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(pageInfo.total / pageInfo.pageSize),
-  );
 
   return (
     <div className="space-y-8">
@@ -292,59 +279,11 @@ export default function SharesPage() {
                 </TableBody>
               </Table>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button variant="outline" size="sm" className="gap-1.5" />
-                      }
-                    >
-                      <ListFilter className="size-3.5" />
-                      {pageInfo.pageSize} / page
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      {[20, 50, 100].map((size) => (
-                        <DropdownMenuItem
-                          key={size}
-                          onClick={() => fetchShares(1, size)}
-                        >
-                          {size} per page
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <p className="text-sm text-muted-foreground">
-                    {pageInfo.total} share{pageInfo.total !== 1 ? "s" : ""} total
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page <= 1}
-                    onClick={() =>
-                      fetchShares(pageInfo.page - 1, pageInfo.pageSize)
-                    }
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground tabular-nums">
-                    {pageInfo.page} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pageInfo.page >= totalPages}
-                    onClick={() =>
-                      fetchShares(pageInfo.page + 1, pageInfo.pageSize)
-                    }
-                  >
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
+              <PaginationBar
+                pageInfo={pageInfo}
+                onChange={(page, pageSize) => fetchShares(page, pageSize)}
+                totalLabel="shares"
+              />
             </>
           )}
         </CardContent>
