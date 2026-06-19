@@ -52,6 +52,14 @@ type ModelCallAuditTask struct {
 	StreamDurationMs         int64
 	UpstreamStatusCode       int
 	ErrorMessage             string
+
+	// 压缩相关
+	CompressionEnabled    bool
+	CompressedTokens      int
+	CompressionStrategies []string
+	// 中间值，不持久化
+	compressionBytesBefore int
+	compressionBytesAfter  int
 }
 
 // SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数
@@ -146,4 +154,24 @@ func (t *ModelCallAuditTask) SetErrorFromResponseStatus(rsp *OpenAICreateRespons
 		}
 		t.ErrorMessage = constant.ResponseIncompleteAuditReason
 	}
+}
+
+// SetCompressionStats 设置压缩统计中间值。
+func (t *ModelCallAuditTask) SetCompressionStats(bytesBefore, bytesAfter int, strategies []string) {
+	t.CompressionEnabled = true
+	t.CompressionStrategies = strategies
+	t.compressionBytesBefore = bytesBefore
+	t.compressionBytesAfter = bytesAfter
+}
+
+// ComputeCompressedTokens 在拿到真实 input_tokens 后计算压缩节省的 token 数。
+// 公式：CompressedTokens = input_tokens * (before - after) / after
+func (t *ModelCallAuditTask) ComputeCompressedTokens() {
+	if !t.CompressionEnabled || t.compressionBytesAfter == 0 || t.InputTokens <= 0 {
+		return
+	}
+	if t.compressionBytesAfter >= t.compressionBytesBefore {
+		return
+	}
+	t.CompressedTokens = t.InputTokens * (t.compressionBytesBefore - t.compressionBytesAfter) / t.compressionBytesAfter
 }
