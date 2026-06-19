@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -23,10 +24,11 @@ import (
 
 func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
 	body := proxyutil.MarshalAnthropicMessageBodyForModel(req.Body, upstream.Model)
+	body, compStats := u.compressBodyIfNeeded(ctx, body, enum.ProtocolAnthropicMessage)
 	if stream {
-		return u.forwardMessageNativeStream(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+		return u.forwardMessageNativeStream(ctx, req, m, upstream, exposedModel, ep.Name(), body, compStats)
 	}
-	return u.forwardMessageNativeUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+	return u.forwardMessageNativeUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body, compStats)
 }
 
 func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, ep *aggregate.Endpoint, exposedModel string) *huma.StreamResponse {
@@ -45,7 +47,7 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 	return u.forwardMessageViaChatUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body)
 }
 
-func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
@@ -84,11 +86,15 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})
 }
 
-func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
@@ -108,6 +114,10 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		if anthropicMsg.Usage != nil {
 			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
+		}
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
 		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})

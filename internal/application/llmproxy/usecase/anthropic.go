@@ -9,8 +9,10 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -40,6 +42,7 @@ type anthropicUseCase struct {
 	openAIProxy      OpenAIProxyPort
 	taskSubmitter    TaskSubmitter
 	blockedChecker   BlockedChecker
+	dispatcher       *compression.Dispatcher
 }
 
 func NewAnthropicUseCase(
@@ -50,6 +53,7 @@ func NewAnthropicUseCase(
 	openAIProxy OpenAIProxyPort,
 	taskSubmitter TaskSubmitter,
 	blockedChecker BlockedChecker,
+	dispatcher *compression.Dispatcher,
 ) AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -59,6 +63,7 @@ func NewAnthropicUseCase(
 		openAIProxy:      openAIProxy,
 		taskSubmitter:    taskSubmitter,
 		blockedChecker:   blockedChecker,
+		dispatcher:       dispatcher,
 	}
 }
 
@@ -119,4 +124,20 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 		log.Error("[AnthropicUseCase] Unsupported messages compatibility route", zap.String("model", req.Body.Model))
 		return proxyutil.SendAnthropicModelNotFoundError(req.Body.Model), nil
 	}
+}
+
+func (u *anthropicUseCase) compressBodyIfNeeded(ctx context.Context, body []byte, upstreamProtocol enum.ProtocolType) ([]byte, *compression.CompressionStats) {
+	if !config.CompressionEnabled || u.dispatcher == nil || len(body) < config.CompressionMinBodyBytes {
+		return body, nil
+	}
+	newBody, stats := compression.CompressBody(body, upstreamProtocol, u.dispatcher, config.CompressionMinToolOutputBytes)
+	if stats != nil && stats.ItemsCompressed > 0 {
+		logger.WithCtx(ctx).Info("[Compression] Anthropic body compressed",
+			zap.Int("bytesBefore", stats.BytesBefore),
+			zap.Int("bytesAfter", stats.BytesAfter),
+			zap.Int("itemsCompressed", stats.ItemsCompressed),
+			zap.Strings("strategies", stats.StrategiesUsed),
+		)
+	}
+	return newBody, stats
 }
