@@ -34,13 +34,13 @@ func (s *SmartCrusher) Compress(content string) ItemCompressionResult {
 	}
 
 	// 只处理对象数组（map[string]any）
-	objArray, ok := toObjectArray(arr)
+	objs, ok := toObjectArray(arr)
 	if !ok {
 		return passthrough(original, constant.CompressionStrategySmartCrusher)
 	}
 
 	// Step 1: lossless CSV
-	csv := s.toCSV(objArray)
+	csv := s.toCSV(objs)
 	if float64(len(csv)) < float64(bytesBefore)*constant.CompressionSmartCrusherLosslessRatio {
 		return ItemCompressionResult{
 			Output:      csv,
@@ -52,7 +52,7 @@ func (s *SmartCrusher) Compress(content string) ItemCompressionResult {
 	}
 
 	// Step 2: lossy 采样
-	sampled := s.sampleRows(objArray)
+	sampled := s.sampleRows(objs)
 	if len(sampled) >= bytesBefore {
 		return passthrough(original, constant.CompressionStrategySmartCrusher)
 	}
