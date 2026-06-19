@@ -35,7 +35,7 @@ type ListAuditLogsRsp struct {
 // AuditLogItem 审计日志条目
 //
 //	@author centonhuang
-//	@update 2026-05-11 10:00:00
+//	@update 2026-06-21 10:00:00
 type AuditLogItem struct {
 	ID                       uint      `json:"id" doc:"记录ID"`
 	CreatedAt                time.Time `json:"createdAt" doc:"创建时间"`
@@ -56,4 +56,7 @@ type AuditLogItem struct {
 	APIKeyName               string    `json:"apiKeyName" doc:"调用所用 API Key 名称"`
 	UserName                 string    `json:"userName" doc:"调用方用户名"`
 	UserEmail                string    `json:"userEmail" doc:"调用方邮箱"`
+	CompressionEnabled       bool      `json:"compressionEnabled" doc:"是否启用上下文压缩"`
+	CompressedTokens         int       `json:"compressedTokens" doc:"压缩节省的token数"`
+	CompressionStrategies    []string  `json:"compressionStrategies,omitempty" doc:"压缩策略列表"`
 }

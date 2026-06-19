@@ -374,6 +374,9 @@ export interface AuditLogItem {
   apiKeyName: string;
   userName: string;
   userEmail: string;
+  compressionEnabled: boolean;
+  compressedTokens: number;
+  compressionStrategies?: string[];
 }
 
 export interface ListAuditLogsRsp extends CommonRsp {
