@@ -61,6 +61,9 @@ const (
 	FieldHitCount                 = "hit_count"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
+	FieldCompressionEnabled       = "compression_enabled"
+	FieldCompressedTokens         = "compressed_tokens"
+	FieldCompressionStrategies    = "compression_strategies"
 )
 
 const (
@@ -102,7 +105,7 @@ var (
 	AuditRepoFieldIDQualified        = "model_call_audits.id"
 	AuditRepoFieldCreatedAtQualified = "model_call_audits.created_at"
 
-	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, AuditRepoFieldCreatedAtQualified}
+	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, FieldCompressionEnabled, FieldCompressedTokens, FieldCompressionStrategies, AuditRepoFieldCreatedAtQualified}
 
 	AuditQueryFields = []string{FieldTraceID, FieldModel}
 

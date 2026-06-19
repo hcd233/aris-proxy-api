@@ -77,6 +77,9 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 			APIKeyName:               log.APIKeyName,
 			UserName:                 log.UserName,
 			UserEmail:                log.UserEmail,
+			CompressionEnabled:       log.CompressionEnabled,
+			CompressedTokens:         log.CompressedTokens,
+			CompressionStrategies:    log.CompressionStrategies,
 		}
 	})
 	rsp.PageInfo = pageInfo

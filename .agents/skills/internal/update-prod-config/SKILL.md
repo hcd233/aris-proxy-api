@@ -20,7 +20,11 @@ ssh ubuntu@api.lvlvko.top
 | api.env | `/home/ubuntu/code/aris-proxy-api/env/api.env` | Direct file edit (`echo >>` or `sed -i`) |
 | K8s ConfigMap | namespace `aris-proxy-api`, name `aris-proxy-api-config` | `kubectl patch configmap` |
 
+> **重要**：Deployment 通过 `envFrom` 引用 ConfigMap（而非直接读取 api.env），因此 **api.env 和 ConfigMap 必须同步更新**，否则重启后配置不生效。具体流程：先修改 api.env 作为源文件记录，然后 patch ConfigMap，最后滚动重启。
+
 ## Updating api.env
+
+`api.env` 是配置文件源码，修改后必须同步到 ConfigMap。
 
 Append new key=value:
 
@@ -56,10 +60,16 @@ ssh ubuntu@api.lvlvko.top 'kubectl get configmap aris-proxy-api-config -n aris-p
 
 ## After updating
 
-Not all configs trigger an automatic reload. If the app doesn't pick up the change, check if pods need a rolling restart:
+K8s 不会自动监听到 ConfigMap 变更后热加载环境变量，必须滚动重启使新配置生效：
 
 ```bash
 ssh ubuntu@api.lvlvko.top 'kubectl rollout restart deployment -n aris-proxy-api'
+```
+
+等待 rollout 完成：
+
+```bash
+ssh ubuntu@api.lvlvko.top 'kubectl rollout status deployment -n aris-proxy-api --timeout=120s'
 ```
 
 ## Safety rules

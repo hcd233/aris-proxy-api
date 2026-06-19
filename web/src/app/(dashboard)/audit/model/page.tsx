@@ -63,6 +63,14 @@ function formatProtocol(protocol: string): string {
   return labels[protocol] || protocol;
 }
 
+function formatCompression(tokens: number, strategies?: string[]): string | null {
+  if (tokens <= 0) return null;
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+  const label = `C: ${fmt(tokens)}`;
+  if (!strategies?.length) return label;
+  return `${label} (${strategies.join(", ")})`;
+}
+
 function buildAuditFilter(user: string[], model: string[], status: string[]): string | undefined {
   const parts: string[] = [];
   if (user.length) parts.push(`user:${user.join("|")}`);
@@ -320,6 +328,11 @@ export default function AuditPage() {
                           <span>O: {(log.streamDurationMs / 1000).toFixed(1)}s</span>
                         )}
                         {cacheInfo && <span>{cacheInfo}</span>}
+                        {log.compressionEnabled && log.compressedTokens > 0 && (
+                          <span title={log.compressionStrategies?.length ? `Strategies: ${log.compressionStrategies.join(", ")}` : undefined}>
+                            {formatCompression(log.compressedTokens, log.compressionStrategies)}
+                          </span>
+                        )}
                         <span
                           className="cursor-pointer font-mono underline-offset-2 hover:underline"
                           onClick={(e) => {
@@ -402,6 +415,18 @@ export default function AuditPage() {
                                 {formatProtocol(log.apiProtocol)}
                               </p>
                             </div>
+                            {log.compressionEnabled && log.compressedTokens > 0 && (
+                              <>
+                                <div>
+                                  <span className="text-muted-foreground">Compression</span>
+                                  <p>{log.compressedTokens.toLocaleString()} tokens saved</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Strategies</span>
+                                  <p>{log.compressionStrategies?.join(", ") || "—"}</p>
+                                </div>
+                              </>
+                            )}
                           </div>
 
                           <div className="mt-3 border-t border-border pt-2 text-xs">
@@ -438,6 +463,7 @@ export default function AuditPage() {
                   <TableHead>User</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
+                  <TableHead>Compression</TableHead>
                   <TableHead>Latency</TableHead>
                   <TableHead>UserAgent</TableHead>
                   <TableHead>TraceID</TableHead>
@@ -511,6 +537,29 @@ export default function AuditPage() {
                         <div>{formatTokens(log.inputTokens, log.outputTokens)}</div>
                         {cacheInfo && (
                           <div className="text-xs text-muted-foreground">{cacheInfo}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">
+                        {log.compressionEnabled && log.compressedTokens > 0 ? (
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger render={
+                                <button type="button" className="cursor-default text-muted-foreground">
+                                  {formatCompression(log.compressedTokens, log.compressionStrategies)}
+                                </button>
+                              } />
+                              <TooltipContent side="top" className="max-w-xs">
+                                <span>Compressed {log.compressedTokens.toLocaleString()} tokens</span>
+                                {log.compressionStrategies?.length ? (
+                                  <span className="block text-xs opacity-70">
+                                    Strategies: {log.compressionStrategies.join(", ")}
+                                  </span>
+                                ) : null}
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">

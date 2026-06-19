@@ -129,6 +129,9 @@ func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
 			APIKeyName:               v.APIKeyName,
 			UserName:                 v.UserName,
 			UserEmail:                v.UserEmail,
+			CompressionEnabled:       v.CompressionEnabled,
+			CompressedTokens:         v.CompressedTokens,
+			CompressionStrategies:    v.CompressionStrategies,
 		}
 	})
 }
