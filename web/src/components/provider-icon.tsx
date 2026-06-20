@@ -13,7 +13,6 @@ import {
   ChatGLM,
   Minimax,
   Moonshot,
-  Kimi,
   Meta,
   Mistral,
   Cohere,

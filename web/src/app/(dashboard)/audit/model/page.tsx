@@ -50,7 +50,7 @@ function formatTokens(input: number, output: number): string {
 function formatCacheTokens(write: number, read: number): string | null {
   if (write === 0 && read === 0) return null;
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  return `c: ${fmt(read)} / ${fmt(write)}`;
+  return `ca: ${fmt(read)} / ${fmt(write)}`;
 }
 
 function formatProtocol(protocol: string): string {
@@ -63,12 +63,13 @@ function formatProtocol(protocol: string): string {
   return labels[protocol] || protocol;
 }
 
-function formatCompression(tokens: number, strategies?: string[]): string | null {
-  if (tokens <= 0) return null;
-  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  const label = `C: ${fmt(tokens)}`;
-  if (!strategies?.length) return label;
-  return `${label} (${strategies.join(", ")})`;
+function formatTokenCount(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
+function formatMs(ms: number): string {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
+  return `${ms}ms`;
 }
 
 function buildAuditFilter(user: string[], model: string[], status: string[]): string | undefined {
@@ -323,14 +324,15 @@ export default function AuditPage() {
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
-                        <span>I: {log.firstTokenLatencyMs}ms</span>
+                        <span>I: {formatMs(log.firstTokenLatencyMs)}</span>
                         {log.streamDurationMs > 0 && (
-                          <span>O: {(log.streamDurationMs / 1000).toFixed(1)}s</span>
+                          <span>O: {formatMs(log.streamDurationMs)}</span>
                         )}
                         {cacheInfo && <span>{cacheInfo}</span>}
                         {log.compressionEnabled && log.compressedTokens > 0 && (
-                          <span title={log.compressionStrategies?.length ? `Strategies: ${log.compressionStrategies.join(", ")}` : undefined}>
-                            {formatCompression(log.compressedTokens, log.compressionStrategies)}
+                          <span>
+                            cp: {formatTokenCount(log.compressedTokens)}
+                            {log.compressionStrategies?.map((s) => ` ${s}`).join("")}
                           </span>
                         )}
                         <span
@@ -387,11 +389,11 @@ export default function AuditPage() {
                             </div>
                             <div>
                               <span className="text-muted-foreground">I (First Token)</span>
-                              <p>{log.firstTokenLatencyMs}ms</p>
+                              <p>{formatMs(log.firstTokenLatencyMs)}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">O (Stream Duration)</span>
-                              <p>{log.streamDurationMs > 0 ? `${(log.streamDurationMs / 1000).toFixed(1)}s` : "—"}</p>
+                              <p>{log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Upstream</span>
@@ -463,7 +465,6 @@ export default function AuditPage() {
                   <TableHead>User</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Tokens</TableHead>
-                  <TableHead>Compression</TableHead>
                   <TableHead>Latency</TableHead>
                   <TableHead>UserAgent</TableHead>
                   <TableHead>TraceID</TableHead>
@@ -489,7 +490,26 @@ export default function AuditPage() {
                           {log.model || "—"}
                         </span>
                       </TableCell>
-                      <TableCell className="max-w-[140px] truncate text-muted-foreground">{log.endpoint || "—"}</TableCell>
+                      <TableCell>
+                        {log.endpoint ? (
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <button type="button" className="max-w-[120px] cursor-default truncate text-xs text-muted-foreground">
+                                    {log.endpoint}
+                                  </button>
+                                }
+                              />
+                              <TooltipContent side="top" className="max-w-xs">
+                                <span className="break-all">{log.endpoint}</span>
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         <div className="flex items-center gap-1.5 text-xs">
                           <ProviderIcon protocol={log.apiProtocol} size={14} />
@@ -535,37 +555,24 @@ export default function AuditPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div>{formatTokens(log.inputTokens, log.outputTokens)}</div>
-                        {cacheInfo && (
-                          <div className="text-xs text-muted-foreground">{cacheInfo}</div>
+                        {log.compressionEnabled && log.compressedTokens > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                            <span className="text-muted-foreground/70">cp: {formatTokenCount(log.compressedTokens)}</span>
+                            {log.compressionStrategies?.map((s) => (
+                              <Badge key={s} variant="outline" className="text-[10px] px-1 py-0 font-normal">
+                                {s}
+                              </Badge>
+                            ))}
+                          </div>
                         )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">
-                        {log.compressionEnabled && log.compressedTokens > 0 ? (
-                          <TooltipProvider>
-                            <TooltipRoot>
-                              <TooltipTrigger render={
-                                <button type="button" className="cursor-default text-muted-foreground">
-                                  {formatCompression(log.compressedTokens, log.compressionStrategies)}
-                                </button>
-                              } />
-                              <TooltipContent side="top" className="max-w-xs">
-                                <span>Compressed {log.compressedTokens.toLocaleString()} tokens</span>
-                                {log.compressionStrategies?.length ? (
-                                  <span className="block text-xs opacity-70">
-                                    Strategies: {log.compressionStrategies.join(", ")}
-                                  </span>
-                                ) : null}
-                              </TooltipContent>
-                            </TooltipRoot>
-                          </TooltipProvider>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
+                        {cacheInfo && (
+                          <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        <div className="text-xs">I: {log.firstTokenLatencyMs}ms</div>
+                        <div className="text-xs">I: {formatMs(log.firstTokenLatencyMs)}</div>
                         {log.streamDurationMs > 0 && (
-                          <div className="text-xs">O: {(log.streamDurationMs / 1000).toFixed(1)}s</div>
+                          <div className="text-xs">O: {formatMs(log.streamDurationMs)}</div>
                         )}
                       </TableCell>
                       <TableCell>
