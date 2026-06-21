@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { PaginationBar } from "@/components/pagination-bar";
 import {
+  Info,
   ScrollText,
   Search,
   X,
@@ -330,9 +331,24 @@ export default function AuditPage() {
                         )}
                         {cacheInfo && <span>{cacheInfo}</span>}
                         {log.compressionEnabled && log.compressedTokens > 0 && (
-                          <span>
+                          <span className="inline-flex items-center gap-0.5">
                             cp: {formatTokenCount(log.compressedTokens)}
-                            {log.compressionStrategies?.map((s) => ` ${s}`).join("")}
+                            {log.compressionStrategies && log.compressionStrategies.length > 0 && (
+                              <TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <button type="button" className="cursor-help text-muted-foreground/70 hover:text-muted-foreground">
+                                        <Info className="size-3" />
+                                      </button>
+                                    }
+                                  />
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <span>{log.compressionStrategies.join(", ")}</span>
+                                  </TooltipContent>
+                                </TooltipRoot>
+                              </TooltipProvider>
+                            )}
                           </span>
                         )}
                         <span
@@ -425,7 +441,26 @@ export default function AuditPage() {
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground">Strategies</span>
-                                  <p>{log.compressionStrategies?.join(", ") || "—"}</p>
+                                  <p className="flex items-center gap-1">
+                                    {log.compressionStrategies && log.compressionStrategies.length > 0 ? (
+                                      <TooltipProvider>
+                                        <TooltipRoot>
+                                          <TooltipTrigger
+                                            render={
+                                              <button type="button" className="cursor-help text-muted-foreground/70 hover:text-muted-foreground">
+                                                <Info className="size-3.5" />
+                                              </button>
+                                            }
+                                          />
+                                          <TooltipContent side="top" className="max-w-xs">
+                                            <span>{log.compressionStrategies.join(", ")}</span>
+                                          </TooltipContent>
+                                        </TooltipRoot>
+                                      </TooltipProvider>
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </p>
                                 </div>
                               </>
                             )}
@@ -558,11 +593,22 @@ export default function AuditPage() {
                         {log.compressionEnabled && log.compressedTokens > 0 && (
                           <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                             <span className="text-muted-foreground/70">cp: {formatTokenCount(log.compressedTokens)}</span>
-                            {log.compressionStrategies?.map((s) => (
-                              <Badge key={s} variant="outline" className="text-[10px] px-1 py-0 font-normal">
-                                {s}
-                              </Badge>
-                            ))}
+                            {log.compressionStrategies && log.compressionStrategies.length > 0 && (
+                              <TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <button type="button" className="cursor-help text-muted-foreground/70 hover:text-muted-foreground">
+                                        <Info className="size-3" />
+                                      </button>
+                                    }
+                                  />
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <span>{log.compressionStrategies.join(", ")}</span>
+                                  </TooltipContent>
+                                </TooltipRoot>
+                              </TooltipProvider>
+                            )}
                           </div>
                         )}
                         {cacheInfo && (
