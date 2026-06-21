@@ -125,15 +125,23 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]any
 
 	mergeResult := FindRedundantSessionsWithMerge(sessions)
 
+	// 构建TerminalToolCall检查的排除ID列表，包含已标记冗余的ID和merge target ID
+	// 防止merge target session被FindTerminalToolCallSessions标记为冗余导致被误删
+	terminalExcludeIDs := make([]uint, len(mergeResult.RedundantIDs))
+	copy(terminalExcludeIDs, mergeResult.RedundantIDs)
+	for sessionID := range mergeResult.MergeMapping {
+		terminalExcludeIDs = append(terminalExcludeIDs, sessionID)
+	}
+
 	// 额外检查：Session最后一条消息是assistant且有tool_calls的也标记为冗余
-	messages, err := c.loadLastMessagesForTerminalToolCheck(db, sessions, mergeResult.RedundantIDs)
+	messages, err := c.loadLastMessagesForTerminalToolCheck(db, sessions, terminalExcludeIDs)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to load last messages for terminal tool call check", zap.Error(err))
 		// 不return，继续执行已有的去重结果
 	}
 
 	if len(messages) > 0 {
-		terminalToolCallResult := FindTerminalToolCallSessions(sessions, messages, mergeResult.RedundantIDs)
+		terminalToolCallResult := FindTerminalToolCallSessions(sessions, messages, terminalExcludeIDs)
 		if len(terminalToolCallResult.RedundantIDs) > 0 {
 			mergeResult.RedundantIDs = append(mergeResult.RedundantIDs, terminalToolCallResult.RedundantIDs...)
 
