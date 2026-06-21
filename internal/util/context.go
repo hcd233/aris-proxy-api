@@ -21,6 +21,7 @@ func CopyContextValues(src context.Context) (dst context.Context) {
 	dst = context.WithValue(dst, constant.CtxKeyUserName, src.Value(constant.CtxKeyUserName))
 	dst = context.WithValue(dst, constant.CtxKeyPermission, src.Value(constant.CtxKeyPermission))
 	dst = context.WithValue(dst, constant.CtxKeyAPIKeyID, src.Value(constant.CtxKeyAPIKeyID))
+	dst = context.WithValue(dst, constant.CtxKeyAPIKeyName, src.Value(constant.CtxKeyAPIKeyName))
 	dst = context.WithValue(dst, constant.CtxKeyClient, src.Value(constant.CtxKeyClient))
 	dst = context.WithValue(dst, constant.CtxKeyPassthroughHeaders, src.Value(constant.CtxKeyPassthroughHeaders))
 	dst = context.WithValue(dst, constant.CtxKeyPassthroughResponseHeaders, src.Value(constant.CtxKeyPassthroughResponseHeaders))

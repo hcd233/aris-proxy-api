@@ -36,6 +36,10 @@ const (
 	//	@update 2026-04-08 10:00:00
 	CtxKeyAPIKeyID enum.CtxKey = "apiKeyID"
 
+	// CtxKeyAPIKeyName API Key 名称（用于 session 存储）
+	//	@update 2026-06-21 10:00:00
+	CtxKeyAPIKeyName enum.CtxKey = "apiKeyName"
+
 	// CtxKeyPassthroughHeaders 透传到上游的请求头
 	//	@update 2026-04-28 10:00:00
 	CtxKeyPassthroughHeaders enum.CtxKey = "passthroughHeaders"
