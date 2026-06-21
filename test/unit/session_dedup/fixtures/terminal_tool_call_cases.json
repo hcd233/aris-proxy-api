@@ -95,5 +95,20 @@
         "exclude_ids": [],
         "expected_redundant_ids": [],
         "expected_merge_mapping": {}
+    },
+    {
+        "name": "terminal_tool_call_merge_target_excluded",
+        "description": "Session that is a merge target (has shorter sessions merged into it) is excluded from terminal tool call check, preventing it from being both updated and deleted. Regression test for bug where session with longer message_ids that absorbed shorter sessions' tool_ids was later marked redundant and deleted, losing merged tool data.",
+        "sessions": [
+            {"id": 1, "message_ids": [10, 20, 30, 40, 50, 60], "tool_ids": [100]},
+            {"id": 2, "message_ids": [10, 20, 30, 40, 50], "tool_ids": [200]},
+            {"id": 3, "message_ids": [10, 20, 30], "tool_ids": [30]}
+        ],
+        "messages": [
+            {"id": 50, "role": "assistant", "tool_calls": [{"id": "tc1", "function": {"name": "search"}}]}
+        ],
+        "exclude_ids": [2],
+        "expected_redundant_ids": [],
+        "expected_merge_mapping": {}
     }
 ]

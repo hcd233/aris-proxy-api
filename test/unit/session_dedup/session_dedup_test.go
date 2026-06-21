@@ -334,6 +334,7 @@ func TestFindTerminalToolCallSessions(t *testing.T) {
 		"terminal_tool_call_no_tool_ids",
 		"terminal_tool_call_last_msg_not_assistant",
 		"terminal_tool_call_empty_sessions",
+		"terminal_tool_call_merge_target_excluded",
 	}
 
 	for _, caseName := range caseNames {
@@ -463,4 +464,97 @@ func TestFindParentSessionID(t *testing.T) {
 			t.Errorf("Tool ID mismatch at index %d: got %d, want %d", i, actualToolIDs[i], expectedToolIDs[i])
 		}
 	}
+}
+
+// TestMergeTargetNotDuplicatedInTerminalToolCall is a regression test for the bug
+// where a session that was a merge target in FindRedundantSessionsWithMerge
+// was later marked as redundant by FindTerminalToolCallSessions, causing the
+// session to be both updated (with merged tool IDs) and then deleted.
+//
+// Bug scenario (from production trace 77a87daf):
+//   - Session 2 (merge target): shorter session 3's tool IDs merge into session 2
+//   - Session 2's last message is assistant+tool_calls
+//   - Bug: deduplicate passed only RedundantIDs as excludeIDs to FindTerminalToolCallSessions,
+//     NOT merge target IDs. So session 2 was NOT excluded and got marked redundant.
+//   - Result: session 2's tool_ids updated from merge, then session 2 deleted.
+func TestMergeTargetNotDuplicatedInTerminalToolCall(t *testing.T) {
+	t.Parallel()
+
+	sessions := toDBSessions([]sessionFixture{
+		{ID: 1, MessageIDs: []uint{10, 20, 70, 80, 90, 100}, ToolIDs: []uint{100}},
+		{ID: 2, MessageIDs: []uint{10, 20, 30, 40, 50}, ToolIDs: []uint{200}},
+		{ID: 3, MessageIDs: []uint{10, 20, 30}, ToolIDs: []uint{30}},
+	})
+
+	messages := toDBMessages([]terminalToolCallMessageFix{
+		{ID: 50, Role: "assistant", ToolCalls: []terminalToolCallFix{
+			{ID: "tc1", Function: struct {
+				Name string `json:"name"`
+			}{Name: "search"}},
+		}},
+	})
+
+	// Step 1: FindRedundantSessionsWithMerge
+	// Session 3 ([10,20,30]) is a subarray of session 2 ([10,20,30,40,50])
+	// Session 2 should be the merge target (kept), session 3 redundant
+	mergeResult := cron.FindRedundantSessionsWithMerge(sessions)
+
+	// Verify session 2 is a merge target (will receive merged tool IDs)
+	if _, exists := mergeResult.MergeMapping[2]; !exists {
+		t.Fatalf("Expected session 2 to be a merge target, got MergeMapping=%v", mergeResult.MergeMapping)
+	}
+
+	// Verify session 3 is redundant
+	found3 := false
+	for _, id := range mergeResult.RedundantIDs {
+		if id == 3 {
+			found3 = true
+			break
+		}
+	}
+	if !found3 {
+		t.Fatalf("Session 3 should be redundant (subarray of session 2)")
+	}
+
+	// Step 2: Simulate the BUG - FindTerminalToolCallSessions with ONLY redundant IDs as excludeIDs
+	// This is what deduplicate currently does (the bug)
+	resultWithoutMergeExclude := cron.FindTerminalToolCallSessions(sessions, messages, mergeResult.RedundantIDs)
+
+	// BUG ASSERTION: With the bug, session 2 IS in redundantIDs from terminal tool call
+	// because merge target IDs were NOT passed as excludeIDs
+	session2InBug := false
+	for _, id := range resultWithoutMergeExclude.RedundantIDs {
+		if id == 2 {
+			session2InBug = true
+			break
+		}
+	}
+
+	if session2InBug {
+		// This is the bug: session 2 would be both merged AND deleted
+		t.Log("BUG CONFIRMED: session 2 (merge target) is also in terminal tool call redundant list")
+		t.Log("  This means session 2 will be both updated with merged tool_ids AND deleted")
+	} else {
+		t.Log("Session 2 was NOT marked redundant (no parent found or other reason)")
+	}
+
+	// Step 3: The FIX - include merge target IDs in exclude list
+	excludeIDs := make([]uint, len(mergeResult.RedundantIDs))
+	copy(excludeIDs, mergeResult.RedundantIDs)
+	for sessionID := range mergeResult.MergeMapping {
+		excludeIDs = append(excludeIDs, sessionID)
+	}
+
+	resultFixed := cron.FindTerminalToolCallSessions(sessions, messages, excludeIDs)
+
+	// With the fix, session 2 should NOT be in the redundant list
+	for _, id := range resultFixed.RedundantIDs {
+		if id == 2 {
+			t.Error("BUG FIX FAILED: Session 2 (merge target) should NOT be in redundant list after fix")
+		}
+	}
+
+	t.Logf("mergeResult: redundantIDs=%v, mergeMapping=%v", mergeResult.RedundantIDs, mergeResult.MergeMapping)
+	t.Logf("Without fix: redundantIDs=%v", resultWithoutMergeExclude.RedundantIDs)
+	t.Logf("With fix: redundantIDs=%v", resultFixed.RedundantIDs)
 }
