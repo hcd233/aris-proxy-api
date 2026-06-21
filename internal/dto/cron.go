@@ -13,7 +13,7 @@ import (
 //	@update 2026-06-17 10:00:00
 type ListCronJobsReq struct {
 	Page      int       `query:"page" required:"true" minimum:"1"`
-	PageSize  int       `query:"pageSize" required:"true" minimum:"1" maximum:"100"`
+	PageSize  int       `query:"pageSize" required:"true" minimum:"1" maximum:"500"`
 	Query     string    `query:"query" maxLength:"100"`
 	Sort      enum.Sort `query:"sort" enum:"asc,desc"`
 	SortField string    `query:"sortField" maxLength:"50"`
@@ -75,7 +75,7 @@ type UpdateCronJobRsp struct {
 //	@update 2026-06-17 10:00:00
 type ListCronCallAuditsReq struct {
 	Page      int       `query:"page" required:"true" minimum:"1"`
-	PageSize  int       `query:"pageSize" required:"true" minimum:"1" maximum:"100"`
+	PageSize  int       `query:"pageSize" required:"true" minimum:"1" maximum:"500"`
 	Query     string    `query:"query" maxLength:"100"`
 	Sort      enum.Sort `query:"sort" enum:"asc,desc"`
 	SortField string    `query:"sortField" maxLength:"50"`

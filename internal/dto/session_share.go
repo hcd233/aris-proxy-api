@@ -112,7 +112,7 @@ type GetShareMetadataRsp struct {
 type ListShareMessagesReq struct {
 	ShareID  string `query:"id" required:"true" doc:"分享ID (6-8 位大小写字母+数字短码)"`
 	Page     int    `query:"page" required:"true" minimum:"1" doc:"页码"`
-	PageSize int    `query:"pageSize" required:"true" minimum:"1" maximum:"200" default:"50" doc:"每页条数"`
+	PageSize int    `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"50" doc:"每页条数"`
 }
 
 // ListShareMessagesRsp 分页获取分享 Session 消息响应
@@ -132,7 +132,7 @@ type ListShareMessagesRsp struct {
 type ListShareToolsReq struct {
 	ShareID  string `query:"id" required:"true" doc:"分享ID (6-8 位大小写字母+数字短码)"`
 	Page     int    `query:"page" required:"true" minimum:"1" doc:"页码"`
-	PageSize int    `query:"pageSize" required:"true" minimum:"1" maximum:"200" default:"20" doc:"每页条数"`
+	PageSize int    `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"20" doc:"每页条数"`
 }
 
 // ListShareToolsRsp 分页获取分享 Session 工具响应

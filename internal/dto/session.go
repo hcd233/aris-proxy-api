@@ -145,7 +145,7 @@ type GetSessionMetadataRsp struct {
 type ListSessionMessagesReq struct {
 	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
 	Page      int  `query:"page" required:"true" minimum:"1" doc:"页码"`
-	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"200" default:"50" doc:"每页条数"`
+	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"50" doc:"每页条数"`
 }
 
 // ListSessionMessagesRsp 分页获取 Session 消息响应
@@ -165,7 +165,7 @@ type ListSessionMessagesRsp struct {
 type ListSessionToolsReq struct {
 	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
 	Page      int  `query:"page" required:"true" minimum:"1" doc:"页码"`
-	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"200" default:"20" doc:"每页条数"`
+	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"20" doc:"每页条数"`
 }
 
 // ListSessionToolsRsp 分页获取 Session 工具响应
