@@ -121,8 +121,8 @@ func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
 			if param.Page != 1 {
 				t.Errorf("Page = %d, want 1 (default for 0)", param.Page)
 			}
-			if param.PageSize != 100 {
-				t.Errorf("PageSize = %d, want 100 (clamped from 999)", param.PageSize)
+			if param.PageSize != 500 {
+				t.Errorf("PageSize = %d, want 500 (clamped from 999)", param.PageSize)
 			}
 			if param.Sort != enum.SortAsc {
 				t.Errorf("Sort = %q, want asc (default)", param.Sort)
@@ -130,7 +130,7 @@ func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
 			if param.SortField != "id" {
 				t.Errorf("SortField = %q, want id (default)", param.SortField)
 			}
-			return nil, &model.PageInfo{Page: 1, PageSize: 100}, nil
+			return nil, &model.PageInfo{Page: 1, PageSize: 500}, nil
 		},
 	}
 	h := auditquery.NewListAllAuditLogsHandler(repo)

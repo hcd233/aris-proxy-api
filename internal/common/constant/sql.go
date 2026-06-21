@@ -115,9 +115,9 @@ var (
 
 	BlockedRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldCreatedAt, FieldUpdatedAt}
 
-	AuditMaxPageSize = 100
+	AuditMaxPageSize = 500
 
-	SessionMaxPageSize = 200
+	SessionMaxPageSize = 500
 
 	// SessionListINChunkSize session 列表「空 summary fallback」批量加载消息时，
 	// 每条 SELECT ... WHERE id IN (?) 携带的 ID 上限。
