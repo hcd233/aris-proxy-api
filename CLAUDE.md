@@ -8,6 +8,7 @@
 - **执行循环**：分类任务 → 加载必要 skill → 阅读相关代码/文档 → 小步计划 → 最小修改 → 聚焦验证 → 汇报证据。
 - **边界**：不为普通需求默认走线上日志排障；不为手工 `curl` 结果跳过仓库测试；不绕过 hook 或安全规则。
 - **Superpowers 强制合规**：任何响应或操作前必须先加载 `using-superpowers` skill，严格按照该 skill 中说明的流程执行。禁止以"简单问题""先看看代码""我记住了"等理由绕过。
+- **代码风格 Skill 强制合规**：编写或修改 Go 代码时，必须加载 `golang-samber-lo` 和 `golang-samber-mo` skill，确保正确使用函数式编程工具和 Monadic 类型。
 - **输出**：简短说明做了什么、验证了什么、还有什么未验证；引用文件路径和命令必须精确。
 
 ## 1. Karpathy 编码原则
@@ -275,6 +276,7 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 ## 5. 开发工作流
 
 - **严格遵循 Superpowers 研发流程**：收到任务后必须先加载 `using-superpowers` skill，严格按 skill 中说明的流程进行开发。process skill（brainstorming、debugging 等）优先于 implementation skill。禁止以"这不是正式任务""我先收集信息"等理由绕过。
+- **编写或修改 Go 代码时，必须加载 `golang-samber-lo` 和 `golang-samber-mo` skill**，确保正确使用 `github.com/samber/lo` 函数式编程工具和 `github.com/samber/mo` Monadic 类型。
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 修改前先定位相关 handler/usecase/converter/transport/DTO，不做大范围重写。
