@@ -30,7 +30,7 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.
 
 	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
-		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyUserName),
+		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
 		Model:        upstreamModel,
 		Messages:     unifiedMessages,
 		Tools:        unifiedTools,
