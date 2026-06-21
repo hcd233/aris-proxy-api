@@ -156,10 +156,11 @@ func (t *ModelCallAuditTask) SetErrorFromResponseStatus(rsp *OpenAICreateRespons
 	}
 }
 
-// SetCompressionStats 设置压缩统计中间值。
+// SetCompressionStats 设置压缩统计中间值。strategies 会按首次出现顺序去重，
+// 避免同一策略因多个 tool output 压缩而在审计记录中重复存储。
 func (t *ModelCallAuditTask) SetCompressionStats(bytesBefore, bytesAfter int, strategies []string) {
 	t.CompressionEnabled = true
-	t.CompressionStrategies = strategies
+	t.CompressionStrategies = lo.Uniq(strategies)
 	t.compressionBytesBefore = bytesBefore
 	t.compressionBytesAfter = bytesAfter
 }
