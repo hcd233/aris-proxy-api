@@ -116,6 +116,8 @@ export interface UnifiedMessage {
   refusal?: string;
   tool_call_id?: string;
   tool_calls?: UnifiedToolCall[];
+  raw_content?: string;
+  compression_strategy?: string;
 }
 
 export interface MessageItem {
