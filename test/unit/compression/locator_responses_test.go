@@ -3,63 +3,96 @@ package compression
 import (
 	"testing"
 
-	"github.com/bytedance/sonic"
-
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
+	comp "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-func TestResponsesLocatorCompressFunctionCallOutput(t *testing.T) {
+func TestCompressOpenAIResponses_CompressesFunctionCallOutput(t *testing.T) {
 	t.Parallel()
-	locator := &compression.OpenAIResponsesLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	body := map[string]any{
-		"model": "gpt-4o",
-		"input": []any{
-			map[string]any{"type": "message", "role": "user", "content": "Search for errors"},
-			map[string]any{"type": "function_call", "name": "search", "arguments": "{}"},
-			map[string]any{
-				"type":    "function_call_output",
-				"call_id": "call_123",
-				"output":  `[{"name":"error","code":500,"msg":"database connection failed"},{"name":"warn","code":0,"msg":"ok"},{"name":"error","code":503,"msg":"timeout"},{"name":"info","code":200,"msg":"healthy"},{"name":"debug","code":100,"msg":"trace"}]`,
-			},
+	callID := "call_001"
+	itemType := constant.CompressionJSONKeyFuncCallOutput
+	largeContent := makeLargeJSONArray()
+	items := []*dto.ResponseInputItem{
+		{
+			Type:   &itemType,
+			CallID: &callID,
+			Output: &dto.ResponseInputItemOutput{Text: largeContent},
 		},
 	}
-	bodyBytes, _ := sonic.Marshal(body)
+	dispatcher := comp.NewDispatcher()
 
-	newBody, stats := locator.LocateAndCompress(bodyBytes, dispatcher, 10)
-	if newBody == nil {
-		t.Fatal("expected compressed body")
-	}
+	stats := comp.CompressOpenAIResponses(items, dispatcher, 100)
+
 	if stats.ItemsCompressed == 0 {
-		t.Error("expected at least 1 item compressed")
+		t.Fatal("expected at least 1 item compressed")
 	}
-
-	// 验证 message item 未被修改
-	var result map[string]any
-	sonic.Unmarshal(newBody, &result)
-	input := result["input"].([]any)
-	msgItem := input[0].(map[string]any)
-	if msgItem["content"] != "Search for errors" {
-		t.Error("message item should not be modified")
+	if items[0].Output.Text == largeContent {
+		t.Error("expected output to be replaced with compressed content")
+	}
+	if len(stats.Items) == 0 || stats.Items[0].ToolCallID != callID {
+		t.Error("expected ToolCallID to be set in result")
 	}
 }
 
-func TestResponsesLocatorNoFunctionCallOutput(t *testing.T) {
+func TestCompressOpenAIResponses_SkipsSmallOutput(t *testing.T) {
 	t.Parallel()
-	locator := &compression.OpenAIResponsesLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	body := map[string]any{
-		"model": "gpt-4o",
-		"input": []any{
-			map[string]any{"type": "message", "role": "user", "content": "hello"},
+	callID := "call_002"
+	itemType := constant.CompressionJSONKeyFuncCallOutput
+	smallContent := "small"
+	items := []*dto.ResponseInputItem{
+		{
+			Type:   &itemType,
+			CallID: &callID,
+			Output: &dto.ResponseInputItemOutput{Text: smallContent},
 		},
 	}
-	bodyBytes, _ := sonic.Marshal(body)
+	dispatcher := comp.NewDispatcher()
 
-	newBody, _ := locator.LocateAndCompress(bodyBytes, dispatcher, 10)
-	if newBody != nil {
-		t.Error("body without function_call_output should return nil")
+	stats := comp.CompressOpenAIResponses(items, dispatcher, 100)
+
+	if stats.ItemsCompressed != 0 {
+		t.Error("expected 0 items compressed for small content")
+	}
+	if stats.ItemsSkipped != 1 {
+		t.Error("expected 1 item skipped")
+	}
+	if items[0].Output.Text != smallContent {
+		t.Error("expected small output to remain unchanged")
+	}
+}
+
+func TestCompressOpenAIResponses_SkipsNonFunctionCallOutput(t *testing.T) {
+	t.Parallel()
+	msgType := "message"
+	items := []*dto.ResponseInputItem{
+		{
+			Type: &msgType,
+		},
+	}
+	dispatcher := comp.NewDispatcher()
+
+	stats := comp.CompressOpenAIResponses(items, dispatcher, 0)
+
+	if stats.ItemsCompressed != 0 || stats.ItemsSkipped != 0 {
+		t.Error("expected no items processed for non-function_call_output items")
+	}
+}
+
+func TestCompressOpenAIResponses_NilOutputSkipped(t *testing.T) {
+	t.Parallel()
+	itemType := constant.CompressionJSONKeyFuncCallOutput
+	items := []*dto.ResponseInputItem{
+		{
+			Type:   &itemType,
+			Output: nil,
+		},
+	}
+	dispatcher := comp.NewDispatcher()
+
+	stats := comp.CompressOpenAIResponses(items, dispatcher, 0)
+
+	if stats.ItemsCompressed != 0 || stats.ItemsSkipped != 0 {
+		t.Error("expected no items processed for nil output")
 	}
 }

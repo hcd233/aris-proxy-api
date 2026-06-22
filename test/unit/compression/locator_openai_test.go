@@ -1,89 +1,123 @@
 package compression
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/bytedance/sonic"
-
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
+	comp "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-func TestOpenAIChatLocatorCompressToolOutput(t *testing.T) {
+func TestCompressOpenAIChat_CompressesToolOutput(t *testing.T) {
 	t.Parallel()
-	locator := &compression.OpenAIChatLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	// 构造含 tool output 的 body
-	body := map[string]any{
-		"model": "gpt-4o",
-		"messages": []any{
-			map[string]any{"role": "system", "content": "You are a helpful assistant."},
-			map[string]any{"role": "user", "content": "Search for errors"},
-			map[string]any{"role": "assistant", "content": "Let me search."},
-			map[string]any{
-				"role":         "tool",
-				"content":      `[{"name":"error","code":500,"msg":"database connection failed"},{"name":"warn","code":0,"msg":"ok"},{"name":"error","code":503,"msg":"timeout"},{"name":"info","code":200,"msg":"healthy"},{"name":"debug","code":100,"msg":"trace"}]`,
-				"tool_call_id": "call_123",
-			},
+	toolCallID := "call_001"
+	largeContent := makeLargeJSONArray()
+	messages := []*dto.OpenAIChatCompletionMessageParam{
+		{
+			Role:       enum.RoleTool,
+			ToolCallID: &toolCallID,
+			Content:    &dto.OpenAIMessageContent{Text: largeContent},
 		},
 	}
-	bodyBytes, _ := sonic.Marshal(body)
+	dispatcher := comp.NewDispatcher()
 
-	newBody, stats := locator.LocateAndCompress(bodyBytes, dispatcher, 10)
-	if newBody == nil {
-		t.Fatal("expected compressed body, got nil")
-	}
+	stats := comp.CompressOpenAIChat(messages, dispatcher, 100)
+
 	if stats.ItemsCompressed == 0 {
-		t.Error("expected at least 1 item compressed")
+		t.Fatal("expected at least 1 item compressed")
 	}
-
-	// 验证非 tool 消息未被修改
-	var result map[string]any
-	sonic.Unmarshal(newBody, &result)
-	messages := result["messages"].([]any)
-	sysMsg := messages[0].(map[string]any)
-	if sysMsg["content"] != "You are a helpful assistant." {
-		t.Error("system message should not be modified")
+	if messages[0].Content.Text == largeContent {
+		t.Error("expected message content to be replaced with compressed output")
 	}
-}
-
-func TestOpenAIChatLocatorNoToolOutput(t *testing.T) {
-	t.Parallel()
-	locator := &compression.OpenAIChatLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	body := map[string]any{
-		"model": "gpt-4o",
-		"messages": []any{
-			map[string]any{"role": "user", "content": "hello"},
-		},
+	if len(stats.Items) == 0 {
+		t.Fatal("expected stats.Items to contain per-item results")
 	}
-	bodyBytes, _ := sonic.Marshal(body)
-
-	newBody, _ := locator.LocateAndCompress(bodyBytes, dispatcher, 10)
-	if newBody != nil {
-		t.Error("body without tool output should return nil (no modification)")
+	if stats.Items[0].ToolCallID != toolCallID {
+		t.Error("expected ToolCallID to be set in result")
+	}
+	if stats.Items[0].Input != largeContent {
+		t.Error("expected Input to contain original content")
 	}
 }
 
-func TestOpenAIChatLocatorSmallToolOutputSkipped(t *testing.T) {
+func TestCompressOpenAIChat_SkipsSmallToolOutput(t *testing.T) {
 	t.Parallel()
-	locator := &compression.OpenAIChatLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	body := map[string]any{
-		"model": "gpt-4o",
-		"messages": []any{
-			map[string]any{"role": "tool", "content": "ok"},
+	toolCallID := "call_002"
+	smallContent := "small"
+	messages := []*dto.OpenAIChatCompletionMessageParam{
+		{
+			Role:       enum.RoleTool,
+			ToolCallID: &toolCallID,
+			Content:    &dto.OpenAIMessageContent{Text: smallContent},
 		},
 	}
-	bodyBytes, _ := sonic.Marshal(body)
+	dispatcher := comp.NewDispatcher()
 
-	newBody, stats := locator.LocateAndCompress(bodyBytes, dispatcher, 512)
-	if newBody != nil {
-		t.Error("small tool output should be skipped, no modification")
+	stats := comp.CompressOpenAIChat(messages, dispatcher, 100)
+
+	if stats.ItemsCompressed != 0 {
+		t.Error("expected 0 items compressed for small content")
 	}
 	if stats.ItemsSkipped != 1 {
-		t.Errorf("expected 1 skipped item, got %d", stats.ItemsSkipped)
+		t.Error("expected 1 item skipped")
 	}
+	if messages[0].Content.Text != smallContent {
+		t.Error("expected small content to remain unchanged")
+	}
+}
+
+func TestCompressOpenAIChat_SkipsNonToolMessages(t *testing.T) {
+	t.Parallel()
+	messages := []*dto.OpenAIChatCompletionMessageParam{
+		{
+			Role:    enum.RoleUser,
+			Content: &dto.OpenAIMessageContent{Text: "user message"},
+		},
+	}
+	dispatcher := comp.NewDispatcher()
+
+	stats := comp.CompressOpenAIChat(messages, dispatcher, 0)
+
+	if stats.ItemsCompressed != 0 || stats.ItemsSkipped != 0 {
+		t.Error("expected no items processed for non-tool messages")
+	}
+}
+
+func TestCompressOpenAIChat_NilContentSkipped(t *testing.T) {
+	t.Parallel()
+	toolCallID := "call_003"
+	messages := []*dto.OpenAIChatCompletionMessageParam{
+		{
+			Role:       enum.RoleTool,
+			ToolCallID: &toolCallID,
+			Content:    nil,
+		},
+	}
+	dispatcher := comp.NewDispatcher()
+
+	stats := comp.CompressOpenAIChat(messages, dispatcher, 0)
+
+	if stats.ItemsCompressed != 0 || stats.ItemsSkipped != 0 {
+		t.Error("expected no items processed for nil content")
+	}
+}
+
+func makeLargeJSONArray() string {
+	const count = 20
+	var b strings.Builder
+	b.WriteByte('[')
+	for i := range count {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(`{"id":`)
+		b.WriteString(strconv.Itoa(i))
+		b.WriteString(`,"name":"item_`)
+		b.WriteString(strconv.Itoa(i))
+		b.WriteString(`","data":"some data here"}`)
+	}
+	b.WriteByte(']')
+	return b.String()
 }

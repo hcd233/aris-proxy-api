@@ -6,6 +6,8 @@ package compression
 
 // ItemCompressionResult 单个 tool output 的压缩结果。
 type ItemCompressionResult struct {
+	ToolCallID  string // 关联到存储消息的 tool_call_id
+	Input       string // 压缩前原始内容
 	Output      string // 压缩后内容（或跳过/失败时的原始内容）
 	Strategy    string // 策略名（"smart_crusher"/"log_compressor"/"search_compressor"/"passthrough"）
 	Applied     bool   // 是否实际执行了压缩
@@ -20,6 +22,7 @@ type CompressionStats struct {
 	ItemsCompressed int
 	ItemsSkipped    int
 	StrategiesUsed  []string
+	Items           []ItemCompressionResult // per-item 详情列表
 }
 
 func (s *CompressionStats) addItem(r ItemCompressionResult) {
@@ -31,6 +34,7 @@ func (s *CompressionStats) addItem(r ItemCompressionResult) {
 			s.StrategiesUsed = []string{}
 		}
 		s.StrategiesUsed = append(s.StrategiesUsed, r.Strategy)
+		s.Items = append(s.Items, r)
 	} else {
 		s.ItemsSkipped++
 	}
