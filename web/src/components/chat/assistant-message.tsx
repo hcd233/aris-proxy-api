@@ -2,7 +2,7 @@ import { Sparkles, ShieldAlert } from "lucide-react";
 import type { MessageItem, UnifiedToolCall } from "@/lib/types";
 import { ProviderIcon } from "@/components/provider-icon";
 import { cn } from "@/lib/utils";
-import { extractContent, lookupToolResult } from "./content-extract";
+import { extractContent, lookupToolResult, type ToolResultInfo } from "./content-extract";
 import { MultimodalParts } from "./multimodal-parts";
 import { ReasoningBlock } from "./reasoning-block";
 import { ToolCallCard } from "./tool-call-card";
@@ -24,7 +24,7 @@ function modelIcon(model: string) {
 interface AssistantMessageProps {
   message: MessageItem;
   index: number;
-  toolResultsByID: Record<string, string>;
+  toolResultsByID: Record<string, ToolResultInfo>;
 }
 
 export function AssistantMessage({

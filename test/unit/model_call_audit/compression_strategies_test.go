@@ -11,6 +11,7 @@ import (
 // compression strategies 去重后存储，避免同一策略因多个 tool output 压缩
 // 而在 audit 记录中重复出现。
 func TestSetCompressionStatsDedupStrategies(t *testing.T) {
+	t.Parallel()
 	task := &dto.ModelCallAuditTask{}
 
 	task.SetCompressionStats(1000, 400, []string{
@@ -35,6 +36,7 @@ func TestSetCompressionStatsDedupStrategies(t *testing.T) {
 
 // TestSetCompressionStatsDedupSingleStrategy 验证仅含单一重复策略时去重为 1 项。
 func TestSetCompressionStatsDedupSingleStrategy(t *testing.T) {
+	t.Parallel()
 	task := &dto.ModelCallAuditTask{}
 
 	task.SetCompressionStats(500, 200, []string{
@@ -54,6 +56,7 @@ func TestSetCompressionStatsDedupSingleStrategy(t *testing.T) {
 
 // TestSetCompressionStatsNilStrategies 验证 nil 策略切片不 panic 且存储为空切片。
 func TestSetCompressionStatsNilStrategies(t *testing.T) {
+	t.Parallel()
 	task := &dto.ModelCallAuditTask{}
 
 	task.SetCompressionStats(100, 50, nil)
@@ -68,6 +71,7 @@ func TestSetCompressionStatsNilStrategies(t *testing.T) {
 
 // TestSetCompressionStatsUniqueStrategies 验证无重复时顺序保持不变。
 func TestSetCompressionStatsUniqueStrategies(t *testing.T) {
+	t.Parallel()
 	task := &dto.ModelCallAuditTask{}
 
 	input := []string{"smart_crusher", "log_compressor", "search_compressor"}

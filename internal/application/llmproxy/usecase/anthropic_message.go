@@ -23,8 +23,8 @@ import (
 )
 
 func (u *anthropicUseCase) forwardMessageNative(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, exposedModel string, stream bool) *huma.StreamResponse {
+	compStats := u.compressMessagesIfNeeded(req.Body.Messages)
 	body := proxyutil.MarshalAnthropicMessageBodyForModel(req.Body, upstream.Model)
-	body, compStats := u.compressBodyIfNeeded(ctx, body, enum.ProtocolAnthropicMessage)
 	if stream {
 		return u.forwardMessageNativeStream(ctx, req, m, upstream, exposedModel, ep.Name(), body, compStats)
 	}
@@ -40,11 +40,12 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 	}
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	upstream := toTransportEndpoint(m, ep, false)
+	compStats := u.compressChatMessagesIfNeeded(chatReq.Messages)
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(chatReq, upstream.Model)
 	if stream {
-		return u.forwardMessageViaChatStream(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+		return u.forwardMessageViaChatStream(ctx, req, m, upstream, exposedModel, ep.Name(), body, compStats)
 	}
-	return u.forwardMessageViaChatUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body)
+	return u.forwardMessageViaChatUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body, compStats)
 }
 
 func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
@@ -77,7 +78,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		}
 
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model, compItems(compStats))
 
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolAnthropicMessage, firstTokenLatencyMs)
 		task.StreamDurationMs = streamDurationMs
@@ -107,7 +108,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model, compItems(compStats))
 
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
@@ -123,11 +124,11 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 	})
 }
 
-func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
+func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
+	return apiutil.WrapStreamResponse(u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body, compStats))
 }
 
-func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) func(w *bufio.Writer) {
+func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compStats *compression.CompressionStats) func(w *bufio.Writer) {
 	conv := &converter.OpenAIProtocolConverter{}
 	tracker := converter.NewSSEContentBlockTracker()
 	return func(w *bufio.Writer) {
@@ -141,7 +142,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, 
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
 		anthropicMsg := u.finalizeAnthropicChatStream(ctx, conv, w, completion, err, exposedModel)
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model, compItems(compStats))
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, firstTokenLatencyMs)
 		task.StreamDurationMs = streamDurationMs
 		if completion != nil {
@@ -151,6 +152,10 @@ func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, 
 			}
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	}
 }
@@ -190,7 +195,7 @@ func (u *anthropicUseCase) finalizeAnthropicChatStream(ctx context.Context, conv
 	return anthropicMsg
 }
 
-func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
+func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
 	conv := &converter.OpenAIProtocolConverter{}
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
@@ -209,12 +214,16 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model, compItems(compStats))
 		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs)
 		task.UpstreamStatusCode = fiber.StatusOK
 		task.SetTokensFromOpenAIUsage(completion.Usage)
 		if completion.Usage != nil {
 			reportTokenUsage(ctx, completion.Usage.InputOutputTokens())
+		}
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
 		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
 	})

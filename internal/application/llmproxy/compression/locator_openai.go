@@ -1,50 +1,26 @@
 package compression
 
 import (
-	"github.com/bytedance/sonic"
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"go.uber.org/zap"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// OpenAIChatLocator 扫描 OpenAI Chat Completions body 中的 messages[role=tool]。
-type OpenAIChatLocator struct{}
-
-func (l *OpenAIChatLocator) LocateAndCompress(body []byte, dispatcher *Dispatcher, minToolOutputBytes int) ([]byte, CompressionStats) {
-	var bodyMap map[string]any
-	if err := sonic.Unmarshal(body, &bodyMap); err != nil {
-		logger.Logger().Warn("[Compression] OpenAI Chat: failed to parse body", zap.Error(err))
-		return nil, CompressionStats{}
-	}
-
-	messagesRaw, ok := bodyMap["messages"]
-	if !ok {
-		return nil, CompressionStats{}
-	}
-	messages, ok := messagesRaw.([]any)
-	if !ok {
-		return nil, CompressionStats{}
-	}
-
+// CompressOpenAIChat 扫描 OpenAI Chat Completions 消息中的 role=tool 消息，
+// 压缩其 Content.Text，in-place 修改 DTO。
+func CompressOpenAIChat(messages []*dto.OpenAIChatCompletionMessageParam, dispatcher *Dispatcher, minToolOutputBytes int) CompressionStats {
 	stats := CompressionStats{}
-	modified := false
-
-	for _, msgRaw := range messages {
-		msg, ok := msgRaw.(map[string]any)
-		if !ok {
+	for _, msg := range messages {
+		if msg.Role != enum.RoleTool || msg.Content == nil {
 			continue
 		}
-		role, _ := msg["role"].(string)
-		if role != constant.CompressionJSONKeyTool {
-			continue
-		}
-		content, ok := msg["content"].(string)
-		if !ok {
-			continue
-		}
+		content := msg.Content.Text
 		if len(content) < minToolOutputBytes {
 			stats.addItem(ItemCompressionResult{
+				ToolCallID:  lo.FromPtr(msg.ToolCallID),
+				Input:       content,
 				Output:      content,
 				Strategy:    constant.CompressionStrategySkippedTooSmall,
 				Applied:     false,
@@ -53,23 +29,14 @@ func (l *OpenAIChatLocator) LocateAndCompress(body []byte, dispatcher *Dispatche
 			})
 			continue
 		}
-
 		result := dispatcher.Compress(content)
+		result.ToolCallID = lo.FromPtr(msg.ToolCallID)
+		result.Input = content
 		stats.addItem(result)
 		if result.Applied {
-			msg["content"] = result.Output
-			modified = true
+			msg.Content.Text = result.Output
+			msg.Content.Parts = nil
 		}
 	}
-
-	if !modified {
-		return nil, stats
-	}
-
-	newBody, err := proxyutil.MarshalUpstreamBody(bodyMap)
-	if err != nil {
-		logger.Logger().Warn("[Compression] OpenAI Chat: failed to re-marshal body", zap.Error(err))
-		return nil, stats
-	}
-	return newBody, stats
+	return stats
 }

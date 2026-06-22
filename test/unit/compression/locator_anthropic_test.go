@@ -3,107 +3,110 @@ package compression
 import (
 	"testing"
 
-	"github.com/bytedance/sonic"
-
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
+	comp "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-func TestAnthropicLocatorStringContent(t *testing.T) {
+func TestCompressAnthropicMessages_CompressesStringContent(t *testing.T) {
 	t.Parallel()
-	locator := &compression.AnthropicMessagesLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	body := map[string]any{
-		"model": "claude-sonnet-4-5-20250929",
-		"messages": []any{
-			map[string]any{
-				"role": "user",
-				"content": []any{
-					map[string]any{"type": "text", "text": "Check these errors"},
-					map[string]any{
-						"type":        "tool_result",
-						"tool_use_id": "toolu_123",
-						"content":     `[{"name":"error","code":500},{"name":"warn","code":0},{"name":"error","code":503},{"name":"info","code":200}]`,
+	toolUseID := "toolu_001"
+	largeContent := makeLargeJSONArray()
+	messages := []*dto.AnthropicMessageParam{
+		{
+			Role: "user",
+			Content: &dto.AnthropicMessageContent{
+				Blocks: []*dto.AnthropicContentBlock{
+					{
+						Type:      constant.CompressionJSONKeyToolResult,
+						ToolUseID: &toolUseID,
+						Content:   &dto.AnthropicToolResultContent{Text: largeContent},
 					},
 				},
 			},
 		},
 	}
-	bodyBytes, _ := sonic.Marshal(body)
+	dispatcher := comp.NewDispatcher()
 
-	newBody, stats := locator.LocateAndCompress(bodyBytes, dispatcher, 10)
-	if newBody == nil {
-		t.Fatal("expected compressed body")
-	}
+	stats := comp.CompressAnthropicMessages(messages, dispatcher, 100)
+
 	if stats.ItemsCompressed == 0 {
-		t.Error("expected at least 1 item compressed")
+		t.Fatal("expected at least 1 item compressed")
 	}
-
-	// 验证 text block 未被修改
-	var result map[string]any
-	sonic.Unmarshal(newBody, &result)
-	messages := result["messages"].([]any)
-	msg := messages[0].(map[string]any)
-	blocks := msg["content"].([]any)
-	textBlock := blocks[0].(map[string]any)
-	if textBlock["text"] != "Check these errors" {
-		t.Error("text block should not be modified")
+	if messages[0].Content.Blocks[0].Content.Text == largeContent {
+		t.Error("expected content to be replaced with compressed output")
+	}
+	if len(stats.Items) == 0 || stats.Items[0].ToolCallID != toolUseID {
+		t.Error("expected ToolCallID to be set in result")
 	}
 }
 
-func TestAnthropicLocatorArrayContent(t *testing.T) {
+func TestCompressAnthropicMessages_CompressesArrayContent(t *testing.T) {
 	t.Parallel()
-	locator := &compression.AnthropicMessagesLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	body := map[string]any{
-		"model": "claude-sonnet-4-5-20250929",
-		"messages": []any{
-			map[string]any{
-				"role": "user",
-				"content": []any{
-					map[string]any{
-						"type":        "tool_result",
-						"tool_use_id": "toolu_456",
-						"content": []any{
-							map[string]any{"type": "text", "text": `[{"name":"error","code":500,"msg":"db failed"},{"name":"warn","code":0,"msg":"ok"},{"name":"error","code":503,"msg":"timeout"},{"name":"info","code":200,"msg":"healthy"},{"name":"debug","code":100,"msg":"trace"}]`},
+	toolUseID := "toolu_002"
+	largeContent := makeLargeJSONArray()
+	messages := []*dto.AnthropicMessageParam{
+		{
+			Role: "user",
+			Content: &dto.AnthropicMessageContent{
+				Blocks: []*dto.AnthropicContentBlock{
+					{
+						Type:      constant.CompressionJSONKeyToolResult,
+						ToolUseID: &toolUseID,
+						Content: &dto.AnthropicToolResultContent{
+							Blocks: []*dto.AnthropicContentBlock{
+								{Type: "text", Text: &largeContent},
+							},
 						},
 					},
 				},
 			},
 		},
 	}
-	bodyBytes, _ := sonic.Marshal(body)
+	dispatcher := comp.NewDispatcher()
 
-	newBody, stats := locator.LocateAndCompress(bodyBytes, dispatcher, 10)
-	if newBody == nil {
-		t.Fatal("expected compressed body for array content")
-	}
+	stats := comp.CompressAnthropicMessages(messages, dispatcher, 100)
+
 	if stats.ItemsCompressed == 0 {
-		t.Error("expected at least 1 item compressed")
+		t.Fatal("expected at least 1 item compressed for array content")
+	}
+	if len(stats.Items) == 0 || stats.Items[0].ToolCallID != toolUseID {
+		t.Error("expected ToolCallID to be set in result")
 	}
 }
 
-func TestAnthropicLocatorNoToolResult(t *testing.T) {
+func TestCompressAnthropicMessages_SkipsNonToolResultBlocks(t *testing.T) {
 	t.Parallel()
-	locator := &compression.AnthropicMessagesLocator{}
-	dispatcher := compression.NewDispatcher()
-
-	body := map[string]any{
-		"model": "claude-sonnet-4-5-20250929",
-		"messages": []any{
-			map[string]any{
-				"role": "user",
-				"content": []any{
-					map[string]any{"type": "text", "text": "hello"},
+	originalText := "some text"
+	messages := []*dto.AnthropicMessageParam{
+		{
+			Role: "assistant",
+			Content: &dto.AnthropicMessageContent{
+				Blocks: []*dto.AnthropicContentBlock{
+					{Type: "text", Text: &originalText},
 				},
 			},
 		},
 	}
-	bodyBytes, _ := sonic.Marshal(body)
+	dispatcher := comp.NewDispatcher()
 
-	newBody, _ := locator.LocateAndCompress(bodyBytes, dispatcher, 10)
-	if newBody != nil {
-		t.Error("body without tool_result should return nil")
+	stats := comp.CompressAnthropicMessages(messages, dispatcher, 0)
+
+	if stats.ItemsCompressed != 0 || stats.ItemsSkipped != 0 {
+		t.Error("expected no items processed for non-tool_result blocks")
+	}
+}
+
+func TestCompressAnthropicMessages_NilContentSkipped(t *testing.T) {
+	t.Parallel()
+	messages := []*dto.AnthropicMessageParam{
+		{Role: "user", Content: nil},
+	}
+	dispatcher := comp.NewDispatcher()
+
+	stats := comp.CompressAnthropicMessages(messages, dispatcher, 0)
+
+	if stats.ItemsCompressed != 0 || stats.ItemsSkipped != 0 {
+		t.Error("expected no items processed for nil content")
 	}
 }

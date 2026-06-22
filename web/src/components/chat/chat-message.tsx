@@ -13,7 +13,7 @@
  */
 
 import type { MessageItem } from "@/lib/types";
-import { extractContent } from "./content-extract";
+import { extractContent, type ToolResultInfo } from "./content-extract";
 import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message";
 import { SystemMessage } from "./system-message";
@@ -23,7 +23,7 @@ export { buildToolResultsByID } from "./content-extract";
 interface ChatMessageProps {
   message: MessageItem;
   index: number;
-  toolResultsByID: Record<string, string>;
+  toolResultsByID: Record<string, ToolResultInfo>;
 }
 
 export function ChatMessage({

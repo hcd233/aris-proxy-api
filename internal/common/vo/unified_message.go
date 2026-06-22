@@ -95,6 +95,10 @@ type UnifiedMessage struct {
 	ToolCalls        []*UnifiedToolCall `json:"tool_calls,omitempty" doc:"工具调用列表"`
 	ToolCallID       string             `json:"tool_call_id,omitempty" doc:"工具调用ID(工具结果消息)"`
 	Refusal          string             `json:"refusal,omitempty" doc:"拒绝消息"`
+
+	// 压缩相关，仅当 tool output 被压缩时设置
+	RawContent          *string `json:"raw_content,omitempty" doc:"压缩前原始内容"`
+	CompressionStrategy string  `json:"compression_strategy,omitempty" doc:"压缩策略"`
 }
 
 // UnifiedToolCall 统一工具调用

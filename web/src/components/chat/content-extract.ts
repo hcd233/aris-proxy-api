@@ -51,9 +51,9 @@ export function normalizeToolCallID(id: string): string {
 }
 
 export function lookupToolResult(
-  map: Record<string, string>,
+  map: Record<string, ToolResultInfo>,
   id: string,
-): string | undefined {
+): ToolResultInfo | undefined {
   if (id in map) return map[id];
   const normalized = normalizeToolCallID(id);
   for (const key of Object.keys(map)) {
@@ -62,16 +62,26 @@ export function lookupToolResult(
   return undefined;
 }
 
+export interface ToolResultInfo {
+  text: string;
+  rawContent?: string;
+  compressionStrategy?: string;
+}
+
 export function buildToolResultsByID(
   messages: MessageItem[],
-): Record<string, string> {
-  const map: Record<string, string> = {};
+): Record<string, ToolResultInfo> {
+  const map: Record<string, ToolResultInfo> = {};
   for (const m of messages) {
     const id = m.message.tool_call_id;
     if (!id) continue;
     if (m.message.role !== "tool" && m.message.role !== "user") continue;
     const { text } = extractContent(m.message.content);
-    map[id] = text;
+    map[id] = {
+      text,
+      rawContent: m.message.raw_content,
+      compressionStrategy: m.message.compression_strategy,
+    };
   }
   return map;
 }

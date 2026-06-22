@@ -27,8 +27,11 @@ import (
 )
 
 func (u *openAIUseCase) forwardResponseNative(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+	var compStats *compression.CompressionStats
+	if req.Body.Input != nil && len(req.Body.Input.Items) > 0 {
+		compStats = u.compressResponseItemsIfNeeded(req.Body.Input.Items)
+	}
 	body := proxyutil.MarshalOpenAIResponseBodyForModel(req.Body, upstream.Model)
-	body, compStats := u.compressBodyIfNeeded(ctx, body, enum.ProtocolOpenAIResponse)
 	if stream {
 		return u.forwardResponseNativeStream(ctx, req, m, ep, upstream, body, compStats)
 	}
@@ -43,12 +46,13 @@ func (u *openAIUseCase) forwardResponseViaChat(ctx context.Context, req *dto.Ope
 		return proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
 	}
 	upstream := toTransportEndpoint(m, ep, false)
+	compStats := u.compressChatMessagesIfNeeded(chatReq.Messages)
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(chatReq, upstream.Model)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	if stream {
-		return u.forwardResponseViaChatStream(ctx, req, m, upstream, ep.Name(), body)
+		return u.forwardResponseViaChatStream(ctx, req, m, upstream, ep.Name(), body, compStats)
 	}
-	return u.forwardResponseViaChatUnary(ctx, req, m, upstream, ep.Name(), body)
+	return u.forwardResponseViaChatUnary(ctx, req, m, upstream, ep.Name(), body, compStats)
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) *huma.StreamResponse {
@@ -59,12 +63,13 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 		return proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
 	}
 	upstream := toTransportEndpoint(m, ep, true)
+	compStats := u.compressAnthropicMessagesIfNeeded(anthropicReq.Messages)
 	body := proxyutil.MarshalAnthropicMessageBodyForModel(anthropicReq, upstream.Model)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	if stream {
-		return u.forwardResponseViaAnthropicStream(ctx, req, m, upstream, ep.Name(), body)
+		return u.forwardResponseViaAnthropicStream(ctx, req, m, upstream, ep.Name(), body, compStats)
 	}
-	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, ep.Name(), body)
+	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, ep.Name(), body, compStats)
 }
 
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse { //nolint:gocognit // this function orchestrates streaming response forwarding which inherently involves multiple concerns
@@ -156,7 +161,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 			finalResponse.Output = accumulatedOutput
 		}
 
-		u.storeResponseFromRsp(ctx, req, finalResponse, proxyErr, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, finalResponse, proxyErr, upstream.Model, compItems(compStats))
 
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
@@ -209,7 +214,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		if parseErr != nil {
 			log.Warn("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
 		} else {
-			u.storeResponseFromRsp(ctx, req, &rsp, nil, upstream.Model)
+			u.storeResponseFromRsp(ctx, req, &rsp, nil, upstream.Model, compItems(compStats))
 		}
 
 		task := &dto.ModelCallAuditTask{
@@ -237,7 +242,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
 	conv := &converter.ResponseProtocolConverter{}
 	assertRespConvInit(conv, req)
@@ -293,7 +298,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 					zap.Int("outputCount", len(rsp.Output)))
 			}
 		}
-		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model, compItems(compStats))
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
@@ -309,11 +314,15 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 			reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
 	conv := &converter.ResponseProtocolConverter{}
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
@@ -333,7 +342,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 			return
 		}
 		writer.WriteJSON(rsp)
-		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model, compItems(compStats))
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
@@ -348,15 +357,19 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 		if rsp != nil && rsp.Usage != nil {
 			reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
 		}
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body))
+func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
+	return apiutil.WrapStreamResponse(u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body, compStats))
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) { //nolint:gocognit // streaming response forwarding naturally involves multiple concerns
+func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte, compStats *compression.CompressionStats) func(w *bufio.Writer) { //nolint:gocognit // streaming response forwarding naturally involves multiple concerns
 	log := logger.WithCtx(ctx)
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
@@ -422,7 +435,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 				zap.String("status", rsp.Status),
 				zap.Int("outputCount", len(rsp.Output)))
 		}
-		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model, compItems(compStats))
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
@@ -438,11 +451,15 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
 		}
 		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
+		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	}
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte, compStats *compression.CompressionStats) *huma.StreamResponse {
 	anthropicConv := &converter.AnthropicProtocolConverter{}
 	responseConv := &converter.ResponseProtocolConverter{}
 	assertRespConvInit(responseConv, req)
@@ -470,7 +487,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 			return
 		}
 		writer.WriteJSON(rsp)
-		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model, compItems(compStats))
 		task := &dto.ModelCallAuditTask{
 			Ctx:                 util.CopyContextValues(ctx),
 			ModelID:             m.AggregateID(),
@@ -484,6 +501,10 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 		task.SetTokensFromAnthropicUsage(anthropicMsg)
 		if anthropicMsg != nil && anthropicMsg.Usage != nil {
 			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
+		}
+		if compStats != nil {
+			task.SetCompressionStats(compStats.BytesBefore, compStats.BytesAfter, compStats.StrategiesUsed)
+			task.ComputeCompressedTokens()
 		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
 	})

@@ -126,18 +126,24 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	}
 }
 
-func (u *anthropicUseCase) compressBodyIfNeeded(ctx context.Context, body []byte, upstreamProtocol enum.ProtocolType) ([]byte, *compression.CompressionStats) {
-	if !config.CompressionEnabled || u.dispatcher == nil || len(body) < config.CompressionMinBodyBytes {
-		return body, nil
+func (u *anthropicUseCase) compressMessagesIfNeeded(messages []*dto.AnthropicMessageParam) *compression.CompressionStats {
+	if !config.CompressionEnabled || u.dispatcher == nil {
+		return nil
 	}
-	newBody, stats := compression.CompressBody(body, upstreamProtocol, u.dispatcher, config.CompressionMinToolOutputBytes)
-	if stats != nil && stats.ItemsCompressed > 0 {
-		logger.WithCtx(ctx).Info("[Compression] Anthropic body compressed",
-			zap.Int("bytesBefore", stats.BytesBefore),
-			zap.Int("bytesAfter", stats.BytesAfter),
-			zap.Int("itemsCompressed", stats.ItemsCompressed),
-			zap.Strings("strategies", stats.StrategiesUsed),
-		)
+	stats := compression.CompressAnthropicMessages(messages, u.dispatcher, config.CompressionMinToolOutputBytes)
+	if stats.ItemsCompressed > 0 {
+		return &stats
 	}
-	return newBody, stats
+	return nil
+}
+
+func (u *anthropicUseCase) compressChatMessagesIfNeeded(messages []*dto.OpenAIChatCompletionMessageParam) *compression.CompressionStats {
+	if !config.CompressionEnabled || u.dispatcher == nil {
+		return nil
+	}
+	stats := compression.CompressOpenAIChat(messages, u.dispatcher, config.CompressionMinToolOutputBytes)
+	if stats.ItemsCompressed > 0 {
+		return &stats
+	}
+	return nil
 }

@@ -1,77 +1,41 @@
 package compression
 
 import (
-	"github.com/bytedance/sonic"
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"go.uber.org/zap"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// OpenAIResponsesLocator 扫描 OpenAI Responses body 中的 input[type=function_call_output]。
-type OpenAIResponsesLocator struct{}
-
-func (l *OpenAIResponsesLocator) LocateAndCompress(body []byte, dispatcher *Dispatcher, minToolOutputBytes int) ([]byte, CompressionStats) {
-	var bodyMap map[string]any
-	if err := sonic.Unmarshal(body, &bodyMap); err != nil {
-		logger.Logger().Warn("[Compression] Responses: failed to parse body", zap.Error(err))
-		return nil, CompressionStats{}
-	}
-
-	inputRaw, ok := bodyMap["input"]
-	if !ok {
-		return nil, CompressionStats{}
-	}
-
+// CompressOpenAIResponses 扫描 OpenAI Responses input 中的 function_call_output 项，
+// 压缩其 Output.Text，in-place 修改 DTO。
+func CompressOpenAIResponses(items []*dto.ResponseInputItem, dispatcher *Dispatcher, minToolOutputBytes int) CompressionStats {
 	stats := CompressionStats{}
-	modified := false
-
-	switch input := inputRaw.(type) {
-	case []any:
-		for _, itemRaw := range input {
-			item, ok := itemRaw.(map[string]any)
-			if !ok {
-				continue
-			}
-			itemType, _ := item["type"].(string)
-			if itemType != constant.CompressionJSONKeyFuncCallOutput {
-				continue
-			}
-			output, ok := item["output"].(string)
-			if !ok {
-				continue
-			}
-			if len(output) < minToolOutputBytes {
-				stats.addItem(ItemCompressionResult{
-					Output:      output,
-					Strategy:    constant.CompressionStrategySkippedTooSmall,
-					Applied:     false,
-					BytesBefore: len(output),
-					BytesAfter:  len(output),
-				})
-				continue
-			}
-			result := dispatcher.Compress(output)
-			stats.addItem(result)
-			if result.Applied {
-				item["output"] = result.Output
-				modified = true
-			}
+	for _, item := range items {
+		if lo.FromPtr(item.Type) != constant.CompressionJSONKeyFuncCallOutput || item.Output == nil {
+			continue
 		}
-
-	case string:
-		// input 是字符串时不处理
-		return nil, CompressionStats{}
+		output := item.Output.Text
+		if len(output) < minToolOutputBytes {
+			stats.addItem(ItemCompressionResult{
+				ToolCallID:  lo.FromPtr(item.CallID),
+				Input:       output,
+				Output:      output,
+				Strategy:    constant.CompressionStrategySkippedTooSmall,
+				Applied:     false,
+				BytesBefore: len(output),
+				BytesAfter:  len(output),
+			})
+			continue
+		}
+		result := dispatcher.Compress(output)
+		result.ToolCallID = lo.FromPtr(item.CallID)
+		result.Input = output
+		stats.addItem(result)
+		if result.Applied {
+			item.Output.Text = result.Output
+			item.Output.FunctionOutput = nil
+		}
 	}
-
-	if !modified {
-		return nil, stats
-	}
-
-	newBody, err := proxyutil.MarshalUpstreamBody(bodyMap)
-	if err != nil {
-		logger.Logger().Warn("[Compression] Responses: failed to re-marshal body", zap.Error(err))
-		return nil, stats
-	}
-	return newBody, stats
+	return stats
 }
