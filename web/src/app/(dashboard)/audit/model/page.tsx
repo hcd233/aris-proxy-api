@@ -196,7 +196,7 @@ export default function AuditPage() {
           <CardTitle className="font-display">Audit Logs</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* 筛选区 */}
+          {/* Filters */}
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <TimeRangePicker
@@ -268,7 +268,7 @@ export default function AuditPage() {
             </div>
           </div>
 
-          {/* 列表 */}
+          {/* List */}
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (

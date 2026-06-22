@@ -108,7 +108,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
                     onClick={() => setShowDiff((v) => !v)}
                     className="font-mono text-[10px] text-primary hover:underline"
                   >
-                    {showDiff ? "查看压缩后内容" : "查看原始内容"}
+                    {showDiff ? "View compressed content" : "View original content"}
                   </button>
                 )}
               </div>
