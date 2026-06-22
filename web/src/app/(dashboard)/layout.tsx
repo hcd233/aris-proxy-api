@@ -23,6 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -264,7 +265,8 @@ export default function DashboardLayout({
             )}
           </div>
           <Separator className="bg-sidebar-border/50" />
-          <div className="p-2">
+          <div className="p-2 space-y-1.5">
+            <ThemeToggle collapsed={collapsed} />
             <UserBar collapsed={collapsed} />
           </div>
         </aside>
@@ -302,7 +304,8 @@ export default function DashboardLayout({
               <SidebarNav items={navItems} onNavigate={closeMobileSidebar} />
             </div>
             <Separator className="bg-sidebar-border/50" />
-            <div className="p-2">
+            <div className="p-2 space-y-1.5">
+              <ThemeToggle />
               <UserBar />
             </div>
           </SheetContent>
