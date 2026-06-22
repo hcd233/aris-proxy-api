@@ -199,9 +199,6 @@ var (
 	// CompressionEnabled bool 是否启用 tool output 压缩
 	CompressionEnabled bool
 
-	// CompressionMinBodyBytes int body 小于此值跳过压缩
-	CompressionMinBodyBytes int
-
 	// CompressionMinToolOutputBytes int 单个 tool output 小于此值跳过
 	CompressionMinToolOutputBytes int
 )
@@ -329,7 +326,6 @@ func initEnvironment() {
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
 
 	CompressionEnabled = config.GetBool("compression.enabled")
-	CompressionMinBodyBytes = config.GetInt("compression.min.body.bytes")
 	CompressionMinToolOutputBytes = config.GetInt("compression.min.tool.output.bytes")
 
 	Pool = PoolConfig{

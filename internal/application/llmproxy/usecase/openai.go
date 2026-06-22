@@ -150,18 +150,35 @@ func toTransportEndpoint(m *aggregate.Model, ep *aggregate.Endpoint, isAnthropic
 	return vo.NewUpstreamEndpointFromCredential(m.ModelName(), ep.APIKey(), baseURL)
 }
 
-func (u *openAIUseCase) compressBodyIfNeeded(ctx context.Context, body []byte, upstreamProtocol enum.ProtocolType) ([]byte, *compression.CompressionStats) {
-	if !config.CompressionEnabled || u.dispatcher == nil || len(body) < config.CompressionMinBodyBytes {
-		return body, nil
+func (u *openAIUseCase) compressChatMessagesIfNeeded(messages []*dto.OpenAIChatCompletionMessageParam) *compression.CompressionStats {
+	if !config.CompressionEnabled || u.dispatcher == nil {
+		return nil
 	}
-	newBody, stats := compression.CompressBody(body, upstreamProtocol, u.dispatcher, config.CompressionMinToolOutputBytes)
-	if stats != nil && stats.ItemsCompressed > 0 {
-		logger.WithCtx(ctx).Info("[Compression] OpenAI body compressed",
-			zap.Int("bytesBefore", stats.BytesBefore),
-			zap.Int("bytesAfter", stats.BytesAfter),
-			zap.Int("itemsCompressed", stats.ItemsCompressed),
-			zap.Strings("strategies", stats.StrategiesUsed),
-		)
+	stats := compression.CompressOpenAIChat(messages, u.dispatcher, config.CompressionMinToolOutputBytes)
+	if stats.ItemsCompressed > 0 {
+		return &stats
 	}
-	return newBody, stats
+	return nil
+}
+
+func (u *openAIUseCase) compressAnthropicMessagesIfNeeded(messages []*dto.AnthropicMessageParam) *compression.CompressionStats {
+	if !config.CompressionEnabled || u.dispatcher == nil {
+		return nil
+	}
+	stats := compression.CompressAnthropicMessages(messages, u.dispatcher, config.CompressionMinToolOutputBytes)
+	if stats.ItemsCompressed > 0 {
+		return &stats
+	}
+	return nil
+}
+
+func (u *openAIUseCase) compressResponseItemsIfNeeded(items []*dto.ResponseInputItem) *compression.CompressionStats {
+	if !config.CompressionEnabled || u.dispatcher == nil {
+		return nil
+	}
+	stats := compression.CompressOpenAIResponses(items, u.dispatcher, config.CompressionMinToolOutputBytes)
+	if stats.ItemsCompressed > 0 {
+		return &stats
+	}
+	return nil
 }
