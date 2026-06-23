@@ -239,7 +239,7 @@ log "Restarting deployment to pick up new image (tag: ${IMAGE_TAG})"
 kubectl rollout restart "deployment/${APP_NAME}" -n "${NAMESPACE}"
 
 log "Waiting for rollout"
-kubectl rollout status "deployment/${APP_NAME}" -n "${NAMESPACE}" --timeout=120s
+kubectl rollout status "deployment/${APP_NAME}" -n "${NAMESPACE}" --timeout=300s
 
 log "Verifying k3s service health"
 wait_for_service_health
