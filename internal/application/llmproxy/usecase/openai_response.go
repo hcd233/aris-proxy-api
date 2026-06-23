@@ -65,111 +65,155 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, ep.Name(), body)
 }
 
+type nativeStreamHandler struct {
+	u                *openAIUseCase
+	ctx              context.Context
+	req              *dto.OpenAICreateResponseRequest
+	w                *bufio.Writer
+	startTime        time.Time
+	firstTokenTime   time.Time
+	firstTokenLatencyMs int64
+	streamDurationMs int64
+	finalResponse    *dto.OpenAICreateResponseRsp
+	accumulatedOutput []*dto.ResponseInputItem
+	logger           *zap.Logger
+}
+
+func newNativeStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest, w *bufio.Writer) *nativeStreamHandler {
+	return &nativeStreamHandler{
+		u:                u,
+		ctx:              ctx,
+		req:              req,
+		w:                w,
+		startTime:        time.Now(),
+		accumulatedOutput: make([]*dto.ResponseInputItem, 0),
+		logger:           logger.WithCtx(ctx),
+	}
+}
+
+func (h *nativeStreamHandler) onEvent(event string, data []byte) error {
+	if h.firstTokenTime.IsZero() && proxyutil.IsResponseAPIDeltaEvent(event) {
+		h.firstTokenTime = time.Now()
+		h.firstTokenLatencyMs = h.firstTokenTime.Sub(h.startTime).Milliseconds()
+		h.logger.Info("[OpenAIUseCase] Native response first delta event",
+			zap.String("event", event),
+			zap.Int64("firstTokenLatencyMs", h.firstTokenLatencyMs))
+	}
+	h.handleOutputItemDone(event, data)
+	h.handleTerminalEvent(event, data)
+
+	outgoingData := h.patchTerminalOutput(event, data)
+	replaced := proxyutil.ReplaceModelInSSEData(outgoingData, lo.FromPtr(h.req.Body.Model))
+	if _, writeErr := fmt.Fprintf(h.w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
+		h.logger.Debug("[OpenAIUseCase] Failed to write SSE event frame", zap.Error(writeErr))
+	}
+	return h.w.Flush()
+}
+
+func (h *nativeStreamHandler) handleOutputItemDone(event string, data []byte) {
+	if event != enum.ResponseStreamEventOutputItemDone {
+		return
+	}
+	var ev dto.ResponseStreamOutputItemDoneEvent
+	if err := sonic.Unmarshal(data, &ev); err != nil {
+		h.logger.Debug("[OpenAIUseCase] Failed to parse output_item.done event", zap.Error(err))
+		return
+	}
+	if ev.Item == nil {
+		return
+	}
+	h.accumulatedOutput = append(h.accumulatedOutput, ev.Item)
+	h.logger.Info("[OpenAIUseCase] Native response output_item.done",
+		zap.Int("outputIndex", ev.OutputIndex),
+		zap.Stringp("itemType", ev.Item.Type))
+}
+
+func (h *nativeStreamHandler) handleTerminalEvent(event string, data []byte) {
+	if h.finalResponse != nil || !proxyutil.IsResponseAPITerminalEvent(event) {
+		return
+	}
+	var ev dto.ResponseStreamTerminalEvent
+	if err := sonic.Unmarshal(data, &ev); err != nil {
+		h.logger.Warn("[OpenAIUseCase] Failed to parse response terminal event",
+			zap.String("event", event), zap.Error(err))
+		return
+	}
+	h.finalResponse = ev.Response
+	if h.finalResponse == nil {
+		return
+	}
+	outputTypes := lo.FilterMap(h.finalResponse.Output, func(item *dto.ResponseInputItem, _ int) (string, bool) {
+		if item == nil {
+			return "", false
+		}
+		return lo.FromPtr(item.Type), true
+	})
+	h.logger.Info("[OpenAIUseCase] Native response terminal event parsed",
+		zap.String("event", event),
+		zap.String("responseID", h.finalResponse.ID),
+		zap.String("status", h.finalResponse.Status),
+		zap.Int("outputCount", len(h.finalResponse.Output)),
+		zap.Strings("outputTypes", outputTypes),
+		zap.Int("accumulatedCount", len(h.accumulatedOutput)))
+}
+
+func (h *nativeStreamHandler) patchTerminalOutput(event string, data []byte) []byte {
+	if !proxyutil.IsResponseAPITerminalEvent(event) {
+		return data
+	}
+	patched, changed, err := proxyutil.FillResponseTerminalOutput(data, h.accumulatedOutput)
+	if err != nil {
+		h.logger.Warn("[OpenAIUseCase] Failed to fill response terminal output", zap.String("event", event), zap.Error(err))
+		return data
+	}
+	if !changed {
+		return data
+	}
+	if h.finalResponse != nil {
+		h.finalResponse.Output = h.accumulatedOutput
+	}
+	h.logger.Info("[OpenAIUseCase] Native response terminal output filled", zap.Int("count", len(h.accumulatedOutput)))
+	return patched
+}
+
+func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint) {
+	if !h.firstTokenTime.IsZero() {
+		h.streamDurationMs = time.Since(h.firstTokenTime).Milliseconds()
+	}
+	if proxyErr != nil {
+		h.logger.Error("[OpenAIUseCase] Native response stream error", zap.Error(proxyErr))
+		proxyutil.WriteUpstreamSSEError(h.ctx, w, proxyErr)
+	}
+	if h.finalResponse != nil && len(h.finalResponse.Output) == 0 && len(h.accumulatedOutput) > 0 {
+		h.logger.Info("[OpenAIUseCase] Using accumulated output items", zap.Int("count", len(h.accumulatedOutput)))
+		h.finalResponse.Output = h.accumulatedOutput
+	}
+	h.u.storeResponseFromRsp(h.ctx, h.req, h.finalResponse, proxyErr, upstream.Model)
+
+	task := &dto.ModelCallAuditTask{
+		Ctx:                 util.CopyContextValues(h.ctx),
+		ModelID:             m.AggregateID(),
+		Model:               lo.FromPtr(h.req.Body.Model),
+		Endpoint:            ep.Name(),
+		UpstreamProtocol:    enum.ProtocolOpenAIResponse,
+		APIProtocol:         enum.ProtocolOpenAIResponse,
+		FirstTokenLatencyMs: h.firstTokenLatencyMs,
+		StreamDurationMs:    h.streamDurationMs,
+	}
+	task.SetTokensFromResponseUsage(h.finalResponse)
+	if h.finalResponse != nil && h.finalResponse.Usage != nil {
+		reportTokenUsage(h.ctx, h.finalResponse.Usage.InputOutputTokens())
+	}
+	task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(proxyErr)
+	task.SetErrorFromResponseStatus(h.finalResponse)
+	_ = h.u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+}
+
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
-	log := logger.WithCtx(ctx)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
-		startTime := time.Now()
-		var firstTokenTime time.Time
-		var firstTokenLatencyMs, streamDurationMs int64
-		var finalResponse *dto.OpenAICreateResponseRsp
-		accumulatedOutput := make([]*dto.ResponseInputItem, 0)
-
-		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, func(event string, data []byte) error {
-			if firstTokenTime.IsZero() && proxyutil.IsResponseAPIDeltaEvent(event) {
-				firstTokenTime = time.Now()
-				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
-				log.Info("[OpenAIUseCase] Native response first delta event",
-					zap.String("event", event),
-					zap.Int64("firstTokenLatencyMs", firstTokenLatencyMs))
-			}
-			if event == enum.ResponseStreamEventOutputItemDone {
-				var ev dto.ResponseStreamOutputItemDoneEvent
-				if err := sonic.Unmarshal(data, &ev); err != nil {
-					log.Debug("[OpenAIUseCase] Failed to parse output_item.done event", zap.Error(err))
-				} else if ev.Item != nil {
-					accumulatedOutput = append(accumulatedOutput, ev.Item)
-					log.Info("[OpenAIUseCase] Native response output_item.done",
-						zap.Int("outputIndex", ev.OutputIndex),
-						zap.Stringp("itemType", ev.Item.Type))
-				}
-			}
-			if finalResponse == nil && proxyutil.IsResponseAPITerminalEvent(event) {
-				var ev dto.ResponseStreamTerminalEvent
-				if err := sonic.Unmarshal(data, &ev); err != nil {
-					log.Warn("[OpenAIUseCase] Failed to parse response terminal event",
-						zap.String("event", event), zap.Error(err))
-				} else {
-					finalResponse = ev.Response
-					if finalResponse != nil {
-						outputTypes := lo.FilterMap(finalResponse.Output, func(item *dto.ResponseInputItem, _ int) (string, bool) {
-							if item == nil {
-								return "", false
-							}
-							return lo.FromPtr(item.Type), true
-						})
-						log.Info("[OpenAIUseCase] Native response terminal event parsed",
-							zap.String("event", event),
-							zap.String("responseID", finalResponse.ID),
-							zap.String("status", finalResponse.Status),
-							zap.Int("outputCount", len(finalResponse.Output)),
-							zap.Strings("outputTypes", outputTypes),
-							zap.Int("accumulatedCount", len(accumulatedOutput)))
-					}
-				}
-			}
-			outgoingData := data
-			if proxyutil.IsResponseAPITerminalEvent(event) {
-				patched, changed, err := proxyutil.FillResponseTerminalOutput(data, accumulatedOutput)
-				if err != nil {
-					log.Warn("[OpenAIUseCase] Failed to fill response terminal output", zap.String("event", event), zap.Error(err))
-				} else if changed {
-					outgoingData = patched
-					if finalResponse != nil {
-						finalResponse.Output = accumulatedOutput
-					}
-					log.Info("[OpenAIUseCase] Native response terminal output filled", zap.Int("count", len(accumulatedOutput)))
-				}
-			}
-			replaced := proxyutil.ReplaceModelInSSEData(outgoingData, lo.FromPtr(req.Body.Model))
-			if _, writeErr := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
-				log.Debug("[OpenAIUseCase] Failed to write SSE event frame", zap.Error(writeErr))
-			}
-			return w.Flush()
-		})
-
-		if !firstTokenTime.IsZero() {
-			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
-		}
-		if proxyErr != nil {
-			log.Error("[OpenAIUseCase] Native response stream error", zap.Error(proxyErr))
-			proxyutil.WriteUpstreamSSEError(ctx, w, proxyErr)
-		}
-
-		if finalResponse != nil && len(finalResponse.Output) == 0 && len(accumulatedOutput) > 0 {
-			log.Info("[OpenAIUseCase] Using accumulated output items",
-				zap.Int("count", len(accumulatedOutput)))
-			finalResponse.Output = accumulatedOutput
-		}
-
-		u.storeResponseFromRsp(ctx, req, finalResponse, proxyErr, upstream.Model)
-
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               lo.FromPtr(req.Body.Model),
-			Endpoint:            ep.Name(),
-			UpstreamProtocol:    enum.ProtocolOpenAIResponse,
-			APIProtocol:         enum.ProtocolOpenAIResponse,
-			FirstTokenLatencyMs: firstTokenLatencyMs,
-			StreamDurationMs:    streamDurationMs,
-		}
-		task.SetTokensFromResponseUsage(finalResponse)
-		if finalResponse != nil && finalResponse.Usage != nil {
-			reportTokenUsage(ctx, finalResponse.Usage.InputOutputTokens())
-		}
-		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(proxyErr)
-		task.SetErrorFromResponseStatus(finalResponse)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		h := newNativeStreamHandler(ctx, u, req, w)
+		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, h.onEvent)
+		h.finalize(w, proxyErr, m, ep, upstream)
 	})
 }
 
@@ -343,89 +387,115 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 	return apiutil.WrapStreamResponse(u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body))
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
-	log := logger.WithCtx(ctx)
-	anthropicConv := &converter.AnthropicProtocolConverter{}
-	responseConv := &converter.ResponseProtocolConverter{}
-	assertRespConvInit(responseConv, req)
-	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
+type anthropicStreamHandler struct {
+	u                 *openAIUseCase
+	ctx               context.Context
+	req               *dto.OpenAICreateResponseRequest
+	responseConv      *converter.ResponseProtocolConverter
+	anthropicConv     *converter.AnthropicProtocolConverter
+	exposedModel      string
+	responseID        string
+	chunkID           string
+	startTime         time.Time
+	firstTokenTime    time.Time
+	firstTokenLatencyMs int64
+	streamDurationMs  int64
+	allChunks         []*dto.OpenAIChatCompletionChunk
+	chunkCount        int64
+	initializedItems  map[int]bool
+	logger            *zap.Logger
+}
+
+func newAnthropicStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *anthropicStreamHandler {
 	exposedModel := lo.FromPtr(req.Body.Model)
-	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
-	initializedItems := make(map[int]bool)
+	return &anthropicStreamHandler{
+		u:               u,
+		ctx:             ctx,
+		req:             req,
+		responseConv:    &converter.ResponseProtocolConverter{},
+		anthropicConv:   &converter.AnthropicProtocolConverter{},
+		exposedModel:    exposedModel,
+		responseID:      fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String()),
+		chunkID:         fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
+		startTime:       time.Now(),
+		initializedItems: make(map[int]bool),
+		logger:          logger.WithCtx(ctx),
+	}
+}
+
+func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.AnthropicSSEEvent) error {
+	if h.firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
+		h.firstTokenTime = time.Now()
+		h.firstTokenLatencyMs = h.firstTokenTime.Sub(h.startTime).Milliseconds()
+		h.logger.Info("[OpenAIUseCase] Via anthropic first delta event",
+			zap.Int64("firstTokenLatencyMs", h.firstTokenLatencyMs))
+	}
+	chunks, convErr := h.anthropicConv.ToOpenAISSEResponse(event, h.exposedModel, h.chunkID)
+	if convErr != nil {
+		h.logger.Error("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
+		return convErr
+	}
+	for _, chunk := range chunks {
+		if chunk == nil {
+			continue
+		}
+		h.chunkCount++
+		h.allChunks = append(h.allChunks, chunk)
+		if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk, h.initializedItems, h.responseID); writeErr != nil {
+			return writeErr
+		}
+	}
+	return nil
+}
+
+func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, anthropicMsg *dto.AnthropicMessage, err error) {
+	if !h.firstTokenTime.IsZero() {
+		h.streamDurationMs = time.Since(h.firstTokenTime).Milliseconds()
+	}
+	h.logger.Info("[OpenAIUseCase] Via anthropic stream completed",
+		zap.Int64("chunkCount", h.chunkCount),
+		zap.Int64("streamDurationMs", h.streamDurationMs),
+		zap.Bool("hasError", err != nil))
+
+	rsp := finalizeResponseFromAnthropicStream(h.ctx, w, err, h.allChunks, anthropicMsg, h.exposedModel, h.responseID, h.anthropicConv, h.responseConv)
+	if rsp != nil {
+		h.logger.Info("[OpenAIUseCase] Via anthropic response finalized",
+			zap.String("responseID", rsp.ID),
+			zap.String("status", rsp.Status),
+			zap.Int("outputCount", len(rsp.Output)))
+	}
+	h.u.storeResponseFromRsp(h.ctx, h.req, rsp, err, upstream.Model)
+	task := &dto.ModelCallAuditTask{
+		Ctx:                 util.CopyContextValues(h.ctx),
+		ModelID:             m.AggregateID(),
+		Model:               h.exposedModel,
+		Endpoint:            endpoint,
+		UpstreamProtocol:    enum.ProtocolAnthropicMessage,
+		APIProtocol:         enum.ProtocolOpenAIResponse,
+		FirstTokenLatencyMs: h.firstTokenLatencyMs,
+		StreamDurationMs:    h.streamDurationMs,
+	}
+	task.SetTokensFromAnthropicUsage(anthropicMsg)
+	if anthropicMsg != nil && anthropicMsg.Usage != nil {
+		reportTokenUsage(h.ctx, anthropicMsg.Usage.InputOutputTokens())
+	}
+	task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
+	_ = h.u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+}
+
+func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
+	h := newAnthropicStreamHandler(ctx, u, req)
 	return func(w *bufio.Writer) {
-		startTime := time.Now()
-		var firstTokenTime time.Time
-		var firstTokenLatencyMs, streamDurationMs int64
-		var allChunks []*dto.OpenAIChatCompletionChunk
-		var chunkCount int64
-
-		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, exposedModel, responseID); err != nil {
-			log.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
+		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, h.exposedModel, h.responseID); err != nil {
+			h.logger.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
 		}
-		log.Info("[OpenAIUseCase] Via anthropic response.created written",
-			zap.String("responseID", responseID),
-			zap.String("model", exposedModel))
-
-		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, exposedModel, responseID); err != nil {
-			log.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
+		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, h.exposedModel, h.responseID); err != nil {
+			h.logger.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
 		}
-
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
-			if firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
-				firstTokenTime = time.Now()
-				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
-				log.Info("[OpenAIUseCase] Via anthropic first delta event",
-					zap.Int64("firstTokenLatencyMs", firstTokenLatencyMs))
-			}
-			chunks, convErr := anthropicConv.ToOpenAISSEResponse(event, exposedModel, chunkID)
-			if convErr != nil {
-				logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
-				return convErr
-			}
-			for _, chunk := range chunks {
-				if chunk == nil {
-					continue
-				}
-				chunkCount++
-				allChunks = append(allChunks, chunk)
-				if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk, initializedItems, responseID); writeErr != nil {
-					return writeErr
-				}
-			}
-			return nil
+			return h.onAnthropicEvent(w, event)
 		})
-		if !firstTokenTime.IsZero() {
-			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
-		}
-		log.Info("[OpenAIUseCase] Via anthropic stream completed",
-			zap.Int64("chunkCount", chunkCount),
-			zap.Int64("streamDurationMs", streamDurationMs),
-			zap.Bool("hasError", err != nil))
-
-		rsp := finalizeResponseFromAnthropicStream(ctx, w, err, allChunks, anthropicMsg, exposedModel, responseID, anthropicConv, responseConv)
-		if rsp != nil {
-			log.Info("[OpenAIUseCase] Via anthropic response finalized",
-				zap.String("responseID", rsp.ID),
-				zap.String("status", rsp.Status),
-				zap.Int("outputCount", len(rsp.Output)))
-		}
-		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               exposedModel,
-			Endpoint:            endpoint,
-			UpstreamProtocol:    enum.ProtocolAnthropicMessage,
-			APIProtocol:         enum.ProtocolOpenAIResponse,
-			FirstTokenLatencyMs: firstTokenLatencyMs,
-			StreamDurationMs:    streamDurationMs,
-		}
-		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		if anthropicMsg != nil && anthropicMsg.Usage != nil {
-			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
-		}
-		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		h.finalize(w, m, upstream, endpoint, anthropicMsg, err)
 	}
 }
 
@@ -488,15 +558,9 @@ func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 		delta := choice.Delta
 		itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
 		outputIndex := choice.Index
-
-		if !initializedItems[outputIndex] {
-			initializedItems[outputIndex] = true
-			if err := writeOutputItemAddedEvent(w, itemID, outputIndex); err != nil {
-				return wroteDelta, err
-			}
-			if err := writeContentPartAddedEvent(w, itemID, outputIndex); err != nil {
-				return wroteDelta, err
-			}
+		initErr := initOutputItem(w, initializedItems, itemID, outputIndex)
+		if initErr != nil {
+			return wroteDelta, initErr
 		}
 
 		wrote, err := writeDeltaField(w, enum.ResponseStreamEventOutputTextDelta, delta.Content, itemID, outputIndex, 0)
@@ -521,6 +585,17 @@ func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 		return true, w.Flush()
 	}
 	return false, nil
+}
+
+func initOutputItem(w *bufio.Writer, initializedItems map[int]bool, itemID string, outputIndex int) error {
+	if initializedItems[outputIndex] {
+		return nil
+	}
+	initializedItems[outputIndex] = true
+	if err := writeOutputItemAddedEvent(w, itemID, outputIndex); err != nil {
+		return err
+	}
+	return writeContentPartAddedEvent(w, itemID, outputIndex)
 }
 
 func writeDeltaField(w *bufio.Writer, event enum.ResponseStreamEventType, value *string, itemID string, outputIndex, contentIndex int) (bool, error) {
