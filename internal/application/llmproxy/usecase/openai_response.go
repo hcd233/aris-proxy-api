@@ -274,7 +274,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	assertRespConvInit(conv, req)
 	exposedModel := lo.FromPtr(req.Body.Model)
 	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
-	initializedItems := make(map[int]bool)
+	itemState := converter.NewStreamItemState()
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		startTime := time.Now()
 		var firstTokenTime time.Time
@@ -294,7 +294,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			chunkCount++
-			hasWritten, writeErr := writeResponseDeltaFromChatChunk(w, chunk, initializedItems, responseID)
+			hasWritten, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, itemState, responseID, conv)
 			if firstTokenTime.IsZero() && hasWritten {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
@@ -316,7 +316,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		if err != nil {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		} else {
-			rsp = finalizeResponseFromChatCompletion(ctx, w, completion, exposedModel, responseID, conv)
+			rsp = converter.FinalizeResponseFromChatCompletion(w, completion, exposedModel, responseID, conv)
 			if rsp != nil {
 				log.Info("[OpenAIUseCase] Via chat response finalized",
 					zap.String("responseID", rsp.ID),
@@ -402,24 +402,26 @@ type anthropicStreamHandler struct {
 	streamDurationMs    int64
 	allChunks           []*dto.OpenAIChatCompletionChunk
 	chunkCount          int64
-	initializedItems    map[int]bool
+	itemState           *converter.StreamItemState
 	logger              *zap.Logger
 }
 
 func newAnthropicStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *anthropicStreamHandler {
 	exposedModel := lo.FromPtr(req.Body.Model)
-	return &anthropicStreamHandler{
-		u:                u,
-		ctx:              ctx,
-		req:              req,
-		responseConv:     &converter.ResponseProtocolConverter{},
-		anthropicConv:    &converter.AnthropicProtocolConverter{},
-		exposedModel:     exposedModel,
-		responseID:       fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String()),
-		chunkID:          fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
-		initializedItems: make(map[int]bool),
-		logger:           logger.WithCtx(ctx),
+	h := &anthropicStreamHandler{
+		u:             u,
+		ctx:           ctx,
+		req:           req,
+		responseConv:  &converter.ResponseProtocolConverter{},
+		anthropicConv: &converter.AnthropicProtocolConverter{},
+		exposedModel:  exposedModel,
+		responseID:    fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String()),
+		chunkID:       fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
+		itemState:     converter.NewStreamItemState(),
+		logger:        logger.WithCtx(ctx),
 	}
+	assertRespConvInit(h.responseConv, req)
+	return h
 }
 
 func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.AnthropicSSEEvent) error {
@@ -440,7 +442,7 @@ func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.Ant
 		}
 		h.chunkCount++
 		h.allChunks = append(h.allChunks, chunk)
-		if _, writeErr := writeResponseDeltaFromChatChunk(w, chunk, h.initializedItems, h.responseID); writeErr != nil {
+		if _, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, h.itemState, h.responseID, h.responseConv); writeErr != nil {
 			return writeErr
 		}
 	}
@@ -546,214 +548,6 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	})
 }
 
-func writeResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk, initializedItems map[int]bool, responseID string) (bool, error) {
-	if chunk == nil {
-		return false, nil
-	}
-	wroteDelta := false
-	for _, choice := range chunk.Choices {
-		if choice == nil || choice.Delta == nil {
-			continue
-		}
-		delta := choice.Delta
-		itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
-		outputIndex := choice.Index
-		initErr := initOutputItem(w, initializedItems, itemID, outputIndex)
-		if initErr != nil {
-			return wroteDelta, initErr
-		}
-
-		wrote, err := writeDeltaField(w, enum.ResponseStreamEventOutputTextDelta, delta.Content, itemID, outputIndex, 0)
-		if err != nil {
-			return wroteDelta || wrote, err
-		}
-		wroteDelta = wroteDelta || wrote
-
-		wrote, err = writeDeltaField(w, enum.ResponseStreamEventReasoningTextDelta, delta.ReasoningContent, itemID, outputIndex, 0)
-		if err != nil {
-			return wroteDelta || wrote, err
-		}
-		wroteDelta = wroteDelta || wrote
-
-		wrote, err = writeToolCallDeltas(w, delta.ToolCalls, itemID, outputIndex)
-		if err != nil {
-			return wroteDelta || wrote, err
-		}
-		wroteDelta = wroteDelta || wrote
-	}
-	if wroteDelta {
-		return true, w.Flush()
-	}
-	return false, nil
-}
-
-func initOutputItem(w *bufio.Writer, initializedItems map[int]bool, itemID string, outputIndex int) error {
-	if initializedItems[outputIndex] {
-		return nil
-	}
-	initializedItems[outputIndex] = true
-	if err := writeOutputItemAddedEvent(w, itemID, outputIndex); err != nil {
-		return err
-	}
-	return writeContentPartAddedEvent(w, itemID, outputIndex)
-}
-
-func writeDeltaField(w *bufio.Writer, event enum.ResponseStreamEventType, value *string, itemID string, outputIndex, contentIndex int) (bool, error) {
-	if value == nil || *value == "" {
-		return false, nil
-	}
-	if err := writeResponseDeltaEvent(w, event, *value, itemID, outputIndex, contentIndex); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func writeToolCallDeltas(w *bufio.Writer, toolCalls []*dto.OpenAIChatCompletionMessageToolCall, itemID string, outputIndex int) (bool, error) {
-	wrote := false
-	for _, tc := range toolCalls {
-		if tc != nil && tc.Function != nil && tc.Function.Arguments != "" {
-			wrote = true
-			if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventFunctionCallArgumentsDelta, tc.Function.Arguments, itemID, outputIndex, 0); err != nil {
-				return wrote, err
-			}
-		}
-	}
-	return wrote, nil
-}
-
-func writeResponseDeltaEvent(w *bufio.Writer, event enum.ResponseStreamEventType, delta, itemID string, outputIndex, contentIndex int) error {
-	payload := lo.Must1(sonic.Marshal(map[string]any{
-		constant.ResponseStreamFieldType:         event,
-		constant.ResponseStreamFieldDelta:        delta,
-		constant.ResponseStreamFieldItemID:       itemID,
-		constant.ResponseStreamFieldOutputIndex:  outputIndex,
-		constant.ResponseStreamFieldContentIndex: contentIndex,
-	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
-	return err
-}
-
-func writeOutputItemAddedEvent(w *bufio.Writer, itemID string, outputIndex int) error {
-	payload := lo.Must1(sonic.Marshal(map[string]any{
-		constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemAdded,
-		constant.ResponseStreamFieldOutputItem: outputIndex,
-		constant.ResponseStreamFieldItem: map[string]any{
-			constant.ResponseStreamFieldID:      itemID,
-			constant.ResponseStreamFieldType:    constant.ResponseStreamFieldTypeValue,
-			constant.ResponseStreamFieldStatus:  constant.ResponseStreamFieldStatusInProgress,
-			constant.ResponseStreamFieldRole:    enum.RoleAssistant,
-			constant.ResponseStreamFieldContent: []any{},
-		},
-	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputItemAdded, payload)
-	return err
-}
-
-func writeContentPartAddedEvent(w *bufio.Writer, itemID string, outputIndex int) error {
-	payload := lo.Must1(sonic.Marshal(map[string]any{
-		constant.ResponseStreamFieldType:         enum.ResponseStreamEventContentPartAdded,
-		constant.ResponseStreamFieldItemID:       itemID,
-		constant.ResponseStreamFieldOutputIndex:  outputIndex,
-		constant.ResponseStreamFieldContentIndex: 0,
-		constant.ResponseStreamFieldPart: map[string]any{
-			constant.ResponseStreamFieldType:        constant.ResponseStreamFieldOutputTextType,
-			constant.ResponseStreamFieldText:        "",
-			constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
-		},
-	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventContentPartAdded, payload)
-	return err
-}
-
-func writeOutputTextDoneEvent(w *bufio.Writer, itemID string, outputIndex int, text string) error {
-	payload := lo.Must1(sonic.Marshal(map[string]any{
-		constant.ResponseStreamFieldType:         enum.ResponseStreamEventOutputTextDone,
-		constant.ResponseStreamFieldItemID:       itemID,
-		constant.ResponseStreamFieldOutputIndex:  outputIndex,
-		constant.ResponseStreamFieldContentIndex: 0,
-		constant.ResponseStreamFieldText:         text,
-	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputTextDone, payload)
-	return err
-}
-
-func writeContentPartDoneEvent(w *bufio.Writer, itemID string, outputIndex int, text string) error {
-	payload := lo.Must1(sonic.Marshal(map[string]any{
-		constant.ResponseStreamFieldType:         enum.ResponseStreamEventContentPartDone,
-		constant.ResponseStreamFieldItemID:       itemID,
-		constant.ResponseStreamFieldOutputIndex:  outputIndex,
-		constant.ResponseStreamFieldContentIndex: 0,
-		constant.ResponseStreamFieldPart: map[string]any{
-			constant.ResponseStreamFieldType:        constant.ResponseStreamFieldOutputTextType,
-			constant.ResponseStreamFieldText:        text,
-			constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
-		},
-	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventContentPartDone, payload)
-	return err
-}
-
-func writeOutputItemDoneEvent(w *bufio.Writer, itemID string, outputIndex int, content []map[string]any) error {
-	payload := lo.Must1(sonic.Marshal(map[string]any{
-		constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemDone,
-		constant.ResponseStreamFieldOutputItem: outputIndex,
-		constant.ResponseStreamFieldItem: map[string]any{
-			constant.ResponseStreamFieldID:      itemID,
-			constant.ResponseStreamFieldType:    constant.ResponseStreamFieldTypeValue,
-			constant.ResponseStreamFieldStatus:  constant.ResponseStreamFieldStatusCompleted,
-			constant.ResponseStreamFieldRole:    enum.RoleAssistant,
-			constant.ResponseStreamFieldContent: content,
-		},
-	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputItemDone, payload)
-	return err
-}
-
-func writeResponseTerminalEvent(w *bufio.Writer, event enum.ResponseStreamEventType, rsp *dto.OpenAICreateResponseRsp) error {
-	payload := lo.Must1(sonic.Marshal(&dto.ResponseStreamTerminalEvent{Type: event, Response: rsp}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
-	return err
-}
-
-func finalizeResponseFromChatCompletion(ctx context.Context, w *bufio.Writer, completion *dto.OpenAIChatCompletion, exposedModel, responseID string, conv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
-	if completion == nil {
-		return nil
-	}
-	completion.Model = exposedModel
-	rsp, convErr := conv.ToResponseResponse(completion)
-	if convErr != nil {
-		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
-	}
-	if rsp != nil {
-		rsp.ID = responseID
-		rsp.CreatedAt = time.Now().Unix()
-		for _, choice := range completion.Choices {
-			if choice == nil {
-				continue
-			}
-			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
-			outputIndex := choice.Index
-
-			var textContent string
-			if choice.Message != nil && choice.Message.Content != nil {
-				textContent = choice.Message.Content.Text
-			}
-
-			_ = writeOutputTextDoneEvent(w, itemID, outputIndex, textContent)  //nolint:errcheck // best-effort write on stream close
-			_ = writeContentPartDoneEvent(w, itemID, outputIndex, textContent) //nolint:errcheck // best-effort write on stream close
-			content := []map[string]any{{
-				constant.ResponseStreamFieldType:        constant.ResponseStreamFieldOutputTextType,
-				constant.ResponseStreamFieldText:        textContent,
-				constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
-			}}
-			_ = writeOutputItemDoneEvent(w, itemID, outputIndex, content) //nolint:errcheck // best-effort write on stream close
-		}
-		_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
-	}
-	_ = w.Flush() //nolint:errcheck // flush best effort on stream close
-	return rsp
-}
-
 func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, upstreamErr error, allChunks []*dto.OpenAIChatCompletionChunk, anthropicMsg *dto.AnthropicMessage, exposedModel, responseID string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if upstreamErr != nil {
 		proxyutil.WriteUpstreamSSEError(ctx, w, upstreamErr)
@@ -766,39 +560,7 @@ func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, u
 	if chatCompletion == nil {
 		return nil
 	}
-	chatCompletion.Model = exposedModel
-	rsp, convErr := responseConv.ToResponseResponse(chatCompletion)
-	if convErr != nil {
-		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
-	}
-	if rsp != nil {
-		rsp.ID = responseID
-		rsp.CreatedAt = time.Now().Unix()
-		for _, choice := range chatCompletion.Choices {
-			if choice == nil {
-				continue
-			}
-			itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
-			outputIndex := choice.Index
-
-			var textContent string
-			if choice.Message != nil && choice.Message.Content != nil {
-				textContent = choice.Message.Content.Text
-			}
-
-			_ = writeOutputTextDoneEvent(w, itemID, outputIndex, textContent)  //nolint:errcheck // best-effort write on stream close
-			_ = writeContentPartDoneEvent(w, itemID, outputIndex, textContent) //nolint:errcheck // best-effort write on stream close
-			content := []map[string]any{{
-				constant.ResponseStreamFieldType:        constant.ResponseStreamFieldOutputTextType,
-				constant.ResponseStreamFieldText:        textContent,
-				constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
-			}}
-			_ = writeOutputItemDoneEvent(w, itemID, outputIndex, content) //nolint:errcheck // best-effort write on stream close
-		}
-		_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
-	}
-	_ = w.Flush() //nolint:errcheck // flush best effort on stream close
-	return rsp
+	return converter.FinalizeResponseFromChatCompletion(w, chatCompletion, exposedModel, responseID, responseConv)
 }
 
 func assertRespConvInit(conv *converter.ResponseProtocolConverter, req *dto.OpenAICreateResponseRequest) {
