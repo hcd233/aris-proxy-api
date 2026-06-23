@@ -211,10 +211,10 @@ func TestResponseProtocolConverter_FromResponseRequest_SkipsEmptyAssistant(t *te
 	}
 }
 
-// TestResponseProtocolConverter_FromResponseRequest_ReasoningUsesContent 验证
-// reasoning item 转换为 assistant 消息时使用 Content 而非 ReasoningContent，
-// 因为 DeepSeek 等上游不支持 reasoning_content 作为请求输入字段。
-func TestResponseProtocolConverter_FromResponseRequest_ReasoningUsesContent(t *testing.T) {
+// TestResponseProtocolConverter_FromResponseRequest_ReasoningSkipped 验证
+// reasoning item 在转换时被跳过，因为它代表模型内部思维过程，
+// 在 Chat Completions 格式中无对应的请求消息类型。
+func TestResponseProtocolConverter_FromResponseRequest_ReasoningSkipped(t *testing.T) {
 	t.Parallel()
 	conv := &converter.ResponseProtocolConverter{}
 
@@ -245,20 +245,77 @@ func TestResponseProtocolConverter_FromResponseRequest_ReasoningUsesContent(t *t
 		t.Fatalf("FromResponseRequest() error: %v", err)
 	}
 
-	var assistantMsg *dto.OpenAIChatCompletionMessageParam
 	for _, msg := range chatReq.Messages {
 		if msg.Role == enum.RoleAssistant {
-			assistantMsg = msg
-			break
+			t.Error("reasoning item should not produce assistant messages")
 		}
 	}
-	if assistantMsg == nil {
-		t.Fatal("expected an assistant message for reasoning item")
+}
+
+// TestResponseProtocolConverter_FromResponseRequest_MergesConsecutiveAssistant 验证
+// 连续的 assistant 消息（来自 function_call + message/assistant）被合并为一条，
+// 避免 Chat Completions API 的 invariant 违反：tool_calls assistant 后必须紧跟 tool 响应。
+func TestResponseProtocolConverter_FromResponseRequest_MergesConsecutiveAssistant(t *testing.T) {
+	t.Parallel()
+	conv := &converter.ResponseProtocolConverter{}
+
+	req := &dto.OpenAICreateResponseReq{
+		Model: lo.ToPtr("deepseek-v4-flash"),
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{
+				{
+					Type: lo.ToPtr(enum.ResponseInputItemTypeMessage),
+					Role: lo.ToPtr(enum.RoleUser),
+					Content: &dto.ResponseInputMessageContent{
+						Text: "run a command",
+					},
+				},
+				{
+					Type:      lo.ToPtr(enum.ResponseInputItemTypeFunctionCall),
+					CallID:    lo.ToPtr("call_123"),
+					Name:      lo.ToPtr("exec_command"),
+					Arguments: lo.ToPtr(`{"command":"ls"}`),
+				},
+				{
+					Type: lo.ToPtr(enum.ResponseInputItemTypeMessage),
+					Role: lo.ToPtr(enum.RoleAssistant),
+					Content: &dto.ResponseInputMessageContent{
+						Text: "Let me run that command",
+					},
+				},
+				{
+					Type:   lo.ToPtr(enum.ResponseInputItemTypeFunctionCallOutput),
+					CallID: lo.ToPtr("call_123"),
+					Output: &dto.ResponseInputItemOutput{
+						Text: "file1 file2",
+					},
+				},
+			},
+		},
 	}
-	if assistantMsg.ReasoningContent != nil {
-		t.Error("reasoning item should NOT set ReasoningContent on the request message")
+
+	chatReq, err := conv.FromResponseRequest(req)
+	if err != nil {
+		t.Fatalf("FromResponseRequest() error: %v", err)
 	}
-	if assistantMsg.Content == nil || assistantMsg.Content.Text == "" {
-		t.Error("reasoning item should set Content with the reasoning text")
+
+	assistantCount := 0
+	var assistantWithToolCalls *dto.OpenAIChatCompletionMessageParam
+	for _, msg := range chatReq.Messages {
+		if msg.Role == enum.RoleAssistant {
+			assistantCount++
+			if len(msg.ToolCalls) > 0 {
+				assistantWithToolCalls = msg
+			}
+		}
+	}
+	if assistantCount != 1 {
+		t.Errorf("expected 1 merged assistant message, got %d", assistantCount)
+	}
+	if assistantWithToolCalls == nil {
+		t.Fatal("merged assistant message should have ToolCalls")
+	}
+	if assistantWithToolCalls.Content == nil || assistantWithToolCalls.Content.Text == "" {
+		t.Error("merged assistant message should have Content from the text message")
 	}
 }

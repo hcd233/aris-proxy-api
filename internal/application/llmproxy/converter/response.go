@@ -135,7 +135,7 @@ func responseInputToChatMessages(req *dto.OpenAICreateResponseReq) []*dto.OpenAI
 	chatMsgs := lo.Flatten(lo.Map(req.Input.Items, func(item *dto.ResponseInputItem, _ int) []*dto.OpenAIChatCompletionMessageParam {
 		return responseInputItemToChatMessages(item)
 	}))
-	messages = append(messages, chatMsgs...)
+	messages = append(messages, mergeConsecutiveAssistantMessages(chatMsgs)...)
 	return messages
 }
 
@@ -157,14 +157,53 @@ func responseInputItemToChatMessages(item *dto.ResponseInputItem) []*dto.OpenAIC
 	case enum.ResponseInputItemTypeFunctionCallOutput, enum.ResponseInputItemTypeCustomToolCallOutput:
 		return []*dto.OpenAIChatCompletionMessageParam{responseFunctionCallOutputToChat(item)}
 	case enum.ResponseInputItemTypeReasoning:
-		if text := responseReasoningText(item); text != "" {
-			return []*dto.OpenAIChatCompletionMessageParam{{
-				Role:    enum.RoleAssistant,
-				Content: &dto.OpenAIMessageContent{Text: text},
-			}}
-		}
+		return nil
 	}
 	return nil
+}
+
+func mergeConsecutiveAssistantMessages(msgs []*dto.OpenAIChatCompletionMessageParam) []*dto.OpenAIChatCompletionMessageParam {
+	if len(msgs) == 0 {
+		return msgs
+	}
+	merged := make([]*dto.OpenAIChatCompletionMessageParam, 0, len(msgs))
+	var pending *dto.OpenAIChatCompletionMessageParam
+	flushPending := func() {
+		if pending != nil && !isEmptyAssistantMessage(pending) {
+			merged = append(merged, pending)
+		}
+		pending = nil
+	}
+	for _, msg := range msgs {
+		if msg == nil {
+			continue
+		}
+		if msg.Role != enum.RoleAssistant {
+			flushPending()
+			merged = append(merged, msg)
+			continue
+		}
+		if pending == nil {
+			pending = msg
+		} else {
+			mergeAssistantInto(pending, msg)
+		}
+	}
+	flushPending()
+	return merged
+}
+
+func mergeAssistantInto(dst, src *dto.OpenAIChatCompletionMessageParam) {
+	if dst.Content == nil || (dst.Content.Text == "" && len(dst.Content.Parts) == 0) {
+		dst.Content = src.Content
+	}
+	dst.ToolCalls = append(dst.ToolCalls, src.ToolCalls...)
+	if src.ReasoningContent != nil && *src.ReasoningContent != "" {
+		dst.ReasoningContent = src.ReasoningContent
+	}
+	if src.Refusal != nil && *src.Refusal != "" {
+		dst.Refusal = src.Refusal
+	}
 }
 
 func isEmptyAssistantMessage(msg *dto.OpenAIChatCompletionMessageParam) bool {
@@ -286,22 +325,6 @@ func responseOutputText(output *dto.ResponseInputItemOutput) string {
 		return lo.FromPtr(part.Text), isTextType
 	})
 	return strings.Join(texts, "\n")
-}
-
-func responseReasoningText(item *dto.ResponseInputItem) string {
-	summaryTexts := lo.FilterMap(item.Summary, func(s *dto.ResponseReasoningSummary, _ int) (string, bool) {
-		if s == nil || s.Text == "" {
-			return "", false
-		}
-		return s.Text, true
-	})
-	reasoningTexts := lo.FilterMap(item.ReasoningContent, func(c *dto.ResponseReasoningTextContent, _ int) (string, bool) {
-		if c == nil || c.Text == "" {
-			return "", false
-		}
-		return c.Text, true
-	})
-	return strings.Join(append(summaryTexts, reasoningTexts...), "\n")
 }
 
 func responseTextFormatToChat(format *dto.ResponseTextFormat) *dto.OpenAIResponseFormat {
