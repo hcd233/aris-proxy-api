@@ -63,14 +63,14 @@ func (r *cronCallAuditRepository) Save(ctx context.Context, audit *port.CronCall
 //
 //	@receiver r *cronCallAuditRepository
 //	@param ctx context.Context
-//	@param param dao.CommonParam
+//	@param param model.CommonParam
 //	@param startTime time.Time
 //	@param endTime time.Time
 //	@param filterExp string
 //	@return []*port.CronCallAuditView
 //	@return *model.PageInfo
 //	@return error
-func (r *cronCallAuditRepository) List(ctx context.Context, param dao.CommonParam, startTime, endTime time.Time, filterExp string) ([]*port.CronCallAuditView, *model.PageInfo, error) {
+func (r *cronCallAuditRepository) List(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterExp string) ([]*port.CronCallAuditView, *model.PageInfo, error) {
 	if param.Page < 1 {
 		param.Page = 1
 	}
@@ -93,7 +93,7 @@ func (r *cronCallAuditRepository) List(ctx context.Context, param dao.CommonPara
 	if filterErr != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, filterErr, "build filter SQL")
 	}
-	sql = r.applyKeywordSearch(r.db.WithContext(ctx), sql, param.Query)
+	sql = r.applyKeywordSearch(r.db.WithContext(ctx), sql, param.Query, param.QueryFields)
 	sql = r.applySort(sql, param.Sort, param.SortField)
 
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
@@ -214,13 +214,12 @@ func (r *cronCallAuditRepository) applyFilter(db *gorm.DB, filterExp string) (*g
 }
 
 // applyKeywordSearch 注入关键词搜索条件
-func (r *cronCallAuditRepository) applyKeywordSearch(db, sql *gorm.DB, query string) *gorm.DB {
-	if query == "" {
+func (r *cronCallAuditRepository) applyKeywordSearch(db, sql *gorm.DB, query string, queryFields []string) *gorm.DB {
+	if query == "" || len(queryFields) == 0 {
 		return sql
 	}
 	like := "%" + query + "%"
-	fields := []string{constant.FieldCronName, constant.FieldTraceID}
-	expressions := lo.FilterMap(fields, func(field string, _ int) (clause.Expression, bool) {
+	expressions := lo.FilterMap(queryFields, func(field string, _ int) (clause.Expression, bool) {
 		if field == "" {
 			return nil, false
 		}
