@@ -74,6 +74,9 @@ const (
 	UpstreamErrorType             = "upstream_error"
 	UpstreamStatusMessageTemplate = "Upstream returned status %d"
 
+	// UpstreamRetryableStatusThreshold 可重试的上游 HTTP 状态码阈值（>= 此值为 5xx 瞬时错误）
+	UpstreamRetryableStatusThreshold = 500
+
 	ResponseFailedAuditReason             = "response.failed"
 	ResponseFailedAuditReasonTemplate     = "response.failed: %s"
 	ResponseIncompleteAuditReason         = "response.incomplete"
