@@ -5,7 +5,6 @@ import (
 	"context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -53,6 +52,7 @@ type SessionDependencies struct {
 	ListByUser         port.ListSessionsByUserHandler
 	GetByUser          port.GetSessionByUserHandler
 	ShareCache         cache.ShareCache
+	CreateShare        port.CreateShareHandler
 	GetMetaByUser      port.GetSessionMetaByUserHandler
 	ListMessages       port.ListSessionMessagesHandler
 	ListTools          port.ListSessionToolsHandler
@@ -67,6 +67,7 @@ type sessionHandler struct {
 	listByUser         port.ListSessionsByUserHandler
 	getByUser          port.GetSessionByUserHandler
 	shareCache         cache.ShareCache
+	createShare        port.CreateShareHandler
 	getMetaByUser      port.GetSessionMetaByUserHandler
 	listMessages       port.ListSessionMessagesHandler
 	listTools          port.ListSessionToolsHandler
@@ -88,6 +89,7 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 		listByUser:         deps.ListByUser,
 		getByUser:          deps.GetByUser,
 		shareCache:         deps.ShareCache,
+		createShare:        deps.CreateShare,
 		getMetaByUser:      deps.GetMetaByUser,
 		listMessages:       deps.ListMessages,
 		listTools:          deps.ListTools,
@@ -231,57 +233,27 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 //	@update 2026-05-28 10:00:00
 func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateShareReq) (*dto.HTTPResponse[*dto.CreateShareRsp], error) {
 	rsp := &dto.CreateShareRsp{}
-	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	permission := util.CtxValuePermission(ctx)
-	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
 	if req.Body == nil {
 		logger.WithCtx(ctx).Warn("[SessionHandler] Create share: empty request body")
 		rsp.Error = ierr.ErrValidation.BizError()
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	sessionID := req.Body.SessionID
 
-	view, err := h.getByUser.Handle(ctx, port.GetSessionByUserQuery{
-		UserID:    userID,
-		IsAdmin:   isAdmin,
-		SessionID: sessionID,
+	result, err := h.createShare.Handle(ctx, port.CreateShareCommand{
+		RequesterID:         util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		RequesterPermission: util.CtxValuePermission(ctx),
+		SessionID:           req.Body.SessionID,
+		ExpiresIn:           req.Body.ExpiresIn,
+		ExpiresAt:           req.Body.ExpiresAt,
 	})
 	if err != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Create share: verify session failed",
-			zap.Uint("sessionID", sessionID), zap.Error(err))
 		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	if view == nil {
-		rsp.Error = ierr.ErrDataNotExists.BizError()
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
 
-	ttl, parseErr := ParseExpiresIn(req.Body.ExpiresIn, req.Body.ExpiresAt)
-	if parseErr != nil {
-		logger.WithCtx(ctx).Warn("[SessionHandler] Create share: invalid expiration",
-			zap.String("expiresIn", req.Body.ExpiresIn), zap.Error(parseErr))
-		rsp.Error = ierr.ToBizError(parseErr, ierr.ErrValidation.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
-	shareID, expiresAt, shareErr := h.shareCache.CreateShare(ctx, userID, sessionID, ttl)
-	if shareErr != nil {
-		logger.WithCtx(ctx).Error("[SessionHandler] Create share failed",
-			zap.Uint("sessionID", sessionID), zap.Error(shareErr))
-		rsp.Error = ierr.ToBizError(shareErr, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
-	rsp.ShareID = shareID
-	rsp.ExpiresAt = expiresAt
-
-	logger.WithCtx(ctx).Info("[SessionHandler] Share created",
-		zap.String("shareID", shareID),
-		zap.Uint("sessionID", sessionID),
-		zap.Uint("userID", userID))
-
+	rsp.ShareID = result.ShareID
+	rsp.ExpiresAt = result.ExpiresAt
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
@@ -773,39 +745,6 @@ func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.S
 
 	rsp.Items = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-// ParseExpiresIn 解析过期选项字符串为 time.Duration
-//
-//	@param expiresIn string 过期选项: 1d | 7d | 30d | never | custom
-//	@param customAt *int64 自定义过期时间戳（秒），expiresIn=custom 时使用
-//	@return time.Duration
-//	@return error
-//	@author centonhuang
-//	@update 2026-06-02 10:00:00
-func ParseExpiresIn(expiresIn string, customAt *int64) (time.Duration, error) {
-	switch expiresIn {
-	case constant.ShareExpireOption1Day, "":
-		return constant.ShareTTL1Day, nil
-	case constant.ShareExpireOption1Week, constant.ShareExpireOption1WeekAlt:
-		return constant.ShareTTL1Week, nil
-	case constant.ShareExpireOption1Month, constant.ShareExpireOption1MonthAlt:
-		return constant.ShareTTL1Month, nil
-	case constant.ShareExpireOptionNever:
-		return constant.ShareTTLNeverExpire, nil
-	case constant.ShareExpireOptionCustom:
-		if customAt == nil {
-			return 0, ierr.New(ierr.ErrValidation, "expiresAt is required when expiresIn is custom")
-		}
-		t := time.Unix(*customAt, 0)
-		remaining := time.Until(t)
-		if remaining <= 0 {
-			return 0, ierr.New(ierr.ErrValidation, "expiresAt must be in the future")
-		}
-		return remaining, nil
-	default:
-		return constant.ShareTTLDefault, nil
-	}
 }
 
 // parseCommaSeparatedIDs 解析逗号分隔的 ID 字符串为 uint 切片

@@ -1,6 +1,9 @@
 package dto
 
-import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+import (
+	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+)
 
 // HTTPResponse HTTP响应
 //
@@ -24,7 +27,7 @@ type RedirectResponse struct {
 //	@author centonhuang
 //	@update 2025-11-08 04:20:42
 type SSEResponse struct {
-	DataType enum.SSEDataType `json:"dataType" doc:"Data type"`
-	Status   enum.SSEStatus   `json:"status" doc:"Status"`
-	Data     any              `json:"data" doc:"Data"`
+	DataType enum.SSEDataType       `json:"dataType" doc:"Data type"`
+	Status   enum.SSEStatus         `json:"status" doc:"Status"`
+	Data     sonic.NoCopyRawMessage `json:"data" doc:"Data"`
 }

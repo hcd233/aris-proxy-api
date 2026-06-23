@@ -7,6 +7,7 @@ package cron
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
@@ -100,7 +101,7 @@ func (c *SoftDeletePurgeCron) Start(spec string) error {
 //	@receiver c *SoftDeletePurgeCron
 //	@author centonhuang
 //	@update 2026-06-09 10:00:00
-func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]any {
+func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
@@ -113,9 +114,9 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]any {
 
 	if len(softDeletedSessions) == 0 {
 		log.Info("[SoftDeletePurgeCron] No soft deleted sessions found")
-		return map[string]any{
-			constant.CronMetadataKeyPurgedMessages: 0,
-			constant.CronMetadataKeyPurgedTools:    0,
+		return map[string]string{
+			constant.CronMetadataKeyPurgedMessages: "0",
+			constant.CronMetadataKeyPurgedTools:    "0",
 		}
 	}
 
@@ -175,8 +176,8 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]any {
 		zap.Int64("messagesDeleted", msgCount),
 		zap.Int64("toolsDeleted", toolCount))
 
-	return map[string]any{
-		constant.CronMetadataKeyPurgedMessages: msgCount,
-		constant.CronMetadataKeyPurgedTools:    toolCount,
+	return map[string]string{
+		constant.CronMetadataKeyPurgedMessages: strconv.FormatInt(msgCount, 10),
+		constant.CronMetadataKeyPurgedTools:    strconv.FormatInt(toolCount, 10),
 	}
 }

@@ -96,15 +96,9 @@ func convertResponseOutputFormat(text *dto.ResponseTextConfig) *dto.AnthropicOut
 	case enum.ResponseTextFormatTypeJSONObject, enum.ResponseTextFormatTypeJSONSchema:
 		cfg := &dto.AnthropicOutputConfig{}
 		if text.Format.Type == enum.ResponseTextFormatTypeJSONSchema && text.Format.Schema != nil {
-			schemaBytes, err := sonic.Marshal(text.Format.Schema)
-			if err == nil {
-				var schema map[string]any
-				if err := sonic.Unmarshal(schemaBytes, &schema); err == nil {
-					cfg.Format = &dto.AnthropicJSONOutputFormat{
-						Type:   enum.ResponseFormatTypeJSONSchema,
-						Schema: schema,
-					}
-				}
+			cfg.Format = &dto.AnthropicJSONOutputFormat{
+				Type:   enum.ResponseFormatTypeJSONSchema,
+				Schema: text.Format.Schema,
 			}
 		}
 		return cfg
@@ -263,7 +257,7 @@ func convertResponseFunctionCallToAnthropic(item *dto.ResponseInputItem) *dto.An
 				Type:  enum.AnthropicContentBlockTypeToolUse,
 				ID:    item.CallID,
 				Name:  item.Name,
-				Input: parseJSONToMap(args),
+				Input: parseJSONToRaw(args),
 			}},
 		},
 	}
@@ -392,15 +386,15 @@ func convertResponseToolChoiceToAnthropic(tc *dto.ResponseToolChoiceParam) *dto.
 	return nil
 }
 
-// parseJSONToMap 解析 JSON 字符串为 map，解析失败时保留原始内容
-func parseJSONToMap(jsonStr string) map[string]any {
+// parseJSONToRaw 解析 JSON 字符串为原始字节，解析失败时保留原始内容
+func parseJSONToRaw(jsonStr string) sonic.NoCopyRawMessage {
 	if jsonStr == "" {
 		return nil
 	}
-	var result map[string]any
+	var result sonic.NoCopyRawMessage
 	if err := sonic.UnmarshalString(jsonStr, &result); err != nil {
 		// 解析失败时保留原始 JSON 字符串，交由上游尝试解释
-		return map[string]any{constant.FallbackJSONRawKey: jsonStr}
+		return sonic.NoCopyRawMessage(jsonStr)
 	}
 	return result
 }

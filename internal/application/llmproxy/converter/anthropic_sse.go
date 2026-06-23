@@ -3,7 +3,6 @@ package converter
 import (
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
 )
@@ -23,6 +22,7 @@ func convertOpenAIFinishReasonToAnthropic(reason enum.FinishReason) *string {
 	}
 }
 
+//nolint:unparam // error kept for forward-compatible expansion
 func convertOpenAIMessageToAnthropicContent(msg *dto.OpenAIChatCompletionMessageParam) ([]*dto.AnthropicContentBlock, error) {
 	if msg == nil {
 		return []*dto.AnthropicContentBlock{}, nil
@@ -62,18 +62,12 @@ func convertOpenAIMessageToAnthropicContent(msg *dto.OpenAIChatCompletionMessage
 	// 工具调用 -> tool_use blocks
 	for _, tc := range msg.ToolCalls {
 		if tc.Function != nil {
-			var input map[string]any
-			if tc.Function.Arguments != "" {
-				if err := sonic.UnmarshalString(tc.Function.Arguments, &input); err != nil {
-					return nil, ierr.Wrapf(ierr.ErrDTOUnmarshal, err, "unmarshal tool call arguments for %q", tc.Function.Name)
-				}
-			}
 			name := tc.Function.Name
 			blocks = append(blocks, &dto.AnthropicContentBlock{
 				Type:  enum.AnthropicContentBlockTypeToolUse,
 				ID:    tc.ID,
 				Name:  &name,
-				Input: input,
+				Input: sonic.NoCopyRawMessage(tc.Function.Arguments),
 			})
 		}
 	}

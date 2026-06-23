@@ -212,3 +212,23 @@ type ListSessionOptionQuery struct {
 type ListSessionOptionHandler interface {
 	Handle(ctx context.Context, q ListSessionOptionQuery) ([]string, error)
 }
+
+// CreateShareCommand 创建分享命令
+type CreateShareCommand struct {
+	RequesterID         uint
+	RequesterPermission enum.Permission
+	SessionID           uint
+	ExpiresIn           string
+	ExpiresAt           *int64
+}
+
+// CreateShareResult 创建分享结果
+type CreateShareResult struct {
+	ShareID   string
+	ExpiresAt time.Time
+}
+
+// CreateShareHandler 创建分享命令处理器接口
+type CreateShareHandler interface {
+	Handle(ctx context.Context, cmd CreateShareCommand) (*CreateShareResult, error)
+}
