@@ -148,6 +148,9 @@ func responseInputItemToChatMessages(item *dto.ResponseInputItem) []*dto.OpenAIC
 		msg := &dto.OpenAIChatCompletionMessageParam{Role: responseRoleToChat(lo.FromPtr(item.Role))}
 		content := responseMessageContentToChat(item.Content)
 		msg.Content = content
+		if isEmptyAssistantMessage(msg) {
+			return nil
+		}
 		return []*dto.OpenAIChatCompletionMessageParam{msg}
 	case enum.ResponseInputItemTypeFunctionCall, enum.ResponseInputItemTypeCustomToolCall:
 		return []*dto.OpenAIChatCompletionMessageParam{responseFunctionCallToChat(item)}
@@ -159,6 +162,22 @@ func responseInputItemToChatMessages(item *dto.ResponseInputItem) []*dto.OpenAIC
 		}
 	}
 	return nil
+}
+
+func isEmptyAssistantMessage(msg *dto.OpenAIChatCompletionMessageParam) bool {
+	if msg == nil || msg.Role != enum.RoleAssistant {
+		return false
+	}
+	if len(msg.ToolCalls) > 0 {
+		return false
+	}
+	if msg.ReasoningContent != nil && *msg.ReasoningContent != "" {
+		return false
+	}
+	if msg.Refusal != nil && *msg.Refusal != "" {
+		return false
+	}
+	return msg.Content == nil || (msg.Content.Text == "" && len(msg.Content.Parts) == 0)
 }
 
 func responseRoleToChat(role string) enum.Role {
