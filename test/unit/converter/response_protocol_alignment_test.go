@@ -167,3 +167,46 @@ func TestResponseProtocolConverter_FromResponseRequest_OmitsEmpty(t *testing.T) 
 		t.Errorf("first message role got %q, want %q", chatReq.Messages[0].Role, enum.RoleUser)
 	}
 }
+
+// TestResponseProtocolConverter_FromResponseRequest_SkipsEmptyAssistant 验证
+// Response API input 中的空 assistant 消息（无 content 也无 tool_calls）在转换为
+// Chat Completions 时被跳过，避免上游返回 400: "Invalid assistant message: content or tool_calls must be set"。
+func TestResponseProtocolConverter_FromResponseRequest_SkipsEmptyAssistant(t *testing.T) {
+	t.Parallel()
+	conv := &converter.ResponseProtocolConverter{}
+
+	req := &dto.OpenAICreateResponseReq{
+		Model: lo.ToPtr("deepseek-v4-flash"),
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{
+				{
+					Type: lo.ToPtr(enum.ResponseInputItemTypeMessage),
+					Role: lo.ToPtr(enum.RoleUser),
+					Content: &dto.ResponseInputMessageContent{
+						Text: "Hello",
+					},
+				},
+				{
+					Type:    lo.ToPtr(enum.ResponseInputItemTypeMessage),
+					Role:    lo.ToPtr(enum.RoleAssistant),
+					Content: nil,
+				},
+			},
+		},
+	}
+
+	chatReq, err := conv.FromResponseRequest(req)
+	if err != nil {
+		t.Fatalf("FromResponseRequest() error: %v", err)
+	}
+
+	assistantCount := 0
+	for _, msg := range chatReq.Messages {
+		if msg.Role == enum.RoleAssistant {
+			assistantCount++
+		}
+	}
+	if assistantCount > 0 {
+		t.Errorf("expected 0 assistant messages, got %d", assistantCount)
+	}
+}
