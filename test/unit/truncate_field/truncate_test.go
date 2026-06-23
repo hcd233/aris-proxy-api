@@ -16,10 +16,10 @@ type fieldCase struct {
 }
 
 type mapCase struct {
-	Name   string                 `json:"name"`
-	Input  map[string]interface{} `json:"input"`
-	MaxLen int                    `json:"max_len"`
-	Want   map[string]interface{} `json:"want"`
+	Name   string         `json:"name"`
+	Input  map[string]any `json:"input"`
+	MaxLen int            `json:"max_len"`
+	Want   map[string]any `json:"want"`
 }
 
 func loadFieldCases(t *testing.T) []fieldCase {
