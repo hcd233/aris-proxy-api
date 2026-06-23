@@ -41,6 +41,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewModelRepository,
 		NewEndpointReadRepository,
 		NewAudioDirCreator,
+		NewShareCache,
 		fx.Annotate(
 			NewShareCache,
 			fx.As(new(sessionport.ShareCreator)),
