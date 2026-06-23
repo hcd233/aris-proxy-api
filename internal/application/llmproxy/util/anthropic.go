@@ -200,7 +200,7 @@ func buildAnthropicContentBlocks(blocks map[int]*blockState, blockOrder []int) (
 		case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
 			if len(bs.inputParts) > 0 {
 				inputJSON := strings.Join(bs.inputParts, "")
-				var input map[string]any
+				var input sonic.NoCopyRawMessage
 				if err := sonic.UnmarshalString(inputJSON, &input); err != nil {
 					return nil, ierr.Wrapf(ierr.ErrSSEParse, err, "unmarshal accumulated tool_use input for block[%d]", idx)
 				}

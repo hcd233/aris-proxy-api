@@ -92,6 +92,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewDeleteSessionHandler,
 		NewScoreSessionHandler,
 		NewDeleteScoreSessionHandler,
+		NewCreateShareHandler,
 		NewSessionOptionHandler,
 		usecase.NewListOpenAIModels,
 		usecase.NewListAnthropicModels,
@@ -275,6 +276,10 @@ func NewScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo ap
 
 func NewDeleteScoreSessionHandler(sessionRepo session.SessionRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.DeleteScoreSessionHandler {
 	return sessioncommand.NewDeleteScoreSessionHandler(sessionRepo, apiKeyRepo)
+}
+
+func NewCreateShareHandler(getByUser sessionport.GetSessionByUserHandler, shareCache sessionport.ShareCreator) sessionport.CreateShareHandler {
+	return sessioncommand.NewCreateShareHandler(getByUser, shareCache)
 }
 
 func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport.ListSessionOptionHandler {

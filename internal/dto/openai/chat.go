@@ -334,10 +334,10 @@ type OpenAIResponseFormat struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIJSONSchemaFormat struct {
-	Name        string         `json:"name" doc:"响应格式名称"`
-	Description *string        `json:"description,omitempty" doc:"响应格式描述"`
-	Schema      map[string]any `json:"schema,omitempty" doc:"JSON Schema对象"`
-	Strict      *bool          `json:"strict,omitempty" doc:"是否启用严格模式"`
+	Name        string                     `json:"name" doc:"响应格式名称"`
+	Description *string                    `json:"description,omitempty" doc:"响应格式描述"`
+	Schema      *schema.JSONSchemaProperty `json:"schema,omitempty" doc:"JSON Schema对象"`
+	Strict      *bool                      `json:"strict,omitempty" doc:"是否启用严格模式"`
 }
 
 // OpenAIChatCompletionStreamOptions 流式选项
@@ -430,8 +430,8 @@ type OpenAIToolChoiceCustom struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIAllowedToolsConfig struct {
-	Mode  string           `json:"mode" doc:"模式: auto/required"`
-	Tools []map[string]any `json:"tools" doc:"允许的工具定义列表"`
+	Mode  string                     `json:"mode" doc:"模式: auto/required"`
+	Tools []OpenAIChatCompletionTool `json:"tools" doc:"允许的工具定义列表"`
 }
 
 // OpenAIWebSearchOptions 网页搜索选项

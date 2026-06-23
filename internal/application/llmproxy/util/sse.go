@@ -48,7 +48,7 @@ func writeSSEErrorResponse(ctx context.Context, w *bufio.Writer, err *model.Erro
 	rsp := &dto.SSEResponse{
 		DataType: enum.SSEDataTypeError,
 		Status:   enum.SSEStatusError,
-		Data:     &dto.CommonRsp{Error: err},
+		Data:     lo.Must1(sonic.Marshal(&dto.CommonRsp{Error: err})),
 	}
 	if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(rsp))); writeErr != nil {
 		logger.Debug("[WriteErrorResponse] Failed to write sse data frame", zap.Error(writeErr))
