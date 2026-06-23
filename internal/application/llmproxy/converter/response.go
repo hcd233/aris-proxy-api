@@ -158,7 +158,10 @@ func responseInputItemToChatMessages(item *dto.ResponseInputItem) []*dto.OpenAIC
 		return []*dto.OpenAIChatCompletionMessageParam{responseFunctionCallOutputToChat(item)}
 	case enum.ResponseInputItemTypeReasoning:
 		if text := responseReasoningText(item); text != "" {
-			return []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleAssistant, ReasoningContent: lo.ToPtr(text)}}
+			return []*dto.OpenAIChatCompletionMessageParam{{
+				Role:    enum.RoleAssistant,
+				Content: &dto.OpenAIMessageContent{Text: text},
+			}}
 		}
 	}
 	return nil
