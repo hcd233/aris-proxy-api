@@ -210,3 +210,55 @@ func TestResponseProtocolConverter_FromResponseRequest_SkipsEmptyAssistant(t *te
 		t.Errorf("expected 0 assistant messages, got %d", assistantCount)
 	}
 }
+
+// TestResponseProtocolConverter_FromResponseRequest_ReasoningUsesContent 验证
+// reasoning item 转换为 assistant 消息时使用 Content 而非 ReasoningContent，
+// 因为 DeepSeek 等上游不支持 reasoning_content 作为请求输入字段。
+func TestResponseProtocolConverter_FromResponseRequest_ReasoningUsesContent(t *testing.T) {
+	t.Parallel()
+	conv := &converter.ResponseProtocolConverter{}
+
+	req := &dto.OpenAICreateResponseReq{
+		Model: lo.ToPtr("deepseek-v4-flash"),
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{
+				{
+					Type: lo.ToPtr(enum.ResponseInputItemTypeMessage),
+					Role: lo.ToPtr(enum.RoleUser),
+					Content: &dto.ResponseInputMessageContent{
+						Text: "Hello",
+					},
+				},
+				{
+					Type: lo.ToPtr(enum.ResponseInputItemTypeReasoning),
+					Summary: []*dto.ResponseReasoningSummary{{
+						Text: "Let me think about this...",
+						Type: enum.ResponseContentTypeSummaryText,
+					}},
+				},
+			},
+		},
+	}
+
+	chatReq, err := conv.FromResponseRequest(req)
+	if err != nil {
+		t.Fatalf("FromResponseRequest() error: %v", err)
+	}
+
+	var assistantMsg *dto.OpenAIChatCompletionMessageParam
+	for _, msg := range chatReq.Messages {
+		if msg.Role == enum.RoleAssistant {
+			assistantMsg = msg
+			break
+		}
+	}
+	if assistantMsg == nil {
+		t.Fatal("expected an assistant message for reasoning item")
+	}
+	if assistantMsg.ReasoningContent != nil {
+		t.Error("reasoning item should NOT set ReasoningContent on the request message")
+	}
+	if assistantMsg.Content == nil || assistantMsg.Content.Text == "" {
+		t.Error("reasoning item should set Content with the reasoning text")
+	}
+}
