@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 )
 
 // CronJobView CronJob 展示视图
@@ -53,7 +52,7 @@ type UpdateCronJobHandler interface {
 //	@update 2026-06-17 10:00:00
 type CronJobRepository interface {
 	Sync(ctx context.Context, jobs []*CronJobView) error
-	List(ctx context.Context, param dao.CommonParam) ([]*CronJobView, *model.PageInfo, error)
+	List(ctx context.Context, param model.CommonParam) ([]*CronJobView, *model.PageInfo, error)
 	Update(ctx context.Context, name string, params UpdateCronJobParams) error
 	Get(ctx context.Context, name string) (*CronJobView, error)
 }

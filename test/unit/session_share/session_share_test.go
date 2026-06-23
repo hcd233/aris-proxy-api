@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
 
+	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -20,6 +21,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 )
 
@@ -189,9 +191,10 @@ func testSessionView() *sessionport.SessionDetailView {
 
 func newTestHandler(sc cache.ShareCache, getByUser sessionport.GetSessionByUserHandler) handler.SessionHandler {
 	return handler.NewSessionHandler(handler.SessionDependencies{
-		ListByUser: &mockListSessionsByUserHandler{},
-		GetByUser:  getByUser,
-		ShareCache: sc,
+		ListByUser:  &mockListSessionsByUserHandler{},
+		GetByUser:   getByUser,
+		ShareCache:  sc,
+		CreateShare: sessioncommand.NewCreateShareHandler(getByUser, sc),
 	})
 }
 
@@ -435,7 +438,7 @@ func TestParseExpiresIn(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := handler.ParseExpiresIn(tt.expiresIn, tt.customAt)
+			got, err := util.ParseExpiresIn(tt.expiresIn, tt.customAt)
 			if tt.wantErr {
 				if err == nil {
 					t.Error("expected error but got nil")
@@ -457,7 +460,7 @@ func TestParseExpiresIn(t *testing.T) {
 		now := time.Now()
 		target := now.Add(48 * time.Hour)
 		customAt := lo.ToPtr(target.Unix())
-		got, err := handler.ParseExpiresIn("custom", customAt)
+		got, err := util.ParseExpiresIn("custom", customAt)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

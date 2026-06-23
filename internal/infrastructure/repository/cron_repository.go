@@ -79,12 +79,17 @@ func (r *cronRepository) Sync(ctx context.Context, jobs []*port.CronJobView) err
 //
 //	@receiver r *cronRepository
 //	@param ctx context.Context
-//	@param param dao.CommonParam
+//	@param param model.CommonParam
 //	@return []*port.CronJobView
 //	@return *model.PageInfo
 //	@return error
-func (r *cronRepository) List(ctx context.Context, param dao.CommonParam) ([]*port.CronJobView, *model.PageInfo, error) {
-	rows, pageInfo, err := r.dao.Paginate(r.db.WithContext(ctx), &dbmodel.CronJob{}, nil, &param)
+func (r *cronRepository) List(ctx context.Context, param model.CommonParam) ([]*port.CronJobView, *model.PageInfo, error) {
+	daoParam := dao.CommonParam{
+		PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
+		QueryParam: dao.QueryParam{Query: param.Query, QueryFields: param.QueryFields},
+		SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
+	}
+	rows, pageInfo, err := r.dao.Paginate(r.db.WithContext(ctx), &dbmodel.CronJob{}, nil, &daoParam)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "list cron jobs")
 	}

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -103,7 +104,7 @@ func (c *SessionDeduplicateCron) Start(spec string) error {
 //	@receiver c *SessionDeduplicateCron
 //	@author centonhuang
 //	@update 2026-06-01 10:00:00
-func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]any {
+func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]string {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
@@ -117,9 +118,9 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]any
 
 	if len(sessions) < 2 {
 		log.Info("[SessionDeduplicateCron] Skip deduplication, not enough sessions", zap.Int("count", checkedCount))
-		return map[string]any{
-			constant.CronMetadataKeyCheckedSessions: checkedCount,
-			constant.CronMetadataKeyDedupedSessions: 0,
+		return map[string]string{
+			constant.CronMetadataKeyCheckedSessions: strconv.Itoa(checkedCount),
+			constant.CronMetadataKeyDedupedSessions: "0",
 		}
 	}
 
@@ -154,9 +155,9 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]any
 
 	if len(mergeResult.RedundantIDs) == 0 {
 		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", checkedCount))
-		return map[string]any{
-			constant.CronMetadataKeyCheckedSessions: checkedCount,
-			constant.CronMetadataKeyDedupedSessions: 0,
+		return map[string]string{
+			constant.CronMetadataKeyCheckedSessions: strconv.Itoa(checkedCount),
+			constant.CronMetadataKeyDedupedSessions: "0",
 		}
 	}
 
@@ -195,9 +196,9 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]any
 		zap.Int("deleted", len(mergeResult.RedundantIDs)),
 		zap.Int("merged", mergedCount))
 
-	return map[string]any{
-		constant.CronMetadataKeyCheckedSessions: checkedCount,
-		constant.CronMetadataKeyDedupedSessions: len(mergeResult.RedundantIDs),
+	return map[string]string{
+		constant.CronMetadataKeyCheckedSessions: strconv.Itoa(checkedCount),
+		constant.CronMetadataKeyDedupedSessions: strconv.Itoa(len(mergeResult.RedundantIDs)),
 	}
 }
 

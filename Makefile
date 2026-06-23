@@ -83,11 +83,11 @@ test-cover:
 lint: lint-conv lint-static
 
 ## lint-conv: 扫描项目自定义编码规范
-lint-conv:
+lint-conv: web-build
 	@go run $(MAIN) lint conv ./...
 
 ## lint-static: run go vet + staticcheck + golangci-lint
-lint-static:
+lint-static: web-build
 	@go run $(MAIN) lint static ./...
 
 ## fgprof: 从远程服务拉取 fgprof profile 并打开 Web 可视化（火焰图+调用图）

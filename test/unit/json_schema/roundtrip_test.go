@@ -1,9 +1,8 @@
 package json_schema
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/bytedance/sonic"
@@ -45,17 +44,15 @@ func TestToolParametersRoundTrip(t *testing.T) {
 				t.Fatalf("marshal error: %v", err)
 			}
 
-			var orig, remarsh map[string]interface{}
-			json.Unmarshal([]byte(tc.rawBody), &orig)
-			json.Unmarshal(remarshaled, &remarsh)
+			var roundTripped dto.OpenAIChatCompletionReq
+			if err := sonic.Unmarshal(remarshaled, &roundTripped); err != nil {
+				t.Fatalf("unmarshal remarshaled error: %v", err)
+			}
 
-			origTools, _ := json.Marshal(orig["tools"])
-			remarshTools, _ := json.Marshal(remarsh["tools"])
-
-			if !bytes.Equal(origTools, remarshTools) {
-				t.Errorf("TOOLS ROUND-TRIP BROKEN\n  raw:   %s\n  remarsh: %s", string(origTools), string(remarshTools))
+			if !reflect.DeepEqual(req.Tools, roundTripped.Tools) {
+				t.Errorf("TOOLS ROUND-TRIP BROKEN\n  raw:   %#v\n  remarsh: %#v", req.Tools, roundTripped.Tools)
 			} else {
-				fmt.Printf("  OK: %s\n", string(origTools))
+				fmt.Printf("  OK: %s\n", tc.rawBody)
 			}
 		})
 	}
