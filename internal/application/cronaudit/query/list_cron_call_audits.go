@@ -7,7 +7,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 )
 
 // listCronCallAuditsHandler 列出 CronCallAudit 处理器
@@ -36,10 +35,6 @@ func NewListCronCallAuditsHandler(repo port.CronCallAuditRepository) port.ListCr
 //	@return *model.PageInfo
 //	@return error
 func (h *listCronCallAuditsHandler) Handle(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterStr string) ([]*port.CronCallAuditView, *model.PageInfo, error) {
-	daoParam := dao.CommonParam{
-		PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
-		SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
-		QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldCronName, constant.FieldTraceID}},
-	}
-	return h.repo.List(ctx, daoParam, startTime, endTime, filterStr)
+	param.QueryFields = []string{constant.FieldCronName, constant.FieldTraceID}
+	return h.repo.List(ctx, param, startTime, endTime, filterStr)
 }

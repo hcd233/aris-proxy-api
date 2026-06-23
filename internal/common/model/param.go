@@ -26,7 +26,8 @@ type PageParam struct {
 //	author centonhuang
 //	update 2024-09-18 02:56:39
 type QueryParam struct {
-	Query string `query:"query" maxLength:"100"`
+	Query       string   `query:"query" maxLength:"100"`
+	QueryFields []string // 由应用层指定查询字段，不暴露为 HTTP 参数
 }
 
 // SortParam 排序参数

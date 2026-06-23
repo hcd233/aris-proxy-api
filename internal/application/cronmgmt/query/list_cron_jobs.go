@@ -6,7 +6,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 )
 
 // listCronJobsHandler 列出 CronJob 处理器
@@ -32,14 +31,9 @@ func NewListCronJobsHandler(repo port.CronJobRepository) port.ListCronJobsHandle
 //	@return *model.PageInfo
 //	@return error
 func (h *listCronJobsHandler) Handle(ctx context.Context, param model.CommonParam) ([]*port.CronJobView, *model.PageInfo, error) {
-	sortField := param.SortField
-	if sortField == "" {
-		sortField = constant.FieldName
+	if param.SortField == "" {
+		param.SortField = constant.FieldName
 	}
-	daoParam := dao.CommonParam{
-		PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
-		QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName, constant.FieldSpec}},
-		SortParam:  dao.SortParam{Sort: param.Sort, SortField: sortField},
-	}
-	return h.repo.List(ctx, daoParam)
+	param.QueryFields = []string{constant.FieldName, constant.FieldSpec}
+	return h.repo.List(ctx, param)
 }

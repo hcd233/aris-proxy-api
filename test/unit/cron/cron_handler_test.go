@@ -14,7 +14,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 )
 
 type fakeCronJobRepo struct {
@@ -26,7 +25,7 @@ func (r *fakeCronJobRepo) Sync(ctx context.Context, jobs []*cronmgmtport.CronJob
 	return r.err
 }
 
-func (r *fakeCronJobRepo) List(ctx context.Context, param dao.CommonParam) ([]*cronmgmtport.CronJobView, *model.PageInfo, error) {
+func (r *fakeCronJobRepo) List(ctx context.Context, param model.CommonParam) ([]*cronmgmtport.CronJobView, *model.PageInfo, error) {
 	if r.err != nil {
 		return nil, nil, r.err
 	}
@@ -73,7 +72,7 @@ func (r *fakeCronCallAuditRepo) Save(ctx context.Context, audit *cronauditport.C
 	return nil
 }
 
-func (r *fakeCronCallAuditRepo) List(ctx context.Context, param dao.CommonParam, startTime, endTime time.Time, filterExp string) ([]*cronauditport.CronCallAuditView, *model.PageInfo, error) {
+func (r *fakeCronCallAuditRepo) List(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterExp string) ([]*cronauditport.CronCallAuditView, *model.PageInfo, error) {
 	if r.err != nil {
 		return nil, nil, r.err
 	}
