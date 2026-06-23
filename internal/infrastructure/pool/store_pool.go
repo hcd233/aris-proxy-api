@@ -201,9 +201,6 @@ func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) er
 			UpstreamStatusCode:       task.UpstreamStatusCode,
 			ErrorMessage:             task.ErrorMessage,
 			TraceID:                  util.CtxValueString(task.Ctx, constant.CtxKeyTraceID),
-			CompressionEnabled:       task.CompressionEnabled,
-			CompressedTokens:         task.CompressedTokens,
-			CompressionStrategies:    task.CompressionStrategies,
 		}
 		if err := dao.GetModelCallAuditDAO().Create(db, audit); err != nil {
 			l.Error("[StorePool] Failed to store audit record", zap.Error(err))

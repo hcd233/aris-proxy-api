@@ -117,7 +117,6 @@ export interface UnifiedMessage {
   tool_call_id?: string;
   tool_calls?: UnifiedToolCall[];
   raw_content?: string;
-  compression_strategy?: string;
 }
 
 export interface MessageItem {
@@ -376,9 +375,6 @@ export interface AuditLogItem {
   apiKeyName: string;
   userName: string;
   userEmail: string;
-  compressionEnabled: boolean;
-  compressedTokens: number;
-  compressionStrategies?: string[];
 }
 
 export interface ListAuditLogsRsp extends CommonRsp {

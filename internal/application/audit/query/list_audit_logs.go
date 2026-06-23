@@ -64,9 +64,6 @@ type AuditLogView struct {
 	APIKeyName               string
 	UserName                 string
 	UserEmail                string
-	CompressionEnabled       bool
-	CompressedTokens         int
-	CompressionStrategies    []string
 }
 
 type listAuditLogsParam struct {
@@ -250,9 +247,6 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
 			ErrorMessage:             audit.Status().ErrorMessage(),
 			TraceID:                  audit.TraceID(),
-			CompressionEnabled:       audit.CompressionEnabled(),
-			CompressedTokens:         audit.CompressedTokens(),
-			CompressionStrategies:    audit.CompressionStrategies(),
 		}
 		if relation, ok := relations[audit.APIKeyID()]; ok {
 			view.APIKeyName = relation.APIKeyName

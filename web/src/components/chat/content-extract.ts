@@ -65,7 +65,6 @@ export function lookupToolResult(
 export interface ToolResultInfo {
   text: string;
   rawContent?: string;
-  compressionStrategy?: string;
 }
 
 export function buildToolResultsByID(
@@ -80,7 +79,6 @@ export function buildToolResultsByID(
     map[id] = {
       text,
       rawContent: m.message.raw_content,
-      compressionStrategy: m.message.compression_strategy,
     };
   }
   return map;

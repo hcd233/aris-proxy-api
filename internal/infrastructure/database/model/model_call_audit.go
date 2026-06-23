@@ -6,23 +6,20 @@ package model
 //	@update 2026-06-21 10:00:00
 type ModelCallAudit struct {
 	BaseModel
-	APIKeyID                 uint     `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_api_key_id_created_at,priority:1"`
-	ModelID                  uint     `json:"model_id" gorm:"column:model_id;not null;comment:模型端点ID;index:idx_model_id_created_at,priority:1"`
-	Model                    string   `json:"model" gorm:"column:model;not null;default:'';comment:对外暴露的模型别名;index:idx_model_created_at,priority:1"`
-	UpstreamProtocol         string   `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message)"`
-	APIProtocol              string   `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message)"`
-	Endpoint                 string   `json:"endpoint" gorm:"column:endpoint;not null;default:'';comment:调用模型的 Endpoint 名"`
-	InputTokens              int      `json:"input_tokens" gorm:"column:input_tokens;not null;default:0;comment:输入token数"`
-	OutputTokens             int      `json:"output_tokens" gorm:"column:output_tokens;not null;default:0;comment:输出token数"`
-	CacheCreationInputTokens int      `json:"cache_creation_input_tokens" gorm:"column:cache_creation_input_tokens;not null;default:0;comment:缓存写入token数"`
-	CacheReadInputTokens     int      `json:"cache_read_input_tokens" gorm:"column:cache_read_input_tokens;not null;default:0;comment:缓存命中token数"`
-	FirstTokenLatencyMs      int64    `json:"first_token_latency_ms" gorm:"column:first_token_latency_ms;not null;default:0;comment:首token延迟(ms)，非流式为总延迟"`
-	StreamDurationMs         int64    `json:"stream_duration_ms" gorm:"column:stream_duration_ms;not null;default:0;comment:流式传输持续时间(ms)，非流式为0"`
-	UserAgent                string   `json:"user_agent" gorm:"column:user_agent;not null;default:'';comment:请求客户端User-Agent"`
-	UpstreamStatusCode       int      `json:"upstream_status_code" gorm:"column:upstream_status_code;not null;default:0;comment:上游HTTP状态码：200成功，>0为上游返回码，-1为连接错误，0为未知错误"`
-	ErrorMessage             string   `json:"error_message" gorm:"column:error_message;not null;default:'';comment:错误信息，成功时为空"`
-	TraceID                  string   `json:"trace_id" gorm:"column:trace_id;not null;default:'';comment:请求追踪ID;index"`
-	CompressionEnabled       bool     `json:"compression_enabled" gorm:"column:compression_enabled;not null;default:false;comment:是否启用上下文压缩"`
-	CompressedTokens         int      `json:"compressed_tokens" gorm:"column:compressed_tokens;not null;default:0;comment:压缩节省的token数"`
-	CompressionStrategies    []string `json:"compression_strategies" gorm:"column:compression_strategies;comment:压缩策略列表;serializer:json"`
+	APIKeyID                 uint   `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_api_key_id_created_at,priority:1"`
+	ModelID                  uint   `json:"model_id" gorm:"column:model_id;not null;comment:模型端点ID;index:idx_model_id_created_at,priority:1"`
+	Model                    string `json:"model" gorm:"column:model;not null;default:'';comment:对外暴露的模型别名;index:idx_model_created_at,priority:1"`
+	UpstreamProtocol         string `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message)"`
+	APIProtocol              string `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message)"`
+	Endpoint                 string `json:"endpoint" gorm:"column:endpoint;not null;default:'';comment:调用模型的 Endpoint 名"`
+	InputTokens              int    `json:"input_tokens" gorm:"column:input_tokens;not null;default:0;comment:输入token数"`
+	OutputTokens             int    `json:"output_tokens" gorm:"column:output_tokens;not null;default:0;comment:输出token数"`
+	CacheCreationInputTokens int    `json:"cache_creation_input_tokens" gorm:"column:cache_creation_input_tokens;not null;default:0;comment:缓存写入token数"`
+	CacheReadInputTokens     int    `json:"cache_read_input_tokens" gorm:"column:cache_read_input_tokens;not null;default:0;comment:缓存命中token数"`
+	FirstTokenLatencyMs      int64  `json:"first_token_latency_ms" gorm:"column:first_token_latency_ms;not null;default:0;comment:首token延迟(ms)，非流式为总延迟"`
+	StreamDurationMs         int64  `json:"stream_duration_ms" gorm:"column:stream_duration_ms;not null;default:0;comment:流式传输持续时间(ms)，非流式为0"`
+	UserAgent                string `json:"user_agent" gorm:"column:user_agent;not null;default:'';comment:请求客户端User-Agent"`
+	UpstreamStatusCode       int    `json:"upstream_status_code" gorm:"column:upstream_status_code;not null;default:0;comment:上游HTTP状态码：200成功，>0为上游返回码，-1为连接错误，0为未知错误"`
+	ErrorMessage             string `json:"error_message" gorm:"column:error_message;not null;default:'';comment:错误信息，成功时为空"`
+	TraceID                  string `json:"trace_id" gorm:"column:trace_id;not null;default:'';comment:请求追踪ID;index"`
 }

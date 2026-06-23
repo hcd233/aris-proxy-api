@@ -56,7 +56,4 @@ type AuditLogItem struct {
 	APIKeyName               string    `json:"apiKeyName" doc:"调用所用 API Key 名称"`
 	UserName                 string    `json:"userName" doc:"调用方用户名"`
 	UserEmail                string    `json:"userEmail" doc:"调用方邮箱"`
-	CompressionEnabled       bool      `json:"compressionEnabled" doc:"是否启用上下文压缩"`
-	CompressedTokens         int       `json:"compressedTokens" doc:"压缩节省的token数"`
-	CompressionStrategies    []string  `json:"compressionStrategies,omitempty" doc:"压缩策略列表"`
 }
