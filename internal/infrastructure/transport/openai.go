@@ -116,8 +116,16 @@ func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {
 	return mo.Some(chunk)
 }
 
-// doUpstreamRequest 构建并发送上游 HTTP 请求的公共逻辑
+// doUpstreamRequest 构建并发送上游 HTTP 请求，对可重试错误自动重试
 func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
+	sendFn := func() (*http.Response, error) {
+		return p.sendUpstreamRequestOnce(ctx, ep, body, pathSuffix)
+	}
+	return SendUpstreamWithRetry(ctx, constant.ModuleOpenAIProxy, sendFn)
+}
+
+// sendUpstreamRequestOnce 执行单次上游 HTTP 请求发送（不含重试逻辑）
+func (p *openAIProxy) sendUpstreamRequestOnce(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
 	log := logger.WithCtx(ctx)
 
 	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + pathSuffix
@@ -143,18 +151,12 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpo
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
-		log.Error("[OpenAIProxy] Send http request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
 		return nil, &model.UpstreamConnectionError{Cause: err}
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck // read best effort on error path
 		_ = resp.Body.Close()                 //nolint:errcheck // close best effort on error path
-		log.Error("[OpenAIProxy] Upstream returned non-200 status",
-			zap.String("upstreamURL", upstreamURL),
-			zap.Int("statusCode", resp.StatusCode),
-			zap.String("responseBody", string(errorBody)),
-		)
 		return nil, &model.UpstreamError{
 			StatusCode: resp.StatusCode,
 			Headers:    capturePassthroughResponseHeaders(resp.Header),
