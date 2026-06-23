@@ -565,9 +565,11 @@ func TestOpenAIProtocolConverter_ToAnthropicResponse_WithToolUse(t *testing.T) {
 			if lo.FromPtr(block.Name) != "search" {
 				t.Errorf("tool_use Name = %q, want %q", lo.FromPtr(block.Name), "search")
 			}
-			query, ok := block.Input["query"]
-			if !ok || query != "hello" {
-				t.Errorf("tool_use Input = %v, want {query: hello}", block.Input)
+			var inputMap map[string]string
+			if err := sonic.Unmarshal(block.Input, &inputMap); err != nil {
+				t.Errorf("unmarshal tool_use Input: %v", err)
+			} else if query, ok := inputMap["query"]; !ok || query != "hello" {
+				t.Errorf("tool_use Input = %v, want {query: hello}", inputMap)
 			}
 		}
 	}

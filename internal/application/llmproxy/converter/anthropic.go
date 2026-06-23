@@ -287,6 +287,7 @@ func convertOpenAIImageURLToAnthropicBlock(img *dto.OpenAIChatCompletionImageURL
 	return block
 }
 
+//nolint:unparam // error kept for forward-compatible expansion
 func convertOpenAIAssistantMessageToAnthropic(msg *dto.OpenAIChatCompletionMessageParam) (*dto.AnthropicMessageParam, error) {
 	am := &dto.AnthropicMessageParam{
 		Role: enum.RoleAssistant,
@@ -315,20 +316,14 @@ func convertOpenAIAssistantMessageToAnthropic(msg *dto.OpenAIChatCompletionMessa
 	}
 
 	// 工具调用 -> tool_use blocks
-	for i, tc := range msg.ToolCalls {
+	for _, tc := range msg.ToolCalls {
 		if tc.Function != nil {
-			var input map[string]any
-			if tc.Function.Arguments != "" {
-				if err := sonic.UnmarshalString(tc.Function.Arguments, &input); err != nil {
-					return nil, ierr.Wrapf(ierr.ErrDTOUnmarshal, err, "unmarshal tool call arguments[%d]", i)
-				}
-			}
 			name := tc.Function.Name
 			blocks = append(blocks, &dto.AnthropicContentBlock{
 				Type:  enum.AnthropicContentBlockTypeToolUse,
 				ID:    tc.ID,
 				Name:  &name,
-				Input: input,
+				Input: sonic.NoCopyRawMessage(tc.Function.Arguments),
 			})
 		}
 	}
@@ -425,6 +420,7 @@ func convertAnthropicStopReasonToOpenAI(stopReason *string) enum.FinishReason {
 	}
 }
 
+//nolint:unparam // error kept for forward-compatible expansion
 func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock) (*dto.OpenAIChatCompletionMessageParam, error) {
 	msg := &dto.OpenAIChatCompletionMessageParam{
 		Role: enum.RoleAssistant,
@@ -443,13 +439,9 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 		return "", false
 	})
 	var toolCalls []*dto.OpenAIChatCompletionMessageToolCall
-	for i, block := range blocks {
+	for _, block := range blocks {
 		if block.Type != enum.AnthropicContentBlockTypeToolUse {
 			continue
-		}
-		args, err := sonic.MarshalString(block.Input)
-		if err != nil {
-			return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
 		}
 		name := lo.FromPtr(block.Name)
 		toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
@@ -457,7 +449,7 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
 				Name:      name,
-				Arguments: args,
+				Arguments: string(block.Input),
 			},
 		})
 	}

@@ -235,7 +235,7 @@ type AnthropicContentBlock struct {
 	// ToolUseBlock 字段
 	ID     *string                      `json:"id,omitempty" doc:"工具调用ID(type=tool_use)"`
 	Name   *string                      `json:"name,omitempty" doc:"工具名称(type=tool_use)"`
-	Input  map[string]any               `json:"input,omitempty" doc:"工具输入(type=tool_use)"`
+	Input  sonic.NoCopyRawMessage       `json:"input,omitempty" doc:"工具输入(type=tool_use)"`
 	Caller *AnthropicContentBlockCaller `json:"caller,omitempty" doc:"调用者信息(type=tool_use)"`
 
 	// ToolResultBlock 字段
@@ -289,7 +289,7 @@ type anthropicToolUseContentBlockWire struct {
 	Type         string                       `json:"type"`
 	ID           string                       `json:"id,omitempty"`
 	Name         string                       `json:"name,omitempty"`
-	Input        map[string]any               `json:"input"`
+	Input        sonic.NoCopyRawMessage       `json:"input"`
 	Caller       *AnthropicContentBlockCaller `json:"caller,omitempty"`
 	CacheControl *CacheControl                `json:"cache_control,omitempty"`
 }
@@ -297,7 +297,7 @@ type anthropicToolUseContentBlockWire struct {
 func newAnthropicToolUseContentBlockWire(b *AnthropicContentBlock) anthropicToolUseContentBlockWire {
 	input := b.Input
 	if input == nil {
-		input = map[string]any{}
+		input = sonic.NoCopyRawMessage(constant.EmptyJSONObject)
 	}
 	id := ""
 	if b.ID != nil {
@@ -350,8 +350,8 @@ func (b *AnthropicContentBlock) MarshalJSON() ([]byte, error) {
 //	@author centonhuang
 //	@update 2026-03-18 10:00:00
 type AnthropicJSONOutputFormat struct {
-	Type   string         `json:"type" doc:"格式类型: json_schema"`
-	Schema map[string]any `json:"schema,omitempty" doc:"JSON Schema对象"`
+	Type   string                     `json:"type" doc:"格式类型: json_schema"`
+	Schema *schema.JSONSchemaProperty `json:"schema,omitempty" doc:"JSON Schema对象"`
 }
 
 // AnthropicOutputConfig Anthropic 输出配置

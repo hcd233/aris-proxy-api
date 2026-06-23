@@ -20,7 +20,7 @@ type CronCallAuditView struct {
 	DurationMs int64
 	Status     string
 	Message    string
-	Metadata   map[string]any
+	Metadata   map[string]string
 	CreatedAt  time.Time
 }
 

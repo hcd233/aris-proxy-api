@@ -21,6 +21,7 @@ const (
 	ZeroString             = "0"
 	OneString              = "1"
 	NullJSONLiteral        = "null"
+	EmptyJSONObject        = "{}"
 	QuoteString            = "\""
 	DefaultFormatJSON      = "application/json"
 	DataURLPrefix          = "data:"

@@ -131,11 +131,11 @@ func renewLoop(ctx context.Context, locker lock.Locker, key, value string, ttl, 
 //
 //	@author centonhuang
 //	@update 2026-06-18 10:00:00
-func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context) map[string]any) func() {
+func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context) map[string]string) func() {
 	return func() {
 		ctx := context.WithValue(getBootstrapContext(), constant.CtxKeyTraceID, uuid.New().String())
 		start := time.Now()
-		var metadata map[string]any
+		var metadata map[string]string
 		defer func() {
 			if r := recover(); r != nil {
 				cronPanicHandler(ctx, name, r)
@@ -161,7 +161,7 @@ func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions,
 	}
 }
 
-func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string, metadata map[string]any) {
+func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string, metadata map[string]string) {
 	if cronCallAuditStore == nil {
 		return
 	}

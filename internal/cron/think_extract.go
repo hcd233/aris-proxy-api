@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -102,7 +103,7 @@ func (c *ThinkExtractCron) Start(spec string) error {
 //	@param ctx context.Context
 //	@author centonhuang
 //	@update 2026-06-02 10:00:00
-func (c *ThinkExtractCron) extract(ctx context.Context) map[string]any {
+func (c *ThinkExtractCron) extract(ctx context.Context) map[string]string {
 	log := logger.WithCtx(ctx)
 	startTime, endTime := currentDayRange(time.Now().UTC())
 
@@ -154,9 +155,9 @@ func (c *ThinkExtractCron) extract(ctx context.Context) map[string]any {
 
 	log.Info("[ThinkExtractCron] Extract completed", zap.Int("totalProcessed", totalProcessed))
 
-	return map[string]any{
-		constant.CronMetadataKeyScannedMessages:   totalScanned,
-		constant.CronMetadataKeyExtractedMessages: totalProcessed,
+	return map[string]string{
+		constant.CronMetadataKeyScannedMessages:   strconv.Itoa(totalScanned),
+		constant.CronMetadataKeyExtractedMessages: strconv.Itoa(totalProcessed),
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
@@ -289,13 +288,10 @@ func responseTextFormatToChat(format *dto.ResponseTextFormat) *dto.OpenAIRespons
 	}
 	rspFormat := &dto.OpenAIResponseFormat{Type: format.Type}
 	if format.Schema != nil {
-		schema := lo.Must1(sonic.Marshal(format.Schema))
-		var schemaMap map[string]any
-		_ = sonic.Unmarshal(schema, &schemaMap) //nolint:errcheck // schema comes from trusted internal source, zero-valued map on failure is acceptable
 		rspFormat.JSONSchema = &dto.OpenAIJSONSchemaFormat{
 			Name:        lo.FromPtr(format.Name),
 			Description: format.Description,
-			Schema:      schemaMap,
+			Schema:      format.Schema,
 			Strict:      format.Strict,
 		}
 	}

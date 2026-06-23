@@ -75,7 +75,7 @@ func (h *pingHandler) HandleSSEPing(_ context.Context, _ *dto.EmptyReq) (rsp *hu
 				for i := range constant.SSEHeartbeatCount {
 					data := &dto.SSEResponse{
 						DataType: enum.SSEDataTypeHeartBeat,
-						Data:     strconv.Itoa(i),
+						Data:     sonic.NoCopyRawMessage(strconv.Itoa(i)),
 					}
 					_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(data))) //nolint:errcheck // best-effort write
 					err := w.Flush()

@@ -227,7 +227,7 @@ func (*OpenAIProtocolConverter) handleToolCallDelta(choice *dto.OpenAIChatComple
 					Type:  enum.AnthropicContentBlockTypeToolUse,
 					ID:    tc.ID,
 					Name:  &name,
-					Input: map[string]any{},
+					Input: sonic.NoCopyRawMessage(constant.EmptyJSONObject),
 				}))
 				tracker.startedToolBlocks[toolCallIndex] = struct{}{}
 			}
@@ -311,7 +311,7 @@ func convertAnthropicBlocksToOpenAIMessages(role string, blocks []*dto.Anthropic
 	var contentParts []*dto.OpenAIChatCompletionContentPart
 	hasMultiModal := false
 
-	for i, block := range blocks {
+	for _, block := range blocks {
 		switch block.Type {
 		case enum.AnthropicContentBlockTypeText:
 			contentParts = append(contentParts, &dto.OpenAIChatCompletionContentPart{
@@ -323,17 +323,13 @@ func convertAnthropicBlocksToOpenAIMessages(role string, blocks []*dto.Anthropic
 			thinkingParts = append(thinkingParts, lo.FromPtr(block.Thinking))
 
 		case enum.AnthropicContentBlockTypeToolUse:
-			args, err := sonic.MarshalString(block.Input)
-			if err != nil {
-				return nil, ierr.Wrapf(ierr.ErrDTOMarshal, err, "marshal tool_use input for block[%d]", i)
-			}
 			name := lo.FromPtr(block.Name)
 			toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
 				ID:   block.ID,
 				Type: enum.ToolTypeFunction,
 				Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
 					Name:      name,
-					Arguments: args,
+					Arguments: string(block.Input),
 				},
 			})
 
