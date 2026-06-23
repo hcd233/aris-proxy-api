@@ -337,5 +337,9 @@ linters:
       - "web/node_modules"
       - ".worktrees"
 
+formatters:
+  enable:
+    - gofmt           # gofmt 格式检查
+
 output:
   sort-results: true

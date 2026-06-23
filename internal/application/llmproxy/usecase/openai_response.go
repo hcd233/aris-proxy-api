@@ -66,32 +66,29 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 }
 
 type nativeStreamHandler struct {
-	u                *openAIUseCase
-	ctx              context.Context
-	req              *dto.OpenAICreateResponseRequest
-	w                *bufio.Writer
-	startTime        time.Time
-	firstTokenTime   time.Time
+	u                   *openAIUseCase
+	ctx                 context.Context
+	req                 *dto.OpenAICreateResponseRequest
+	startTime           time.Time
+	firstTokenTime      time.Time
 	firstTokenLatencyMs int64
-	streamDurationMs int64
-	finalResponse    *dto.OpenAICreateResponseRsp
-	accumulatedOutput []*dto.ResponseInputItem
-	logger           *zap.Logger
+	streamDurationMs    int64
+	finalResponse       *dto.OpenAICreateResponseRsp
+	accumulatedOutput   []*dto.ResponseInputItem
+	logger              *zap.Logger
 }
 
-func newNativeStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest, w *bufio.Writer) *nativeStreamHandler {
+func newNativeStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *nativeStreamHandler {
 	return &nativeStreamHandler{
-		u:                u,
-		ctx:              ctx,
-		req:              req,
-		w:                w,
-		startTime:        time.Now(),
+		u:                 u,
+		ctx:               ctx,
+		req:               req,
 		accumulatedOutput: make([]*dto.ResponseInputItem, 0),
-		logger:           logger.WithCtx(ctx),
+		logger:            logger.WithCtx(ctx),
 	}
 }
 
-func (h *nativeStreamHandler) onEvent(event string, data []byte) error {
+func (h *nativeStreamHandler) onEvent(w *bufio.Writer, event string, data []byte) error {
 	if h.firstTokenTime.IsZero() && proxyutil.IsResponseAPIDeltaEvent(event) {
 		h.firstTokenTime = time.Now()
 		h.firstTokenLatencyMs = h.firstTokenTime.Sub(h.startTime).Milliseconds()
@@ -104,10 +101,10 @@ func (h *nativeStreamHandler) onEvent(event string, data []byte) error {
 
 	outgoingData := h.patchTerminalOutput(event, data)
 	replaced := proxyutil.ReplaceModelInSSEData(outgoingData, lo.FromPtr(h.req.Body.Model))
-	if _, writeErr := fmt.Fprintf(h.w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
+	if _, writeErr := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
 		h.logger.Debug("[OpenAIUseCase] Failed to write SSE event frame", zap.Error(writeErr))
 	}
-	return h.w.Flush()
+	return w.Flush()
 }
 
 func (h *nativeStreamHandler) handleOutputItemDone(event string, data []byte) {
@@ -211,8 +208,11 @@ func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggre
 
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
-		h := newNativeStreamHandler(ctx, u, req, w)
-		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, h.onEvent)
+		h := newNativeStreamHandler(ctx, u, req)
+		h.startTime = time.Now()
+		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, func(event string, data []byte) error {
+			return h.onEvent(w, event, data)
+		})
 		h.finalize(w, proxyErr, m, ep, upstream)
 	})
 }
@@ -388,38 +388,37 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 }
 
 type anthropicStreamHandler struct {
-	u                 *openAIUseCase
-	ctx               context.Context
-	req               *dto.OpenAICreateResponseRequest
-	responseConv      *converter.ResponseProtocolConverter
-	anthropicConv     *converter.AnthropicProtocolConverter
-	exposedModel      string
-	responseID        string
-	chunkID           string
-	startTime         time.Time
-	firstTokenTime    time.Time
+	u                   *openAIUseCase
+	ctx                 context.Context
+	req                 *dto.OpenAICreateResponseRequest
+	responseConv        *converter.ResponseProtocolConverter
+	anthropicConv       *converter.AnthropicProtocolConverter
+	exposedModel        string
+	responseID          string
+	chunkID             string
+	startTime           time.Time
+	firstTokenTime      time.Time
 	firstTokenLatencyMs int64
-	streamDurationMs  int64
-	allChunks         []*dto.OpenAIChatCompletionChunk
-	chunkCount        int64
-	initializedItems  map[int]bool
-	logger            *zap.Logger
+	streamDurationMs    int64
+	allChunks           []*dto.OpenAIChatCompletionChunk
+	chunkCount          int64
+	initializedItems    map[int]bool
+	logger              *zap.Logger
 }
 
 func newAnthropicStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *anthropicStreamHandler {
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return &anthropicStreamHandler{
-		u:               u,
-		ctx:             ctx,
-		req:             req,
-		responseConv:    &converter.ResponseProtocolConverter{},
-		anthropicConv:   &converter.AnthropicProtocolConverter{},
-		exposedModel:    exposedModel,
-		responseID:      fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String()),
-		chunkID:         fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
-		startTime:       time.Now(),
+		u:                u,
+		ctx:              ctx,
+		req:              req,
+		responseConv:     &converter.ResponseProtocolConverter{},
+		anthropicConv:    &converter.AnthropicProtocolConverter{},
+		exposedModel:     exposedModel,
+		responseID:       fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String()),
+		chunkID:          fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
 		initializedItems: make(map[int]bool),
-		logger:          logger.WithCtx(ctx),
+		logger:           logger.WithCtx(ctx),
 	}
 }
 
@@ -486,6 +485,7 @@ func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, u
 func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
 	h := newAnthropicStreamHandler(ctx, u, req)
 	return func(w *bufio.Writer) {
+		h.startTime = time.Now()
 		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, h.exposedModel, h.responseID); err != nil {
 			h.logger.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
 		}
