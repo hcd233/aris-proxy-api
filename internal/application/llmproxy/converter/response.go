@@ -487,16 +487,28 @@ func chatMessageToResponseOutputs(msg *dto.OpenAIChatCompletionMessageParam, too
 	}
 
 	toolCallItems := lo.FilterMap(msg.ToolCalls, func(tc *dto.OpenAIChatCompletionMessageToolCall, _ int) (*dto.ResponseInputItem, bool) {
-		if tc == nil || tc.Function == nil {
+		if tc == nil {
 			return nil, false
 		}
-		itemType := resolveToolCallOutputType(tc.Function.Name, toolTypeMap)
-		return &dto.ResponseInputItem{
-			Type:      lo.ToPtr(itemType),
-			CallID:    tc.ID,
-			Name:      lo.ToPtr(tc.Function.Name),
-			Arguments: lo.ToPtr(tc.Function.Arguments),
-		}, true
+		switch {
+		case tc.Function != nil:
+			itemType := resolveToolCallOutputType(tc.Function.Name, toolTypeMap)
+			return &dto.ResponseInputItem{
+				Type:      lo.ToPtr(itemType),
+				CallID:    tc.ID,
+				Name:      lo.ToPtr(tc.Function.Name),
+				Arguments: lo.ToPtr(tc.Function.Arguments),
+			}, true
+		case tc.Custom != nil:
+			itemType := resolveToolCallOutputType(tc.Custom.Name, toolTypeMap)
+			return &dto.ResponseInputItem{
+				Type:   lo.ToPtr(itemType),
+				CallID: tc.ID,
+				Name:   lo.ToPtr(tc.Custom.Name),
+				Input:  lo.ToPtr(tc.Custom.Input),
+			}, true
+		}
+		return nil, false
 	})
 	items = append(items, toolCallItems...)
 
