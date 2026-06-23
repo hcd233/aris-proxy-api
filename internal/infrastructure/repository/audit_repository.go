@@ -64,9 +64,6 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 		UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
 		ErrorMessage:             audit.Status().ErrorMessage(),
 		TraceID:                  audit.TraceID(),
-		CompressionEnabled:       audit.CompressionEnabled(),
-		CompressedTokens:         audit.CompressedTokens(),
-		CompressionStrategies:    audit.CompressionStrategies(),
 	}
 	if err := r.dao.Create(db, record); err != nil {
 		return ierr.Wrap(ierr.ErrDBCreate, err, "create model call audit")
@@ -260,21 +257,18 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 
 	audits := lo.Map(records, func(rec *dbmodel.ModelCallAudit, _ int) *aggregate.ModelCallAudit {
 		a := aggregate.ReconstructAudit(aggregate.ReconstructAuditInput{
-			APIKeyID:              rec.APIKeyID,
-			ModelID:               rec.ModelID,
-			Model:                 rec.Model,
-			UpstreamProtocol:      rec.UpstreamProtocol,
-			APIProtocol:           rec.APIProtocol,
-			Endpoint:              rec.Endpoint,
-			Tokens:                vo.NewTokenBreakdown(rec.InputTokens, rec.OutputTokens, rec.CacheCreationInputTokens, rec.CacheReadInputTokens),
-			Latency:               vo.NewCallLatency(time.Duration(rec.FirstTokenLatencyMs)*time.Millisecond, time.Duration(rec.StreamDurationMs)*time.Millisecond),
-			Status:                vo.NewCallStatus(rec.UpstreamStatusCode, rec.ErrorMessage),
-			UserAgent:             rec.UserAgent,
-			TraceID:               rec.TraceID,
-			CompressionEnabled:    rec.CompressionEnabled,
-			CompressedTokens:      rec.CompressedTokens,
-			CompressionStrategies: rec.CompressionStrategies,
-			CreatedAt:             rec.CreatedAt,
+			APIKeyID:         rec.APIKeyID,
+			ModelID:          rec.ModelID,
+			Model:            rec.Model,
+			UpstreamProtocol: rec.UpstreamProtocol,
+			APIProtocol:      rec.APIProtocol,
+			Endpoint:         rec.Endpoint,
+			Tokens:           vo.NewTokenBreakdown(rec.InputTokens, rec.OutputTokens, rec.CacheCreationInputTokens, rec.CacheReadInputTokens),
+			Latency:          vo.NewCallLatency(time.Duration(rec.FirstTokenLatencyMs)*time.Millisecond, time.Duration(rec.StreamDurationMs)*time.Millisecond),
+			Status:           vo.NewCallStatus(rec.UpstreamStatusCode, rec.ErrorMessage),
+			UserAgent:        rec.UserAgent,
+			TraceID:          rec.TraceID,
+			CreatedAt:        rec.CreatedAt,
 		})
 		a.SetID(rec.ID)
 		return a

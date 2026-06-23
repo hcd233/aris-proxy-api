@@ -19,21 +19,18 @@ import (
 type ModelCallAudit struct {
 	aggregate.Base
 
-	apiKeyID              uint
-	modelID               uint
-	model                 string // exposed model（客户端请求别名）
-	upstreamProtocol      enum.ProtocolType
-	apiProtocol           enum.ProtocolType
-	endpoint              string
-	tokens                vo.TokenBreakdown
-	latency               vo.CallLatency
-	status                vo.CallStatus
-	userAgent             string
-	traceID               string
-	compressionEnabled    bool
-	compressedTokens      int
-	compressionStrategies []string
-	createdAt             time.Time
+	apiKeyID         uint
+	modelID          uint
+	model            string // exposed model（客户端请求别名）
+	upstreamProtocol enum.ProtocolType
+	apiProtocol      enum.ProtocolType
+	endpoint         string
+	tokens           vo.TokenBreakdown
+	latency          vo.CallLatency
+	status           vo.CallStatus
+	userAgent        string
+	traceID          string
+	createdAt        time.Time
 }
 
 // RecordCall 构造一条审计聚合（成功/失败由 CallInput.Status 区分，工厂不重复表达）
@@ -55,40 +52,34 @@ func RecordCall(input RecordCallInput, now time.Time) *ModelCallAudit {
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
 type RecordCallInput struct {
-	APIKeyID              uint
-	ModelID               uint
-	Model                 string
-	UpstreamProtocol      enum.ProtocolType
-	APIProtocol           enum.ProtocolType
-	Endpoint              string
-	Tokens                vo.TokenBreakdown
-	Latency               vo.CallLatency
-	Status                vo.CallStatus
-	UserAgent             string
-	TraceID               string
-	CompressionEnabled    bool
-	CompressedTokens      int
-	CompressionStrategies []string
+	APIKeyID         uint
+	ModelID          uint
+	Model            string
+	UpstreamProtocol enum.ProtocolType
+	APIProtocol      enum.ProtocolType
+	Endpoint         string
+	Tokens           vo.TokenBreakdown
+	Latency          vo.CallLatency
+	Status           vo.CallStatus
+	UserAgent        string
+	TraceID          string
 }
 
 // newAudit 构造聚合但不生成事件（由调用方选择 Complete/Fail 事件）
 func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 	return &ModelCallAudit{
-		apiKeyID:              input.APIKeyID,
-		modelID:               input.ModelID,
-		model:                 input.Model,
-		upstreamProtocol:      input.UpstreamProtocol,
-		apiProtocol:           input.APIProtocol,
-		endpoint:              input.Endpoint,
-		tokens:                input.Tokens,
-		latency:               input.Latency,
-		status:                input.Status,
-		userAgent:             input.UserAgent,
-		traceID:               input.TraceID,
-		compressionEnabled:    input.CompressionEnabled,
-		compressedTokens:      input.CompressedTokens,
-		compressionStrategies: input.CompressionStrategies,
-		createdAt:             now,
+		apiKeyID:         input.APIKeyID,
+		modelID:          input.ModelID,
+		model:            input.Model,
+		upstreamProtocol: input.UpstreamProtocol,
+		apiProtocol:      input.APIProtocol,
+		endpoint:         input.Endpoint,
+		tokens:           input.Tokens,
+		latency:          input.Latency,
+		status:           input.Status,
+		userAgent:        input.UserAgent,
+		traceID:          input.TraceID,
+		createdAt:        now,
 	}
 }
 
@@ -127,15 +118,6 @@ func (a *ModelCallAudit) UserAgent() string { return a.userAgent }
 
 // TraceID 返回 Trace ID
 func (a *ModelCallAudit) TraceID() string { return a.traceID }
-
-// CompressionEnabled 返回是否启用压缩
-func (a *ModelCallAudit) CompressionEnabled() bool { return a.compressionEnabled }
-
-// CompressedTokens 返回压缩节省的 token 数
-func (a *ModelCallAudit) CompressedTokens() int { return a.compressedTokens }
-
-// CompressionStrategies 返回压缩策略列表
-func (a *ModelCallAudit) CompressionStrategies() []string { return a.compressionStrategies }
 
 // CreatedAt 返回创建时间
 func (a *ModelCallAudit) CreatedAt() time.Time { return a.createdAt }

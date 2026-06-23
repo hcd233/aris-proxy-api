@@ -1,7 +1,3 @@
-// Package usecase LLMProxy 域用例层 — 消息存储辅助函数
-//
-//	@author centonhuang
-//	@update 2026-04-28 20:00:00
 package usecase
 
 import (
@@ -10,7 +6,6 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -20,22 +15,20 @@ import (
 )
 
 // storeOpenAIChatFromCompletion 原生 OpenAI 响应 → 消息存储
-func (u *openAIUseCase) storeOpenAIChatFromCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string, compResults []compression.ItemCompressionResult) {
+func (u *openAIUseCase) storeOpenAIChatFromCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return
 	}
-	u.storeOpenAIChatMessages(ctx, req, completion.Choices[0].Message, upstreamModel, completion.Usage, compResults)
+	u.storeOpenAIChatMessages(ctx, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
 }
 
 // storeOpenAIChatMessages ChatCompletion 存储基元：req.Messages + assistantMsg → UnifiedMessage 列表
-func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage, compResults []compression.ItemCompressionResult) {
+func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
 	log := logger.WithCtx(ctx)
 	unifiedMessages, unifiedTools, err := u.convertRequestMessages(ctx, req)
 	if err != nil {
 		return
 	}
-
-	compression.ApplyResultsToMessages(unifiedMessages, compResults)
 
 	aiMsg, err := dto.FromOpenAIMessage(assistantMsg)
 	if err != nil {
@@ -94,7 +87,7 @@ func (u *openAIUseCase) convertRequestMessages(ctx context.Context, req *dto.Ope
 // ==================== Store Helpers: Response API 路径 ====================
 
 // storeResponseFromRsp Response API 原生响应 → 消息存储
-func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenAICreateResponseRequest, rsp *dto.OpenAICreateResponseRsp, proxyErr error, upstreamModel string, compResults []compression.ItemCompressionResult) {
+func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenAICreateResponseRequest, rsp *dto.OpenAICreateResponseRsp, proxyErr error, upstreamModel string) {
 	log := logger.WithCtx(ctx)
 	if proxyErr != nil || rsp == nil {
 		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: proxyErr or rsp nil",
@@ -120,8 +113,6 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenA
 			zap.String("responseID", rsp.ID))
 		return
 	}
-
-	compression.ApplyResultsToMessages(unifiedMessages, compResults)
 
 	outputMsgs, ok := convertResponseOutput(rsp)
 	if !ok {

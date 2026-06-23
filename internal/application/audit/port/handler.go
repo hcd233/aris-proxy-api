@@ -32,9 +32,6 @@ type AuditLogView struct {
 	APIKeyName               string
 	UserName                 string
 	UserEmail                string
-	CompressionEnabled       bool
-	CompressedTokens         int
-	CompressionStrategies    []string
 }
 
 // ListAuditLogsParams 列表查询的通用参数（不带权限相关字段）

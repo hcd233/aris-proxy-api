@@ -6,7 +6,6 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/compression"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	convvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -15,21 +14,19 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string, compResults []compression.ItemCompressionResult) {
+func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
 	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
 		return
 	}
-	u.storeAnthropicMessages(ctx, req, msg, upstreamModel, compResults)
+	u.storeAnthropicMessages(ctx, req, msg, upstreamModel)
 }
 
-func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string, compResults []compression.ItemCompressionResult) {
+func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
 	log := logger.WithCtx(ctx)
 	unifiedMessages, unifiedTools, inputTokens, outputTokens, err := u.convertAnthropicRequestMessages(ctx, req, assistantMsg)
 	if err != nil {
 		return
 	}
-
-	compression.ApplyResultsToMessages(unifiedMessages, compResults)
 
 	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),

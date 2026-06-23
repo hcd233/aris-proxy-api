@@ -3,7 +3,6 @@ import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UnifiedToolCall } from "@/lib/types";
 import type { ToolResultInfo } from "./content-extract";
-import { CompressionDiff } from "./compression-diff";
 
 function prettyJSON(s: string): string {
   if (!s) return "";
@@ -36,11 +35,9 @@ interface ToolCallCardProps {
 
 export function ToolCallCard({ call, result }: ToolCallCardProps) {
   const [open, setOpen] = useState(false);
-  const [showDiff, setShowDiff] = useState(false);
   const args = prettyJSON(call.arguments);
   const out = result ? prettyJSON(result.text) : undefined;
   const preview = previewFirstArg(call.arguments);
-  const hasCompression = !!result?.rawContent && !!result?.compressionStrategy;
 
   return (
     <div
@@ -68,11 +65,6 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
             )}
           </div>
         </div>
-        {hasCompression && (
-          <span className="rounded bg-amber-500/12 px-1.5 py-0.5 font-mono text-[9px] font-medium text-amber-600 dark:text-amber-400">
-            {result!.compressionStrategy}
-          </span>
-        )}
         {open ? (
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         ) : (
@@ -102,26 +94,10 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   Output
                 </p>
-                {hasCompression && (
-                  <button
-                    type="button"
-                    onClick={() => setShowDiff((v) => !v)}
-                    className="font-mono text-[10px] text-primary hover:underline"
-                  >
-                    {showDiff ? "View compressed content" : "View original content"}
-                  </button>
-                )}
               </div>
-              {showDiff && hasCompression ? (
-                <CompressionDiff
-                  before={result!.rawContent!}
-                  after={result!.text}
-                />
-              ) : (
-                <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
-                  {out}
-                </pre>
-              )}
+              <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
+                {out}
+              </pre>
             </div>
           )}
         </div>

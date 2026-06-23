@@ -12,21 +12,18 @@ import (
 //	@author centonhuang
 //	@update 2026-06-21 10:00:00
 type ReconstructAuditInput struct {
-	APIKeyID              uint
-	ModelID               uint
-	Model                 string
-	UpstreamProtocol      enum.ProtocolType
-	APIProtocol           enum.ProtocolType
-	Endpoint              string
-	Tokens                vo.TokenBreakdown
-	Latency               vo.CallLatency
-	Status                vo.CallStatus
-	UserAgent             string
-	TraceID               string
-	CompressionEnabled    bool
-	CompressedTokens      int
-	CompressionStrategies []string
-	CreatedAt             time.Time
+	APIKeyID         uint
+	ModelID          uint
+	Model            string
+	UpstreamProtocol enum.ProtocolType
+	APIProtocol      enum.ProtocolType
+	Endpoint         string
+	Tokens           vo.TokenBreakdown
+	Latency          vo.CallLatency
+	Status           vo.CallStatus
+	UserAgent        string
+	TraceID          string
+	CreatedAt        time.Time
 }
 
 // ReconstructAudit 从持久层数据重建审计聚合（用于读查询）
@@ -37,20 +34,17 @@ type ReconstructAuditInput struct {
 //	@update 2026-05-11 10:00:00
 func ReconstructAudit(input ReconstructAuditInput) *ModelCallAudit {
 	return &ModelCallAudit{
-		apiKeyID:              input.APIKeyID,
-		modelID:               input.ModelID,
-		model:                 input.Model,
-		upstreamProtocol:      input.UpstreamProtocol,
-		apiProtocol:           input.APIProtocol,
-		endpoint:              input.Endpoint,
-		tokens:                input.Tokens,
-		latency:               input.Latency,
-		status:                input.Status,
-		userAgent:             input.UserAgent,
-		traceID:               input.TraceID,
-		compressionEnabled:    input.CompressionEnabled,
-		compressedTokens:      input.CompressedTokens,
-		compressionStrategies: input.CompressionStrategies,
-		createdAt:             input.CreatedAt,
+		apiKeyID:         input.APIKeyID,
+		modelID:          input.ModelID,
+		model:            input.Model,
+		upstreamProtocol: input.UpstreamProtocol,
+		apiProtocol:      input.APIProtocol,
+		endpoint:         input.Endpoint,
+		tokens:           input.Tokens,
+		latency:          input.Latency,
+		status:           input.Status,
+		userAgent:        input.UserAgent,
+		traceID:          input.TraceID,
+		createdAt:        input.CreatedAt,
 	}
 }

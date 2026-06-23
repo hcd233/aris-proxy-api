@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/table";
 import { PaginationBar } from "@/components/pagination-bar";
 import {
-  Info,
   ScrollText,
   Search,
   X,
@@ -64,9 +63,6 @@ function formatProtocol(protocol: string): string {
   return labels[protocol] || protocol;
 }
 
-function formatTokenCount(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-}
 
 function formatMs(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
@@ -330,27 +326,6 @@ export default function AuditPage() {
                           <span>O: {formatMs(log.streamDurationMs)}</span>
                         )}
                         {cacheInfo && <span>{cacheInfo}</span>}
-                        {log.compressionEnabled && log.compressedTokens > 0 && (
-                          <span className="inline-flex items-center gap-0.5">
-                            cp: {formatTokenCount(log.compressedTokens)}
-                            {log.compressionStrategies && log.compressionStrategies.length > 0 && (
-                              <TooltipProvider>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <button type="button" className="cursor-help text-muted-foreground/70 hover:text-muted-foreground">
-                                        <Info className="size-3" />
-                                      </button>
-                                    }
-                                  />
-                                  <TooltipContent side="top" className="max-w-xs">
-                                    <span>{log.compressionStrategies.join(", ")}</span>
-                                  </TooltipContent>
-                                </TooltipRoot>
-                              </TooltipProvider>
-                            )}
-                          </span>
-                        )}
                         <span
                           className="cursor-pointer font-mono underline-offset-2 hover:underline"
                           onClick={(e) => {
@@ -433,37 +408,6 @@ export default function AuditPage() {
                                 {formatProtocol(log.apiProtocol)}
                               </p>
                             </div>
-                            {log.compressionEnabled && log.compressedTokens > 0 && (
-                              <>
-                                <div>
-                                  <span className="text-muted-foreground">Compression</span>
-                                  <p>{log.compressedTokens.toLocaleString()} tokens saved</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Strategies</span>
-                                  <p className="flex items-center gap-1">
-                                    {log.compressionStrategies && log.compressionStrategies.length > 0 ? (
-                                      <TooltipProvider>
-                                        <TooltipRoot>
-                                          <TooltipTrigger
-                                            render={
-                                              <button type="button" className="cursor-help text-muted-foreground/70 hover:text-muted-foreground">
-                                                <Info className="size-3.5" />
-                                              </button>
-                                            }
-                                          />
-                                          <TooltipContent side="top" className="max-w-xs">
-                                            <span>{log.compressionStrategies.join(", ")}</span>
-                                          </TooltipContent>
-                                        </TooltipRoot>
-                                      </TooltipProvider>
-                                    ) : (
-                                      "—"
-                                    )}
-                                  </p>
-                                </div>
-                              </>
-                            )}
                           </div>
 
                           <div className="mt-3 border-t border-border pt-2 text-xs">
@@ -590,27 +534,6 @@ export default function AuditPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div>{formatTokens(log.inputTokens, log.outputTokens)}</div>
-                        {log.compressionEnabled && log.compressedTokens > 0 && (
-                          <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                            <span className="text-muted-foreground/70">cp: {formatTokenCount(log.compressedTokens)}</span>
-                            {log.compressionStrategies && log.compressionStrategies.length > 0 && (
-                              <TooltipProvider>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <button type="button" className="cursor-help text-muted-foreground/70 hover:text-muted-foreground">
-                                        <Info className="size-3" />
-                                      </button>
-                                    }
-                                  />
-                                  <TooltipContent side="top" className="max-w-xs">
-                                    <span>{log.compressionStrategies.join(", ")}</span>
-                                  </TooltipContent>
-                                </TooltipRoot>
-                              </TooltipProvider>
-                            )}
-                          </div>
-                        )}
                         {cacheInfo && (
                           <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
                         )}

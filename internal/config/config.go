@@ -195,12 +195,6 @@ var (
 	// CronThinkExtractEnabled bool 是否启用 Think 内容提取定时任务
 	//	@update 2026-06-02 10:00:00
 	CronThinkExtractEnabled bool
-
-	// CompressionEnabled bool 是否启用 tool output 压缩
-	CompressionEnabled bool
-
-	// CompressionMinToolOutputBytes int 单个 tool output 小于此值跳过
-	CompressionMinToolOutputBytes int
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -255,10 +249,6 @@ func initEnvironment() {
 	config.SetDefault("cron.session.summarize.enabled", false)
 	config.SetDefault("cron.session.score.enabled", false)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
-
-	config.SetDefault("compression.enabled", false)
-	config.SetDefault("compression.min.body.bytes", 2048)
-	config.SetDefault("compression.min.tool.output.bytes", 512)
 
 	config.AutomaticEnv()
 
@@ -324,9 +314,6 @@ func initEnvironment() {
 	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
-
-	CompressionEnabled = config.GetBool("compression.enabled")
-	CompressionMinToolOutputBytes = config.GetInt("compression.min.tool.output.bytes")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{
