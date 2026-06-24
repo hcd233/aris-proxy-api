@@ -44,13 +44,4 @@ const (
 	CronReloadActionRestart = "restart"
 	CronReloadActionDisable = "disable"
 	CronReloadActionEnable  = "enable"
-
-	// ── Cron Audit Metadata 字段名 ──
-	CronMetadataKeyCheckedSessions   = "checked_sessions_count"
-	CronMetadataKeyDedupedSessions   = "deduped_sessions_count"
-	CronMetadataKeyPurgedMessages    = "purged_messages_count"
-	CronMetadataKeyPurgedTools       = "purged_tools_count"
-	CronMetadataKeyScannedMessages   = "scanned_messages_count"
-	CronMetadataKeyExtractedMessages = "extracted_messages_count"
-	CronMetadataKeySyncedHits        = "synced_hits_count"
 )

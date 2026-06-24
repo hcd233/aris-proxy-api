@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
 // CronCallAuditView CronCallAudit 展示视图
 //
 //	@author centonhuang
-//	@update 2026-06-18 10:00:00
+//	@update 2026-06-24 10:00:00
 type CronCallAuditView struct {
 	ID         uint
 	CronName   string
@@ -20,7 +20,7 @@ type CronCallAuditView struct {
 	DurationMs int64
 	Status     string
 	Message    string
-	Metadata   map[string]string
+	Metadata   *commonmodel.CronCallAuditMetadata
 	CreatedAt  time.Time
 }
 
@@ -29,7 +29,7 @@ type CronCallAuditView struct {
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 type ListCronCallAuditsHandler interface {
-	Handle(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filter string) ([]*CronCallAuditView, *model.PageInfo, error)
+	Handle(ctx context.Context, param commonmodel.CommonParam, startTime, endTime time.Time, filter string) ([]*CronCallAuditView, *commonmodel.PageInfo, error)
 }
 
 // ListCronCallAuditOptionsHandler 获取 CronCallAudit 筛选项处理器接口
@@ -46,7 +46,7 @@ type ListCronCallAuditOptionsHandler interface {
 //	@update 2026-06-17 10:00:00
 type CronCallAuditRepository interface {
 	Save(ctx context.Context, audit *CronCallAuditView) error
-	List(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, filterExp string) ([]*CronCallAuditView, *model.PageInfo, error)
+	List(ctx context.Context, param commonmodel.CommonParam, startTime, endTime time.Time, filterExp string) ([]*CronCallAuditView, *commonmodel.PageInfo, error)
 	ListDistinctTypes(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 	ListDistinctStatuses(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 }

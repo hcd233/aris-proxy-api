@@ -8,12 +8,12 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
@@ -102,8 +102,8 @@ func (c *ThinkExtractCron) Start(spec string) error {
 //	@receiver c *ThinkExtractCron
 //	@param ctx context.Context
 //	@author centonhuang
-//	@update 2026-06-02 10:00:00
-func (c *ThinkExtractCron) extract(ctx context.Context) map[string]string {
+//	@update 2026-06-24 10:00:00
+func (c *ThinkExtractCron) extract(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
 	log := logger.WithCtx(ctx)
 	startTime, endTime := currentDayRange(time.Now().UTC())
 
@@ -115,7 +115,7 @@ func (c *ThinkExtractCron) extract(ctx context.Context) map[string]string {
 		messages, err := c.repo.FindThinkExtractCandidates(ctx, lastID, startTime, endTime, config.SQLBatchSize)
 		if err != nil {
 			log.Error("[ThinkExtractCron] Query error", zap.Error(err))
-			return nil
+			return nil, err
 		}
 
 		if len(messages) == 0 {
@@ -155,10 +155,10 @@ func (c *ThinkExtractCron) extract(ctx context.Context) map[string]string {
 
 	log.Info("[ThinkExtractCron] Extract completed", zap.Int("totalProcessed", totalProcessed))
 
-	return map[string]string{
-		constant.CronMetadataKeyScannedMessages:   strconv.Itoa(totalScanned),
-		constant.CronMetadataKeyExtractedMessages: strconv.Itoa(totalProcessed),
-	}
+	return &commonmodel.CronCallAuditMetadata{
+		ScannedMessages:   int64(totalScanned),
+		ExtractedMessages: int64(totalProcessed),
+	}, nil
 }
 
 func currentDayRange(now time.Time) (start, end time.Time) {
