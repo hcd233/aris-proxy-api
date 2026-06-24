@@ -3,7 +3,6 @@ package aggregate
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonagg "github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -44,8 +43,6 @@ func CreateModel(id uint, alias vo.EndpointAlias, model string, endpointID uint,
 	m.SetID(id)
 	return m, nil
 }
-
-func (*Model) AggregateType() string { return enum.AggregateTypeModel }
 
 func (m *Model) Alias() vo.EndpointAlias { return m.alias }
 func (m *Model) ModelName() string       { return m.model }

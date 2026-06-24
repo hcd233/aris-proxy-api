@@ -7,7 +7,6 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
@@ -115,9 +114,6 @@ func (s *Session) UpdateScore(score vo.SessionScore, now time.Time) {
 	s.score = score
 	s.updatedAt = now
 }
-
-// AggregateType 实现 aggregate.Root 接口
-func (*Session) AggregateType() string { return enum.AggregateTypeSession }
 
 // Owner 返回所属 API Key 名称
 func (s *Session) Owner() vo.APIKeyOwner { return s.owner }

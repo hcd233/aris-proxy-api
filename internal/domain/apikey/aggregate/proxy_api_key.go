@@ -4,7 +4,6 @@ package aggregate
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
@@ -78,14 +77,6 @@ func RestoreProxyAPIKey(id, userID uint, name vo.APIKeyName, secret vo.APIKeySec
 	k.SetID(id)
 	return k
 }
-
-// AggregateType 实现 aggregate.Root 接口
-//
-//	@receiver *ProxyAPIKey
-//	@return string
-//	@author centonhuang
-//	@update 2026-04-23 10:45:00
-func (*ProxyAPIKey) AggregateType() string { return enum.AggregateTypeAPIKey }
 
 // UserID 返回关联用户 ID
 func (k *ProxyAPIKey) UserID() uint { return k.userID }

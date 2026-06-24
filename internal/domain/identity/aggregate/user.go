@@ -136,9 +136,6 @@ func (u *User) ChangePermission(newPerm enum.Permission) {
 	u.permission = newPerm
 }
 
-// AggregateType 实现 aggregate.Root 接口
-func (*User) AggregateType() string { return enum.AggregateTypeUser }
-
 // Name 返回用户名
 func (u *User) Name() vo.UserName { return u.name }
 

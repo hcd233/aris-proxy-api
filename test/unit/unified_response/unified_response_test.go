@@ -6,12 +6,14 @@ package unified_response
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/bytedance/sonic"
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -194,6 +196,30 @@ func TestFromResponseAPI_FunctionCallAndOutput(t *testing.T) {
 	tool := dto.FromResponseAPITool(req.Tools[0])
 	if tool == nil || tool.Name != "get_weather" {
 		t.Errorf("tool conversion mismatch: %+v", tool)
+	}
+}
+
+// TestFromResponseAPITool_Mcp verifies that an MCP tool is converted to a
+// UnifiedTool (not silently dropped), so it gets persisted to the tools table.
+func TestFromResponseAPITool_Mcp(t *testing.T) {
+	t.Parallel()
+	mcpTool := &dto.ResponseTool{
+		Type: enum.ResponseToolTypeMcp,
+		Mcp: &dto.ResponseToolMcp{
+			Type:        enum.ResponseToolTypeMcp,
+			ServerLabel: "my-mcp-server",
+		},
+	}
+	tool := dto.FromResponseAPITool(mcpTool)
+	if tool == nil {
+		t.Fatal("expected non-nil UnifiedTool for MCP tool, got nil")
+	}
+	if tool.Name != "my-mcp-server" {
+		t.Errorf("Name = %q, want %q", tool.Name, "my-mcp-server")
+	}
+	wantDesc := fmt.Sprintf(constant.ChatCompletionConvertToolDescMCPTemplate, "my-mcp-server")
+	if tool.Description != wantDesc {
+		t.Errorf("Description = %q, want %q", tool.Description, wantDesc)
 	}
 }
 
