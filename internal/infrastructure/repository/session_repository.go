@@ -20,6 +20,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // sessionRepository SessionRepository 的 GORM 实现
@@ -254,7 +255,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
 	if param.Sort != "" && param.SortField != "" {
-		param.SortField = safeSortField(param.SortField)
+		param.SortField = util.SafeSortField(param.SortField)
 	}
 	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
@@ -323,7 +324,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
 	if param.Sort != "" && param.SortField != "" {
-		param.SortField = safeSortField(param.SortField)
+		param.SortField = util.SafeSortField(param.SortField)
 	}
 	if param.Sort != "" && param.SortField != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})

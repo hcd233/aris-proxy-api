@@ -95,11 +95,3 @@ func (sm *StateManager) cleanupExpired() {
 		}
 	}
 }
-
-// globalStateManager 全局state管理器实例
-var globalStateManager = NewStateManager()
-
-// VerifyOAuth2State 验证OAuth2 state
-func VerifyOAuth2State(state string) error {
-	return globalStateManager.VerifyState(state)
-}

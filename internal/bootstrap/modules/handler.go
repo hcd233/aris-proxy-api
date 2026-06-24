@@ -1,9 +1,6 @@
 package modules
 
 import (
-	"context"
-
-	"github.com/danielgtaylor/huma/v2"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
@@ -11,12 +8,11 @@ import (
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	llmproxyport "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"go.uber.org/fx"
@@ -108,40 +104,12 @@ func NewSessionDependencies(
 	}
 }
 
-func NewOpenAIDependencies(useCase usecase.OpenAIUseCase) handler.OpenAIDependencies {
-	return handler.OpenAIDependencies{UseCase: &openAIUseCaseAdapter{inner: useCase}}
+func NewOpenAIDependencies(useCase llmproxyport.OpenAIUseCase) handler.OpenAIDependencies {
+	return handler.OpenAIDependencies{UseCase: useCase}
 }
 
-func NewAnthropicDependencies(useCase usecase.AnthropicUseCase) handler.AnthropicDependencies {
-	return handler.AnthropicDependencies{UseCase: &anthropicUseCaseAdapter{inner: useCase}}
-}
-
-type openAIUseCaseAdapter struct {
-	inner usecase.OpenAIUseCase
-}
-
-func (a *openAIUseCaseAdapter) ListModels(ctx context.Context) (*dto.OpenAIListModelsRsp, error) {
-	return a.inner.ListModels(ctx)
-}
-func (a *openAIUseCaseAdapter) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
-	return a.inner.CreateChatCompletion(ctx, req)
-}
-func (a *openAIUseCaseAdapter) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
-	return a.inner.CreateResponse(ctx, req)
-}
-
-type anthropicUseCaseAdapter struct {
-	inner usecase.AnthropicUseCase
-}
-
-func (a *anthropicUseCaseAdapter) ListModels(ctx context.Context) (*dto.AnthropicListModelsRsp, error) {
-	return a.inner.ListModels(ctx)
-}
-func (a *anthropicUseCaseAdapter) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
-	return a.inner.CreateMessage(ctx, req)
-}
-func (a *anthropicUseCaseAdapter) CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
-	return a.inner.CountTokens(ctx, req)
+func NewAnthropicDependencies(useCase llmproxyport.AnthropicUseCase) handler.AnthropicDependencies {
+	return handler.AnthropicDependencies{UseCase: useCase}
 }
 
 func NewAuditDependencies(svc auditport.AuditService) handler.AuditDependencies {

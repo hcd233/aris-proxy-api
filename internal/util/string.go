@@ -67,6 +67,25 @@ func truncateValue(val any, maxLen int) any {
 	}
 }
 
+// SafeSortField 校验排序字段是否仅由 [a-zA-Z0-9_] 构成，防止 ORDER BY SQL 注入。
+// 合法则原样返回，否则返回空字符串。
+//
+//	@param field string
+//	@return string
+//	@author centonhuang
+//	@update 2026-06-24 19:00:00
+func SafeSortField(field string) string {
+	if field == "" {
+		return ""
+	}
+	if lo.EveryBy([]rune(field), func(c rune) bool {
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'
+	}) {
+		return field
+	}
+	return ""
+}
+
 // ExtractMessageText 从 UnifiedContent 中提取纯文本内容
 //
 //	@param c *vo.UnifiedContent

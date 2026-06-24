@@ -17,6 +17,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -25,12 +26,6 @@ var anthropicInternalErrorBody = lo.Must1(sonic.Marshal(&dto.AnthropicErrorRespo
 	Type:  constant.AnthropicInternalErrorBodyType,
 	Error: &dto.AnthropicError{Type: constant.AnthropicInternalErrorType, Message: constant.AnthropicInternalErrorMessage},
 }))
-
-type AnthropicUseCase interface {
-	ListModels(ctx context.Context) (*dto.AnthropicListModelsRsp, error)
-	CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error)
-	CountTokens(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error)
-}
 
 type anthropicUseCase struct {
 	resolver         service.EndpointResolver
@@ -50,7 +45,7 @@ func NewAnthropicUseCase(
 	openAIProxy OpenAIProxyPort,
 	taskSubmitter TaskSubmitter,
 	blockedChecker BlockedChecker,
-) AnthropicUseCase {
+) port.AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
 		modelsQuery:      modelsQuery,
