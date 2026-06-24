@@ -195,6 +195,22 @@ var (
 	// CronThinkExtractEnabled bool 是否启用 Think 内容提取定时任务
 	//	@update 2026-06-02 10:00:00
 	CronThinkExtractEnabled bool
+
+	// UpstreamRetryMaxAttempts int 上游请求重试最大次数（不含首次请求）
+	//	@update 2026-06-23 10:00:00
+	UpstreamRetryMaxAttempts int
+
+	// UpstreamRetryInitialBackoff time.Duration 上游请求重试初始退避时间
+	//	@update 2026-06-23 10:00:00
+	UpstreamRetryInitialBackoff time.Duration
+
+	// UpstreamRetryMaxBackoff time.Duration 上游请求重试最大退避时间
+	//	@update 2026-06-23 10:00:00
+	UpstreamRetryMaxBackoff time.Duration
+
+	// UpstreamRetryJitterFactor float64 上游请求重试退避抖动因子 (0~1)
+	//	@update 2026-06-23 10:00:00
+	UpstreamRetryJitterFactor float64
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -249,6 +265,11 @@ func initEnvironment() {
 	config.SetDefault("cron.session.summarize.enabled", false)
 	config.SetDefault("cron.session.score.enabled", false)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
+
+	config.SetDefault("upstream.retry.max_attempts", 2)
+	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
+	config.SetDefault("upstream.retry.max_backoff", 2*time.Second)
+	config.SetDefault("upstream.retry.jitter_factor", 0.3)
 
 	config.AutomaticEnv()
 
@@ -314,6 +335,11 @@ func initEnvironment() {
 	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
+
+	UpstreamRetryMaxAttempts = config.GetInt("upstream.retry.max_attempts")
+	UpstreamRetryInitialBackoff = config.GetDuration("upstream.retry.initial_backoff")
+	UpstreamRetryMaxBackoff = config.GetDuration("upstream.retry.max_backoff")
+	UpstreamRetryJitterFactor = config.GetFloat64("upstream.retry.jitter_factor")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{
