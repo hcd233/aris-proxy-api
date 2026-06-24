@@ -195,7 +195,8 @@ func writeToolCallDeltas(w *bufio.Writer, toolCalls []*dto.OpenAIChatCompletionM
 			state.initializedToolCalls[itemID] = true
 			itemType := resolveToolCallOutputType(info.name, conv.ToolTypeMap())
 			outputIndex := len(state.initializedToolCalls)
-			if err := writeToolCallOutputItemAdded(w, itemID, outputIndex, itemType, info.callID, info.name); err != nil {
+			name, ns := splitNamespacedName(info.name, conv.NamespaceMap())
+			if err := writeToolCallOutputItemAdded(w, itemID, outputIndex, itemType, info.callID, name, ns); err != nil {
 				return wrote, err
 			}
 			wrote = true
@@ -296,7 +297,7 @@ func writeOutputItemAddedEvent(w *bufio.Writer, itemID string, outputIndex int, 
 }
 
 // writeToolCallOutputItemAdded 写入工具调用的 output_item.added 事件
-func writeToolCallOutputItemAdded(w *bufio.Writer, itemID string, outputIndex int, itemType, callID, name string) error {
+func writeToolCallOutputItemAdded(w *bufio.Writer, itemID string, outputIndex int, itemType, callID, name, namespace string) error {
 	item := map[string]any{
 		constant.ResponseStreamFieldID:     itemID,
 		constant.ResponseStreamFieldType:   itemType,
@@ -307,6 +308,9 @@ func writeToolCallOutputItemAdded(w *bufio.Writer, itemID string, outputIndex in
 	}
 	if name != "" {
 		item[constant.ResponseStreamFieldName] = name
+	}
+	if namespace != "" {
+		item[constant.ResponseStreamFieldNamespace] = namespace
 	}
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemAdded,
@@ -378,6 +382,9 @@ func writeToolCallOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem, i
 	}
 	if item.Name != nil {
 		doneItem[constant.ResponseStreamFieldName] = *item.Name
+	}
+	if item.Namespace != nil && *item.Namespace != "" {
+		doneItem[constant.ResponseStreamFieldNamespace] = *item.Namespace
 	}
 	if item.Arguments != nil {
 		doneItem[constant.ResponseStreamFieldArguments] = *item.Arguments
