@@ -138,7 +138,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
         <>
           <div className="hidden min-w-0 flex-1 md:block">
             <p className="truncate text-sm font-medium leading-none">
-              {user.name ?? user.email ?? "User"}
+              {user.name ?? user.email ?? t("layout.user")}
             </p>
             <div className="mt-1 flex items-center gap-1.5">
               <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
@@ -169,6 +169,7 @@ export default function DashboardLayout({
 
   const closeMobileSidebar = useCallback(() => setSidebarOpen(false), []);
 
+  const t = useT();
   const navItems = getNavItems();
 
   // Persist collapsed state; auto-expand on session detail so history is visible.
@@ -205,7 +206,7 @@ export default function DashboardLayout({
           <div className="flex h-14 items-center justify-between border-b border-sidebar-border/50 px-3">
             {!collapsed && (
               <span className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground">
-                Aris Proxy
+                {t("layout.aris_proxy")}
               </span>
             )}
             <Button
@@ -249,7 +250,7 @@ export default function DashboardLayout({
               >
                 <Menu className="size-5" />
               </SheetTrigger>
-              <span className="font-display text-xl font-semibold tracking-tight">Aris Proxy</span>
+              <span className="font-display text-xl font-semibold tracking-tight">{t("layout.aris_proxy")}</span>
             </header>
 
             <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
@@ -259,7 +260,7 @@ export default function DashboardLayout({
 
           <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
             <SheetHeader className="border-b border-sidebar-border/50 px-4 py-3">
-              <SheetTitle className="font-display text-xl font-semibold tracking-tight">Aris Proxy</SheetTitle>
+              <SheetTitle className="font-display text-xl font-semibold tracking-tight">{t("layout.aris_proxy")}</SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto py-3">
               <SidebarNav items={navItems} onNavigate={closeMobileSidebar} />
