@@ -35,6 +35,7 @@ type routeParams struct {
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
 	BlockedHandler   handler.BlockedHandler
+	MetricsHandler   handler.MetricsHandler
 }
 
 func registerRoutes(params routeParams) {
@@ -58,6 +59,7 @@ func registerRoutes(params routeParams) {
 		OpenAIHandler:    params.OpenAIHandler,
 		AnthropicHandler: params.AnthropicHandler,
 		BlockedHandler:   params.BlockedHandler,
+		MetricsHandler:   params.MetricsHandler,
 	})
 
 	router.RegisterWebRouter(params.App, web.DistFS)

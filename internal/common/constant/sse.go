@@ -18,4 +18,7 @@ const (
 	SSEDataLineTemplate         = "data: %s\n\n"
 	SSEOpenAIUpstreamErrorFrame = "data: {\"error\":{\"message\":\"upstream returned status %d\",\"type\":\"server_error\",\"code\":\"upstream_error\"}}\n\n"
 	SSEOpenAIInternalErrorFrame = "data: {\"error\":{\"message\":\"internal server error\",\"type\":\"server_error\",\"code\":\"internal_error\"}}\n\n"
+
+	SSEProviderOpenAI    = "openai"
+	SSEProviderAnthropic = "anthropic"
 )

@@ -31,6 +31,7 @@ type APIRouterDependencies struct {
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
 	BlockedHandler   handler.BlockedHandler
+	MetricsHandler   handler.MetricsHandler
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -107,4 +108,7 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	anthropicGroup := huma.NewGroup(apiGroup, "/anthropic/v1")
 	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.Cache)
+
+	metricsGroup := huma.NewGroup(v1Group, "/metrics")
+	initMetricsRouter(metricsGroup, deps.MetricsHandler, deps.DB, deps.Cache, deps.AccessSigner)
 }
