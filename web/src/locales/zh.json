@@ -182,6 +182,9 @@
   "monitor.latency_p95": "延迟P95",
   "monitor.goroutines_chart": "协程数",
   "monitor.in_progress_requests": "处理中请求",
+  "monitor.live": "实时",
+  "monitor.collecting": "正在采集数据…",
+  "monitor.current": "当前值",
 
   "schedule.title": "编辑定时调度",
   "schedule.description": "配置 {name} 的调度",
