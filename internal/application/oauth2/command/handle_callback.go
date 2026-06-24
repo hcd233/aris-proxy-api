@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	xoauth2 "golang.org/x/oauth2"
+	"golang.org/x/oauth2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -21,8 +21,8 @@ import (
 	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	identityvo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
-	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
-	oauth2vo "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
+	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
+	oauthvo "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -37,17 +37,17 @@ type InitiateLoginHandler interface {
 }
 
 type initiateLoginHandler struct {
-	platforms    map[string]oauth2service.Platform
-	stateManager oauth2service.StateManager
+	platforms    map[string]oauthsvc.Platform
+	stateManager oauthsvc.StateManager
 }
 
 // NewInitiateLoginHandler 构造发起登录处理器
 //
-//	@param platforms map[string]oauth2service.Platform 按平台名索引的策略实例（github / google）
+//	@param platforms map[string]oauthsvc.Platform 按平台名索引的策略实例（github / google）
 //	@return InitiateLoginHandler
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
-func NewInitiateLoginHandler(platforms map[string]oauth2service.Platform, stateManager oauth2service.StateManager) InitiateLoginHandler {
+func NewInitiateLoginHandler(platforms map[string]oauthsvc.Platform, stateManager oauthsvc.StateManager) InitiateLoginHandler {
 	return &initiateLoginHandler{platforms: platforms, stateManager: stateManager}
 }
 
@@ -94,17 +94,17 @@ type HandleCallbackHandler interface {
 }
 
 type handleCallbackHandler struct {
-	platforms      map[string]oauth2service.Platform
+	platforms      map[string]oauthsvc.Platform
 	userRepo       identity.UserRepository
 	accessSigner   identityservice.TokenSigner
 	refreshSigner  identityservice.TokenSigner
 	objStorageDirC port.ObjectStorageDirCreator
-	stateManager   oauth2service.StateManager
+	stateManager   oauthsvc.StateManager
 }
 
 // NewHandleCallbackHandler 构造回调处理器
 //
-//	@param platforms map[string]oauth2service.Platform
+//	@param platforms map[string]oauthsvc.Platform
 //	@param userRepo identity.UserRepository
 //	@param accessSigner identityservice.TokenSigner
 //	@param refreshSigner identityservice.TokenSigner
@@ -113,11 +113,11 @@ type handleCallbackHandler struct {
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
 func NewHandleCallbackHandler(
-	platforms map[string]oauth2service.Platform,
+	platforms map[string]oauthsvc.Platform,
 	userRepo identity.UserRepository,
 	accessSigner, refreshSigner identityservice.TokenSigner,
 	objStorageDirC port.ObjectStorageDirCreator,
-	stateManager oauth2service.StateManager,
+	stateManager oauthsvc.StateManager,
 ) HandleCallbackHandler {
 	return &handleCallbackHandler{
 		platforms:      platforms,
@@ -180,11 +180,11 @@ func (h *handleCallbackHandler) Handle(ctx context.Context, cmd port.HandleCallb
 //	@param ctx context.Context
 //	@param state string
 //	@param platform string
-//	@return oauth2service.Platform
+//	@return oauthsvc.Platform
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (h *handleCallbackHandler) validateStateAndPlatform(ctx context.Context, state, platform string) (oauth2service.Platform, error) {
+func (h *handleCallbackHandler) validateStateAndPlatform(ctx context.Context, state, platform string) (oauthsvc.Platform, error) {
 	log := logger.WithCtx(ctx)
 
 	if err := h.stateManager.VerifyState(state); err != nil {
@@ -208,27 +208,27 @@ func (h *handleCallbackHandler) validateStateAndPlatform(ctx context.Context, st
 //
 //	@receiver h *handleCallbackHandler
 //	@param ctx context.Context
-//	@param platform oauth2service.Platform
+//	@param platform oauthsvc.Platform
 //	@param code string
-//	@return oauth2vo.OAuthUserInfo
+//	@return oauthvo.OAuthUserInfo
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (h *handleCallbackHandler) exchangeAndFetchUser(ctx context.Context, platform oauth2service.Platform, code string) (oauth2vo.OAuthUserInfo, error) {
+func (h *handleCallbackHandler) exchangeAndFetchUser(ctx context.Context, platform oauthsvc.Platform, code string) (oauthvo.OAuthUserInfo, error) {
 	log := logger.WithCtx(ctx)
 
 	log.Info("[OAuth2Command] Exchanging token")
 	token, err := platform.ExchangeToken(ctx, code)
 	if err != nil {
 		log.Error("[OAuth2Command] Failed to exchange token", zap.Error(err))
-		return oauth2vo.OAuthUserInfo{}, ierr.Wrap(ierr.ErrOAuth2Exchange, err, "exchange oauth token")
+		return oauthvo.OAuthUserInfo{}, ierr.Wrap(ierr.ErrOAuth2Exchange, err, "exchange oauth token")
 	}
 	h.logTokenReceived(ctx, token)
 
 	userInfo, err := platform.GetUserInfo(ctx, token)
 	if err != nil {
 		log.Error("[OAuth2Command] Failed to get user info", zap.Error(err))
-		return oauth2vo.OAuthUserInfo{}, ierr.Wrap(ierr.ErrOAuth2UserInfo, err, "get oauth user info")
+		return oauthvo.OAuthUserInfo{}, ierr.Wrap(ierr.ErrOAuth2UserInfo, err, "get oauth user info")
 	}
 
 	return userInfo, nil
@@ -239,13 +239,13 @@ func (h *handleCallbackHandler) exchangeAndFetchUser(ctx context.Context, platfo
 //	@receiver h *handleCallbackHandler
 //	@param ctx context.Context
 //	@param platformName string
-//	@param userInfo oauth2vo.OAuthUserInfo
+//	@param userInfo oauthvo.OAuthUserInfo
 //	@return uint userID
 //	@return bool isNewUser
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName string, userInfo oauth2vo.OAuthUserInfo) (uid uint, isNew bool, err error) {
+func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName string, userInfo oauthvo.OAuthUserInfo) (uid uint, isNew bool, err error) {
 	log := logger.WithCtx(ctx)
 	thirdPartyID := userInfo.ID()
 	userName, email, avatar := userInfo.Name(), userInfo.Email(), userInfo.Avatar()
@@ -353,10 +353,10 @@ func (h *handleCallbackHandler) findByBindID(ctx context.Context, platform, bind
 //
 //	@receiver h *handleCallbackHandler
 //	@param ctx context.Context
-//	@param token *xoauth2.Token
+//	@param token *oauth2.Token
 //	@author centonhuang
 //	@update 2026-04-26 12:00:00
-func (h *handleCallbackHandler) logTokenReceived(ctx context.Context, token *xoauth2.Token) {
+func (h *handleCallbackHandler) logTokenReceived(ctx context.Context, token *oauth2.Token) {
 	logger.WithCtx(ctx).Info("[OAuth2Command] Token exchange successful",
 		zap.String("tokenType", token.TokenType),
 		zap.Bool("valid", token.Valid()))

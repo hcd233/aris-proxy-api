@@ -25,8 +25,8 @@ import (
 	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
-	applicationoauth2 "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
-	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
+	appoauth "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
+	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
@@ -39,7 +39,7 @@ import (
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
-	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
+	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"go.uber.org/fx"
@@ -123,16 +123,16 @@ func NewRefreshTokensHandler(params refreshTokensParams) identityport.RefreshTok
 type handleCallbackParams struct {
 	fx.In
 
-	Platforms     map[string]oauth2service.Platform
+	Platforms     map[string]oauthsvc.Platform
 	UserRepo      identity.UserRepository
 	AccessSigner  identityservice.TokenSigner `name:"accessSigner"`
 	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
-	DirCreator    oauth2port.ObjectStorageDirCreator
-	StateManager  oauth2service.StateManager
+	DirCreator    oauthport.ObjectStorageDirCreator
+	StateManager  oauthsvc.StateManager
 }
 
-func NewHandleCallbackHandler(params handleCallbackParams) oauth2port.HandleCallbackHandler {
-	return applicationoauth2.NewHandleCallbackHandler(
+func NewHandleCallbackHandler(params handleCallbackParams) oauthport.HandleCallbackHandler {
+	return appoauth.NewHandleCallbackHandler(
 		params.Platforms,
 		params.UserRepo,
 		params.AccessSigner,
@@ -142,8 +142,8 @@ func NewHandleCallbackHandler(params handleCallbackParams) oauth2port.HandleCall
 	)
 }
 
-func NewInitiateLoginHandler(platforms map[string]oauth2service.Platform, stateManager oauth2service.StateManager) oauth2port.InitiateLoginHandler {
-	return applicationoauth2.NewInitiateLoginHandler(platforms, stateManager)
+func NewInitiateLoginHandler(platforms map[string]oauthsvc.Platform, stateManager oauthsvc.StateManager) oauthport.InitiateLoginHandler {
+	return appoauth.NewInitiateLoginHandler(platforms, stateManager)
 }
 
 func NewIssueAPIKeyHandler(repo apikey.APIKeyRepository, generator apikeyservice.APIKeyGenerator, userExistsCh apikeycommand.UserExistenceChecker) apikeyport.IssueAPIKeyHandler {

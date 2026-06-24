@@ -10,7 +10,7 @@ import (
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	llmproxyport "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
+	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -56,7 +56,7 @@ func NewTokenDependencies(refresh identityport.RefreshTokensHandler) handler.Tok
 	return handler.TokenDependencies{Refresh: refresh}
 }
 
-func NewOauth2Dependencies(initiate oauth2port.InitiateLoginHandler, callback oauth2port.HandleCallbackHandler) handler.Oauth2Dependencies {
+func NewOauth2Dependencies(initiate oauthport.InitiateLoginHandler, callback oauthport.HandleCallbackHandler) handler.Oauth2Dependencies {
 	return handler.Oauth2Dependencies{
 		Initiate: initiate,
 		Callback: callback,
