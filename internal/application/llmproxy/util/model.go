@@ -4,6 +4,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
@@ -26,17 +27,27 @@ func MarshalOpenAIResponseBodyForModel(req *dto.OpenAICreateResponseReq, modelNa
 		input := *req.Input
 		input.Items = make([]*dto.ResponseInputItem, 0, len(req.Input.Items))
 		for _, item := range req.Input.Items {
-			if item == nil {
-				input.Items = append(input.Items, nil)
-				continue
-			}
-			copied := *item
-			copied.Summary = nil
-			input.Items = append(input.Items, &copied)
+			input.Items = append(input.Items, normalizeResponseInputItemForUpstream(item))
 		}
 		body.Input = &input
 	}
 	return lo.Must1(MarshalUpstreamBody(&body))
+}
+
+func normalizeResponseInputItemForUpstream(item *dto.ResponseInputItem) *dto.ResponseInputItem {
+	if item == nil {
+		return nil
+	}
+	copied := *item
+	if lo.FromPtr(copied.Type) != enum.ResponseInputItemTypeReasoning {
+		copied.Summary = nil
+		return &copied
+	}
+	if copied.Summary == nil {
+		empty := make([]*dto.ResponseReasoningSummary, 0)
+		copied.Summary = &empty
+	}
+	return &copied
 }
 
 // MarshalAnthropicMessageBodyForModel 使用上游模型名序列化 Anthropic Message 请求体，且不修改原请求。
