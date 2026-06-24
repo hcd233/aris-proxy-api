@@ -94,7 +94,7 @@ export default function ModelsPage() {
         setPersistedPageSize(modelsRsp.pageInfo.pageSize);
       }
     } catch {
-      toast.error("Failed to load models");
+      toast.error(t("models.load_error"));
     } finally {
       setLoading(false);
     }
@@ -145,7 +145,7 @@ export default function ModelsPage() {
 
   const handleSave = async () => {
     if (!form.alias.trim() || !form.modelName.trim() || !form.endpointID) {
-      toast.error("All fields are required");
+      toast.error(t("models.fields_required"));
       return;
     }
     setSaving(true);
@@ -156,19 +156,19 @@ export default function ModelsPage() {
           modelName: form.modelName,
           endpointID: form.endpointID,
         });
-        toast.success("Model updated");
+        toast.success(t("models.updated_success"));
       } else {
         await api.createModel({
           alias: form.alias,
           modelName: form.modelName,
           endpointID: form.endpointID,
         });
-        toast.success("Model created");
+        toast.success(t("models.created_success"));
       }
       setDialogOpen(false);
       fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save model");
+      toast.error(err instanceof Error ? err.message : t("models.save_error"));
     } finally {
       setSaving(false);
     }
@@ -184,10 +184,10 @@ export default function ModelsPage() {
     setDeleting(deleteTarget.id);
     try {
       await api.deleteModel(deleteTarget.id);
-      toast.success("Model deleted");
+      toast.success(t("models.deleted_success"));
       fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete model");
+      toast.error(err instanceof Error ? err.message : t("models.delete_error"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -198,10 +198,10 @@ export default function ModelsPage() {
   const handleToggleEnabled = async (model: ModelItem) => {
     try {
       await api.updateModel(model.id, { enabled: !model.enabled });
-      toast.success(model.enabled ? "Model disabled" : "Model enabled");
+      toast.success(model.enabled ? t("models.disabled") : t("models.enabled"));
       fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to toggle model");
+      toast.error(err instanceof Error ? err.message : t("models.toggle_error"));
     }
   };
 
@@ -216,7 +216,7 @@ export default function ModelsPage() {
           <div>
             <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("models.title")}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Manage model aliases and routing
+              {t("models.subtitle")}
             </p>
           </div>
           <Button onClick={openCreate}>
@@ -227,14 +227,14 @@ export default function ModelsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-display">All Models</CardTitle>
+            <CardTitle className="font-display">{t("models.all_models")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
               <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search models..."
+                  placeholder={t("models.search_placeholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -395,7 +395,7 @@ export default function ModelsPage() {
               {t("common.are_you_sure")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
+                {t("models.delete_desc").replace("{name}", deleteTarget?.name ?? "")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -415,8 +415,8 @@ export default function ModelsPage() {
               </DialogTitle>
               <DialogDescription>
                 {editingId
-                  ? "Update model configuration."
-                  : "Add a new model alias."}
+                  ? t("models.edit_desc")
+                  : t("models.create_desc")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
@@ -424,7 +424,7 @@ export default function ModelsPage() {
                 <Label htmlFor="model-alias">{t("models.alias")}</Label>
                 <Input
                   id="model-alias"
-                  placeholder="e.g. gpt-4o"
+                  placeholder={t("models.alias_placeholder")}
                   value={form.alias}
                   onChange={(e) => setForm((f) => ({ ...f, alias: e.target.value }))}
                 />
@@ -433,7 +433,7 @@ export default function ModelsPage() {
                 <Label htmlFor="model-name">{t("models.model_name")}</Label>
                 <Input
                   id="model-name"
-                  placeholder="e.g. gpt-4o-2024-08-06"
+                  placeholder={t("models.model_name_placeholder")}
                   value={form.modelName}
                   onChange={(e) => setForm((f) => ({ ...f, modelName: e.target.value }))}
                 />

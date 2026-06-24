@@ -26,15 +26,7 @@ export interface TimeRangePickerProps {
   className?: string;
 }
 
-const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
-
-const PRESET_LABELS: Record<TimeRangeKey, string> = {
-  "1h": "1H",
-  "24h": "24H",
-  "7d": "7D",
-  "30d": "30D",
-  custom: "Custom",
-};
+  const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
 
 export function TimeRangePicker({
   value,
@@ -154,12 +146,12 @@ export function TimeRangePicker({
       return `${format(dateRange.from, "MMM d")} – ${format(dateRange.to, "MMM d")}`;
     }
     if (dateRange?.from) {
-      return `${format(dateRange.from, "MMM d")} – Select end`;
+      return `${format(dateRange.from, "MMM d")} – ${t("time_range.select_end")}`;
     }
-    return "Select date range";
-  }, [dateRange, showTimePicker]);
+    return t("time_range.select_date_range");
+  }, [dateRange, showTimePicker, t]);
 
-  const customRangeError = customRange && !customRange.isValid ? "Start must be before end" : "";
+  const customRangeError = customRange && !customRange.isValid ? t("time_range.start_before_end") : "";
   const canApply = Boolean(customRange?.isValid);
 
   const customDisplayLabel = useMemo(() => {
@@ -237,7 +229,7 @@ export function TimeRangePicker({
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setShowTimePicker(!showTimePicker)}
             >
-              {showTimePicker ? "Hide time" : "Add time"}
+              {showTimePicker ? t("time_range.hide_time") : t("time_range.add_time")}
             </button>
           </div>
 
@@ -246,7 +238,7 @@ export function TimeRangePicker({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                    Start
+                    {t("time_range.start")}
                   </Label>
                   <Input
                     type="time"
@@ -257,7 +249,7 @@ export function TimeRangePicker({
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                    End
+                    {t("time_range.end")}
                   </Label>
                   <Input
                     type="time"
@@ -272,7 +264,7 @@ export function TimeRangePicker({
 
           <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2.5">
             <div className="min-w-0 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Range:</span>{" "}
+              <span className="font-medium text-foreground">{t("time_range.range")}</span>{" "}
               <span className="truncate">{draftLabel}</span>
               {customRangeError && (
                 <span className="ml-2 text-destructive">{customRangeError}</span>
@@ -285,7 +277,7 @@ export function TimeRangePicker({
                 className="h-7 px-2.5 text-xs"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                {t("time_range.cancel")}
               </Button>
               <Button
                 size="sm"
@@ -293,7 +285,7 @@ export function TimeRangePicker({
                 disabled={!canApply}
                 className="h-7 px-3 text-xs"
               >
-                Apply
+                {t("time_range.apply")}
               </Button>
             </div>
           </div>

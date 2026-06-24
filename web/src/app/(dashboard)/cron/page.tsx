@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Search, Timer, Pencil, Lock } from "lucide-react";
 
+import { useT } from "@/lib/i18n";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -41,6 +42,7 @@ function specToHuman(spec: string): string {
 }
 
 export default function CronPage() {
+  const t = useT();
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cron.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.cron.pageSize", 20);
   const [jobs, setJobs] = useState<CronJobItem[]>([]);
@@ -55,7 +57,7 @@ export default function CronPage() {
     try {
       const rsp = await api.listCronJobs({ page, pageSize, query: query || undefined });
       if (rsp.error) {
-        toast.error(rsp.error.message ?? "Failed to load cron jobs");
+        toast.error(rsp.error.message ?? t("cron.load_error"));
         return;
       }
       setJobs(rsp.jobs ?? []);
@@ -65,7 +67,7 @@ export default function CronPage() {
         setPersistedPageSize(rsp.pageInfo.pageSize);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load cron jobs");
+      toast.error(err instanceof Error ? err.message : t("cron.load_error"));
     } finally {
       setLoading(false);
     }
@@ -79,22 +81,22 @@ export default function CronPage() {
 
   const handleToggle = async (job: CronJobItem) => {
     if (job.type === "core") {
-      toast.error("Core cron job cannot be disabled");
+        toast.error(t("cron.core_cannot_disable"));
       return;
     }
     setUpdating((prev) => ({ ...prev, [job.name]: true }));
     try {
       const rsp = await api.updateCronJob({ name: job.name, enabled: !job.enabled });
       if (rsp.error) {
-        toast.error(rsp.error.message ?? "Failed to update cron job");
+        toast.error(rsp.error.message ?? t("cron.update_error"));
         return;
       }
       setJobs((prev) =>
         prev.map((j) => (j.name === job.name ? { ...j, enabled: !j.enabled } : j))
       );
-      toast.success(`${job.name} ${!job.enabled ? "enabled" : "disabled"}`);
+      toast.success(`${job.name} ${!job.enabled ? t("cron.enabled") : t("cron.disabled")}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update cron job");
+      toast.error(err instanceof Error ? err.message : t("cron.update_error"));
     } finally {
       setUpdating((prev) => ({ ...prev, [job.name]: false }));
     }
@@ -104,13 +106,13 @@ export default function CronPage() {
     if (!editingJob) return;
     const rsp = await api.updateCronJob({ name: editingJob.name, spec });
     if (rsp.error) {
-      toast.error(rsp.error.message ?? "Failed to update schedule");
+      toast.error(rsp.error.message ?? t("cron.update_schedule_error"));
       return;
     }
     setJobs((prev) =>
       prev.map((j) => (j.name === editingJob.name ? { ...j, spec } : j))
     );
-    toast.success(`${editingJob.name} schedule updated`);
+    toast.success(`${editingJob.name} ${t("cron.schedule_updated")}`);
   }, [editingJob]);
 
   const refresh = (page: number, pageSize?: number) =>
@@ -121,10 +123,10 @@ export default function CronPage() {
       <div className="space-y-8">
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            Cron Jobs
+            {t("cron.title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            View and manage scheduled cron jobs.
+            {t("cron.subtitle")}
           </p>
         </div>
 
@@ -132,7 +134,7 @@ export default function CronPage() {
           <CardHeader>
             <CardTitle className="font-display flex items-center gap-2">
               <Timer className="size-5" />
-              Cron Jobs
+              {t("cron.all_jobs")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -140,7 +142,7 @@ export default function CronPage() {
               <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or spec..."
+                  placeholder={t("cron.search_placeholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -160,18 +162,18 @@ export default function CronPage() {
             ) : jobs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Timer className="mb-3 size-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">No cron jobs found</p>
+                <p className="text-sm text-muted-foreground">{t("cron.no_jobs")}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Schedule</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Enabled</TableHead>
-                    <TableHead>Updated At</TableHead>
+                    <TableHead>{t("cron.name")}</TableHead>
+                    <TableHead>{t("cron.type")}</TableHead>
+                    <TableHead>{t("cron.spec")}</TableHead>
+                    <TableHead>{t("cron.description")}</TableHead>
+                    <TableHead>{t("cron.enabled")}</TableHead>
+                    <TableHead>{t("cron.updated_at")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -180,7 +182,7 @@ export default function CronPage() {
                       <TableCell className="font-medium">{job.name}</TableCell>
                       <TableCell>
                         <Badge variant={job.type === "core" ? "default" : "secondary"}>
-                          {job.type === "core" ? "Core" : "Functional"}
+                          {job.type === "core" ? t("cron.core") : t("cron.functional")}
                         </Badge>
                       </TableCell>
                       <TableCell>

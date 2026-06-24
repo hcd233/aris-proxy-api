@@ -65,6 +65,10 @@ export function useI18n(): I18nContextValue {
   return ctx;
 }
 
+export function translate(key: string, fallback?: string): string {
+  return translations[detectBrowserLocale()]?.[key] ?? fallback ?? key;
+}
+
 export function useT() {
   return useI18n().t;
 }

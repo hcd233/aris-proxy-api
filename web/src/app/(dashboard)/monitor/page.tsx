@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, Cpu, MemoryStick, Zap } from "lucide-react";
 
 import { api } from "@/lib/api-client";
+import { useT } from "@/lib/i18n";
 import type { MetricFamilyItem } from "@/lib/types";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeLineChart } from "@/components/charts/runtime-line-chart";
@@ -80,6 +81,7 @@ function getHistogramP95(
 }
 
 export default function MonitorPage() {
+  const t = useT();
   const [state, setState] = useState<MonitorState>({
     goroutines: [],
     heapMB: [],
@@ -173,31 +175,31 @@ export default function MonitorPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Monitor</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("monitor.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Real-time runtime and business metrics (5s interval)
+          {t("monitor.subtitle")}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <RuntimeGaugeCard
-          label="Goroutines"
+          label={t("monitor.goroutines")}
           value={currentValues.goroutines}
           icon={<Activity className="size-4" />}
         />
         <RuntimeGaugeCard
-          label="Heap"
+          label={t("monitor.heap")}
           value={currentValues.heapMB}
           unit="MB"
           icon={<MemoryStick className="size-4" />}
         />
         <RuntimeGaugeCard
-          label="In-Progress"
+          label={t("monitor.in_progress")}
           value={currentValues.inProgress}
           icon={<Zap className="size-4" />}
         />
         <RuntimeGaugeCard
-          label="SSE Active"
+          label={t("monitor.sse_active")}
           value={currentValues.sseActive}
           icon={<Cpu className="size-4" />}
         />
@@ -207,38 +209,38 @@ export default function MonitorPage() {
         <RuntimeLineChart
           data={state.cpuPercent}
           dataKey="cpuPercent"
-          label="CPU Usage"
+          label={t("monitor.cpu_usage")}
           unit="%"
         />
         <RuntimeLineChart
           data={state.heapMB}
           dataKey="heapMB"
-          label="Heap Memory"
+          label={t("monitor.heap_memory")}
           unit=" MB"
         />
         <RuntimeLineChart
           data={state.qps}
           dataKey="qps"
-          label="Request QPS"
+          label={t("monitor.request_qps")}
           color="#5B8DB8"
         />
         <RuntimeLineChart
           data={state.p95Ms}
           dataKey="p95Ms"
-          label="Latency P95"
+          label={t("monitor.latency_p95")}
           unit=" ms"
           color="#7C6BA5"
         />
         <RuntimeLineChart
           data={state.goroutines}
           dataKey="goroutines"
-          label="Goroutines"
+          label={t("monitor.goroutines_chart")}
           color="#4A9E7D"
         />
         <RuntimeLineChart
           data={state.inProgress}
           dataKey="inProgress"
-          label="In-Progress Requests"
+          label={t("monitor.in_progress_requests")}
           color="#C76B8A"
         />
       </div>

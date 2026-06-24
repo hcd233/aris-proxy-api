@@ -10,11 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const localeLabels: Record<Locale, string> = {
-  en: "English",
-  zh: "中文",
-};
-
 export function LanguageSwitcher() {
   const { locale, setLocale, t } = useI18n();
 
@@ -26,13 +21,13 @@ export function LanguageSwitcher() {
         <Languages className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {(Object.keys(localeLabels) as Locale[]).map((l) => (
+        {(["en", "zh"] as Locale[]).map((l) => (
           <DropdownMenuItem
             key={l}
             onClick={() => setLocale(l)}
             className={locale === l ? "font-semibold" : ""}
           >
-            {localeLabels[l]}
+            {t(`lang.${l}`)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { translate } from "@/lib/i18n";
 import type {
   CallbackRsp,
   CallbackReqBody,
@@ -146,13 +147,11 @@ class ApiClient {
   private clearAuthAndPromptLogin(): void {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
-    const isZh = locale === "zh";
-    toast.error(isZh ? "会话已过期" : "Session expired", {
-      description: isZh ? "请重新登录以继续" : "Please log in again to continue",
+    toast.error(translate("auth.session_expired"), {
+      description: translate("auth.please_login"),
       duration: AUTH_TOAST_DURATION_MS,
       action: {
-        label: isZh ? "登录" : "Login",
+        label: translate("auth.login"),
         onClick: () => {
           window.location.href = "/web/login";
         },

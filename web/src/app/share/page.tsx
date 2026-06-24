@@ -38,25 +38,22 @@ function ShareErrorView({ error }: { error: ShareError }) {
     switch (error.kind) {
       case "missing-id":
         return {
-          title: "Invalid share link",
-          description:
-            "This share link is missing a required identifier. Please ask the sender for a fresh link.",
+          title: t("share.invalid_link"),
+          description: t("share.invalid_link_desc"),
         };
       case "rate-limited":
         return {
           title: t("error.too_many_requests"),
-          description:
-            "You've opened this link too frequently. Please wait a moment and try again.",
+          description: t("share.rate_limited_desc"),
         };
       case "not-found":
         return {
-          title: "Link expired or unavailable",
-          description:
-            "This share link is no longer valid. It may have expired (after 24 hours) or been revoked by the owner.",
+          title: t("share.expired"),
+          description: t("share.expired_desc"),
         };
       default:
         return {
-          title: "Unable to load shared session",
+          title: t("share.load_error"),
           description: error.message,
         };
     }
@@ -97,6 +94,7 @@ function SharedSessionView() {
   const searchParams = useSearchParams();
   const shareID = searchParams.get("id") ?? "";
   const isMobile = useIsMobile();
+  const t = useT();
 
   const [metadata, setMetadata] = useState<ShareSessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
@@ -274,7 +272,7 @@ function SharedSessionView() {
             isMobile && headerCompact ? "text-[14px]" : "text-[15px]",
           ].filter(Boolean).join(" ")}
         >
-          Shared session #{metadata.id}
+          {t("share.session_title").replace("{id}", String(metadata.id))}
         </h1>
         <p
           className={[
@@ -283,7 +281,7 @@ function SharedSessionView() {
             isMobile && headerCompact ? "max-h-0 opacity-0" : "max-h-4 opacity-100",
           ].filter(Boolean).join(" ")}
         >
-          {formatRelativeTime(metadata.createdAt)} · {metadata.messageCount} message{metadata.messageCount === 1 ? "" : "s"}
+          {formatRelativeTime(metadata.createdAt)} · {metadata.messageCount} {t("sessions.messages").toLowerCase()}
         </p>
       </div>
       {metadata.toolCount > 0 && (
@@ -297,8 +295,8 @@ function SharedSessionView() {
               ? "bg-secondary text-foreground"
               : "text-foreground/70 hover:text-foreground",
           ].join(" ")}
-          aria-label="Toggle available tools"
-          title="Available tools"
+          aria-label={t("share.toggle_tools")}
+          title={t("share.available_tools")}
         >
           <Wrench className="size-5" />
           <span
@@ -318,7 +316,7 @@ function SharedSessionView() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <MessagesSquare className="mb-3 size-10 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
-            No messages in this session
+            {t("share.no_messages")}
           </p>
         </div>
       ) : (
@@ -342,7 +340,7 @@ function SharedSessionView() {
           {!messagesList.hasMore && messages.length > 0 && (
             <div className="pt-3 pb-1 text-center">
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                end of conversation
+                {t("share.end_of_conversation")}
               </span>
             </div>
           )}
