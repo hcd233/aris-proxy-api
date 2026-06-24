@@ -3,7 +3,7 @@ package metrics
 import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/prometheus/client_golang/prometheus"
-	dto_pb "github.com/prometheus/client_model/go"
+	metricpb "github.com/prometheus/client_model/go"
 	"github.com/samber/lo"
 )
 
@@ -19,7 +19,7 @@ func GatherMetricFamilies(gatherer prometheus.Gatherer) ([]dto.MetricFamilyItem,
 	if err != nil {
 		return nil, err
 	}
-	return lo.Map(families, func(f *dto_pb.MetricFamily, _ int) dto.MetricFamilyItem {
+	return lo.Map(families, func(f *metricpb.MetricFamily, _ int) dto.MetricFamilyItem {
 		return dto.MetricFamilyItem{
 			Name:    f.GetName(),
 			Type:    f.GetType().String(),
@@ -29,13 +29,13 @@ func GatherMetricFamilies(gatherer prometheus.Gatherer) ([]dto.MetricFamilyItem,
 	}), nil
 }
 
-func convertMetricSamples(f *dto_pb.MetricFamily) []dto.MetricSampleItem {
+func convertMetricSamples(f *metricpb.MetricFamily) []dto.MetricSampleItem {
 	metrics := f.GetMetric()
 	if len(metrics) == 0 {
 		return nil
 	}
-	return lo.Map(metrics, func(m *dto_pb.Metric, _ int) dto.MetricSampleItem {
-		labels := lo.SliceToMap(m.GetLabel(), func(l *dto_pb.LabelPair) (string, string) {
+	return lo.Map(metrics, func(m *metricpb.Metric, _ int) dto.MetricSampleItem {
+		labels := lo.SliceToMap(m.GetLabel(), func(l *metricpb.LabelPair) (string, string) {
 			return l.GetName(), l.GetValue()
 		})
 		value := getMetricValue(m)
@@ -46,7 +46,7 @@ func convertMetricSamples(f *dto_pb.MetricFamily) []dto.MetricSampleItem {
 	})
 }
 
-func getMetricValue(m *dto_pb.Metric) float64 {
+func getMetricValue(m *metricpb.Metric) float64 {
 	switch {
 	case m.GetCounter() != nil:
 		return m.GetCounter().GetValue()
