@@ -375,19 +375,15 @@ func convertNamespaceToolsToChat(ns *dto.ResponseToolNamespace) []dto.OpenAIChat
 		flatName := ns.Name + constant.NamespaceToolSeparator + sub.Name
 		switch sub.Type {
 		case enum.ResponseToolTypeCustom:
-			chatTool := dto.OpenAIChatCompletionTool{
-				Type: enum.ToolTypeCustom,
-				Custom: &dto.OpenAICustomToolDefinition{
+			return dto.OpenAIChatCompletionTool{
+				Type: enum.ToolTypeFunction,
+				Function: &dto.OpenAIFunctionDefinition{
 					Name:        flatName,
 					Description: sub.Description,
+					Parameters:  sub.Parameters,
+					Strict:      sub.Strict,
 				},
-			}
-			if sub.Format != nil {
-				chatTool.Custom.Format = &dto.OpenAICustomToolFormat{
-					Type: sub.Format.Type,
-				}
-			}
-			return chatTool, true
+			}, true
 		default:
 			return dto.OpenAIChatCompletionTool{
 				Type: enum.ToolTypeFunction,
@@ -415,19 +411,13 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 			},
 		}, true
 	case tool.Custom != nil:
-		chatTool := dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeCustom,
-			Custom: &dto.OpenAICustomToolDefinition{
+		return dto.OpenAIChatCompletionTool{
+			Type: enum.ToolTypeFunction,
+			Function: &dto.OpenAIFunctionDefinition{
 				Name:        tool.Custom.Name,
 				Description: tool.Custom.Description,
 			},
-		}
-		if tool.Custom.Format != nil {
-			chatTool.Custom.Format = &dto.OpenAICustomToolFormat{
-				Type: tool.Custom.Format.Type,
-			}
-		}
-		return chatTool, true
+		}, true
 	case tool.FileSearch != nil:
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
