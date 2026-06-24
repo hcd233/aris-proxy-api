@@ -29,6 +29,10 @@ import { cn } from "@/lib/utils";
 
 import "highlight.js/styles/atom-one-dark.css";
 
+function isSafeUrl(url: unknown): url is string {
+  return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
+}
+
 function reactChildrenToText(children: ReactNode): string {
   if (typeof children === "string") return children;
   if (typeof children === "number") return String(children);
@@ -213,16 +217,21 @@ const markdownComponents: Components = {
       {children}
     </del>
   ),
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:decoration-primary"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }) => {
+    if (!isSafeUrl(href)) {
+      return <span className="break-words">{children}</span>;
+    }
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline decoration-primary/30 underline-offset-2 transition-colors hover:decoration-primary"
+      >
+        {children}
+      </a>
+    );
+  },
 
   // Lists
   ul: ({ children }) => (
@@ -305,7 +314,7 @@ const markdownComponents: Components = {
 
   // Image
   img: ({ src, alt }) => {
-    if (typeof src !== "string") return null;
+    if (!isSafeUrl(src)) return null;
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
