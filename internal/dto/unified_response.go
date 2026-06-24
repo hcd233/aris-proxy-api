@@ -354,10 +354,61 @@ func resolveRole(role string) enum.Role {
 
 // ==================== Tools ====================
 
+// FromResponseAPITools 将 Response API tools 列表转换为 UnifiedTool 列表。
+//
+// 与 converter（Response API → ChatCompletion）的铺平行为保持一致：
+//   - namespace 工具铺平为多个独立 UnifiedTool，命名为 {namespace}__{subToolName}
+//   - function / custom / mcp 工具映射为单个 UnifiedTool
+//   - 其他不可表达的工具类型被跳过
+//
+// namespace 工具承载了 MCP 子工具，铺平后才能完整落到 tools 表，
+// 否则这些子工具会被 FromResponseAPITool 当作未知类型静默丢弃。
+//
+//	@param tools []*ResponseTool
+//	@return []*vo.UnifiedTool
+func FromResponseAPITools(tools []*ResponseTool) []*vo.UnifiedTool {
+	var result []*vo.UnifiedTool
+	for _, tool := range tools {
+		if tool == nil {
+			continue
+		}
+		if tool.Namespace != nil {
+			result = append(result, fromResponseAPINamespaceTools(tool.Namespace)...)
+			continue
+		}
+		if ut := FromResponseAPITool(tool); ut != nil {
+			result = append(result, ut)
+		}
+	}
+	return result
+}
+
+// fromResponseAPINamespaceTools 将 namespace 工具内的子工具铺平为独立 UnifiedTool。
+// 命名格式 {namespace}__{subToolName}，与 converter.convertNamespaceToolsToChat 一致。
+func fromResponseAPINamespaceTools(ns *ResponseToolNamespace) []*vo.UnifiedTool {
+	if ns == nil || ns.Name == "" {
+		return nil
+	}
+	return lo.FilterMap(ns.Tools, func(sub *ResponseNamespaceTool, _ int) (*vo.UnifiedTool, bool) {
+		if sub == nil || sub.Name == "" {
+			return nil, false
+		}
+		ut := &vo.UnifiedTool{
+			Name:        ns.Name + constant.NamespaceToolSeparator + sub.Name,
+			Description: lo.FromPtr(sub.Description),
+		}
+		if sub.Parameters != nil {
+			ut.Parameters = &sub.Parameters.JSONSchemaProperty
+		}
+		return ut, true
+	})
+}
+
 // FromResponseAPITool 将 Response API tools 元素转换为 UnifiedTool
 //
 // 可映射的工具类型：function / custom / mcp。
-// 其他类型（file_search/web_search/computer/...）返回 nil，调用方应跳过。
+// 其他类型（file_search/web_search/computer/namespace/...）返回 nil，调用方应跳过。
+// namespace 工具的铺平由 FromResponseAPITools 统一处理。
 //
 //	@param tool *ResponseTool
 //	@return *UnifiedTool

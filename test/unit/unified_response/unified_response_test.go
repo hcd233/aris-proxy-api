@@ -223,6 +223,36 @@ func TestFromResponseAPITool_Mcp(t *testing.T) {
 	}
 }
 
+// TestFromResponseAPITools_NamespaceFlatten verifies that namespace tools
+// (which carry MCP sub-tools) are flattened into independent UnifiedTools so
+// every sub-tool gets persisted to the tools table, matching the converter
+// chain's {namespace}__{subTool} naming.
+func TestFromResponseAPITools_NamespaceFlatten(t *testing.T) {
+	t.Parallel()
+	tools := []*dto.ResponseTool{{
+		Type: enum.ResponseToolTypeNamespace,
+		Namespace: &dto.ResponseToolNamespace{
+			Type: enum.ResponseToolTypeNamespace,
+			Name: "github",
+			Tools: []*dto.ResponseNamespaceTool{
+				{Name: "list_repos", Type: enum.ResponseToolTypeFunction},
+				{Name: "create_issue", Type: enum.ResponseToolTypeFunction},
+			},
+		},
+	}}
+	got := dto.FromResponseAPITools(tools)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 flattened tools, got %d", len(got))
+	}
+	sep := constant.NamespaceToolSeparator
+	if got[0].Name != "github"+sep+"list_repos" {
+		t.Errorf("tool[0].Name = %q", got[0].Name)
+	}
+	if got[1].Name != "github"+sep+"create_issue" {
+		t.Errorf("tool[1].Name = %q", got[1].Name)
+	}
+}
+
 func TestFromResponseAPI_StringInput(t *testing.T) {
 	t.Parallel()
 	tc := findCase(t, loadCases(t), "string_input")
