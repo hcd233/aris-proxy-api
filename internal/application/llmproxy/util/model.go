@@ -28,7 +28,8 @@ func MarshalOpenAIResponseBodyForModel(req *dto.OpenAICreateResponseReq, modelNa
 	if body.Input != nil {
 		for _, item := range body.Input.Items {
 			if item != nil && item.Summary == nil {
-				item.Summary = make([]*dto.ResponseReasoningSummary, 0)
+				empty := make([]*dto.ResponseReasoningSummary, 0)
+				item.Summary = &empty
 			}
 		}
 	}

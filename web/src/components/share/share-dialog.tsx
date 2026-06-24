@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 /**
  * Share dialog — invoked from a session detail page. Calls
  * `POST /api/v1/session/share` to create a share link, then displays the
@@ -62,6 +64,8 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
   const [expireOption, setExpireOption] = useState<ExpireOption>("1d");
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
 
+  const t = useT();
+
   const reset = useCallback(() => {
     setShareURL(existingShareID ? buildShareURL(existingShareID) : null);
     setExpiresAt(null);
@@ -86,14 +90,14 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
       const rsp = await api.createShare(body);
       if (rsp.error) {
         if (rsp.error.code === 10004) {
-          toast.error("This session is already shared. Revoke the existing link first.");
+          toast.error(t("share_dialog.already_shared"));
         } else {
-          toast.error(rsp.error.message || "Failed to create share link");
+          toast.error(rsp.error.message || t("share_dialog.create_failed"));
         }
         return;
       }
       if (!rsp.shareId) {
-        toast.error("Failed to create share link");
+        toast.error(t("share_dialog.create_failed"));
         return;
       }
       setShareURL(buildShareURL(rsp.shareId));
@@ -101,27 +105,27 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
     } catch (err) {
       const msg =
         err instanceof ApiError
-          ? `Failed to create share link (${err.status})`
+          ? `${t("share_dialog.create_failed")} (${err.status})`
           : err instanceof Error
             ? err.message
-            : "Failed to create share link";
+            : t("share_dialog.create_failed");
       toast.error(msg);
     } finally {
       setCreating(false);
     }
-  }, [sessionId, expireOption, customDate]);
+  }, [sessionId, expireOption, customDate, t]);
 
   const handleCopy = useCallback(async () => {
     if (!shareURL) return;
     try {
       await navigator.clipboard.writeText(shareURL);
       setCopied(true);
-      toast.success("Link copied to clipboard");
+      toast.success(t("share_dialog.copied_to_clipboard"));
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(t("share_dialog.copy_failed"));
     }
-  }, [shareURL]);
+  }, [shareURL, t]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -129,12 +133,12 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="size-4 text-primary" />
-            Share session
+            {t("share_dialog.title")}
           </DialogTitle>
           <DialogDescription>
             {shareURL
-              ? "Copy the public link below to share this conversation. The link can be revoked anytime from the Shares page."
-              : "Generate a public link to this conversation. Choose how long the link stays valid."}
+              ? t("share_dialog.desc_created")
+              : t("share_dialog.desc_create")}
           </DialogDescription>
         </DialogHeader>
 
@@ -157,19 +161,19 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
                 {copied ? (
                   <>
                     <Check className="size-3.5" />
-                    Copied
+                    {t("share_dialog.copied")}
                   </>
                 ) : (
                   <>
                     <Copy className="size-3.5" />
-                    Copy
+                    {t("share_dialog.copy")}
                   </>
                 )}
               </Button>
             </div>
             {expiresAt && (
               <p className="text-xs text-muted-foreground">
-                Expires at{" "}
+                {t("share_dialog.expires_at")}{" "}
                 <span className="font-medium text-foreground/80">
                   {new Date(expiresAt).toLocaleString()}
                 </span>
@@ -179,18 +183,18 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Link expiration</Label>
+              <Label>{t("share_dialog.link_expiration")}</Label>
               <RadioGroup
                 value={expireOption}
                 onValueChange={(v) => setExpireOption(v as ExpireOption)}
                 className="flex flex-wrap gap-2"
               >
                 {[
-                  { value: "1d", label: "1 day" },
-                  { value: "7d", label: "1 week" },
-                  { value: "30d", label: "1 month" },
-                  { value: "never", label: "Never" },
-                  { value: "custom", label: "Custom" },
+                  { value: "1d", label: t("share_dialog.exp_1d") },
+                  { value: "7d", label: t("share_dialog.exp_7d") },
+                  { value: "30d", label: t("share_dialog.exp_30d") },
+                  { value: "never", label: t("share_dialog.exp_never") },
+                  { value: "custom", label: t("share_dialog.exp_custom") },
                 ].map((opt) => (
                   <div key={opt.value} className="flex items-center gap-1.5">
                     <RadioGroupItem value={opt.value} id={`expire-${opt.value}`} />
@@ -213,7 +217,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
                     )}
                   >
                     <CalendarIcon className="mr-2 size-4" />
-                    {customDate ? format(customDate, "PPP") : "Pick a date"}
+                    {customDate ? format(customDate, "PPP") : t("share_dialog.pick_date")}
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -228,8 +232,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
             )}
 
             <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-5 text-center text-sm text-muted-foreground">
-              Anyone with the generated link will be able to read this session
-              until it expires.
+              {t("share_dialog.warning")}
             </div>
           </div>
         )}
@@ -238,7 +241,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
           <DialogClose
             render={<Button variant="outline" type="button" />}
           >
-            Close
+            {t("share_dialog.close")}
           </DialogClose>
           {!shareURL && (
             <Button
@@ -250,12 +253,12 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
               {creating ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />
-                  Creating...
+                  {t("share_dialog.creating")}
                 </>
               ) : (
                 <>
                   <Share2 className="size-3.5" />
-                  Create link
+                  {t("share_dialog.create_link")}
                 </>
               )}
             </Button>

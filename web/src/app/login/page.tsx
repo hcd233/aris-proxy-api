@@ -37,14 +37,14 @@ export default function LoginPage() {
         await handleCallback(rsp.accessToken, rsp.refreshToken);
         window.location.href = "/web/";
       } else {
-        setError("Login failed: no tokens received");
+        setError(t("login.failed_no_tokens"));
         setProcessing(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("login.failed"));
       setProcessing(false);
     }
-  }, [handleCallback]);
+    }, [handleCallback, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- OAuth2 callback requires setting state from URL params on mount */
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function LoginPage() {
             </p>
           </div>
           <p className="text-xs text-sidebar-foreground/50">
-            Secure access powered by OAuth2
+            {t("login.secure_access")}
           </p>
         </div>
 
@@ -107,10 +107,10 @@ export default function LoginPage() {
           </div>
           <div className="hidden md:block">
             <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
-              Welcome back
+              {t("login.welcome_back")}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Sign in to continue to the management console.
+              {t("login.sign_in")}
             </p>
           </div>
 

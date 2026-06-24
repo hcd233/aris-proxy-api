@@ -311,7 +311,7 @@ func extractResponseFunctionCallOutputText(output *dto.ResponseInputItemOutput) 
 // convertResponseReasoningToAnthropic 将 reasoning item 转换为 Anthropic thinking block
 func convertResponseReasoningToAnthropic(item *dto.ResponseInputItem) *dto.AnthropicMessageParam {
 	var thinkingParts []string
-	thinkingParts = append(thinkingParts, lo.FilterMap(item.Summary, func(s *dto.ResponseReasoningSummary, _ int) (string, bool) {
+	thinkingParts = append(thinkingParts, lo.FilterMap(lo.FromPtr(item.Summary), func(s *dto.ResponseReasoningSummary, _ int) (string, bool) {
 		if s != nil && s.Text != "" {
 			return s.Text, true
 		}

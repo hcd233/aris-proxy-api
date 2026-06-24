@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { SessionHistoryList } from "./session-history-list";
+import { useT } from "@/lib/i18n";
 
 export interface SessionHistorySheetProps {
   activeSessionId: number;
@@ -21,6 +22,7 @@ export function SessionHistorySheet({
   activeSessionId,
   onSelect,
 }: SessionHistorySheetProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   const handleSelect = (sessionId: number) => {
@@ -35,7 +37,7 @@ export function SessionHistorySheet({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Session history"
+            aria-label={t("session_detail.history_aria")}
           />
         }
       >
@@ -48,7 +50,7 @@ export function SessionHistorySheet({
       >
         <div className="flex h-full flex-col">
           <SheetHeader className="border-b border-border/60 px-4 py-3 text-left">
-            <SheetTitle>History</SheetTitle>
+            <SheetTitle>{t("session_detail.history")}</SheetTitle>
           </SheetHeader>
           <div className="min-h-0 flex-1">
             <SessionHistoryList

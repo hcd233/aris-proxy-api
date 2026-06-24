@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, Cpu, MemoryStick, Zap } from "lucide-react";
+import { Activity, MemoryStick, Radio, Signal, Zap } from "lucide-react";
 
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
@@ -168,17 +168,42 @@ export default function MonitorPage() {
       }
     };
 
+    poll();
     const interval = setInterval(poll, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [pushPoint]);
 
+  const lastUpdated = state.goroutines.at(-1)?.time ?? "--:--:--";
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("monitor.title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("monitor.subtitle")}
-        </p>
+    <div className="space-y-8">
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 shadow-[0_24px_70px_rgba(92,62,29,0.10)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:p-6">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-[#5B8DB8]/12 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground supports-[backdrop-filter]:bg-background/55">
+              <Signal className="size-3.5 text-primary" />
+              <span>{t("monitor.telemetry")}</span>
+            </div>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              {t("monitor.title")}
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {t("monitor.subtitle")}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm sm:min-w-72">
+            <div className="rounded-2xl border border-border/70 bg-background/70 p-3 supports-[backdrop-filter]:bg-background/55">
+              <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{t("monitor.refresh")}</div>
+              <div className="mt-1 font-display text-2xl font-semibold">5s</div>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-background/70 p-3 supports-[backdrop-filter]:bg-background/55">
+              <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{t("monitor.updated")}</div>
+              <div className="mt-1 font-mono text-lg font-semibold tabular-nums">{lastUpdated}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -186,62 +211,84 @@ export default function MonitorPage() {
           label={t("monitor.goroutines")}
           value={currentValues.goroutines}
           icon={<Activity className="size-4" />}
+          tone="primary"
         />
         <RuntimeGaugeCard
           label={t("monitor.heap")}
           value={currentValues.heapMB}
           unit="MB"
           icon={<MemoryStick className="size-4" />}
+          tone="blue"
         />
         <RuntimeGaugeCard
           label={t("monitor.in_progress")}
           value={currentValues.inProgress}
           icon={<Zap className="size-4" />}
+          tone="green"
         />
         <RuntimeGaugeCard
           label={t("monitor.sse_active")}
           value={currentValues.sseActive}
-          icon={<Cpu className="size-4" />}
+          icon={<Radio className="size-4" />}
+          tone="violet"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <RuntimeLineChart
           data={state.cpuPercent}
           dataKey="cpuPercent"
           label={t("monitor.cpu_usage")}
           unit="%"
+          sampleLabel={t("monitor.samples")}
+          className="xl:row-span-2"
+          heightClassName="h-[320px]"
+          accent="primary"
         />
         <RuntimeLineChart
           data={state.heapMB}
           dataKey="heapMB"
           label={t("monitor.heap_memory")}
           unit=" MB"
+          sampleLabel={t("monitor.samples")}
+          color="#5B8DB8"
+          accent="blue"
         />
         <RuntimeLineChart
           data={state.qps}
           dataKey="qps"
           label={t("monitor.request_qps")}
           color="#5B8DB8"
+          sampleLabel={t("monitor.samples")}
+          accent="green"
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <RuntimeLineChart
           data={state.p95Ms}
           dataKey="p95Ms"
           label={t("monitor.latency_p95")}
           unit=" ms"
           color="#7C6BA5"
+          sampleLabel={t("monitor.samples")}
+          accent="violet"
         />
         <RuntimeLineChart
           data={state.goroutines}
           dataKey="goroutines"
           label={t("monitor.goroutines_chart")}
           color="#4A9E7D"
+          sampleLabel={t("monitor.samples")}
+          accent="green"
         />
         <RuntimeLineChart
           data={state.inProgress}
           dataKey="inProgress"
           label={t("monitor.in_progress_requests")}
           color="#C76B8A"
+          sampleLabel={t("monitor.samples")}
+          accent="rose"
         />
       </div>
     </div>

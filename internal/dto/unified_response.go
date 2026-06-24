@@ -319,7 +319,7 @@ func fromResponseAPIReasoning(item *ResponseInputItem) *vo.UnifiedMessage {
 
 // collectReasoningText 合并 reasoning item 的 summary / content 文本
 func collectReasoningText(item *ResponseInputItem) string {
-	summaries := lo.FilterMap(item.Summary, func(s *ResponseReasoningSummary, _ int) (string, bool) {
+	summaries := lo.FilterMap(lo.FromPtr(item.Summary), func(s *ResponseReasoningSummary, _ int) (string, bool) {
 		if s == nil || s.Text == "" {
 			return "", false
 		}

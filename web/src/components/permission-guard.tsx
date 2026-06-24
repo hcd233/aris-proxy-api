@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 
 interface PermissionGuardProps {
   children: ReactNode;
@@ -34,6 +35,7 @@ export function PermissionGuard({
   adminOnly = false,
 }: PermissionGuardProps) {
   const { user, isLoading, isUser, isAdmin } = useAuth();
+  const t = useT();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -42,7 +44,7 @@ export function PermissionGuard({
   }, [isLoading, user]);
 
   if (isLoading) {
-    return <GuardState title="Loading" description="Preparing your console..." />;
+    return <GuardState title={t("permission_guard.loading")} description={t("permission_guard.preparing")} />;
   }
 
   if (!user) {
@@ -54,9 +56,9 @@ export function PermissionGuard({
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Access Pending</h1>
+          <h1 className="text-2xl font-bold">{t("permission_guard.access_pending")}</h1>
           <p className="mt-2 text-muted-foreground">
-            Your account is awaiting approval from an administrator.
+            {t("permission_guard.access_pending_desc")}
           </p>
         </div>
       </div>
@@ -66,8 +68,8 @@ export function PermissionGuard({
   if (adminOnly && !isAdmin()) {
     return (
       <GuardState
-        title="Access Denied"
-        description="You need administrator privileges to access this page."
+        title={t("permission_guard.access_denied")}
+        description={t("permission_guard.access_denied_desc")}
       />
     );
   }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 interface ScoreDotsProps {
   score: number | undefined;
@@ -18,6 +19,7 @@ export function ScoreDots({
   onClear,
   size = 16,
 }: ScoreDotsProps) {
+  const t = useT();
   const [hover, setHover] = useState<number | null>(null);
 
   const dotSize = Math.round(size * 0.625);
@@ -32,7 +34,7 @@ export function ScoreDots({
   return (
     <span
       role="group"
-      aria-label={isRated ? `Rated ${score} out of 5` : "Session rating"}
+      aria-label={isRated ? t("score_dots.rated").replace("{score}", String(score)) : t("score_dots.rating")}
       className="relative inline-flex items-center"
       style={{ width: `${containerWidth}px` }}
       onMouseLeave={() => setHover(null)}
@@ -48,7 +50,7 @@ export function ScoreDots({
               onScore(v);
             }}
             onMouseEnter={() => setHover(v)}
-            aria-label={`Rate ${v}`}
+            aria-label={t("score_dots.rate").replace("{value}", String(v))}
             className={cn(
               "relative rounded-full transition-all duration-150 disabled:opacity-30 active:scale-90",
               "before:absolute before:-inset-1 before:content-['']",
@@ -69,7 +71,7 @@ export function ScoreDots({
           type="button"
           onClick={onClear}
           disabled={scoring}
-          aria-label="Remove rating"
+          aria-label={t("score_dots.remove")}
           className={cn(
             "absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:text-destructive disabled:opacity-30",
             "before:absolute before:-inset-1 before:content-['']",

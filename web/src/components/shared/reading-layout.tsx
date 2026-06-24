@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export interface ReadingLayoutProps {
   header: ReactNode;
@@ -37,6 +38,7 @@ export function ReadingLayout({
   onToolsScroll,
   onToolsScrollRootChange,
 }: ReadingLayoutProps) {
+  const t = useT();
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -92,7 +94,7 @@ export function ReadingLayout({
             >
               <SwipeDismissSheetBody
                 onDismiss={() => onToolsOpenChange(false)}
-                title="Available Tools"
+                title={t("reading_layout.available_tools")}
                 count={toolsCount}
                 onScroll={onToolsScroll}
                 onScrollRootChange={onToolsScrollRootChange}
@@ -139,7 +141,7 @@ export function ReadingLayout({
               <div className="flex items-center gap-2">
                 <Wrench className="size-4 text-muted-foreground" />
                 <span className="font-display text-[14px] font-semibold text-foreground">
-                  Available Tools
+                  {t("reading_layout.available_tools")}
                 </span>
                 <Badge variant="secondary" className="text-[10px]">
                   {toolsCount}
@@ -149,7 +151,7 @@ export function ReadingLayout({
                 type="button"
                 onClick={() => onToolsOpenChange(false)}
                 className="text-[14px] text-muted-foreground transition-colors hover:text-foreground"
-                aria-label="Close tools panel"
+                aria-label={t("reading_layout.close_tools")}
               >
                 ✕
               </button>

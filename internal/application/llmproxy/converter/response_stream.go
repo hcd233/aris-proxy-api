@@ -406,7 +406,7 @@ func writeReasoningOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem) 
 	itemID := lo.FromPtr(item.ID)
 	outputIndex := 0
 
-	summaryTexts := lo.FilterMap(item.Summary, func(s *dto.ResponseReasoningSummary, _ int) (string, bool) {
+	summaryTexts := lo.FilterMap(lo.FromPtr(item.Summary), func(s *dto.ResponseReasoningSummary, _ int) (string, bool) {
 		if s == nil || s.Text == "" {
 			return "", false
 		}
@@ -417,7 +417,7 @@ func writeReasoningOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem) 
 		constant.ResponseStreamFieldID:     itemID,
 		constant.ResponseStreamFieldType:   enum.ResponseInputItemTypeReasoning,
 		constant.ResponseStreamFieldStatus: constant.ResponseStreamFieldStatusCompleted,
-		constant.ResponseStreamFieldSummary: lo.Map(item.Summary, func(s *dto.ResponseReasoningSummary, _ int) map[string]any {
+		constant.ResponseStreamFieldSummary: lo.Map(lo.FromPtr(item.Summary), func(s *dto.ResponseReasoningSummary, _ int) map[string]any {
 			if s == nil {
 				return nil
 			}

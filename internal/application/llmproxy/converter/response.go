@@ -552,7 +552,7 @@ func chatMessageToResponseOutputs(msg *dto.OpenAIChatCompletionMessageParam, too
 	if msg.ReasoningContent != nil && *msg.ReasoningContent != "" {
 		items = append(items, &dto.ResponseInputItem{
 			Type: lo.ToPtr(enum.ResponseInputItemTypeReasoning),
-			Summary: []*dto.ResponseReasoningSummary{{
+			Summary: &[]*dto.ResponseReasoningSummary{{
 				Text: *msg.ReasoningContent,
 				Type: enum.ResponseContentTypeSummaryText,
 			}},

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -52,6 +53,7 @@ export default function SessionDetailClient({
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const t = useT();
   const [metadata, setMetadata] = useState<SessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -104,10 +106,10 @@ export default function SessionDetailClient({
     setDeleting(true);
     try {
       await api.deleteSession(sessionId);
-      toast.success("Session deleted");
+      toast.success(t("common.done"));
       router.push("/sessions/");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete session");
+      toast.error(err instanceof Error ? err.message : t("sessions.delete_error"));
     } finally {
       setDeleting(false);
       setDeleteConfirmOpen(false);
@@ -121,9 +123,9 @@ export default function SessionDetailClient({
       try {
         await api.scoreSession({ sessionId, score: value });
         setScore(value);
-        toast.success("Scored");
+        toast.success(t("sessions.scored"));
       } catch {
-        toast.error("Failed to score");
+        toast.error(t("sessions.score_error"));
       } finally {
         setScoring(false);
       }
@@ -137,9 +139,9 @@ export default function SessionDetailClient({
     try {
       await api.deleteScoreSession(sessionId);
       setScore(undefined);
-      toast.success("Score removed");
+      toast.success(t("sessions.score_removed"));
     } catch {
-      toast.error("Failed to remove score");
+      toast.error(t("sessions.score_remove_error"));
     } finally {
       setScoring(false);
     }
@@ -237,13 +239,13 @@ export default function SessionDetailClient({
   if (!sessionId || Number.isNaN(sessionId)) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-muted-foreground">Invalid session ID</p>
+        <p className="text-muted-foreground">{t("session_detail.invalid_id")}</p>
         <Button
           variant="outline"
           className="mt-4"
           onClick={() => router.push("/sessions/")}
         >
-          Back to Sessions
+          {t("session_detail.back_to_sessions")}
         </Button>
       </div>
     );
@@ -266,13 +268,13 @@ export default function SessionDetailClient({
   if (!metadata) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-muted-foreground">Session not found</p>
+        <p className="text-muted-foreground">{t("session_detail.session_not_found")}</p>
         <Button
           variant="outline"
           className="mt-4"
           onClick={() => router.push("/sessions/")}
         >
-          Back to Sessions
+          {t("session_detail.back_to_sessions")}
         </Button>
       </div>
     );
@@ -287,7 +289,7 @@ export default function SessionDetailClient({
         size="icon-sm"
         onClick={() => router.push("/sessions/")}
         className="size-10 text-foreground/70 hover:text-foreground"
-        aria-label="Back to sessions"
+        aria-label={t("session_detail.back_aria")}
       >
         <ArrowLeft className="size-5" />
       </Button>
@@ -300,7 +302,7 @@ export default function SessionDetailClient({
                 variant="ghost"
                 size="icon-sm"
                 className="size-10 text-foreground/70 hover:text-foreground"
-                aria-label="Session history"
+                aria-label={t("session_detail.history_aria")}
               />
             }
           >
@@ -313,7 +315,7 @@ export default function SessionDetailClient({
           >
             <div className="flex h-full flex-col">
               <SheetHeader className="border-b border-border/60 px-4 py-3 text-left">
-                <SheetTitle>History</SheetTitle>
+                <SheetTitle>{t("session_detail.history")}</SheetTitle>
               </SheetHeader>
               <div className="min-h-0 flex-1">
                 <SessionHistoryList
@@ -334,7 +336,7 @@ export default function SessionDetailClient({
             isMobile && headerCompact ? "text-[14px]" : "text-[15px]",
           ].filter(Boolean).join(" ")}
         >
-          Session #{metadata.id}
+          {t("session_history.session_label").replace("{id}", String(metadata.id))}
         </h1>
         <p
           className={[
@@ -343,7 +345,7 @@ export default function SessionDetailClient({
             isMobile && headerCompact ? "max-h-0 opacity-0" : "max-h-4 opacity-100",
           ].filter(Boolean).join(" ")}
         >
-          {messageCount} message{messageCount === 1 ? "" : "s"}
+          {t("session_history.message_count").replace("{count}", String(messageCount)).replace("{s}", messageCount === 1 ? "" : "s")}
           {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
         </p>
       </div>
@@ -366,8 +368,8 @@ export default function SessionDetailClient({
             ? "text-primary"
             : "text-foreground/70 hover:text-foreground",
         ].join(" ")}
-        aria-label={metadata.shareID ? "Manage share link" : "Share session"}
-        title={metadata.shareID ? "Shared" : "Share"}
+        aria-label={metadata.shareID ? t("session_detail.manage_share_aria") : t("session_detail.share_aria")}
+        title={metadata.shareID ? t("session_detail.shared_title") : t("session_detail.share_title")}
       >
         <Share2 className="size-5" />
       </Button>
@@ -377,8 +379,8 @@ export default function SessionDetailClient({
         size="icon-sm"
         onClick={() => setDeleteConfirmOpen(true)}
         className="size-10 text-foreground/70 hover:text-destructive"
-        aria-label="Delete session"
-        title="Delete session"
+        aria-label={t("session_detail.delete_aria")}
+        title={t("session_detail.delete_title")}
       >
         <Trash2 className="size-5" />
       </Button>
@@ -394,8 +396,8 @@ export default function SessionDetailClient({
               ? "bg-secondary text-foreground"
               : "text-foreground/70 hover:text-foreground",
           ].join(" ")}
-          aria-label="Toggle available tools"
-          title="Available tools"
+          aria-label={t("session_detail.toggle_tools_aria")}
+          title={t("session_detail.tools_title")}
         >
           <Wrench className="size-5" />
           <span
@@ -415,7 +417,7 @@ export default function SessionDetailClient({
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <MessagesSquare className="mb-3 size-10 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
-            No messages in this session
+            {t("session_detail.no_messages")}
           </p>
         </div>
       ) : (
@@ -439,7 +441,7 @@ export default function SessionDetailClient({
           {!messagesList.hasMore && messages.length > 0 && (
             <div className="pt-3 pb-1 text-center">
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                end of conversation
+                {t("session_detail.end_of_conversation")}
               </span>
             </div>
           )}
@@ -484,22 +486,20 @@ export default function SessionDetailClient({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="size-5 text-destructive" />
-              Delete session?
+              {t("session_detail.delete_dialog_title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete{" "}
-              <strong>Session #{metadata.id}</strong> and all its messages. This
-              action cannot be undone.
+              {t("session_detail.delete_dialog_desc").replace("{id}", String(metadata.id))}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? "Deleting..." : "Delete"}
+              {deleting ? t("common.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

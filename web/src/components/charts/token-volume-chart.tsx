@@ -21,13 +21,6 @@ import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
-const TOKEN_LAYERS = [
-  { key: "cacheReadTokens", label: "Cache Read", color: "#F2D0B8" },
-  { key: "inputTokens", label: "Input", color: "#E6733F" },
-  { key: "cacheCreationTokens", label: "Cache Write", color: "#F2D5BE" },
-  { key: "outputTokens", label: "Output", color: "#D46A3E" },
-] as const;
-
 function formatTokenCount(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
@@ -36,6 +29,12 @@ function formatTokenCount(v: number): string {
 
 export function TokenVolumeChart() {
   const t = useT();
+  const TOKEN_LAYERS = [
+    { key: "cacheReadTokens", label: t("charts.cache_read"), color: "#F2D0B8" },
+    { key: "inputTokens", label: t("charts.input"), color: "#E6733F" },
+    { key: "cacheCreationTokens", label: t("charts.cache_write"), color: "#F2D5BE" },
+    { key: "outputTokens", label: t("charts.output"), color: "#D46A3E" },
+  ] as const;
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.tokenVolume.customEnd", "");
@@ -115,14 +114,14 @@ export function TokenVolumeChart() {
           <Skeleton className="h-64 w-full" />
         ) : error ? (
           <div className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-            <p>Failed to load</p>
+            <p>{t("charts.failed_to_load")}</p>
             <Button variant="outline" size="sm" onClick={() => fetchData()}>
-              Retry
+              {t("charts.retry")}
             </Button>
           </div>
         ) : flatData.length === 0 ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-            No data for this period
+            {t("charts.no_data")}
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-64 w-full">

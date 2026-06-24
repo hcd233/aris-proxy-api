@@ -210,7 +210,7 @@ export default function EndpointsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-display">{t("endpoints.all_endpoints")}</CardTitle>
+              <CardTitle className="font-display">{t("endpoints.all_endpoints")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
@@ -285,19 +285,19 @@ export default function EndpointsPage() {
                           {ep.supportOpenAIChatCompletion && (
                             <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
                               <ProviderIcon protocol="openai-chat-completion" size={14} />
-                              OpenAI / Chat
+                              {t("endpoints.openai_chat_badge")}
                             </Badge>
                           )}
                           {ep.supportOpenAIResponse && (
                             <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
                               <ProviderIcon protocol="openai-response" size={14} />
-                              OpenAI / Response
+                              {t("endpoints.response_badge")}
                             </Badge>
                           )}
                           {ep.supportAnthropicMessage && (
                             <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
                               <ProviderIcon protocol="anthropic-message" size={14} />
-                              Anthropic / Messages
+                              {t("endpoints.messages_badge")}
                             </Badge>
                           )}
                         </div>
@@ -365,19 +365,19 @@ export default function EndpointsPage() {
                             {ep.supportOpenAIChatCompletion && (
                               <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
                                 <ProviderIcon protocol="openai-chat-completion" size={14} />
-                                Chat Completions
+                                {t("endpoints.openai_chat_badge")}
                               </Badge>
                             )}
                             {ep.supportOpenAIResponse && (
                               <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
                                 <ProviderIcon protocol="openai-response" size={14} />
-                                Response
+                                {t("endpoints.response_badge")}
                               </Badge>
                             )}
                             {ep.supportAnthropicMessage && (
                               <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
                                 <ProviderIcon protocol="anthropic-message" size={14} />
-                                Messages
+                                {t("endpoints.messages_badge")}
                               </Badge>
                             )}
                           </div>
@@ -410,7 +410,7 @@ export default function EndpointsPage() {
                 <PaginationBar
                   pageInfo={pageInfo}
                   onChange={(page, pageSize) => refresh(page, pageSize)}
-                  totalLabel="endpoints"
+                   totalLabel={t("pagination.endpoints")}
                 />
               </>
             )}
@@ -454,7 +454,7 @@ export default function EndpointsPage() {
                 <Label htmlFor="ep-name">{t("endpoints.name")}</Label>
                 <Input
                   id="ep-name"
-                  placeholder="e.g. OpenAI Production"
+                  placeholder={t("endpoints.name") + "..."}
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 />
