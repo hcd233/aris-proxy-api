@@ -202,11 +202,11 @@ func buildResponseRequestUnifiedMessages(ctx context.Context, req *dto.OpenAICre
 }
 
 // buildResponseUnifiedTools Response API 请求 tools → UnifiedTool
+//
+// namespace 工具会被铺平为多个子工具（承载 MCP 子工具），与 converter 链路保持一致，
+// 保证 MCP 子工具完整落到 tools 表。
 func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*vo.UnifiedTool {
-	return lo.FilterMap(tools, func(tool *dto.ResponseTool, _ int) (*vo.UnifiedTool, bool) {
-		ut := dto.FromResponseAPITool(tool)
-		return ut, ut != nil
-	})
+	return dto.FromResponseAPITools(tools)
 }
 
 // submitResponseMessageStoreTask Response API 路径统一的消息存储投递
