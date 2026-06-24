@@ -39,6 +39,7 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useT } from "@/lib/i18n";
 
 const emptyForm = { word: "" };
 
@@ -49,6 +50,7 @@ export default function BlockPage() {
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const t = useT();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -117,11 +119,11 @@ export default function BlockPage() {
       <div className="space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Blocked Words</h1>
+            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("blocked.title")}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">Manage sensitive word blacklist. Words matched in proxy requests will be blocked.</p>
           </div>
           <Button onClick={() => { setForm(emptyForm); setDialogOpen(true); }}>
-            <Plus /> Add Word
+            <Plus /> {t("blocked.create")}
           </Button>
         </div>
 
@@ -151,7 +153,7 @@ export default function BlockPage() {
             ) : items.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Ban className="mb-3 size-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No blocked words yet. Add one to get started.</p>
+                <p className="text-sm text-muted-foreground">{t("blocked.no_words")}</p>
               </div>
             ) : (
               <>
@@ -162,7 +164,7 @@ export default function BlockPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">{item.word}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">Hits: {item.hitCount}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{t("blocked.hit_count")}: {item.hitCount}</p>
                           </div>
                           <Button variant="destructive" size="sm"
                             onClick={() => { setDeleteTarget(item); setDeleteConfirmOpen(true); }}>
@@ -177,10 +179,10 @@ export default function BlockPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-16">ID</TableHead>
-                        <TableHead>Word</TableHead>
-                        <TableHead className="w-24">Hit Count</TableHead>
-                        <TableHead className="w-32">Created</TableHead>
-                        <TableHead className="w-20">Actions</TableHead>
+                        <TableHead>{t("blocked.word")}</TableHead>
+                        <TableHead className="w-24">{t("blocked.hit_count")}</TableHead>
+                        <TableHead className="w-32">{t("common.created")}</TableHead>
+                        <TableHead className="w-20">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -214,21 +216,21 @@ export default function BlockPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Add Blocked Word</DialogTitle>
-              <DialogDescription>Enter a word to block. Requests containing this word will be rejected.</DialogDescription>
+              <DialogTitle>{t("blocked.create")}</DialogTitle>
+              <DialogDescription>{t("blocked.create_placeholder")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
               <Input
-                placeholder="Enter word..."
+                placeholder={t("blocked.create_placeholder")}
                 value={form.word}
                 onChange={(e) => setForm({ word: e.target.value })}
                 onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
               />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
               <Button onClick={handleCreate} disabled={!form.word.trim() || saving}>
-                {saving ? "Saving..." : "Create"}
+                {saving ? t("common.saving") : t("common.create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -238,15 +240,15 @@ export default function BlockPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-destructive" /> Are you sure?
+                <AlertTriangle className="size-5 text-destructive" /> {t("common.are_you_sure")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Delete blocked word <strong>{deleteTarget?.word}</strong>? This action cannot be undone.
+                {t("blocked.delete_confirm")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleDelete}>Delete</AlertDialogAction>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

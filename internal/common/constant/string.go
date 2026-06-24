@@ -178,4 +178,11 @@ const (
 
 	// ── Cron Pub/Sub ──
 	CronReloadChannel = "cron:reload"
+
+	// ── Locale ──
+	LocaleEmbedDir        = "locales"
+	LocaleFileExt         = ".json"
+	LocaleDefaultLocale   = "en"
+	LocalePrimaryZH       = "zh"
+	LocaleAcceptSeparator = "-_;"
 )

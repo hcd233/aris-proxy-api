@@ -10,6 +10,7 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -34,7 +35,7 @@ func RedisLockMiddleware(cache *redis.Client, serviceName, key string, expire ti
 		value := ctx.Context().Value(key)
 		if value == nil {
 			logger.Error("[RedisLockMiddleware] Value is nil", zap.String("key", key))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
@@ -44,12 +45,12 @@ func RedisLockMiddleware(cache *redis.Client, serviceName, key string, expire ti
 		success, err := locker.Lock(ctx.Context(), lockKey, lockValue, expire)
 		if err != nil {
 			logger.Error("[RedisLockMiddleware] Lock resource error", zap.Error(err))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 		if !success {
 			logger.Info("[RedisLockMiddleware] Lock resource is already locked", zap.String("lockKey", lockKey))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrResourceLocked.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrResourceLocked.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 

@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PaginationBar } from "@/components/pagination-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useT } from "@/lib/i18n";
 
 interface EndpointForm {
   name: string;
@@ -65,6 +66,7 @@ const emptyForm: EndpointForm = {
 };
 
 export default function EndpointsPage() {
+  const t = useT();
   const isMobile = useIsMobile();
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.endpoints.page", 1);
@@ -95,11 +97,11 @@ export default function EndpointsPage() {
         }
       }
     } catch {
-      toast.error("Failed to load endpoints");
+      toast.error(t("endpoints.load_error"));
     } finally {
       setLoading(false);
     }
-  }, [setPersistedPage, setPersistedPageSize]);
+  }, [t, setPersistedPage, setPersistedPageSize]);
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -132,7 +134,7 @@ export default function EndpointsPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      toast.error("Name is required");
+      toast.error(t("endpoints.name_required"));
       return;
     }
     setSaving(true);
@@ -147,7 +149,7 @@ export default function EndpointsPage() {
           supportOpenAIResponse: form.supportOpenAIResponse,
           supportAnthropicMessage: form.supportAnthropicMessage,
         });
-        toast.success("Endpoint updated");
+        toast.success(t("endpoints.updated_success"));
       } else {
         await api.createEndpoint({
           name: form.name,
@@ -158,12 +160,12 @@ export default function EndpointsPage() {
           supportOpenAIResponse: form.supportOpenAIResponse,
           supportAnthropicMessage: form.supportAnthropicMessage,
         });
-        toast.success("Endpoint created");
+        toast.success(t("endpoints.created_success"));
       }
       setDialogOpen(false);
       fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save endpoint");
+      toast.error(err instanceof Error ? err.message : t("endpoints.save_error"));
     } finally {
       setSaving(false);
     }
@@ -179,10 +181,10 @@ export default function EndpointsPage() {
     setDeleting(deleteTarget.id);
     try {
       await api.deleteEndpoint(deleteTarget.id);
-      toast.success("Endpoint deleted");
+      toast.success(t("endpoints.deleted_success"));
       fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete endpoint");
+      toast.error(err instanceof Error ? err.message : t("endpoints.delete_error"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -195,27 +197,27 @@ export default function EndpointsPage() {
       <div className="space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Endpoints</h1>
+            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("endpoints.title")}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Manage LLM provider endpoints
+              {t("endpoints.subtitle")}
             </p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="mr-1 size-4" />
-            Create Endpoint
+            {t("endpoints.create")}
           </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-display">All Endpoints</CardTitle>
+            <CardTitle className="font-display">{t("endpoints.all_endpoints")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
               <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search endpoints..."
+                  placeholder={t("endpoints.search_endpoints")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -235,7 +237,7 @@ export default function EndpointsPage() {
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Server className="mb-3 size-10 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">
-                  No endpoints configured. Create one to get started.
+                  {t("endpoints.empty")}
                 </p>
               </div>
             ) : (
@@ -275,7 +277,7 @@ export default function EndpointsPage() {
                               onClick={() => openDeleteConfirm(ep)}
                             >
                               <Trash2 className="mr-1 size-3" />
-                              Delete
+                              {t("common.delete")}
                             </Button>
                           </div>
                         </div>
@@ -300,7 +302,7 @@ export default function EndpointsPage() {
                           )}
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground">
-                          Created {new Date(ep.createdAt).toLocaleDateString()}
+                          {t("endpoints.created")} {new Date(ep.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     ))}
@@ -309,12 +311,12 @@ export default function EndpointsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Key</TableHead>
-                      <TableHead>Base URL</TableHead>
-                      <TableHead>Supported APIs</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t("endpoints.name")}</TableHead>
+                      <TableHead>{t("endpoints.key")}</TableHead>
+                      <TableHead>{t("endpoints.base_url")}</TableHead>
+                      <TableHead>{t("endpoints.supported_apis")}</TableHead>
+                      <TableHead>{t("endpoints.created")}</TableHead>
+                      <TableHead className="text-right">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -395,7 +397,7 @@ export default function EndpointsPage() {
                               onClick={() => openDeleteConfirm(ep)}
                             >
                               <Trash2 className="mr-1 size-3" />
-                              Delete
+                              {t("common.delete")}
                             </Button>
                           </div>
                         </TableCell>
@@ -419,17 +421,17 @@ export default function EndpointsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-destructive" />
-                Are you sure?
+              <AlertTriangle className="size-5 text-destructive" />
+              {t("common.are_you_sure")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
+                {t("endpoints.delete_description").replace("{name}", deleteTarget?.name ?? "")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
-                {deleting !== null ? "Deleting..." : "Delete"}
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
+              {deleting !== null ? t("common.deleting") : t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -439,17 +441,17 @@ export default function EndpointsPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingId ? "Edit Endpoint" : "Create Endpoint"}
+                {editingId ? t("endpoints.edit") : t("endpoints.create")}
               </DialogTitle>
               <DialogDescription>
                 {editingId
-                  ? "Update endpoint configuration."
-                  : "Add a new LLM provider endpoint."}
+                  ? t("endpoints.edit_description")
+                  : t("endpoints.create_description")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="ep-name">Name</Label>
+                <Label htmlFor="ep-name">{t("endpoints.name")}</Label>
                 <Input
                   id="ep-name"
                   placeholder="e.g. OpenAI Production"
@@ -458,7 +460,7 @@ export default function EndpointsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="ep-openai-url">OpenAI Base URL</Label>
+                <Label htmlFor="ep-openai-url">{t("endpoints.openai_base_url")}</Label>
                 <Input
                   id="ep-openai-url"
                   placeholder="https://api.openai.com/v1"
@@ -467,7 +469,7 @@ export default function EndpointsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="ep-anthropic-url">Anthropic Base URL</Label>
+                <Label htmlFor="ep-anthropic-url">{t("endpoints.anthropic_base_url")}</Label>
                 <Input
                   id="ep-anthropic-url"
                   placeholder="https://api.anthropic.com/v1"
@@ -476,17 +478,17 @@ export default function EndpointsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="ep-apikey">API Key</Label>
+                <Label htmlFor="ep-apikey">{t("endpoints.api_key")}</Label>
                 <Input
                   id="ep-apikey"
                   type="password"
-                  placeholder={editingId ? "Leave empty to keep current" : "Enter API key"}
+                  placeholder={editingId ? t("endpoints.keep_current") : t("endpoints.enter_api_key")}
                   value={form.apiKey}
                   onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Capabilities</Label>
+                <Label>{t("endpoints.capabilities")}</Label>
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -497,7 +499,7 @@ export default function EndpointsPage() {
                       }
                       className="rounded"
                     />
-                    OpenAI Chat Completion
+                    {t("endpoints.openai_chat_label")}
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -508,7 +510,7 @@ export default function EndpointsPage() {
                       }
                       className="rounded"
                     />
-                    OpenAI Response API
+                    {t("endpoints.openai_response_label")}
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -519,17 +521,17 @@ export default function EndpointsPage() {
                       }
                       className="rounded"
                     />
-                    Anthropic Messages
+                    {t("endpoints.anthropic_messages_label")}
                   </label>
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button onClick={handleSave} disabled={!form.name.trim() || saving}>
-                {saving ? "Saving..." : editingId ? "Update" : "Create"}
+                {saving ? t("common.saving") : editingId ? t("endpoints.update") : t("common.create")}
               </Button>
             </DialogFooter>
           </DialogContent>

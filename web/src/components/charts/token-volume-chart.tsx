@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
+import { useT } from "@/lib/i18n";
 import type { TokenThroughputPoint } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +35,7 @@ function formatTokenCount(v: number): string {
 }
 
 export function TokenVolumeChart() {
+  const t = useT();
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.tokenVolume.customEnd", "");
@@ -95,7 +97,7 @@ export function TokenVolumeChart() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Token Throughput</CardTitle>
+        <CardTitle className="font-display">{t("dashboard.token_volume")}</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}

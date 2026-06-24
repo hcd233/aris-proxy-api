@@ -1,0 +1,14 @@
+{
+  "error.internal": "内部错误",
+  "error.bad_request": "请求参数错误",
+  "error.unauthorized": "未登录或登录已过期",
+  "error.no_permission": "没有权限",
+  "error.data_not_exists": "数据不存在",
+  "error.data_exists": "数据已存在",
+  "error.too_many_requests": "请求过于频繁",
+  "error.insufficient_quota": "配额不足",
+  "error.quota_exceeded": "配额已超限",
+  "error.resource_locked": "资源已锁定",
+  "error.content_blocked": "内容违反策略",
+  "error.validation": "参数校验失败"
+}

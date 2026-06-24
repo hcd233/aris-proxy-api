@@ -19,6 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/ratelimit"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -158,7 +159,7 @@ func TokenBucketTokenRateLimiterMiddleware(
 		logger := logger.WithCtx(ctx.Context())
 		if cache == nil {
 			logger.Error("[TokenBucketTokenRateLimiter] Redis dependency is nil")
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
@@ -176,7 +177,7 @@ func TokenBucketTokenRateLimiterMiddleware(
 					zap.String("serviceName", serviceName),
 					zap.String("key", string(key)),
 				)
-				lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+				lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 				return
 			}
 		}
@@ -192,7 +193,7 @@ func TokenBucketTokenRateLimiterMiddleware(
 		).StringSlice()
 		if err != nil {
 			logger.Error("[TokenBucketTokenRateLimiter] Failed to peek rate limit bucket", zap.Error(err))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
@@ -212,7 +213,7 @@ func TokenBucketTokenRateLimiterMiddleware(
 			ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, constant.ZeroString)
 			ctx.SetHeader(constant.HTTPHeaderRetryAfter, strconv.Itoa(retryAfterSeconds))
 			ctx.SetStatus(fiber.StatusTooManyRequests)
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 

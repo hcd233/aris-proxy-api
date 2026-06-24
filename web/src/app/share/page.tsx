@@ -24,6 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { formatRelativeTime } from "@/lib/utils";
 import { ReadingLayout } from "@/components/shared/reading-layout";
+import { useT } from "@/lib/i18n";
 
 type ShareError =
   | { kind: "missing-id" }
@@ -32,6 +33,7 @@ type ShareError =
   | { kind: "unknown"; message: string };
 
 function ShareErrorView({ error }: { error: ShareError }) {
+  const t = useT();
   const { title, description } = (() => {
     switch (error.kind) {
       case "missing-id":
@@ -42,7 +44,7 @@ function ShareErrorView({ error }: { error: ShareError }) {
         };
       case "rate-limited":
         return {
-          title: "Too many requests",
+          title: t("error.too_many_requests"),
           description:
             "You've opened this link too frequently. Please wait a moment and try again.",
         };

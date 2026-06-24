@@ -12,7 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/samber/lo"
-	tencentcloud_cls_sdk_go "github.com/tencentcloud/tencentcloud-cls-sdk-go"
+	tcclssdk "github.com/tencentcloud/tencentcloud-cls-sdk-go"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -21,7 +21,7 @@ import (
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
 type clsCore struct {
-	producer *tencentcloud_cls_sdk_go.AsyncProducerClient
+	producer *tcclssdk.AsyncProducerClient
 	topicID  string
 	level    zapcore.LevelEnabler
 	fields   []zapcore.Field
@@ -34,10 +34,10 @@ type clsCore struct {
 type clsCallback struct{}
 
 // Success 发送成功回调。
-func (c *clsCallback) Success(_ *tencentcloud_cls_sdk_go.Result) {}
+func (c *clsCallback) Success(_ *tcclssdk.Result) {}
 
 // Fail 发送失败回调，输出到 stderr。
-func (c *clsCallback) Fail(result *tencentcloud_cls_sdk_go.Result) {
+func (c *clsCallback) Fail(result *tcclssdk.Result) {
 	fmt.Fprintf(
 		os.Stderr,
 		"[CLS] Send log failed: code=%s, message=%s, requestId=%s\n",
@@ -66,12 +66,12 @@ func newCLSCore() *clsCore {
 		level = zapcore.ErrorLevel
 	}
 
-	producerConfig := tencentcloud_cls_sdk_go.GetDefaultAsyncProducerClientConfig()
+	producerConfig := tcclssdk.GetDefaultAsyncProducerClientConfig()
 	producerConfig.Endpoint = config.CLSEndpoint
 	producerConfig.AccessKeyID = config.CLSSecretID
 	producerConfig.AccessKeySecret = config.CLSSecretKey
 
-	producer, err := tencentcloud_cls_sdk_go.NewAsyncProducerClient(producerConfig)
+	producer, err := tcclssdk.NewAsyncProducerClient(producerConfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[CLS] Failed to create producer: %v\n", err)
 		return nil
@@ -149,7 +149,7 @@ func (c *clsCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 		}
 	}
 
-	log := tencentcloud_cls_sdk_go.NewCLSLog(entry.Time.Unix(), contents)
+	log := tcclssdk.NewCLSLog(entry.Time.Unix(), contents)
 	return c.producer.SendLog(c.topicID, log, &clsCallback{})
 }
 

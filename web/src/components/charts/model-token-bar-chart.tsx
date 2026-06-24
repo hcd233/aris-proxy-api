@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
+import { useT } from "@/lib/i18n";
 import type { ModelUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,6 +130,7 @@ function BarWithTooltip({
 }
 
 export function ModelTokenBarChart() {
+  const t = useT();
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTokenBar.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTokenBar.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTokenBar.customEnd", "");
@@ -196,7 +198,7 @@ export function ModelTokenBarChart() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Model Usage</CardTitle>
+        <CardTitle className="font-display">{t("dashboard.model_usage")}</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}

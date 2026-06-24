@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 )
 
 // Error 错误
@@ -11,8 +13,9 @@ import (
 //	@author centonhuang
 //	@update 2025-11-10 19:10:53
 type Error struct {
-	Code    int    `json:"code" doc:"Code"`
-	Message string `json:"message" doc:"Message"`
+	Code       int    `json:"code" doc:"Code"`
+	Message    string `json:"message" doc:"Message"`
+	MessageKey string `json:"-"`
 }
 
 // NewError 创建错误
@@ -29,8 +32,29 @@ func NewError(code int, message string) *Error {
 	}
 }
 
+// NewErrorWithKey 创建带翻译键的错误
+func NewErrorWithKey(code int, message, key string) *Error {
+	return &Error{
+		Code:       code,
+		Message:    message,
+		MessageKey: key,
+	}
+}
+
 func (e *Error) Error() string {
 	return fmt.Sprintf(constant.ErrorModelTemplate, e.Code, e.Message)
+}
+
+// Localize 根据 locale 翻译错误消息
+func (e *Error) Localize(locale enum.Locale) *Error {
+	if e.MessageKey == "" {
+		return e
+	}
+	return &Error{
+		Code:       e.Code,
+		Message:    i18n.Translate(locale, e.MessageKey, e.Message),
+		MessageKey: e.MessageKey,
+	}
 }
 
 // UpstreamError 上游返回非 200 状态码的错误

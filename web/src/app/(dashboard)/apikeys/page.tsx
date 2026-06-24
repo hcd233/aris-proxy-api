@@ -40,8 +40,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useT } from "@/lib/i18n";
 
 export default function APIKeysPage() {
+  const t = useT();
   const isMobile = useIsMobile();
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.apikeys.page", 1);
@@ -69,11 +71,11 @@ export default function APIKeysPage() {
         setPersistedPageSize(rsp.pageInfo.pageSize);
       }
     } catch {
-      toast.error("Failed to load API keys");
+      toast.error(t("apikeys.load_error"));
     } finally {
       setLoading(false);
     }
-  }, [setPersistedPage, setPersistedPageSize]);
+  }, [t, setPersistedPage, setPersistedPageSize]);
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -93,11 +95,11 @@ export default function APIKeysPage() {
       if (rsp.key) {
         setCreatedKey(rsp.key);
         setNewKeyName("");
-        toast.success("API key created");
+        toast.success(t("apikeys.created_success"));
         fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create key");
+      toast.error(err instanceof Error ? err.message : t("apikeys.create_error"));
     } finally {
       setCreating(false);
     }
@@ -113,10 +115,10 @@ export default function APIKeysPage() {
     setDeleting(deleteTarget.id);
     try {
       await api.deleteAPIKey(deleteTarget.id);
-      toast.success("API key deleted");
+      toast.success(t("apikeys.deleted_success"));
       fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete key");
+      toast.error(err instanceof Error ? err.message : t("apikeys.delete_error"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -128,7 +130,7 @@ export default function APIKeysPage() {
     navigator.clipboard.writeText(key);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast.success("Copied to clipboard");
+    toast.success(t("common.copied_to_clipboard"));
   };
 
   const closeCreateDialog = () => {
@@ -141,9 +143,9 @@ export default function APIKeysPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">API Keys</h1>
+          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("apikeys.title")}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Manage your API keys for authentication
+            {t("apikeys.subtitle")}
           </p>
         </div>
         <Dialog
@@ -157,15 +159,15 @@ export default function APIKeysPage() {
             render={<Button />}
           >
             <Plus className="mr-1 size-4" />
-            Create Key
+            {t("apikeys.create_key")}
           </DialogTrigger>
           <DialogContent>
             {createdKey ? (
               <>
                 <DialogHeader>
-                  <DialogTitle>Key Created</DialogTitle>
+                  <DialogTitle>{t("apikeys.key_created")}</DialogTitle>
                   <DialogDescription>
-                    Copy this key now — you won&apos;t be able to see it again.
+                    {t("apikeys.copy_key_warning")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
@@ -179,22 +181,22 @@ export default function APIKeysPage() {
                   </Button>
                 </div>
                 <DialogFooter showCloseButton>
-                  <Button onClick={closeCreateDialog}>Done</Button>
+                  <Button onClick={closeCreateDialog}>{t("common.done")}</Button>
                 </DialogFooter>
               </>
             ) : (
               <>
                 <DialogHeader>
-                  <DialogTitle>Create API Key</DialogTitle>
+                  <DialogTitle>{t("apikeys.create")}</DialogTitle>
                   <DialogDescription>
-                    Enter a name for your new API key.
+                    {t("apikeys.create_description")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2">
-                  <Label htmlFor="key-name">Name</Label>
+                  <Label htmlFor="key-name">{t("apikeys.create_name_label")}</Label>
                   <Input
                     id="key-name"
-                    placeholder="e.g. Production key"
+                    placeholder={t("apikeys.create_name_placeholder")}
                     value={newKeyName}
                     onChange={(e) => setNewKeyName(e.target.value)}
                     onKeyDown={(e) => {
@@ -204,10 +206,10 @@ export default function APIKeysPage() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={closeCreateDialog}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button onClick={handleCreate} disabled={!newKeyName.trim() || creating}>
-                    {creating ? "Creating..." : "Create"}
+                    {creating ? t("common.creating") : t("common.create")}
                   </Button>
                 </DialogFooter>
               </>
@@ -218,14 +220,14 @@ export default function APIKeysPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">Your Keys</CardTitle>
+          <CardTitle className="font-display">{t("apikeys.your_keys")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
             <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search keys..."
+                placeholder={t("apikeys.search_keys")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -245,7 +247,7 @@ export default function APIKeysPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Key className="mb-3 size-10 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
-                No API keys yet. Create one to get started.
+                {t("apikeys.empty")}
               </p>
             </div>
           ) : (
@@ -271,11 +273,11 @@ export default function APIKeysPage() {
                           onClick={() => openDeleteConfirm(key)}
                         >
                           <Trash2 className="mr-1 size-3" />
-                          Delete
+                          {t("common.delete")}
                         </Button>
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">
-                        Created {new Date(key.createdAt).toLocaleDateString()}
+                        {t("apikeys.created")} {new Date(key.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   ))}
@@ -284,10 +286,10 @@ export default function APIKeysPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Key</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t("apikeys.name")}</TableHead>
+                    <TableHead>{t("apikeys.key")}</TableHead>
+                    <TableHead>{t("apikeys.created")}</TableHead>
+                    <TableHead className="text-right">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -308,7 +310,7 @@ export default function APIKeysPage() {
                           onClick={() => openDeleteConfirm(key)}
                         >
                           <Trash2 className="mr-1 size-3" />
-                          Delete
+                          {t("common.delete")}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -332,16 +334,16 @@ export default function APIKeysPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="size-5 text-destructive" />
-              Are you sure?
+              {t("common.are_you_sure")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete API key <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
+              {t("apikeys.delete_description").replace("{name}", deleteTarget?.name ?? "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
-              {deleting !== null ? "Deleting..." : "Delete"}
+              {deleting !== null ? t("common.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

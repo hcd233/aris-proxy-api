@@ -20,106 +20,106 @@ var (
 	// ==================== 通用错误 ====================
 
 	// ErrInternal 通用内部错误（兜底）
-	ErrInternal = newFromSentinel(newSentinel("internal_error", model.NewError(10000, "InternalError")))
+	ErrInternal = newFromSentinel(newSentinel("internal_error", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrBadRequest 请求参数错误
-	ErrBadRequest = newFromSentinel(newSentinel("bad_request", model.NewError(10006, "BadRequest")))
+	ErrBadRequest = newFromSentinel(newSentinel("bad_request", model.NewErrorWithKey(10006, "Bad Request", "error.bad_request")))
 
 	// ErrUnauthorized 未授权
-	ErrUnauthorized = newFromSentinel(newSentinel("unauthorized", model.NewError(10001, "Unauthorized")))
+	ErrUnauthorized = newFromSentinel(newSentinel("unauthorized", model.NewErrorWithKey(10001, "Unauthorized", "error.unauthorized")))
 
 	// ErrNoPermission 没有权限
-	ErrNoPermission = newFromSentinel(newSentinel("no_permission", model.NewError(10002, "NoPermission")))
+	ErrNoPermission = newFromSentinel(newSentinel("no_permission", model.NewErrorWithKey(10002, "No Permission", "error.no_permission")))
 
 	// ErrDataNotExists 数据不存在
-	ErrDataNotExists = newFromSentinel(newSentinel("data_not_exists", model.NewError(10003, "DataNotExists")))
+	ErrDataNotExists = newFromSentinel(newSentinel("data_not_exists", model.NewErrorWithKey(10003, "Data Not Found", "error.data_not_exists")))
 
 	// ErrDataExists 数据已存在
-	ErrDataExists = newFromSentinel(newSentinel("data_exists", model.NewError(10004, "DataExists")))
+	ErrDataExists = newFromSentinel(newSentinel("data_exists", model.NewErrorWithKey(10004, "Data Already Exists", "error.data_exists")))
 
 	// ErrTooManyRequests 请求过于频繁
-	ErrTooManyRequests = newFromSentinel(newSentinel("too_many_requests", model.NewError(10005, "TooManyRequests")))
+	ErrTooManyRequests = newFromSentinel(newSentinel("too_many_requests", model.NewErrorWithKey(10005, "Too Many Requests", "error.too_many_requests")))
 
 	// ErrInsufficientQuota 配额不足
-	ErrInsufficientQuota = newFromSentinel(newSentinel("insufficient_quota", model.NewError(10007, "InsufficientQuota")))
+	ErrInsufficientQuota = newFromSentinel(newSentinel("insufficient_quota", model.NewErrorWithKey(10007, "Insufficient Quota", "error.insufficient_quota")))
 
 	// ErrQuotaExceeded 配额超限
-	ErrQuotaExceeded = newFromSentinel(newSentinel("quota_exceeded", model.NewError(10008, "QuotaExceeded")))
+	ErrQuotaExceeded = newFromSentinel(newSentinel("quota_exceeded", model.NewErrorWithKey(10008, "Quota Exceeded", "error.quota_exceeded")))
 
 	// ErrResourceLocked 资源锁定
-	ErrResourceLocked = newFromSentinel(newSentinel("resource_locked", model.NewError(10009, "ResourceLocked")))
+	ErrResourceLocked = newFromSentinel(newSentinel("resource_locked", model.NewErrorWithKey(10009, "Resource Locked", "error.resource_locked")))
 
 	// ErrContentBlocked 内容违反策略
-	ErrContentBlocked = newFromSentinel(newSentinel("content_blocked", model.NewError(10010, "ContentBlocked")))
+	ErrContentBlocked = newFromSentinel(newSentinel("content_blocked", model.NewErrorWithKey(10010, "Content Blocked", "error.content_blocked")))
 
 	// ==================== 数据库错误 ====================
 
 	// ErrDBQuery 数据库查询错误
-	ErrDBQuery = newFromSentinel(newSentinel("db_query", model.NewError(10000, "InternalError")))
+	ErrDBQuery = newFromSentinel(newSentinel("db_query", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrDBCreate 数据库创建错误
-	ErrDBCreate = newFromSentinel(newSentinel("db_create", model.NewError(10000, "InternalError")))
+	ErrDBCreate = newFromSentinel(newSentinel("db_create", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrDBUpdate 数据库更新错误
-	ErrDBUpdate = newFromSentinel(newSentinel("db_update", model.NewError(10000, "InternalError")))
+	ErrDBUpdate = newFromSentinel(newSentinel("db_update", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrDBDelete 数据库删除错误
-	ErrDBDelete = newFromSentinel(newSentinel("db_delete", model.NewError(10000, "InternalError")))
+	ErrDBDelete = newFromSentinel(newSentinel("db_delete", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrDBClose 数据库关闭错误
-	ErrDBClose = newFromSentinel(newSentinel("db_close", model.NewError(10000, "InternalError")))
+	ErrDBClose = newFromSentinel(newSentinel("db_close", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ==================== 认证与鉴权错误 ====================
 
 	// ErrJWTDecode JWT 解码错误
-	ErrJWTDecode = newFromSentinel(newSentinel("jwt_decode", model.NewError(10001, "Unauthorized")))
+	ErrJWTDecode = newFromSentinel(newSentinel("jwt_decode", model.NewErrorWithKey(10001, "Unauthorized", "error.unauthorized")))
 
 	// ErrJWTEncode JWT 编码错误
-	ErrJWTEncode = newFromSentinel(newSentinel("jwt_encode", model.NewError(10000, "InternalError")))
+	ErrJWTEncode = newFromSentinel(newSentinel("jwt_encode", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrOAuth2Exchange OAuth2 token 交换错误
-	ErrOAuth2Exchange = newFromSentinel(newSentinel("oauth2_exchange", model.NewError(10001, "Unauthorized")))
+	ErrOAuth2Exchange = newFromSentinel(newSentinel("oauth2_exchange", model.NewErrorWithKey(10001, "Unauthorized", "error.unauthorized")))
 
 	// ErrOAuth2UserInfo OAuth2 用户信息获取错误
-	ErrOAuth2UserInfo = newFromSentinel(newSentinel("oauth2_user_info", model.NewError(10000, "InternalError")))
+	ErrOAuth2UserInfo = newFromSentinel(newSentinel("oauth2_user_info", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ==================== DTO 转换错误 ====================
 
 	// ErrDTOConvert DTO 格式转换错误
-	ErrDTOConvert = newFromSentinel(newSentinel("dto_convert", model.NewError(10000, "InternalError")))
+	ErrDTOConvert = newFromSentinel(newSentinel("dto_convert", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrDTOMarshal DTO 序列化错误
-	ErrDTOMarshal = newFromSentinel(newSentinel("dto_marshal", model.NewError(10000, "InternalError")))
+	ErrDTOMarshal = newFromSentinel(newSentinel("dto_marshal", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrDTOUnmarshal DTO 反序列化错误
-	ErrDTOUnmarshal = newFromSentinel(newSentinel("dto_unmarshal", model.NewError(10000, "InternalError")))
+	ErrDTOUnmarshal = newFromSentinel(newSentinel("dto_unmarshal", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ==================== SSE 流式处理错误 ====================
 
 	// ErrSSEParse SSE 事件解析错误
-	ErrSSEParse = newFromSentinel(newSentinel("sse_parse", model.NewError(10000, "InternalError")))
+	ErrSSEParse = newFromSentinel(newSentinel("sse_parse", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrSSEUnknownEvent SSE 未知事件类型
-	ErrSSEUnknownEvent = newFromSentinel(newSentinel("sse_unknown_event", model.NewError(10000, "InternalError")))
+	ErrSSEUnknownEvent = newFromSentinel(newSentinel("sse_unknown_event", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ==================== 对象存储错误 ====================
 
 	// ErrObjStorage 对象存储操作错误
-	ErrObjStorage = newFromSentinel(newSentinel("obj_storage", model.NewError(10000, "InternalError")))
+	ErrObjStorage = newFromSentinel(newSentinel("obj_storage", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ==================== 上游代理错误 ====================
 
 	// ErrProxyRequest 上游请求构建错误
-	ErrProxyRequest = newFromSentinel(newSentinel("proxy_request", model.NewError(10000, "InternalError")))
+	ErrProxyRequest = newFromSentinel(newSentinel("proxy_request", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrProxyResponse 上游响应读取/解析错误
-	ErrProxyResponse = newFromSentinel(newSentinel("proxy_response", model.NewError(10000, "InternalError")))
+	ErrProxyResponse = newFromSentinel(newSentinel("proxy_response", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ErrProxySend 上游请求发送错误
-	ErrProxySend = newFromSentinel(newSentinel("proxy_send", model.NewError(10000, "InternalError")))
+	ErrProxySend = newFromSentinel(newSentinel("proxy_send", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
 	// ==================== 校验错误 ====================
 
 	// ErrValidation 输入校验错误
-	ErrValidation = newFromSentinel(newSentinel("validation", model.NewError(10006, "BadRequest")))
+	ErrValidation = newFromSentinel(newSentinel("validation", model.NewErrorWithKey(10006, "Validation Error", "error.validation")))
 )

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import type { OAuth2Provider } from "@/lib/types";
 
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const { login, handleCallback, accessToken, user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const t = useT();
 
   const processCallback = useCallback(async () => {
     const params = new URLSearchParams(window.location.search);
@@ -53,7 +55,6 @@ export default function LoginPage() {
   }, [processCallback]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Redirect to home if already authenticated
   useEffect(() => {
     if (accessToken && user) {
       window.location.href = "/web/";
@@ -68,7 +69,7 @@ export default function LoginPage() {
             Aris Proxy
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Processing login...
+            {t("common.loading")}
           </p>
         </div>
       </div>
@@ -87,8 +88,7 @@ export default function LoginPage() {
               Aris Proxy
             </h1>
             <p className="mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
-              A warm, focused console for managing your LLM gateway,
-              sessions, API keys, endpoints, and model routing.
+              {t("auth.login_subtitle")}
             </p>
           </div>
           <p className="text-xs text-sidebar-foreground/50">
@@ -102,7 +102,7 @@ export default function LoginPage() {
               Aris Proxy
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Sign in to continue
+              {t("auth.login_subtitle")}
             </p>
           </div>
           <div className="hidden md:block">
@@ -122,10 +122,10 @@ export default function LoginPage() {
 
           <div className="mt-8 flex flex-col gap-3">
             <Button size="lg" onClick={() => login("github")}>
-              Sign in with GitHub
+              {t("auth.login_github")}
             </Button>
             <Button size="lg" variant="outline" onClick={() => login("google")}>
-              Sign in with Google
+              {t("auth.login_google")}
             </Button>
           </div>
         </div>

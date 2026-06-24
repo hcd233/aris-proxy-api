@@ -47,4 +47,7 @@ const (
 	// CtxKeyPassthroughResponseHeaders 从上游透传到客户端的响应头
 	//	@update 2026-04-29 10:00:00
 	CtxKeyPassthroughResponseHeaders enum.CtxKey = "passthroughResponseHeaders"
+
+	// CtxKeyLocale 请求语言环境
+	CtxKeyLocale enum.CtxKey = "locale"
 )

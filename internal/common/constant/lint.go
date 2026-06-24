@@ -41,4 +41,6 @@ const (
 	RuleTestingSleep        = "testing.sleep"
 
 	RuleDTONaming = "architecture.dto_naming"
+
+	RuleImportAliasUnderscore = "style.import_alias_underscore"
 )

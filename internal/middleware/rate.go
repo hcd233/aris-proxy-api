@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
@@ -105,7 +106,7 @@ func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, k
 		logger := logger.WithCtx(ctx.Context())
 		if cache == nil {
 			logger.Error("[TokenBucketRateLimiter] Redis dependency is nil")
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 		var keyValue, value string
@@ -122,7 +123,7 @@ func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, k
 					zap.String("serviceName", serviceName),
 					zap.String("key", string(key)),
 				)
-				lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+				lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 				return
 			}
 		}
@@ -139,7 +140,7 @@ func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, k
 		).StringSlice()
 		if err != nil {
 			logger.Error("[TokenBucketRateLimiter] Failed to execute rate limit script", zap.Error(err))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
@@ -159,7 +160,7 @@ func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, k
 			ctx.SetHeader(constant.HTTPHeaderXRateLimitLimit, limitStr)
 			ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, constant.ZeroString)
 			ctx.SetHeader(constant.HTTPHeaderRetryAfter, strconv.Itoa(retryAfterSeconds))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 

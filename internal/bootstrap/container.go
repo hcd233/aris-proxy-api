@@ -77,6 +77,7 @@ func registerMiddlewares(params middlewareParams) {
 		middleware.CORSMiddleware(),
 		middleware.CompressMiddleware(),
 		middleware.TraceMiddleware(),
+		middleware.LocaleMiddleware(),
 		middleware.LogMiddleware(middleware.LogMiddlewareConfig{
 			SamplingRules: []middleware.LogSamplingRule{
 				{Path: constant.RoutePathHealth, Interval: constant.LogMiddlewareSamplingInterval},
