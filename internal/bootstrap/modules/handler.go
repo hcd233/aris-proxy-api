@@ -15,6 +15,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/fx"
 )
 
@@ -45,6 +47,8 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewAnthropicHandler,
 		NewBlockedDependencies,
 		handler.NewBlockedHandler,
+		NewMetricsDependencies,
+		handler.NewMetricsHandler,
 	),
 )
 
@@ -104,12 +108,12 @@ func NewSessionDependencies(
 	}
 }
 
-func NewOpenAIDependencies(useCase llmproxyport.OpenAIUseCase) handler.OpenAIDependencies {
-	return handler.OpenAIDependencies{UseCase: useCase}
+func NewOpenAIDependencies(useCase llmproxyport.OpenAIUseCase, sseGauge metrics.SSEGauge) handler.OpenAIDependencies {
+	return handler.OpenAIDependencies{UseCase: useCase, SSEGauge: sseGauge}
 }
 
-func NewAnthropicDependencies(useCase llmproxyport.AnthropicUseCase) handler.AnthropicDependencies {
-	return handler.AnthropicDependencies{UseCase: useCase}
+func NewAnthropicDependencies(useCase llmproxyport.AnthropicUseCase, sseGauge metrics.SSEGauge) handler.AnthropicDependencies {
+	return handler.AnthropicDependencies{UseCase: useCase, SSEGauge: sseGauge}
 }
 
 func NewAuditDependencies(svc auditport.AuditService) handler.AuditDependencies {
@@ -140,4 +144,8 @@ func NewModelDependencies(create modelport.CreateModelHandler, update modelport.
 
 func NewBlockedDependencies(create blockedport.CreateBlockedHandler, del blockedport.DeleteBlockedHandler, list blockedport.ListBlockedHandler) handler.BlockedDependencies {
 	return handler.BlockedDependencies{Create: create, Delete: del, List: list}
+}
+
+func NewMetricsDependencies(registry *prometheus.Registry) handler.MetricsDependencies {
+	return handler.MetricsDependencies{Registry: registry}
 }

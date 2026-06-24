@@ -51,6 +51,7 @@ import type {
   ListCronCallAuditsRsp,
   CronCallAuditOptionListReq,
   CronCallAuditOptionListRsp,
+  MetricsJSONRsp,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -660,6 +661,10 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<CronCallAuditOptionListRsp>(`/api/v1/audit/cron/option/list?${sp}`);
+  }
+
+  async getMetricsJSON(): Promise<MetricsJSONRsp> {
+    return this.request<MetricsJSONRsp>("/api/v1/metrics/json");
   }
 }
 

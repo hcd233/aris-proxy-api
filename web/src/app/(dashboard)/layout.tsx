@@ -36,6 +36,7 @@ import {
   ScrollText,
   Ban,
   Timer,
+  Activity,
 } from "lucide-react";
 
 interface NavItem {
@@ -99,6 +100,12 @@ const navItems: NavItem[] = [
     label: "Cron Audit",
     href: "/audit/cron/",
     icon: <ScrollText className="size-4" />,
+    adminOnly: true,
+  },
+  {
+    label: "Monitor",
+    href: "/monitor/",
+    icon: <Activity className="size-4" />,
     adminOnly: true,
   },
   {

@@ -566,3 +566,21 @@ export interface ListBlockedRsp extends CommonRsp {
   blocked?: BlockedItem[];
   pageInfo?: PageInfo;
 }
+
+// ─── Metrics ───────────────────────────────────────────────────────────────────
+
+export interface MetricSampleItem {
+  labels?: Record<string, string>;
+  value: number;
+}
+
+export interface MetricFamilyItem {
+  name: string;
+  type: string;
+  help: string;
+  samples?: MetricSampleItem[];
+}
+
+export interface MetricsJSONRsp extends CommonRsp {
+  metrics?: MetricFamilyItem[];
+}
