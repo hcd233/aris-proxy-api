@@ -54,7 +54,7 @@ func FromResponseAPIInputItems(items []*ResponseInputItem) ([]*vo.UnifiedMessage
 			msgs = append(msgs, um)
 		}
 	}
-	return msgs, nil
+	return mergeConsecutiveAssistantMessages(msgs), nil
 }
 
 // FromResponseAPIOutputItems 将 Response API 响应 output 数组转换为 UnifiedMessage 列表
@@ -102,7 +102,75 @@ func FromResponseAPIOutputItems(items []*ResponseInputItem) ([]*vo.UnifiedMessag
 			ReasoningContent: pendingReasoning.String(),
 		})
 	}
-	return msgs, nil
+	return mergeConsecutiveAssistantMessages(msgs), nil
+}
+
+// mergeConsecutiveAssistantMessages 将连续的 assistant 消息合并为一条，
+// 与 converter 路径的 mergeConsecutiveAssistantMessages 行为一致：
+// content 取首个非空、tool_calls 追加、reasoning_content / refusal 取首个非空。
+// 空的 assistant 消息（无 content、tool_calls、reasoning、refusal）在合并后被丢弃。
+func mergeConsecutiveAssistantMessages(msgs []*vo.UnifiedMessage) []*vo.UnifiedMessage {
+	if len(msgs) == 0 {
+		return msgs
+	}
+	merged := make([]*vo.UnifiedMessage, 0, len(msgs))
+	var pending *vo.UnifiedMessage
+	flushPending := func() {
+		if pending != nil && !isEmptyAssistantMessage(pending) {
+			merged = append(merged, pending)
+		}
+		pending = nil
+	}
+	for _, msg := range msgs {
+		if msg == nil {
+			continue
+		}
+		if msg.Role != enum.RoleAssistant {
+			flushPending()
+			merged = append(merged, msg)
+			continue
+		}
+		if pending == nil {
+			pending = msg
+		} else {
+			mergeAssistantInto(pending, msg)
+		}
+	}
+	flushPending()
+	return merged
+}
+
+func mergeAssistantInto(dst, src *vo.UnifiedMessage) {
+	if dst.Content == nil || (dst.Content.Text == "" && len(dst.Content.Parts) == 0) {
+		dst.Content = src.Content
+	}
+	dst.ToolCalls = append(dst.ToolCalls, src.ToolCalls...)
+	if src.ReasoningContent != "" {
+		if dst.ReasoningContent == "" {
+			dst.ReasoningContent = src.ReasoningContent
+		} else {
+			dst.ReasoningContent = dst.ReasoningContent + "\n" + src.ReasoningContent
+		}
+	}
+	if src.Refusal != "" && dst.Refusal == "" {
+		dst.Refusal = src.Refusal
+	}
+}
+
+func isEmptyAssistantMessage(msg *vo.UnifiedMessage) bool {
+	if msg == nil || msg.Role != enum.RoleAssistant {
+		return false
+	}
+	if len(msg.ToolCalls) > 0 {
+		return false
+	}
+	if msg.ReasoningContent != "" {
+		return false
+	}
+	if msg.Refusal != "" {
+		return false
+	}
+	return msg.Content == nil || (msg.Content.Text == "" && len(msg.Content.Parts) == 0)
 }
 
 // fromResponseAPIItem 转换单个 Response API item，无法映射时返回 (nil, nil)

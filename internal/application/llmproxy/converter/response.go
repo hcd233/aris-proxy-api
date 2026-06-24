@@ -243,18 +243,14 @@ func responseMessageContentToChat(content *dto.ResponseInputMessageContent) *dto
 		return &dto.OpenAIMessageContent{Text: content.Text}
 	}
 	parts := make([]*dto.OpenAIChatCompletionContentPart, 0, len(content.Parts))
-	var texts []string
-	multimodal := false
 	for _, part := range content.Parts {
 		if part == nil {
 			continue
 		}
 		switch part.Type {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
-			texts = append(texts, lo.FromPtr(part.Text))
 			parts = append(parts, &dto.OpenAIChatCompletionContentPart{Type: enum.ContentPartTypeText, Text: part.Text})
 		case enum.ResponseContentTypeInputImage:
-			multimodal = true
 			parts = append(parts, &dto.OpenAIChatCompletionContentPart{
 				Type: enum.ContentPartTypeImageURL,
 				ImageURL: &dto.OpenAIChatCompletionImageURL{
@@ -263,15 +259,15 @@ func responseMessageContentToChat(content *dto.ResponseInputMessageContent) *dto
 				},
 			})
 		case enum.ResponseContentTypeRefusal:
-			texts = append(texts, lo.FromPtr(part.Refusal))
+			parts = append(parts, &dto.OpenAIChatCompletionContentPart{Type: enum.ContentPartTypeText, Text: part.Refusal})
 		default:
 			continue
 		}
 	}
-	if multimodal {
-		return &dto.OpenAIMessageContent{Parts: parts}
+	if len(parts) == 0 {
+		return &dto.OpenAIMessageContent{Text: content.Text}
 	}
-	return &dto.OpenAIMessageContent{Text: strings.Join(texts, "\n")}
+	return &dto.OpenAIMessageContent{Parts: parts}
 }
 
 func responseFunctionCallToChat(item *dto.ResponseInputItem) *dto.OpenAIChatCompletionMessageParam {

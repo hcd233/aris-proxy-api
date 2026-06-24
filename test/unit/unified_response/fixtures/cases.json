@@ -191,5 +191,99 @@
       "error": {"code": "server_error", "message": "upstream model unavailable"},
       "usage": {"input_tokens": 2, "output_tokens": 0, "total_tokens": 2}
     }
+  },
+  {
+    "name": "reasoning_function_calls_message_merged",
+    "description": "Output with reasoning + 2 function_calls + message text — all assistant items should merge into one UnifiedMessage with reasoning_content, 2 tool_calls, and content.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": "check weather and time"
+    },
+    "response_body": {
+      "id": "resp_7",
+      "object": "response",
+      "status": "completed",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "id": "rs_1",
+          "type": "reasoning",
+          "summary": [{"type": "summary_text", "text": "I need to call two tools."}]
+        },
+        {
+          "id": "fc_1",
+          "type": "function_call",
+          "call_id": "call_w",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Shanghai\"}"
+        },
+        {
+          "id": "fc_2",
+          "type": "function_call",
+          "call_id": "call_t",
+          "name": "get_time",
+          "arguments": "{\"timezone\":\"Asia/Shanghai\"}"
+        },
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {"type": "output_text", "text": "Let me check both for you."}
+          ]
+        }
+      ],
+      "usage": {"input_tokens": 10, "output_tokens": 20, "total_tokens": 30}
+    }
+  },
+  {
+    "name": "consecutive_function_calls_in_input",
+    "description": "Input with user + 2 consecutive function_calls + function_call_output + final message — the 2 function_calls should merge into one assistant message, and the final message should be a separate assistant after the tool output.",
+    "request_body": {
+      "model": "gpt-5.4",
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [{"type": "input_text", "text": "check weather and time"}]
+        },
+        {
+          "type": "function_call",
+          "call_id": "call_w",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Shanghai\"}"
+        },
+        {
+          "type": "function_call",
+          "call_id": "call_t",
+          "name": "get_time",
+          "arguments": "{\"timezone\":\"Asia/Shanghai\"}"
+        },
+        {
+          "type": "function_call_output",
+          "call_id": "call_w",
+          "output": "Sunny, 25C"
+        },
+        {
+          "type": "function_call_output",
+          "call_id": "call_t",
+          "output": "14:00 CST"
+        },
+        {
+          "type": "message",
+          "role": "assistant",
+          "content": [{"type": "output_text", "text": "It's sunny and 14:00."}]
+        }
+      ]
+    },
+    "response_body": {
+      "id": "resp_8",
+      "object": "response",
+      "status": "completed",
+      "model": "gpt-5.4",
+      "output": [],
+      "usage": {"input_tokens": 5, "output_tokens": 0, "total_tokens": 5}
+    }
   }
 ]
