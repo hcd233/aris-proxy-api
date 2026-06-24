@@ -26,6 +26,7 @@ import rehypeRaw from "rehype-raw";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 import "highlight.js/styles/atom-one-dark.css";
 
@@ -133,6 +134,7 @@ function CodeBlock({
   highlightedClassName?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
 
   const onCopy = () => {
     void navigator.clipboard.writeText(value).then(() => {
@@ -151,17 +153,17 @@ function CodeBlock({
           type="button"
           onClick={onCopy}
           className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-[#E8DDD3]/35 transition-colors hover:bg-white/5 hover:text-[#E8DDD3]/70"
-          aria-label="Copy code"
+          aria-label={t("markdown.copy_code_aria")}
         >
           {copied ? (
             <>
               <Check className="size-3" />
-              copied
+              {t("markdown.copied")}
             </>
           ) : (
             <>
               <Copy className="size-3" />
-              copy
+              {t("markdown.copy")}
             </>
           )}
         </button>

@@ -51,6 +51,35 @@ func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingReque
 	}
 }
 
+func TestMarshalOpenAIResponseBodyForModel_IncludesSummaryForInputItems(t *testing.T) {
+	t.Parallel()
+	req := &dto.OpenAICreateResponseReq{
+		Model: lo.ToPtr("gpt-5.5"),
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{
+				{
+					Type: lo.ToPtr(enum.ResponseInputItemTypeMessage),
+					Role: lo.ToPtr(enum.RoleUser),
+					Content: &dto.ResponseInputMessageContent{
+						Text: "Hello",
+					},
+				},
+				{
+					Type:   lo.ToPtr(enum.ResponseInputItemTypeReasoning),
+					Status: lo.ToPtr("completed"),
+				},
+			},
+		},
+	}
+
+	body := proxyutil.MarshalOpenAIResponseBodyForModel(req, "upstream-model")
+	bodyStr := string(body)
+
+	if !strings.Contains(bodyStr, `"summary":[]`) {
+		t.Fatalf("serialized body must include summary:[] for each input item, got: %s", bodyStr)
+	}
+}
+
 func TestMarshalAnthropicMessageBodyForModel_UsesUpstreamModelWithoutMutatingRequest(t *testing.T) {
 	t.Parallel()
 	req := &dto.AnthropicCreateMessageReq{

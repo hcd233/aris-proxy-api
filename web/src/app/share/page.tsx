@@ -130,20 +130,20 @@ function SharedSessionView() {
         } else {
           setError({
             kind: "unknown",
-            message: `Request failed (${err.status})`,
+            message: t("share_page.request_failed").replace("{status}", String(err.status)),
           });
         }
       } else {
         setError({
           kind: "unknown",
           message:
-            err instanceof Error ? err.message : "Unexpected network error",
+            err instanceof Error ? err.message : t("share_page.network_error"),
         });
       }
     } finally {
       setLoading(false);
     }
-  }, [shareID]);
+  }, [shareID, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {

@@ -484,7 +484,7 @@ type ResponseInputItem struct {
 	Reason            *string `json:"reason,omitempty" doc:"MCP 审批原因"`
 
 	// ---------- Reasoning ----------
-	Summary          []*ResponseReasoningSummary     `json:"summary,omitempty" doc:"Reasoning 摘要内容"`
+	Summary          *[]*ResponseReasoningSummary    `json:"summary,omitempty" doc:"Reasoning 摘要内容"`
 	ReasoningContent []*ResponseReasoningTextContent `json:"-"` // 内部保留，序列化时借由自定义 MarshalJSON 输出为 content 字段
 
 	// ---------- Compaction / Reasoning ----------

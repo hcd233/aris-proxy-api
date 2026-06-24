@@ -25,6 +25,7 @@ import {
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useT } from "@/lib/i18n";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -79,6 +80,7 @@ function buildAuditFilter(user: string[], model: string[], status: string[]): st
 
 export default function AuditPage() {
   const isMobile = useIsMobile();
+  const t = useT();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -121,13 +123,13 @@ export default function AuditPage() {
           filter,
         });
         if (rsp.error) {
-          toast.error(rsp.error.message ?? "Failed to load audit logs");
+          toast.error(rsp.error.message ?? t("common.error"));
           return;
         }
         setLogs(rsp.logs ?? []);
         if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to load audit logs");
+        toast.error(err instanceof Error ? err.message : t("common.error"));
       } finally {
         setLoading(false);
       }
@@ -171,8 +173,8 @@ export default function AuditPage() {
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
     navigator.clipboard.writeText(traceId).then(
-      () => toast.success("TraceID copied"),
-      () => toast.error("Copy failed"),
+      () => toast.success(t("audit.trace_copied")),
+      () => toast.error(t("audit.copy_failed")),
     );
   };
 
@@ -180,16 +182,16 @@ export default function AuditPage() {
     <div className="space-y-8">
       <div>
           <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            Model Call Audit
+            {t("audit.model_page_title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Inspect model call records, latency, errors, and trace IDs.
+            {t("audit.model_page_subtitle")}
           </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">Audit Logs</CardTitle>
+          <CardTitle className="font-display">{t("audit.logs_title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Filters */}
@@ -207,7 +209,7 @@ export default function AuditPage() {
                 }}
               />
               <MultiSelectPill
-                label="User"
+                label={t("audit.filter_user")}
                 options={userOptions}
                 value={filterUser}
                 onChange={(v) => {
@@ -216,7 +218,7 @@ export default function AuditPage() {
                 }}
               />
               <MultiSelectPill
-                label="Model"
+                label={t("audit.filter_model")}
                 options={modelOptions}
                 value={filterModel}
                 onChange={(v) => {
@@ -225,7 +227,7 @@ export default function AuditPage() {
                 }}
               />
               <MultiSelectPill
-                label="Status"
+                label={t("audit.filter_status")}
                 options={statusOptions}
                 value={filterStatus}
                 onChange={(v) => {
@@ -246,14 +248,14 @@ export default function AuditPage() {
                   }}
                 >
                   <X size={14} />
-                  Clear filters
+                  {t("audit.clear_filters")}
                 </Button>
               )}
             </div>
             <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by traceID or model..."
+                placeholder={t("audit.search_placeholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -274,7 +276,7 @@ export default function AuditPage() {
           ) : logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ScrollText className="mb-3 size-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">No audit logs in selected range</p>
+              <p className="text-sm text-muted-foreground">{t("audit.no_logs_range")}</p>
             </div>
           ) : isMobile ? (
             <div className="space-y-3">
@@ -332,7 +334,7 @@ export default function AuditPage() {
                             e.stopPropagation();
                             handleCopyTrace(log.traceId);
                           }}
-                          title="Click to copy full traceID"
+                          title={t("audit.copy_traceid_title")}
                         >
                           {log.traceId.slice(-6) || "—"}
                         </span>
@@ -356,53 +358,53 @@ export default function AuditPage() {
                         <div className="border-t border-border px-4 pb-4 pt-3">
                           {hasError && (
                             <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-xs">
-                              <span className="font-medium text-destructive">Error: </span>
+                              <span className="font-medium text-destructive">{t("audit.error_label")}</span>
                               <span className="text-destructive">{log.errorMessage}</span>
                             </div>
                           )}
 
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                             <div>
-                              <span className="text-muted-foreground">Input Tokens</span>
+                              <span className="text-muted-foreground">{t("audit.input_tokens_label")}</span>
                               <p>{log.inputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Output Tokens</span>
+                              <span className="text-muted-foreground">{t("audit.output_tokens_label")}</span>
                               <p>{log.outputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Cache Read</span>
+                              <span className="text-muted-foreground">{t("audit.cache_read_colon")}</span>
                               <p>{log.cacheReadInputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Cache Creation</span>
+                              <span className="text-muted-foreground">{t("audit.cache_creation")}</span>
                               <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">I (First Token)</span>
+                              <span className="text-muted-foreground">{t("audit.first_token_label")}</span>
                               <p>{formatMs(log.firstTokenLatencyMs)}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">O (Stream Duration)</span>
+                              <span className="text-muted-foreground">{t("audit.stream_label")}</span>
                               <p>{log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Upstream</span>
+                              <span className="text-muted-foreground">{t("audit.upstream")}</span>
                               <p className="flex items-center gap-1.5">
                                 <ProviderIcon protocol={log.upstreamProtocol} size={14} />
                                 {formatProtocol(log.upstreamProtocol)}
                               </p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Endpoint</span>
+                              <span className="text-muted-foreground">{t("audit.endpoint_name")}</span>
                               <p>{log.endpoint || "—"}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">User</span>
+                              <span className="text-muted-foreground">{t("audit.user_name")}</span>
                               <p>{log.userName || "—"}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">API Protocol</span>
+                              <span className="text-muted-foreground">{t("audit.api_protocol")}</span>
                               <p className="flex items-center gap-1.5">
                                 <ProviderIcon protocol={log.apiProtocol} size={14} />
                                 {formatProtocol(log.apiProtocol)}
@@ -411,7 +413,7 @@ export default function AuditPage() {
                           </div>
 
                           <div className="mt-3 border-t border-border pt-2 text-xs">
-                            <span className="text-muted-foreground">UA: </span>
+                            <span className="text-muted-foreground">{t("audit.ua_label")}</span>
                             <span className="break-all">{log.userAgent || "—"}</span>
                           </div>
 
@@ -423,7 +425,7 @@ export default function AuditPage() {
                               className="cursor-pointer font-mono text-muted-foreground underline-offset-2 hover:underline"
                               onClick={() => handleCopyTrace(log.traceId)}
                             >
-                              Copy TraceID
+                              {t("audit.copy_traceid")}
                             </span>
                           </div>
                         </div>
@@ -437,16 +439,16 @@ export default function AuditPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Endpoint</TableHead>
-                  <TableHead>Protocol</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tokens</TableHead>
-                  <TableHead>Latency</TableHead>
-                  <TableHead>UserAgent</TableHead>
-                  <TableHead>TraceID</TableHead>
+                  <TableHead>{t("audit.time")}</TableHead>
+                  <TableHead>{t("audit.filter_model")}</TableHead>
+                  <TableHead>{t("audit.endpoint_name")}</TableHead>
+                  <TableHead>{t("audit.protocol")}</TableHead>
+                  <TableHead>{t("audit.user_name")}</TableHead>
+                  <TableHead>{t("audit.filter_status")}</TableHead>
+                  <TableHead>{t("audit.tokens")}</TableHead>
+                  <TableHead>{t("audit.latency")}</TableHead>
+                  <TableHead>{t("audit.useragent")}</TableHead>
+                  <TableHead>{t("audit.copy_traceid")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -567,7 +569,7 @@ export default function AuditPage() {
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                         onClick={() => handleCopyTrace(log.traceId)}
-                        title="Click to copy full traceID"
+                        title={t("audit.copy_traceid_title")}
                       >
                         {log.traceId.slice(-6) || "—"}
                       </TableCell>
@@ -581,7 +583,7 @@ export default function AuditPage() {
           <PaginationBar
             pageInfo={pageInfo}
             onChange={(page, pageSize) => refresh(page, pageSize)}
-            totalLabel="logs"
+            totalLabel={t("pagination.logs")}
           />
         </CardContent>
       </Card>

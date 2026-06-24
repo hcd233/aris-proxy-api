@@ -70,7 +70,7 @@ export default function BlockPage() {
         setPersistedPageSize(rsp.pageInfo.pageSize);
       }
     } catch {
-      toast.error("Failed to load blocked words");
+      toast.error(t("blocked.load_error"));
     } finally {
       setLoading(false);
     }
@@ -90,12 +90,12 @@ export default function BlockPage() {
     setSaving(true);
     try {
       await api.createBlocked({ word: form.word.trim() });
-      toast.success("Blocked word created");
+      toast.success(t("blocked.created_success"));
       setDialogOpen(false);
       setForm(emptyForm);
       fetchItems(persistedPage, persistedPageSize);
     } catch {
-      toast.error("Failed to create blocked word");
+      toast.error(t("blocked.create_error"));
     } finally {
       setSaving(false);
     }
@@ -105,12 +105,12 @@ export default function BlockPage() {
     if (!deleteTarget) return;
     try {
       await api.deleteBlocked(deleteTarget.id);
-      toast.success("Blocked word deleted");
+      toast.success(t("blocked.deleted_success"));
       setDeleteConfirmOpen(false);
       setDeleteTarget(null);
       fetchItems(persistedPage, persistedPageSize);
     } catch {
-      toast.error("Failed to delete blocked word");
+      toast.error(t("blocked.delete_error"));
     }
   }, [deleteTarget, fetchItems, persistedPage, persistedPageSize]);
 
@@ -120,7 +120,7 @@ export default function BlockPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("blocked.title")}</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">Manage sensitive word blacklist. Words matched in proxy requests will be blocked.</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{t("blocked.subtitle")}</p>
           </div>
           <Button onClick={() => { setForm(emptyForm); setDialogOpen(true); }}>
             <Plus /> {t("blocked.create")}
@@ -129,14 +129,14 @@ export default function BlockPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-display">All Blocked Words</CardTitle>
+            <CardTitle className="font-display">{t("blocked.all_words")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
               <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search words..."
+                  placeholder={t("blocked.search_placeholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
@@ -178,7 +178,7 @@ export default function BlockPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-16">ID</TableHead>
+                        <TableHead className="w-16">{t("blocked.id")}</TableHead>
                         <TableHead>{t("blocked.word")}</TableHead>
                         <TableHead className="w-24">{t("blocked.hit_count")}</TableHead>
                         <TableHead className="w-32">{t("common.created")}</TableHead>
@@ -206,7 +206,7 @@ export default function BlockPage() {
                 <PaginationBar
                   pageInfo={pageInfo}
                   onChange={(page, pageSize) => fetchItems(page, pageSize, searchQuery || undefined)}
-                  totalLabel="items"
+                  totalLabel={t("pagination.items")}
                 />
               </>
             )}

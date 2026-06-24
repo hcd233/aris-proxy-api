@@ -12,8 +12,10 @@ import {
 import type { ToolItem, UnifiedTool } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { CollapsibleText } from "./collapsible-text";
+import { useT } from "@/lib/i18n";
 
 export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   const toolData: UnifiedTool = tool.tool;
 
@@ -37,7 +39,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
             {toolData.name}
           </p>
           <p className="truncate text-[12px] leading-snug text-muted-foreground">
-            {toolData.description || "No description"}
+            {toolData.description || t("tool_sidebar.no_description")}
           </p>
         </div>
         {expanded ? (
@@ -52,7 +54,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
             <div>
               <p className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 <FileText className="size-3" />
-                Description
+                {t("tool_sidebar.description")}
               </p>
               <CollapsibleText
                 text={toolData.description}
@@ -65,7 +67,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
             <div>
               <p className="mb-1.5 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 <Braces className="size-3" />
-                Parameters
+                {t("tool_sidebar.parameters")}
               </p>
               <div className="space-y-1.5">
                 {Object.entries(paramProperties).map(([name, schema]) => (
@@ -79,7 +81,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
                       </span>
                       {requiredParams.includes(name) && (
                         <span className="text-[9px] font-medium uppercase tracking-wider text-rose-500">
-                          required
+                          {t("tool_sidebar.required")}
                         </span>
                       )}
                       {schema.type !== undefined && (
@@ -106,7 +108,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
           {params?.type !== undefined && (
             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
               <Hash className="size-3" />
-              Schema type: {params.type as string}
+              {t("tool_sidebar.schema_type").replace("{type}", params.type as string)}
             </div>
           )}
         </div>

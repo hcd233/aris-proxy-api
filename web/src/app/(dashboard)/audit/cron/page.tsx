@@ -20,6 +20,7 @@ import {
 import { ScrollText, Search, X } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -45,31 +46,31 @@ function buildCronAuditFilter(type: string[], status: string[]): string | undefi
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
-const statusLabelMap: Record<string, string> = {
-  success: "Success",
-  failed: "Failed",
-  panic: "Panic",
-  skipped: "Skipped",
-};
 
-const metadataLabelMap: Record<string, string> = {
-  checked_sessions_count: "Checked",
-  deduped_sessions_count: "Deduped",
-  purged_messages_count: "Messages",
-  purged_tools_count: "Tools",
-  scanned_messages_count: "Scanned",
-  extracted_messages_count: "Extracted",
-  synced_hits_count: "Synced Hits",
-};
-
-function formatMetadata(metadata: Record<string, number> | undefined | null): string {
-  if (!metadata || Object.keys(metadata).length === 0) return "—";
-  return Object.entries(metadata)
-    .map(([key, val]) => `${metadataLabelMap[key] ?? key}: ${val}`)
-    .join(" | ");
-}
 
 export default function CronAuditPage() {
+  const t = useT();
+  const statusLabelMap: Record<string, string> = {
+    success: t("cron_audit.status_success"),
+    failed: t("cron_audit.status_failed"),
+    panic: t("cron_audit.status_panic"),
+    skipped: t("cron_audit.status_skipped"),
+  };
+  const metadataLabelMap: Record<string, string> = {
+    checked_sessions_count: "Checked",
+    deduped_sessions_count: "Deduped",
+    purged_messages_count: "Messages",
+    purged_tools_count: "Tools",
+    scanned_messages_count: "Scanned",
+    extracted_messages_count: "Extracted",
+    synced_hits_count: "Synced Hits",
+  };
+  function formatMetadata(metadata: Record<string, number> | undefined | null): string {
+    if (!metadata || Object.keys(metadata).length === 0) return "—";
+    return Object.entries(metadata)
+      .map(([key, val]) => `${metadataLabelMap[key] ?? key}: ${val}`)
+      .join(" | ");
+  }
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cronAudit.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.cronAudit.pageSize", 20);
   const [logs, setLogs] = useState<CronCallAuditItem[]>([]);
@@ -110,7 +111,7 @@ export default function CronAuditPage() {
           filter,
         });
         if (rsp.error) {
-          toast.error(rsp.error.message ?? "Failed to load cron audit logs");
+          toast.error(rsp.error.message ?? t("common.error"));
           return;
         }
         setLogs(rsp.logs ?? []);
@@ -120,7 +121,7 @@ export default function CronAuditPage() {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to load cron audit logs");
+        toast.error(err instanceof Error ? err.message : t("common.error"));
       } finally {
         setLoading(false);
       }
@@ -160,8 +161,8 @@ export default function CronAuditPage() {
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
     navigator.clipboard.writeText(traceId).then(
-      () => toast.success("TraceID copied"),
-      () => toast.error("Copy failed"),
+      () => toast.success(t("cron_audit.trace_copied")),
+      () => toast.error(t("cron_audit.copy_failed")),
     );
   };
 
@@ -184,16 +185,16 @@ export default function CronAuditPage() {
       <div className="space-y-8">
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            Cron Audit
+            {t("cron_audit.page_title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Inspect cron job execution records, status, duration, and trace IDs.
+            {t("cron_audit.page_subtitle")}
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-display">Cron Call Audit Logs</CardTitle>
+            <CardTitle className="font-display">{t("cron_audit.logs_title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -210,7 +211,7 @@ export default function CronAuditPage() {
                   }}
                 />
                 <MultiSelectPill
-                  label="Type"
+                  label={t("cron_audit.filter_type")}
                   options={typeOptions}
                   value={filterType}
                   onChange={(v) => {
@@ -219,7 +220,7 @@ export default function CronAuditPage() {
                   }}
                 />
                 <MultiSelectPill
-                  label="Status"
+                  label={t("cron_audit.filter_status")}
                   options={statusOptions}
                   value={filterStatus}
                   formatOption={(v) => statusLabelMap[v] ?? v}
@@ -240,14 +241,14 @@ export default function CronAuditPage() {
                     }}
                   >
                     <X size={14} />
-                    Clear filters
-                  </Button>
+                  {t("cron_audit.clear_filters")}
+                </Button>
                 )}
               </div>
               <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search by cron name or traceID..."
+                  placeholder={t("cron_audit.search_placeholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -267,18 +268,18 @@ export default function CronAuditPage() {
             ) : logs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <ScrollText className="mb-3 size-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">No cron audit logs in selected range</p>
+                <p className="text-sm text-muted-foreground">{t("cron_audit.no_logs")}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Cron Name</TableHead>
-                    <TableHead>TraceID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Metadata</TableHead>
+                    <TableHead>{t("cron_audit.time")}</TableHead>
+                    <TableHead>{t("cron_audit.cron_name")}</TableHead>
+                    <TableHead>{t("cron_audit.traceid")}</TableHead>
+                    <TableHead>{t("cron_audit.filter_status")}</TableHead>
+                    <TableHead>{t("cron_audit.duration")}</TableHead>
+                    <TableHead>{t("cron_audit.metadata")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -291,7 +292,7 @@ export default function CronAuditPage() {
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                         onClick={() => handleCopyTrace(log.traceId)}
-                        title="Click to copy full traceID"
+                        title={t("cron_audit.copy_traceid_title")}
                       >
                         {log.traceId.slice(-6) || "—"}
                       </TableCell>
@@ -332,7 +333,7 @@ export default function CronAuditPage() {
             <PaginationBar
               pageInfo={pageInfo}
               onChange={(page, pageSize) => refresh(page, pageSize)}
-              totalLabel="logs"
+              totalLabel={t("pagination.logs")}
             />
           </CardContent>
         </Card>

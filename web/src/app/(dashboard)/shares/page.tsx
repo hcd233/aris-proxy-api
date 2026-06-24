@@ -73,7 +73,7 @@ export default function SharesPage() {
     try {
       const rsp = await api.listShares(page, pageSize);
       if (rsp.error) {
-        toast.error(rsp.error.message || "Failed to load shares");
+        toast.error(rsp.error.message || t("common.error"));
         setShares([]);
         return;
       }
@@ -87,10 +87,10 @@ export default function SharesPage() {
     } catch (err) {
       const msg =
         err instanceof ApiError
-          ? `Failed to load shares (${err.status})`
+          ? `${t("common.error")} (${err.status})`
           : err instanceof Error
             ? err.message
-            : "Failed to load shares";
+            : t("common.error");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -111,7 +111,7 @@ export default function SharesPage() {
       toast.success(t("common.copied_to_clipboard"));
       window.setTimeout(() => setCopiedID(null), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(t("shares.copy_error"));
     }
   }, [t]);
 
@@ -121,18 +121,18 @@ export default function SharesPage() {
     try {
       const rsp = await api.deleteShare(deleteTarget.shareId);
       if (rsp.error) {
-        toast.error(rsp.error.message || "Failed to revoke share");
+        toast.error(rsp.error.message || t("shares.revoke_error"));
         return;
       }
-      toast.success("Share revoked");
+      toast.success(t("shares.revoke_success"));
       fetchShares(pageInfo.page, pageInfo.pageSize);
     } catch (err) {
       const msg =
         err instanceof ApiError
-          ? `Failed to revoke share (${err.status})`
+          ? `${t("shares.revoke_error")} (${err.status})`
           : err instanceof Error
             ? err.message
-            : "Failed to revoke share";
+            : t("shares.revoke_error");
       toast.error(msg);
     } finally {
       setDeleting(false);
@@ -147,14 +147,13 @@ export default function SharesPage() {
           {t("shares.title")}
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Manage public links to your conversations. Expired links remain visible
-          for 3 days after they stop working.
+          {t("shares.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">Share links</CardTitle>
+          <CardTitle className="font-display">{t("shares.share_links")}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -170,8 +169,7 @@ export default function SharesPage() {
                 {t("shares.no_shares")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground/70">
-                Open a session and click &ldquo;Share&rdquo; to create a public
-                link.
+                {t("shares.create_hint")}
               </p>
             </div>
           ) : (
@@ -183,7 +181,7 @@ export default function SharesPage() {
                     <TableHead>{t("shares.session_id")}</TableHead>
                     <TableHead>{t("common.created")}</TableHead>
                     <TableHead>{t("shares.expires_at")}</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("shares.status")}</TableHead>
                     <TableHead className="text-right">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -235,7 +233,7 @@ export default function SharesPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant={expired ? "destructive" : "secondary"}>
-                            {expired ? "Expired" : "Active"}
+                            {expired ? t("shares.expired") : t("shares.active")}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -271,7 +269,7 @@ export default function SharesPage() {
                               className="gap-1"
                             >
                               <Trash2 className="size-3" />
-                              Revoke
+                              {t("shares.revoke")}
                             </Button>
                           </div>
                         </TableCell>
@@ -284,7 +282,7 @@ export default function SharesPage() {
               <PaginationBar
                 pageInfo={pageInfo}
                 onChange={(page, pageSize) => fetchShares(page, pageSize)}
-                totalLabel="shares"
+                totalLabel={t("pagination.shares")}
               />
             </>
           )}
@@ -304,9 +302,7 @@ export default function SharesPage() {
               {t("shares.delete_confirm")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              The link for session{" "}
-              <strong>#{deleteTarget?.sessionId}</strong> will stop working
-              immediately. Anyone who already opened it will lose access.
+              {t("shares.delete_dialog_desc").replace("{id}", String(deleteTarget?.sessionId ?? ""))}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -316,7 +312,7 @@ export default function SharesPage() {
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? "Revoking..." : "Revoke"}
+              {deleting ? t("shares.revoking") : t("shares.revoke")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

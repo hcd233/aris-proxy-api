@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { MarkdownLite } from "./markdown-lite";
+import { useT } from "@/lib/i18n";
 
 const SYSTEM_MSG_PREVIEW_CHARS = 200;
 
@@ -11,6 +12,7 @@ interface SystemMessageProps {
 }
 
 export function SystemMessage({ text, time, index }: SystemMessageProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const trimmed = text.trim();
   const isLong = trimmed.length > SYSTEM_MSG_PREVIEW_CHARS;
@@ -26,7 +28,7 @@ export function SystemMessage({ text, time, index }: SystemMessageProps) {
       className="animate-in fade-in slide-in-from-bottom-1 duration-300"
     >
       <div className="mb-1.5 flex items-center gap-2 text-[11px] text-muted-foreground/70">
-        <span className="font-medium uppercase tracking-[0.14em]">System</span>
+        <span className="font-medium uppercase tracking-[0.14em]">{t("system_message.system")}</span>
         {time && (
           <>
             <span className="text-muted-foreground/30">·</span>
@@ -42,7 +44,7 @@ export function SystemMessage({ text, time, index }: SystemMessageProps) {
             onClick={() => setOpen((v) => !v)}
             className="mt-2 inline-flex items-center gap-1 font-medium text-primary/90 transition-colors hover:text-primary"
           >
-            {open ? "Show less" : "Show more"}
+            {open ? t("system_message.show_less") : t("system_message.show_more")}
             {open ? (
               <ChevronDown className="size-3" />
             ) : (

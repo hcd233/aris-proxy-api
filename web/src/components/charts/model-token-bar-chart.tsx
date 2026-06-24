@@ -218,30 +218,30 @@ export function ModelTokenBarChart() {
           </div>
         ) : error ? (
           <div className="flex h-64 flex-col items-center justify-center gap-2 px-6 pb-6 text-sm text-muted-foreground">
-            <p>Failed to load</p>
+            <p>{t("charts.failed_to_load")}</p>
             <Button variant="outline" size="sm" onClick={() => fetchData()}>
-              Retry
+              {t("charts.retry")}
             </Button>
           </div>
         ) : sorted.length === 0 ? (
           <div className="flex h-64 items-center justify-center px-6 pb-6 text-sm text-muted-foreground">
-            No data for this period
+            {t("charts.no_data")}
           </div>
         ) : (
           <div className="h-64 overflow-y-auto">
             <table className="w-full text-sm tabular-nums">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
-                  <th className="w-8 py-2 pl-6 text-left font-medium">#</th>
-                  <th className="py-2 text-left font-medium">Model</th>
+                  <th className="w-8 py-2 pl-6 text-left font-medium">{t("model_chart.rank")}</th>
+                  <th className="py-2 text-left font-medium">{t("model_chart.model")}</th>
                   <th
                     className="cursor-pointer py-2 text-right font-medium hover:text-foreground"
                     onClick={() => handleSort("total")}
                   >
-                    Total{sortIndicator("total")}
+                    {t("charts.total")}{sortIndicator("total")}
                   </th>
-                  <th className="w-[220px] py-2 text-left font-medium">Input</th>
-                  <th className="w-[220px] py-2 pr-6 text-left font-medium">Output</th>
+                  <th className="w-[220px] py-2 text-left font-medium">{t("charts.input")}</th>
+                  <th className="w-[220px] py-2 pr-6 text-left font-medium">{t("charts.output")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,20 +259,20 @@ export function ModelTokenBarChart() {
                       </td>
                       <td className="w-[220px] py-3 pr-4">
                         <BarWithTooltip
-                          cacheLabel="Cache Read"
+                          cacheLabel={t("charts.cache_read")}
                           cacheValue={item.cacheReadTokens}
                           cacheColor={CACHE_READ_COLOR}
-                          mainLabel="Input"
+                          mainLabel={t("charts.input")}
                           mainValue={item.inputTokens}
                           mainColor={INPUT_COLOR}
                         />
                       </td>
                       <td className="w-[220px] py-3 pr-6">
                         <BarWithTooltip
-                          cacheLabel="Cache Write"
+                          cacheLabel={t("charts.cache_write")}
                           cacheValue={item.cacheCreationTokens}
                           cacheColor={CACHE_CREATED_COLOR}
-                          mainLabel="Output"
+                          mainLabel={t("charts.output")}
                           mainValue={item.outputTokens}
                           mainColor={OUTPUT_COLOR}
                         />

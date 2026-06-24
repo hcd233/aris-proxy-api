@@ -231,7 +231,7 @@ func TestResponseProtocolConverter_FromResponseRequest_ReasoningSkipped(t *testi
 				},
 				{
 					Type: lo.ToPtr(enum.ResponseInputItemTypeReasoning),
-					Summary: []*dto.ResponseReasoningSummary{{
+					Summary: &[]*dto.ResponseReasoningSummary{{
 						Text: "Let me think about this...",
 						Type: enum.ResponseContentTypeSummaryText,
 					}},

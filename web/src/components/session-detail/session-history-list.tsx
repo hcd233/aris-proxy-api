@@ -8,6 +8,7 @@ import type { SessionSummary } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatRelativeTime } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -20,6 +21,7 @@ export function SessionHistoryList({
   activeSessionId,
   onSelect,
 }: SessionHistoryListProps) {
+  const t = useT();
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,7 +89,7 @@ export function SessionHistoryList({
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search history"
+            placeholder={t("session_detail.search_history")}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             className="h-9 bg-background pl-9 text-sm"
@@ -98,7 +100,7 @@ export function SessionHistoryList({
         <div className="px-2 pb-4">
           {items.length === 0 && !loading && (
             <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-              No history found
+              {t("session_detail.no_history")}
             </p>
           )}
           <ul className="space-y-0.5">
@@ -115,10 +117,10 @@ export function SessionHistoryList({
                   )}
                 >
                   <p className="line-clamp-1 text-sm font-medium">
-                    {session.summary || `Session #${session.id}`}
+                    {session.summary || t("session_history.session_label").replace("{id}", String(session.id))}
                   </p>
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                    {session.messageCount} message{session.messageCount === 1 ? "" : "s"} ·{" "}
+                    {t("session_history.message_count").replace("{count}", String(session.messageCount)).replace("{s}", session.messageCount === 1 ? "" : "s")} ·{" "}
                     {formatRelativeTime(session.updatedAt)}
                   </p>
                 </button>

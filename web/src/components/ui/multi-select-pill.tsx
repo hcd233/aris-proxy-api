@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export interface MultiSelectPillProps {
   label: string;
@@ -27,10 +28,11 @@ export function MultiSelectPill({
   value,
   onChange,
   searchable,
-  emptyText = "No options in current range",
+  emptyText,
   className,
   formatOption,
 }: MultiSelectPillProps) {
+  const t = useT();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
 
@@ -85,7 +87,7 @@ export function MultiSelectPill({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter\u2026"
+              placeholder={t("multi_select.filter")}
               className="h-7 w-full rounded-md border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
             />
           </div>
@@ -94,7 +96,7 @@ export function MultiSelectPill({
         <div className="max-h-64 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="py-4 text-center text-xs text-muted-foreground">
-              {emptyText}
+              {emptyText ?? t("multi_select.no_options")}
             </div>
           ) : (
             filtered.map((opt) => {
@@ -134,7 +136,7 @@ export function MultiSelectPill({
               onClick={clearLocal}
               className="w-full rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
             >
-              Clear selection
+              {t("multi_select.clear")}
             </button>
           </>
         )}
