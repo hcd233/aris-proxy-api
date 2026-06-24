@@ -7,9 +7,9 @@ package cron
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -100,8 +100,8 @@ func (c *SoftDeletePurgeCron) Start(spec string) error {
 //
 //	@receiver c *SoftDeletePurgeCron
 //	@author centonhuang
-//	@update 2026-06-09 10:00:00
-func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
+//	@update 2026-06-24 10:00:00
+func (c *SoftDeletePurgeCron) purge(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
@@ -109,15 +109,12 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
 	softDeletedSessions, err := c.sessionDAO.FindAllForPurge(db, true)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find soft deleted sessions", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	if len(softDeletedSessions) == 0 {
 		log.Info("[SoftDeletePurgeCron] No soft deleted sessions found")
-		return map[string]string{
-			constant.CronMetadataKeyPurgedMessages: "0",
-			constant.CronMetadataKeyPurgedTools:    "0",
-		}
+		return &commonmodel.CronCallAuditMetadata{}, nil
 	}
 
 	// 2. 从被软删除的 session 中提取 message_ids 和 tool_ids 并去重
@@ -132,7 +129,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
 	activeSessions, err := c.sessionDAO.FindAllForPurge(db, false)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to find active sessions", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	usedMessageIDs := lo.Uniq(lo.Flatten(lo.Map(activeSessions, func(s dao.SessionPurgeView, _ int) []uint {
@@ -152,7 +149,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
 		msgCount, err = c.messageDAO.HardDeleteByIDs(db, orphanMessageIDs)
 		if err != nil {
 			log.Error("[SoftDeletePurgeCron] Failed to purge messages", zap.Error(err))
-			return nil
+			return nil, err
 		}
 	}
 
@@ -160,7 +157,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
 		toolCount, err = c.toolDAO.HardDeleteByIDs(db, orphanToolIDs)
 		if err != nil {
 			log.Error("[SoftDeletePurgeCron] Failed to purge tools", zap.Error(err))
-			return nil
+			return nil, err
 		}
 	}
 
@@ -168,7 +165,7 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
 	sessionCount, err := c.sessionDAO.HardDeleteSoftDeleted(db)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to purge sessions", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	log.Info("[SoftDeletePurgeCron] Purge completed",
@@ -176,8 +173,8 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) map[string]string {
 		zap.Int64("messagesDeleted", msgCount),
 		zap.Int64("toolsDeleted", toolCount))
 
-	return map[string]string{
-		constant.CronMetadataKeyPurgedMessages: strconv.FormatInt(msgCount, 10),
-		constant.CronMetadataKeyPurgedTools:    strconv.FormatInt(toolCount, 10),
-	}
+	return &commonmodel.CronCallAuditMetadata{
+		PurgedMessages: msgCount,
+		PurgedTools:    toolCount,
+	}, nil
 }

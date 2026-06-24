@@ -8,11 +8,11 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
@@ -103,25 +103,24 @@ func (c *SessionDeduplicateCron) Start(spec string) error {
 //
 //	@receiver c *SessionDeduplicateCron
 //	@author centonhuang
-//	@update 2026-06-01 10:00:00
-func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]string {
+//	@update 2026-06-24 10:00:00
+func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
 	sessions, err := c.sessionDAO.BatchGet(db, &dbmodel.Session{}, constant.SessionRepoFieldsDedup)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to load sessions", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
-	checkedCount := len(sessions)
+	checkedCount := int64(len(sessions))
 
 	if len(sessions) < 2 {
-		log.Info("[SessionDeduplicateCron] Skip deduplication, not enough sessions", zap.Int("count", checkedCount))
-		return map[string]string{
-			constant.CronMetadataKeyCheckedSessions: strconv.Itoa(checkedCount),
-			constant.CronMetadataKeyDedupedSessions: "0",
-		}
+		log.Info("[SessionDeduplicateCron] Skip deduplication, not enough sessions", zap.Int("count", len(sessions)))
+		return &commonmodel.CronCallAuditMetadata{
+			CheckedSessions: checkedCount,
+		}, nil
 	}
 
 	mergeResult := FindRedundantSessionsWithMerge(sessions)
@@ -154,11 +153,10 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]str
 	}
 
 	if len(mergeResult.RedundantIDs) == 0 {
-		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", checkedCount))
-		return map[string]string{
-			constant.CronMetadataKeyCheckedSessions: strconv.Itoa(checkedCount),
-			constant.CronMetadataKeyDedupedSessions: "0",
-		}
+		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", len(sessions)))
+		return &commonmodel.CronCallAuditMetadata{
+			CheckedSessions: checkedCount,
+		}, nil
 	}
 
 	// 合并ToolIDs到保留的Session
@@ -188,18 +186,18 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) map[string]str
 	err = c.sessionDAO.BatchDeleteByField(db, constant.WhereFieldID, mergeResult.RedundantIDs)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to delete redundant sessions", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	log.Info("[SessionDeduplicateCron] Deduplication completed",
-		zap.Int("total", checkedCount),
+		zap.Int("total", len(sessions)),
 		zap.Int("deleted", len(mergeResult.RedundantIDs)),
 		zap.Int("merged", mergedCount))
 
-	return map[string]string{
-		constant.CronMetadataKeyCheckedSessions: strconv.Itoa(checkedCount),
-		constant.CronMetadataKeyDedupedSessions: strconv.Itoa(len(mergeResult.RedundantIDs)),
-	}
+	return &commonmodel.CronCallAuditMetadata{
+		CheckedSessions: checkedCount,
+		DedupedSessions: int64(len(mergeResult.RedundantIDs)),
+	}, nil
 }
 
 func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.DB, sessions []*dbmodel.Session, excludeIDs []uint) ([]*dbmodel.Message, error) {

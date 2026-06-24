@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -130,12 +131,15 @@ func renewLoop(ctx context.Context, locker lock.Locker, key, value string, ttl, 
 // parentCtx 取自 SetBootstrapContext；未设置时退化为 context.Background()。
 //
 //	@author centonhuang
-//	@update 2026-06-18 10:00:00
-func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context) map[string]string) func() {
+//	@update 2026-06-24 10:00:00
+func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error)) func() {
 	return func() {
 		ctx := context.WithValue(getBootstrapContext(), constant.CtxKeyTraceID, uuid.New().String())
 		start := time.Now()
-		var metadata map[string]string
+		var (
+			metadata *commonmodel.CronCallAuditMetadata
+			fnErr    error
+		)
 		defer func() {
 			if r := recover(); r != nil {
 				cronPanicHandler(ctx, name, r)
@@ -151,17 +155,22 @@ func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions,
 			}
 		}
 
-		if !RunWithLock(ctx, locker, key, opts, func(lockCtx context.Context) {
-			metadata = fn(lockCtx)
-		}) {
+		executed := RunWithLock(ctx, locker, key, opts, func(lockCtx context.Context) {
+			metadata, fnErr = fn(lockCtx)
+		})
+		if !executed {
 			return
 		}
 		durationMs := time.Since(start).Milliseconds()
+		if fnErr != nil {
+			saveCronCallAudit(ctx, name, constant.CronCallAuditStatusFailed, durationMs, fnErr.Error(), nil)
+			return
+		}
 		saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSuccess, durationMs, "", metadata)
 	}
 }
 
-func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string, metadata map[string]string) {
+func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string, metadata *commonmodel.CronCallAuditMetadata) {
 	if cronCallAuditStore == nil {
 		return
 	}
