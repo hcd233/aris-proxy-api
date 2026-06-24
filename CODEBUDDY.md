@@ -7,7 +7,7 @@
 - **上下文**：以现有代码、`Makefile`、脚本、workflow、hook 为事实源；文档与可执行源冲突时信任可执行源。
 - **执行循环**：分类任务 → 加载必要 skill → 阅读相关代码/文档 → 小步计划 → 最小修改 → 聚焦验证 → 汇报证据。
 - **边界**：不为普通需求默认走线上日志排障；不为手工 `curl` 结果跳过仓库测试；不绕过 hook 或安全规则。
-- **Superpowers 强制合规**：任何响应或操作前必须先加载 `using-superpowers` skill，严格按照该 skill 中说明的流程执行。禁止以"简单问题""先看看代码""我记住了"等理由绕过。
+- **Grill-first 设计评审**：在着手实现需求或修复 bug 前，先加载 `grill-me` 或 `grill-with-docs` skill 对设计方案进行压力测试，暴露假设、权衡和边界，确保思路清晰后再动手。禁止以"简单问题""先看看代码""我记住了"等理由跳过设计评审。
 - **代码风格 Skill 强制合规**：编写或修改 Go 代码时，必须加载 `golang-samber-lo` 和 `golang-samber-mo` skill，确保正确使用函数式编程工具和 Monadic 类型。
 - **输出**：简短说明做了什么、验证了什么、还有什么未验证；引用文件路径和命令必须精确。
 
@@ -247,6 +247,8 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 - **修改 `github.com/spf13/viper` 相关代码**：使用 `golang-spf13-viper`。
 - **使用 `github.com/samber/lo` 函数式编程**：使用 `golang-samber-lo`。
 - **使用 `github.com/samber/mo` Monadic 类型**：使用 `golang-samber-mo`。
+- **需求 / 设计方案评审**：在动手编码前，使用 `grill-me` 或 `grill-with-docs` 对设计方案进行压力测试，暴露假设、权衡和边界。`grill-with-docs` 还会同步产出 ADR 和术语表。
+- **需求澄清 / 快速决策**：使用 `grilling` 进行交互式问答，逐条厘清设计树分支。
 - 专项流程细节放在对应 skill，主文档只保留触发条件和项目级硬约束。
 
 ## 3. 项目模型
@@ -275,9 +277,10 @@ func SavePreferences(db DB, userID int, prefs map[string]any) error {
 
 ## 5. 开发工作流
 
-- **严格遵循 Superpowers 研发流程**：收到任务后必须先加载 `using-superpowers` skill，严格按 skill 中说明的流程进行开发。process skill（brainstorming、debugging 等）优先于 implementation skill。禁止以"这不是正式任务""我先收集信息"等理由绕过。
+- **Grill-first 设计先行**：收到需求或 bug 任务后，在着手编码前优先加载 `grill-me` 或 `grill-with-docs` skill 对设计方案进行压力测试。需求模糊或存在多种方案时先启动 `grilling` 厘清。process skill（设计评审、调试等）优先于 implementation skill。禁止以"这不是正式任务""我先收集信息"等理由跳过设计评审。
 - **编写或修改 Go 代码时，必须加载 `golang-samber-lo` 和 `golang-samber-mo` skill**，确保正确使用 `github.com/samber/lo` 函数式编程工具和 `github.com/samber/mo` Monadic 类型。
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
+- 设计方案不确定时，优先启动 `grill-me` 做快速方案验证，使用 `grill-with-docs` 产出 ADR 记录决策。
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - 修改前先定位相关 handler/usecase/converter/transport/DTO，不做大范围重写。
 - 新需求和 bugfix 都应先补或更新测试；bugfix 必须有能复现问题的回归用例。
