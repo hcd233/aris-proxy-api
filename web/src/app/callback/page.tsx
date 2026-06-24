@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 import type { OAuth2Provider } from "@/lib/types";
 
 export default function CallbackPage() {
   const { handleCallback } = useAuth();
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
 
   const processCallback = useCallback(async () => {
@@ -14,7 +16,7 @@ export default function CallbackPage() {
     const state = params.get("state");
 
     if (!code || !state) {
-      setError("Missing authorization code or state");
+      setError(t("callback.missing_params"));
       return;
     }
 
@@ -28,7 +30,7 @@ export default function CallbackPage() {
       const data = await api.oauth2Callback({ platform, code, state });
 
       if (data.error) {
-        setError(data.error.message || "Token exchange failed");
+        setError(data.error.message || t("callback.token_exchange_failed"));
         return;
       }
 
@@ -36,10 +38,10 @@ export default function CallbackPage() {
         await handleCallback(data.accessToken, data.refreshToken);
         window.location.href = "/web/";
       } else {
-        setError("Login failed: no tokens received");
+        setError(t("callback.no_tokens"));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("callback.token_exchange_failed"));
     }
   }, [handleCallback]);
 
@@ -53,13 +55,13 @@ export default function CallbackPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center">
-          <h1 className="font-display text-2xl font-semibold text-destructive">Login Failed</h1>
+          <h1 className="font-display text-2xl font-semibold text-destructive">{t("callback.login_failed")}</h1>
           <p className="mt-3 text-sm text-muted-foreground">{error}</p>
           <a
             href="/web/login/"
             className="mt-6 inline-block text-sm font-medium text-primary hover:text-[var(--primary-hover)] transition-colors"
           >
-            Back to login
+            {t("callback.back_to_login")}
           </a>
         </div>
       </div>
@@ -69,8 +71,8 @@ export default function CallbackPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
-        <p className="font-display text-xl font-semibold text-foreground">Completing login...</p>
-        <p className="mt-2 text-sm text-muted-foreground">Please wait a moment</p>
+        <p className="font-display text-xl font-semibold text-foreground">{t("callback.completing")}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("callback.please_wait")}</p>
       </div>
     </div>
   );

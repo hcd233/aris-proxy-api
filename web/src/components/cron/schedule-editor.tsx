@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/lib/i18n";
 
 type RepeatMode = "minute" | "hour" | "day" | "week" | "month" | "advanced";
 
@@ -95,15 +96,7 @@ function isValidCronSpec(spec: string): boolean {
   }
 }
 
-const WEEKDAY_LABELS = [
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
-];
+const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
 interface ScheduleEditorDialogProps {
   open: boolean;
@@ -113,6 +106,7 @@ interface ScheduleEditorDialogProps {
 }
 
 export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: ScheduleEditorDialogProps) {
+  const t = useT();
   const [parsed, setParsed] = useState<ParsedSpec>({
     mode: "day", minute: 0, hour: 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: "",
   });
@@ -164,15 +158,15 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Cron Schedule</DialogTitle>
+          <DialogTitle>{t("schedule.title")}</DialogTitle>
           <DialogDescription>
-            Configure the schedule for <span className="font-medium">{job?.name}</span>
+            {t("schedule.description").replace("{name}", job?.name ?? "")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Repeat</Label>
+            <Label>{t("schedule.repeat")}</Label>
             <Select
               value={parsed.mode}
               onValueChange={(value) => updateParsed({ mode: String(value) as RepeatMode })}
@@ -181,12 +175,12 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="minute">Every Minute</SelectItem>
-                <SelectItem value="hour">Every Hour</SelectItem>
-                <SelectItem value="day">Every Day</SelectItem>
-                <SelectItem value="week">Every Week</SelectItem>
-                <SelectItem value="month">Every Month</SelectItem>
-                <SelectItem value="advanced">Advanced (cron expression)</SelectItem>
+                <SelectItem value="minute">{t("schedule.every_minute")}</SelectItem>
+                <SelectItem value="hour">{t("schedule.every_hour")}</SelectItem>
+                <SelectItem value="day">{t("schedule.every_day")}</SelectItem>
+                <SelectItem value="week">{t("schedule.every_week")}</SelectItem>
+                <SelectItem value="month">{t("schedule.every_month")}</SelectItem>
+                <SelectItem value="advanced">{t("schedule.advanced")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -195,7 +189,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
             <div className="grid grid-cols-2 gap-3">
               {(parsed.mode === "hour" || parsed.mode === "day" || parsed.mode === "week" || parsed.mode === "month") && (
                 <div className="space-y-2">
-                  <Label>Minute</Label>
+                  <Label>{t("schedule.minute")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -208,7 +202,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
 
               {(parsed.mode === "day" || parsed.mode === "week" || parsed.mode === "month") && (
                 <div className="space-y-2">
-                  <Label>Hour</Label>
+                  <Label>{t("schedule.hour")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -221,7 +215,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
 
               {parsed.mode === "month" && (
                 <div className="space-y-2">
-                  <Label>Day of Month</Label>
+                  <Label>{t("schedule.day_of_month")}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -234,7 +228,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
 
               {parsed.mode === "week" && (
                 <div className="space-y-2 col-span-2">
-                  <Label>Day of Week</Label>
+                  <Label>{t("schedule.day_of_week")}</Label>
                   <Select
                     value={String(parsed.dayOfWeek)}
                     onValueChange={(value) => updateParsed({ dayOfWeek: parseInt(String(value)) })}
@@ -243,9 +237,9 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {WEEKDAY_LABELS.map((d) => (
-                        <SelectItem key={d.value} value={String(d.value)}>
-                          {d.label}
+                      {WEEKDAYS.map((d, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          {t(`schedule.${d}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -257,7 +251,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
 
           {parsed.mode === "advanced" && (
             <div className="space-y-2">
-              <Label>Cron Expression</Label>
+              <Label>{t("schedule.cron_expression")}</Label>
               <Input
                 placeholder="*/5 * * * *"
                 value={parsed.advancedSpec}
@@ -279,10 +273,10 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("schedule.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!canSave || !specChanged || saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? t("schedule.saving") : t("schedule.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

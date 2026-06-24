@@ -39,10 +39,10 @@ export default function ProfilePage() {
       }
       if (rsp.user) {
         setLocalUser(rsp.user);
-        toast.success("Profile updated");
+        toast.success(t("profile.updated"));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update profile");
+      toast.error(err instanceof Error ? err.message : t("profile.update_error"));
     } finally {
       setSaving(false);
     }
@@ -60,7 +60,7 @@ export default function ProfilePage() {
   if (!localUser) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Unable to load profile</p>
+        <p className="text-muted-foreground">{t("profile.load_error")}</p>
       </div>
     );
   }
@@ -77,14 +77,14 @@ export default function ProfilePage() {
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("profile.title")}</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Manage your account settings
+          {t("profile.subtitle")}
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="font-display">Account Information</CardTitle>
+            <CardTitle className="font-display">{t("profile.account_info")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center text-center gap-4">
@@ -96,13 +96,13 @@ export default function ProfilePage() {
               </Avatar>
               <div className="space-y-2">
                 <div>
-                  <p className="font-display text-lg font-medium">{localUser.name ?? "Unnamed"}</p>
+                  <p className="font-display text-lg font-medium">{localUser.name ?? t("profile.unnamed")}</p>
                   <p className="text-sm text-muted-foreground">{localUser.email ?? "—"}</p>
                 </div>
                 <Badge variant="secondary" className="text-xs">{localUser.permission}</Badge>
                 {localUser.createdAt && (
                   <p className="text-xs text-muted-foreground">
-                    Joined {new Date(localUser.createdAt).toLocaleDateString()}
+                    {t("profile.joined").replace("{date}", new Date(localUser.createdAt).toLocaleDateString())}
                   </p>
                 )}
               </div>
@@ -122,18 +122,18 @@ export default function ProfilePage() {
                   id="profile-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your name"
+                  placeholder={t("profile.name_placeholder")}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">{t("profile.email")}</Label>
                 <Input value={localUser.email ?? ""} disabled className="opacity-60 bg-muted/30" />
                 <p className="text-xs text-muted-foreground">
-                  Email is managed by your OAuth2 provider.
+                  {t("profile.email_oauth_hint")}
                 </p>
               </div>
               <Button onClick={handleSave} disabled={saving || name === (localUser.name ?? "")}>
-                {saving ? "Saving..." : t("common.save")}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </div>
           </CardContent>

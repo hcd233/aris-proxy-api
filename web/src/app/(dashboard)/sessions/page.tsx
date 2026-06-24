@@ -213,10 +213,10 @@ export default function SessionsPage() {
     setDeleting(deleteTarget.id);
     try {
       await api.deleteSession(deleteTarget.id);
-      toast.success("Session deleted");
+      toast.success(t("sessions.delete_success"));
       fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel, true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete session");
+      toast.error(err instanceof Error ? err.message : t("sessions.delete_error"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -253,14 +253,14 @@ export default function SessionsPage() {
       const rsp = await api.batchDeleteSessions(ids);
       const failed = rsp.failures?.length ?? 0;
       if (failed > 0) {
-        toast.warning(`${rsp.deletedCount} deleted, ${failed} failed`);
+        toast.warning(t("sessions.batch_delete_warning").replace("{deleted}", String(rsp.deletedCount)).replace("{failed}", String(failed)));
       } else {
-        toast.success(`${rsp.deletedCount} sessions deleted`);
+        toast.success(t("sessions.batch_delete_success").replace("{count}", String(rsp.deletedCount)));
       }
       setSelected(new Set());
       fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel, true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to batch delete");
+      toast.error(err instanceof Error ? err.message : t("sessions.batch_delete_error"));
     } finally {
       setBatchDeleting(false);
       setBatchDeleteConfirmOpen(false);
@@ -275,9 +275,9 @@ export default function SessionsPage() {
       setSessions((prev) =>
         prev.map((s) => (s.id === sessionId ? { ...s, score } : s)),
       );
-      toast.success("Scored");
+      toast.success(t("sessions.scored"));
     } catch {
-      toast.error("Failed to score");
+      toast.error(t("sessions.score_error"));
     } finally {
       setScoring(null);
     }
@@ -291,9 +291,9 @@ export default function SessionsPage() {
       setSessions((prev) =>
         prev.map((s) => (s.id === sessionId ? { ...s, score: undefined } : s)),
       );
-      toast.success("Score removed");
+      toast.success(t("sessions.score_removed"));
     } catch {
-      toast.error("Failed to remove score");
+      toast.error(t("sessions.score_remove_error"));
     } finally {
       setScoring(null);
     }
@@ -626,16 +626,16 @@ export default function SessionsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="size-5 text-destructive" />
-                Are you sure?
+                {t("sessions.delete_dialog_title")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete session <strong>{deleteTarget?.summary}</strong> and all its messages. This action cannot be undone.
+                {t("sessions.delete_dialog_desc").replace("{name}", deleteTarget?.summary ?? "")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
-                {deleting !== null ? "Deleting..." : "Delete"}
+                {deleting !== null ? t("common.deleting") : t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -646,16 +646,16 @@ export default function SessionsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="size-5 text-destructive" />
-                Batch delete sessions?
+                {t("sessions.batch_delete_title")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete <strong>{selected.size}</strong> session{selected.size !== 1 ? "s" : ""} and all their messages. This action cannot be undone.
+                {t("sessions.batch_delete_desc").replace("{count}", String(selected.size))}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction variant="destructive" onClick={handleBatchDelete} disabled={batchDeleting}>
-                {batchDeleting ? "Deleting..." : `Delete ${selected.size}`}
+                {batchDeleting ? t("common.deleting") : `${t("common.delete")} ${selected.size}`}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
