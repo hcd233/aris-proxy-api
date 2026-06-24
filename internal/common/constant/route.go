@@ -5,6 +5,7 @@ const (
 	RoutePathHealth                    = "/health"
 	RoutePathReady                     = "/ready"
 	RoutePathSSEHealth                 = "/ssehealth"
+	RoutePathMetrics                   = "/metrics"
 	RoutePathFavicon                   = "/favicon.ico"
 	RoutePathRobots                    = "/robots.txt"
 	RoutePathAppleTouchIcon            = "/apple-touch-icon.png"

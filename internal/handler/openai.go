@@ -8,7 +8,9 @@ import (
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 )
 
 // OpenAIHandler OpenAI兼容接口处理器
@@ -26,11 +28,13 @@ type OpenAIHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type OpenAIDependencies struct {
-	UseCase port.OpenAIUseCase
+	UseCase  port.OpenAIUseCase
+	SSEGauge metrics.SSEGauge
 }
 
 type openAIHandler struct {
-	uc port.OpenAIUseCase
+	uc       port.OpenAIUseCase
+	sseGauge metrics.SSEGauge
 }
 
 // NewOpenAIHandler 创建OpenAI兼容接口处理器
@@ -41,7 +45,8 @@ type openAIHandler struct {
 //	@update 2026-04-26 10:00:00
 func NewOpenAIHandler(deps OpenAIDependencies) OpenAIHandler {
 	return &openAIHandler{
-		uc: deps.UseCase,
+		uc:       deps.UseCase,
+		sseGauge: deps.SSEGauge,
 	}
 }
 
@@ -68,7 +73,17 @@ func (h *openAIHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *openAIHandler) HandleChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
-	return h.uc.CreateChatCompletion(ctx, req)
+	rsp, err := h.uc.CreateChatCompletion(ctx, req)
+	if err != nil || rsp == nil || rsp.Body == nil {
+		return rsp, err
+	}
+	originalBody := rsp.Body
+	rsp.Body = func(humaCtx huma.Context) {
+		h.sseGauge.Inc(constant.SSEProviderOpenAI)
+		defer h.sseGauge.Dec(constant.SSEProviderOpenAI)
+		originalBody(humaCtx)
+	}
+	return rsp, nil
 }
 
 // HandleCreateResponse 处理 Response API 请求
@@ -81,5 +96,15 @@ func (h *openAIHandler) HandleChatCompletion(ctx context.Context, req *dto.OpenA
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *openAIHandler) HandleCreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
-	return h.uc.CreateResponse(ctx, req)
+	rsp, err := h.uc.CreateResponse(ctx, req)
+	if err != nil || rsp == nil || rsp.Body == nil {
+		return rsp, err
+	}
+	originalBody := rsp.Body
+	rsp.Body = func(humaCtx huma.Context) {
+		h.sseGauge.Inc(constant.SSEProviderOpenAI)
+		defer h.sseGauge.Dec(constant.SSEProviderOpenAI)
+		originalBody(humaCtx)
+	}
+	return rsp, nil
 }

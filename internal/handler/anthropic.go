@@ -8,7 +8,9 @@ import (
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 )
 
 // AnthropicHandler Anthropic兼容接口处理器
@@ -26,11 +28,13 @@ type AnthropicHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type AnthropicDependencies struct {
-	UseCase port.AnthropicUseCase
+	UseCase  port.AnthropicUseCase
+	SSEGauge metrics.SSEGauge
 }
 
 type anthropicHandler struct {
-	uc port.AnthropicUseCase
+	uc       port.AnthropicUseCase
+	sseGauge metrics.SSEGauge
 }
 
 // NewAnthropicHandler 创建Anthropic兼容接口处理器
@@ -41,7 +45,8 @@ type anthropicHandler struct {
 //	@update 2026-04-26 10:00:00
 func NewAnthropicHandler(deps AnthropicDependencies) AnthropicHandler {
 	return &anthropicHandler{
-		uc: deps.UseCase,
+		uc:       deps.UseCase,
+		sseGauge: deps.SSEGauge,
 	}
 }
 
@@ -68,7 +73,17 @@ func (h *anthropicHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *anthropicHandler) HandleCreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
-	return h.uc.CreateMessage(ctx, req)
+	rsp, err := h.uc.CreateMessage(ctx, req)
+	if err != nil || rsp == nil || rsp.Body == nil {
+		return rsp, err
+	}
+	originalBody := rsp.Body
+	rsp.Body = func(humaCtx huma.Context) {
+		h.sseGauge.Inc(constant.SSEProviderAnthropic)
+		defer h.sseGauge.Dec(constant.SSEProviderAnthropic)
+		originalBody(humaCtx)
+	}
+	return rsp, nil
 }
 
 // HandleCountTokens 处理Token计数请求

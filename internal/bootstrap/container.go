@@ -44,13 +44,16 @@ func BuildFxApp(host, port string, customizers ...fx.Option) *fx.App {
 type middlewareParams struct {
 	fx.In
 
-	App             *fiber.App
-	InflightTracker *inflight.Tracker
-	Cache           *redis.Client
+	App                  *fiber.App
+	InflightTracker      *inflight.Tracker
+	Cache                *redis.Client
+	PrometheusMiddleware fiber.Handler
 }
 
-// registerMiddlewares 注册中间件链，顺序：Recover → Inflight → Guard → Fgprof → CORS → Compress → Trace → Log
+// registerMiddlewares 注册中间件链，顺序：Recover → Inflight → Guard → Fgprof → Prometheus → CORS → Compress → Trace → Log
 func registerMiddlewares(params middlewareParams) {
+	params.App.Use(constant.RoutePathMetrics, params.PrometheusMiddleware)
+
 	params.App.Use(
 		middleware.RecoverMiddleware(),
 		middleware.InflightMiddleware(params.InflightTracker),

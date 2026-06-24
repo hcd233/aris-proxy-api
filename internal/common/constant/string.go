@@ -145,6 +145,7 @@ const (
 	TagEndpoint  = "Endpoint"
 	TagHealth    = "Health"
 	TagModel     = "Model"
+	TagMonitor   = "Monitor"
 	TagOpenAI    = "OpenAI"
 	TagSession   = "Session"
 	TagBlocked   = "Blocked"
