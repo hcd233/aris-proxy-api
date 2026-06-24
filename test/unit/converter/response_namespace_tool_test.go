@@ -115,13 +115,16 @@ func TestFromResponseRequest_NamespaceFlatten(t *testing.T) {
 		t.Errorf("chatTools[3] function name = %v, want %q", chatReq.Tools[3].Function, expectedName3)
 	}
 
-	// 第五个：mcp__computer_use__type_text (custom sub-tool → ToolTypeCustom)
+	// 第五个：mcp__computer_use__type_text (custom sub-tool → 统一转换为 function 以兼容上游)
 	expectedName4 := "mcp__computer_use" + sep + "type_text"
-	if chatReq.Tools[4].Custom == nil || chatReq.Tools[4].Custom.Name != expectedName4 {
-		t.Errorf("chatTools[4] custom name = %v, want %q", chatReq.Tools[4].Custom, expectedName4)
+	if chatReq.Tools[4].Function == nil || chatReq.Tools[4].Function.Name != expectedName4 {
+		t.Errorf("chatTools[4] function name = %v, want %q", chatReq.Tools[4].Function, expectedName4)
 	}
-	if chatReq.Tools[4].Type != enum.ToolTypeCustom {
-		t.Errorf("chatTools[4] type = %v, want %q", chatReq.Tools[4].Type, enum.ToolTypeCustom)
+	if chatReq.Tools[4].Type != enum.ToolTypeFunction {
+		t.Errorf("chatTools[4] type = %v, want %q", chatReq.Tools[4].Type, enum.ToolTypeFunction)
+	}
+	if chatReq.Tools[4].Function.Description == nil || *chatReq.Tools[4].Function.Description != "Type text into the focused element" {
+		t.Errorf("chatTools[4] description = %v, want Type text into the focused element", chatReq.Tools[4].Function.Description)
 	}
 }
 
