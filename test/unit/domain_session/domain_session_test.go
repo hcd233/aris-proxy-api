@@ -77,9 +77,6 @@ func TestCreateSession_ValidOwner(t *testing.T) {
 	if s.Owner().String() != tc.Owner {
 		t.Errorf("Owner = %q, want %q", s.Owner().String(), tc.Owner)
 	}
-	if s.AggregateType() != "session.session" {
-		t.Errorf("AggregateType = %q, want %q", s.AggregateType(), "session.session")
-	}
 }
 
 // TestCreateSession_EmptyOwner 空 owner 应返回校验错误

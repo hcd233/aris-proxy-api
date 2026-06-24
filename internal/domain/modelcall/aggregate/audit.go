@@ -83,9 +83,6 @@ func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 	}
 }
 
-// AggregateType 实现 aggregate.Root 接口
-func (*ModelCallAudit) AggregateType() string { return enum.AggregateTypeModelCallAudit }
-
 // APIKeyID 返回 API Key ID
 func (a *ModelCallAudit) APIKeyID() uint { return a.apiKeyID }
 

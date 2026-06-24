@@ -1,8 +1,10 @@
 package dto
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -354,8 +356,8 @@ func resolveRole(role string) enum.Role {
 
 // FromResponseAPITool 将 Response API tools 元素转换为 UnifiedTool
 //
-// 只有可通过函数签名表达的工具 (function / custom) 能映射到统一工具格式，
-// 其他类型（file_search/web_search/mcp/...）返回 nil，调用方应跳过。
+// 可映射的工具类型：function / custom / mcp。
+// 其他类型（file_search/web_search/computer/...）返回 nil，调用方应跳过。
 //
 //	@param tool *ResponseTool
 //	@return *UnifiedTool
@@ -374,6 +376,11 @@ func FromResponseAPITool(tool *ResponseTool) *vo.UnifiedTool {
 		return &vo.UnifiedTool{
 			Name:        tool.Custom.Name,
 			Description: lo.FromPtr(tool.Custom.Description),
+		}
+	case tool.Mcp != nil:
+		return &vo.UnifiedTool{
+			Name:        tool.Mcp.ServerLabel,
+			Description: fmt.Sprintf(constant.ChatCompletionConvertToolDescMCPTemplate, tool.Mcp.ServerLabel),
 		}
 	default:
 		return nil

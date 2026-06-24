@@ -11,7 +11,6 @@
 package aggregate
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
@@ -72,9 +71,6 @@ func RestoreMessage(id uint, content *vo.UnifiedMessage, upstreamModel, checksum
 	m.SetID(id)
 	return m
 }
-
-// AggregateType 实现 aggregate.Root 接口
-func (*Message) AggregateType() string { return enum.AggregateTypeMessage }
 
 // Content 返回消息内容的防御性副本
 func (m *Message) Content() *vo.UnifiedMessage {
