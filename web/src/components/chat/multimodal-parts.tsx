@@ -2,7 +2,12 @@ import { FileText, Music2, ShieldAlert } from "lucide-react";
 import type { ContentPart } from "./content-extract";
 import { imageURLOf } from "./content-extract";
 
+function isSafeUrl(url: string): boolean {
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
 function PartImage({ url }: { url: string }) {
+  if (!isSafeUrl(url)) return null;
   return (
     <div className="my-2 inline-block max-w-sm overflow-hidden rounded-lg border border-border/60 bg-muted/40">
       {/* eslint-disable-next-line @next/next/no-img-element */}
