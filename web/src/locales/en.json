@@ -283,6 +283,9 @@
   "monitor.latency_p95": "Latency P95",
   "monitor.goroutines_chart": "Goroutines",
   "monitor.in_progress_requests": "In-Progress Requests",
+  "monitor.live": "Live",
+  "monitor.collecting": "Collecting data…",
+  "monitor.current": "Current",
 
   "schedule.title": "Edit Cron Schedule",
   "schedule.description": "Configure the schedule for {name}",

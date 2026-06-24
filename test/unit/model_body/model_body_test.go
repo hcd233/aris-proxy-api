@@ -51,8 +51,12 @@ func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingReque
 	}
 }
 
-func TestMarshalOpenAIResponseBodyForModel_IncludesSummaryForInputItems(t *testing.T) {
+func TestMarshalOpenAIResponseBodyForModel_ExcludesInputItemSummaryWithoutMutatingRequest(t *testing.T) {
 	t.Parallel()
+	summary := []*dto.ResponseReasoningSummary{{
+		Type: enum.ResponseContentTypeSummaryText,
+		Text: "thinking summary",
+	}}
 	req := &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("gpt-5.5"),
 		Input: &dto.ResponseInput{
@@ -65,8 +69,9 @@ func TestMarshalOpenAIResponseBodyForModel_IncludesSummaryForInputItems(t *testi
 					},
 				},
 				{
-					Type:   lo.ToPtr(enum.ResponseInputItemTypeReasoning),
-					Status: lo.ToPtr("completed"),
+					Type:    lo.ToPtr(enum.ResponseInputItemTypeReasoning),
+					Status:  lo.ToPtr("completed"),
+					Summary: &summary,
 				},
 			},
 		},
@@ -75,8 +80,14 @@ func TestMarshalOpenAIResponseBodyForModel_IncludesSummaryForInputItems(t *testi
 	body := proxyutil.MarshalOpenAIResponseBodyForModel(req, "upstream-model")
 	bodyStr := string(body)
 
-	if !strings.Contains(bodyStr, `"summary":[]`) {
-		t.Fatalf("serialized body must include summary:[] for each input item, got: %s", bodyStr)
+	if strings.Contains(bodyStr, `"summary"`) {
+		t.Fatalf("serialized body must not include input item summary, got: %s", bodyStr)
+	}
+	if req.Input.Items[0].Summary != nil {
+		t.Fatalf("request item without summary must remain nil")
+	}
+	if req.Input.Items[1].Summary == nil || len(*req.Input.Items[1].Summary) != 1 {
+		t.Fatalf("request item summary must remain unchanged")
 	}
 }
 
