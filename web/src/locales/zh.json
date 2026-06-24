@@ -168,6 +168,10 @@
 
   "monitor.title": "运行时监控",
   "monitor.subtitle": "实时运行时与业务指标（5秒间隔）",
+  "monitor.telemetry": "运行时遥测",
+  "monitor.refresh": "刷新",
+  "monitor.updated": "更新于",
+  "monitor.samples": "最近 {count} 个样本",
   "monitor.goroutines": "协程数",
   "monitor.heap": "堆内存",
   "monitor.in_progress": "处理中",
