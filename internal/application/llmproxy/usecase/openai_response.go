@@ -346,6 +346,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 
 func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
 	conv := &converter.ResponseProtocolConverter{}
+	assertRespConvInit(conv, req)
 	exposedModel := lo.FromPtr(req.Body.Model)
 	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
 		startTime := time.Now()
@@ -568,6 +569,7 @@ func assertRespConvInit(conv *converter.ResponseProtocolConverter, req *dto.Open
 		return
 	}
 	conv.SetToolTypeMap(converter.BuildToolTypeMap(req.Body.Tools))
+	conv.SetNamespaceMap(converter.BuildNamespaceMap(req.Body.Tools))
 }
 
 func writeResponseLifecycleEvent(w *bufio.Writer, event enum.ResponseStreamEventType, model, responseID string) error {

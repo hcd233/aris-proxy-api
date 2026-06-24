@@ -16,7 +16,8 @@ import (
 
 // ResponseProtocolConverter 以 OpenAI ChatCompletion 作为 OpenAI Response API 的兼容基座。
 type ResponseProtocolConverter struct {
-	toolTypeMap map[string]string // Chat function name → original Response tool type
+	toolTypeMap  map[string]string // Chat function name → original Response tool type
+	namespaceMap map[string]string // flattened function name → namespace name
 }
 
 func (c *ResponseProtocolConverter) FromResponseRequest(req *dto.OpenAICreateResponseReq) (*dto.OpenAIChatCompletionReq, error) {
@@ -57,6 +58,7 @@ func (c *ResponseProtocolConverter) FromResponseRequest(req *dto.OpenAICreateRes
 	if len(req.Tools) > 0 {
 		chatReq.Tools = responseToolsToChat(req.Tools)
 		c.toolTypeMap = BuildToolTypeMap(req.Tools)
+		c.namespaceMap = BuildNamespaceMap(req.Tools)
 	}
 	if req.ToolChoice != nil {
 		chatReq.ToolChoice = responseToolChoiceToChat(req.ToolChoice)
@@ -107,7 +109,7 @@ func (c *ResponseProtocolConverter) ToResponseResponse(completion *dto.OpenAICha
 	if len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return rsp, nil
 	}
-	items := chatMessageToResponseOutputs(completion.Choices[0].Message, c.toolTypeMap)
+	items := chatMessageToResponseOutputs(completion.Choices[0].Message, c.toolTypeMap, c.namespaceMap)
 	rsp.Output = items
 	return rsp, nil
 }
@@ -279,13 +281,17 @@ func responseFunctionCallToChat(item *dto.ResponseInputItem) *dto.OpenAIChatComp
 	if callID == "" {
 		callID = "call_" + uuid.New().String()
 	}
+	name := lo.FromPtr(item.Name)
+	if ns := lo.FromPtr(item.Namespace); ns != "" && name != "" {
+		name = ns + constant.NamespaceToolSeparator + name
+	}
 	return &dto.OpenAIChatCompletionMessageParam{
 		Role: enum.RoleAssistant,
 		ToolCalls: []*dto.OpenAIChatCompletionMessageToolCall{{
 			ID:   lo.ToPtr(callID),
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
-				Name:      lo.FromPtr(item.Name),
+				Name:      name,
 				Arguments: args,
 			},
 		}},
@@ -340,11 +346,59 @@ func responseTextFormatToChat(format *dto.ResponseTextFormat) *dto.OpenAIRespons
 }
 
 func responseToolsToChat(tools []*dto.ResponseTool) []dto.OpenAIChatCompletionTool {
-	return lo.FilterMap(tools, func(tool *dto.ResponseTool, _ int) (dto.OpenAIChatCompletionTool, bool) {
+	var result []dto.OpenAIChatCompletionTool
+	for _, tool := range tools {
 		if tool == nil {
+			continue
+		}
+		if tool.Namespace != nil {
+			result = append(result, convertNamespaceToolsToChat(tool.Namespace)...)
+			continue
+		}
+		if t, ok := convertResponseToolToChat(tool); ok {
+			result = append(result, t)
+		}
+	}
+	return result
+}
+
+// convertNamespaceToolsToChat 将 namespace 工具内的子工具铺平为独立的 ChatCompletion function/custom 工具。
+// 子工具名称使用 `{namespace}__{subToolName}` 格式，保证在 ChatCompletion 协议中唯一可调用。
+func convertNamespaceToolsToChat(ns *dto.ResponseToolNamespace) []dto.OpenAIChatCompletionTool {
+	if ns == nil || ns.Name == "" {
+		return nil
+	}
+	return lo.FilterMap(ns.Tools, func(sub *dto.ResponseNamespaceTool, _ int) (dto.OpenAIChatCompletionTool, bool) {
+		if sub == nil || sub.Name == "" {
 			return dto.OpenAIChatCompletionTool{}, false
 		}
-		return convertResponseToolToChat(tool)
+		flatName := ns.Name + constant.NamespaceToolSeparator + sub.Name
+		switch sub.Type {
+		case enum.ResponseToolTypeCustom:
+			chatTool := dto.OpenAIChatCompletionTool{
+				Type: enum.ToolTypeCustom,
+				Custom: &dto.OpenAICustomToolDefinition{
+					Name:        flatName,
+					Description: sub.Description,
+				},
+			}
+			if sub.Format != nil {
+				chatTool.Custom.Format = &dto.OpenAICustomToolFormat{
+					Type: sub.Format.Type,
+				}
+			}
+			return chatTool, true
+		default:
+			return dto.OpenAIChatCompletionTool{
+				Type: enum.ToolTypeFunction,
+				Function: &dto.OpenAIFunctionDefinition{
+					Name:        flatName,
+					Description: sub.Description,
+					Parameters:  sub.Parameters,
+					Strict:      sub.Strict,
+				},
+			}, true
+		}
 	})
 }
 
@@ -454,14 +508,6 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescShell),
 			},
 		}, true
-	case tool.Namespace != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.Namespace.Name,
-				Description: lo.ToPtr(tool.Namespace.Description),
-			},
-		}, true
 	case tool.ToolSearch != nil:
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
@@ -507,7 +553,7 @@ func responseToolChoiceToChat(tc *dto.ResponseToolChoiceParam) *dto.OpenAIChatCo
 	return nil
 }
 
-func chatMessageToResponseOutputs(msg *dto.OpenAIChatCompletionMessageParam, toolTypeMap map[string]string) []*dto.ResponseInputItem {
+func chatMessageToResponseOutputs(msg *dto.OpenAIChatCompletionMessageParam, toolTypeMap, namespaceMap map[string]string) []*dto.ResponseInputItem {
 	if msg == nil {
 		return nil
 	}
@@ -530,19 +576,23 @@ func chatMessageToResponseOutputs(msg *dto.OpenAIChatCompletionMessageParam, too
 		switch {
 		case tc.Function != nil:
 			itemType := resolveToolCallOutputType(tc.Function.Name, toolTypeMap)
+			name, ns := splitNamespacedName(tc.Function.Name, namespaceMap)
 			return &dto.ResponseInputItem{
 				Type:      lo.ToPtr(itemType),
 				CallID:    tc.ID,
-				Name:      lo.ToPtr(tc.Function.Name),
+				Name:      lo.ToPtr(name),
+				Namespace: lo.ToPtr(ns),
 				Arguments: lo.ToPtr(tc.Function.Arguments),
 			}, true
 		case tc.Custom != nil:
 			itemType := resolveToolCallOutputType(tc.Custom.Name, toolTypeMap)
+			name, ns := splitNamespacedName(tc.Custom.Name, namespaceMap)
 			return &dto.ResponseInputItem{
-				Type:   lo.ToPtr(itemType),
-				CallID: tc.ID,
-				Name:   lo.ToPtr(tc.Custom.Name),
-				Input:  lo.ToPtr(tc.Custom.Input),
+				Type:      lo.ToPtr(itemType),
+				CallID:    tc.ID,
+				Name:      lo.ToPtr(name),
+				Namespace: lo.ToPtr(ns),
+				Input:     lo.ToPtr(tc.Custom.Input),
 			}, true
 		}
 		return nil, false
@@ -583,12 +633,55 @@ func buildTextOutputItem(msg *dto.OpenAIChatCompletionMessageParam) *dto.Respons
 }
 
 func BuildToolTypeMap(tools []*dto.ResponseTool) map[string]string {
-	validTools := lo.Filter(tools, func(t *dto.ResponseTool, _ int) bool {
-		return t != nil && responseToolFunctionName(t) != ""
-	})
-	return lo.SliceToMap(validTools, func(t *dto.ResponseTool) (string, string) {
-		return responseToolFunctionName(t), responseToolOrigType(t)
-	})
+	m := make(map[string]string)
+	for _, t := range tools {
+		if t == nil {
+			continue
+		}
+		if t.Namespace != nil {
+			for _, sub := range t.Namespace.Tools {
+				if sub == nil || sub.Name == "" {
+					continue
+				}
+				flatName := t.Namespace.Name + constant.NamespaceToolSeparator + sub.Name
+				m[flatName] = sub.Type
+			}
+			continue
+		}
+		name := responseToolFunctionName(t)
+		if name == "" {
+			continue
+		}
+		m[name] = responseToolOrigType(t)
+	}
+	return m
+}
+
+// BuildNamespaceMap 构建铺平后的函数名 → 命名空间名称的映射，用于响应方向拆分 namespaced tool call。
+func BuildNamespaceMap(tools []*dto.ResponseTool) map[string]string {
+	m := make(map[string]string)
+	for _, t := range tools {
+		if t == nil || t.Namespace == nil || t.Namespace.Name == "" {
+			continue
+		}
+		for _, sub := range t.Namespace.Tools {
+			if sub == nil || sub.Name == "" {
+				continue
+			}
+			flatName := t.Namespace.Name + constant.NamespaceToolSeparator + sub.Name
+			m[flatName] = t.Namespace.Name
+		}
+	}
+	return m
+}
+
+// splitNamespacedName 根据命名空间映射将铺平的函数名拆分回 (subToolName, namespaceName)。
+// 未在映射中找到时返回原始名称和空命名空间。
+func splitNamespacedName(flatName string, namespaceMap map[string]string) (name, namespace string) {
+	if ns, ok := namespaceMap[flatName]; ok {
+		return strings.TrimPrefix(flatName, ns+constant.NamespaceToolSeparator), ns
+	}
+	return flatName, ""
 }
 
 func responseToolFunctionName(t *dto.ResponseTool) string {
@@ -633,6 +726,14 @@ func (c *ResponseProtocolConverter) SetToolTypeMap(m map[string]string) {
 
 func (c *ResponseProtocolConverter) ToolTypeMap() map[string]string {
 	return c.toolTypeMap
+}
+
+func (c *ResponseProtocolConverter) SetNamespaceMap(m map[string]string) {
+	c.namespaceMap = m
+}
+
+func (c *ResponseProtocolConverter) NamespaceMap() map[string]string {
+	return c.namespaceMap
 }
 
 func responseToolOrigType(t *dto.ResponseTool) string {

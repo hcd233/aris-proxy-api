@@ -37,6 +37,7 @@ const (
 	ResponseStreamFieldSummary          = "summary"
 	ResponseStreamFieldCallID           = "call_id"
 	ResponseStreamFieldName             = "name"
+	ResponseStreamFieldNamespace        = "namespace"
 	ResponseStreamFieldArguments        = "arguments"
 	ResponseStreamFieldInput            = "input"
 	OpenAIInvalidRequestErrorType       = "invalid_request_error"
@@ -66,9 +67,11 @@ const (
 	ChatCompletionConvertToolDescShell = "Shell tool"
 	// ChatCompletionConvertToolDescApplyPatch ApplyPatch 工具转换描述
 	ChatCompletionConvertToolDescApplyPatch = "Apply patch tool"
-	OpenAIInternalErrorMessage              = "Internal server error"
-	OpenAIInternalErrorType                 = "server_error"
-	OpenAIInternalErrorCode                 = "internal_error"
+	// NamespaceToolSeparator 命名空间工具铺平为 ChatCompletion function 时的分隔符
+	NamespaceToolSeparator     = "__"
+	OpenAIInternalErrorMessage = "Internal server error"
+	OpenAIInternalErrorType    = "server_error"
+	OpenAIInternalErrorCode    = "internal_error"
 
 	AnthropicNotFoundErrorType            = "not_found_error"
 	AnthropicModelNotFoundMessageTemplate = "model: %s"
