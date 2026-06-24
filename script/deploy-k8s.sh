@@ -235,11 +235,14 @@ log "Applying deployment and service"
 sed "s|ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER|${IMAGE}|g" "${K8S_DIR}/deployment.yaml" | kubectl apply -f -
 kubectl apply -f "${K8S_DIR}/service.yaml"
 
+log "Cleaning up stuck pods before rollout (if any)"
+kubectl delete pod -n "${NAMESPACE}" -l app=${APP_NAME} --field-selector=status.phase!=Running --ignore-not-found=true || true
+
 log "Restarting deployment to pick up new image (tag: ${IMAGE_TAG})"
 kubectl rollout restart "deployment/${APP_NAME}" -n "${NAMESPACE}"
 
 log "Waiting for rollout"
-kubectl rollout status "deployment/${APP_NAME}" -n "${NAMESPACE}" --timeout=120s
+kubectl rollout status "deployment/${APP_NAME}" -n "${NAMESPACE}" --timeout=600s
 
 log "Verifying k3s service health"
 wait_for_service_health
