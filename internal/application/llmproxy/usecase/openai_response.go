@@ -92,9 +92,6 @@ func (h *nativeStreamHandler) onEvent(w *bufio.Writer, event string, data []byte
 	if h.firstTokenTime.IsZero() && proxyutil.IsResponseAPIDeltaEvent(event) {
 		h.firstTokenTime = time.Now()
 		h.firstTokenLatencyMs = h.firstTokenTime.Sub(h.startTime).Milliseconds()
-		h.logger.Info("[OpenAIUseCase] Native response first delta event",
-			zap.String("event", event),
-			zap.Int64("firstTokenLatencyMs", h.firstTokenLatencyMs))
 	}
 	h.handleOutputItemDone(event, data)
 	h.handleTerminalEvent(event, data)
@@ -120,9 +117,6 @@ func (h *nativeStreamHandler) handleOutputItemDone(event string, data []byte) {
 		return
 	}
 	h.accumulatedOutput = append(h.accumulatedOutput, ev.Item)
-	h.logger.Info("[OpenAIUseCase] Native response output_item.done",
-		zap.Int("outputIndex", ev.OutputIndex),
-		zap.Stringp("itemType", ev.Item.Type))
 }
 
 func (h *nativeStreamHandler) handleTerminalEvent(event string, data []byte) {
@@ -139,19 +133,6 @@ func (h *nativeStreamHandler) handleTerminalEvent(event string, data []byte) {
 	if h.finalResponse == nil {
 		return
 	}
-	outputTypes := lo.FilterMap(h.finalResponse.Output, func(item *dto.ResponseInputItem, _ int) (string, bool) {
-		if item == nil {
-			return "", false
-		}
-		return lo.FromPtr(item.Type), true
-	})
-	h.logger.Info("[OpenAIUseCase] Native response terminal event parsed",
-		zap.String("event", event),
-		zap.String("responseID", h.finalResponse.ID),
-		zap.String("status", h.finalResponse.Status),
-		zap.Int("outputCount", len(h.finalResponse.Output)),
-		zap.Strings("outputTypes", outputTypes),
-		zap.Int("accumulatedCount", len(h.accumulatedOutput)))
 }
 
 func (h *nativeStreamHandler) patchTerminalOutput(event string, data []byte) []byte {
@@ -169,7 +150,6 @@ func (h *nativeStreamHandler) patchTerminalOutput(event string, data []byte) []b
 	if h.finalResponse != nil {
 		h.finalResponse.Output = h.accumulatedOutput
 	}
-	h.logger.Info("[OpenAIUseCase] Native response terminal output filled", zap.Int("count", len(h.accumulatedOutput)))
 	return patched
 }
 
@@ -182,7 +162,6 @@ func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggre
 		proxyutil.WriteUpstreamSSEError(h.ctx, w, proxyErr)
 	}
 	if h.finalResponse != nil && len(h.finalResponse.Output) == 0 && len(h.accumulatedOutput) > 0 {
-		h.logger.Info("[OpenAIUseCase] Using accumulated output items", zap.Int("count", len(h.accumulatedOutput)))
 		h.finalResponse.Output = h.accumulatedOutput
 	}
 	h.u.storeResponseFromRsp(h.ctx, h.req, h.finalResponse, proxyErr, upstream.Model)
@@ -242,7 +221,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		var rsp dto.OpenAICreateResponseRsp
 		parseErr := sonic.Unmarshal(respBody, &rsp)
 		if parseErr != nil {
-			log.Warn("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
+			log.Debug("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
 		} else {
 			u.storeResponseFromRsp(ctx, req, &rsp, nil, upstream.Model)
 		}
@@ -279,50 +258,32 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		startTime := time.Now()
 		var firstTokenTime time.Time
 		var firstTokenLatencyMs, streamDurationMs int64
-		var chunkCount int64
 
 		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, exposedModel, responseID); err != nil {
 			log.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
 		}
-		log.Info("[OpenAIUseCase] Via chat response.created written",
-			zap.String("responseID", responseID),
-			zap.String("model", exposedModel))
 
 		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, exposedModel, responseID); err != nil {
 			log.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
 		}
 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
-			chunkCount++
 			hasWritten, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, itemState, responseID, conv)
 			if firstTokenTime.IsZero() && hasWritten {
 				firstTokenTime = time.Now()
 				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
-				log.Info("[OpenAIUseCase] Via chat first delta event",
-					zap.Int64("firstTokenLatencyMs", firstTokenLatencyMs),
-					zap.Int64("chunkCount", chunkCount))
 			}
 			return writeErr
 		})
 		if !firstTokenTime.IsZero() {
 			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
 		}
-		log.Info("[OpenAIUseCase] Via chat stream completed",
-			zap.Int64("chunkCount", chunkCount),
-			zap.Int64("streamDurationMs", streamDurationMs),
-			zap.Bool("hasError", err != nil))
 
 		var rsp *dto.OpenAICreateResponseRsp
 		if err != nil {
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		} else {
 			rsp = converter.FinalizeResponseFromChatCompletion(w, completion, exposedModel, responseID, conv)
-			if rsp != nil {
-				log.Info("[OpenAIUseCase] Via chat response finalized",
-					zap.String("responseID", rsp.ID),
-					zap.String("status", rsp.Status),
-					zap.Int("outputCount", len(rsp.Output)))
-			}
 		}
 		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
 		task := &dto.ModelCallAuditTask{
@@ -402,7 +363,6 @@ type anthropicStreamHandler struct {
 	firstTokenLatencyMs int64
 	streamDurationMs    int64
 	allChunks           []*dto.OpenAIChatCompletionChunk
-	chunkCount          int64
 	itemState           *converter.StreamItemState
 	logger              *zap.Logger
 }
@@ -429,8 +389,6 @@ func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.Ant
 	if h.firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
 		h.firstTokenTime = time.Now()
 		h.firstTokenLatencyMs = h.firstTokenTime.Sub(h.startTime).Milliseconds()
-		h.logger.Info("[OpenAIUseCase] Via anthropic first delta event",
-			zap.Int64("firstTokenLatencyMs", h.firstTokenLatencyMs))
 	}
 	chunks, convErr := h.anthropicConv.ToOpenAISSEResponse(event, h.exposedModel, h.chunkID)
 	if convErr != nil {
@@ -441,7 +399,6 @@ func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.Ant
 		if chunk == nil {
 			continue
 		}
-		h.chunkCount++
 		h.allChunks = append(h.allChunks, chunk)
 		if _, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, h.itemState, h.responseID, h.responseConv); writeErr != nil {
 			return writeErr
@@ -454,18 +411,8 @@ func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, u
 	if !h.firstTokenTime.IsZero() {
 		h.streamDurationMs = time.Since(h.firstTokenTime).Milliseconds()
 	}
-	h.logger.Info("[OpenAIUseCase] Via anthropic stream completed",
-		zap.Int64("chunkCount", h.chunkCount),
-		zap.Int64("streamDurationMs", h.streamDurationMs),
-		zap.Bool("hasError", err != nil))
 
 	rsp := finalizeResponseFromAnthropicStream(h.ctx, w, err, h.allChunks, anthropicMsg, h.exposedModel, h.responseID, h.anthropicConv, h.responseConv)
-	if rsp != nil {
-		h.logger.Info("[OpenAIUseCase] Via anthropic response finalized",
-			zap.String("responseID", rsp.ID),
-			zap.String("status", rsp.Status),
-			zap.Int("outputCount", len(rsp.Output)))
-	}
 	h.u.storeResponseFromRsp(h.ctx, h.req, rsp, err, upstream.Model)
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(h.ctx),
