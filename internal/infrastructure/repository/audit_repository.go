@@ -20,6 +20,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // auditRepository AuditRepository 的 GORM 实现
@@ -325,7 +326,7 @@ func (r *auditRepository) applySort(db *gorm.DB, sort enum.Sort, sortField strin
 	if sort == "" || sortField == "" {
 		return db
 	}
-	sortField = safeSortField(sortField)
+	sortField = util.SafeSortField(sortField)
 	if sortField == constant.FieldCreatedAt {
 		sortField = constant.AuditRepoFieldCreatedAtQualified
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -23,12 +24,6 @@ import (
 var openAIInternalErrorBody = lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
 	Error: &dto.OpenAIError{Message: constant.OpenAIInternalErrorMessage, Type: constant.OpenAIInternalErrorType, Code: constant.OpenAIInternalErrorCode},
 }))
-
-type OpenAIUseCase interface {
-	ListModels(ctx context.Context) (*dto.OpenAIListModelsRsp, error)
-	CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error)
-	CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error)
-}
 
 type openAIUseCase struct {
 	resolver       service.EndpointResolver
@@ -46,7 +41,7 @@ func NewOpenAIUseCase(
 	anthropicProxy AnthropicProxyPort,
 	taskSubmitter TaskSubmitter,
 	blockedChecker BlockedChecker,
-) OpenAIUseCase {
+) port.OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
 		modelsQuery:    modelsQuery,

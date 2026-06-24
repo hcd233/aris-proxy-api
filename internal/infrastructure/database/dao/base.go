@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -22,15 +23,6 @@ import (
 //	author centonhuang
 //	update 2024-10-17 02:32:22
 type baseDAO[ModelT any] struct{}
-
-func isValidSortField(field string) bool {
-	for _, c := range field {
-		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
-			return false
-		}
-	}
-	return field != ""
-}
 
 // Create 创建数据
 //
@@ -265,7 +257,7 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 
 	param.Sort = lo.Ternary(param.Sort != "", param.Sort, enum.SortAsc)
 	param.SortField = lo.Ternary(param.SortField != "", param.SortField, constant.FieldID)
-	if isValidSortField(param.SortField) {
+	if util.SafeSortField(param.SortField) != "" {
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 

@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // cronCallAuditRepository CronCallAuditRepository 的 GORM 实现
@@ -240,6 +241,6 @@ func (r *cronCallAuditRepository) applySort(db *gorm.DB, sort enum.Sort, sortFie
 	if sort == "" || sortField == "" {
 		return db
 	}
-	sortField = safeSortField(sortField)
+	sortField = util.SafeSortField(sortField)
 	return db.Order(clause.OrderByColumn{Column: clause.Column{Name: sortField}, Desc: sort == enum.SortDesc})
 }
