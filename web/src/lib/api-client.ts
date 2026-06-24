@@ -81,6 +81,10 @@ class ApiClient {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
+      const locale = localStorage.getItem("locale");
+      if (locale === "zh" || locale === "en") {
+        headers["Accept-Language"] = locale;
+      }
     }
     return headers;
   }
@@ -343,12 +347,12 @@ class ApiClient {
    * Get shared session metadata (public, no auth).
    */
   async getShareMetadata(shareId: string): Promise<GetShareMetadataRsp> {
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
+    if (locale === "zh" || locale === "en") headers["Accept-Language"] = locale;
     const res = await fetch(
       `${API_BASE}/api/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
+      { method: "GET", headers }
     );
     if (!res.ok) {
       throw new ApiError(res.status, await res.text());
@@ -364,12 +368,12 @@ class ApiClient {
     page: number = 1,
     pageSize: number = 50
   ): Promise<ListShareMessagesRsp> {
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
+    if (locale === "zh" || locale === "en") headers["Accept-Language"] = locale;
     const res = await fetch(
       `${API_BASE}/api/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
+      { method: "GET", headers }
     );
     if (!res.ok) {
       throw new ApiError(res.status, await res.text());
@@ -385,12 +389,12 @@ class ApiClient {
     page: number = 1,
     pageSize: number = 20
   ): Promise<ListShareToolsRsp> {
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
+    if (locale === "zh" || locale === "en") headers["Accept-Language"] = locale;
     const res = await fetch(
       `${API_BASE}/api/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
+      { method: "GET", headers }
     );
     if (!res.ok) {
       throw new ApiError(res.status, await res.text());
