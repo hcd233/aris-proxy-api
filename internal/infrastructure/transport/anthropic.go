@@ -174,6 +174,12 @@ func (p *anthropicProxy) sendRequestOnce(ctx context.Context, ep vo.UpstreamEndp
 	if resp.StatusCode != http.StatusOK {
 		errorBody, _ := io.ReadAll(resp.Body) //nolint:errcheck // read best effort on error path
 		_ = resp.Body.Close()                 //nolint:errcheck // close best effort on error path
+		log.Error("[AnthropicProxy] Upstream returned non-200 status",
+			zap.Int("statusCode", resp.StatusCode),
+			zap.String("upstreamURL", upstreamURL),
+			zap.String("upstreamModel", ep.Model),
+			zap.String("responseBody", string(errorBody)),
+		)
 		return nil, &model.UpstreamError{
 			StatusCode: resp.StatusCode,
 			Headers:    capturePassthroughResponseHeaders(resp.Header),
