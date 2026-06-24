@@ -269,6 +269,10 @@
 
   "monitor.title": "Monitor",
   "monitor.subtitle": "Real-time runtime and business metrics (5s interval)",
+  "monitor.telemetry": "Runtime telemetry",
+  "monitor.refresh": "Refresh",
+  "monitor.updated": "Updated",
+  "monitor.samples": "Last {count} samples",
   "monitor.goroutines": "Goroutines",
   "monitor.heap": "Heap",
   "monitor.in_progress": "In-Progress",
