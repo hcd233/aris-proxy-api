@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	xoauth2 "golang.org/x/oauth2"
+	"golang.org/x/oauth2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
@@ -20,7 +20,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
-	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 )
 
 // stubStateManager 模拟 StateManager，委托给真实实现
@@ -29,7 +29,7 @@ type stubStateManager struct {
 }
 
 func newStubStateManager() service.StateManager {
-	return &stubStateManager{StateManager: infraoauth2.NewStateManager()}
+	return &stubStateManager{StateManager: infraoauth.NewStateManager()}
 }
 
 type initiateCase struct {
@@ -73,11 +73,11 @@ func (p *stubPlatform) GetAuthURLWithState(state string) string {
 	return "https://example.test/auth?state=" + state + "&platform=" + p.name
 }
 
-func (p *stubPlatform) ExchangeToken(_ context.Context, _ string) (*xoauth2.Token, error) {
+func (p *stubPlatform) ExchangeToken(_ context.Context, _ string) (*oauth2.Token, error) {
 	return nil, ierr.New(ierr.ErrInternal, "not used in initiate tests")
 }
 
-func (p *stubPlatform) GetUserInfo(_ context.Context, _ *xoauth2.Token) (vo.OAuthUserInfo, error) {
+func (p *stubPlatform) GetUserInfo(_ context.Context, _ *oauth2.Token) (vo.OAuthUserInfo, error) {
 	return vo.NewOAuthUserInfo("", "", "", ""), ierr.New(ierr.ErrInternal, "not used in initiate tests")
 }
 

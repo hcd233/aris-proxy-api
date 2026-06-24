@@ -4,7 +4,7 @@ import (
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
-	oauth2port "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
+	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -17,11 +17,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	llmproxyservice "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
-	oauth2service "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
+	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
-	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
@@ -101,7 +101,7 @@ func NewEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
 	return repository.NewEndpointReadRepository(db)
 }
 
-func NewAudioDirCreator() oauth2port.ObjectStorageDirCreator {
+func NewAudioDirCreator() oauthport.ObjectStorageDirCreator {
 	if config.CosAppID == "" && config.MinioEndpoint == "" {
 		return nil
 	}
@@ -128,15 +128,15 @@ func NewAPIKeyGenerator() apikeyservice.APIKeyGenerator {
 	return apikeyservice.NewAPIKeyGenerator()
 }
 
-func NewOauth2Platforms() map[string]oauth2service.Platform {
-	return map[string]oauth2service.Platform{
-		enum.Oauth2PlatformGithub: infraoauth2.NewGithubPlatform(),
-		enum.Oauth2PlatformGoogle: infraoauth2.NewGooglePlatform(),
+func NewOauth2Platforms() map[string]oauthsvc.Platform {
+	return map[string]oauthsvc.Platform{
+		enum.Oauth2PlatformGithub: infraoauth.NewGithubPlatform(),
+		enum.Oauth2PlatformGoogle: infraoauth.NewGooglePlatform(),
 	}
 }
 
-func NewStateManager() oauth2service.StateManager {
-	return infraoauth2.NewStateManager()
+func NewStateManager() oauthsvc.StateManager {
+	return infraoauth.NewStateManager()
 }
 
 func NewTaskSubmitter(pm *pool.PoolManager) usecase.TaskSubmitter {

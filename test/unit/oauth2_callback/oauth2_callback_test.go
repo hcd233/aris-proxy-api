@@ -12,7 +12,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	xoauth2 "golang.org/x/oauth2"
+	"golang.org/x/oauth2"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
@@ -23,7 +23,7 @@ import (
 	identityvo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
-	infraoauth2 "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 )
 
 // callbackCase 回调测试用例
@@ -97,17 +97,17 @@ func findCase(t *testing.T, cases []callbackCase, name string) callbackCase {
 // stubPlatform 模拟 OAuth2 平台：固定返回 token 和用户信息
 type stubPlatform struct {
 	name          string
-	exchangeToken func(ctx context.Context, code string) (*xoauth2.Token, error)
-	getUserInfo   func(ctx context.Context, token *xoauth2.Token) (vo.OAuthUserInfo, error)
+	exchangeToken func(ctx context.Context, code string) (*oauth2.Token, error)
+	getUserInfo   func(ctx context.Context, token *oauth2.Token) (vo.OAuthUserInfo, error)
 }
 
 func newStubPlatform(name string, userInfo *stubUserInfo) *stubPlatform {
 	return &stubPlatform{
 		name: name,
-		exchangeToken: func(_ context.Context, code string) (*xoauth2.Token, error) {
-			return &xoauth2.Token{AccessToken: "stub-access-token", TokenType: "bearer"}, nil
+		exchangeToken: func(_ context.Context, code string) (*oauth2.Token, error) {
+			return &oauth2.Token{AccessToken: "stub-access-token", TokenType: "bearer"}, nil
 		},
-		getUserInfo: func(_ context.Context, _ *xoauth2.Token) (vo.OAuthUserInfo, error) {
+		getUserInfo: func(_ context.Context, _ *oauth2.Token) (vo.OAuthUserInfo, error) {
 			if userInfo == nil {
 				return vo.OAuthUserInfo{}, nil
 			}
@@ -120,11 +120,11 @@ func (p *stubPlatform) GetAuthURLWithState(state string) string {
 	return "https://example.test/auth?state=" + state
 }
 
-func (p *stubPlatform) ExchangeToken(ctx context.Context, code string) (*xoauth2.Token, error) {
+func (p *stubPlatform) ExchangeToken(ctx context.Context, code string) (*oauth2.Token, error) {
 	return p.exchangeToken(ctx, code)
 }
 
-func (p *stubPlatform) GetUserInfo(ctx context.Context, token *xoauth2.Token) (vo.OAuthUserInfo, error) {
+func (p *stubPlatform) GetUserInfo(ctx context.Context, token *oauth2.Token) (vo.OAuthUserInfo, error) {
 	return p.getUserInfo(ctx, token)
 }
 
@@ -246,7 +246,7 @@ func TestHandleCallback_NewUser(t *testing.T) {
 	tc := findCase(t, allCases, "callback_new_user")
 	ctx := context.Background()
 
-	stateManager := infraoauth2.NewStateManager()
+	stateManager := infraoauth.NewStateManager()
 
 	state, err := stateManager.GenerateState(tc.Platform)
 	if err != nil {
@@ -292,7 +292,7 @@ func TestHandleCallback_ExistingUser(t *testing.T) {
 	tc := findCase(t, allCases, "callback_existing_user")
 	ctx := context.Background()
 
-	stateManager := infraoauth2.NewStateManager()
+	stateManager := infraoauth.NewStateManager()
 
 	state, err := stateManager.GenerateState(tc.Platform)
 	if err != nil {
@@ -368,7 +368,7 @@ func TestHandleCallback_InvalidPlatform(t *testing.T) {
 	tc := findCase(t, allCases, "callback_invalid_platform")
 	ctx := context.Background()
 
-	stateManager := infraoauth2.NewStateManager()
+	stateManager := infraoauth.NewStateManager()
 
 	state, err := stateManager.GenerateState(tc.Platform)
 	if err != nil {
@@ -398,7 +398,7 @@ func TestHandleCallback_InvalidState(t *testing.T) {
 	tc := findCase(t, allCases, "callback_invalid_state")
 	ctx := context.Background()
 
-	stateManager := infraoauth2.NewStateManager()
+	stateManager := infraoauth.NewStateManager()
 	userRepo := newStubUserRepo()
 	handler := makeHandler(userRepo, &tc, stateManager)
 
