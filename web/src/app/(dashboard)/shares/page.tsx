@@ -43,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useT } from "@/lib/i18n";
 
 interface DeleteTarget {
   shareId: string;
@@ -50,6 +51,7 @@ interface DeleteTarget {
 }
 
 export default function SharesPage() {
+  const t = useT();
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.shares.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.shares.pageSize", 20);
@@ -106,12 +108,12 @@ export default function SharesPage() {
     try {
       await navigator.clipboard.writeText(url);
       setCopiedID(share.shareId);
-      toast.success("Link copied to clipboard");
+      toast.success(t("common.copied_to_clipboard"));
       window.setTimeout(() => setCopiedID(null), 2000);
     } catch {
       toast.error("Failed to copy link");
     }
-  }, []);
+  }, [t]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -142,7 +144,7 @@ export default function SharesPage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          Shares
+          {t("shares.title")}
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Manage public links to your conversations. Expired links remain visible
@@ -165,7 +167,7 @@ export default function SharesPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Share2 className="mb-3 size-10 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
-                You haven&apos;t shared any sessions yet.
+                {t("shares.no_shares")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground/70">
                 Open a session and click &ldquo;Share&rdquo; to create a public
@@ -177,12 +179,12 @@ export default function SharesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Share ID</TableHead>
-                    <TableHead>Session</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Expires</TableHead>
+                    <TableHead>{t("shares.share_id")}</TableHead>
+                    <TableHead>{t("shares.session_id")}</TableHead>
+                    <TableHead>{t("common.created")}</TableHead>
+                    <TableHead>{t("shares.expires_at")}</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,12 +250,12 @@ export default function SharesPage() {
                               {copiedID === share.shareId ? (
                                 <>
                                   <Check className="size-3" />
-                                  Copied
+                                  {t("common.copied")}
                                 </>
                               ) : (
                                 <>
                                   <Copy className="size-3" />
-                                  Copy
+                                  {t("common.copy")}
                                 </>
                               )}
                             </Button>
@@ -299,7 +301,7 @@ export default function SharesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="size-5 text-destructive" />
-              Revoke this share?
+              {t("shares.delete_confirm")}
             </AlertDialogTitle>
             <AlertDialogDescription>
               The link for session{" "}
@@ -308,7 +310,7 @@ export default function SharesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={handleDelete}

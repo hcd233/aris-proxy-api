@@ -19,7 +19,10 @@ var (
 	allowedImplNames = []string{constant.ConvCheckNameStateMap, constant.ConvCheckNameChoiceMap, constant.ConvCheckNameToolCallMap, constant.ConvCheckNameBlockMap, constant.ConvCheckNameBlackList, constant.ConvCheckNameWhiteList, constant.ConvCheckNameAllowList, constant.ConvCheckNameDenyList, constant.ConvCheckNameBodyMap, constant.ConvCheckNameDataMap, constant.ConvCheckNameMsgMap, constant.ConvCheckNameMessageMap, constant.ConvCheckNameToolMap, constant.ConvCheckNameExistingMap, constant.ConvCheckNameSchemaMap, constant.ConvCheckNameSpecialNameBlackList, constant.ConvCheckNameSpecialNameWhiteList}
 )
 
-var implementationNamePattern = regexp.MustCompile(`[a-z](List|Map|Slice|Array)$`)
+var (
+	implementationNamePattern = regexp.MustCompile(`[a-z](List|Map|Slice|Array)$`)
+	importAliasPattern        = regexp.MustCompile(`^[a-z]+$`)
+)
 
 func (c *checker) checkStyle() {
 	for _, file := range c.files {
@@ -27,7 +30,27 @@ func (c *checker) checkStyle() {
 		c.checkImplementationDetailNames(file)
 		c.checkLocalConst(file)
 		c.checkTypeAlias(file)
+		c.checkImportAliasUnderscore(file)
 	}
+}
+
+func (c *checker) checkImportAliasUnderscore(file SourceFile) {
+	inspectFile(file, func(node ast.Node) {
+		spec, ok := node.(*ast.ImportSpec)
+		if !ok {
+			return
+		}
+		if spec.Name == nil {
+			return
+		}
+		name := spec.Name.Name
+		if name == "_" || name == "." {
+			return
+		}
+		if !importAliasPattern.MatchString(name) {
+			c.report(file, spec, enum.SeverityError, constant.RuleImportAliasUnderscore, constant.ConvCheckMsgImportAliasUnderscore)
+		}
+	})
 }
 
 func (c *checker) checkCommentedCode(file SourceFile) {

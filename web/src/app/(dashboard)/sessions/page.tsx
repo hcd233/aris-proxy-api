@@ -27,6 +27,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScoreDots } from "@/components/session-detail/score-dots";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -67,6 +68,7 @@ function formatDateTime(dateStr: string): string {
 }
 
 export default function SessionsPage() {
+  const t = useT();
   const isMobile = useIsMobile();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.sessions.page", 1);
@@ -300,15 +302,15 @@ export default function SessionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Sessions</h1>
+        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("sessions.title")}</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          View and browse your conversation sessions
+          {t("sessions.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">All Sessions</CardTitle>
+          <CardTitle className="font-display">{t("sessions.all_sessions")}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Filters — always visible */}
@@ -326,7 +328,7 @@ export default function SessionsPage() {
                 }}
               />
               <MultiSelectPill
-                label="Score"
+                label={t("sessions.filter_score")}
                 options={scoreOptions}
                 value={filterScore}
                 onChange={(v) => {
@@ -335,7 +337,7 @@ export default function SessionsPage() {
                 }}
               />
               <MultiSelectPill
-                label="Model"
+                label={t("sessions.filter_model")}
                 options={modelOptions}
                 value={filterModel}
                 onChange={(v) => {
@@ -355,7 +357,7 @@ export default function SessionsPage() {
                   }}
                 >
                   <X className="size-3.5" />
-                  Clear
+                  {t("common.clear")}
                 </Button>
               )}
             </div>
@@ -363,7 +365,7 @@ export default function SessionsPage() {
               <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search messages..."
+                  placeholder={t("sessions.search_placeholder")}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -389,7 +391,7 @@ export default function SessionsPage() {
                   className="gap-1.5"
                 >
                   <Trash2 className="size-3.5" />
-                  Delete {selected.size}
+                  {t("common.delete")} {selected.size}
                 </Button>
               )}
             </div>
@@ -404,7 +406,7 @@ export default function SessionsPage() {
           ) : sessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <MessageSquare className="mb-3 size-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">No sessions found</p>
+              <p className="text-sm text-muted-foreground">{t("sessions.no_sessions")}</p>
             </div>
           ) : (
             <>

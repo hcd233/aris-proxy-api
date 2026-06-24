@@ -602,6 +602,54 @@
     ]
   },
   {
+    "name": "import alias with underscore is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/demo.go",
+        "content": "package demo\n\nimport dto_pb \"github.com/prometheus/client_model/go\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "style.import_alias_underscore", "severity": "error"}
+    ]
+  },
+  {
+    "name": "import alias with camelCase is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/demo.go",
+        "content": "package demo\n\nimport dtoPb \"github.com/prometheus/client_model/go\"\n"
+      }
+    ],
+    "want": [
+      {"rule": "style.import_alias_underscore", "severity": "error"}
+    ]
+  },
+  {
+    "name": "all lowercase alias is allowed",
+    "files": [
+      {
+        "path": "internal/application/demo/demo.go",
+        "content": "package demo\n\nimport dtopb \"github.com/prometheus/client_model/go\"\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "style.import_alias_underscore", "severity": "error"}
+    ]
+  },
+  {
+    "name": "blank import is not flagged",
+    "files": [
+      {
+        "path": "internal/application/demo/demo.go",
+        "content": "package demo\n\nimport _ \"github.com/prometheus/client_model/go\"\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "style.import_alias_underscore", "severity": "error"}
+    ]
+  },
+  {
     "name": "non infrastructure package importing database model is rejected",
     "files": [
       {

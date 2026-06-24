@@ -5,6 +5,7 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
@@ -24,7 +25,7 @@ func LimitUserPermissionMiddleware(serviceName string, requiredPermission enum.P
 	return func(ctx huma.Context, next func(huma.Context)) {
 		permission := util.CtxValuePermission(ctx.Context())
 		if permission == "" {
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrNoPermission.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrNoPermission.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
@@ -33,7 +34,7 @@ func LimitUserPermissionMiddleware(serviceName string, requiredPermission enum.P
 				zap.String("serviceName", serviceName),
 				zap.String("requiredPermission", string(requiredPermission)),
 				zap.String("permission", string(permission)))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrNoPermission.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrNoPermission.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 

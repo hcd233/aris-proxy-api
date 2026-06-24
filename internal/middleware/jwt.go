@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
@@ -53,25 +54,25 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client, accessTokenSvc jwt.TokenSig
 		log := logger.WithCtx(ctx.Context())
 		if db == nil {
 			log.Error("[JwtMiddleware] DB dependency is nil")
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
 		tokenString := ctx.Header(constant.HTTPHeaderAuthorization)
 		tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(tokenString), constant.HTTPAuthBearerPrefix))
 		if tokenString == "" {
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 		userID, err := accessTokenSvc.DecodeToken(tokenString)
 		if err != nil {
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrJWTDecode.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
 		name, permission, err := resolveJWTUser(ctx.Context(), db, cache, userID)
 		if err != nil {
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError()))
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 

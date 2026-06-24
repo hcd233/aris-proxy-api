@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -66,7 +67,7 @@ func (h *cronHandler) HandleListCronJobs(ctx context.Context, req *dto.ListCronJ
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[CronHandler] List cron jobs failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -88,13 +89,13 @@ func (h *cronHandler) HandleListCronJobs(ctx context.Context, req *dto.ListCronJ
 func (h *cronHandler) HandleUpdateCronJob(ctx context.Context, req *dto.UpdateCronJobReq) (*dto.HTTPResponse[*dto.UpdateCronJobRsp], error) {
 	rsp := &dto.UpdateCronJobRsp{}
 	if req.Body == nil {
-		rsp.Error = ierr.ErrValidation.BizError()
+		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	// 至少传一个字段
 	if req.Body.Enabled == nil && req.Body.Spec == nil {
-		rsp.Error = ierr.ErrValidation.BizError()
+		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -104,7 +105,7 @@ func (h *cronHandler) HandleUpdateCronJob(ctx context.Context, req *dto.UpdateCr
 	}
 	if err := h.updateCronJob.Handle(ctx, req.Name, params); err != nil {
 		logger.WithCtx(ctx).Error("[CronHandler] Update cron job failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -122,7 +123,7 @@ func (h *cronHandler) HandleListCronCallAudits(ctx context.Context, req *dto.Lis
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[CronHandler] List cron call audits failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -149,7 +150,7 @@ func (h *cronHandler) HandleListCronCallAuditOptions(ctx context.Context, req *d
 	items, err := h.listCronCallAuditOpts.Handle(ctx, req.Field, req.Keyword, req.StartTime, req.EndTime)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[CronHandler] List cron call audit options failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 

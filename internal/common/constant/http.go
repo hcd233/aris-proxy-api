@@ -14,6 +14,7 @@ const (
 
 	// HTTPHeader HTTP 头部常量（全部使用标准 Title-Case 格式）
 	HTTPHeaderAcceptEncoding      = "Accept-Encoding"
+	HTTPHeaderAcceptLanguage      = "Accept-Language"
 	HTTPHeaderAuthorization       = "Authorization"
 	HTTPHeaderAPIKey              = "X-Api-Key"
 	HTTPHeaderAnthropicVersion    = "Anthropic-Version"

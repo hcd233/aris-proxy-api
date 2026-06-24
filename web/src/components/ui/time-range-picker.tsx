@@ -6,6 +6,7 @@ import { CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -42,6 +43,7 @@ export function TimeRangePicker({
   onChange,
   className,
 }: TimeRangePickerProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (value === "custom" && customStart && customEnd) {
@@ -166,8 +168,16 @@ export function TimeRangePicker({
       const end = new Date(customEnd);
       return `${format(start, "MMM d")} – ${format(end, "MMM d")}`;
     }
-    return "Custom";
-  }, [value, customStart, customEnd]);
+    return t("time.custom");
+  }, [value, customStart, customEnd, t]);
+
+  const timeLabels: Record<TimeRangeKey, string> = {
+    "1h": t("time.last_1h"),
+    "24h": t("time.last_24h"),
+    "7d": t("time.last_7d"),
+    "30d": t("time.last_30d"),
+    custom: t("time.custom"),
+  };
 
   return (
     <div className={cn("flex items-center gap-0.5 rounded-lg bg-muted p-0.5", className)}>
@@ -183,7 +193,7 @@ export function TimeRangePicker({
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          {PRESET_LABELS[key]}
+          {timeLabels[key]}
         </button>
       ))}
 

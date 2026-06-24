@@ -9,6 +9,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -33,7 +34,7 @@ func RecoverMiddleware() fiber.Handler {
 			c.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 			_ = c.Status(fiber.StatusOK).Send( //nolint:errcheck // best-effort send in panic handler
 				lo.Must1(sonic.Marshal(&dto.CommonRsp{
-					Error: ierr.ErrInternal.BizError(),
+					Error: ierr.ErrInternal.BizError().Localize(i18n.FromCtx(c)),
 				})),
 			)
 			return nil

@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -60,7 +61,7 @@ func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshT
 	rsp := &dto.RefreshTokenRsp{}
 
 	if strings.TrimSpace(req.Body.RefreshToken) == "" {
-		rsp.Error = ierr.ErrValidation.BizError()
+		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -71,7 +72,7 @@ func (h *tokenHandler) HandleRefreshToken(ctx context.Context, req *dto.RefreshT
 		logger.WithCtx(ctx).Warn("[TokenHandler] Refresh token failed",
 			zap.String("refreshToken", commonutil.MaskSecret(req.Body.RefreshToken)),
 			zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 

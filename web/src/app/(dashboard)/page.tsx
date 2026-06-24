@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -56,6 +57,7 @@ function StatCard({
 }
 
 export default function DashboardPage() {
+  const t = useT();
   const { isAdmin } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     apiKeys: 0,
@@ -98,28 +100,28 @@ export default function DashboardPage() {
   return (
       <div className="space-y-8">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Dashboard</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{t("dashboard.title")}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Overview of your Aris Proxy API resources
+            {t("dashboard.overview")}
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="API Keys"
+            title={t("apikeys.title")}
             value={stats.apiKeys}
             icon={<Key className="size-4" />}
             loading={loading}
           />
           <StatCard
-            title="Sessions"
+            title={t("sessions.title")}
             value={stats.sessions}
             icon={<MessageSquare className="size-4" />}
             loading={loading}
           />
           {isAdmin() && (
             <StatCard
-              title="Endpoints"
+              title={t("endpoints.title")}
               value={stats.endpoints}
               icon={<Server className="size-4" />}
               loading={loading}
@@ -127,7 +129,7 @@ export default function DashboardPage() {
           )}
           {isAdmin() && (
             <StatCard
-              title="Models"
+              title={t("models.title")}
               value={stats.models}
               icon={<Cpu className="size-4" />}
               loading={loading}

@@ -50,6 +50,7 @@ import { ProviderIcon } from "@/components/provider-icon";
 import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useT } from "@/lib/i18n";
 
 interface ModelForm {
   alias: string;
@@ -65,6 +66,7 @@ const emptyForm: ModelForm = {
 
 export default function ModelsPage() {
   const router = useRouter();
+  const t = useT();
   const isMobile = useIsMobile();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
@@ -105,10 +107,10 @@ export default function ModelsPage() {
       setEndpoints(list);
       return list;
     } catch {
-      toast.error("Failed to load endpoints");
+      toast.error(t("endpoints.load_error"));
       return [];
     }
-  }, []);
+  }, [t]);
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -212,14 +214,14 @@ export default function ModelsPage() {
       <div className="space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Models</h1>
+            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("models.title")}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Manage model aliases and routing
             </p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="mr-1 size-4" />
-            Create Model
+            {t("models.create")}
           </Button>
         </div>
 
@@ -252,7 +254,7 @@ export default function ModelsPage() {
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Cpu className="mb-3 size-10 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">
-                  No models configured. Create one to get started.
+                  {t("models.no_models")}
                 </p>
               </div>
             ) : (
@@ -285,7 +287,7 @@ export default function ModelsPage() {
                               onClick={() => openDeleteConfirm(model)}
                             >
                               <Trash2 className="mr-1 size-3" />
-                              Delete
+                              {t("common.delete")}
                             </Button>
                           </div>
                         </div>
@@ -295,15 +297,15 @@ export default function ModelsPage() {
                             checked={model.enabled}
                             onCheckedChange={() => handleToggleEnabled(model)}
                           />
-                          <span className="text-xs text-muted-foreground">
-                            {model.enabled ? "Enabled" : "Disabled"}
-                          </span>
-                        </div>
+                              <span className="text-xs text-muted-foreground">
+                                {model.enabled ? t("models.enabled") : t("models.disabled")}
+                              </span>
+                            </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Endpoint: {getEndpointName(model)}
+                          {t("models.endpoint")}: {getEndpointName(model)}
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          Created {new Date(model.createdAt).toLocaleDateString()}
+                          {t("common.created")} {new Date(model.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     ))}
@@ -312,12 +314,12 @@ export default function ModelsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Alias</TableHead>
-                        <TableHead>Model Name</TableHead>
-                        <TableHead>Enabled</TableHead>
-                        <TableHead>Endpoint</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>{t("models.alias")}</TableHead>
+                        <TableHead>{t("models.model_name")}</TableHead>
+                        <TableHead>{t("models.enabled")}</TableHead>
+                        <TableHead>{t("models.endpoint")}</TableHead>
+                        <TableHead>{t("common.created")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -338,7 +340,7 @@ export default function ModelsPage() {
                                 onCheckedChange={() => handleToggleEnabled(model)}
                               />
                               <span className="text-xs text-muted-foreground">
-                                {model.enabled ? "Enabled" : "Disabled"}
+                                {model.enabled ? t("models.enabled") : t("models.disabled")}
                               </span>
                             </div>
                           </TableCell>
@@ -364,11 +366,11 @@ export default function ModelsPage() {
                                 disabled={deleting === model.id}
                                 onClick={() => openDeleteConfirm(model)}
                               >
-                                <Trash2 className="mr-1 size-3" />
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
+                              <Trash2 className="mr-1 size-3" />
+                              {t("common.delete")}
+                            </Button>
+                          </div>
+                        </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -389,17 +391,17 @@ export default function ModelsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-destructive" />
-                Are you sure?
+              <AlertTriangle className="size-5 text-destructive" />
+              {t("common.are_you_sure")}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 This will permanently delete <strong>{deleteTarget?.name}</strong>. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
-                {deleting !== null ? "Deleting..." : "Delete"}
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
+              {deleting !== null ? t("common.deleting") : t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -409,7 +411,7 @@ export default function ModelsPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingId ? "Edit Model" : "Create Model"}
+                {editingId ? t("models.edit") : t("models.create")}
               </DialogTitle>
               <DialogDescription>
                 {editingId
@@ -419,7 +421,7 @@ export default function ModelsPage() {
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="model-alias">Alias</Label>
+                <Label htmlFor="model-alias">{t("models.alias")}</Label>
                 <Input
                   id="model-alias"
                   placeholder="e.g. gpt-4o"
@@ -428,7 +430,7 @@ export default function ModelsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="model-name">Model ID</Label>
+                <Label htmlFor="model-name">{t("models.model_name")}</Label>
                 <Input
                   id="model-name"
                   placeholder="e.g. gpt-4o-2024-08-06"
@@ -437,7 +439,7 @@ export default function ModelsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="model-endpoint">Endpoint</Label>
+                <Label htmlFor="model-endpoint">{t("models.endpoint")}</Label>
                 <Select
                   value={String(form.endpointID)}
                   onValueChange={(value) =>
@@ -461,13 +463,13 @@ export default function ModelsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={!form.alias.trim() || !form.modelName.trim() || !form.endpointID || saving}
               >
-                {saving ? "Saving..." : editingId ? "Update" : "Create"}
+                {saving ? t("common.saving") : editingId ? t("common.update") : t("common.create")}
               </Button>
             </DialogFooter>
           </DialogContent>

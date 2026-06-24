@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
+import { useT } from "@/lib/i18n";
 import type { RequestRateItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +22,7 @@ import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
 
 export function RequestRateChart() {
+  const t = useT();
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.requestRate.timeRange", "24h");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.requestRate.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.requestRate.customEnd", "");
@@ -85,7 +87,7 @@ export function RequestRateChart() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">Request Success Rate</CardTitle>
+        <CardTitle className="font-display">{t("dashboard.request_rate")}</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}

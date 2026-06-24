@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import {
   LayoutDashboard,
@@ -40,80 +42,28 @@ import {
 } from "lucide-react";
 
 interface NavItem {
-  label: string;
+  labelKey: string;
   href: string;
   icon: ReactNode;
   adminOnly?: boolean;
 }
 
-const navItems: NavItem[] = [
-  {
-    label: "Dashboard",
-    href: "/",
-    icon: <LayoutDashboard className="size-4" />,
-  },
-  {
-    label: "Sessions",
-    href: "/sessions/",
-    icon: <MessageSquare className="size-4" />,
-  },
-  {
-    label: "Shares",
-    href: "/shares/",
-    icon: <Share2 className="size-4" />,
-  },
-  {
-    label: "API Keys",
-    href: "/apikeys/",
-    icon: <Key className="size-4" />,
-  },
-  {
-    label: "Endpoints",
-    href: "/endpoints/",
-    icon: <Server className="size-4" />,
-    adminOnly: true,
-  },
-  {
-    label: "Models",
-    href: "/models/",
-    icon: <Cpu className="size-4" />,
-    adminOnly: true,
-  },
-  {
-    label: "Blocked",
-    href: "/blocked/",
-    icon: <Ban className="size-4" />,
-    adminOnly: true,
-  },
-  {
-    label: "Model Call Audit",
-    href: "/audit/model/",
-    icon: <ScrollText className="size-4" />,
-  },
-  {
-    label: "Cron",
-    href: "/cron/",
-    icon: <Timer className="size-4" />,
-    adminOnly: true,
-  },
-  {
-    label: "Cron Audit",
-    href: "/audit/cron/",
-    icon: <ScrollText className="size-4" />,
-    adminOnly: true,
-  },
-  {
-    label: "Monitor",
-    href: "/monitor/",
-    icon: <Activity className="size-4" />,
-    adminOnly: true,
-  },
-  {
-    label: "Profile",
-    href: "/profile/",
-    icon: <User className="size-4" />,
-  },
-];
+function getNavItems(): NavItem[] {
+  return [
+    { labelKey: "nav.dashboard", href: "/", icon: <LayoutDashboard className="size-4" /> },
+    { labelKey: "nav.sessions", href: "/sessions/", icon: <MessageSquare className="size-4" /> },
+    { labelKey: "nav.shares", href: "/shares/", icon: <Share2 className="size-4" /> },
+    { labelKey: "nav.api_keys", href: "/apikeys/", icon: <Key className="size-4" /> },
+    { labelKey: "nav.endpoints", href: "/endpoints/", icon: <Server className="size-4" />, adminOnly: true },
+    { labelKey: "nav.models", href: "/models/", icon: <Cpu className="size-4" />, adminOnly: true },
+    { labelKey: "nav.blocked", href: "/blocked/", icon: <Ban className="size-4" />, adminOnly: true },
+    { labelKey: "nav.audit", href: "/audit/model/", icon: <ScrollText className="size-4" /> },
+    { labelKey: "nav.cron", href: "/cron/", icon: <Timer className="size-4" />, adminOnly: true },
+    { labelKey: "nav.cron_audit", href: "/audit/cron/", icon: <ScrollText className="size-4" />, adminOnly: true },
+    { labelKey: "nav.monitor", href: "/monitor/", icon: <Activity className="size-4" />, adminOnly: true },
+    { labelKey: "nav.profile", href: "/profile/", icon: <User className="size-4" /> },
+  ];
+}
 
 function SidebarNav({
   items,
@@ -126,6 +76,7 @@ function SidebarNav({
 }) {
   const pathname = usePathname();
   const { isAdmin } = useAuth();
+  const t = useT();
 
   const visibleItems = items.filter(
     (item) => !item.adminOnly || isAdmin()
@@ -138,6 +89,7 @@ function SidebarNav({
           item.href === "/"
             ? pathname === "/"
             : pathname.startsWith(item.href);
+        const label = t(item.labelKey);
 
         return (
           <Link
@@ -149,10 +101,10 @@ function SidebarNav({
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             } ${collapsed ? "justify-center" : ""}`}
-            title={collapsed ? item.label : undefined}
+            title={collapsed ? label : undefined}
           >
             <span className={isActive ? "text-white" : ""}>{item.icon}</span>
-            {!collapsed && <span>{item.label}</span>}
+            {!collapsed && <span>{label}</span>}
           </Link>
         );
       })}
@@ -162,6 +114,7 @@ function SidebarNav({
 
 function UserBar({ collapsed = false }: { collapsed?: boolean }) {
   const { user, logout } = useAuth();
+  const t = useT();
 
   if (!user) return null;
 
@@ -193,7 +146,8 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
               </Badge>
             </div>
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={logout} title="Logout" className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+          <LanguageSwitcher />
+          <Button variant="ghost" size="icon-sm" onClick={logout} title={t("nav.logout")} className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
             <LogOut className="size-4" />
           </Button>
         </>
@@ -214,6 +168,8 @@ export default function DashboardLayout({
   const isSessionDetail = pathname.startsWith("/sessions/detail");
 
   const closeMobileSidebar = useCallback(() => setSidebarOpen(false), []);
+
+  const navItems = getNavItems();
 
   // Persist collapsed state; auto-expand on session detail so history is visible.
   /* eslint-disable react-hooks/set-state-in-effect -- Reading localStorage requires setting state in effect on mount */

@@ -1,0 +1,14 @@
+{
+  "error.internal": "Internal Error",
+  "error.bad_request": "Bad Request",
+  "error.unauthorized": "Unauthorized",
+  "error.no_permission": "No Permission",
+  "error.data_not_exists": "Data Not Found",
+  "error.data_exists": "Data Already Exists",
+  "error.too_many_requests": "Too Many Requests",
+  "error.insufficient_quota": "Insufficient Quota",
+  "error.quota_exceeded": "Quota Exceeded",
+  "error.resource_locked": "Resource Locked",
+  "error.content_blocked": "Content Blocked",
+  "error.validation": "Validation Error"
+}

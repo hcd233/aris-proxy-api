@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -73,7 +74,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 	// DTO 级别输入校验
 	if strings.TrimSpace(req.Body.Name) == "" {
 		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: empty api key name")
-		rsp.Error = ierr.ErrValidation.BizError()
+		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -83,7 +84,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] Create api key failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -117,7 +118,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIK
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] List api keys failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -150,7 +151,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 	// DTO 级别输入校验
 	if req.ID == 0 {
 		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: invalid api key id")
-		rsp.Error = ierr.ErrValidation.BizError()
+		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
@@ -161,7 +162,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] Delete api key failed", zap.Error(err))
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)

@@ -9,6 +9,7 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -34,20 +35,20 @@ func APIKeyMiddleware(db *gorm.DB) func(ctx huma.Context, next func(huma.Context
 
 		if tokenString == "" {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key is empty")
-			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
 		if db == nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] DB dependency is nil")
-			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 		reqDB := db.WithContext(ctx.Context())
 		apiKey, err := proxyAPIKeyDAO.Get(reqDB, &dbmodel.ProxyAPIKey{Key: tokenString}, constant.ProxyAPIKeyRepoFieldsAuth)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
-			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
@@ -55,7 +56,7 @@ func APIKeyMiddleware(db *gorm.DB) func(ctx huma.Context, next func(huma.Context
 		user, err := userDAO.Get(reqDB, &dbmodel.User{ID: apiKey.UserID}, constant.UserRepoFieldsBasic)
 		if err != nil {
 			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] Failed to get user", zap.Error(err))
-			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError()))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusInternalServerError, ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 

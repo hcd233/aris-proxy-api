@@ -142,11 +142,13 @@ class ApiClient {
   private clearAuthAndPromptLogin(): void {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    toast.error("Session expired", {
-      description: "Please log in again to continue",
+    const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
+    const isZh = locale === "zh";
+    toast.error(isZh ? "会话已过期" : "Session expired", {
+      description: isZh ? "请重新登录以继续" : "Please log in again to continue",
       duration: AUTH_TOAST_DURATION_MS,
       action: {
-        label: "Login",
+        label: isZh ? "登录" : "Login",
         onClick: () => {
           window.location.href = "/web/login";
         },

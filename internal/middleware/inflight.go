@@ -7,6 +7,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/i18n"
 )
 
 var healthCheckPaths = map[string]struct{}{
@@ -26,7 +27,7 @@ func InflightMiddleware(tracker *inflight.Tracker) fiber.Handler {
 			c.Status(fiber.StatusServiceUnavailable)
 
 			body, _ := sonic.Marshal(&dto.CommonRsp{ //nolint:errcheck // Marshal always succeeds for static struct
-				Error: ierr.ErrInternal.BizError(),
+				Error: ierr.ErrInternal.BizError().Localize(i18n.FromCtx(c)),
 			})
 			return c.Send(body)
 		}

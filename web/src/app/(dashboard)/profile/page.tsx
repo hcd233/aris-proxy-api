@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 import type { DetailedUser } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuth();
+  const t = useT();
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [localUser, setLocalUser] = useState<DetailedUser | null>(null);
@@ -73,7 +75,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Profile</h1>
+        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("profile.title")}</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Manage your account settings
         </p>
@@ -110,12 +112,12 @@ export default function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-display">Edit Profile</CardTitle>
+            <CardTitle className="font-display">{t("profile.update")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="max-w-md space-y-5">
               <div className="space-y-1.5">
-                <Label htmlFor="profile-name" className="text-sm font-medium">Display Name</Label>
+                <Label htmlFor="profile-name" className="text-sm font-medium">{t("profile.name")}</Label>
                 <Input
                   id="profile-name"
                   value={name}
@@ -124,14 +126,14 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Email</Label>
+                <Label className="text-sm font-medium">{t("profile.email")}</Label>
                 <Input value={localUser.email ?? ""} disabled className="opacity-60 bg-muted/30" />
                 <p className="text-xs text-muted-foreground">
                   Email is managed by your OAuth2 provider.
                 </p>
               </div>
               <Button onClick={handleSave} disabled={saving || name === (localUser.name ?? "")}>
-                {saving ? "Saving..." : "Save Changes"}
+                {saving ? "Saving..." : t("common.save")}
               </Button>
             </div>
           </CardContent>
