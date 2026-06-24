@@ -51,19 +51,24 @@ func TestMarshalOpenAIResponseBodyForModel_UsesUpstreamModelWithoutMutatingReque
 	}
 }
 
-func TestMarshalOpenAIResponseBodyForModel_ExcludesInputItemSummaryWithoutMutatingRequest(t *testing.T) {
+func TestMarshalOpenAIResponseBodyForModel_NormalizesInputItemSummaryWithoutMutatingRequest(t *testing.T) {
 	t.Parallel()
 	summary := []*dto.ResponseReasoningSummary{{
 		Type: enum.ResponseContentTypeSummaryText,
 		Text: "thinking summary",
+	}}
+	messageSummary := []*dto.ResponseReasoningSummary{{
+		Type: enum.ResponseContentTypeSummaryText,
+		Text: "invalid message summary",
 	}}
 	req := &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("gpt-5.5"),
 		Input: &dto.ResponseInput{
 			Items: []*dto.ResponseInputItem{
 				{
-					Type: lo.ToPtr(enum.ResponseInputItemTypeMessage),
-					Role: lo.ToPtr(enum.RoleUser),
+					Type:    lo.ToPtr(enum.ResponseInputItemTypeMessage),
+					Role:    lo.ToPtr(enum.RoleUser),
+					Summary: &messageSummary,
 					Content: &dto.ResponseInputMessageContent{
 						Text: "Hello",
 					},
@@ -73,6 +78,10 @@ func TestMarshalOpenAIResponseBodyForModel_ExcludesInputItemSummaryWithoutMutati
 					Status:  lo.ToPtr("completed"),
 					Summary: &summary,
 				},
+				{
+					Type:   lo.ToPtr(enum.ResponseInputItemTypeReasoning),
+					Status: lo.ToPtr("completed"),
+				},
 			},
 		},
 	}
@@ -80,14 +89,23 @@ func TestMarshalOpenAIResponseBodyForModel_ExcludesInputItemSummaryWithoutMutati
 	body := proxyutil.MarshalOpenAIResponseBodyForModel(req, "upstream-model")
 	bodyStr := string(body)
 
-	if strings.Contains(bodyStr, `"summary"`) {
-		t.Fatalf("serialized body must not include input item summary, got: %s", bodyStr)
+	if strings.Contains(bodyStr, `"invalid message summary"`) {
+		t.Fatalf("serialized body must not include message item summary, got: %s", bodyStr)
 	}
-	if req.Input.Items[0].Summary != nil {
-		t.Fatalf("request item without summary must remain nil")
+	if !strings.Contains(bodyStr, `"summary":[{"text":"thinking summary","type":"summary_text"}]`) {
+		t.Fatalf("serialized body must keep reasoning item summary, got: %s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, `"summary":[]`) {
+		t.Fatalf("serialized body must include empty summary for reasoning item without summary, got: %s", bodyStr)
+	}
+	if req.Input.Items[0].Summary == nil || len(*req.Input.Items[0].Summary) != 1 {
+		t.Fatalf("request message item summary must remain unchanged")
 	}
 	if req.Input.Items[1].Summary == nil || len(*req.Input.Items[1].Summary) != 1 {
-		t.Fatalf("request item summary must remain unchanged")
+		t.Fatalf("request reasoning item summary must remain unchanged")
+	}
+	if req.Input.Items[2].Summary != nil {
+		t.Fatalf("request reasoning item without summary must remain nil")
 	}
 }
 
