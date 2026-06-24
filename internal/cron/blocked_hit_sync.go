@@ -3,13 +3,13 @@ package cron
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
@@ -60,25 +60,23 @@ func (c *blockedHitSyncCron) StopGracefully() {
 	c.cron.Stop()
 }
 
-func (c *blockedHitSyncCron) sync(ctx context.Context) map[string]string {
+func (c *blockedHitSyncCron) sync(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
 	hits, err := c.hitCache.PopAll(ctx)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHitSync] Failed to pop hit counts", zap.Error(err))
-		return nil
+		return nil, err
 	}
 	if len(hits) == 0 {
-		return map[string]string{
-			constant.CronMetadataKeySyncedHits: "0",
-		}
+		return &commonmodel.CronCallAuditMetadata{}, nil
 	}
 	err = c.blockedRepo.BatchIncrementHitCount(ctx, hits)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHitSync] Failed to batch increment hit counts", zap.Error(err))
-		return nil
+		return nil, err
 	}
 	logger.WithCtx(ctx).Info("[BlockedHitSync] Synced hit counts",
 		zap.Int("count", len(hits)))
-	return map[string]string{
-		constant.CronMetadataKeySyncedHits: strconv.Itoa(len(hits)),
-	}
+	return &commonmodel.CronCallAuditMetadata{
+		SyncedHits: int64(len(hits)),
+	}, nil
 }
