@@ -73,17 +73,11 @@ func (h *openAIHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq) (
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *openAIHandler) HandleChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
-	rsp, err := h.uc.CreateChatCompletion(ctx, req)
-	if err != nil || rsp == nil || rsp.Body == nil {
-		return rsp, err
-	}
-	originalBody := rsp.Body
-	rsp.Body = func(humaCtx huma.Context) {
-		h.sseGauge.Inc(constant.SSEProviderOpenAI)
-		defer h.sseGauge.Dec(constant.SSEProviderOpenAI)
-		originalBody(humaCtx)
-	}
-	return rsp, nil
+	ctx = apiutil.WithStreamLifecycle(ctx,
+		func() { h.sseGauge.Inc(constant.SSEProviderOpenAI) },
+		func() { h.sseGauge.Dec(constant.SSEProviderOpenAI) },
+	)
+	return h.uc.CreateChatCompletion(ctx, req)
 }
 
 // HandleCreateResponse 处理 Response API 请求
@@ -96,15 +90,9 @@ func (h *openAIHandler) HandleChatCompletion(ctx context.Context, req *dto.OpenA
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *openAIHandler) HandleCreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
-	rsp, err := h.uc.CreateResponse(ctx, req)
-	if err != nil || rsp == nil || rsp.Body == nil {
-		return rsp, err
-	}
-	originalBody := rsp.Body
-	rsp.Body = func(humaCtx huma.Context) {
-		h.sseGauge.Inc(constant.SSEProviderOpenAI)
-		defer h.sseGauge.Dec(constant.SSEProviderOpenAI)
-		originalBody(humaCtx)
-	}
-	return rsp, nil
+	ctx = apiutil.WithStreamLifecycle(ctx,
+		func() { h.sseGauge.Inc(constant.SSEProviderOpenAI) },
+		func() { h.sseGauge.Dec(constant.SSEProviderOpenAI) },
+	)
+	return h.uc.CreateResponse(ctx, req)
 }

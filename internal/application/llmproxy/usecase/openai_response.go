@@ -176,7 +176,7 @@ func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggre
 }
 
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
+	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		h := newNativeStreamHandler(ctx, u, req)
 		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, func(event string, data []byte) error {
 			return h.onEvent(w, event, data)
@@ -236,7 +236,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	exposedModel := lo.FromPtr(req.Body.Model)
 	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
 	itemState := converter.NewStreamItemState()
-	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
+	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		timer := newStreamTimer()
 
 		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, exposedModel, responseID); err != nil {
@@ -313,7 +313,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body))
+	return apiutil.WrapStreamResponse(ctx, u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body))
 }
 
 type anthropicStreamHandler struct {
