@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 
 type RepeatMode = "minute" | "hour" | "day" | "week" | "month" | "advanced";
 
@@ -78,9 +78,10 @@ function parsedToSpec(parsed: ParsedSpec): string {
   }
 }
 
-function specToHuman(spec: string): string {
+function specToHuman(spec: string, locale: string): string {
   try {
-    return cronstrue.toString(spec, { locale: "en" });
+    const cronLocale = locale === "zh" ? "zh_CN" : "en";
+    return cronstrue.toString(spec, { locale: cronLocale });
   } catch {
     return spec;
   }
@@ -106,7 +107,7 @@ interface ScheduleEditorDialogProps {
 }
 
 export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: ScheduleEditorDialogProps) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const [parsed, setParsed] = useState<ParsedSpec>({
     mode: "day", minute: 0, hour: 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: "",
   });
@@ -124,9 +125,9 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
 
   const humanReadable = useMemo(() => {
     if (parsed.mode === "advanced") {
-      return isValidCronSpec(parsed.advancedSpec) ? specToHuman(parsed.advancedSpec) : "";
+      return isValidCronSpec(parsed.advancedSpec) ? specToHuman(parsed.advancedSpec, locale) : "";
     }
-    return specToHuman(currentSpec);
+    return specToHuman(currentSpec, locale);
   }, [parsed, currentSpec]);
 
   const canSave = useMemo(() => {
