@@ -15,14 +15,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// ListAPIKeysHandler 查询处理器
-//
-//	@author centonhuang
-//	@update 2026-05-27 10:00:00
-type ListAPIKeysHandler interface {
-	Handle(ctx context.Context, q port.ListAPIKeysQuery) ([]*port.APIKeyView, *model.PageInfo, error)
-}
-
 type listAPIKeysHandler struct {
 	repo apikey.APIKeyRepository
 }
@@ -33,7 +25,7 @@ type listAPIKeysHandler struct {
 //	@return ListAPIKeysHandler
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func NewListAPIKeysHandler(repo apikey.APIKeyRepository) ListAPIKeysHandler {
+func NewListAPIKeysHandler(repo apikey.APIKeyRepository) port.ListAPIKeysHandler {
 	return &listAPIKeysHandler{repo: repo}
 }
 

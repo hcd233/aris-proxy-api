@@ -11,16 +11,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// DeleteEndpointHandler 删除命令处理器
-type DeleteEndpointHandler interface {
-	Handle(ctx context.Context, cmd port.DeleteEndpointCommand) error
-}
-
 type deleteEndpointHandler struct {
 	endpointRepo llmproxy.EndpointRepository
 }
 
-func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository) DeleteEndpointHandler {
+func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository) port.DeleteEndpointHandler {
 	return &deleteEndpointHandler{endpointRepo: endpointRepo}
 }
 

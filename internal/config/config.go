@@ -47,15 +47,6 @@ var (
 	//	update 2024-06-22 08:59:07
 	Oauth2GithubRedirectURL string
 
-	// Oauth2QQClientID string QQ OAuth2 Client ID
-	Oauth2QQClientID string
-
-	// Oauth2QQClientSecret string QQ OAuth2 Client Secret
-	Oauth2QQClientSecret string
-
-	// Oauth2QQRedirectURL string QQ OAuth2 Redirect URL
-	Oauth2QQRedirectURL string
-
 	// Oauth2GoogleClientID string Google OAuth2 Client ID
 	Oauth2GoogleClientID string
 
@@ -262,8 +253,6 @@ func initEnvironment() {
 
 	config.SetDefault("trusted.proxies", "172.18.0.1")
 	config.SetDefault("cron.session.deduplicate.enabled", true)
-	config.SetDefault("cron.session.summarize.enabled", false)
-	config.SetDefault("cron.session.score.enabled", false)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 
 	config.SetDefault("upstream.retry.max_attempts", 2)

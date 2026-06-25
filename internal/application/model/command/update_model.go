@@ -12,17 +12,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// UpdateModelHandler 更新命令处理器
-type UpdateModelHandler interface {
-	Handle(ctx context.Context, cmd port.UpdateModelCommand) error
-}
-
 type updateModelHandler struct {
 	repo llmproxy.ModelRepository
 }
 
 // NewUpdateModelHandler 构造更新命令处理器
-func NewUpdateModelHandler(repo llmproxy.ModelRepository) UpdateModelHandler {
+func NewUpdateModelHandler(repo llmproxy.ModelRepository) port.UpdateModelHandler {
 	return &updateModelHandler{repo: repo}
 }
 

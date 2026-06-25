@@ -13,11 +13,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// UpdateProfileHandler 更新档案命令处理器
-type UpdateProfileHandler interface {
-	Handle(ctx context.Context, cmd port.UpdateProfileCommand) error
-}
-
 type updateProfileHandler struct {
 	repo identity.UserRepository
 }
@@ -28,7 +23,7 @@ type updateProfileHandler struct {
 //	@return UpdateProfileHandler
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func NewUpdateProfileHandler(repo identity.UserRepository) UpdateProfileHandler {
+func NewUpdateProfileHandler(repo identity.UserRepository) port.UpdateProfileHandler {
 	return &updateProfileHandler{repo: repo}
 }
 

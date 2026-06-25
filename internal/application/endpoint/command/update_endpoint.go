@@ -11,17 +11,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// UpdateEndpointHandler 更新命令处理器
-type UpdateEndpointHandler interface {
-	Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error
-}
-
 type updateEndpointHandler struct {
 	repo llmproxy.EndpointRepository
 }
 
 // NewUpdateEndpointHandler 构造更新命令处理器
-func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) UpdateEndpointHandler {
+func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) port.UpdateEndpointHandler {
 	return &updateEndpointHandler{repo: repo}
 }
 

@@ -12,14 +12,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// ListSessionToolsHandler 分页获取 tools handler 接口
-type ListSessionToolsHandler interface {
-	Handle(ctx context.Context, q sessionport.ListSessionToolsQuery) (*sessionport.ListSessionToolsResult, error)
-}
-
 type listSessionToolsHandler struct {
 	readRepo  session.SessionReadRepository
-	metaQuery GetSessionMetaByUserHandler
+	metaQuery sessionport.GetSessionMetaByUserHandler
 	cache     sessionport.SessionDetailCache
 }
 
@@ -27,7 +22,7 @@ type listSessionToolsHandler struct {
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) ListSessionToolsHandler {
+func NewListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionToolsHandler {
 	return &listSessionToolsHandler{
 		readRepo:  readRepo,
 		metaQuery: metaQuery,

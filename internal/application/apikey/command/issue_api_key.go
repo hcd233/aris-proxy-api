@@ -26,14 +26,6 @@ type UserExistenceChecker interface {
 	Exists(ctx context.Context, userID uint) (bool, error)
 }
 
-// IssueAPIKeyHandler 签发命令处理器
-//
-//	@author centonhuang
-//	@update 2026-04-22 17:00:00
-type IssueAPIKeyHandler interface {
-	Handle(ctx context.Context, cmd port.IssueAPIKeyCommand) (*port.IssueAPIKeyResult, error)
-}
-
 type issueAPIKeyHandler struct {
 	repo         apikey.APIKeyRepository
 	generator    service.APIKeyGenerator
@@ -48,7 +40,7 @@ type issueAPIKeyHandler struct {
 //	@return IssueAPIKeyHandler
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func NewIssueAPIKeyHandler(repo apikey.APIKeyRepository, generator service.APIKeyGenerator, userExistsCh UserExistenceChecker) IssueAPIKeyHandler {
+func NewIssueAPIKeyHandler(repo apikey.APIKeyRepository, generator service.APIKeyGenerator, userExistsCh UserExistenceChecker) port.IssueAPIKeyHandler {
 	return &issueAPIKeyHandler{repo: repo, generator: generator, userExistsCh: userExistsCh}
 }
 

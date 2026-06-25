@@ -13,18 +13,13 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// CreateModelHandler 创建命令处理器
-type CreateModelHandler interface {
-	Handle(ctx context.Context, cmd port.CreateModelCommand) (*port.CreateModelResult, error)
-}
-
 type createModelHandler struct {
 	endpointRepo llmproxy.EndpointRepository
 	modelRepo    llmproxy.ModelRepository
 }
 
 // NewCreateModelHandler 构造创建命令处理器
-func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) CreateModelHandler {
+func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) port.CreateModelHandler {
 	return &createModelHandler{endpointRepo: endpointRepo, modelRepo: modelRepo}
 }
 

@@ -14,17 +14,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// ListEndpointsHandler 查询处理器
-type ListEndpointsHandler interface {
-	Handle(ctx context.Context, q port.ListEndpointsQuery) ([]*port.EndpointView, *model.PageInfo, error)
-}
-
 type listEndpointsHandler struct {
 	repo llmproxy.EndpointRepository
 }
 
 // NewListEndpointsHandler 构造查询处理器
-func NewListEndpointsHandler(repo llmproxy.EndpointRepository) ListEndpointsHandler {
+func NewListEndpointsHandler(repo llmproxy.EndpointRepository) port.ListEndpointsHandler {
 	return &listEndpointsHandler{repo: repo}
 }
 

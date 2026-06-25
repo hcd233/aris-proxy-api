@@ -31,11 +31,6 @@ import (
 // InitiateLoginCommand 发起 OAuth 登录：生成 state + 构造授权 URL
 // ============================================================
 
-// InitiateLoginHandler 登录发起命令处理器
-type InitiateLoginHandler interface {
-	Handle(ctx context.Context, cmd port.InitiateLoginCommand) (*port.InitiateLoginResult, error)
-}
-
 type initiateLoginHandler struct {
 	platforms    map[string]oauthsvc.Platform
 	stateManager oauthsvc.StateManager
@@ -47,7 +42,7 @@ type initiateLoginHandler struct {
 //	@return InitiateLoginHandler
 //	@author centonhuang
 //	@update 2026-04-22 20:30:00
-func NewInitiateLoginHandler(platforms map[string]oauthsvc.Platform, stateManager oauthsvc.StateManager) InitiateLoginHandler {
+func NewInitiateLoginHandler(platforms map[string]oauthsvc.Platform, stateManager oauthsvc.StateManager) port.InitiateLoginHandler {
 	return &initiateLoginHandler{platforms: platforms, stateManager: stateManager}
 }
 
@@ -88,11 +83,6 @@ func (h *initiateLoginHandler) Handle(ctx context.Context, cmd port.InitiateLogi
 //   → 获取用户信息 → 查/建用户 → 签发 token pair
 // ============================================================
 
-// HandleCallbackHandler 回调命令处理器
-type HandleCallbackHandler interface {
-	Handle(ctx context.Context, cmd port.HandleCallbackCommand) (*port.HandleCallbackResult, error)
-}
-
 type handleCallbackHandler struct {
 	platforms      map[string]oauthsvc.Platform
 	userRepo       identity.UserRepository
@@ -118,7 +108,7 @@ func NewHandleCallbackHandler(
 	accessSigner, refreshSigner identityservice.TokenSigner,
 	objStorageDirC port.ObjectStorageDirCreator,
 	stateManager oauthsvc.StateManager,
-) HandleCallbackHandler {
+) port.HandleCallbackHandler {
 	return &handleCallbackHandler{
 		platforms:      platforms,
 		userRepo:       userRepo,

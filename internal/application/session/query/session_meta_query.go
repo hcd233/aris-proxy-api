@@ -13,11 +13,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// GetSessionMetaByUserHandler 元数据查询 handler 接口
-type GetSessionMetaByUserHandler interface {
-	Handle(ctx context.Context, q sessionport.GetSessionMetaByUserQuery) (*sessionport.SessionMetaView, error)
-}
-
 type getSessionMetaByUserHandler struct {
 	readRepo   session.SessionReadRepository
 	apiKeyRepo apikey.APIKeyRepository
@@ -28,7 +23,7 @@ type getSessionMetaByUserHandler struct {
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) GetSessionMetaByUserHandler {
+func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionport.GetSessionMetaByUserHandler {
 	return &getSessionMetaByUserHandler{
 		readRepo:   readRepo,
 		apiKeyRepo: apiKeyRepo,

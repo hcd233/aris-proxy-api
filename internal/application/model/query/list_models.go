@@ -14,18 +14,13 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// ListModelsHandler 查询处理器
-type ListModelsHandler interface {
-	Handle(ctx context.Context, q modelport.ListModelsQuery) ([]*modelport.ModelView, *model.PageInfo, error)
-}
-
 type listModelsHandler struct {
 	repo         llmproxy.ModelRepository
 	endpointRepo llmproxy.EndpointRepository
 }
 
 // NewListModelsHandler 构造查询处理器
-func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository) ListModelsHandler {
+func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository) modelport.ListModelsHandler {
 	return &listModelsHandler{repo: repo, endpointRepo: endpointRepo}
 }
 

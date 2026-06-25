@@ -14,11 +14,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// RefreshTokensHandler 刷新命令处理器
-type RefreshTokensHandler interface {
-	Handle(ctx context.Context, cmd port.RefreshTokensCommand) (*vo.TokenPair, error)
-}
-
 type refreshTokensHandler struct {
 	repo    identity.UserRepository
 	access  service.TokenSigner
@@ -33,7 +28,7 @@ type refreshTokensHandler struct {
 //	@return RefreshTokensHandler
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func NewRefreshTokensHandler(repo identity.UserRepository, access, refresh service.TokenSigner) RefreshTokensHandler {
+func NewRefreshTokensHandler(repo identity.UserRepository, access, refresh service.TokenSigner) port.RefreshTokensHandler {
 	return &refreshTokensHandler{repo: repo, access: access, refresh: refresh}
 }
 

@@ -12,14 +12,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// ListSessionMessagesHandler 分页获取 messages handler 接口
-type ListSessionMessagesHandler interface {
-	Handle(ctx context.Context, q sessionport.ListSessionMessagesQuery) (*sessionport.ListSessionMessagesResult, error)
-}
-
 type listSessionMessagesHandler struct {
 	readRepo  session.SessionReadRepository
-	metaQuery GetSessionMetaByUserHandler
+	metaQuery sessionport.GetSessionMetaByUserHandler
 	cache     sessionport.SessionDetailCache
 }
 
@@ -27,7 +22,7 @@ type listSessionMessagesHandler struct {
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) ListSessionMessagesHandler {
+func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionMessagesHandler {
 	return &listSessionMessagesHandler{
 		readRepo:  readRepo,
 		metaQuery: metaQuery,
