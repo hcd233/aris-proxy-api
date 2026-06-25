@@ -8,7 +8,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
@@ -49,15 +48,12 @@ func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.Op
 func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
-		startTime := time.Now()
-		var firstTokenTime time.Time
-		var firstTokenLatencyMs, streamDurationMs int64
+		timer := newStreamTimer()
 		toolCallIDs := make(map[int]string)
 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
-			if firstTokenTime.IsZero() && proxyutil.HasNonEmptyDelta(chunk) {
-				firstTokenTime = time.Now()
-				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+			if proxyutil.HasNonEmptyDelta(chunk) {
+				timer.markFirstToken()
 			}
 			proxyutil.NormalizeOpenAIStreamToolCalls(chunk, toolCallIDs)
 			chunk.Model = req.Body.Model
@@ -71,9 +67,7 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 			}
 			return w.Flush()
 		})
-		if !firstTokenTime.IsZero() {
-			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
-		}
+		timer.finish()
 		if err == nil {
 			if _, doneErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal); doneErr != nil {
 				log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(doneErr))
@@ -91,14 +85,17 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 		if completion != nil {
 			usage = completion.Usage
 		}
-		task := newAuditTask(ctx, m, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIChatCompletion, firstTokenLatencyMs)
-		task.StreamDurationMs = streamDurationMs
-		task.SetTokensFromOpenAIUsage(usage)
-		if usage != nil {
-			reportTokenUsage(ctx, usage.InputOutputTokens())
-		}
-		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit
+		recordModelCall(ctx, u.taskSubmitter, callOutcome{
+			model:               m,
+			exposedModel:        req.Body.Model,
+			endpoint:            ep.Name(),
+			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+			firstTokenLatencyMs: timer.firstLatencyMs,
+			streamDurationMs:    timer.durationMs,
+			usage:               openAITokenUsage{usage},
+			err:                 err,
+		})
 	})
 }
 
@@ -117,13 +114,16 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 
 		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
 
-		task := newAuditTask(ctx, m, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIChatCompletion, totalMs)
-		task.UpstreamStatusCode = fiber.StatusOK
-		task.SetTokensFromOpenAIUsage(completion.Usage)
-		if completion.Usage != nil {
-			reportTokenUsage(ctx, completion.Usage.InputOutputTokens())
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		recordModelCall(ctx, u.taskSubmitter, callOutcome{
+			model:               m,
+			exposedModel:        req.Body.Model,
+			endpoint:            ep.Name(),
+			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+			firstTokenLatencyMs: totalMs,
+			usage:               openAITokenUsage{completion.Usage},
+			successStatus:       true,
+		})
 	})
 }
 
@@ -135,38 +135,36 @@ func (u *openAIUseCase) forwardChatViaAnthropicStreamBody(ctx context.Context, r
 	conv := &converter.AnthropicProtocolConverter{}
 	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
 	return func(w *bufio.Writer) {
-		startTime := time.Now()
-		var firstTokenTime time.Time
-		var firstTokenLatencyMs, streamDurationMs int64
+		timer := newStreamTimer()
 		var allChunks []*dto.OpenAIChatCompletionChunk
 
-		onEvent := u.buildOpenAIChatStreamCallback(conv, w, chunkID, exposedModel, startTime, &firstTokenTime, &firstTokenLatencyMs, &allChunks)
+		onEvent := u.buildOpenAIChatStreamCallback(conv, w, chunkID, exposedModel, timer, &allChunks)
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, onEvent)
-		if !firstTokenTime.IsZero() {
-			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
-		}
+		timer.finish()
 		u.finalizeOpenAIChatStream(ctx, w, err)
 		completion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails
 		if completion != nil {
 			completion.Model = exposedModel
 		}
 		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, upstream.Model)
-		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, firstTokenLatencyMs)
-		task.StreamDurationMs = streamDurationMs
-		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		if anthropicMsg != nil && anthropicMsg.Usage != nil {
-			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
-		}
-		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		recordModelCall(ctx, u.taskSubmitter, callOutcome{
+			model:               m,
+			exposedModel:        exposedModel,
+			endpoint:            endpoint,
+			upstreamProtocol:    enum.ProtocolAnthropicMessage,
+			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+			firstTokenLatencyMs: timer.firstLatencyMs,
+			streamDurationMs:    timer.durationMs,
+			usage:               anthropicTokenUsage{anthropicMsg},
+			err:                 err,
+		})
 	}
 }
 
-func (u *openAIUseCase) buildOpenAIChatStreamCallback(conv *converter.AnthropicProtocolConverter, w *bufio.Writer, chunkID, exposedModel string, startTime time.Time, firstTokenTime *time.Time, firstTokenLatencyMs *int64, allChunks *[]*dto.OpenAIChatCompletionChunk) func(dto.AnthropicSSEEvent) error {
+func (u *openAIUseCase) buildOpenAIChatStreamCallback(conv *converter.AnthropicProtocolConverter, w *bufio.Writer, chunkID, exposedModel string, timer *streamTimer, allChunks *[]*dto.OpenAIChatCompletionChunk) func(dto.AnthropicSSEEvent) error {
 	return func(event dto.AnthropicSSEEvent) error {
-		if firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
-			*firstTokenTime = time.Now()
-			*firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+		if event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
+			timer.markFirstToken()
 		}
 		chunks, convErr := conv.ToOpenAISSEResponse(event, exposedModel, chunkID)
 		if convErr != nil {
@@ -216,12 +214,15 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 		completion.Model = exposedModel
 		writer.WriteJSON(completion)
 		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
-		task := newAuditTask(ctx, m, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs)
-		task.UpstreamStatusCode = fiber.StatusOK
-		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		if anthropicMsg != nil && anthropicMsg.Usage != nil {
-			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		recordModelCall(ctx, u.taskSubmitter, callOutcome{
+			model:               m,
+			exposedModel:        exposedModel,
+			endpoint:            endpoint,
+			upstreamProtocol:    enum.ProtocolAnthropicMessage,
+			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+			firstTokenLatencyMs: totalMs,
+			usage:               anthropicTokenUsage{anthropicMsg},
+			successStatus:       true,
+		})
 	})
 }

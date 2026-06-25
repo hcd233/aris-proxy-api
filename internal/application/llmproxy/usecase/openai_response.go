@@ -66,16 +66,13 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 }
 
 type nativeStreamHandler struct {
-	u                   *openAIUseCase
-	ctx                 context.Context
-	req                 *dto.OpenAICreateResponseRequest
-	startTime           time.Time
-	firstTokenTime      time.Time
-	firstTokenLatencyMs int64
-	streamDurationMs    int64
-	finalResponse       *dto.OpenAICreateResponseRsp
-	accumulatedOutput   []*dto.ResponseInputItem
-	logger              *zap.Logger
+	u                 *openAIUseCase
+	ctx               context.Context
+	req               *dto.OpenAICreateResponseRequest
+	timer             *streamTimer
+	finalResponse     *dto.OpenAICreateResponseRsp
+	accumulatedOutput []*dto.ResponseInputItem
+	logger            *zap.Logger
 }
 
 func newNativeStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *nativeStreamHandler {
@@ -83,15 +80,15 @@ func newNativeStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.Open
 		u:                 u,
 		ctx:               ctx,
 		req:               req,
+		timer:             newStreamTimer(),
 		accumulatedOutput: make([]*dto.ResponseInputItem, 0),
 		logger:            logger.WithCtx(ctx),
 	}
 }
 
 func (h *nativeStreamHandler) onEvent(w *bufio.Writer, event string, data []byte) error {
-	if h.firstTokenTime.IsZero() && proxyutil.IsResponseAPIDeltaEvent(event) {
-		h.firstTokenTime = time.Now()
-		h.firstTokenLatencyMs = h.firstTokenTime.Sub(h.startTime).Milliseconds()
+	if proxyutil.IsResponseAPIDeltaEvent(event) {
+		h.timer.markFirstToken()
 	}
 	h.handleOutputItemDone(event, data)
 	h.handleTerminalEvent(event, data)
@@ -154,9 +151,7 @@ func (h *nativeStreamHandler) patchTerminalOutput(event string, data []byte) []b
 }
 
 func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint) {
-	if !h.firstTokenTime.IsZero() {
-		h.streamDurationMs = time.Since(h.firstTokenTime).Milliseconds()
-	}
+	h.timer.finish()
 	if proxyErr != nil {
 		h.logger.Error("[OpenAIUseCase] Native response stream error", zap.Error(proxyErr))
 		proxyutil.WriteUpstreamSSEError(h.ctx, w, proxyErr)
@@ -166,29 +161,23 @@ func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggre
 	}
 	h.u.storeResponseFromRsp(h.ctx, h.req, h.finalResponse, proxyErr, upstream.Model)
 
-	task := &dto.ModelCallAuditTask{
-		Ctx:                 util.CopyContextValues(h.ctx),
-		ModelID:             m.AggregateID(),
-		Model:               lo.FromPtr(h.req.Body.Model),
-		Endpoint:            ep.Name(),
-		UpstreamProtocol:    enum.ProtocolOpenAIResponse,
-		APIProtocol:         enum.ProtocolOpenAIResponse,
-		FirstTokenLatencyMs: h.firstTokenLatencyMs,
-		StreamDurationMs:    h.streamDurationMs,
-	}
-	task.SetTokensFromResponseUsage(h.finalResponse)
-	if h.finalResponse != nil && h.finalResponse.Usage != nil {
-		reportTokenUsage(h.ctx, h.finalResponse.Usage.InputOutputTokens())
-	}
-	task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(proxyErr)
-	task.SetErrorFromResponseStatus(h.finalResponse)
-	_ = h.u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+	recordModelCall(h.ctx, h.u.taskSubmitter, callOutcome{
+		model:               m,
+		exposedModel:        lo.FromPtr(h.req.Body.Model),
+		endpoint:            ep.Name(),
+		upstreamProtocol:    enum.ProtocolOpenAIResponse,
+		apiProtocol:         enum.ProtocolOpenAIResponse,
+		firstTokenLatencyMs: h.timer.firstLatencyMs,
+		streamDurationMs:    h.timer.durationMs,
+		usage:               responseTokenUsage{h.finalResponse},
+		err:                 proxyErr,
+		responseStatus:      h.finalResponse,
+	})
 }
 
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
 		h := newNativeStreamHandler(ctx, u, req)
-		h.startTime = time.Now()
 		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, func(event string, data []byte) error {
 			return h.onEvent(w, event, data)
 		})
@@ -220,30 +209,23 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 
 		var rsp dto.OpenAICreateResponseRsp
 		parseErr := sonic.Unmarshal(respBody, &rsp)
+		out := callOutcome{
+			model:               m,
+			exposedModel:        lo.FromPtr(req.Body.Model),
+			endpoint:            ep.Name(),
+			upstreamProtocol:    enum.ProtocolOpenAIResponse,
+			apiProtocol:         enum.ProtocolOpenAIResponse,
+			firstTokenLatencyMs: totalMs,
+			successStatus:       true,
+		}
 		if parseErr != nil {
 			log.Debug("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
 		} else {
 			u.storeResponseFromRsp(ctx, req, &rsp, nil, upstream.Model)
+			out.usage = responseTokenUsage{&rsp}
+			out.responseStatus = &rsp
 		}
-
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               lo.FromPtr(req.Body.Model),
-			Endpoint:            ep.Name(),
-			UpstreamProtocol:    enum.ProtocolOpenAIResponse,
-			APIProtocol:         enum.ProtocolOpenAIResponse,
-			FirstTokenLatencyMs: totalMs,
-			UpstreamStatusCode:  fiber.StatusOK,
-		}
-		if parseErr == nil {
-			task.SetTokensFromResponseUsage(&rsp)
-			if rsp.Usage != nil {
-				reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
-			}
-			task.SetErrorFromResponseStatus(&rsp)
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		recordModelCall(ctx, u.taskSubmitter, out)
 	})
 }
 
@@ -255,9 +237,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
 	itemState := converter.NewStreamItemState()
 	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
-		startTime := time.Now()
-		var firstTokenTime time.Time
-		var firstTokenLatencyMs, streamDurationMs int64
+		timer := newStreamTimer()
 
 		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, exposedModel, responseID); err != nil {
 			log.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
@@ -269,15 +249,12 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			hasWritten, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, itemState, responseID, conv)
-			if firstTokenTime.IsZero() && hasWritten {
-				firstTokenTime = time.Now()
-				firstTokenLatencyMs = firstTokenTime.Sub(startTime).Milliseconds()
+			if hasWritten {
+				timer.markFirstToken()
 			}
 			return writeErr
 		})
-		if !firstTokenTime.IsZero() {
-			streamDurationMs = time.Since(firstTokenTime).Milliseconds()
-		}
+		timer.finish()
 
 		var rsp *dto.OpenAICreateResponseRsp
 		if err != nil {
@@ -286,22 +263,17 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 			rsp = converter.FinalizeResponseFromChatCompletion(w, completion, exposedModel, responseID, conv)
 		}
 		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               exposedModel,
-			Endpoint:            endpoint,
-			UpstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
-			APIProtocol:         enum.ProtocolOpenAIResponse,
-			FirstTokenLatencyMs: firstTokenLatencyMs,
-			StreamDurationMs:    streamDurationMs,
-		}
-		task.SetTokensFromResponseUsage(rsp)
-		if rsp != nil && rsp.Usage != nil {
-			reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
-		}
-		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		recordModelCall(ctx, u.taskSubmitter, callOutcome{
+			model:               m,
+			exposedModel:        exposedModel,
+			endpoint:            endpoint,
+			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+			apiProtocol:         enum.ProtocolOpenAIResponse,
+			firstTokenLatencyMs: timer.firstLatencyMs,
+			streamDurationMs:    timer.durationMs,
+			usage:               responseTokenUsage{rsp},
+			err:                 err,
+		})
 	})
 }
 
@@ -327,21 +299,16 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 		}
 		writer.WriteJSON(rsp)
 		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               exposedModel,
-			Endpoint:            endpoint,
-			UpstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
-			APIProtocol:         enum.ProtocolOpenAIResponse,
-			FirstTokenLatencyMs: totalMs,
-			UpstreamStatusCode:  fiber.StatusOK,
-		}
-		task.SetTokensFromResponseUsage(rsp)
-		if rsp != nil && rsp.Usage != nil {
-			reportTokenUsage(ctx, rsp.Usage.InputOutputTokens())
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		recordModelCall(ctx, u.taskSubmitter, callOutcome{
+			model:               m,
+			exposedModel:        exposedModel,
+			endpoint:            endpoint,
+			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+			apiProtocol:         enum.ProtocolOpenAIResponse,
+			firstTokenLatencyMs: totalMs,
+			usage:               responseTokenUsage{rsp},
+			successStatus:       true,
+		})
 	})
 }
 
@@ -350,21 +317,18 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 }
 
 type anthropicStreamHandler struct {
-	u                   *openAIUseCase
-	ctx                 context.Context
-	req                 *dto.OpenAICreateResponseRequest
-	responseConv        *converter.ResponseProtocolConverter
-	anthropicConv       *converter.AnthropicProtocolConverter
-	exposedModel        string
-	responseID          string
-	chunkID             string
-	startTime           time.Time
-	firstTokenTime      time.Time
-	firstTokenLatencyMs int64
-	streamDurationMs    int64
-	allChunks           []*dto.OpenAIChatCompletionChunk
-	itemState           *converter.StreamItemState
-	logger              *zap.Logger
+	u             *openAIUseCase
+	ctx           context.Context
+	req           *dto.OpenAICreateResponseRequest
+	responseConv  *converter.ResponseProtocolConverter
+	anthropicConv *converter.AnthropicProtocolConverter
+	exposedModel  string
+	responseID    string
+	chunkID       string
+	timer         *streamTimer
+	allChunks     []*dto.OpenAIChatCompletionChunk
+	itemState     *converter.StreamItemState
+	logger        *zap.Logger
 }
 
 func newAnthropicStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *anthropicStreamHandler {
@@ -386,9 +350,8 @@ func newAnthropicStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.O
 }
 
 func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.AnthropicSSEEvent) error {
-	if h.firstTokenTime.IsZero() && event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
-		h.firstTokenTime = time.Now()
-		h.firstTokenLatencyMs = h.firstTokenTime.Sub(h.startTime).Milliseconds()
+	if event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
+		h.timer.markFirstToken()
 	}
 	chunks, convErr := h.anthropicConv.ToOpenAISSEResponse(event, h.exposedModel, h.chunkID)
 	if convErr != nil {
@@ -408,34 +371,27 @@ func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.Ant
 }
 
 func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, anthropicMsg *dto.AnthropicMessage, err error) {
-	if !h.firstTokenTime.IsZero() {
-		h.streamDurationMs = time.Since(h.firstTokenTime).Milliseconds()
-	}
+	h.timer.finish()
 
 	rsp := finalizeResponseFromAnthropicStream(h.ctx, w, err, h.allChunks, anthropicMsg, h.exposedModel, h.responseID, h.anthropicConv, h.responseConv)
 	h.u.storeResponseFromRsp(h.ctx, h.req, rsp, err, upstream.Model)
-	task := &dto.ModelCallAuditTask{
-		Ctx:                 util.CopyContextValues(h.ctx),
-		ModelID:             m.AggregateID(),
-		Model:               h.exposedModel,
-		Endpoint:            endpoint,
-		UpstreamProtocol:    enum.ProtocolAnthropicMessage,
-		APIProtocol:         enum.ProtocolOpenAIResponse,
-		FirstTokenLatencyMs: h.firstTokenLatencyMs,
-		StreamDurationMs:    h.streamDurationMs,
-	}
-	task.SetTokensFromAnthropicUsage(anthropicMsg)
-	if anthropicMsg != nil && anthropicMsg.Usage != nil {
-		reportTokenUsage(h.ctx, anthropicMsg.Usage.InputOutputTokens())
-	}
-	task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(err)
-	_ = h.u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+	recordModelCall(h.ctx, h.u.taskSubmitter, callOutcome{
+		model:               m,
+		exposedModel:        h.exposedModel,
+		endpoint:            endpoint,
+		upstreamProtocol:    enum.ProtocolAnthropicMessage,
+		apiProtocol:         enum.ProtocolOpenAIResponse,
+		firstTokenLatencyMs: h.timer.firstLatencyMs,
+		streamDurationMs:    h.timer.durationMs,
+		usage:               anthropicTokenUsage{anthropicMsg},
+		err:                 err,
+	})
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
 	h := newAnthropicStreamHandler(ctx, u, req)
 	return func(w *bufio.Writer) {
-		h.startTime = time.Now()
+		h.timer = newStreamTimer()
 		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, h.exposedModel, h.responseID); err != nil {
 			h.logger.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
 		}
@@ -478,21 +434,16 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 		}
 		writer.WriteJSON(rsp)
 		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model)
-		task := &dto.ModelCallAuditTask{
-			Ctx:                 util.CopyContextValues(ctx),
-			ModelID:             m.AggregateID(),
-			Model:               exposedModel,
-			Endpoint:            endpoint,
-			UpstreamProtocol:    enum.ProtocolAnthropicMessage,
-			APIProtocol:         enum.ProtocolOpenAIResponse,
-			FirstTokenLatencyMs: totalMs,
-			UpstreamStatusCode:  fiber.StatusOK,
-		}
-		task.SetTokensFromAnthropicUsage(anthropicMsg)
-		if anthropicMsg != nil && anthropicMsg.Usage != nil {
-			reportTokenUsage(ctx, anthropicMsg.Usage.InputOutputTokens())
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+		recordModelCall(ctx, u.taskSubmitter, callOutcome{
+			model:               m,
+			exposedModel:        exposedModel,
+			endpoint:            endpoint,
+			upstreamProtocol:    enum.ProtocolAnthropicMessage,
+			apiProtocol:         enum.ProtocolOpenAIResponse,
+			firstTokenLatencyMs: totalMs,
+			usage:               anthropicTokenUsage{anthropicMsg},
+			successStatus:       true,
+		})
 	})
 }
 

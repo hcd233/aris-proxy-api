@@ -90,7 +90,7 @@ func TestMessageRepositoryBatchSaveDedup_DeduplicatesEquivalentMessagesInsideBat
 func TestMessageStoreTask_DeduplicatesEquivalentMessagesInsideBatch(t *testing.T) {
 	t.Parallel()
 	db := newTestDB(t)
-	pm := pool.NewPoolManager(db)
+	pm := pool.NewPoolManager(db, nil)
 	task := &dto.MessageStoreTask{
 		Ctx:        context.Background(),
 		APIKeyName: "test-key",
