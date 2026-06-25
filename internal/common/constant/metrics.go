@@ -52,7 +52,8 @@ const (
 // —— 各 range 档对应的窗口长度与桶宽 ——
 const (
 	RuntimeMetricsWindow15m = 15 * time.Minute
-	RuntimeMetricsBucket15m = 15 * time.Second
+	// RuntimeMetricsBucket15m 与 flush 间隔（5s）对齐，提供最细的秒级 QPS/速率分辨率
+	RuntimeMetricsBucket15m = 5 * time.Second
 	RuntimeMetricsWindow1h  = 1 * time.Hour
 	RuntimeMetricsBucket1h  = 1 * time.Minute
 	RuntimeMetricsWindow6h  = 6 * time.Hour

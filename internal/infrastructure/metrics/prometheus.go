@@ -63,5 +63,11 @@ func NewSSEGauge(registry *prometheus.Registry) SSEGauge {
 		[]string{constant.MetricLabelProvider},
 	)
 	registry.MustRegister(gauge)
+	// 预热已知 provider 的子序列：GaugeVec 在首次 WithLabelValues 之前不产生任何序列，
+	// 否则在没有任何 SSE 流量时 Gather 不输出 sse_active_connections，前端 sseActive 恒为空 {}。
+	// 预置为 0 后，快照始终携带各 provider，活跃流到来时自然抬升。
+	for _, provider := range []string{constant.SSEProviderOpenAI, constant.SSEProviderAnthropic} {
+		gauge.WithLabelValues(provider).Set(0)
+	}
 	return &sseGauge{gauge: gauge}
 }
