@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, MemoryStick, Radio, Zap } from "lucide-react";
+import { Activity, MemoryStick, Radio } from "lucide-react";
 
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
@@ -30,7 +30,6 @@ type Pt = RuntimePoint;
 interface SeriesState {
   goroutines: Pt[];
   heapMB: Pt[];
-  inProgress: Pt[];
   qps: Pt[];
   cpuPercent: Pt[];
   p95Ms: Pt[];
@@ -40,7 +39,6 @@ interface SeriesState {
 const EMPTY_STATE: SeriesState = {
   goroutines: [],
   heapMB: [],
-  inProgress: [],
   qps: [],
   cpuPercent: [],
   p95Ms: [],
@@ -109,7 +107,6 @@ export default function MonitorPage() {
         setState((prev) => ({
           goroutines: mergePoints(prev.goroutines, s.goroutines ?? [], cutoff),
           heapMB: mergePoints(prev.heapMB, s.heapMB ?? [], cutoff),
-          inProgress: mergePoints(prev.inProgress, s.inProgress ?? [], cutoff),
           qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
           cpuPercent: mergePoints(prev.cpuPercent, s.cpuPercent ?? [], cutoff),
           p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
@@ -183,10 +180,9 @@ export default function MonitorPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <RuntimeGaugeCard label={t("monitor.goroutines")} value={lastValue(state.goroutines)} icon={<Activity className="size-4" />} tone="primary" loading={loading} />
         <RuntimeGaugeCard label={t("monitor.heap")} value={lastValue(state.heapMB)} unit="MB" icon={<MemoryStick className="size-4" />} tone="blue" loading={loading} />
-        <RuntimeGaugeCard label={t("monitor.in_progress")} value={lastValue(state.inProgress)} icon={<Zap className="size-4" />} tone="green" loading={loading} />
         <RuntimeGaugeCard label={t("monitor.sse_active")} value={sseTotal} icon={<Radio className="size-4" />} tone="violet" loading={loading} />
       </div>
 
@@ -196,7 +192,6 @@ export default function MonitorPage() {
         <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: "#4A9E7D" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: "#7C6BA5" }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.goroutines_chart")} data={toChartData(state.goroutines)} series={[{ key: "value", label: t("monitor.goroutines_chart"), color: "#4A9E7D" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.in_progress_requests")} data={toChartData(state.inProgress)} series={[{ key: "value", label: t("monitor.in_progress_requests"), color: "#C76B8A" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
       </div>
     </div>
