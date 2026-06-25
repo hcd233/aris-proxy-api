@@ -10,18 +10,14 @@ const (
 
 	// MetricNameRequestDuration 请求时延直方图（不含 namespace）
 	MetricNameRequestDuration = "request_duration_seconds"
-	// MetricNameRequestsInProgress 在途请求数 gauge（不含 namespace）
-	MetricNameRequestsInProgress = "requests_in_progress"
 
 	MetricSSEActiveConnectionsName = "sse_active_connections"
 	MetricSSEActiveConnectionsHelp = "Number of active SSE streaming connections"
-	MetricRequestsInProgressHelp   = "Number of HTTP requests currently being served"
 	MetricRequestDurationHelp      = "HTTP request latency in seconds"
 	MetricLabelProvider            = "provider"
 
 	// —— flusher 从 registry.Gather() 抽取快照时用的完整指标名 ——
 	MetricFullRequestDuration = "http_request_duration_seconds"
-	MetricFullInProgress      = "http_requests_in_progress"
 	MetricFullGoGoroutines    = "go_goroutines"
 	MetricFullGoHeapAlloc     = "go_memstats_alloc_bytes"
 	MetricFullProcessCPU      = "process_cpu_seconds_total"

@@ -20,7 +20,6 @@ type Snapshot struct {
 	TS         int64              `json:"ts"`                   // unix 秒
 	Goroutines float64            `json:"goroutines"`           // gauge
 	HeapBytes  float64            `json:"heapBytes"`            // gauge
-	InProgress float64            `json:"inProgress"`           // gauge
 	CPUSeconds float64            `json:"cpuSeconds"`           // counter 累计值 → 聚合层求 CPU%
 	SSEActive  map[string]float64 `json:"sseActive,omitempty"`  // provider -> gauge
 	LatBuckets map[string]float64 `json:"latBuckets,omitempty"` // le -> 累计计数 → 聚合层求 P95
@@ -58,7 +57,6 @@ func BuildSnapshot(gatherer prometheus.Gatherer, now time.Time) (*Snapshot, erro
 		TS:         now.Unix(),
 		Goroutines: firstGaugeValue(byName[constant.MetricFullGoGoroutines]),
 		HeapBytes:  firstGaugeValue(byName[constant.MetricFullGoHeapAlloc]),
-		InProgress: firstGaugeValue(byName[constant.MetricFullInProgress]),
 		CPUSeconds: firstCounterValue(byName[constant.MetricFullProcessCPU]),
 		SSEActive:  labeledGaugeValues(byName[constant.MetricFullSSEActive], constant.MetricLabelProvider),
 	}
