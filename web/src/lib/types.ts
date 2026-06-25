@@ -577,7 +577,6 @@ export interface RuntimePoint {
 export interface RuntimeSeries {
   goroutines?: RuntimePoint[];
   heapMB?: RuntimePoint[];
-  inProgress?: RuntimePoint[];
   qps?: RuntimePoint[];
   cpuPercent?: RuntimePoint[];
   p95Ms?: RuntimePoint[];

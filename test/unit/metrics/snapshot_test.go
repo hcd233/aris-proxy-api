@@ -13,17 +13,12 @@ func TestBuildSnapshot_ExtractsRuntimeMetrics(t *testing.T) {
 	t.Parallel()
 	registry := prometheus.NewRegistry()
 
-	inProgress := prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: constant.MetricNamespaceHTTP,
-		Name:      constant.MetricNameRequestsInProgress,
-	})
 	duration := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Namespace: constant.MetricNamespaceHTTP,
 		Name:      constant.MetricNameRequestDuration,
 		Buckets:   constant.PrometheusRequestDurationBuckets,
 	})
-	registry.MustRegister(inProgress, duration)
-	inProgress.Set(3)
+	registry.MustRegister(duration)
 	duration.Observe(0.02)
 	duration.Observe(0.2)
 
@@ -37,9 +32,6 @@ func TestBuildSnapshot_ExtractsRuntimeMetrics(t *testing.T) {
 		t.Fatalf("BuildSnapshot failed: %v", err)
 	}
 
-	if snap.InProgress != 3 {
-		t.Errorf("expected inProgress 3, got %f", snap.InProgress)
-	}
 	if snap.LatCount != 2 {
 		t.Errorf("expected latCount 2, got %f", snap.LatCount)
 	}

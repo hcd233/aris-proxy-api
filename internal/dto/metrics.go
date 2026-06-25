@@ -26,7 +26,6 @@ type RuntimeMetricsRsp struct {
 type RuntimeSeries struct {
 	Goroutines []RuntimePoint            `json:"goroutines" doc:"goroutine 数（集群求和）"`
 	HeapMB     []RuntimePoint            `json:"heapMB" doc:"堆内存 MB（集群求和）"`
-	InProgress []RuntimePoint            `json:"inProgress" doc:"在途请求数（集群求和）"`
 	QPS        []RuntimePoint            `json:"qps" doc:"每秒请求数（集群求和）"`
 	CPUPercent []RuntimePoint            `json:"cpuPercent" doc:"CPU 使用率 %（集群求和）"`
 	P95Ms      []RuntimePoint            `json:"p95Ms" doc:"P95 请求时延 ms（跨 pod 合并 bucket）"`

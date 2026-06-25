@@ -6,7 +6,6 @@ package query
 
 import (
 	"context"
-	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -114,7 +113,6 @@ func Aggregate(byInstance map[string][]metrics.Snapshot, alignedStart, bucket, e
 type bucketAgg struct {
 	goroutines  float64
 	heap        float64
-	inProgress  float64
 	sse         map[string]float64
 	qps         float64
 	cpuPercent  float64
@@ -155,10 +153,9 @@ func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart,
 }
 
 // instanceGauges 按桶累加单实例的 gauge 原值与计数（用于后续求桶内均值）。
-func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) (gSum, gHeap, gInProg []float64, gSSE []map[string]float64, gCount []float64) {
+func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) (gSum, gHeap []float64, gSSE []map[string]float64, gCount []float64) {
 	gSum = make([]float64, n)
 	gHeap = make([]float64, n)
-	gInProg = make([]float64, n)
 	gSSE = make([]map[string]float64, n)
 	gCount = make([]float64, n)
 	for _, s := range snaps {
@@ -168,7 +165,6 @@ func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int)
 		}
 		gSum[idx] += s.Goroutines
 		gHeap[idx] += s.HeapBytes
-		gInProg[idx] += s.InProgress
 		gCount[idx]++
 		if gSSE[idx] == nil {
 			gSSE[idx] = map[string]float64{}
@@ -177,7 +173,7 @@ func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int)
 			gSSE[idx][prov] += v
 		}
 	}
-	return gSum, gHeap, gInProg, gSSE, gCount
+	return gSum, gHeap, gSSE, gCount
 }
 
 // instanceDeltas 按桶累加单实例相邻快照的正向 delta（速率与 histogram），归属到后一个快照所在的桶。
@@ -236,9 +232,8 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 		if t < outputStart {
 			continue
 		}
-		series.Goroutines = append(series.Goroutines, dto.RuntimePoint{Time: t, Value: math.Floor(agg[idx].goroutines)})
+		series.Goroutines = append(series.Goroutines, dto.RuntimePoint{Time: t, Value: round2(agg[idx].goroutines)})
 		series.HeapMB = append(series.HeapMB, dto.RuntimePoint{Time: t, Value: round2(agg[idx].heap / constant.RuntimeMetricsBytesPerMB)})
-		series.InProgress = append(series.InProgress, dto.RuntimePoint{Time: t, Value: round2(agg[idx].inProgress)})
 		series.QPS = append(series.QPS, dto.RuntimePoint{Time: t, Value: round2(agg[idx].qps)})
 		series.CPUPercent = append(series.CPUPercent, dto.RuntimePoint{Time: t, Value: round2(agg[idx].cpuPercent)})
 		series.P95Ms = append(series.P95Ms, dto.RuntimePoint{Time: t, Value: round2(percentileP95(agg[idx].histBuckets, agg[idx].histTotal))})

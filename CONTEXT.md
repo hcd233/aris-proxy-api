@@ -20,7 +20,7 @@ _Avoid_: sample, datapoint, reading
 
 **Aggregation（聚合）**:
 把多个 Instance、多个时刻的 Snapshot 合并成一条可展示时序的过程，由后端聚合 API 完成，前端只渲染。三类指标合并规则不同，不可混用：
-- **Gauge**（goroutines/heap/in_progress/sse_active）：跨 Instance 直接求和。
+- **Gauge**（goroutines/heap/sse_active）：跨 Instance 直接求和。
 - **Counter→Rate**（请求总数→QPS、CPU 累计秒→CPU%）：必须**先**按各 Instance 自身相邻快照求速率（遇负 delta 判为重启、该段清零），**再**把各 Instance 的速率求和（等同 PromQL `sum(rate(...))`）。**严禁先跨 Instance 求和再求速率**——某个 pod 重启会让全局累计值塌陷、污染整段速率。
 - **Histogram→Percentile**（请求时延→P95）：跨 Instance 合并同 `le` 的 bucket 计数，在合并后的分布上求分位；不可对各 Instance 的 P95 求和或求平均。
 _Avoid_: rollup, merge, reduce
