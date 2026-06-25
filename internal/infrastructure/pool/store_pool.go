@@ -10,6 +10,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
+	mcaggregate "github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
+	mcvo "github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -174,35 +176,32 @@ func (pm *PoolManager) upgradeReasoningContent(tx *gorm.DB, messages []*dbmodel.
 
 // SubmitModelCallAuditTask 提交模型调用审计任务到协程池
 //
+// 审计落库统一经 modelcall.AuditRepository 聚合仓储，与审计读路径共用同一 seam，
+// 不再由 PoolManager 直接拼装 dbmodel 调 DAO。
+//
 //	@receiver pm *PoolManager
 //	@param task *dto.ModelCallAuditTask
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-09 10:00:00
+//	@update 2026-06-25 10:00:00
 func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) error {
 	l := logger.WithCtx(task.Ctx)
-	db := pm.db.WithContext(task.Ctx)
 
 	return pm.storePool.Go(func() {
-		audit := &dbmodel.ModelCallAudit{
-			APIKeyID:                 util.CtxValueUint(task.Ctx, constant.CtxKeyAPIKeyID),
-			ModelID:                  task.ModelID,
-			Model:                    task.Model,
-			UpstreamProtocol:         task.UpstreamProtocol,
-			APIProtocol:              task.APIProtocol,
-			Endpoint:                 task.Endpoint,
-			InputTokens:              task.InputTokens,
-			OutputTokens:             task.OutputTokens,
-			CacheCreationInputTokens: task.CacheCreationInputTokens,
-			CacheReadInputTokens:     task.CacheReadInputTokens,
-			FirstTokenLatencyMs:      task.FirstTokenLatencyMs,
-			StreamDurationMs:         task.StreamDurationMs,
-			UserAgent:                util.CtxValueString(task.Ctx, constant.CtxKeyClient),
-			UpstreamStatusCode:       task.UpstreamStatusCode,
-			ErrorMessage:             task.ErrorMessage,
-			TraceID:                  util.CtxValueString(task.Ctx, constant.CtxKeyTraceID),
-		}
-		if err := dao.GetModelCallAuditDAO().Create(db, audit); err != nil {
+		audit := mcaggregate.RecordCall(mcaggregate.RecordCallInput{
+			APIKeyID:         util.CtxValueUint(task.Ctx, constant.CtxKeyAPIKeyID),
+			ModelID:          task.ModelID,
+			Model:            task.Model,
+			UpstreamProtocol: task.UpstreamProtocol,
+			APIProtocol:      task.APIProtocol,
+			Endpoint:         task.Endpoint,
+			Tokens:           mcvo.NewTokenBreakdown(task.InputTokens, task.OutputTokens, task.CacheCreationInputTokens, task.CacheReadInputTokens),
+			Latency:          mcvo.NewCallLatency(time.Duration(task.FirstTokenLatencyMs)*time.Millisecond, time.Duration(task.StreamDurationMs)*time.Millisecond),
+			Status:           mcvo.NewCallStatus(task.UpstreamStatusCode, task.ErrorMessage),
+			UserAgent:        util.CtxValueString(task.Ctx, constant.CtxKeyClient),
+			TraceID:          util.CtxValueString(task.Ctx, constant.CtxKeyTraceID),
+		}, time.Now())
+		if err := pm.auditRepo.Save(task.Ctx, audit); err != nil {
 			l.Error("[StorePool] Failed to store audit record", zap.Error(err))
 			return
 		}

@@ -10,6 +10,7 @@ import (
 	"github.com/alitto/pond/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -23,6 +24,7 @@ import (
 //	@update 2026-04-05 10:00:00
 type PoolManager struct {
 	db        *gorm.DB
+	auditRepo modelcall.AuditRepository
 	storePool pond.Pool
 	agentPool pond.Pool
 }
@@ -30,12 +32,14 @@ type PoolManager struct {
 // NewPoolManager 创建协程池管理器。
 //
 //	@param db *gorm.DB
+//	@param auditRepo modelcall.AuditRepository 审计写聚合仓储（审计落库统一经此聚合）
 //	@return *PoolManager
 //	@author centonhuang
-//	@update 2026-05-12 20:30:00
-func NewPoolManager(db *gorm.DB) *PoolManager {
+//	@update 2026-06-25 10:00:00
+func NewPoolManager(db *gorm.DB, auditRepo modelcall.AuditRepository) *PoolManager {
 	return &PoolManager{
 		db:        db,
+		auditRepo: auditRepo,
 		storePool: pond.NewPool(config.Pool.Store.Workers, pond.WithQueueSize(config.Pool.Store.QueueSize)),
 		agentPool: pond.NewPool(config.Pool.Agent.Workers, pond.WithQueueSize(config.Pool.Agent.QueueSize)),
 	}

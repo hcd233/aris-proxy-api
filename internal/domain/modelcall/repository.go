@@ -1,7 +1,7 @@
 // Package modelcall ModelCall 域根（仓储接口）
 //
-// 注意：此域尚未被 use case 层接入。LLM 代理当前通过 pool.SubmitModelCallAuditTask() 直接写入审计记录，
-// 本包作为未来将审计写入迁移至 aggregate + repository 模式的扩展点保留。
+// 审计读写双向统一经本包的 AuditRepository 聚合仓储：写路径由 pool.SubmitModelCallAuditTask()
+// 构造 ModelCallAudit 聚合后调用 Save()，读路径由 application/audit 查询服务调用 ListAll/聚合统计。
 package modelcall
 
 import (

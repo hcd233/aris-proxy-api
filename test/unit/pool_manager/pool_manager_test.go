@@ -220,7 +220,7 @@ func TestPoolConfig_MinimalValues(t *testing.T) {
 
 func TestPoolManager_NewPoolManager(t *testing.T) {
 	t.Parallel()
-	pm := pool.NewPoolManager(nil)
+	pm := pool.NewPoolManager(nil, nil)
 	if pm == nil {
 		t.Error("NewPoolManager() returned nil")
 	}
@@ -229,7 +229,7 @@ func TestPoolManager_NewPoolManager(t *testing.T) {
 
 func TestPoolManager_Stop(t *testing.T) {
 	t.Parallel()
-	pm := pool.NewPoolManager(nil)
+	pm := pool.NewPoolManager(nil, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := pm.StopWithContext(ctx); err != nil {
