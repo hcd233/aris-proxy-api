@@ -195,8 +195,8 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 		OperationID: "streamHeaders",
 		Method:      http.MethodGet,
 		Path:        "/stream",
-	}, func(_ context.Context, _ *struct{}) (*huma.StreamResponse, error) {
-		return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
+	}, func(ctx context.Context, _ *struct{}) (*huma.StreamResponse, error) {
+		return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, []byte(`{"ok":true}`))
 			_ = w.Flush()
 		}), nil

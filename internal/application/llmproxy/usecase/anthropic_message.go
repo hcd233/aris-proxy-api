@@ -46,7 +46,7 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 
 func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
-	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
+	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		timer := newStreamTimer()
 
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
@@ -114,7 +114,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 }
 
 func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
+	return apiutil.WrapStreamResponse(ctx, u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
 }
 
 func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) func(w *bufio.Writer) {

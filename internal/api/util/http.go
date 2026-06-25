@@ -38,7 +38,43 @@ func WriteErrorHTTPResponse(ctx huma.Context, statusCode int, err *model.Error) 
 	return WriteErrorResponse(ctx.BodyWriter(), err)
 }
 
-func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
+// streamLifecycle 承载包裹"真实流式写入"的起止回调。
+//
+// 必须在 SendStreamWriter 的回调内部触发，而非在注册阶段：
+// fiber/fasthttp 的 SendStreamWriter 只是把写函数登记到响应上，注册后立即返回，
+// 真正的流式写入要等 handler 链返回后由 fasthttp 在连接写阶段调用。
+// 若在注册前后 bracket，回调会在微秒内 start→end，导致 SSE 并发 gauge 恒为 0。
+type streamLifecycle struct {
+	onStart func()
+	onEnd   func()
+}
+
+type streamLifecycleKeyType struct{}
+
+var streamLifecycleKey streamLifecycleKeyType
+
+// WithStreamLifecycle 在 ctx 上挂载流式写入的起止回调。
+//
+// onStart 在真正开始向客户端写流时触发，onEnd 在流结束（含异常/中断）时触发；
+// 二者由 WrapStreamResponse 在 SendStreamWriter 回调内部 bracket 真实写入过程。
+//
+//	@param ctx context.Context
+//	@param onStart func()
+//	@param onEnd func()
+//	@return context.Context
+//	@author centonhuang
+//	@update 2026-06-25 20:00:00
+func WithStreamLifecycle(ctx context.Context, onStart, onEnd func()) context.Context {
+	return context.WithValue(ctx, streamLifecycleKey, streamLifecycle{onStart: onStart, onEnd: onEnd})
+}
+
+func streamLifecycleFromContext(ctx context.Context) streamLifecycle {
+	lc, _ := ctx.Value(streamLifecycleKey).(streamLifecycle)
+	return lc
+}
+
+func WrapStreamResponse(ctx context.Context, handler func(w *bufio.Writer)) *huma.StreamResponse {
+	lc := streamLifecycleFromContext(ctx)
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			fiberCtx := humafiber.Unwrap(humaCtx)
@@ -53,7 +89,16 @@ func WrapStreamResponse(handler func(w *bufio.Writer)) *huma.StreamResponse {
 			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fiberCtx.Status(fiber.StatusOK)
-			_ = fiberCtx.SendStreamWriter(handler) //nolint:errcheck // stream write errors propagate via the Fiber error handler
+			// 在 SendStreamWriter 回调内部 bracket，确保 onStart/onEnd 覆盖真实流式写入全程。
+			_ = fiberCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // stream write errors propagate via the Fiber error handler
+				if lc.onStart != nil {
+					lc.onStart()
+				}
+				if lc.onEnd != nil {
+					defer lc.onEnd()
+				}
+				handler(w)
+			})
 		},
 	}
 }

@@ -73,17 +73,11 @@ func (h *anthropicHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq
 //	@author centonhuang
 //	@update 2026-04-22 21:00:00
 func (h *anthropicHandler) HandleCreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
-	rsp, err := h.uc.CreateMessage(ctx, req)
-	if err != nil || rsp == nil || rsp.Body == nil {
-		return rsp, err
-	}
-	originalBody := rsp.Body
-	rsp.Body = func(humaCtx huma.Context) {
-		h.sseGauge.Inc(constant.SSEProviderAnthropic)
-		defer h.sseGauge.Dec(constant.SSEProviderAnthropic)
-		originalBody(humaCtx)
-	}
-	return rsp, nil
+	ctx = apiutil.WithStreamLifecycle(ctx,
+		func() { h.sseGauge.Inc(constant.SSEProviderAnthropic) },
+		func() { h.sseGauge.Dec(constant.SSEProviderAnthropic) },
+	)
+	return h.uc.CreateMessage(ctx, req)
 }
 
 // HandleCountTokens 处理Token计数请求

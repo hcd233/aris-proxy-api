@@ -47,7 +47,7 @@ func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.Op
 
 func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
-	return apiutil.WrapStreamResponse(func(w *bufio.Writer) {
+	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		timer := newStreamTimer()
 		toolCallIDs := make(map[int]string)
 
@@ -128,7 +128,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 }
 
 func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(u.forwardChatViaAnthropicStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
+	return apiutil.WrapStreamResponse(ctx, u.forwardChatViaAnthropicStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
 }
 
 func (u *openAIUseCase) forwardChatViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) func(w *bufio.Writer) {
