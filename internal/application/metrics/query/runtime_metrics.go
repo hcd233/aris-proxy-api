@@ -77,6 +77,7 @@ func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey str
 	}
 
 	series := Aggregate(byInstance, alignedStart, bucket, end, outputStart)
+	// latest 取当前桶起点；无样本的桶在 buildSeries 中被跳过，故空的末桶不会塌成 0。
 	latest := end - mod(end, bucket)
 	return series, latest, nil
 }
@@ -118,6 +119,7 @@ type bucketAgg struct {
 	cpuPercent  float64
 	histBuckets map[string]float64
 	histTotal   float64
+	samples     float64 // 桶内跨实例累计的快照数；为 0 表示该桶无数据，不应输出
 }
 
 func newBucketAggs(n int) []bucketAgg {
@@ -204,6 +206,7 @@ func mergeGaugeBucket(b *bucketAgg, sum, heap float64, sse map[string]float64, c
 	if count <= 0 {
 		return
 	}
+	b.samples += count
 	b.goroutines += sum / count
 	b.heap += heap / count
 	for prov, v := range sse {
@@ -229,7 +232,10 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 
 	for idx := range agg {
 		t := alignedStart + int64(idx)*bucket
-		if t < outputStart {
+		// t < outputStart：增量下界之前的桶不重复输出；
+		// samples == 0：该桶无任何快照（含末尾未采集到的当前桶、抖动丢点的空桶），
+		// 输出会让 gauge 塌成 0 形成断崖，故直接跳过。
+		if t < outputStart || agg[idx].samples == 0 {
 			continue
 		}
 		series.Goroutines = append(series.Goroutines, dto.RuntimePoint{Time: t, Value: round2(agg[idx].goroutines)})
