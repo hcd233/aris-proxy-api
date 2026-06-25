@@ -6,6 +6,7 @@ package query
 
 import (
 	"context"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -143,12 +144,12 @@ func decodeSnapshots(payloads [][]byte) []metrics.Snapshot {
 }
 
 func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart, bucket int64, n int) {
-	gSum, gHeap, gInProg, gSSE, gCount := instanceGauges(snaps, alignedStart, bucket, n)
+	gSum, gHeap, gSSE, gCount := instanceGauges(snaps, alignedStart, bucket, n)
 	dCount, dCPU, dHist := instanceDeltas(snaps, alignedStart, bucket, n)
 
 	bucketSeconds := float64(bucket)
 	for idx := range n {
-		mergeGaugeBucket(&agg[idx], gSum[idx], gHeap[idx], gInProg[idx], gSSE[idx], gCount[idx])
+		mergeGaugeBucket(&agg[idx], gSum[idx], gHeap[idx], gSSE[idx], gCount[idx])
 		mergeRateBucket(&agg[idx], dCount[idx], dCPU[idx], dHist[idx], bucketSeconds)
 	}
 }
@@ -203,13 +204,12 @@ func instanceDeltas(snaps []metrics.Snapshot, alignedStart, bucket int64, n int)
 }
 
 // mergeGaugeBucket 把单实例某桶的 gauge 桶内均值跨实例累加进全局桶。
-func mergeGaugeBucket(b *bucketAgg, sum, heap, inProg float64, sse map[string]float64, count float64) {
+func mergeGaugeBucket(b *bucketAgg, sum, heap float64, sse map[string]float64, count float64) {
 	if count <= 0 {
 		return
 	}
 	b.goroutines += sum / count
 	b.heap += heap / count
-	b.inProgress += inProg / count
 	for prov, v := range sse {
 		b.sse[prov] += v / count
 	}
@@ -236,7 +236,7 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 		if t < outputStart {
 			continue
 		}
-		series.Goroutines = append(series.Goroutines, dto.RuntimePoint{Time: t, Value: round2(agg[idx].goroutines)})
+		series.Goroutines = append(series.Goroutines, dto.RuntimePoint{Time: t, Value: math.Floor(agg[idx].goroutines)})
 		series.HeapMB = append(series.HeapMB, dto.RuntimePoint{Time: t, Value: round2(agg[idx].heap / constant.RuntimeMetricsBytesPerMB)})
 		series.InProgress = append(series.InProgress, dto.RuntimePoint{Time: t, Value: round2(agg[idx].inProgress)})
 		series.QPS = append(series.QPS, dto.RuntimePoint{Time: t, Value: round2(agg[idx].qps)})
