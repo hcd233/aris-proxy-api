@@ -8,58 +8,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
-
-// FillTrendSeries 把 SQL 返回的稀疏点集补齐为每个 model 拥有相同时间槽的折线数据。
-//
-// GROUP BY date_trunc 不会为没有调用的时间槽生成行；前端折线图需要这些槽位才能连续绘制。
-// 缺失槽位以 count=0 填充。start/end 非零时，按请求区间补齐完整时间轴。
-func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, granularity enum.Granularity) []*dto.ModelTrendItem {
-	modelOrder, byModel, timeSet := indexSeries(points,
-		func(p *modelcall.ModelTrendPoint) string { return p.Model },
-		func(p *modelcall.ModelTrendPoint) time.Time { return p.Time.UTC() },
-		func(p *modelcall.ModelTrendPoint) int { return p.Count },
-	)
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := lo.Map(modelOrder, func(m string, _ int) *dto.ModelTrendItem {
-		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TrendPoint {
-			return &dto.TrendPoint{Time: t, Count: byModel[m][t]}
-		})
-		return &dto.ModelTrendItem{Model: m, Points: pts}
-	})
-	return items
-}
-
-// FillRateSeries 同 FillTrendSeries，并计算 successRate 与 failed。
-func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, granularity enum.Granularity) []*dto.RequestRateItem {
-	type slot struct{ total, success int }
-	modelOrder, byModel, timeSet := indexSeries(points,
-		func(p *modelcall.RequestRatePoint) string { return p.Model },
-		func(p *modelcall.RequestRatePoint) time.Time { return p.Time.UTC() },
-		func(p *modelcall.RequestRatePoint) slot { return slot{total: p.Total, success: p.Success} },
-	)
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := lo.Map(modelOrder, func(m string, _ int) *dto.RequestRateItem {
-		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.RatePoint {
-			s := byModel[m][t]
-			var rate float64
-			if s.total > 0 {
-				rate = float64(s.success) / float64(s.total)
-			}
-			return &dto.RatePoint{
-				Time:        t,
-				Total:       s.total,
-				Success:     s.success,
-				Failed:      s.total - s.success,
-				SuccessRate: rate,
-			}
-		})
-		return &dto.RequestRateItem{Model: m, Points: pts}
-	})
-	return items
-}
 
 // indexSeries 提取 (model, time) 索引：返回 model 出现顺序 + 嵌套 map + 全局 time 桶集合。
 func indexSeries[P any, V any](
@@ -128,40 +77,4 @@ func truncateBucket(t time.Time, granularity enum.Granularity) time.Time {
 	default:
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 	}
-}
-
-type throughputSlot struct {
-	inputTokens         int
-	outputTokens        int
-	cacheCreationTokens int
-	cacheReadTokens     int
-}
-
-func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, end time.Time, granularity enum.Granularity) []*dto.TokenThroughputPoint {
-	aggregated := make(map[time.Time]*throughputSlot)
-	timeSet := make(map[time.Time]struct{})
-	for _, p := range points {
-		t := p.Time.UTC()
-		timeSet[t] = struct{}{}
-		if aggregated[t] == nil {
-			aggregated[t] = &throughputSlot{}
-		}
-		s := aggregated[t]
-		s.inputTokens += p.InputTokens
-		s.outputTokens += p.OutputTokens
-		s.cacheCreationTokens += p.CacheCreationTokens
-		s.cacheReadTokens += p.CacheReadTokens
-	}
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TokenThroughputPoint {
-		tp := &dto.TokenThroughputPoint{Time: t}
-		if s, ok := aggregated[t]; ok {
-			tp.InputTokens = s.inputTokens
-			tp.OutputTokens = s.outputTokens
-			tp.CacheCreationTokens = s.cacheCreationTokens
-			tp.CacheReadTokens = s.cacheReadTokens
-		}
-		return tp
-	})
-	return pts
 }

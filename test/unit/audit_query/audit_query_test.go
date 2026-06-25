@@ -333,7 +333,7 @@ func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
 		{Model: "gpt-4", Time: t3, Count: 5},
 		{Model: "claude", Time: t2, Count: 1},
 	}
-	items := auditquery.FillTrendSeries(points, t1, t4, enum.GranularityHour)
+	items := auditport.FillTrendSeries(points, t1, t4, enum.GranularityHour)
 	if len(items) != 2 {
 		t.Fatalf("len(items) = %d, want 2", len(items))
 	}
@@ -359,7 +359,7 @@ func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
 
 func TestFillTrendSeries_Empty(t *testing.T) {
 	t.Parallel()
-	items := auditquery.FillTrendSeries(nil, time.Time{}, time.Time{}, enum.GranularityHour)
+	items := auditport.FillTrendSeries(nil, time.Time{}, time.Time{}, enum.GranularityHour)
 	if len(items) != 0 {
 		t.Errorf("empty input should return empty, got %d items", len(items))
 	}
@@ -373,7 +373,7 @@ func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
 		{Model: "gpt-4", Time: t1, Total: 10, Success: 8},
 		{Model: "gpt-4", Time: t2, Total: 5, Success: 5},
 	}
-	items := auditquery.FillRateSeries(points, t1, t2, enum.GranularityHour)
+	items := auditport.FillRateSeries(points, t1, t2, enum.GranularityHour)
 	if len(items) != 1 {
 		t.Fatalf("len(items) = %d, want 1", len(items))
 	}
@@ -398,7 +398,7 @@ func TestFillRateSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
 		{Model: "gpt-4", Time: time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai), Total: 10, Success: 8},
 	}
 
-	items := auditquery.FillRateSeries(points, start, end, enum.GranularityHour)
+	items := auditport.FillRateSeries(points, start, end, enum.GranularityHour)
 
 	if len(items) != 1 {
 		t.Fatalf("len(items) = %d, want 1", len(items))
@@ -420,7 +420,7 @@ func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 	points := []*modelcall.TokenThroughputPoint{
 		{Model: "gpt-4", Time: t1, OutputTokens: 20},
 	}
-	items := auditquery.FillTokenThroughputSeries(points, t1, t3, enum.GranularityHour)
+	items := auditport.FillTokenThroughputSeries(points, t1, t3, enum.GranularityHour)
 	if len(items) != 3 {
 		t.Fatalf("len(items) = %d, want 3", len(items))
 	}
@@ -449,7 +449,7 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 		},
 	}
 
-	items := auditquery.FillTokenThroughputSeries(points, start, end, enum.GranularityHour)
+	items := auditport.FillTokenThroughputSeries(points, start, end, enum.GranularityHour)
 
 	if len(items) != 1 {
 		t.Fatalf("len(items) = %d, want 1", len(items))

@@ -12,17 +12,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// CreateEndpointHandler 创建命令处理器
-type CreateEndpointHandler interface {
-	Handle(ctx context.Context, cmd port.CreateEndpointCommand) (*port.CreateEndpointResult, error)
-}
-
 type createEndpointHandler struct {
 	repo llmproxy.EndpointRepository
 }
 
 // NewCreateEndpointHandler 构造创建命令处理器
-func NewCreateEndpointHandler(repo llmproxy.EndpointRepository) CreateEndpointHandler {
+func NewCreateEndpointHandler(repo llmproxy.EndpointRepository) port.CreateEndpointHandler {
 	return &createEndpointHandler{repo: repo}
 }
 

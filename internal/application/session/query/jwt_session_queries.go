@@ -41,14 +41,6 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 	},
 }
 
-type ListSessionsByUserHandler interface {
-	Handle(ctx context.Context, q sessionport.ListSessionsByUserQuery) ([]*sessionport.SessionSummaryView, *model.PageInfo, error)
-}
-
-type GetSessionByUserHandler interface {
-	Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error)
-}
-
 type ownerNameLookup interface {
 	LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error)
 }
@@ -58,7 +50,7 @@ type listSessionsByUserHandler struct {
 	apiKeyRepo ownerNameLookup
 }
 
-func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) ListSessionsByUserHandler {
+func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
 	return &listSessionsByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
 }
 
@@ -187,7 +179,7 @@ type getSessionByUserHandler struct {
 	apiKeyRepo ownerNameLookup
 }
 
-func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) GetSessionByUserHandler {
+func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.GetSessionByUserHandler {
 	return &getSessionByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
 }
 

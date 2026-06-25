@@ -12,11 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// GetCurrentUserHandler 查询处理器
-type GetCurrentUserHandler interface {
-	Handle(ctx context.Context, q port.GetCurrentUserQuery) (*port.UserView, error)
-}
-
 type getCurrentUserHandler struct {
 	repo identity.UserRepository
 }
@@ -27,7 +22,7 @@ type getCurrentUserHandler struct {
 //	@return GetCurrentUserHandler
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
-func NewGetCurrentUserHandler(repo identity.UserRepository) GetCurrentUserHandler {
+func NewGetCurrentUserHandler(repo identity.UserRepository) port.GetCurrentUserHandler {
 	return &getCurrentUserHandler{repo: repo}
 }
 

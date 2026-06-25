@@ -11,17 +11,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// DeleteModelHandler 删除命令处理器
-type DeleteModelHandler interface {
-	Handle(ctx context.Context, cmd port.DeleteModelCommand) error
-}
-
 type deleteModelHandler struct {
 	repo llmproxy.ModelRepository
 }
 
 // NewDeleteModelHandler 构造删除命令处理器
-func NewDeleteModelHandler(repo llmproxy.ModelRepository) DeleteModelHandler {
+func NewDeleteModelHandler(repo llmproxy.ModelRepository) port.DeleteModelHandler {
 	return &deleteModelHandler{repo: repo}
 }
 

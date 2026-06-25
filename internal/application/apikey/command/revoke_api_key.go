@@ -12,14 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-// RevokeAPIKeyHandler 吊销命令处理器
-//
-//	@author centonhuang
-//	@update 2026-04-23 10:45:00
-type RevokeAPIKeyHandler interface {
-	Handle(ctx context.Context, cmd port.RevokeAPIKeyCommand) error
-}
-
 type revokeAPIKeyHandler struct {
 	repo apikey.APIKeyRepository
 }
@@ -30,7 +22,7 @@ type revokeAPIKeyHandler struct {
 //	@return RevokeAPIKeyHandler
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func NewRevokeAPIKeyHandler(repo apikey.APIKeyRepository) RevokeAPIKeyHandler {
+func NewRevokeAPIKeyHandler(repo apikey.APIKeyRepository) port.RevokeAPIKeyHandler {
 	return &revokeAPIKeyHandler{repo: repo}
 }
 
