@@ -509,6 +509,8 @@
   "cron_audit.status_failed": "Failed",
   "cron_audit.status_panic": "Panic",
   "cron_audit.status_skipped": "Skipped",
+  "cron_audit.filter_type": "Type",
+  "cron_audit.filter_status": "Status",
 
   "login.secure_access": "Secure access powered by OAuth2",
   "login.welcome_back": "Welcome back",
