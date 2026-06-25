@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Search, Timer, Pencil, Lock } from "lucide-react";
 
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -33,16 +33,17 @@ function formatTime(iso: string): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function specToHuman(spec: string): string {
+function specToHuman(spec: string, locale: string): string {
   try {
-    return cronstrue.toString(spec, { locale: "en" });
+    const cronLocale = locale === "zh" ? "zh_CN" : "en";
+    return cronstrue.toString(spec, { locale: cronLocale });
   } catch {
     return spec;
   }
 }
 
 export default function CronPage() {
-  const t = useT();
+  const { t, locale } = useI18n();
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cron.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.cron.pageSize", 20);
   const [jobs, setJobs] = useState<CronJobItem[]>([]);
@@ -188,7 +189,7 @@ export default function CronPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="min-w-0">
-                            <p className="text-sm">{specToHuman(job.spec)}</p>
+                            <p className="text-sm">{specToHuman(job.spec, locale)}</p>
                             <p className="font-mono text-xs text-muted-foreground">{job.spec}</p>
                           </div>
                           <Button
@@ -226,7 +227,7 @@ export default function CronPage() {
             <PaginationBar
               pageInfo={pageInfo}
               onChange={(page, pageSize) => refresh(page, pageSize)}
-              totalLabel="jobs"
+              totalLabel={t("pagination.jobs")}
             />
           </CardContent>
         </Card>

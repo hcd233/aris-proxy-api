@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight, Check, ListFilter } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 const PAGE_SIZES = [20, 50, 100, 200, 500];
 
@@ -23,11 +24,13 @@ interface PaginationBarProps {
 export function PaginationBar({
   pageInfo,
   onChange,
-  totalLabel = "items",
+  totalLabel: rawTotalLabel,
   className = "",
 }: PaginationBarProps) {
   const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
   const inputRef = useRef<HTMLInputElement>(null);
+  const t = useT();
+  const totalLabel = rawTotalLabel ?? t("pagination.items");
 
   if (pageInfo.total <= 0) return null;
 
@@ -58,21 +61,21 @@ export function PaginationBar({
             render={<Button variant="outline" size="sm" className="gap-1.5" />}
           >
             <ListFilter size={14} />
-            {pageInfo.pageSize} / page
+            {pageInfo.pageSize} {t("pagination.per_page")}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             {PAGE_SIZES.map((size) => (
               <DropdownMenuItem key={size} onClick={() => onChange(1, size)}>
                 {size === pageInfo.pageSize && <Check className="size-4" />}
                 <span className={size === pageInfo.pageSize ? "ml-0" : "ml-6"}>
-                  {size} per page
+                  {size} {t("pagination.per_page")}
                 </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
         <p className="hidden text-sm text-muted-foreground md:block">
-          {pageInfo.total} {totalLabel} total
+          {pageInfo.total} {totalLabel} {t("pagination.total")}
         </p>
       </div>
 
@@ -86,7 +89,7 @@ export function PaginationBar({
           <ChevronLeft className="size-4" />
         </Button>
         <div className="flex items-center gap-1.5 text-sm">
-          <span className="text-muted-foreground">Page</span>
+          <span className="text-muted-foreground">{t("pagination.page")}</span>
           <input
             key={`page-${pageInfo.page}`}
             ref={inputRef}
