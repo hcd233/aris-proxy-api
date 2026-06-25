@@ -2,11 +2,14 @@ package bootstrap
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	"github.com/hcd233/aris-proxy-api/internal/bootstrap/modules"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 )
@@ -44,18 +47,21 @@ func BuildFxApp(host, port string, customizers ...fx.Option) *fx.App {
 type middlewareParams struct {
 	fx.In
 
-	App                  *fiber.App
-	InflightTracker      *inflight.Tracker
-	Cache                *redis.Client
-	PrometheusMiddleware fiber.Handler
+	App               *fiber.App
+	InflightTracker   *inflight.Tracker
+	Cache             *redis.Client
+	Registry          *prometheus.Registry
+	MetricsMiddleware fiber.Handler
 }
 
-// registerMiddlewares 注册中间件链，顺序：Recover → Inflight → Guard → Fgprof → Prometheus → CORS → Compress → Trace → Log
+// registerMiddlewares 注册中间件链，顺序：Recover → Metrics → Inflight → Guard → Fgprof → CORS → Compress → Trace → Log
 func registerMiddlewares(params middlewareParams) {
-	params.App.Use(constant.RoutePathMetrics, params.PrometheusMiddleware)
+	// 标准 Prometheus 文本端点，供未来 Prometheus 抓取（当前不依赖）
+	params.App.Get(constant.RoutePathMetrics, adaptor.HTTPHandler(promhttp.HandlerFor(params.Registry, promhttp.HandlerOpts{})))
 
 	params.App.Use(
 		middleware.RecoverMiddleware(),
+		params.MetricsMiddleware,
 		middleware.InflightMiddleware(params.InflightTracker),
 		middleware.GuardMiddleware(params.Cache, middleware.GuardConfig{
 			StrikeThreshold: constant.GuardStrikeThreshold,
@@ -66,6 +72,7 @@ func registerMiddlewares(params middlewareParams) {
 				constant.RoutePathHealth,
 				constant.RoutePathReady,
 				constant.RoutePathSSEHealth,
+				constant.RoutePathMetrics,
 				constant.RoutePathFavicon,
 				constant.RoutePathRobots,
 				constant.RoutePathAppleTouchIcon,
