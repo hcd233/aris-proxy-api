@@ -17,13 +17,13 @@ func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHand
 	metricsGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 
 	huma.Register(metricsGroup, huma.Operation{
-		OperationID: "getMetricsJSON",
+		OperationID: "getRuntimeMetrics",
 		Method:      http.MethodGet,
-		Path:        "/json",
-		Summary:     "GetMetricsJSON",
-		Description: "Get Prometheus metrics in JSON format for dashboard consumption. Admin only.",
+		Path:        "/runtime",
+		Summary:     "GetRuntimeMetrics",
+		Description: "Get cross-pod aggregated runtime metrics time series for the monitor dashboard. Admin only.",
 		Tags:        []string{constant.TagMonitor},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getMetricsJSON", enum.PermissionAdmin)},
-	}, metricsHandler.HandleGetMetricsJSON)
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getRuntimeMetrics", enum.PermissionAdmin)},
+	}, metricsHandler.HandleGetRuntimeMetrics)
 }

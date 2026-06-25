@@ -569,18 +569,22 @@ export interface ListBlockedRsp extends CommonRsp {
 
 // ─── Metrics ───────────────────────────────────────────────────────────────────
 
-export interface MetricSampleItem {
-  labels?: Record<string, string>;
+export interface RuntimePoint {
+  time: number; // unix 秒（桶起始）
   value: number;
 }
 
-export interface MetricFamilyItem {
-  name: string;
-  type: string;
-  help: string;
-  samples?: MetricSampleItem[];
+export interface RuntimeSeries {
+  goroutines?: RuntimePoint[];
+  heapMB?: RuntimePoint[];
+  inProgress?: RuntimePoint[];
+  qps?: RuntimePoint[];
+  cpuPercent?: RuntimePoint[];
+  p95Ms?: RuntimePoint[];
+  sseActive?: Record<string, RuntimePoint[]>;
 }
 
-export interface MetricsJSONRsp extends CommonRsp {
-  metrics?: MetricFamilyItem[];
+export interface RuntimeMetricsRsp extends CommonRsp {
+  series: RuntimeSeries;
+  latestTime: number;
 }

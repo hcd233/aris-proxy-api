@@ -3,34 +3,33 @@ package handler
 import (
 	"context"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	metricsport "github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"go.uber.org/zap"
 )
 
-// MetricsHandler 指标处理器
+// MetricsHandler 运行时指标处理器
 //
 //	@author centonhuang
-//	@update 2026-06-23 10:00:00
+//	@update 2026-06-25 10:00:00
 type MetricsHandler interface {
-	HandleGetMetricsJSON(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.MetricsJSONRsp], error)
+	HandleGetRuntimeMetrics(ctx context.Context, req *dto.RuntimeMetricsReq) (*dto.HTTPResponse[*dto.RuntimeMetricsRsp], error)
 }
 
 // MetricsDependencies MetricsHandler 依赖项
 //
 //	@author centonhuang
-//	@update 2026-06-23 10:00:00
+//	@update 2026-06-25 10:00:00
 type MetricsDependencies struct {
-	Registry *prometheus.Registry
+	RuntimeMetrics metricsport.RuntimeMetricsService
 }
 
 type metricsHandler struct {
-	gatherer prometheus.Gatherer
+	runtime metricsport.RuntimeMetricsService
 }
 
 // NewMetricsHandler 创建指标处理器
@@ -38,27 +37,29 @@ type metricsHandler struct {
 //	@param deps MetricsDependencies
 //	@return MetricsHandler
 //	@author centonhuang
-//	@update 2026-06-23 10:00:00
+//	@update 2026-06-25 10:00:00
 func NewMetricsHandler(deps MetricsDependencies) MetricsHandler {
-	return &metricsHandler{gatherer: deps.Registry}
+	return &metricsHandler{runtime: deps.RuntimeMetrics}
 }
 
-// HandleGetMetricsJSON 获取 Prometheus 指标的 JSON 表示
+// HandleGetRuntimeMetrics 获取跨 pod 聚合后的运行时指标时序
 //
 //	@receiver h *metricsHandler
 //	@param ctx context.Context
-//	@param req *dto.EmptyReq
-//	@return *dto.HTTPResponse[*dto.MetricsJSONRsp]
+//	@param req *dto.RuntimeMetricsReq
+//	@return *dto.HTTPResponse[*dto.RuntimeMetricsRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2026-06-23 10:00:00
-func (h *metricsHandler) HandleGetMetricsJSON(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.MetricsJSONRsp], error) {
-	families, err := metrics.GatherMetricFamilies(h.gatherer)
+//	@update 2026-06-25 10:00:00
+func (h *metricsHandler) HandleGetRuntimeMetrics(ctx context.Context, req *dto.RuntimeMetricsReq) (*dto.HTTPResponse[*dto.RuntimeMetricsRsp], error) {
+	rsp := &dto.RuntimeMetricsRsp{}
+	series, latest, err := h.runtime.RuntimeMetrics(ctx, req.Range, req.Since)
 	if err != nil {
-		logger.WithCtx(ctx).Error("[MetricsHandler] Gather metrics failed", zap.Error(err))
-		rsp := &dto.MetricsJSONRsp{}
-		rsp.Error = ierr.ToBizError(err, ierr.ErrInternal.BizError())
+		logger.WithCtx(ctx).Error("[MetricsHandler] Query runtime metrics failed", zap.Error(err))
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	return apiutil.WrapHTTPResponse(&dto.MetricsJSONRsp{Metrics: families}, nil)
+	rsp.Series = series
+	rsp.LatestTime = latest
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

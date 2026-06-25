@@ -22,6 +22,8 @@ import (
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	metricsport "github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
+	metricsquery "github.com/hcd233/aris-proxy-api/internal/application/metrics/query"
 	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
@@ -105,6 +107,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewCreateBlockedHandler,
 		NewDeleteBlockedHandler,
 		NewListBlockedHandler,
+		NewRuntimeMetricsHandler,
 	),
 )
 
@@ -308,6 +311,10 @@ func NewDeleteBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockeda
 
 func NewListBlockedHandler(repo blockeddomain.BlockedRepository) blockedport.ListBlockedHandler {
 	return blockedquery.NewListBlockedHandler(repo)
+}
+
+func NewRuntimeMetricsHandler(runtimeCache *cache.RuntimeMetricsCache) metricsport.RuntimeMetricsService {
+	return metricsquery.NewRuntimeMetricsHandler(runtimeCache)
 }
 
 func NewListCronJobsHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.ListCronJobsHandler {

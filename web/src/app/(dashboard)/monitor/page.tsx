@@ -5,178 +5,146 @@ import { Activity, MemoryStick, Radio, Zap } from "lucide-react";
 
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
-import type { MetricFamilyItem } from "@/lib/types";
+import { usePersistentState } from "@/hooks/use-persistent-state";
+import type { RuntimePoint } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
-import { RuntimeLineChart } from "@/components/charts/runtime-line-chart";
+import { RuntimeChart } from "@/components/charts/runtime-chart";
 
 const POLL_INTERVAL_MS = 5000;
-const MAX_DATA_POINTS = 60;
 
-interface TimeSeries {
-  time: string;
-  value: number;
+const RANGE_KEYS = ["15m", "1h", "6h", "24h"] as const;
+type RangeKey = (typeof RANGE_KEYS)[number];
+
+const RANGE_WINDOW_SEC: Record<RangeKey, number> = {
+  "15m": 900,
+  "1h": 3600,
+  "6h": 21600,
+  "24h": 86400,
+};
+
+const SSE_COLORS = ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355"];
+
+type Pt = RuntimePoint;
+
+interface SeriesState {
+  goroutines: Pt[];
+  heapMB: Pt[];
+  inProgress: Pt[];
+  qps: Pt[];
+  cpuPercent: Pt[];
+  p95Ms: Pt[];
+  sseActive: Record<string, Pt[]>;
 }
 
-interface MonitorState {
-  goroutines: TimeSeries[];
-  heapMB: TimeSeries[];
-  inProgress: TimeSeries[];
-  sseActive: TimeSeries[];
-  cpuPercent: TimeSeries[];
-  qps: TimeSeries[];
-  p95Ms: TimeSeries[];
+const EMPTY_STATE: SeriesState = {
+  goroutines: [],
+  heapMB: [],
+  inProgress: [],
+  qps: [],
+  cpuPercent: [],
+  p95Ms: [],
+  sseActive: {},
+};
+
+function mergePoints(prev: Pt[], incoming: Pt[], cutoff: number): Pt[] {
+  const map = new Map<number, number>();
+  for (const p of prev) map.set(p.time, p.value);
+  for (const p of incoming) map.set(p.time, p.value);
+  return [...map.entries()]
+    .filter(([t]) => t >= cutoff)
+    .sort((a, b) => a[0] - b[0])
+    .map(([time, value]) => ({ time, value }));
 }
 
-function nowLabel(): string {
-  return new Date().toLocaleTimeString("en-US", {
-    hour12: false,
-    minute: "2-digit",
-    second: "2-digit",
-  });
+function mergeSSE(
+  prev: Record<string, Pt[]>,
+  incoming: Record<string, Pt[]>,
+  cutoff: number,
+): Record<string, Pt[]> {
+  const providers = new Set([...Object.keys(prev), ...Object.keys(incoming)]);
+  const out: Record<string, Pt[]> = {};
+  for (const prov of providers) {
+    out[prov] = mergePoints(prev[prov] ?? [], incoming[prov] ?? [], cutoff);
+  }
+  return out;
 }
 
-function findMetric(
-  families: MetricFamilyItem[],
-  name: string,
-): MetricFamilyItem | undefined {
-  return families.find((f) => f.name === name);
+function lastValue(points: Pt[]): number {
+  return points.at(-1)?.value ?? 0;
 }
 
-function getGaugeValue(
-  families: MetricFamilyItem[],
-  name: string,
-): number {
-  const m = findMetric(families, name);
-  return m?.samples?.[0]?.value ?? 0;
+function toChartData(points: Pt[]): Array<Record<string, number>> {
+  return points.map((p) => ({ time: p.time, value: p.value }));
 }
 
-function getCounterValue(
-  families: MetricFamilyItem[],
-  name: string,
-): number {
-  const m = findMetric(families, name);
-  if (!m?.samples) return 0;
-  return m.samples.reduce((sum, s) => sum + s.value, 0);
-}
-
-function getHistogramP95(
-  families: MetricFamilyItem[],
-  name: string,
-): number {
-  const m = findMetric(families, name);
-  if (!m?.samples) return 0;
-  const buckets = m.samples
-    .filter((s) => s.labels?.le !== undefined && s.labels?.le !== "+Inf")
-    .map((s) => ({ le: parseFloat(s.labels!.le), count: s.value }))
-    .sort((a, b) => a.le - b.le);
-  const total = m.samples.find((s) => s.labels?.le === "+Inf")?.value ?? 0;
-  if (total === 0 || buckets.length === 0) return 0;
-  const target = total * 0.95;
-  for (let i = buckets.length - 1; i >= 0; i--) {
-    if (buckets[i].count >= target) {
-      return buckets[i].le * 1000;
+function sseChartData(sse: Record<string, Pt[]>): Array<Record<string, number>> {
+  const rows = new Map<number, Record<string, number>>();
+  for (const [prov, points] of Object.entries(sse)) {
+    for (const p of points) {
+      const row = rows.get(p.time) ?? { time: p.time };
+      row[prov] = p.value;
+      rows.set(p.time, row);
     }
   }
-  return 0;
+  return [...rows.values()].sort((a, b) => a.time - b.time);
 }
 
 export default function MonitorPage() {
   const t = useT();
-  const [state, setState] = useState<MonitorState>({
-    goroutines: [],
-    heapMB: [],
-    inProgress: [],
-    sseActive: [],
-    cpuPercent: [],
-    qps: [],
-    p95Ms: [],
-  });
-  const [currentValues, setCurrentValues] = useState({
-    goroutines: 0,
-    heapMB: 0,
-    inProgress: 0,
-    sseActive: 0,
-  });
+  const [range, setRange] = usePersistentState<RangeKey>("monitor.range", "1h");
+  const [state, setState] = useState<SeriesState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
-  const prevCpuRef = useRef<number | null>(null);
-  const prevRequestCountRef = useRef<number | null>(null);
-  const prevTimeRef = useRef<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>("--:--:--");
+  const sinceRef = useRef(0);
 
-  const pushPoint = useCallback(
-    (key: keyof MonitorState, time: string, value: number) => {
-      setState((prev) => {
-        const arr = [...prev[key], { time, value }];
-        if (arr.length > MAX_DATA_POINTS) arr.shift();
-        return { ...prev, [key]: arr };
-      });
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const poll = async () => {
+  const poll = useCallback(
+    async (rangeKey: RangeKey) => {
       try {
-        const rsp = await api.getMetricsJSON();
-        const families = rsp.metrics ?? [];
-        const time = nowLabel();
-        const now = Date.now() / 1000;
+        const rsp = await api.getRuntimeMetrics({ range: rangeKey, since: sinceRef.current });
+        const s = rsp.series ?? {};
+        const now = Math.floor(Date.now() / 1000);
+        const cutoff = now - RANGE_WINDOW_SEC[rangeKey];
 
-        const goroutines = getGaugeValue(families, "go_goroutines");
-        const heapBytes = getGaugeValue(families, "go_memstats_alloc_bytes");
-        const heapMB = heapBytes / (1024 * 1024);
-        const inProgress = getGaugeValue(families, "http_requests_in_progress");
-        const sseActive = getGaugeValue(families, "sse_active_connections");
-        const cpuTotal = getGaugeValue(families, "process_cpu_seconds_total");
+        setState((prev) => ({
+          goroutines: mergePoints(prev.goroutines, s.goroutines ?? [], cutoff),
+          heapMB: mergePoints(prev.heapMB, s.heapMB ?? [], cutoff),
+          inProgress: mergePoints(prev.inProgress, s.inProgress ?? [], cutoff),
+          qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
+          cpuPercent: mergePoints(prev.cpuPercent, s.cpuPercent ?? [], cutoff),
+          p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
+          sseActive: mergeSSE(prev.sseActive, s.sseActive ?? {}, cutoff),
+        }));
 
-        setCurrentValues({
-          goroutines,
-          heapMB: Math.round(heapMB * 100) / 100,
-          inProgress,
-          sseActive,
-        });
-
-        pushPoint("goroutines", time, goroutines);
-        pushPoint("heapMB", time, Math.round(heapMB * 100) / 100);
-        pushPoint("inProgress", time, inProgress);
-        pushPoint("sseActive", time, sseActive);
-
-        if (prevCpuRef.current !== null && prevTimeRef.current !== null) {
-          const cpuDelta = cpuTotal - prevCpuRef.current;
-          const timeDelta = now - prevTimeRef.current;
-          if (timeDelta > 0) {
-            const cpuPercent = (cpuDelta / timeDelta) * 100;
-            pushPoint("cpuPercent", time, Math.round(cpuPercent * 100) / 100);
-          }
-        }
-        prevCpuRef.current = cpuTotal;
-
-        const requestTotal = getCounterValue(families, "http_requests_total");
-        if (prevRequestCountRef.current !== null && prevTimeRef.current !== null) {
-          const reqDelta = requestTotal - prevRequestCountRef.current;
-          const timeDelta = now - prevTimeRef.current;
-          if (timeDelta > 0) {
-            const qps = reqDelta / timeDelta;
-            pushPoint("qps", time, Math.round(qps * 100) / 100);
-          }
-        }
-        prevRequestCountRef.current = requestTotal;
-        prevTimeRef.current = now;
-
-        const p95 = getHistogramP95(families, "http_request_duration_seconds");
-        pushPoint("p95Ms", time, Math.round(p95));
+        if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
+        setLastUpdated(new Date().toLocaleTimeString([], { hour12: false }));
       } catch {
         // silently ignore polling errors
       } finally {
         setLoading(false);
       }
-    };
+    },
+    [],
+  );
 
-    poll();
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
+  /* eslint-disable react-hooks/set-state-in-effect -- range 切换需重置时序状态并立即触发首次拉取 */
+  useEffect(() => {
+    sinceRef.current = 0;
+    setState(EMPTY_STATE);
+    setLoading(true);
+    poll(range);
+    const interval = setInterval(() => poll(range), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [pushPoint]);
+  }, [range, poll]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const lastUpdated = state.goroutines.at(-1)?.time ?? "--:--:--";
+  const sseProviders = Object.keys(state.sseActive).sort();
+  const sseSeries = sseProviders.map((prov, i) => ({
+    key: prov,
+    label: prov,
+    color: SSE_COLORS[i % SSE_COLORS.length],
+  }));
+  const sseTotal = sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0);
 
   return (
     <div className="space-y-8">
@@ -185,102 +153,51 @@ export default function MonitorPage() {
           <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("monitor.title")}
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("monitor.subtitle")}
-          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full opacity-60 bg-[#4A9E7D]" />
-            <span className="relative inline-flex size-2 rounded-full bg-[#4A9E7D]" />
-          </span>
-          <span className="font-mono tabular-nums">5s · {lastUpdated}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full opacity-60 bg-[#4A9E7D]" />
+              <span className="relative inline-flex size-2 rounded-full bg-[#4A9E7D]" />
+            </span>
+            <span className="font-mono tabular-nums">5s · {lastUpdated}</span>
+          </div>
+          <div className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+            {RANGE_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setRange(key)}
+                className={cn(
+                  "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors",
+                  range === key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <RuntimeGaugeCard
-          label={t("monitor.goroutines")}
-          value={currentValues.goroutines}
-          icon={<Activity className="size-4" />}
-          tone="primary"
-          loading={loading}
-        />
-        <RuntimeGaugeCard
-          label={t("monitor.heap")}
-          value={currentValues.heapMB}
-          unit="MB"
-          icon={<MemoryStick className="size-4" />}
-          tone="blue"
-          loading={loading}
-        />
-        <RuntimeGaugeCard
-          label={t("monitor.in_progress")}
-          value={currentValues.inProgress}
-          icon={<Zap className="size-4" />}
-          tone="green"
-          loading={loading}
-        />
-        <RuntimeGaugeCard
-          label={t("monitor.sse_active")}
-          value={currentValues.sseActive}
-          icon={<Radio className="size-4" />}
-          tone="violet"
-          loading={loading}
-        />
+        <RuntimeGaugeCard label={t("monitor.goroutines")} value={lastValue(state.goroutines)} icon={<Activity className="size-4" />} tone="primary" loading={loading} />
+        <RuntimeGaugeCard label={t("monitor.heap")} value={lastValue(state.heapMB)} unit="MB" icon={<MemoryStick className="size-4" />} tone="blue" loading={loading} />
+        <RuntimeGaugeCard label={t("monitor.in_progress")} value={lastValue(state.inProgress)} icon={<Zap className="size-4" />} tone="green" loading={loading} />
+        <RuntimeGaugeCard label={t("monitor.sse_active")} value={sseTotal} icon={<Radio className="size-4" />} tone="violet" loading={loading} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <RuntimeLineChart
-          data={state.cpuPercent}
-          dataKey="cpuPercent"
-          label={t("monitor.cpu_usage")}
-          unit="%"
-          sampleLabel={t("monitor.samples")}
-          accent="primary"
-        />
-        <RuntimeLineChart
-          data={state.heapMB}
-          dataKey="heapMB"
-          label={t("monitor.heap_memory")}
-          unit=" MB"
-          sampleLabel={t("monitor.samples")}
-          color="#5B8DB8"
-          accent="blue"
-        />
-        <RuntimeLineChart
-          data={state.qps}
-          dataKey="qps"
-          label={t("monitor.request_qps")}
-          sampleLabel={t("monitor.samples")}
-          color="#4A9E7D"
-          accent="green"
-        />
-        <RuntimeLineChart
-          data={state.p95Ms}
-          dataKey="p95Ms"
-          label={t("monitor.latency_p95")}
-          unit=" ms"
-          sampleLabel={t("monitor.samples")}
-          color="#7C6BA5"
-          accent="violet"
-        />
-        <RuntimeLineChart
-          data={state.goroutines}
-          dataKey="goroutines"
-          label={t("monitor.goroutines_chart")}
-          sampleLabel={t("monitor.samples")}
-          color="#4A9E7D"
-          accent="green"
-        />
-        <RuntimeLineChart
-          data={state.inProgress}
-          dataKey="inProgress"
-          label={t("monitor.in_progress_requests")}
-          sampleLabel={t("monitor.samples")}
-          color="#C76B8A"
-          accent="rose"
-        />
+        <RuntimeChart title={t("monitor.cpu_usage")} data={toChartData(state.cpuPercent)} series={[{ key: "value", label: t("monitor.cpu_usage"), color: "#D97757" }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.heap_memory")} data={toChartData(state.heapMB)} series={[{ key: "value", label: t("monitor.heap_memory"), color: "#5B8DB8" }]} unit=" MB" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: "#4A9E7D" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: "#7C6BA5" }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.goroutines_chart")} data={toChartData(state.goroutines)} series={[{ key: "value", label: t("monitor.goroutines_chart"), color: "#4A9E7D" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.in_progress_requests")} data={toChartData(state.inProgress)} series={[{ key: "value", label: t("monitor.in_progress_requests"), color: "#C76B8A" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
       </div>
     </div>
   );

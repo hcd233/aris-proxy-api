@@ -9,6 +9,7 @@ import (
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	llmproxyport "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
+	metricsport "github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -16,7 +17,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/fx"
 )
 
@@ -146,6 +146,6 @@ func NewBlockedDependencies(create blockedport.CreateBlockedHandler, del blocked
 	return handler.BlockedDependencies{Create: create, Delete: del, List: list}
 }
 
-func NewMetricsDependencies(registry *prometheus.Registry) handler.MetricsDependencies {
-	return handler.MetricsDependencies{Registry: registry}
+func NewMetricsDependencies(runtimeMetrics metricsport.RuntimeMetricsService) handler.MetricsDependencies {
+	return handler.MetricsDependencies{RuntimeMetrics: runtimeMetrics}
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -28,6 +29,7 @@ type lifecycleParams struct {
 	Cache           *redis.Client
 	PoolManager     *pool.PoolManager
 	InflightTracker *inflight.Tracker
+	MetricsFlusher  *metrics.Flusher
 	CronEntries     []cron.Cron
 	CronManager     *cron.CronManager
 	BlockedService  *blockedapp.BlockedService
@@ -85,6 +87,17 @@ func registerLifecycleHooks(params lifecycleParams) {
 			if err := params.App.ShutdownWithContext(shutdownCtx); err != nil {
 				logger.Logger().Error("[Server] HTTP server shutdown error", zap.Error(err))
 			}
+			return nil
+		},
+	})
+
+	params.Lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			params.MetricsFlusher.Start()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			params.MetricsFlusher.Stop()
 			return nil
 		},
 	})
