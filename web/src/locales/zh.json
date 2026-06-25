@@ -558,15 +558,6 @@
   "pagination.per_page": "每页",
   "pagination.total": "共",
 
-  "cron_audit.metadata_checked_sessions": "已检查",
-  "cron_audit.metadata_deduped_sessions": "已去重",
-  "cron_audit.metadata_purged_messages": "已清理消息",
-  "cron_audit.metadata_purged_tools": "已清理工具",
-  "cron_audit.metadata_scanned_messages": "已扫描",
-  "cron_audit.metadata_extracted_messages": "已提取",
-  "cron_audit.metadata_synced_hits": "已同步命中",
-  "cron_audit.ms": "毫秒",
-
   "lang.switch": "切换语言",
   "lang.en": "English",
   "lang.zh": "中文"
