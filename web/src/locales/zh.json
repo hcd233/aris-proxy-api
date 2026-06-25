@@ -511,6 +511,8 @@
   "cron_audit.status_failed": "失败",
   "cron_audit.status_panic": "崩溃",
   "cron_audit.status_skipped": "跳过",
+  "cron_audit.filter_type": "类型",
+  "cron_audit.filter_status": "状态",
 
   "login.secure_access": "OAuth2 安全认证",
   "login.welcome_back": "欢迎回来",

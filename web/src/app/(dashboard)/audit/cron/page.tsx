@@ -276,7 +276,7 @@ export default function CronAuditPage() {
                   <TableRow>
                     <TableHead>{t("cron_audit.time")}</TableHead>
                     <TableHead>{t("cron_audit.cron_name")}</TableHead>
-                    <TableHead>{t("cron_audit.traceid")}</TableHead>
+                    <TableHead>{t("cron_audit.trace_id")}</TableHead>
                     <TableHead>{t("cron_audit.filter_status")}</TableHead>
                     <TableHead>{t("cron_audit.duration")}</TableHead>
                     <TableHead>{t("cron_audit.metadata")}</TableHead>
