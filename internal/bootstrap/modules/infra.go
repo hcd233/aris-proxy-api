@@ -24,7 +24,10 @@ var InfraModule = fx.Module(constant.DigNameInfraModule,
 		NewInflightTracker,
 		metrics.NewRegistry,
 		NewSSEGauge,
-		NewPrometheusMiddleware,
+		NewHTTPCollector,
+		NewMetricsMiddleware,
+		NewRuntimeMetricsCache,
+		NewMetricsFlusher,
 	),
 	fx.Invoke(InitHTTPClient),
 )
@@ -53,6 +56,18 @@ func NewSSEGauge(registry *prometheus.Registry) metrics.SSEGauge {
 	return metrics.NewSSEGauge(registry)
 }
 
-func NewPrometheusMiddleware(registry *prometheus.Registry) fiber.Handler {
-	return metrics.NewMiddleware(registry)
+func NewHTTPCollector(registry *prometheus.Registry) *metrics.HTTPCollector {
+	return metrics.NewHTTPCollector(registry)
+}
+
+func NewMetricsMiddleware(collector *metrics.HTTPCollector) fiber.Handler {
+	return collector.Middleware()
+}
+
+func NewRuntimeMetricsCache(client *redis.Client) *cache.RuntimeMetricsCache {
+	return cache.NewRuntimeMetricsCache(client)
+}
+
+func NewMetricsFlusher(registry *prometheus.Registry, store *cache.RuntimeMetricsCache) *metrics.Flusher {
+	return metrics.NewFlusher(registry, store, constant.RuntimeMetricsFlushInterval, constant.RuntimeMetricsRetention)
 }

@@ -47,11 +47,11 @@ func TestMetricsEndpoint_Returns200(t *testing.T) {
 	}
 }
 
-func TestMetricsJSONEndpoint_RequiresAuth(t *testing.T) {
+func TestRuntimeMetricsEndpoint_RequiresAuth(t *testing.T) {
 	t.Parallel()
 	baseURL := mustE2EEnv(t)
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/metrics/json", http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/metrics/runtime?range=15m", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestMetricsJSONEndpoint_RequiresAuth(t *testing.T) {
 	}
 }
 
-func TestMetricsJSONEndpoint_AdminReturnsMetrics(t *testing.T) {
+func TestRuntimeMetricsEndpoint_AdminReturnsSeries(t *testing.T) {
 	t.Parallel()
 	baseURL := mustE2EEnv(t)
 	adminToken := os.Getenv("ADMIN_TOKEN")
@@ -74,7 +74,7 @@ func TestMetricsJSONEndpoint_AdminReturnsMetrics(t *testing.T) {
 		t.Skip("ADMIN_TOKEN is required for admin e2e test")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/metrics/json", http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/metrics/runtime?range=15m", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -94,23 +94,15 @@ func TestMetricsJSONEndpoint_AdminReturnsMetrics(t *testing.T) {
 		t.Fatalf("failed to read body: %v", err)
 	}
 
-	var result dto.HTTPResponse[dto.MetricsJSONRsp]
+	var result dto.HTTPResponse[dto.RuntimeMetricsRsp]
 	if err := sonic.Unmarshal(body, &result); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 
-	if len(result.Body.Metrics) == 0 {
-		t.Fatal("expected non-empty metrics list")
+	if result.Body.Error != nil {
+		t.Fatalf("expected no error in response, got %v", result.Body.Error)
 	}
-
-	names := make(map[string]bool)
-	for _, m := range result.Body.Metrics {
-		names[m.Name] = true
-	}
-	if !names["http_requests_total"] {
-		t.Error("expected http_requests_total in metrics")
-	}
-	if !names["go_goroutines"] {
-		t.Error("expected go_goroutines in metrics")
+	if result.Body.Series.SSEActive == nil {
+		t.Error("expected series.sseActive map to be present (may be empty)")
 	}
 }

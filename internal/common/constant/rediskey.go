@@ -18,6 +18,11 @@ const (
 	MessageKeyTemplate = "message:%d"
 	// ToolKeyTemplate 缓存单条 tool 详情（不可变，TTL 内永远有效）
 	ToolKeyTemplate = "tool:%d"
+
+	// RuntimeMetricsInstancesKey 运行时指标-实例注册表（ZSET：member=instanceID, score=最后flush的unix秒）
+	RuntimeMetricsInstancesKey = "metrics:runtime:instances"
+	// RuntimeMetricsDataKeyTemplate 运行时指标-单实例快照时序（ZSET：member=快照payload, score=快照unix秒），%s = instanceID
+	RuntimeMetricsDataKeyTemplate = "metrics:runtime:data:%s"
 )
 
 const RedisZRangePositiveInfinity = "+inf"
