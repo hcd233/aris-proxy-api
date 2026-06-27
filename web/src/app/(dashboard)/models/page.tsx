@@ -47,7 +47,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { PaginationBar } from "@/components/pagination-bar";
 import { ProviderIcon } from "@/components/provider-icon";
-import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search } from "lucide-react";
+import ExportDialog from "@/components/export-dialog";
+import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -82,6 +83,7 @@ export default function ModelsPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const fetchData = useCallback(async (page: number, pageSize: number, query?: string) => {
     setLoading(true);
@@ -219,10 +221,16 @@ export default function ModelsPage() {
               {t("models.subtitle")}
             </p>
           </div>
-          <Button onClick={openCreate}>
-            <Plus className="mr-1 size-4" />
-            {t("models.create")}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
+              <FileDown className="mr-1 size-4" />
+              {t("models.export")}
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus className="mr-1 size-4" />
+              {t("models.create")}
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -474,6 +482,12 @@ export default function ModelsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ExportDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          models={models}
+        />
       </div>
     </PermissionGuard>
   );
