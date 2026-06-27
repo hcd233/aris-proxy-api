@@ -16,7 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/lib/i18n";
-import { Check, Copy, FileDown, Search } from "lucide-react";
+import { Check, Copy, Search } from "lucide-react";
+import { OpenCode } from "@lobehub/icons";
 
 interface ExportDialogProps {
   open: boolean;
@@ -208,19 +209,19 @@ export default function ExportDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!max-w-[960px] w-[calc(100vw-2rem)] max-h-[85vh] p-0 gap-0 overflow-hidden sm:!max-w-[960px]">
-        <DialogHeader className="px-6 pt-5 pb-0">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
           <DialogTitle className="flex items-center gap-2.5">
             <span className="flex size-7 items-center justify-center rounded-lg border border-border bg-muted">
-              <FileDown className="size-3.5" />
+              <OpenCode className="size-3.5" />
             </span>
-            <span>{t("models.export")}</span>
+            <span>{t("models.export_opencode")}</span>
           </DialogTitle>
           <DialogDescription>{t("models.export_desc")}</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border overflow-hidden flex-1 min-h-0">
           {/* ─── Left: Config Form ─── */}
-          <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(85vh-100px)]">
+          <div className="overflow-y-auto max-h-[calc(85vh-100px)] md:max-h-none p-6 space-y-5">
             {/* Provider ID */}
             <div className="space-y-1.5">
               <Label htmlFor="export-provider-id" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -344,22 +345,17 @@ export default function ExportDialog({
           </div>
 
           {/* ─── Right: Script Preview ─── */}
-          <div className="flex flex-col bg-[#0d1117] text-[#e6edf3] min-h-[300px]">
+          <div className="flex flex-col bg-[#1E1E20] text-[#CCCCCC] min-h-0 overflow-y-auto">
             {/* Preview toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-2.5 bg-[#1E1E20] border-b border-white/[0.06]">
               <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <span className="size-2.5 rounded-full bg-[#ff5f56]" />
-                  <span className="size-2.5 rounded-full bg-[#ffbd2e]" />
-                  <span className="size-2.5 rounded-full bg-[#27c93f]" />
-                </div>
-                <span className="text-[11px] text-white/30 font-mono">
+                <span className="text-[11px] text-white/30 font-mono tracking-wide">
                   export.sh
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {selectedIds.size > 0 && (
-                  <span className="text-[10px] text-white/25 font-mono">
+                  <span className="text-[10px] text-white/20 font-mono tabular-nums">
                     {script.length.toLocaleString()}b
                   </span>
                 )}
@@ -368,7 +364,7 @@ export default function ExportDialog({
                   size="xs"
                   onClick={handleCopy}
                   disabled={!script}
-                  className="h-7 text-white/40 hover:text-white hover:bg-white/5"
+                  className="h-7 text-white/35 hover:text-white hover:bg-white/[0.06] text-[11px] transition-colors"
                 >
                   {copied ? (
                     <><Check className="size-3 mr-1" />{t("models.export_copied")}</>
@@ -382,19 +378,19 @@ export default function ExportDialog({
             {/* Code */}
             <div
               ref={previewRef}
-              className="flex-1 overflow-auto p-4 text-[13px] leading-relaxed font-mono"
+              className="p-5 text-[13px] leading-[1.7] font-mono"
             >
               {selectedIds.size > 0 ? (
                 <div
-                  className="[&_.hljs-comment]:text-[#8b949e] [&_.hljs-keyword]:text-[#ff7b72] [&_.hljs-built_in]:text-[#d2a8ff] [&_.hljs-string]:text-[#a5d6ff] [&_.hljs-number]:text-[#79c0ff] [&_.hljs-literal]:text-[#79c0ff] [&_.hljs-attr]:text-[#79c0ff] [&_.hljs-title]:text-[#d2a8ff] [&_.hljs-params]:text-[#e6edf3] [&_.hljs-variable]:text-[#ffa657] [&_.hljs-operator]:text-[#ff7b72] [&_.hljs-punctuation]:text-[#e6edf3] [&_.hljs-property]:text-[#79c0ff] whitespace-pre-wrap break-all"
+                  className="[&_.hljs-comment]:text-[#6A737D] [&_.hljs-keyword]:text-[#C792EA] [&_.hljs-built_in]:text-[#82AAFF] [&_.hljs-string]:text-[#C3E88D] [&_.hljs-number]:text-[#F78C6C] [&_.hljs-literal]:text-[#F78C6C] [&_.hljs-attr]:text-[#82AAFF] [&_.hljs-title]:text-[#82AAFF] [&_.hljs-params]:text-[#CCCCCC] [&_.hljs-variable]:text-[#F78C6C] [&_.hljs-operator]:text-[#89DDFF] [&_.hljs-punctuation]:text-[#ABB2BF] [&_.hljs-property]:text-[#82AAFF] [&_.hljs-meta]:text-[#C792EA] [&_.hljs-section]:text-[#82AAFF] [&_.hljs-selector-tag]:text-[#C792EA] [&_.hljs-type]:text-[#FFCB6B] whitespace-pre-wrap break-all"
                   dangerouslySetInnerHTML={{ __html: highlighted }}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-white/20">
-                  <svg className="size-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                <div className="flex flex-col items-center justify-center py-16 text-white/10">
+                  <svg className="size-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                   </svg>
-                  <p className="text-xs">{t("models.export_no_models_selected")}</p>
+                  <p className="text-xs text-white/15">{t("models.export_no_models_selected")}</p>
                 </div>
               )}
             </div>

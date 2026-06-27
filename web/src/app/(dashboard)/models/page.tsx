@@ -48,7 +48,14 @@ import { Switch } from "@/components/ui/switch";
 import { PaginationBar } from "@/components/pagination-bar";
 import { ProviderIcon } from "@/components/provider-icon";
 import ExportDialog from "@/components/export-dialog";
-import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown } from "lucide-react";
+import { OpenCode } from "@lobehub/icons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -222,10 +229,21 @@ export default function ModelsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
-              <FileDown className="mr-1 size-4" />
-              {t("models.export")}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant="outline" className="gap-1" />}
+              >
+                <FileDown className="size-4" />
+                {t("models.export")}
+                <ChevronDown className="size-3.5 opacity-50" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setExportDialogOpen(true)} className="gap-2.5">
+                  <OpenCode size={16} />
+                  <span>{t("models.export_opencode")}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={openCreate}>
               <Plus className="mr-1 size-4" />
               {t("models.create")}
