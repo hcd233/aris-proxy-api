@@ -53,6 +53,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown, ChevronDown } from "lucide-react";
@@ -231,16 +232,31 @@ export default function ModelsPage() {
           <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={<Button variant="outline" className="gap-1" />}
+                render={<Button variant="outline" className="gap-1.5" />}
               >
                 <FileDown className="size-4" />
                 {t("models.export")}
-                <ChevronDown className="size-3.5 opacity-50" />
+                <ChevronDown className="size-3.5 opacity-50 transition-transform duration-150 group-aria-expanded/button:rotate-180" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setExportDialogOpen(true)} className="gap-2.5">
-                  <OpenCode size={16} />
-                  <span>{t("models.export_opencode")}</span>
+              <DropdownMenuContent align="end" className="w-64 p-1.5">
+                <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
+                  {t("models.export_target")}
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => setExportDialogOpen(true)}
+                  className="items-start gap-2.5 rounded-lg px-2 py-2"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                    <OpenCode size={17} />
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-sm font-medium leading-none">
+                      {t("models.export_opencode")}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {t("models.export_opencode_hint")}
+                    </span>
+                  </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
