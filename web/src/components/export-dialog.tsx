@@ -1,20 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ModelItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/lib/i18n";
-import { Check, Copy, FileDown } from "lucide-react";
+import { Check, Copy, FileDown, Search } from "lucide-react";
 
 interface ExportDialogProps {
   open: boolean;
@@ -28,6 +27,8 @@ function generateScript(
   apiKey: string,
   selectedModels: ModelItem[]
 ): string {
+  if (selectedModels.length === 0) return "";
+
   const modelsJson = JSON.stringify(
     Object.fromEntries(
       selectedModels.map((m) => [
@@ -105,8 +106,24 @@ with open(config_path, 'w') as f:
     json.dump(config, f, indent=2)
 
 print(f"Provider '{provider_id}' configured with {len(models)} models")
-PYEOF
-`;
+PYEOF`;
+}
+
+function highlightBash(code: string): string {
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return code
+    .replace(/^#!\/usr\/bin\/env bash$/gm, '<span class="hlp-comment">#!/usr/bin/env bash</span>')
+    .replace(/^# .*/gm, '<span class="hlp-comment">$&</span>')
+    .replace(/\bset -euo pipefail\b/g, '<span class="hlp-keyword">set -euo pipefail</span>')
+    .replace(/\b(if|then|else|elif|fi|for|while|do|done|in|case|esac|function|return|exit|break|continue)\b/g, '<span class="hlp-keyword">$1</span>')
+    .replace(/\b(echo|print|cd|mkdir|rm|mv|cp|chmod|chown|source|export|unset|read|exec|trap|eval|test|shift|wait|printf)\b/g, '<span class="hlp-builtin">$1</span>')
+    .replace(/\b(PYEOF)\b/g, '<span class="hlp-string">$1</span>')
+    .replace(/\$\{(\w+):-([^}]+)\}/g, '<span class="hlp-variable">${<span class="hlp-varname">$1</span>:-<span class="hlp-default">$2</span>}</span>')
+    .replace(/\$(\w+)/g, '<span class="hlp-variable">$$<span class="hlp-varname">$1</span></span>')
+    .replace(/(['"][^'"]*['"])/g, '<span class="hlp-string">$1</span>')
+    .replace(/\b(\d+)\b/g, '<span class="hlp-number">$1</span>')
+    .replace(/(# .*$)/gm, '<span class="hlp-comment">$1</span>')
+    .replace(/\b(import|from|def|class|return|if|elif|else|for|while|in|not|and|or|is|None|True|False|with|as|try|except|finally|print|os\.\w+|json\.\w+|sys\.\w+|f\|)\b/g, '<span class="hlp-python">$1</span>');
 }
 
 export default function ExportDialog({
@@ -115,19 +132,48 @@ export default function ExportDialog({
   models,
 }: ExportDialogProps) {
   const t = useT();
+  const previewRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [providerId, setProviderId] = useState("aris-proxy");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("YOUR_API_KEY");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [script, setScript] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [modelSearch, setModelSearch] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setBaseUrl(`${window.location.origin}/api/openai/v1`);
     }
   }, []);
+
+  const filteredModels = useMemo(
+    () =>
+      modelSearch.trim()
+        ? models.filter(
+            (m) =>
+              m.alias.toLowerCase().includes(modelSearch.toLowerCase()) ||
+              m.modelName.toLowerCase().includes(modelSearch.toLowerCase())
+          )
+        : models,
+    [models, modelSearch]
+  );
+
+  const selectedModels = useMemo(
+    () => models.filter((m) => selectedIds.has(m.id)),
+    [models, selectedIds]
+  );
+
+  const script = useMemo(
+    () => generateScript(providerId, baseUrl, apiKey, selectedModels),
+    [providerId, baseUrl, apiKey, selectedModels]
+  );
+
+  const highlighted = useMemo(
+    () => (script ? highlightBash(script) : ""),
+    [script]
+  );
 
   const handleToggle = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -141,164 +187,226 @@ export default function ExportDialog({
     });
   }, []);
 
-  const selectedModels = useMemo(
-    () => models.filter((m) => selectedIds.has(m.id)),
-    [models, selectedIds]
-  );
-
-  const handleGenerate = useCallback(() => {
-    const s = generateScript(providerId, baseUrl, apiKey, selectedModels);
-    setScript(s);
-    setCopied(false);
-  }, [providerId, baseUrl, apiKey, selectedModels]);
-
   const handleCopy = useCallback(async () => {
     if (!script) return;
     await navigator.clipboard.writeText(script);
     setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [script]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
 
-  const hasSelection = selectedIds.size > 0;
-  const canGenerate = providerId.trim() && baseUrl.trim() && apiKey.trim() && hasSelection;
+  useEffect(() => {
+    if (!open) {
+      setSelectedIds(new Set());
+      setModelSearch("");
+      setCopied(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileDown className="size-5" />
-            {t("models.export")}
+      <DialogContent className="max-w-[900px] w-[calc(100vw-3rem)] max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-0">
+          <DialogTitle className="flex items-center gap-2.5">
+            <span className="flex size-7 items-center justify-center rounded-lg border border-border bg-muted">
+              <FileDown className="size-3.5" />
+            </span>
+            <span>{t("models.export")}</span>
           </DialogTitle>
           <DialogDescription>{t("models.export_desc")}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Provider ID */}
-          <div className="space-y-1.5">
-            <Label htmlFor="export-provider-id">{t("models.export_provider_id")}</Label>
-            <Input
-              id="export-provider-id"
-              placeholder={t("models.export_provider_id_placeholder")}
-              value={providerId}
-              onChange={(e) => setProviderId(e.target.value)}
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+          {/* ─── Left: Config Form ─── */}
+          <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(85vh-100px)]">
+            {/* Provider ID */}
+            <div className="space-y-1.5">
+              <Label htmlFor="export-provider-id" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("models.export_provider_id")}
+              </Label>
+              <Input
+                id="export-provider-id"
+                placeholder={t("models.export_provider_id_placeholder")}
+                value={providerId}
+                onChange={(e) => setProviderId(e.target.value)}
+              />
+            </div>
 
-          {/* Base URL */}
-          <div className="space-y-1.5">
-            <Label htmlFor="export-base-url">{t("models.export_base_url")}</Label>
-            <Input
-              id="export-base-url"
-              placeholder={t("models.export_base_url_placeholder")}
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-            />
-          </div>
+            {/* Base URL */}
+            <div className="space-y-1.5">
+              <Label htmlFor="export-base-url" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("models.export_base_url")}
+              </Label>
+              <Input
+                id="export-base-url"
+                placeholder={t("models.export_base_url_placeholder")}
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+              />
+            </div>
 
-          {/* API Key */}
-          <div className="space-y-1.5">
-            <Label htmlFor="export-api-key">{t("models.export_api_key")}</Label>
-            <Input
-              id="export-api-key"
-              placeholder={t("models.export_api_key_placeholder")}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          </div>
+            {/* API Key */}
+            <div className="space-y-1.5">
+              <Label htmlFor="export-api-key" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("models.export_api_key")}
+              </Label>
+              <Input
+                id="export-api-key"
+                placeholder={t("models.export_api_key_placeholder")}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            </div>
 
-          {/* Separator */}
-          <div className="border-t border-border" />
+            <div className="border-t border-border" />
 
-          {/* Model Selection */}
-          <div className="space-y-1.5">
-            <Label>{t("models.export_select_models")}</Label>
-            <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border border-border p-2">
-              {models.length === 0 && (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  {t("models.no_models")}
-                </p>
-              )}
-              {models.map((model) => {
-                const selected = selectedIds.has(model.id);
-                return (
-                  <label
-                    key={model.id}
-                    className="flex cursor-pointer items-center gap-2.5 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                  >
-                    <div
-                      className={`flex size-4 shrink-0 items-center justify-center rounded-sm border ${
-                        selected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input"
+            {/* Model Selection */}
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("models.export_select_models")}
+                <span className="ml-1.5 text-muted-foreground/60 font-normal normal-case">
+                  ({selectedIds.size})
+                </span>
+              </Label>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/60" />
+                <Input
+                  ref={searchInputRef}
+                  placeholder={t("models.search_placeholder")}
+                  value={modelSearch}
+                  onChange={(e) => setModelSearch(e.target.value)}
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
+
+              {/* List */}
+              <div className="space-y-0.5 max-h-52 overflow-y-auto rounded-lg border border-border">
+                {filteredModels.length === 0 && (
+                  <p className="py-6 text-center text-xs text-muted-foreground">
+                    {modelSearch ? "No matches" : t("models.no_models")}
+                  </p>
+                )}
+                {filteredModels.map((model) => {
+                  const selected = selectedIds.has(model.id);
+                  return (
+                    <label
+                      key={model.id}
+                      className={`flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-accent/50 ${
+                        selected ? "bg-accent/30" : ""
                       }`}
                     >
-                      {selected && <Check className="size-3" />}
-                    </div>
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={selected}
-                      onChange={() => handleToggle(model.id)}
-                    />
-                    <span className="font-medium">{model.alias}</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {model.modelName}
-                    </span>
-                  </label>
-                );
-              })}
+                      <span
+                        className={`flex size-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border"
+                        }`}
+                      >
+                        {selected && <Check className="size-3" />}
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={selected}
+                        onChange={() => handleToggle(model.id)}
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium truncate text-sm">{model.alias}</span>
+                        <span className="truncate font-mono text-[10px] text-muted-foreground/70">
+                          {model.modelName}
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                >
+                  Clear all ({selectedIds.size})
+                </button>
+              )}
             </div>
-            {!hasSelection && script === null && (
-              <p className="text-xs text-muted-foreground">
-                {t("models.export_no_models_selected")}
-              </p>
-            )}
+
+            {/* Footer buttons */}
+            <div className="flex items-center gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={handleClose}>
+                {t("share_dialog.close")}
+              </Button>
+            </div>
           </div>
 
-          {/* Generated Script */}
-          {script && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{t("models.export_script_title")}</Label>
-                <Button variant="outline" size="xs" onClick={handleCopy}>
+          {/* ─── Right: Script Preview ─── */}
+          <div className="flex flex-col bg-[#0d1117] text-[#e6edf3] min-h-[300px]">
+            {/* Preview toolbar */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <span className="size-2.5 rounded-full bg-[#ff5f56]" />
+                  <span className="size-2.5 rounded-full bg-[#ffbd2e]" />
+                  <span className="size-2.5 rounded-full bg-[#27c93f]" />
+                </div>
+                <span className="text-[11px] text-white/30 font-mono">
+                  export.sh
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedIds.size > 0 && (
+                  <span className="text-[10px] text-white/25 font-mono">
+                    {script.length.toLocaleString()}b
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={handleCopy}
+                  disabled={!script}
+                  className="h-7 text-white/40 hover:text-white hover:bg-white/5"
+                >
                   {copied ? (
-                    <>
-                      <Check className="mr-1 size-3" />
-                      {t("models.export_copied")}
-                    </>
+                    <><Check className="size-3 mr-1" />{t("models.export_copied")}</>
                   ) : (
-                    <>
-                      <Copy className="mr-1 size-3" />
-                      {t("models.export_copy")}
-                    </>
+                    <><Copy className="size-3 mr-1" />{t("models.export_copy")}</>
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t("models.export_script_hint")}
-              </p>
-              <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted p-3 text-xs leading-relaxed">
-                <code>{script}</code>
-              </pre>
-              <p className="text-xs text-muted-foreground">
-                {t("models.export_footer")}
-              </p>
             </div>
-          )}
-        </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose}>
-            {script ? t("share_dialog.close") : t("common.cancel")}
-          </Button>
-          <Button onClick={handleGenerate} disabled={!canGenerate}>
-            {script ? t("models.export_regenerate") : t("models.export_generate")}
-          </Button>
-        </DialogFooter>
+            {/* Code */}
+            <div
+              ref={previewRef}
+              className="flex-1 overflow-auto p-4 text-[13px] leading-relaxed font-mono"
+            >
+              {selectedIds.size > 0 ? (
+                <div
+                  className="[&_.hlp-comment]:text-[#8b949e] [&_.hlp-keyword]:text-[#ff7b72] [&_.hlp-builtin]:text-[#d2a8ff] [&_.hlp-string]:text-[#a5d6ff] [&_.hlp-number]:text-[#79c0ff] [&_.hlp-variable]:text-[#ffa657] [&_.hlp-varname]:text-[#ffa657] [&_.hlp-default]:text-[#a5d6ff] [&_.hlp-python]:text-[#d2a8ff] whitespace-pre-wrap break-all"
+                  dangerouslySetInnerHTML={{ __html: highlighted }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-white/20">
+                  <svg className="size-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  <p className="text-xs">{t("models.export_no_models_selected")}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
