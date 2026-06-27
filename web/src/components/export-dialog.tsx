@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ModelItem } from "@/lib/types";
+import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import python from "highlight.js/lib/languages/python";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -109,21 +112,11 @@ print(f"Provider '{provider_id}' configured with {len(models)} models")
 PYEOF`;
 }
 
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("python", python);
+
 function highlightBash(code: string): string {
-  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return code
-    .replace(/^#!\/usr\/bin\/env bash$/gm, '<span class="hlp-comment">#!/usr/bin/env bash</span>')
-    .replace(/^# .*/gm, '<span class="hlp-comment">$&</span>')
-    .replace(/\bset -euo pipefail\b/g, '<span class="hlp-keyword">set -euo pipefail</span>')
-    .replace(/\b(if|then|else|elif|fi|for|while|do|done|in|case|esac|function|return|exit|break|continue)\b/g, '<span class="hlp-keyword">$1</span>')
-    .replace(/\b(echo|print|cd|mkdir|rm|mv|cp|chmod|chown|source|export|unset|read|exec|trap|eval|test|shift|wait|printf)\b/g, '<span class="hlp-builtin">$1</span>')
-    .replace(/\b(PYEOF)\b/g, '<span class="hlp-string">$1</span>')
-    .replace(/\$\{(\w+):-([^}]+)\}/g, '<span class="hlp-variable">${<span class="hlp-varname">$1</span>:-<span class="hlp-default">$2</span>}</span>')
-    .replace(/\$(\w+)/g, '<span class="hlp-variable">$$<span class="hlp-varname">$1</span></span>')
-    .replace(/(['"][^'"]*['"])/g, '<span class="hlp-string">$1</span>')
-    .replace(/\b(\d+)\b/g, '<span class="hlp-number">$1</span>')
-    .replace(/(# .*$)/gm, '<span class="hlp-comment">$1</span>')
-    .replace(/\b(import|from|def|class|return|if|elif|else|for|while|in|not|and|or|is|None|True|False|with|as|try|except|finally|print|os\.\w+|json\.\w+|sys\.\w+|f\|)\b/g, '<span class="hlp-python">$1</span>');
+  return hljs.highlight(code, { language: "bash" }).value;
 }
 
 export default function ExportDialog({
@@ -393,7 +386,7 @@ export default function ExportDialog({
             >
               {selectedIds.size > 0 ? (
                 <div
-                  className="[&_.hlp-comment]:text-[#8b949e] [&_.hlp-keyword]:text-[#ff7b72] [&_.hlp-builtin]:text-[#d2a8ff] [&_.hlp-string]:text-[#a5d6ff] [&_.hlp-number]:text-[#79c0ff] [&_.hlp-variable]:text-[#ffa657] [&_.hlp-varname]:text-[#ffa657] [&_.hlp-default]:text-[#a5d6ff] [&_.hlp-python]:text-[#d2a8ff] whitespace-pre-wrap break-all"
+                  className="[&_.hljs-comment]:text-[#8b949e] [&_.hljs-keyword]:text-[#ff7b72] [&_.hljs-built_in]:text-[#d2a8ff] [&_.hljs-string]:text-[#a5d6ff] [&_.hljs-number]:text-[#79c0ff] [&_.hljs-literal]:text-[#79c0ff] [&_.hljs-attr]:text-[#79c0ff] [&_.hljs-title]:text-[#d2a8ff] [&_.hljs-params]:text-[#e6edf3] [&_.hljs-variable]:text-[#ffa657] [&_.hljs-operator]:text-[#ff7b72] [&_.hljs-punctuation]:text-[#e6edf3] [&_.hljs-property]:text-[#79c0ff] whitespace-pre-wrap break-all"
                   dangerouslySetInnerHTML={{ __html: highlighted }}
                 />
               ) : (
