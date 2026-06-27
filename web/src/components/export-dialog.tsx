@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/lib/i18n";
-import { Check, Copy, Search } from "lucide-react";
+import { Check, Copy, Search, Terminal, X } from "lucide-react";
 import { OpenCode } from "@lobehub/icons";
 
 interface ExportDialogProps {
@@ -120,13 +120,26 @@ function highlightBash(code: string): string {
   return hljs.highlight(code, { language: "bash" }).value;
 }
 
+// Claude.ai-style warm syntax palette mapped onto highlight.js tokens.
+const CLAUDE_SYNTAX =
+  "[&_.hljs-comment]:text-[#8C857B] [&_.hljs-comment]:italic " +
+  "[&_.hljs-keyword]:text-[#C77B5A] " +
+  "[&_.hljs-built_in]:text-[#7DA1C4] " +
+  "[&_.hljs-string]:text-[#9CB071] " +
+  "[&_.hljs-number]:text-[#D69A6B] [&_.hljs-literal]:text-[#D69A6B] " +
+  "[&_.hljs-attr]:text-[#7DA1C4] [&_.hljs-title]:text-[#7DA1C4] " +
+  "[&_.hljs-params]:text-[#E5E0D6] [&_.hljs-variable]:text-[#D69A6B] " +
+  "[&_.hljs-operator]:text-[#9FB3C2] [&_.hljs-punctuation]:text-[#A8A296] " +
+  "[&_.hljs-property]:text-[#7DA1C4] [&_.hljs-meta]:text-[#B98BC9] " +
+  "[&_.hljs-section]:text-[#7DA1C4] [&_.hljs-selector-tag]:text-[#C77B5A] " +
+  "[&_.hljs-type]:text-[#D6B86B]";
+
 export default function ExportDialog({
   open,
   onOpenChange,
   models,
 }: ExportDialogProps) {
   const t = useT();
-  const previewRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [providerId, setProviderId] = useState("aris-proxy");
@@ -169,6 +182,11 @@ export default function ExportDialog({
     [script]
   );
 
+  const lineCount = useMemo(
+    () => (script ? script.split("\n").length : 0),
+    [script]
+  );
+
   const handleToggle = useCallback((id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -180,6 +198,21 @@ export default function ExportDialog({
       return next;
     });
   }, []);
+
+  const allFilteredSelected =
+    filteredModels.length > 0 &&
+    filteredModels.every((m) => selectedIds.has(m.id));
+
+  const handleToggleAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const everySelected = filteredModels.every((m) => next.has(m.id));
+      filteredModels.forEach((m) =>
+        everySelected ? next.delete(m.id) : next.add(m.id)
+      );
+      return next;
+    });
+  }, [filteredModels]);
 
   const handleCopy = useCallback(async () => {
     if (!script) return;
@@ -202,75 +235,122 @@ export default function ExportDialog({
 
   useEffect(() => {
     if (open && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 100);
+      setTimeout(() => searchInputRef.current?.focus(), 120);
     }
   }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[960px] w-[calc(100vw-2rem)] max-h-[85vh] p-0 gap-0 overflow-hidden sm:!max-w-[960px]">
-        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
-          <DialogTitle className="flex items-center gap-2.5">
-            <span className="flex size-7 items-center justify-center rounded-lg border border-border bg-muted">
-              <OpenCode className="size-3.5" />
-            </span>
-            <span>{t("models.export_opencode")}</span>
-          </DialogTitle>
-          <DialogDescription>{t("models.export_desc")}</DialogDescription>
+      <DialogContent
+        showCloseButton={false}
+        className="!max-w-[1040px] w-[calc(100vw-1.5rem)] h-[min(86vh,720px)] p-0 gap-0 overflow-hidden flex flex-col sm:!max-w-[1040px]"
+      >
+        {/* ─── Header ─── */}
+        <DialogHeader className="shrink-0 flex-row items-center gap-3 px-6 py-4 border-b border-border">
+          <span className="flex size-9 items-center justify-center rounded-xl border border-border bg-gradient-to-b from-secondary to-muted shadow-sm">
+            <OpenCode className="size-4.5" />
+          </span>
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <DialogTitle className="font-display text-base leading-tight">
+              {t("models.export_opencode_title")}
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-snug">
+              {t("models.export_desc")}
+            </DialogDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleClose}
+            className="ml-auto shrink-0 text-muted-foreground"
+            aria-label={t("share_dialog.close")}
+          >
+            <X className="size-4" />
+          </Button>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border overflow-hidden flex-1 min-h-0">
-          {/* ─── Left: Config Form ─── */}
-          <div className="overflow-y-auto max-h-[calc(85vh-100px)] md:max-h-none p-6 space-y-5">
-            {/* Provider ID */}
-            <div className="space-y-1.5">
-              <Label htmlFor="export-provider-id" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("models.export_provider_id")}
-              </Label>
-              <Input
-                id="export-provider-id"
-                placeholder={t("models.export_provider_id_placeholder")}
-                value={providerId}
-                onChange={(e) => setProviderId(e.target.value)}
-              />
-            </div>
+        {/* ─── Body: two independently-scrolling panes ─── */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto md:overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)]">
+          {/* ── Left: configuration ── */}
+          <div className="md:min-h-0 md:overflow-y-auto md:border-r border-border px-6 py-5 space-y-6">
+            {/* Connection */}
+            <section className="space-y-4">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                {t("models.export_connection")}
+              </h3>
 
-            {/* Base URL */}
-            <div className="space-y-1.5">
-              <Label htmlFor="export-base-url" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("models.export_base_url")}
-              </Label>
-              <Input
-                id="export-base-url"
-                placeholder={t("models.export_base_url_placeholder")}
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="export-provider-id"
+                  className="text-xs font-medium text-foreground/80"
+                >
+                  {t("models.export_provider_id")}
+                </Label>
+                <Input
+                  id="export-provider-id"
+                  placeholder={t("models.export_provider_id_placeholder")}
+                  value={providerId}
+                  onChange={(e) => setProviderId(e.target.value)}
+                  className="font-mono text-sm"
+                />
+              </div>
 
-            {/* API Key */}
-            <div className="space-y-1.5">
-              <Label htmlFor="export-api-key" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("models.export_api_key")}
-              </Label>
-              <Input
-                id="export-api-key"
-                placeholder={t("models.export_api_key_placeholder")}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="export-base-url"
+                  className="text-xs font-medium text-foreground/80"
+                >
+                  {t("models.export_base_url")}
+                </Label>
+                <Input
+                  id="export-base-url"
+                  placeholder={t("models.export_base_url_placeholder")}
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  className="font-mono text-sm"
+                />
+              </div>
 
-            <div className="border-t border-border" />
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="export-api-key"
+                  className="text-xs font-medium text-foreground/80"
+                >
+                  {t("models.export_api_key")}
+                </Label>
+                <Input
+                  id="export-api-key"
+                  placeholder={t("models.export_api_key_placeholder")}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="font-mono text-sm"
+                />
+              </div>
+            </section>
 
-            {/* Model Selection */}
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("models.export_select_models")}
-                <span className="ml-1.5 text-muted-foreground/60 font-normal normal-case">
-                  ({selectedIds.size})
-                </span>
-              </Label>
+            {/* Models */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                  {t("models.export_select_models")}
+                  {selectedIds.size > 0 && (
+                    <span className="ml-1.5 inline-flex items-center rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-semibold text-primary tabular-nums normal-case tracking-normal">
+                      {selectedIds.size}
+                    </span>
+                  )}
+                </h3>
+                {filteredModels.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleToggleAll}
+                    className="text-[11px] font-medium text-primary/80 transition-colors hover:text-primary"
+                  >
+                    {allFilteredSelected
+                      ? t("models.export_clear_all")
+                      : t("models.export_select_all")}
+                  </button>
+                )}
+              </div>
 
               {/* Search */}
               <div className="relative">
@@ -280,120 +360,132 @@ export default function ExportDialog({
                   placeholder={t("models.search_placeholder")}
                   value={modelSearch}
                   onChange={(e) => setModelSearch(e.target.value)}
-                  className="h-8 pl-8 text-xs"
+                  className="h-8 pl-8 text-sm"
                 />
               </div>
 
               {/* List */}
-              <div className="space-y-0.5 max-h-52 overflow-y-auto rounded-lg border border-border">
-                {filteredModels.length === 0 && (
-                  <p className="py-6 text-center text-xs text-muted-foreground">
-                    {modelSearch ? "No matches" : t("models.no_models")}
+              <div className="space-y-1">
+                {filteredModels.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
+                    {modelSearch
+                      ? t("models.export_no_matches")
+                      : t("models.no_models")}
                   </p>
-                )}
-                {filteredModels.map((model) => {
-                  const selected = selectedIds.has(model.id);
-                  return (
-                    <label
-                      key={model.id}
-                      className={`flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-accent/50 ${
-                        selected ? "bg-accent/30" : ""
-                      }`}
-                    >
-                      <span
-                        className={`flex size-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                ) : (
+                  filteredModels.map((model) => {
+                    const selected = selectedIds.has(model.id);
+                    return (
+                      <label
+                        key={model.id}
+                        className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-all ${
                           selected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border"
+                            ? "border-primary/40 bg-primary/[0.06]"
+                            : "border-transparent hover:border-border hover:bg-secondary/60"
                         }`}
                       >
-                        {selected && <Check className="size-3" />}
-                      </span>
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={selected}
-                        onChange={() => handleToggle(model.id)}
-                      />
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-medium truncate text-sm">{model.alias}</span>
-                        <span className="truncate font-mono text-[10px] text-muted-foreground/70">
-                          {model.modelName}
+                        <span
+                          className={`flex size-4 shrink-0 items-center justify-center rounded-[5px] border transition-colors ${
+                            selected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-muted-foreground/30 group-hover:border-muted-foreground/50"
+                          }`}
+                        >
+                          {selected && <Check className="size-3" strokeWidth={3} />}
                         </span>
-                      </div>
-                    </label>
-                  );
-                })}
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={selected}
+                          onChange={() => handleToggle(model.id)}
+                        />
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {model.alias}
+                          </span>
+                          <span className="truncate font-mono text-[11px] text-muted-foreground/70">
+                            {model.modelName}
+                          </span>
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
               </div>
-
-              {selectedIds.size > 0 && (
-                <button
-                  onClick={() => setSelectedIds(new Set())}
-                  className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                >
-                  Clear all ({selectedIds.size})
-                </button>
-              )}
-            </div>
-
-            {/* Footer buttons */}
-            <div className="flex items-center gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={handleClose}>
-                {t("share_dialog.close")}
-              </Button>
-            </div>
+            </section>
           </div>
 
-          {/* ─── Right: Script Preview ─── */}
-          <div className="flex flex-col bg-[#1E1E20] text-[#CCCCCC] min-h-0 overflow-y-auto">
-            {/* Preview toolbar */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-2.5 bg-[#1E1E20] border-b border-white/[0.06]">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-white/30 font-mono tracking-wide">
-                  export.sh
+          {/* ── Right: Claude-style code preview ── */}
+          <div className="flex flex-col md:min-h-0 md:overflow-hidden bg-[#262624]">
+            {/* Window toolbar */}
+            <div className="shrink-0 flex items-center justify-between gap-3 border-b border-white/[0.07] bg-[#30302E] px-4 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Terminal className="size-3.5 shrink-0 text-white/35" />
+                <span className="truncate font-mono text-xs text-white/50">
+                  opencode-setup.sh
                 </span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 {selectedIds.size > 0 && (
-                  <span className="text-[10px] text-white/20 font-mono tabular-nums">
-                    {script.length.toLocaleString()}b
+                  <span className="hidden font-mono text-[10px] tabular-nums text-white/25 sm:inline">
+                    {lineCount} {t("models.export_lines")}
                   </span>
                 )}
-                <Button
-                  variant="ghost"
-                  size="xs"
+                <button
+                  type="button"
                   onClick={handleCopy}
                   disabled={!script}
-                  className="h-7 text-white/35 hover:text-white hover:bg-white/[0.06] text-[11px] transition-colors"
+                  className="inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[11px] font-medium text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white disabled:pointer-events-none disabled:opacity-30"
                 >
                   {copied ? (
-                    <><Check className="size-3 mr-1" />{t("models.export_copied")}</>
+                    <>
+                      <Check className="size-3.5 text-[#9CB071]" />
+                      {t("models.export_copied")}
+                    </>
                   ) : (
-                    <><Copy className="size-3 mr-1" />{t("models.export_copy")}</>
+                    <>
+                      <Copy className="size-3.5" />
+                      {t("models.export_copy")}
+                    </>
                   )}
-                </Button>
+                </button>
               </div>
             </div>
 
-            {/* Code */}
-            <div
-              ref={previewRef}
-              className="p-5 text-[13px] leading-[1.7] font-mono"
-            >
+            {/* Code surface */}
+            <div className="flex-1 md:min-h-0 overflow-auto">
               {selectedIds.size > 0 ? (
-                <div
-                  className="[&_.hljs-comment]:text-[#6A737D] [&_.hljs-keyword]:text-[#C792EA] [&_.hljs-built_in]:text-[#82AAFF] [&_.hljs-string]:text-[#C3E88D] [&_.hljs-number]:text-[#F78C6C] [&_.hljs-literal]:text-[#F78C6C] [&_.hljs-attr]:text-[#82AAFF] [&_.hljs-title]:text-[#82AAFF] [&_.hljs-params]:text-[#CCCCCC] [&_.hljs-variable]:text-[#F78C6C] [&_.hljs-operator]:text-[#89DDFF] [&_.hljs-punctuation]:text-[#ABB2BF] [&_.hljs-property]:text-[#82AAFF] [&_.hljs-meta]:text-[#C792EA] [&_.hljs-section]:text-[#82AAFF] [&_.hljs-selector-tag]:text-[#C792EA] [&_.hljs-type]:text-[#FFCB6B] whitespace-pre-wrap break-all"
-                  dangerouslySetInnerHTML={{ __html: highlighted }}
-                />
+                <pre className="px-5 py-4 text-[12.5px] leading-[1.65] text-[#E5E0D6]">
+                  <code
+                    className={`block font-mono whitespace-pre ${CLAUDE_SYNTAX}`}
+                    dangerouslySetInnerHTML={{ __html: highlighted }}
+                  />
+                </pre>
               ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-white/10">
-                  <svg className="size-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                  </svg>
-                  <p className="text-xs text-white/15">{t("models.export_no_models_selected")}</p>
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+                  <span className="flex size-14 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
+                    <OpenCode className="size-7 opacity-30" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-white/45">
+                      {t("models.export_no_models_selected")}
+                    </p>
+                    <p className="text-xs text-white/25">
+                      {t("models.export_empty_hint")}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
+
+            {/* Run hint footer */}
+            {selectedIds.size > 0 && (
+              <div className="shrink-0 border-t border-white/[0.07] bg-[#30302E] px-4 py-2">
+                <p className="font-mono text-[10.5px] leading-relaxed text-white/30">
+                  {t("models.export_footer")}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
