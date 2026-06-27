@@ -207,7 +207,7 @@ export default function ExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[900px] w-[calc(100vw-3rem)] max-h-[85vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="!max-w-[960px] w-[calc(100vw-2rem)] max-h-[85vh] p-0 gap-0 overflow-hidden sm:!max-w-[960px]">
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="flex items-center gap-2.5">
             <span className="flex size-7 items-center justify-center rounded-lg border border-border bg-muted">
