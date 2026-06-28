@@ -105,7 +105,7 @@ func (c *ThinkExtractCron) Start(spec string) error {
 //	@update 2026-06-24 10:00:00
 func (c *ThinkExtractCron) extract(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
 	log := logger.WithCtx(ctx)
-	startTime, endTime := currentDayRange(time.Now().UTC())
+	var startTime, endTime time.Time
 
 	var lastID uint
 	totalScanned := 0
@@ -159,12 +159,6 @@ func (c *ThinkExtractCron) extract(ctx context.Context) (*commonmodel.CronCallAu
 		ScannedMessages:   int64(totalScanned),
 		ExtractedMessages: int64(totalProcessed),
 	}, nil
-}
-
-func currentDayRange(now time.Time) (start, end time.Time) {
-	start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	end = start.AddDate(0, 0, 1)
-	return
 }
 
 // extractThinkFromContent 从消息内容中提取 <think> 标签内容并移除标签
