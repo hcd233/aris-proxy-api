@@ -52,6 +52,7 @@ import { OpenCode } from "@lobehub/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -239,25 +240,27 @@ export default function ModelsPage() {
                 <ChevronDown className="size-3.5 opacity-50 transition-transform duration-150 group-aria-expanded/button:rotate-180" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 p-1.5">
-                <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
-                  {t("models.export_target")}
-                </DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => setExportDialogOpen(true)}
-                  className="items-start gap-2.5 rounded-lg px-2 py-2"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                    <OpenCode size={17} />
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm font-medium leading-none">
-                      {t("models.export_opencode")}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
+                    {t("models.export_target")}
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    onClick={() => setExportDialogOpen(true)}
+                    className="items-start gap-2.5 rounded-lg px-2 py-2"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                      <OpenCode size={17} />
                     </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {t("models.export_opencode_hint")}
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-medium leading-none">
+                        {t("models.export_opencode")}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {t("models.export_opencode_hint")}
+                      </span>
                     </span>
-                  </span>
-                </DropdownMenuItem>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button onClick={openCreate}>
