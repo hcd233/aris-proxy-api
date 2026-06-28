@@ -39,7 +39,10 @@ function generateScript(
         m.alias,
         {
           name: m.alias.charAt(0).toUpperCase() + m.alias.slice(1),
-          limit: { context: 128000, output: 64000 },
+          limit: {
+            context: m.contextLength > 0 ? m.contextLength : 128000,
+            output: m.maxOutputTokens > 0 ? m.maxOutputTokens : 64000,
+          },
           temperature: true,
           tool_call: true,
         },
@@ -118,6 +121,20 @@ hljs.registerLanguage("python", python);
 
 function highlightBash(code: string): string {
   return hljs.highlight(code, { language: "bash" }).value;
+}
+
+// 将 token 数格式化为紧凑可读形式：128000 -> 128K
+function formatTokens(n: number): string {
+  if (!n || n <= 0) return "—";
+  if (n >= 1_000_000) {
+    const v = n / 1_000_000;
+    return `${Number.isInteger(v) ? v : v.toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    const v = n / 1_000;
+    return `${Number.isInteger(v) ? v : v.toFixed(1)}K`;
+  }
+  return String(n);
 }
 
 // Claude.ai-style warm syntax palette mapped onto highlight.js tokens.
@@ -399,7 +416,7 @@ export default function ExportDialog({
                           checked={selected}
                           onChange={() => handleToggle(model.id)}
                         />
-                        <div className="flex min-w-0 flex-col">
+                        <div className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate text-sm font-medium text-foreground">
                             {model.alias}
                           </span>
@@ -407,6 +424,11 @@ export default function ExportDialog({
                             {model.modelName}
                           </span>
                         </div>
+                        <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">
+                          {formatTokens(model.contextLength || 128000)}
+                          <span className="mx-0.5 opacity-50">/</span>
+                          {formatTokens(model.maxOutputTokens || 64000)}
+                        </span>
                       </label>
                     );
                   })

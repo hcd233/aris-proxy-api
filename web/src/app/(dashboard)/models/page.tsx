@@ -57,7 +57,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -66,13 +66,31 @@ interface ModelForm {
   alias: string;
   modelName: string;
   endpointID: number;
+  contextLength: number;
+  maxOutputTokens: number;
 }
 
 const emptyForm: ModelForm = {
   alias: "",
   modelName: "",
   endpointID: 0,
+  contextLength: 128000,
+  maxOutputTokens: 64000,
 };
+
+// 将 token 数格式化为紧凑可读形式：128000 -> 128K，1048576 -> 1M
+function formatTokens(n: number): string {
+  if (!n || n <= 0) return "—";
+  if (n >= 1_000_000) {
+    const v = n / 1_000_000;
+    return `${Number.isInteger(v) ? v : v.toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    const v = n / 1_000;
+    return `${Number.isInteger(v) ? v : v.toFixed(1)}K`;
+  }
+  return String(n);
+}
 
 export default function ModelsPage() {
   const router = useRouter();
@@ -145,6 +163,8 @@ export default function ModelsPage() {
       alias: model.alias,
       modelName: model.modelName,
       endpointID: model.endpoint.id,
+      contextLength: model.contextLength || 128000,
+      maxOutputTokens: model.maxOutputTokens || 64000,
     });
     // Ensure the model's current endpoint is present in the select options,
     // even if it falls outside the first page of endpoints.
@@ -166,6 +186,8 @@ export default function ModelsPage() {
           alias: form.alias,
           modelName: form.modelName,
           endpointID: form.endpointID,
+          contextLength: form.contextLength,
+          maxOutputTokens: form.maxOutputTokens,
         });
         toast.success(t("models.updated_success"));
       } else {
@@ -173,6 +195,8 @@ export default function ModelsPage() {
           alias: form.alias,
           modelName: form.modelName,
           endpointID: form.endpointID,
+          contextLength: form.contextLength,
+          maxOutputTokens: form.maxOutputTokens,
         });
         toast.success(t("models.created_success"));
       }
@@ -320,6 +344,16 @@ export default function ModelsPage() {
                             <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
                               {model.modelName}
                             </p>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
+                                <ArrowLeftRight className="size-3 text-muted-foreground" />
+                                {formatTokens(model.contextLength)}
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
+                                <ArrowUpFromLine className="size-3 text-muted-foreground" />
+                                {formatTokens(model.maxOutputTokens)}
+                              </span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
@@ -361,6 +395,7 @@ export default function ModelsPage() {
                       <TableRow>
                         <TableHead>{t("models.alias")}</TableHead>
                         <TableHead>{t("models.model_name")}</TableHead>
+                        <TableHead>{t("models.limits")}</TableHead>
                         <TableHead>{t("models.enabled")}</TableHead>
                         <TableHead>{t("models.endpoint")}</TableHead>
                         <TableHead>{t("common.created")}</TableHead>
@@ -377,6 +412,24 @@ export default function ModelsPage() {
                             </span>
                           </TableCell>
                           <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground"
+                                title={`${t("models.context_length")}: ${model.contextLength.toLocaleString()}`}
+                              >
+                                <ArrowLeftRight className="size-3 text-muted-foreground" />
+                                {formatTokens(model.contextLength)}
+                              </span>
+                              <span
+                                className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground"
+                                title={`${t("models.max_output")}: ${model.maxOutputTokens.toLocaleString()}`}
+                              >
+                                <ArrowUpFromLine className="size-3 text-muted-foreground" />
+                                {formatTokens(model.maxOutputTokens)}
+                              </span>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Switch
@@ -482,6 +535,40 @@ export default function ModelsPage() {
                   value={form.modelName}
                   onChange={(e) => setForm((f) => ({ ...f, modelName: e.target.value }))}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="model-context-length">{t("models.context_length")}</Label>
+                  <Input
+                    id="model-context-length"
+                    type="number"
+                    min={0}
+                    step={1000}
+                    inputMode="numeric"
+                    placeholder="128000"
+                    value={form.contextLength || ""}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }))
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">{t("models.context_length_hint")}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="model-max-output">{t("models.max_output")}</Label>
+                  <Input
+                    id="model-max-output"
+                    type="number"
+                    min={0}
+                    step={1000}
+                    inputMode="numeric"
+                    placeholder="64000"
+                    value={form.maxOutputTokens || ""}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }))
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">{t("models.max_output_hint")}</p>
+                </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="model-endpoint">{t("models.endpoint")}</Label>

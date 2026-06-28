@@ -42,13 +42,15 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 
 	views := lo.Map(models, func(m *aggregate.Model, _ int) *modelport.ModelView {
 		return &modelport.ModelView{
-			ID:        m.AggregateID(),
-			Alias:     m.Alias().String(),
-			ModelName: m.ModelName(),
-			Enabled:   m.Enabled(),
-			Endpoint:  toEndpointView(endpointsByID[m.EndpointID()]),
-			CreatedAt: m.CreatedAt(),
-			UpdatedAt: m.UpdatedAt(),
+			ID:              m.AggregateID(),
+			Alias:           m.Alias().String(),
+			ModelName:       m.ModelName(),
+			Enabled:         m.Enabled(),
+			ContextLength:   m.ContextLength(),
+			MaxOutputTokens: m.MaxOutputTokens(),
+			Endpoint:        toEndpointView(endpointsByID[m.EndpointID()]),
+			CreatedAt:       m.CreatedAt(),
+			UpdatedAt:       m.UpdatedAt(),
 		}
 	})
 

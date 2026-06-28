@@ -224,7 +224,7 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 }
 
 func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
-	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID, m.Enabled)
+	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID, m.Enabled, m.ContextLength, m.MaxOutputTokens)
 	if err != nil {
 		return nil, err
 	}
@@ -234,11 +234,13 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 
 func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 	return &dbmodel.Model{
-		ID:         m.AggregateID(),
-		Alias:      m.Alias().String(),
-		ModelName:  m.ModelName(),
-		EndpointID: m.EndpointID(),
-		Enabled:    m.Enabled(),
+		ID:              m.AggregateID(),
+		Alias:           m.Alias().String(),
+		ModelName:       m.ModelName(),
+		EndpointID:      m.EndpointID(),
+		Enabled:         m.Enabled(),
+		ContextLength:   m.ContextLength(),
+		MaxOutputTokens: m.MaxOutputTokens(),
 	}
 }
 
@@ -269,10 +271,12 @@ func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model) (uint,
 func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
 	db := r.db.WithContext(ctx)
 	updates := map[string]any{
-		constant.FieldModelAlias:      m.Alias().String(),
-		constant.FieldModelModelName:  m.ModelName(),
-		constant.FieldModelEndpointID: m.EndpointID(),
-		constant.FieldModelEnabled:    m.Enabled(),
+		constant.FieldModelAlias:           m.Alias().String(),
+		constant.FieldModelModelName:       m.ModelName(),
+		constant.FieldModelEndpointID:      m.EndpointID(),
+		constant.FieldModelEnabled:         m.Enabled(),
+		constant.FieldModelContextLength:   m.ContextLength(),
+		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
 	}
 	if err := db.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update model")

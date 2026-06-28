@@ -10,9 +10,11 @@ import (
 
 // CreateModelCommand 创建 Model 命令
 type CreateModelCommand struct {
-	Alias      string
-	ModelName  string
-	EndpointID uint
+	Alias           string
+	ModelName       string
+	EndpointID      uint
+	ContextLength   int
+	MaxOutputTokens int
 }
 
 // CreateModelResult 创建命令结果
@@ -27,11 +29,13 @@ type CreateModelHandler interface {
 
 // UpdateModelCommand 更新 Model 命令
 type UpdateModelCommand struct {
-	ModelID    uint
-	Alias      *string
-	ModelName  *string
-	EndpointID *uint
-	Enabled    *bool
+	ModelID         uint
+	Alias           *string
+	ModelName       *string
+	EndpointID      *uint
+	Enabled         *bool
+	ContextLength   *int
+	MaxOutputTokens *int
 }
 
 // UpdateModelHandler 更新命令处理器
@@ -65,13 +69,15 @@ type EndpointView struct {
 
 // ModelView Model 只读投影
 type ModelView struct {
-	ID        uint
-	Alias     string
-	ModelName string
-	Enabled   bool
-	Endpoint  *EndpointView
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID              uint
+	Alias           string
+	ModelName       string
+	Enabled         bool
+	ContextLength   int
+	MaxOutputTokens int
+	Endpoint        *EndpointView
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // ListModelsQuery 列出 Models 查询命令
