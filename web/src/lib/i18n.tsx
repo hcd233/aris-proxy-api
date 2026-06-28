@@ -11,17 +11,19 @@ import React, {
 } from "react";
 import en from "@/locales/en.json";
 import zh from "@/locales/zh.json";
+import ja from "@/locales/ja.json";
 
-export type Locale = "en" | "zh";
+export type Locale = "en" | "zh" | "ja";
 
-const translations: Record<Locale, Record<string, string>> = { en, zh };
+const translations: Record<Locale, Record<string, string>> = { en, zh, ja };
 
 function detectBrowserLocale(): Locale {
   if (typeof window === "undefined") return "en";
   const stored = localStorage.getItem("locale");
-  if (stored === "en" || stored === "zh") return stored;
+  if (stored === "en" || stored === "zh" || stored === "ja") return stored;
   const navLang = navigator.language.toLowerCase();
   if (navLang.startsWith("zh")) return "zh";
+  if (navLang.startsWith("ja")) return "ja";
   return "en";
 }
 

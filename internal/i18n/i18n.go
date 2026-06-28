@@ -64,6 +64,8 @@ func DetectLocale(acceptLanguage string) enum.Locale {
 	switch primary {
 	case constant.LocalePrimaryZH:
 		return enum.LocaleZH
+	case constant.LocalePrimaryJA:
+		return enum.LocaleJA
 	default:
 		return enum.LocaleEN
 	}

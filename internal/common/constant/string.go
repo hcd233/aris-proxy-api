@@ -186,5 +186,6 @@ const (
 	LocaleFileExt         = ".json"
 	LocaleDefaultLocale   = "en"
 	LocalePrimaryZH       = "zh"
+	LocalePrimaryJA       = "ja"
 	LocaleAcceptSeparator = "-_;"
 )
