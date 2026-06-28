@@ -87,13 +87,13 @@ export default function SessionsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; summary: string } | null>(null);
   const [scoring, setScoring] = useState<number | null>(null);
-  const [keyword, setKeyword] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [keyword, setKeyword] = usePersistentState("dashboard.sessions.keyword", "");
+  const [searchInput, setSearchInput] = usePersistentState("dashboard.sessions.searchInput", "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
-  const [filterScore, setFilterScore] = useState<string[]>([]);
-  const [filterModel, setFilterModel] = useState<string[]>([]);
+  const [filterScore, setFilterScore] = usePersistentState<string[]>("dashboard.sessions.filterScore", []);
+  const [filterModel, setFilterModel] = usePersistentState<string[]>("dashboard.sessions.filterModel", []);
   const [scoreOptions, setScoreOptions] = useState<string[]>([]);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
 
@@ -172,9 +172,9 @@ export default function SessionsPage() {
     [setPersistedPage, setPersistedPageSize],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount with persisted filters */
   useEffect(() => {
-    fetchSessions(persistedPage, persistedPageSize, "30d", "", "", { field: "created_at", dir: "desc" }, "", [], []);
+    fetchSessions(persistedPage, persistedPageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel);
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
