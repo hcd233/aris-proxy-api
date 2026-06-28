@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -37,7 +38,17 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 		return nil, ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
 
-	m, err := aggregate.CreateModel(0, vo.EndpointAlias(cmd.Alias), cmd.ModelName, cmd.EndpointID, true)
+	// 默认上下文/输出长度兜底，便于下游（如 OpenCode 配置）直接使用
+	contextLength := cmd.ContextLength
+	if contextLength <= 0 {
+		contextLength = constant.DefaultModelContextLength
+	}
+	maxOutputTokens := cmd.MaxOutputTokens
+	if maxOutputTokens <= 0 {
+		maxOutputTokens = constant.DefaultModelMaxOutputTokens
+	}
+
+	m, err := aggregate.CreateModel(0, vo.EndpointAlias(cmd.Alias), cmd.ModelName, cmd.EndpointID, true, contextLength, maxOutputTokens)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate model")
 	}

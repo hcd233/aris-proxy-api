@@ -330,6 +330,8 @@ export interface ModelItem {
   alias: string;
   modelName: string;
   enabled: boolean;
+  contextLength: number;
+  maxOutputTokens: number;
   endpoint: EndpointItem;
   createdAt: string;
   updatedAt: string;
@@ -339,6 +341,8 @@ export interface CreateModelReqBody {
   alias: string;
   modelName: string;
   endpointID: number;
+  contextLength?: number;
+  maxOutputTokens?: number;
 }
 
 export interface UpdateModelReqBody {
@@ -346,6 +350,8 @@ export interface UpdateModelReqBody {
   modelName?: string;
   endpointID?: number;
   enabled?: boolean;
+  contextLength?: number;
+  maxOutputTokens?: number;
 }
 
 export interface ListModelsRsp extends CommonRsp {

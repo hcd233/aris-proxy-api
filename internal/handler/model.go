@@ -50,9 +50,11 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	result, err := h.create.Handle(ctx, port.CreateModelCommand{
-		Alias:      req.Body.Alias,
-		ModelName:  req.Body.ModelName,
-		EndpointID: req.Body.EndpointID,
+		Alias:           req.Body.Alias,
+		ModelName:       req.Body.ModelName,
+		EndpointID:      req.Body.EndpointID,
+		ContextLength:   req.Body.ContextLength,
+		MaxOutputTokens: req.Body.MaxOutputTokens,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Create model failed", zap.Error(err))
@@ -80,12 +82,14 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 
 	rsp.Models = lo.Map(views, func(v *port.ModelView, _ int) *dto.ModelItem {
 		item := &dto.ModelItem{
-			ID:        v.ID,
-			Alias:     v.Alias,
-			ModelName: v.ModelName,
-			Enabled:   v.Enabled,
-			CreatedAt: v.CreatedAt,
-			UpdatedAt: v.UpdatedAt,
+			ID:              v.ID,
+			Alias:           v.Alias,
+			ModelName:       v.ModelName,
+			Enabled:         v.Enabled,
+			ContextLength:   v.ContextLength,
+			MaxOutputTokens: v.MaxOutputTokens,
+			CreatedAt:       v.CreatedAt,
+			UpdatedAt:       v.UpdatedAt,
 		}
 		if v.Endpoint != nil {
 			item.Endpoint = &dto.EndpointItem{
@@ -111,11 +115,13 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	rsp := &dto.EmptyRsp{}
 
 	err := h.update.Handle(ctx, port.UpdateModelCommand{
-		ModelID:    req.ID,
-		Alias:      req.Body.Alias,
-		ModelName:  req.Body.ModelName,
-		EndpointID: req.Body.EndpointID,
-		Enabled:    req.Body.Enabled,
+		ModelID:         req.ID,
+		Alias:           req.Body.Alias,
+		ModelName:       req.Body.ModelName,
+		EndpointID:      req.Body.EndpointID,
+		Enabled:         req.Body.Enabled,
+		ContextLength:   req.Body.ContextLength,
+		MaxOutputTokens: req.Body.MaxOutputTokens,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
