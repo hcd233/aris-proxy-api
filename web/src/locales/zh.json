@@ -303,7 +303,7 @@
   "models.export_claudecode": "Claude Code",
   "models.export_claudecode_hint": "生成 Claude Code 配置脚本",
   "models.export_claudecode_title": "导出到 Claude Code",
-  "models.export_claudecode_desc": "生成 bash 脚本，通过 ~/.claude/settings.json 将 Claude Code 指向本代理。",
+  "models.export_claudecode_desc": "生成 bash 脚本，通过 ~/.claude/settings.json 将 Claude Code 指向本代理。上下文窗口达 1M 的模型会自动追加 [1m] 后缀。",
   "models.export_auth_token": "Auth Token",
   "models.export_auth_token_placeholder": "YOUR_API_KEY",
   "models.export_base_url_anthropic_placeholder": "https://api.example.com/api/anthropic/v1",

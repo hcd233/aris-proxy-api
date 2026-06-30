@@ -394,7 +394,7 @@
   "models.export_claudecode": "Claude Code",
   "models.export_claudecode_hint": "Generate a setup script for Claude Code",
   "models.export_claudecode_title": "Export to Claude Code",
-  "models.export_claudecode_desc": "Generate a bash script to point Claude Code at this proxy via ~/.claude/settings.json.",
+  "models.export_claudecode_desc": "Generate a bash script to point Claude Code at this proxy via ~/.claude/settings.json. Models with a 1M context window get the [1m] suffix automatically.",
   "models.export_auth_token": "Auth Token",
   "models.export_auth_token_placeholder": "YOUR_API_KEY",
   "models.export_base_url_anthropic_placeholder": "https://api.example.com/api/anthropic/v1",
