@@ -190,11 +190,11 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
                 className="flex flex-wrap gap-2"
               >
                 {[
-                  { value: "1d", label: t("share_dialog.exp_1d") },
-                  { value: "7d", label: t("share_dialog.exp_7d") },
-                  { value: "30d", label: t("share_dialog.exp_30d") },
-                  { value: "never", label: t("share_dialog.exp_never") },
-                  { value: "custom", label: t("share_dialog.exp_custom") },
+                  { value: "1d", label: t("share_dialog.expire_1d") },
+                  { value: "7d", label: t("share_dialog.expire_7d") },
+                  { value: "30d", label: t("share_dialog.expire_30d") },
+                  { value: "never", label: t("share_dialog.expire_never") },
+                  { value: "custom", label: t("share_dialog.expire_custom") },
                 ].map((opt) => (
                   <div key={opt.value} className="flex items-center gap-1.5">
                     <RadioGroupItem value={opt.value} id={`expire-${opt.value}`} />
