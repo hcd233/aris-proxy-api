@@ -40,6 +40,14 @@ const TIER_ENV: Record<TierKey, string> = {
 
 const TIER_ORDER: TierKey[] = ["opus", "sonnet", "haiku"];
 
+// Threshold (tokens) at/above which a model's context window qualifies for
+// Claude Code's 1M context window — opted in via the [1m] model-name suffix.
+const ONE_MILLION = 1_000_000;
+
+function supports1M(m: ModelItem): boolean {
+  return m.contextLength >= ONE_MILLION;
+}
+
 // Per-tier accent — warm/strong (opus) → balanced blue (sonnet) → cool gray (haiku),
 // expressing the capability-to-speed gradient.
 const TIER_ACCENT: Record<TierKey, { badge: string; ring: string; dot: string }> = {
@@ -71,7 +79,14 @@ function generateScript(
   ];
   for (const key of TIER_ORDER) {
     const m = tiers[key];
-    if (m) envEntries.push([TIER_ENV[key], m.alias]);
+    // Claude Code enables the 1M-token context window via a [1m] suffix on the
+    // model name, but only for models that actually support it. We append it
+    // when the upstream model's context window reaches 1M. Claude Code strips
+    // the suffix before forwarding upstream, so it stays transparent to the proxy.
+    if (m) {
+      const alias = supports1M(m) ? `${m.alias}[1m]` : m.alias;
+      envEntries.push([TIER_ENV[key], alias]);
+    }
   }
 
   const envJson = JSON.stringify(Object.fromEntries(envEntries), null, 4);
@@ -204,6 +219,11 @@ function TierPicker({ models, selected, onSelect }: TierPickerProps) {
             <span className="truncate font-medium text-foreground">
               {selected.alias}
             </span>
+            {supports1M(selected) && (
+              <span className="shrink-0 rounded-[4px] border border-[#C77B5A]/30 bg-[#C77B5A]/10 px-1 py-px font-mono text-[9px] font-semibold leading-none text-[#C77B5A]">
+                1M
+              </span>
+            )}
             <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">
               {formatTokens(selected.contextLength || 128000)}
               <span className="mx-0.5 opacity-50">/</span>
@@ -274,8 +294,15 @@ function TierPicker({ models, selected, onSelect }: TierPickerProps) {
                     {isSel && <Check className="size-3" strokeWidth={3} />}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm font-medium text-foreground">
-                      {m.alias}
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {m.alias}
+                      </span>
+                      {supports1M(m) && (
+                        <span className="shrink-0 rounded-[4px] border border-[#C77B5A]/30 bg-[#C77B5A]/10 px-1 py-px font-mono text-[9px] font-semibold leading-none text-[#C77B5A]">
+                          1M
+                        </span>
+                      )}
                     </span>
                     <span className="truncate font-mono text-[11px] text-muted-foreground/70">
                       {m.modelName}

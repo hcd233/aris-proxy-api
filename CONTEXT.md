@@ -59,7 +59,7 @@ _Avoid_: protocol translation, api bridge
 _Avoid_: config generator, setup wizard, integration script
 
 **ClaudeCodeModelTier（Claude Code 模型档位）**:
-Claude Code 通过别名解析模型的三个档位：`opus`（最强推理，主任务与计划模式，对应 `ANTHROPIC_DEFAULT_OPUS_MODEL`）、`sonnet`（均衡，日常编码与 opusplan 执行，对应 `ANTHROPIC_DEFAULT_SONNET_MODEL`）、`haiku`（快速廉价，后台与子任务，对应 `ANTHROPIC_DEFAULT_HAIKU_MODEL`，已取代废弃的 `ANTHROPIC_SMALL_FAST_MODEL`）。导出时每档独立从模型别名中选取、可留空，留空档位不写入对应环境变量。
+Claude Code 通过别名解析模型的三个档位：`opus`（最强推理，主任务与计划模式，对应 `ANTHROPIC_DEFAULT_OPUS_MODEL`）、`sonnet`（均衡，日常编码与 opusplan 执行，对应 `ANTHROPIC_DEFAULT_SONNET_MODEL`）、`haiku`（快速廉价，后台与子任务，对应 `ANTHROPIC_DEFAULT_HAIKU_MODEL`，已取代废弃的 `ANTHROPIC_SMALL_FAST_MODEL`）。导出时每档独立从模型别名中选取、可留空，留空档位不写入对应环境变量。上下文窗口不是 per-model 字典（与 OpenCode 不同），Claude Code 内置各模型的窗口大小；当某档选中模型的 `contextLength` 达到 1M 时，导出会在别名后追加 `[1m]` 后缀以启用 1M 上下文（Claude Code 转发上游前自动剥离该后缀）。
 _Avoid_: model level, model size, model class
 
 ## Session & Conversation（会话与对话）
