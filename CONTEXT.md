@@ -54,6 +54,14 @@ _Avoid_: model router, endpoint lookup
 网关的核心能力：客户端使用 OpenAI 协议，网关可将其转换为 Anthropic 协议再转发，反之亦然。覆盖 7 条转发路径（OpenAI Chat native、Chat→Anthropic、Response native、Response→Chat、Response→Anthropic、Anthropic Message native、Message→Chat）。
 _Avoid_: protocol translation, api bridge
 
+**ClientConfigExport（客户端配置导出）**:
+管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持两种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）与 Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）。生成的 bash 脚本内嵌 Python 做幂等 patch 并备份 `.bak`。
+_Avoid_: config generator, setup wizard, integration script
+
+**ClaudeCodeModelTier（Claude Code 模型档位）**:
+Claude Code 通过别名解析模型的三个档位：`opus`（最强推理，主任务与计划模式，对应 `ANTHROPIC_DEFAULT_OPUS_MODEL`）、`sonnet`（均衡，日常编码与 opusplan 执行，对应 `ANTHROPIC_DEFAULT_SONNET_MODEL`）、`haiku`（快速廉价，后台与子任务，对应 `ANTHROPIC_DEFAULT_HAIKU_MODEL`，已取代废弃的 `ANTHROPIC_SMALL_FAST_MODEL`）。导出时每档独立从模型别名中选取、可留空，留空档位不写入对应环境变量。
+_Avoid_: model level, model size, model class
+
 ## Session & Conversation（会话与对话）
 
 **Session（会话）**:
