@@ -59,6 +59,8 @@ type GuardConfig struct {
 	// IgnoredPaths lists paths where 404 must not increment route-scan strikes.
 	// If nil, DefaultGuardIgnored404Paths is used.
 	IgnoredPaths []string
+	// AllowIPs lists IPs that are exempted from route-scan banning (whitelist).
+	AllowIPs []string
 }
 
 // isRouteNotFound 判断 Fiber 返回的错误是否为路由未匹配
@@ -87,12 +89,18 @@ func GuardMiddleware(cache *redis.Client, cfg GuardConfig) fiber.Handler {
 	ignoredPaths := lo.SliceToMap(cfg.IgnoredPaths, func(p string) (string, struct{}) {
 		return p, struct{}{}
 	})
+	allowIPs := lo.SliceToMap(cfg.AllowIPs, func(p string) (string, struct{}) {
+		return p, struct{}{}
+	})
 	return func(c fiber.Ctx) error {
 		if cache == nil {
 			logger.WithFCtx(c).Warn("[GuardMiddleware] Redis dependency is nil")
 			return c.Next()
 		}
 		ip := c.IP()
+		if _, allowed := allowIPs[ip]; allowed {
+			return c.Next()
+		}
 		banKey := fmt.Sprintf(constant.ScannerBanKeyTemplate, ip)
 		ctx := c.RequestCtx()
 
