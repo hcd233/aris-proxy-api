@@ -7,6 +7,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/bootstrap/modules"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
+	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -67,6 +68,7 @@ func registerMiddlewares(params middlewareParams) {
 			StrikeThreshold: constant.GuardStrikeThreshold,
 			StrikeWindow:    constant.GuardStrikeWindow,
 			BanDuration:     constant.GuardBanDuration,
+			AllowIPs:        config.GuardAllowIPs,
 			IgnoredPaths: []string{
 				constant.RoutePathRoot,
 				constant.RoutePathHealth,

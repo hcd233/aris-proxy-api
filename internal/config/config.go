@@ -142,6 +142,10 @@ var (
 	//	@update 2026-04-04 10:00:00
 	TrustedProxies []string
 
+	// GuardAllowIPs []string 路由扫描防护白名单 IP 列表
+	//	@update 2026-07-01 10:00:00
+	GuardAllowIPs []string
+
 	// CLSEndpoint string 腾讯云 CLS Endpoint
 	//	@update 2026-04-25 10:00:00
 	CLSEndpoint string
@@ -324,6 +328,13 @@ func initEnvironment() {
 
 	if raw := config.GetString("trusted.proxies"); raw != "" {
 		TrustedProxies = lo.FilterMap(strings.Split(raw, ","), func(p string, _ int) (string, bool) {
+			trimmed := strings.TrimSpace(p)
+			return trimmed, trimmed != ""
+		})
+	}
+
+	if raw := config.GetString("guard.allow_ips"); raw != "" {
+		GuardAllowIPs = lo.FilterMap(strings.Split(raw, ","), func(p string, _ int) (string, bool) {
 			trimmed := strings.TrimSpace(p)
 			return trimmed, trimmed != ""
 		})
