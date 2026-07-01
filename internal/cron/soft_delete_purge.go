@@ -27,7 +27,7 @@ import (
 type SoftDeletePurgeCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
-	locker     lock.Locker
+	locker     *lock.RedisLocker
 	messageDAO *dao.MessageDAO
 	sessionDAO *dao.SessionDAO
 	toolDAO    *dao.ToolDAO

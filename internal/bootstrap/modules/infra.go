@@ -52,7 +52,7 @@ func InitHTTPClient() {
 	httpclient.InitHTTPClient()
 }
 
-func NewSSEGauge(registry *prometheus.Registry) metrics.SSEGauge {
+func NewSSEGauge(registry *prometheus.Registry) *metrics.SSEGauge {
 	return metrics.NewSSEGauge(registry)
 }
 

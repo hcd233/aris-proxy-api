@@ -23,10 +23,6 @@ var (
 	//	update 2024-06-22 08:59:37
 	WriteTimeout time.Duration
 
-	// MaxHeaderBytes int Fiber最大头部字节数
-	//	update 2024-06-22 08:59:34
-	MaxHeaderBytes int
-
 	// LogLevel string 日志级别
 	//	update 2024-06-22 08:59:29
 	LogLevel string
@@ -121,15 +117,6 @@ var (
 
 	// CosAppID string Cos App ID
 	CosAppID string
-
-	// OpenAIModel string OpenAI Model
-	OpenAIModel string
-
-	// OpenAIAPIKey string OpenAI API Key
-	OpenAIAPIKey string
-
-	// OpenAIBaseURL string OpenAI Base URL
-	OpenAIBaseURL string
 
 	// JwtAccessTokenExpired time.Duration Access Jwt Token过期时间
 	//	update 2024-06-22 11:09:19
@@ -237,7 +224,6 @@ func initEnvironment() {
 
 	config.SetDefault("read.timeout", 10*time.Second)
 	config.SetDefault("write.timeout", 5*time.Minute)
-	config.SetDefault("max.header.bytes", 1<<20)
 
 	config.SetDefault("log.level", "info")
 	config.SetDefault("log.dir", "./logs")
@@ -266,7 +252,6 @@ func initEnvironment() {
 
 	ReadTimeout = config.GetDuration("read.timeout")
 	WriteTimeout = config.GetDuration("write.timeout")
-	MaxHeaderBytes = config.GetInt("max.header.bytes")
 
 	LogLevel = config.GetString("log.level")
 	LogDirPath = config.GetString("log.dir")
@@ -302,10 +287,6 @@ func initEnvironment() {
 	CosRegion = config.GetString("cos.region")
 	CosSecretID = config.GetString("cos.secret.id")
 	CosSecretKey = config.GetString("cos.secret.key")
-
-	OpenAIModel = config.GetString("openai.model")
-	OpenAIAPIKey = config.GetString("openai.api.key")
-	OpenAIBaseURL = config.GetString("openai.base.url")
 
 	JwtAccessTokenExpired = config.GetDuration("jwt.access.token.expired")
 	JwtAccessTokenSecret = config.GetString("jwt.access.token.secret")

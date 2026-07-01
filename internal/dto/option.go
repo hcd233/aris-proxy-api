@@ -42,12 +42,3 @@ type SessionOptionListRsp struct {
 	CommonRsp
 	Items []string `json:"items" doc:"选项列表"`
 }
-
-// OptionItem 选项项
-//
-//	@author centonhuang
-//	@update 2026-06-09 10:00:00
-type OptionItem struct {
-	Value string `json:"value" doc:"值"`
-	Label string `json:"label" doc:"显示标签"`
-}

@@ -20,7 +20,7 @@ func newMiniredis(t *testing.T) *miniredis.Miniredis {
 	return mr
 }
 
-func newRealLocker(t *testing.T) (lock.Locker, *miniredis.Miniredis) {
+func newRealLocker(t *testing.T) (*lock.RedisLocker, *miniredis.Miniredis) {
 	t.Helper()
 	mr := newMiniredis(t)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
