@@ -10,24 +10,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
-// SSEGauge SSE 并发连接数指标接口
+// SSEGauge SSE 并发连接数指标
 //
 //	@author centonhuang
 //	@update 2026-06-23 10:00:00
-type SSEGauge interface {
-	Inc(provider string)
-	Dec(provider string)
-}
-
-type sseGauge struct {
+type SSEGauge struct {
 	gauge *prometheus.GaugeVec
 }
 
-func (g *sseGauge) Inc(provider string) {
+func (g *SSEGauge) Inc(provider string) {
 	g.gauge.WithLabelValues(provider).Inc()
 }
 
-func (g *sseGauge) Dec(provider string) {
+func (g *SSEGauge) Dec(provider string) {
 	g.gauge.WithLabelValues(provider).Dec()
 }
 
@@ -51,10 +46,10 @@ func NewRegistry() *prometheus.Registry {
 // NewSSEGauge 在 Registry 上注册并返回 SSE gauge
 //
 //	@param registry *prometheus.Registry
-//	@return SSEGauge
+//	@return *SSEGauge
 //	@author centonhuang
 //	@update 2026-06-23 10:00:00
-func NewSSEGauge(registry *prometheus.Registry) SSEGauge {
+func NewSSEGauge(registry *prometheus.Registry) *SSEGauge {
 	gauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: constant.MetricSSEActiveConnectionsName,
@@ -69,5 +64,5 @@ func NewSSEGauge(registry *prometheus.Registry) SSEGauge {
 	for _, provider := range []string{constant.SSEProviderOpenAI, constant.SSEProviderAnthropic} {
 		gauge.WithLabelValues(provider).Set(0)
 	}
-	return &sseGauge{gauge: gauge}
+	return &SSEGauge{gauge: gauge}
 }

@@ -34,7 +34,7 @@ var thinkRegexp = regexp.MustCompile(constant.ThinkTagRegexpPattern)
 type ThinkExtractCron struct {
 	cron   *cron.Cron
 	repo   conversation.ThinkExtractRepository
-	locker lock.Locker
+	locker *lock.RedisLocker
 }
 
 // NewThinkExtractCron 创建消息推理内容提取定时任务

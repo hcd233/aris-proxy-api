@@ -32,7 +32,7 @@ import (
 type SessionDeduplicateCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
-	locker     lock.Locker
+	locker     *lock.RedisLocker
 	sessionDAO *dao.SessionDAO
 	messageDAO *dao.MessageDAO
 }

@@ -108,11 +108,11 @@ func NewSessionDependencies(
 	}
 }
 
-func NewOpenAIDependencies(useCase llmproxyport.OpenAIUseCase, sseGauge metrics.SSEGauge) handler.OpenAIDependencies {
+func NewOpenAIDependencies(useCase llmproxyport.OpenAIUseCase, sseGauge *metrics.SSEGauge) handler.OpenAIDependencies {
 	return handler.OpenAIDependencies{UseCase: useCase, SSEGauge: sseGauge}
 }
 
-func NewAnthropicDependencies(useCase llmproxyport.AnthropicUseCase, sseGauge metrics.SSEGauge) handler.AnthropicDependencies {
+func NewAnthropicDependencies(useCase llmproxyport.AnthropicUseCase, sseGauge *metrics.SSEGauge) handler.AnthropicDependencies {
 	return handler.AnthropicDependencies{UseCase: useCase, SSEGauge: sseGauge}
 }
 

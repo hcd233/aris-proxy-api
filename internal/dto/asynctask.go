@@ -11,14 +11,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 )
 
-// PingTask 健康检查任务
-//
-//	author centonhuang
-//	update 2026-02-04 16:30:00
-type PingTask struct {
-	Ctx context.Context
-}
-
 // MessageStoreTask 消息存储任务
 //
 //	@author centonhuang

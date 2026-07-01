@@ -35,7 +35,6 @@ var startServerCmd = &cobra.Command{
 			zap.String("env", config.Env),
 			zap.Duration("readTimeout", config.ReadTimeout),
 			zap.Duration("writeTimeout", config.WriteTimeout),
-			zap.Int("maxHeaderBytes", config.MaxHeaderBytes),
 			zap.Int("poolStoreWorkers", config.Pool.Store.Workers),
 			zap.Int("poolStoreQueueSize", config.Pool.Store.QueueSize),
 			zap.Int("poolAgentWorkers", config.Pool.Agent.Workers),

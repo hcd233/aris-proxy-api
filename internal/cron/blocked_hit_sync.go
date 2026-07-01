@@ -22,7 +22,7 @@ type blockedHitSyncCron struct {
 	db          *gorm.DB
 	blockedRepo blocked.BlockedRepository
 	hitCache    *cache.BlockedHitCache
-	locker      lock.Locker
+	locker      *lock.RedisLocker
 }
 
 func NewBlockedHitSyncCron(db *gorm.DB, blockedRepo blocked.BlockedRepository, hitCache *cache.BlockedHitCache, redisClient *redis.Client) Cron {

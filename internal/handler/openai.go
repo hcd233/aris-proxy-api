@@ -29,12 +29,12 @@ type OpenAIHandler interface {
 //	@update 2026-04-26 10:00:00
 type OpenAIDependencies struct {
 	UseCase  port.OpenAIUseCase
-	SSEGauge metrics.SSEGauge
+	SSEGauge *metrics.SSEGauge
 }
 
 type openAIHandler struct {
 	uc       port.OpenAIUseCase
-	sseGauge metrics.SSEGauge
+	sseGauge *metrics.SSEGauge
 }
 
 // NewOpenAIHandler 创建OpenAI兼容接口处理器

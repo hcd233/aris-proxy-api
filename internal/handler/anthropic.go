@@ -29,12 +29,12 @@ type AnthropicHandler interface {
 //	@update 2026-04-26 10:00:00
 type AnthropicDependencies struct {
 	UseCase  port.AnthropicUseCase
-	SSEGauge metrics.SSEGauge
+	SSEGauge *metrics.SSEGauge
 }
 
 type anthropicHandler struct {
 	uc       port.AnthropicUseCase
-	sseGauge metrics.SSEGauge
+	sseGauge *metrics.SSEGauge
 }
 
 // NewAnthropicHandler 创建Anthropic兼容接口处理器
