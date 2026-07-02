@@ -69,7 +69,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		}
 
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, m.Alias().String())
 
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
@@ -98,7 +98,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
 
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
 
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
@@ -127,7 +127,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, 
 		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, onChunk)
 		timer.finish()
 		anthropicMsg := u.finalizeAnthropicChatStream(ctx, conv, w, completion, err, exposedModel)
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, m.Alias().String())
 
 		var usage *dto.OpenAICompletionUsage
 		if completion != nil {
@@ -200,7 +200,7 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 		}
 		anthropicMsg.Model = exposedModel
 		writer.WriteJSON(anthropicMsg)
-		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, upstream.Model)
+		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
 			exposedModel:        exposedModel,

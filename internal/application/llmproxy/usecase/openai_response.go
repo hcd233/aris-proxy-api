@@ -150,7 +150,7 @@ func (h *nativeStreamHandler) patchTerminalOutput(event string, data []byte) []b
 	return patched
 }
 
-func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint) {
+func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggregate.Model, ep *aggregate.Endpoint) {
 	h.timer.finish()
 	if proxyErr != nil {
 		h.logger.Error("[OpenAIUseCase] Native response stream error", zap.Error(proxyErr))
@@ -159,7 +159,7 @@ func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggre
 	if h.finalResponse != nil && len(h.finalResponse.Output) == 0 && len(h.accumulatedOutput) > 0 {
 		h.finalResponse.Output = h.accumulatedOutput
 	}
-	h.u.storeResponseFromRsp(h.ctx, h.req, h.finalResponse, proxyErr, upstream.Model)
+	h.u.storeResponseFromRsp(h.ctx, h.req, h.finalResponse, proxyErr, m.Alias().String())
 
 	recordModelCall(h.ctx, h.u.taskSubmitter, callOutcome{
 		model:               m,
@@ -181,7 +181,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, func(event string, data []byte) error {
 			return h.onEvent(w, event, data)
 		})
-		h.finalize(w, proxyErr, m, ep, upstream)
+		h.finalize(w, proxyErr, m, ep)
 	})
 }
 
@@ -221,7 +221,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		if parseErr != nil {
 			log.Debug("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
 		} else {
-			u.storeResponseFromRsp(ctx, req, &rsp, nil, upstream.Model)
+			u.storeResponseFromRsp(ctx, req, &rsp, nil, m.Alias().String())
 			out.usage = responseTokenUsage{&rsp}
 			out.responseStatus = &rsp
 		}
@@ -262,7 +262,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		} else {
 			rsp = converter.FinalizeResponseFromChatCompletion(w, completion, exposedModel, responseID, conv)
 		}
-		u.storeResponseFromRsp(ctx, req, rsp, err, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, rsp, err, m.Alias().String())
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
 			exposedModel:        exposedModel,
@@ -298,7 +298,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 			return
 		}
 		writer.WriteJSON(rsp)
-		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
 			exposedModel:        exposedModel,
@@ -370,11 +370,11 @@ func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.Ant
 	return nil
 }
 
-func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, anthropicMsg *dto.AnthropicMessage, err error) {
+func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, endpoint string, anthropicMsg *dto.AnthropicMessage, err error) {
 	h.timer.finish()
 
 	rsp := finalizeResponseFromAnthropicStream(h.ctx, w, err, h.allChunks, anthropicMsg, h.exposedModel, h.responseID, h.anthropicConv, h.responseConv)
-	h.u.storeResponseFromRsp(h.ctx, h.req, rsp, err, upstream.Model)
+	h.u.storeResponseFromRsp(h.ctx, h.req, rsp, err, m.Alias().String())
 	recordModelCall(h.ctx, h.u.taskSubmitter, callOutcome{
 		model:               m,
 		exposedModel:        h.exposedModel,
@@ -401,7 +401,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
 			return h.onAnthropicEvent(w, event)
 		})
-		h.finalize(w, m, upstream, endpoint, anthropicMsg, err)
+		h.finalize(w, m, endpoint, anthropicMsg, err)
 	}
 }
 
@@ -433,7 +433,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 			return
 		}
 		writer.WriteJSON(rsp)
-		u.storeResponseFromRsp(ctx, req, rsp, nil, upstream.Model)
+		u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
 			exposedModel:        exposedModel,

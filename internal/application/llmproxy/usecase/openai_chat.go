@@ -79,7 +79,7 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 			proxyutil.WriteUpstreamSSEError(ctx, w, err)
 		}
 
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, upstream.Model)
+		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, m.Alias().String())
 
 		var usage *dto.OpenAICompletionUsage
 		if completion != nil {
@@ -112,7 +112,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 		completion.Model = req.Body.Model
 		writer.WriteJSON(completion)
 
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
+		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
 
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
@@ -146,7 +146,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStreamBody(ctx context.Context, r
 		if completion != nil {
 			completion.Model = exposedModel
 		}
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, upstream.Model)
+		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, m.Alias().String())
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
 			exposedModel:        exposedModel,
@@ -213,7 +213,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 		}
 		completion.Model = exposedModel
 		writer.WriteJSON(completion)
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, upstream.Model)
+		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
 		recordModelCall(ctx, u.taskSubmitter, callOutcome{
 			model:               m,
 			exposedModel:        exposedModel,
