@@ -40,6 +40,7 @@
   "nav.cron": "Cron ジョブ",
   "nav.cron_audit": "Cron 監査",
   "nav.monitor": "モニター",
+  "nav.dataset": "訓練データ",
   "nav.profile": "プロフィール",
   "nav.logout": "ログアウト",
 
@@ -559,5 +560,25 @@
   "lang.switch": "言語を切り替え",
   "lang.en": "English",
   "lang.zh": "中文",
-  "lang.ja": "日本語"
+  "lang.ja": "日本語",
+
+  "dataset.title": "訓練データ",
+  "dataset.subtitle": "評価済みセッションを ShareGPT 形式の訓練データとして SFT 微調整用にエクスポート",
+  "dataset.filter_title": "フィルター",
+  "dataset.min_score": "最低スコア",
+  "dataset.models": "モデル（カンマ区切り）",
+  "dataset.start_time": "開始時間",
+  "dataset.end_time": "終了時間",
+  "dataset.preview": "プレビュー",
+  "dataset.export": "JSONL エクスポート",
+  "dataset.exporting": "エクスポート中...",
+  "dataset.preview_title": "プレビュー結果",
+  "dataset.total_sessions": "一致セッション数",
+  "dataset.score_distribution": "スコア分布",
+  "dataset.model_distribution": "モデル分布",
+  "dataset.score_label": "{score}★",
+  "dataset.no_data": "フィルターに一致するセッションがありません",
+  "dataset.preview_error": "プレビューに失敗しました",
+  "dataset.export_error": "エクスポートに失敗しました",
+  "dataset.export_success": "データセットをエクスポートしました"
 }

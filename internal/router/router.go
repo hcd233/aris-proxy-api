@@ -32,6 +32,7 @@ type APIRouterDependencies struct {
 	AnthropicHandler handler.AnthropicHandler
 	BlockedHandler   handler.BlockedHandler
 	MetricsHandler   handler.MetricsHandler
+	DatasetHandler   handler.DatasetHandler
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -111,4 +112,7 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	metricsGroup := huma.NewGroup(v1Group, "/metrics")
 	initMetricsRouter(metricsGroup, deps.MetricsHandler, deps.DB, deps.Cache, deps.AccessSigner)
+
+	datasetGroup := huma.NewGroup(v1Group, "/dataset")
+	initDatasetRouter(datasetGroup, deps.DatasetHandler, deps.DB, deps.Cache, deps.AccessSigner)
 }

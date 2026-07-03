@@ -40,6 +40,7 @@
   "nav.cron": "Cron Jobs",
   "nav.cron_audit": "Cron Audit",
   "nav.monitor": "Monitor",
+  "nav.dataset": "Training Data",
   "nav.profile": "Profile",
   "nav.logout": "Logout",
 
@@ -611,5 +612,25 @@
 
   "lang.switch": "Switch Language",
   "lang.en": "English",
-  "lang.zh": "中文"
+  "lang.zh": "中文",
+
+  "dataset.title": "Training Data",
+  "dataset.subtitle": "Export scored sessions as ShareGPT-format training data for SFT",
+  "dataset.filter_title": "Filter",
+  "dataset.min_score": "Min Score",
+  "dataset.models": "Models (comma-separated)",
+  "dataset.start_time": "Start Time",
+  "dataset.end_time": "End Time",
+  "dataset.preview": "Preview",
+  "dataset.export": "Export JSONL",
+  "dataset.exporting": "Exporting...",
+  "dataset.preview_title": "Preview Results",
+  "dataset.total_sessions": "Matching sessions",
+  "dataset.score_distribution": "Score Distribution",
+  "dataset.model_distribution": "Model Distribution",
+  "dataset.score_label": "{score}★",
+  "dataset.no_data": "No sessions match the filter",
+  "dataset.preview_error": "Failed to preview dataset",
+  "dataset.export_error": "Failed to export dataset",
+  "dataset.export_success": "Dataset exported"
 }
