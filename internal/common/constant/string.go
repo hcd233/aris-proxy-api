@@ -18,6 +18,7 @@ const (
 
 	// ── 运行时字符串字面量（无格式化占位符）──
 	NewlineCRLF            = "\r\n"
+	DoubleNewline          = "\n\n"
 	ZeroString             = "0"
 	OneString              = "1"
 	NullJSONLiteral        = "null"
@@ -151,6 +152,7 @@ const (
 	TagOpenAI    = "OpenAI"
 	TagSession   = "Session"
 	TagBlocked   = "Blocked"
+	TagDataset   = "Dataset"
 
 	// Router sub-paths
 	RoutePathList = "/list"
@@ -188,4 +190,16 @@ const (
 	LocalePrimaryZH       = "zh"
 	LocalePrimaryJA       = "ja"
 	LocaleAcceptSeparator = "-_;"
+
+	// ── Dataset export ──
+	ShareGPTFromSystem              = "system"
+	ShareGPTFromUser                = "user"
+	ShareGPTFromAssistant           = "assistant"
+	ShareGPTFromFunction            = "function"
+	ThinkTagClose                   = "</think>"
+	DatasetExportContentType        = "application/x-jsonlines"
+	DatasetExportFilename           = "dataset.jsonl"
+	DatasetExportContentDisposition = "attachment; filename=\"dataset.jsonl\""
+
+	ContentPartTypeText = "text"
 )

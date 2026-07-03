@@ -53,6 +53,7 @@ import type {
   CronCallAuditOptionListReq,
   CronCallAuditOptionListRsp,
   RuntimeMetricsRsp,
+  DatasetPreviewRsp,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -672,6 +673,59 @@ class ApiClient {
     const sp = new URLSearchParams({ range: params.range });
     if (params.since && params.since > 0) sp.set("since", String(params.since));
     return this.request<RuntimeMetricsRsp>(`/api/v1/metrics/runtime?${sp}`);
+  }
+
+  // ─── Dataset ───────────────────────────────────────────────────────────────────
+
+  async previewDataset(params: {
+    minScore?: number;
+    models?: string[];
+    startTime?: string;
+    endTime?: string;
+  }): Promise<DatasetPreviewRsp> {
+    const sp = new URLSearchParams();
+    if (params.minScore) sp.set("minScore", String(params.minScore));
+    if (params.models && params.models.length > 0) sp.set("models", params.models.join(","));
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    return this.request<DatasetPreviewRsp>(`/api/v1/dataset/preview?${sp}`);
+  }
+
+  async exportDataset(params: {
+    minScore?: number;
+    models?: string[];
+    startTime?: string;
+    endTime?: string;
+  }): Promise<Blob> {
+    const sp = new URLSearchParams();
+    if (params.minScore) sp.set("minScore", String(params.minScore));
+    if (params.models && params.models.length > 0) sp.set("models", params.models.join(","));
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+
+    this.authRetried = false;
+    const res = await fetch(`${API_BASE}/api/v1/dataset/export?${sp}`, {
+      headers: { ...this.getHeaders() },
+    });
+
+    if (res.status === 401) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        const retryRes = await fetch(`${API_BASE}/api/v1/dataset/export?${sp}`, {
+          headers: { ...this.getHeaders() },
+        });
+        if (!retryRes.ok) throw new ApiError(retryRes.status, await retryRes.text());
+        return retryRes.blob();
+      }
+      this.clearAuthAndPromptLogin();
+      throw new ApiError(401, "Authentication required");
+    }
+
+    if (!res.ok) {
+      throw new ApiError(res.status, await res.text());
+    }
+
+    return res.blob();
   }
 }
 

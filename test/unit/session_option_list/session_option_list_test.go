@@ -53,6 +53,14 @@ func (r *fakeSessionReadRepo) ListDistinctModels(ctx context.Context, keyword st
 	return []string{"gpt-4o", "claude-3-5-sonnet"}, nil
 }
 
+func (r *fakeSessionReadRepo) ListSessionsForExport(ctx context.Context, f session.ExportFilter) ([]*session.ExportSessionRow, error) {
+	return nil, nil
+}
+
+func (r *fakeSessionReadRepo) PreviewExport(ctx context.Context, f session.ExportFilter) (*session.ExportPreview, error) {
+	return nil, nil
+}
+
 func TestListSessionOptionHandler_FieldModel(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
