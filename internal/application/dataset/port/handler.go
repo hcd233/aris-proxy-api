@@ -16,7 +16,7 @@ import (
 type ExportParams struct {
 	Permission enum.Permission
 	UserID     uint
-	MinScore   *int
+	MinScore   int
 	Models     []string
 	StartTime  time.Time
 	EndTime    time.Time

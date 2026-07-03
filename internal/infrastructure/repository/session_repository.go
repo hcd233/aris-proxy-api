@@ -589,8 +589,8 @@ type exportSessionRow struct {
 
 func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
 	sql = sql.Where(constant.DBConditionDeletedAtZero)
-	if f.MinScore != nil {
-		sql = sql.Where(constant.FieldScore+" >= ?", *f.MinScore)
+	if f.MinScore > 0 {
+		sql = sql.Where(constant.FieldScore+" >= ?", f.MinScore)
 	}
 	if len(f.Models) > 0 {
 		sql = sql.Where(constant.SessionExportModelFilterSQL, f.Models)
