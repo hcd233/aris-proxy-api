@@ -58,7 +58,7 @@ export function PaginationBar({
       <div className="hidden items-center gap-3 md:flex">
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="outline" size="sm" className="gap-1.5" />}
+            render={<Button variant="outline" size="sm" className="min-w-[7.5rem] gap-1.5" />}
           >
             <ListFilter size={14} />
             {pageInfo.pageSize} {t("pagination.per_page")}
@@ -74,7 +74,7 @@ export function PaginationBar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <p className="hidden text-sm text-muted-foreground md:block">
+        <p className="hidden whitespace-nowrap text-sm tabular-nums text-muted-foreground md:block">
           {pageInfo.total} {totalLabel} {t("pagination.total")}
         </p>
       </div>
@@ -89,7 +89,7 @@ export function PaginationBar({
           <ChevronLeft className="size-4" />
         </Button>
         <div className="flex items-center gap-1.5 text-sm">
-          <span className="text-muted-foreground">{t("pagination.page")}</span>
+          <span className="whitespace-nowrap text-muted-foreground">{t("pagination.page")}</span>
           <input
             key={`page-${pageInfo.page}`}
             ref={inputRef}

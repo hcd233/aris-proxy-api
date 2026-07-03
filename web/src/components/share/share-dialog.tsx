@@ -135,7 +135,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
             <Share2 className="size-4 text-primary" />
             {t("share_dialog.title")}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="min-h-[2.5rem]">
             {shareURL
               ? t("share_dialog.desc_created")
               : t("share_dialog.desc_create")}
