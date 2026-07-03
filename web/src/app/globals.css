@@ -129,6 +129,54 @@
     /* Prevent iOS auto text-size bump on orientation change. */
     -webkit-text-size-adjust: 100%;
   }
+
+  /* i18n Font Scale: equalize CJK glyph height with Latin by scaling the
+   * Tailwind v4 --text-* theme variables per locale. Only font-size is
+   * scaled; rem-based spacing is untouched so the overall UI proportions
+   * hold. Line-heights are recomputed to preserve the original px leading
+   * (original unitless lh * original rem = constant px; new unitless lh =
+   * that px / new rem). See docs/adr/0005-i18n-layout-stability.md.
+   * <html lang> is set by HtmlLangUpdater, so :lang() needs no extra markup. */
+  :lang(zh) {
+    --text-xs: 0.69rem;
+    --text-xs--line-height: 1.4493;
+    --text-sm: 0.805rem;
+    --text-sm--line-height: 1.5528;
+    --text-base: 0.92rem;
+    --text-base--line-height: 1.6304;
+    --text-lg: 1.035rem;
+    --text-lg--line-height: 1.6908;
+    --text-xl: 1.15rem;
+    --text-xl--line-height: 1.5217;
+    --text-2xl: 1.38rem;
+    --text-2xl--line-height: 1.4493;
+    --text-3xl: 1.725rem;
+    --text-3xl--line-height: 1.3043;
+    --text-4xl: 2.07rem;
+    --text-4xl--line-height: 1.2077;
+    --text-5xl: 2.76rem;
+    --text-5xl--line-height: 1;
+  }
+  :lang(ja) {
+    --text-xs: 0.66rem;
+    --text-xs--line-height: 1.5152;
+    --text-sm: 0.77rem;
+    --text-sm--line-height: 1.6234;
+    --text-base: 0.88rem;
+    --text-base--line-height: 1.7045;
+    --text-lg: 0.99rem;
+    --text-lg--line-height: 1.7677;
+    --text-xl: 1.1rem;
+    --text-xl--line-height: 1.5909;
+    --text-2xl: 1.32rem;
+    --text-2xl--line-height: 1.5152;
+    --text-3xl: 1.65rem;
+    --text-3xl--line-height: 1.3636;
+    --text-4xl: 1.98rem;
+    --text-4xl--line-height: 1.2626;
+    --text-5xl: 2.64rem;
+    --text-5xl--line-height: 1;
+  }
   body {
     @apply bg-background text-foreground;
     /* Disable rubber-band scroll chaining on mobile so bottom sheets feel

@@ -24,6 +24,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { LocaleFade } from "@/components/locale-fade";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import {
   LayoutDashboard,
@@ -254,7 +255,9 @@ export default function DashboardLayout({
             </header>
 
             <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
-              <div className="mx-auto max-w-6xl">{children}</div>
+              <LocaleFade>
+                <div className="mx-auto max-w-6xl">{children}</div>
+              </LocaleFade>
             </main>
           </div>
 
