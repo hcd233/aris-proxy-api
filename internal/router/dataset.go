@@ -23,7 +23,7 @@ func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHand
 	huma.Register(datasetGroup, huma.Operation{
 		OperationID: "previewDataset",
 		Method:      http.MethodGet,
-		Path:        "/dataset/preview",
+		Path:        "/preview",
 		Summary:     "PreviewDataset",
 		Description: "Preview dataset export statistics (session count, score distribution, model distribution) for the given filter. Admin sees all; user sees only their own API key sessions.",
 		Tags:        []string{constant.TagDataset},
@@ -34,7 +34,7 @@ func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHand
 	huma.Register(datasetGroup, huma.Operation{
 		OperationID: "exportDataset",
 		Method:      http.MethodGet,
-		Path:        "/dataset/export",
+		Path:        "/export",
 		Summary:     "ExportDataset",
 		Description: "Stream export filtered sessions as ShareGPT-format JSONL. Each line is one conversation. Admin sees all; user sees only their own API key sessions.",
 		Tags:        []string{constant.TagDataset},
