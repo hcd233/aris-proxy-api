@@ -40,6 +40,7 @@
   "nav.cron": "定时任务",
   "nav.cron_audit": "任务审计",
   "nav.monitor": "运行时监控",
+  "nav.dataset": "训练数据",
   "nav.profile": "个人中心",
   "nav.logout": "退出登录",
 
@@ -613,5 +614,25 @@
 
   "lang.switch": "切换语言",
   "lang.en": "English",
-  "lang.zh": "中文"
+  "lang.zh": "中文",
+
+  "dataset.title": "训练数据",
+  "dataset.subtitle": "将评分会话导出为 ShareGPT 格式训练数据，用于 SFT 微调",
+  "dataset.filter_title": "筛选条件",
+  "dataset.min_score": "最低评分",
+  "dataset.models": "模型（逗号分隔）",
+  "dataset.start_time": "开始时间",
+  "dataset.end_time": "结束时间",
+  "dataset.preview": "预览统计",
+  "dataset.export": "导出 JSONL",
+  "dataset.exporting": "导出中...",
+  "dataset.preview_title": "预览结果",
+  "dataset.total_sessions": "匹配会话数",
+  "dataset.score_distribution": "评分分布",
+  "dataset.model_distribution": "模型分布",
+  "dataset.score_label": "{score}★",
+  "dataset.no_data": "没有匹配的会话",
+  "dataset.preview_error": "预览失败",
+  "dataset.export_error": "导出失败",
+  "dataset.export_success": "数据集已导出"
 }

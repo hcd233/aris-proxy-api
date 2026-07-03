@@ -102,6 +102,40 @@ type SessionDetailProjection struct {
 	Tools      []*ToolDetailProjection
 }
 
+// ExportFilter 训练数据导出筛选条件
+//
+//	@author centonhuang
+//	@update 2026-07-03 10:00:00
+type ExportFilter struct {
+	MinScore   *int
+	Models     []string
+	StartTime  time.Time
+	EndTime    time.Time
+	OwnerNames []string
+}
+
+// ExportSessionRow 导出会话行（仅含 ID + 关联 IDs + 元数据，不含消息内容）
+//
+//	@author centonhuang
+//	@update 2026-07-03 10:00:00
+type ExportSessionRow struct {
+	ID         uint
+	Score      *int
+	MessageIDs []uint
+	ToolIDs    []uint
+	Models     []string
+}
+
+// ExportPreview 统计预览结果
+//
+//	@author centonhuang
+//	@update 2026-07-03 10:00:00
+type ExportPreview struct {
+	TotalSessions     int
+	ScoreDistribution map[int]int
+	ModelDistribution map[string]int
+}
+
 // SessionReadRepository Session 只读查询仓储（CQRS 读模型）
 //
 // 与 SessionRepository 分离，避免写仓储受读模型查询的字段/投影需求污染。
@@ -125,4 +159,8 @@ type SessionReadRepository interface {
 	ListDistinctScores(ctx context.Context, startTime, endTime time.Time) ([]int, error)
 	// ListDistinctModels 查询去重的模型列表（支持时间范围与关键字过滤）
 	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	// ListSessionsForExport 按筛选条件查询导出用会话行（不含消息内容，仅 IDs）
+	ListSessionsForExport(ctx context.Context, f ExportFilter) ([]*ExportSessionRow, error)
+	// PreviewExport 按筛选条件统计预览（会话数 + 评分分布 + 模型分布）
+	PreviewExport(ctx context.Context, f ExportFilter) (*ExportPreview, error)
 }

@@ -21,6 +21,7 @@ const (
 	HTTPHeaderCacheControl        = "Cache-Control"
 	HTTPHeaderConnection          = "Connection"
 	HTTPHeaderContentLength       = "Content-Length"
+	HTTPHeaderContentDisposition  = "Content-Disposition"
 	HTTPHeaderContentType         = "Content-Type"
 	HTTPHeaderCookie              = "Cookie"
 	HTTPHeaderETag                = "ETag"

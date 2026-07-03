@@ -6,6 +6,7 @@ import (
 	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
+	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	llmproxyport "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
@@ -49,6 +50,8 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewBlockedHandler,
 		NewMetricsDependencies,
 		handler.NewMetricsHandler,
+		NewDatasetDependencies,
+		handler.NewDatasetHandler,
 	),
 )
 
@@ -148,4 +151,8 @@ func NewBlockedDependencies(create blockedport.CreateBlockedHandler, del blocked
 
 func NewMetricsDependencies(runtimeMetrics metricsport.RuntimeMetricsService) handler.MetricsDependencies {
 	return handler.MetricsDependencies{RuntimeMetrics: runtimeMetrics}
+}
+
+func NewDatasetDependencies(preview datasetport.PreviewDatasetHandler, export datasetport.ExportDatasetHandler) handler.DatasetDependencies {
+	return handler.DatasetDependencies{Preview: preview, Export: export}
 }

@@ -577,3 +577,91 @@ func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 		m.UpdatedAt,
 	)
 }
+
+// exportSessionRow 导出查询的扁平行模型
+type exportSessionRow struct {
+	ID         uint     `gorm:"column:id"`
+	Score      *int     `gorm:"column:score"`
+	MessageIDs []uint   `gorm:"column:message_ids;serializer:json"`
+	ToolIDs    []uint   `gorm:"column:tool_ids;serializer:json"`
+	Models     []string `gorm:"column:models;serializer:json"`
+}
+
+func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
+	sql = sql.Where(constant.DBConditionDeletedAtZero)
+	if f.MinScore != nil {
+		sql = sql.Where(constant.FieldScore+" >= ?", *f.MinScore)
+	}
+	if len(f.Models) > 0 {
+		sql = sql.Where(constant.SessionExportModelFilterSQL, f.Models)
+	}
+	if !f.StartTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" >= ?", f.StartTime)
+	}
+	if !f.EndTime.IsZero() {
+		sql = sql.Where(constant.FieldCreatedAt+" <= ?", f.EndTime)
+	}
+	if len(f.OwnerNames) > 0 {
+		sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), f.OwnerNames)
+	}
+	return sql
+}
+
+// ListSessionsForExport 按筛选条件查询导出用会话行
+func (r *sessionReadRepository) ListSessionsForExport(ctx context.Context, f session.ExportFilter) ([]*session.ExportSessionRow, error) {
+	db := r.db.WithContext(ctx)
+	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionExportSelect)
+	sql = applyExportFilter(sql, f)
+	sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: constant.FieldID}, Desc: false})
+
+	var rows []exportSessionRow
+	if err := sql.Find(&rows).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list sessions for export")
+	}
+	return lo.Map(rows, func(row exportSessionRow, _ int) *session.ExportSessionRow {
+		return &session.ExportSessionRow{
+			ID:         row.ID,
+			Score:      row.Score,
+			MessageIDs: row.MessageIDs,
+			ToolIDs:    row.ToolIDs,
+			Models:     row.Models,
+		}
+	}), nil
+}
+
+// exportPreviewRow 预览聚合查询的扁平行模型
+type exportPreviewRow struct {
+	Score *int   `gorm:"column:score"`
+	Model string `gorm:"column:model"`
+}
+
+func (r *sessionReadRepository) PreviewExport(ctx context.Context, f session.ExportFilter) (*session.ExportPreview, error) {
+	db := r.db.WithContext(ctx)
+	sql := db.Model(&dbmodel.Session{}).
+		Select(constant.SessionExportPreviewSelect).
+		Where(constant.SessionExportModelIsNotNull)
+
+	sql = applyExportFilter(sql, f)
+
+	var rows []exportPreviewRow
+	if err := sql.Scan(&rows).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "preview export")
+	}
+
+	preview := &session.ExportPreview{
+		ScoreDistribution: make(map[int]int),
+		ModelDistribution: make(map[string]int),
+	}
+
+	for _, row := range rows {
+		preview.TotalSessions++
+		if row.Score != nil {
+			preview.ScoreDistribution[*row.Score]++
+		}
+		if row.Model != "" {
+			preview.ModelDistribution[row.Model]++
+		}
+	}
+
+	return preview, nil
+}

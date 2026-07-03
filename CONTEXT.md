@@ -154,6 +154,28 @@ _Avoid_: content compression, body compression, payload shrinking
 单条 tool output 的压缩记录。含 ToolCallID（关联到存储消息）、Input（压缩前内容）、Output（压缩后内容或跳过/失败时的原始内容）、Strategy（策略名，如 smart_crusher / log_compressor / search_compressor / passthrough）、Applied（是否实际压缩）。
 _Avoid_: compression record, tool output compression
 
+## Training Data Pipeline（训练数据管线）
+
+**Training Data Pipeline（训练数据管线）**:
+将代理网关沉淀的会话数据转化为 SFT 训练数据集的闭环管线。治理功能（评分、去重、思维链提取、内容屏蔽）在此语境下不是"治理"而是训练数据清洗管线的组成部分：评分 = 样本质量标注，去重 = 训练样本去重，思维链提取 = 推理过程数据提取，内容屏蔽 = 脏数据过滤。
+_Avoid_: data pipeline, etl, data processing
+
+**DatasetExport（数据集导出）**:
+按筛选条件（评分阈值、模型、时间范围）从会话数据生成 ShareGPT 格式 JSONL 文件的流式导出能力。一条会话 = 一行 JSONL，全量保留多轮对话、思维链（`<think>` 标签）、工具调用和工具响应。不持久化导出文件，浏览器流式下载。
+_Avoid_: data export, dataset generation, training data extraction
+
+**ShareGPT Conversation（ShareGPT 对话记录）**:
+一条 JSONL 行对应的训练样本格式。`conversations` 数组包含多轮对话（system/user/assistant/function 角色），assistant 消息的 `value` 以 `<think>{reasoning}</think>\n\n{content}` 格式嵌入推理内容，工具调用映射为 `function_call` 字段，工具响应对应 `function` 角色消息。`tools` 数组包含工具定义。
+_Avoid_: training sample, sft record, conversation entry
+
+**DatasetPreview（数据集预览）**:
+导出前的统计预览能力：返回匹配会话数、评分分布、模型分布、估算 token 总量。用户据此判断筛选条件是否合理后再触发流式导出。
+_Avoid_: export preview, dataset stats, data overview
+
+**SFT Style Cloning（SFT 风格克隆）**:
+使用数据集导出的 ShareGPT 数据对私有小模型做监督微调（SFT），目标是让小模型学习用户偏好的回答风格和推理方式。数据格式为通用 ShareGPT，不锁定基座模型，chat template 转换在训练侧完成。
+_Avoid_: fine-tuning, model training, style transfer
+
 ## Cron & Maintenance（定时维护）
 
 **Distributed Cron Lock（分布式 Cron 锁）**:

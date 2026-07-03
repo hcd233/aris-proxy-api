@@ -15,6 +15,8 @@ import (
 	cronmgmtcommand "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/command"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	cronmgmtquery "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/query"
+	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
+	datasetquery "github.com/hcd233/aris-proxy-api/internal/application/dataset/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
@@ -108,6 +110,8 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewDeleteBlockedHandler,
 		NewListBlockedHandler,
 		NewRuntimeMetricsHandler,
+		NewPreviewDatasetHandler,
+		NewExportDatasetHandler,
 	),
 )
 
@@ -315,6 +319,14 @@ func NewListBlockedHandler(repo blockeddomain.BlockedRepository) blockedport.Lis
 
 func NewRuntimeMetricsHandler(runtimeCache *cache.RuntimeMetricsCache) metricsport.RuntimeMetricsService {
 	return metricsquery.NewRuntimeMetricsHandler(runtimeCache)
+}
+
+func NewPreviewDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.PreviewDatasetHandler {
+	return datasetquery.NewPreviewDatasetHandler(readRepo, apiKeyRepo)
+}
+
+func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.ExportDatasetHandler {
+	return datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo)
 }
 
 func NewListCronJobsHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.ListCronJobsHandler {

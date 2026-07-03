@@ -214,6 +214,20 @@ var (
 	SessionDistinctModelOrder  = "model ASC"
 	SessionDistinctModelLimit  = 50
 
+	// ── Session export query constants ──
+	// 导出行：id, score, message_ids, tool_ids, models
+	SessionExportSelect = "id, score, message_ids, tool_ids, models"
+
+	// 预览：score + 展开的 model（jsonb_array_elements_text）
+	SessionExportPreviewSelect = "score, jsonb_array_elements_text(models::jsonb) AS model"
+
+	// models JSONB 数组包含任意一个目标模型（? 展开为 ANY 数组）
+	// 用 jsonb_path_exists 做数组包含判断：models @> ?::jsonb
+	SessionExportModelFilterSQL = "models::jsonb @> ?::jsonb"
+
+	// models 非空过滤（预览查询用）
+	SessionExportModelIsNotNull = "models IS NOT NULL AND models::jsonb <> '[]'::jsonb"
+
 	// MigrateMessageBatchSize checksum 迁移与 dedup 每批处理记录数
 	MigrateMessageBatchSize = 1000
 
