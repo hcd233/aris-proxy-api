@@ -10,7 +10,7 @@ import (
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
 type DatasetPreviewReq struct {
-	MinScore  *int      `query:"minScore" minimum:"1" maximum:"5" doc:"最低评分阈值(1-5)"`
+	MinScore  int       `query:"minScore" minimum:"0" maximum:"5" default:"0" doc:"最低评分阈值(1-5)，0 表示不限制"`
 	Models    []string  `query:"models" doc:"模型列表筛选(逗号分隔)"`
 	StartTime time.Time `query:"startTime" doc:"起始时间"`
 	EndTime   time.Time `query:"endTime" doc:"结束时间"`
@@ -32,7 +32,7 @@ type DatasetPreviewRsp struct {
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
 type DatasetExportReq struct {
-	MinScore  *int      `query:"minScore" minimum:"1" maximum:"5" doc:"最低评分阈值(1-5)"`
+	MinScore  int       `query:"minScore" minimum:"0" maximum:"5" default:"0" doc:"最低评分阈值(1-5)，0 表示不限制"`
 	Models    []string  `query:"models" doc:"模型列表筛选(逗号分隔)"`
 	StartTime time.Time `query:"startTime" doc:"起始时间"`
 	EndTime   time.Time `query:"endTime" doc:"结束时间"`
