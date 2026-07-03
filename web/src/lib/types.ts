@@ -593,3 +593,11 @@ export interface RuntimeMetricsRsp extends CommonRsp {
   series: RuntimeSeries;
   latestTime: number;
 }
+
+// ─── Dataset ───────────────────────────────────────────────────────────────────
+
+export interface DatasetPreviewRsp extends CommonRsp {
+  totalSessions?: number;
+  scoreDistribution?: Record<number, number>;
+  modelDistribution?: Record<string, number>;
+}
