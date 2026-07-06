@@ -153,6 +153,6 @@ func NewMetricsDependencies(runtimeMetrics metricsport.RuntimeMetricsService) ha
 	return handler.MetricsDependencies{RuntimeMetrics: runtimeMetrics}
 }
 
-func NewDatasetDependencies(preview datasetport.PreviewDatasetHandler, export datasetport.ExportDatasetHandler) handler.DatasetDependencies {
-	return handler.DatasetDependencies{Preview: preview, Export: export}
+func NewDatasetDependencies(preview datasetport.PreviewDatasetHandler, export datasetport.ExportDatasetHandler, previewFormat datasetport.PreviewFormatDatasetHandler) handler.DatasetDependencies {
+	return handler.DatasetDependencies{Preview: preview, Export: export, PreviewFormat: previewFormat}
 }
