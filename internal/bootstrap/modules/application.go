@@ -112,6 +112,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewRuntimeMetricsHandler,
 		NewPreviewDatasetHandler,
 		NewExportDatasetHandler,
+		NewPreviewFormatDatasetHandler,
 	),
 )
 
@@ -327,6 +328,10 @@ func NewPreviewDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo
 
 func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.ExportDatasetHandler {
 	return datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo)
+}
+
+func NewPreviewFormatDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.PreviewFormatDatasetHandler {
+	return datasetquery.NewPreviewFormatDatasetHandler(readRepo, apiKeyRepo)
 }
 
 func NewListCronJobsHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.ListCronJobsHandler {

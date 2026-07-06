@@ -197,3 +197,102 @@ func buildConversation(
 
 	return converter.ConvertSession(msgs, tools)
 }
+
+type previewFormatDatasetHandler struct {
+	readRepo   session.SessionReadRepository
+	apiKeyRepo ownerNameLookup
+}
+
+// NewPreviewFormatDatasetHandler 构造单条会话格式预览处理器
+//
+//	@return datasetport.PreviewFormatDatasetHandler
+//	@author centonhuang
+//	@update 2026-07-06 10:00:00
+func NewPreviewFormatDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.PreviewFormatDatasetHandler {
+	return &previewFormatDatasetHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
+}
+
+func (h *previewFormatDatasetHandler) Handle(ctx context.Context, p datasetport.ExportParams, offset int) (*datasetport.FormatPreviewResult, error) {
+	log := logger.WithCtx(ctx)
+
+	f, err := h.buildFilter(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	if offset < 0 {
+		offset = 0
+	}
+
+	rows, err := h.readRepo.ListSessionsForExport(ctx, *f)
+	if err != nil {
+		log.Error("[DatasetFormatPreview] Failed to list sessions", zap.Error(err))
+		return nil, err
+	}
+
+	total := len(rows)
+	if total == 0 {
+		return nil, ierr.New(ierr.ErrDataNotExists, "no sessions match the filter")
+	}
+
+	if offset >= total {
+		offset = total - 1
+	}
+
+	row := rows[offset]
+
+	msgs, err := h.readRepo.FindMessagesByIDs(ctx, row.MessageIDs)
+	if err != nil {
+		log.Error("[DatasetFormatPreview] Failed to get messages", zap.Error(err))
+		return nil, err
+	}
+	msgMap := lo.SliceToMap(msgs, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
+		return m.ID, m
+	})
+
+	var toolMap map[uint]*session.ToolDetailProjection
+	if len(row.ToolIDs) > 0 {
+		tools, toolErr := h.readRepo.FindToolsByIDs(ctx, row.ToolIDs)
+		if toolErr != nil {
+			log.Error("[DatasetFormatPreview] Failed to get tools", zap.Error(toolErr))
+			return nil, toolErr
+		}
+		toolMap = lo.SliceToMap(tools, func(t *session.ToolDetailProjection) (uint, *session.ToolDetailProjection) {
+			return t.ID, t
+		})
+	}
+
+	conv := buildConversation(row, msgMap, toolMap)
+	line, marshalErr := converter.MarshalJSONLine(conv)
+	if marshalErr != nil {
+		log.Error("[DatasetFormatPreview] Failed to marshal conversation", zap.Error(marshalErr))
+		return nil, marshalErr
+	}
+
+	return &datasetport.FormatPreviewResult{
+		SessionID:    row.ID,
+		Offset:       offset,
+		TotalCount:   total,
+		ShareGPTJSON: string(line),
+	}, nil
+}
+
+func (h *previewFormatDatasetHandler) buildFilter(ctx context.Context, p datasetport.ExportParams) (*session.ExportFilter, error) {
+	f := &session.ExportFilter{
+		MinScore:  p.MinScore,
+		Models:    p.Models,
+		StartTime: p.StartTime,
+		EndTime:   p.EndTime,
+	}
+
+	if p.Permission != enum.PermissionAdmin {
+		ownerNames, err := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, p.UserID)
+		if err != nil {
+			logger.WithCtx(ctx).Error("[DatasetFormatPreview] Failed to lookup owner names", zap.Error(err), zap.Uint("userID", p.UserID))
+			return nil, err
+		}
+		f.OwnerNames = ownerNames
+	}
+
+	return f, nil
+}

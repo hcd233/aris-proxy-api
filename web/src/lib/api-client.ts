@@ -54,6 +54,7 @@ import type {
   CronCallAuditOptionListRsp,
   RuntimeMetricsRsp,
   DatasetPreviewRsp,
+  DatasetFormatPreviewRsp,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -689,6 +690,22 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<DatasetPreviewRsp>(`/api/v1/dataset/preview?${sp}`);
+  }
+
+  async previewDatasetFormat(params: {
+    minScore?: number;
+    models?: string[];
+    startTime?: string;
+    endTime?: string;
+    offset?: number;
+  }): Promise<DatasetFormatPreviewRsp> {
+    const sp = new URLSearchParams();
+    if (params.minScore) sp.set("minScore", String(params.minScore));
+    if (params.models && params.models.length > 0) sp.set("models", params.models.join(","));
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    if (params.offset !== undefined) sp.set("offset", String(params.offset));
+    return this.request<DatasetFormatPreviewRsp>(`/api/v1/dataset/preview-format?${sp}`);
   }
 
   async exportDataset(params: {

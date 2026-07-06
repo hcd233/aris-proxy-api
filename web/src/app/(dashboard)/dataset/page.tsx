@@ -1,58 +1,139 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Database, Download, BarChart3 } from "lucide-react";
+import {
+  Database,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  Loader2,
+  Check,
+  Hash,
+  Star,
+} from "lucide-react";
 import { toast } from "sonner";
+import { usePersistentState } from "@/hooks/use-persistent-state";
+import { TimeRangePicker } from "@/components/ui/time-range-picker";
+import { MultiSelectPill } from "@/components/ui/multi-select-pill";
+import { ScoreSlider } from "@/components/dataset/score-slider";
+import type { TimeRangeKey } from "@/lib/time-range";
+import { computeRange } from "@/lib/time-range";
 
-interface PreviewData {
-  totalSessions: number;
-  scoreDistribution: Record<number, number>;
-  modelDistribution: Record<string, number>;
+function useDebouncedCallback(cb: () => void, delay: number) {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const cbRef = useRef(cb);
+  cbRef.current = cb;
+
+  return useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => cbRef.current(), delay);
+  }, [delay]);
 }
 
 export default function DatasetPage() {
   const t = useT();
-  const [minScore, setMinScore] = useState("4");
-  const [models, setModels] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [preview, setPreview] = useState<PreviewData | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const [minScore, setMinScore] = useState(4);
+  const [filterModels, setFilterModels] = usePersistentState<string[]>(
+    "dashboard.dataset.filterModels",
+    []
+  );
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
+    "dashboard.dataset.timeRange",
+    "30d"
+  );
+  const [customStart, setCustomStart] = usePersistentState(
+    "dashboard.dataset.customStart",
+    ""
+  );
+  const [customEnd, setCustomEnd] = usePersistentState(
+    "dashboard.dataset.customEnd",
+    ""
+  );
+
+  const [preview, setPreview] = useState<{
+    totalSessions: number;
+    scoreDistribution: Record<number, number>;
+    modelDistribution: Record<string, number>;
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const [formatOffset, setFormatOffset] = useState(0);
+  const [formatData, setFormatData] = useState<{
+    sessionId?: number;
+    offset?: number;
+    totalCount?: number;
+    sharegptJson?: string;
+  } | null>(null);
+  const [formatLoading, setFormatLoading] = useState(false);
+
   const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportCurrent, setExportCurrent] = useState(0);
+  const [exportTotal, setExportTotal] = useState(0);
 
-  const buildParams = useCallback(() => {
-    const params: {
-      minScore?: number;
-      models?: string[];
-      startTime?: string;
-      endTime?: string;
-    } = {};
-    const score = parseInt(minScore, 10);
-    if (score >= 1 && score <= 5) params.minScore = score;
-    const modelList = models
-      .split(",")
-      .map((m) => m.trim())
-      .filter(Boolean);
-    if (modelList.length > 0) params.models = modelList;
-    if (startTime) params.startTime = new Date(startTime).toISOString();
-    if (endTime) params.endTime = new Date(endTime).toISOString();
-    return params;
-  }, [minScore, models, startTime, endTime]);
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
 
-  const handlePreview = useCallback(async () => {
-    setLoadingPreview(true);
+  const buildFilterParams = useCallback(() => {
+    const { startTime, endTime } = computeRange(
+      timeRange,
+      customStart,
+      customEnd
+    );
+    return {
+      minScore,
+      models: filterModels.length > 0 ? filterModels : undefined,
+      startTime,
+      endTime,
+    };
+  }, [minScore, filterModels, timeRange, customStart, customEnd]);
+
+  const buildExportParams = useCallback(() => {
+    const { startTime, endTime } = computeRange(
+      timeRange,
+      customStart,
+      customEnd
+    );
+    return {
+      minScore,
+      models: filterModels.length > 0 ? filterModels : undefined,
+      startTime,
+      endTime,
+    };
+  }, [minScore, filterModels, timeRange, customStart, customEnd]);
+
+  const fetchModelOptions = useCallback(async () => {
+    const { startTime, endTime } = computeRange(
+      timeRange,
+      customStart,
+      customEnd
+    );
     try {
-      const rsp = await api.previewDataset(buildParams());
+      const rsp = await api.listSessionOptions({
+        field: "model",
+        startTime,
+        endTime,
+      });
+      if (!rsp.error && rsp.items) setModelOptions(rsp.items);
+    } catch {
+      // silent
+    }
+  }, [timeRange, customStart, customEnd]);
+
+  const fetchPreview = useCallback(async () => {
+    setPreviewLoading(true);
+    try {
+      const rsp = await api.previewDataset(buildFilterParams());
       if (rsp.error) {
         toast.error(rsp.error.message ?? t("dataset.preview_error"));
+        setPreview(null);
         return;
       }
       setPreview({
@@ -60,170 +141,468 @@ export default function DatasetPage() {
         scoreDistribution: rsp.scoreDistribution ?? {},
         modelDistribution: rsp.modelDistribution ?? {},
       });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("dataset.preview_error"));
+    } catch {
+      // silent
     } finally {
-      setLoadingPreview(false);
+      setPreviewLoading(false);
     }
-  }, [buildParams, t]);
+  }, [buildFilterParams, t]);
+
+  const fetchFormatPreview = useCallback(
+    async (offset: number) => {
+      setFormatLoading(true);
+      try {
+        const rsp = await api.previewDatasetFormat({
+          ...buildFilterParams(),
+          offset,
+        });
+        if (rsp.error) {
+          toast.error(rsp.error.message ?? t("dataset.preview_error"));
+          return;
+        }
+        setFormatData({
+          sessionId: rsp.sessionId,
+          offset: rsp.offset ?? offset,
+          totalCount: rsp.totalCount,
+          sharegptJson: rsp.sharegptJson,
+        });
+      } catch {
+        // silent
+      } finally {
+        setFormatLoading(false);
+      }
+    },
+    [buildFilterParams, t]
+  );
+
+  const debouncedRefresh = useDebouncedCallback(() => {
+    fetchPreview();
+    fetchModelOptions();
+  }, 300);
+
+  useEffect(() => {
+    debouncedRefresh();
+  }, [minScore, filterModels, timeRange, customStart, customEnd, debouncedRefresh]);
+
+  useEffect(() => {
+    if ((preview?.totalSessions ?? 0) > 0) {
+      fetchFormatPreview(formatOffset);
+    } else {
+      setFormatData(null);
+    }
+  }, [preview?.totalSessions, formatOffset, fetchFormatPreview]);
+
+  const handlePrevSession = useCallback(() => {
+    setFormatOffset((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const handleNextSession = useCallback(() => {
+    setFormatOffset((prev) => {
+      const max = (formatData?.totalCount ?? 1) - 1;
+      return Math.min(max, prev + 1);
+    });
+  }, [formatData?.totalCount]);
 
   const handleExport = useCallback(async () => {
+    const params = buildExportParams();
+    const total = preview?.totalSessions ?? 0;
     setExporting(true);
+    setExportProgress(0);
+    setExportCurrent(0);
+    setExportTotal(total);
+
     try {
-      const blob = await api.exportDataset(buildParams());
+      setExportCurrent(Math.floor(total * 0.3));
+      setExportProgress(30);
+
+      const blob = await api.exportDataset(params);
+
+      setExportCurrent(Math.floor(total * 0.8));
+      setExportProgress(80);
+
+      const fmtMinScore = params.minScore ?? 1;
+      const fmtModels = params.models?.length ?? 0;
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const filename = `dataset_${dateStr}_minScore${fmtMinScore}_models${fmtModels}_${total}sessions.jsonl`;
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "dataset.jsonl";
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      setExportCurrent(total);
+      setExportProgress(100);
       toast.success(t("dataset.export_success"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("dataset.export_error"));
+      toast.error(
+        err instanceof Error ? err.message : t("dataset.export_error")
+      );
     } finally {
-      setExporting(false);
+      setTimeout(() => {
+        setExporting(false);
+      }, 1500);
     }
-  }, [buildParams, t]);
+  }, [buildExportParams, preview?.totalSessions, t]);
 
-  const scoreEntries = preview
-    ? Object.entries(preview.scoreDistribution).sort(([a], [b]) => Number(a) - Number(b))
-    : [];
-  const modelEntries = preview
-    ? Object.entries(preview.modelDistribution).sort(([, a], [, b]) => b - a)
-    : [];
+  const formattedJSON = useMemo(() => {
+    if (!formatData?.sharegptJson) return "";
+    try {
+      return JSON.stringify(JSON.parse(formatData.sharegptJson), null, 2);
+    } catch {
+      return formatData.sharegptJson;
+    }
+  }, [formatData?.sharegptJson]);
+
+  const hasFilters =
+    minScore > 1 || filterModels.length > 0 || customStart || customEnd;
+  const totalSessions = preview?.totalSessions ?? 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
           {t("dataset.title")}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">{t("dataset.subtitle")}</p>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          {t("dataset.subtitle")}
+        </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <Database className="size-5" />
-            {t("dataset.filter_title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="minScore">{t("dataset.min_score")}</Label>
-              <Input
-                id="minScore"
-                type="number"
-                min={1}
-                max={5}
+      <div className="flex flex-col lg:flex-row lg:gap-6 gap-4">
+        {/* ─── Left sidebar: Filters ─── */}
+        <div className="lg:w-[320px] lg:shrink-0">
+          <Card>
+            <CardContent className="p-5 space-y-5">
+              <ScoreSlider
+                distribution={preview?.scoreDistribution ?? {}}
                 value={minScore}
-                onChange={(e) => setMinScore(e.target.value)}
-                placeholder="1-5"
+                onChange={setMinScore}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="models">{t("dataset.models")}</Label>
-              <Input
-                id="models"
-                value={models}
-                onChange={(e) => setModels(e.target.value)}
-                placeholder="claude-3.5-sonnet,gpt-4o"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="startTime">{t("dataset.start_time")}</Label>
-              <Input
-                id="startTime"
-                type="datetime-local"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">{t("dataset.end_time")}</Label>
-              <Input
-                id="endTime"
-                type="datetime-local"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
-          </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handlePreview} disabled={loadingPreview} variant="outline">
-              <BarChart3 className="size-4" />
-              {loadingPreview ? t("common.loading") : t("dataset.preview")}
-            </Button>
-            <Button onClick={handleExport} disabled={exporting}>
-              <Download className="size-4" />
-              {exporting ? t("dataset.exporting") : t("dataset.export")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                  {t("sessions.filter_model")}
+                </span>
+                <MultiSelectPill
+                  label={t("sessions.filter_model")}
+                  options={modelOptions}
+                  value={filterModels}
+                  onChange={setFilterModels}
+                  emptyText={t("dataset.no_models")}
+                />
+              </div>
 
-      {loadingPreview && (
-        <Card>
-          <CardContent className="pt-6">
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-      )}
+              <div className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                  Time Range
+                </span>
+                <TimeRangePicker
+                  value={timeRange}
+                  customStart={customStart}
+                  customEnd={customEnd}
+                  onChange={(key, cs, ce) => {
+                    setTimeRange(key);
+                    setCustomStart(cs);
+                    setCustomEnd(ce);
+                  }}
+                />
+              </div>
 
-      {preview && !loadingPreview && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-display">{t("dataset.preview_title")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">{t("dataset.total_sessions")}</span>
-              <span className="font-display text-2xl font-bold">{preview.totalSessions}</span>
-            </div>
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground"
+                  onClick={() => {
+                    setMinScore(1);
+                    setFilterModels([]);
+                    setTimeRange("30d");
+                    setCustomStart("");
+                    setCustomEnd("");
+                  }}
+                >
+                  Clear all filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
 
-            {scoreEntries.length > 0 && (
-              <div>
-                <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-                  {t("dataset.score_distribution")}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {scoreEntries.map(([score, count]) => (
-                    <Badge key={score} variant="secondary" className="text-sm">
-                      {t("dataset.score_label", `${score}★`)}: {count}
-                    </Badge>
-                  ))}
+          <Card className="mt-4">
+            <CardContent className="p-5">
+              {previewLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-16" />
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Database className="size-4 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t("dataset.total_sessions")}
+                    </span>
+                  </div>
+                  <div className="font-display text-3xl font-bold tabular-nums">
+                    {totalSessions.toLocaleString()}
+                  </div>
 
-            {modelEntries.length > 0 && (
-              <div>
-                <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-                  {t("dataset.model_distribution")}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {modelEntries.map(([model, count]) => (
-                    <Badge key={model} variant="outline" className="text-sm">
-                      {model}: {count}
-                    </Badge>
-                  ))}
+                  {preview?.modelDistribution &&
+                    Object.keys(preview.modelDistribution).length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                          {t("dataset.model_distribution")}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(preview.modelDistribution)
+                            .sort(([, a], [, b]) => b - a)
+                            .slice(0, 5)
+                            .map(([model, count]) => (
+                              <Badge
+                                key={model}
+                                variant="outline"
+                                className="text-[10px] font-mono"
+                              >
+                                {model}: {count}
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                 </div>
-              </div>
-            )}
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-            {preview.totalSessions === 0 && (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Database className="mb-3 size-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">{t("dataset.no_data")}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+        {/* ─── Right panel: Stats → Preview → Export ─── */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {exporting ? (
+            <Card>
+              <CardContent className="p-8">
+                <div className="flex flex-col items-center gap-6">
+                  <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-secondary/50">
+                    <Download className="size-7 text-primary animate-pulse" />
+                  </div>
+
+                  <div className="text-center space-y-1.5">
+                    <h2 className="font-display text-lg font-semibold">
+                      Exporting Dataset
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {exportCurrent} / {exportTotal} sessions
+                    </p>
+                  </div>
+
+                  <div className="w-full max-w-md space-y-2">
+                    <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+                        style={{ width: `${exportProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+                      <span>{exportProgress}%</span>
+                      <span>{exportTotal} total</span>
+                    </div>
+                  </div>
+
+                  {exportProgress >= 100 && (
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                      <Check className="size-4" />
+                      Export complete
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Stats summary */}
+              {preview && !previewLoading && totalSessions > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Dataset Summary
+                      </h3>
+                      <Badge variant="secondary" className="font-mono">
+                        {totalSessions.toLocaleString()} conversations
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {Object.keys(preview.scoreDistribution).length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                            {t("dataset.score_distribution")}
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(preview.scoreDistribution)
+                              .sort(([a], [b]) => Number(a) - Number(b))
+                              .map(([score, count]) => (
+                                <Badge
+                                  key={score}
+                                  variant={
+                                    Number(score) >= minScore
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                  className="gap-1"
+                                >
+                                  <Star className="size-3" />
+                                  {score}: {count}
+                                </Badge>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {Object.keys(preview.modelDistribution).length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                            {t("dataset.model_distribution")}
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(preview.modelDistribution)
+                              .sort(([, a], [, b]) => b - a)
+                              .slice(0, 8)
+                              .map(([model, count]) => (
+                                <Badge
+                                  key={model}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {model}: {count}
+                                </Badge>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {previewLoading && (
+                <Card>
+                  <CardContent className="p-6">
+                    <Skeleton className="h-24 w-full" />
+                  </CardContent>
+                </Card>
+              )}
+
+              {preview && !previewLoading && totalSessions === 0 && (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <Database className="mb-3 size-10 text-muted-foreground/30" />
+                    <p className="text-sm text-muted-foreground">
+                      {t("dataset.no_data")}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">
+                      Try lowering the minimum score or adjusting the time range
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Format preview */}
+              {preview && !previewLoading && totalSessions > 0 && (
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Format Preview
+                      </h3>
+                      {formatData && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={formatOffset === 0}
+                            onClick={handlePrevSession}
+                            className="size-7"
+                          >
+                            <ChevronLeft className="size-3.5" />
+                          </Button>
+                          <span className="text-xs text-muted-foreground tabular-nums min-w-[64px] text-center">
+                            {formatOffset + 1} /{" "}
+                            {formatData.totalCount?.toLocaleString()}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={
+                              formatOffset >=
+                              (formatData.totalCount ?? 1) - 1
+                            }
+                            onClick={handleNextSession}
+                            className="size-7"
+                          >
+                            <ChevronRight className="size-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {formatLoading ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    ) : formatData?.sharegptJson ? (
+                      <div className="flex items-start gap-3">
+                        <div className="flex shrink-0 flex-col items-center gap-1 pt-0.5">
+                          <Hash className="size-3.5 text-muted-foreground/50" />
+                          <span className="text-[10px] font-mono text-muted-foreground/50">
+                            #{formatData.sessionId}
+                          </span>
+                        </div>
+                        <pre className="flex-1 min-w-0 overflow-x-auto rounded-lg border border-border bg-[#1e1e2e] p-4 text-[12px] leading-[1.65] text-[#cdd6f4]">
+                          <code className="block whitespace-pre font-mono">
+                            {formattedJSON}
+                          </code>
+                        </pre>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Export action */}
+              {preview &&
+                !previewLoading &&
+                totalSessions > 0 &&
+                formatData?.sharegptJson && (
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      This will export{" "}
+                      <span className="font-semibold text-foreground">
+                        {totalSessions.toLocaleString()}
+                      </span>{" "}
+                      conversations as ShareGPT JSONL for SFT fine-tuning.
+                    </div>
+                    <Button
+                      onClick={handleExport}
+                      disabled={exporting || totalSessions === 0}
+                      size="lg"
+                      className="gap-2"
+                    >
+                      <Download className="size-4" />
+                      Export JSONL
+                    </Button>
+                  </div>
+                )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -41,4 +41,15 @@ func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHand
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("exportDataset", enum.PermissionUser)},
 	}, datasetHandler.HandleExport)
+
+	huma.Register(datasetGroup, huma.Operation{
+		OperationID: "previewDatasetFormat",
+		Method:      http.MethodGet,
+		Path:        "/dataset/preview-format",
+		Summary:     "PreviewDatasetFormat",
+		Description: "Preview one session's ShareGPT JSON format at the given offset in the filtered result set.",
+		Tags:        []string{constant.TagDataset},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("previewDatasetFormat", enum.PermissionUser)},
+	}, datasetHandler.HandlePreviewFormat)
 }
