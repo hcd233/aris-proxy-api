@@ -47,3 +47,22 @@ type PreviewDatasetHandler interface {
 type ExportDatasetHandler interface {
 	Handle(ctx context.Context, p ExportParams, w io.Writer) error
 }
+
+// FormatPreviewResult 单条会话格式预览结果
+//
+//	@author centonhuang
+//	@update 2026-07-06 10:00:00
+type FormatPreviewResult struct {
+	SessionID    uint
+	Offset       int
+	TotalCount   int
+	ShareGPTJSON string
+}
+
+// PreviewFormatDatasetHandler 单条会话格式预览处理器
+//
+//	@author centonhuang
+//	@update 2026-07-06 10:00:00
+type PreviewFormatDatasetHandler interface {
+	Handle(ctx context.Context, p ExportParams, offset int) (*FormatPreviewResult, error)
+}

@@ -617,7 +617,7 @@
   "lang.zh": "中文",
 
   "dataset.title": "训练数据",
-  "dataset.subtitle": "将评分会话导出为 ShareGPT 格式训练数据，用于 SFT 微调",
+  "dataset.subtitle": "筛选、预览并导出高质量对话，生成 ShareGPT 格式训练数据，用于 SFT 微调",
   "dataset.filter_title": "筛选条件",
   "dataset.min_score": "最低评分",
   "dataset.models": "模型（逗号分隔）",
@@ -634,5 +634,14 @@
   "dataset.no_data": "没有匹配的会话",
   "dataset.preview_error": "预览失败",
   "dataset.export_error": "导出失败",
-  "dataset.export_success": "数据集已导出"
+  "dataset.export_success": "数据集已导出",
+  "dataset.no_models": "暂无可用模型",
+  "dataset.clear_filters": "清除筛选",
+  "dataset.format_preview": "格式预览",
+  "dataset.sample_of": "第 {current} / {total} 条",
+  "dataset.export_confirm_total": "将导出 {total} 条对话，格式为 ShareGPT JSONL，用于 SFT 微调训练。",
+  "dataset.empty_hint": "请尝试降低最低评分或调整时间范围",
+  "dataset.export_complete": "导出完成",
+  "dataset.summary_title": "数据集概览",
+  "dataset.conversations_label": "条对话"
 }

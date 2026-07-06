@@ -23,7 +23,7 @@ func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHand
 	huma.Register(datasetGroup, huma.Operation{
 		OperationID: "previewDataset",
 		Method:      http.MethodGet,
-		Path:        "/preview",
+		Path:        "/dataset/preview",
 		Summary:     "PreviewDataset",
 		Description: "Preview dataset export statistics (session count, score distribution, model distribution) for the given filter. Admin sees all; user sees only their own API key sessions.",
 		Tags:        []string{constant.TagDataset},
@@ -34,11 +34,22 @@ func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHand
 	huma.Register(datasetGroup, huma.Operation{
 		OperationID: "exportDataset",
 		Method:      http.MethodGet,
-		Path:        "/export",
+		Path:        "/dataset/export",
 		Summary:     "ExportDataset",
 		Description: "Stream export filtered sessions as ShareGPT-format JSONL. Each line is one conversation. Admin sees all; user sees only their own API key sessions.",
 		Tags:        []string{constant.TagDataset},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("exportDataset", enum.PermissionUser)},
 	}, datasetHandler.HandleExport)
+
+	huma.Register(datasetGroup, huma.Operation{
+		OperationID: "previewDatasetFormat",
+		Method:      http.MethodGet,
+		Path:        "/dataset/sample",
+		Summary:     "PreviewDatasetFormat",
+		Description: "Preview one session's ShareGPT JSON format at the given offset in the filtered result set.",
+		Tags:        []string{constant.TagDataset},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("previewDatasetFormat", enum.PermissionUser)},
+	}, datasetHandler.HandlePreviewFormat)
 }

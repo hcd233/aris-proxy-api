@@ -563,7 +563,7 @@
   "lang.ja": "日本語",
 
   "dataset.title": "訓練データ",
-  "dataset.subtitle": "評価済みセッションを ShareGPT 形式の訓練データとして SFT 微調整用にエクスポート",
+  "dataset.subtitle": "高品質な会話をフィルタリング・プレビューして、ShareGPT 形式の訓練データとして SFT 用にエクスポート",
   "dataset.filter_title": "フィルター",
   "dataset.min_score": "最低スコア",
   "dataset.models": "モデル（カンマ区切り）",
@@ -580,5 +580,14 @@
   "dataset.no_data": "フィルターに一致するセッションがありません",
   "dataset.preview_error": "プレビューに失敗しました",
   "dataset.export_error": "エクスポートに失敗しました",
-  "dataset.export_success": "データセットをエクスポートしました"
+  "dataset.export_success": "データセットをエクスポートしました",
+  "dataset.no_models": "利用可能なモデルがありません",
+  "dataset.clear_filters": "フィルターをクリア",
+  "dataset.format_preview": "フォーマットプレビュー",
+  "dataset.sample_of": "{current} / {total}",
+  "dataset.export_confirm_total": "{total} 件の会話を ShareGPT JSONL 形式で SFT 用にエクスポートします。",
+  "dataset.empty_hint": "最低スコアを下げるか、期間を調整してみてください",
+  "dataset.export_complete": "エクスポート完了",
+  "dataset.summary_title": "データセット概要",
+  "dataset.conversations_label": "件の会話"
 }

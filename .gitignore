@@ -18,6 +18,15 @@ test_embed
 *.o
 *.ko
 
+# Python cache / compiled
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node
+node_modules/
+
 # Build artifacts
 bin/
 dist/

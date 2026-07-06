@@ -25,6 +25,7 @@ import (
 type DatasetHandler interface {
 	HandlePreview(ctx context.Context, req *dto.DatasetPreviewReq) (*dto.HTTPResponse[*dto.DatasetPreviewRsp], error)
 	HandleExport(ctx context.Context, req *dto.DatasetExportReq) (*huma.StreamResponse, error)
+	HandlePreviewFormat(ctx context.Context, req *dto.DatasetFormatPreviewReq) (*dto.HTTPResponse[*dto.DatasetFormatPreviewRsp], error)
 }
 
 // DatasetDependencies 数据集处理器依赖
@@ -32,13 +33,15 @@ type DatasetHandler interface {
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
 type DatasetDependencies struct {
-	Preview datasetport.PreviewDatasetHandler
-	Export  datasetport.ExportDatasetHandler
+	Preview       datasetport.PreviewDatasetHandler
+	Export        datasetport.ExportDatasetHandler
+	PreviewFormat datasetport.PreviewFormatDatasetHandler
 }
 
 type datasetHandler struct {
-	preview datasetport.PreviewDatasetHandler
-	export  datasetport.ExportDatasetHandler
+	preview       datasetport.PreviewDatasetHandler
+	export        datasetport.ExportDatasetHandler
+	previewFormat datasetport.PreviewFormatDatasetHandler
 }
 
 // NewDatasetHandler 构造数据集处理器
@@ -48,7 +51,7 @@ type datasetHandler struct {
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
 func NewDatasetHandler(deps DatasetDependencies) DatasetHandler {
-	return &datasetHandler{preview: deps.Preview, export: deps.Export}
+	return &datasetHandler{preview: deps.Preview, export: deps.Export, previewFormat: deps.PreviewFormat}
 }
 
 func (h *datasetHandler) HandlePreview(ctx context.Context, req *dto.DatasetPreviewReq) (*dto.HTTPResponse[*dto.DatasetPreviewRsp], error) {
@@ -105,4 +108,31 @@ func (h *datasetHandler) HandleExport(ctx context.Context, req *dto.DatasetExpor
 			})
 		},
 	}, nil
+}
+
+func (h *datasetHandler) HandlePreviewFormat(ctx context.Context, req *dto.DatasetFormatPreviewReq) (*dto.HTTPResponse[*dto.DatasetFormatPreviewRsp], error) {
+	rsp := &dto.DatasetFormatPreviewRsp{}
+
+	permission := util.CtxValuePermission(ctx)
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+
+	result, err := h.previewFormat.Handle(ctx, datasetport.ExportParams{
+		Permission: permission,
+		UserID:     userID,
+		MinScore:   req.MinScore,
+		Models:     req.Models,
+		StartTime:  req.StartTime,
+		EndTime:    req.EndTime,
+	}, req.Offset)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[DatasetHandler] PreviewFormat failed", zap.Error(err))
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.SessionID = result.SessionID
+	rsp.Offset = result.Offset
+	rsp.TotalCount = result.TotalCount
+	rsp.ShareGPTJSON = result.ShareGPTJSON
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

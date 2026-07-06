@@ -615,7 +615,7 @@
   "lang.zh": "中文",
 
   "dataset.title": "Training Data",
-  "dataset.subtitle": "Export scored sessions as ShareGPT-format training data for SFT",
+  "dataset.subtitle": "Filter, preview, and export high-quality conversations as ShareGPT-format training data for SFT fine-tuning",
   "dataset.filter_title": "Filter",
   "dataset.min_score": "Min Score",
   "dataset.models": "Models (comma-separated)",
@@ -632,5 +632,14 @@
   "dataset.no_data": "No sessions match the filter",
   "dataset.preview_error": "Failed to preview dataset",
   "dataset.export_error": "Failed to export dataset",
-  "dataset.export_success": "Dataset exported"
+  "dataset.export_success": "Dataset exported",
+  "dataset.no_models": "No models available",
+  "dataset.clear_filters": "Clear all filters",
+  "dataset.format_preview": "Format Preview",
+  "dataset.sample_of": "{current} of {total}",
+  "dataset.export_confirm_total": "This will export {total} conversations as ShareGPT JSONL for SFT fine-tuning.",
+  "dataset.empty_hint": "Try lowering the minimum score or adjusting the time range",
+  "dataset.export_complete": "Export complete",
+  "dataset.summary_title": "Dataset Summary",
+  "dataset.conversations_label": "conversations"
 }

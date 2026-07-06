@@ -601,3 +601,10 @@ export interface DatasetPreviewRsp extends CommonRsp {
   scoreDistribution?: Record<number, number>;
   modelDistribution?: Record<string, number>;
 }
+
+export interface DatasetFormatPreviewRsp extends CommonRsp {
+  sessionId?: number;
+  offset?: number;
+  totalCount?: number;
+  sharegptJson?: string;
+}
