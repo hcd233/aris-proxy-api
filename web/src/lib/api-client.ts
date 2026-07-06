@@ -55,6 +55,10 @@ import type {
   RuntimeMetricsRsp,
   DatasetPreviewRsp,
   DatasetFormatPreviewRsp,
+  DatasetExportSSEEvent,
+  DatasetExportSSEStart,
+  DatasetExportSSEData,
+  DatasetExportSSEError,
 } from "./types";
 import { BusinessErrorCode } from "./api-errors";
 
@@ -708,41 +712,110 @@ class ApiClient {
     return this.request<DatasetFormatPreviewRsp>(`/api/v1/dataset/sample?${sp}`);
   }
 
-  async exportDataset(params: {
-    minScore?: number;
-    models?: string[];
-    startTime?: string;
-    endTime?: string;
-  }): Promise<Blob> {
+  async exportDatasetStream(
+    params: {
+      minScore?: number;
+      models?: string[];
+      startTime?: string;
+      endTime?: string;
+    },
+    onEvent: (event: DatasetExportSSEEvent) => void,
+    signal?: AbortSignal
+  ): Promise<void> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));
-    if (params.models && params.models.length > 0) sp.set("models", params.models.join(","));
+    if (params.models && params.models.length > 0)
+      sp.set("models", params.models.join(","));
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
 
+    const doFetch = () =>
+      fetch(`${API_BASE}/api/v1/dataset/export?${sp}`, {
+        headers: { ...this.getHeaders() },
+        signal,
+      });
+
     this.authRetried = false;
-    const res = await fetch(`${API_BASE}/api/v1/dataset/export?${sp}`, {
-      headers: { ...this.getHeaders() },
-    });
+    let res = await doFetch();
 
     if (res.status === 401) {
       const refreshed = await this.tryRefreshToken();
       if (refreshed) {
-        const retryRes = await fetch(`${API_BASE}/api/v1/dataset/export?${sp}`, {
-          headers: { ...this.getHeaders() },
-        });
-        if (!retryRes.ok) throw new ApiError(retryRes.status, await retryRes.text());
-        return retryRes.blob();
+        res = await doFetch();
+        if (!res.ok) throw new ApiError(res.status, await res.text());
+      } else {
+        this.clearAuthAndPromptLogin();
+        throw new ApiError(401, "Authentication required");
       }
-      this.clearAuthAndPromptLogin();
-      throw new ApiError(401, "Authentication required");
     }
 
     if (!res.ok) {
       throw new ApiError(res.status, await res.text());
     }
 
-    return res.blob();
+    if (!res.body) throw new ApiError(500, "No response body");
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const frames = buffer.split("\n\n");
+        buffer = frames.pop() ?? "";
+
+        for (const frame of frames) {
+          const event = parseSSEFrame(frame);
+          if (event) onEvent(event);
+        }
+      }
+
+      if (buffer.trim()) {
+        const event = parseSSEFrame(buffer);
+        if (event) onEvent(event);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+}
+
+function parseSSEFrame(frame: string): DatasetExportSSEEvent | null {
+  const lines = frame.split("\n");
+  let event = "";
+  let data = "";
+
+  for (const line of lines) {
+    if (line.startsWith("event: ")) {
+      event = line.slice(7).trim();
+    } else if (line.startsWith("data: ")) {
+      data = line.slice(6);
+    }
+  }
+
+  if (!event || !data) return null;
+
+  try {
+    const parsed = JSON.parse(data);
+    switch (event) {
+      case "start":
+        return { event: "start", data: parsed as DatasetExportSSEStart };
+      case "data":
+        return { event: "data", data: parsed as DatasetExportSSEData };
+      case "done":
+        return { event: "done", data: parsed as DatasetExportSSEStart };
+      case "error":
+        return { event: "error", data: parsed as DatasetExportSSEError };
+      default:
+        return null;
+    }
+  } catch {
+    return null;
   }
 }
 

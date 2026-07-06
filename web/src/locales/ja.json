@@ -28,7 +28,6 @@
   "common.copied_to_clipboard": "クリップボードにコピーしました",
   "common.created": "作成日",
   "common.clear": "クリア",
-
   "nav.dashboard": "ダッシュボード",
   "nav.sessions": "セッション",
   "nav.shares": "共有",
@@ -43,7 +42,6 @@
   "nav.dataset": "訓練データ",
   "nav.profile": "プロフィール",
   "nav.logout": "ログアウト",
-
   "auth.session_expired": "セッションの有効期限切れ",
   "auth.please_login": "続行するには再度ログインしてください",
   "auth.login": "ログイン",
@@ -51,7 +49,6 @@
   "auth.login_google": "Google でログイン",
   "auth.login_title": "Aris Proxy",
   "auth.login_subtitle": "サインインして続行",
-
   "dashboard.title": "ダッシュボード",
   "dashboard.overview": "Aris Proxy API リソースの概要",
   "dashboard.model_trend": "モデル呼び出しトレンド",
@@ -60,7 +57,6 @@
   "dashboard.token_volume": "トークンスループット",
   "dashboard.model_usage": "モデルトークン使用量",
   "dashboard.first_token_latency": "初回トークン応答時間",
-
   "sessions.title": "セッション",
   "sessions.subtitle": "会話セッションの表示と管理",
   "sessions.all_sessions": "すべてのセッション",
@@ -91,14 +87,12 @@
   "sessions.delete_dialog_desc": "セッション「{name}」とそのすべてのメッセージが完全に削除されます。この操作は元に戻せません。",
   "sessions.batch_delete_title": "セッションを一括削除しますか？",
   "sessions.batch_delete_desc": "{count} 件のセッションとそのすべてのメッセージが完全に削除されます。この操作は元に戻せません。",
-
   "shares.title": "共有",
   "shares.share_id": "共有 ID",
   "shares.session_id": "セッション ID",
   "shares.expires_at": "有効期限",
   "shares.no_shares": "共有が見つかりません",
   "shares.delete_confirm": "この共有を削除してもよろしいですか？",
-
   "apikeys.title": "API キー",
   "apikeys.name": "名前",
   "apikeys.key": "キー",
@@ -124,7 +118,6 @@
   "apikeys.create_error": "キーの作成に失敗しました",
   "apikeys.delete_error": "キーの削除に失敗しました",
   "apikeys.copied": "クリップボードにコピーしました",
-
   "endpoints.title": "エンドポイント",
   "endpoints.name": "名前",
   "endpoints.openai_base_url": "OpenAI Base URL",
@@ -163,7 +156,6 @@
   "endpoints.anthropic_messages_label": "Anthropic Messages",
   "endpoints.update": "更新",
   "endpoints.saving": "保存中...",
-
   "models.title": "モデル",
   "models.alias": "エイリアス",
   "models.model_name": "モデル名",
@@ -174,7 +166,6 @@
   "models.edit": "モデルを編集",
   "models.delete_confirm": "このモデルを削除してもよろしいですか？",
   "models.no_models": "モデルが見つかりません",
-
   "blocked.title": "ブロックワード",
   "blocked.word": "ワード",
   "blocked.hit_count": "ヒット数",
@@ -182,7 +173,6 @@
   "blocked.create_placeholder": "ブロックするワードを入力",
   "blocked.delete_confirm": "このブロックワードを削除してもよろしいですか？",
   "blocked.no_words": "ブロックワードが見つかりません",
-
   "audit.title": "モデル呼び出し監査",
   "audit.model": "モデル",
   "audit.endpoint": "エンドポイント",
@@ -201,7 +191,6 @@
   "audit.filter_user": "ユーザー",
   "audit.filter_model": "モデル",
   "audit.filter_status": "ステータス",
-
   "cron.title": "Cron ジョブ",
   "cron.subtitle": "スケジュールされた Cron ジョブの表示と管理",
   "cron.all_jobs": "Cron ジョブ",
@@ -221,14 +210,12 @@
   "cron.update_error": "Cron ジョブの更新に失敗しました",
   "cron.update_schedule_error": "スケジュールの更新に失敗しました",
   "cron.schedule_updated": "スケジュールを更新しました",
-
   "cron_audit.title": "Cron 監査",
   "cron_audit.name": "Cron 名",
   "cron_audit.duration_ms": "応答時間 (ms)",
   "cron_audit.status": "ステータス",
   "cron_audit.message": "メッセージ",
-  "cron_audit.no_logs": "Cron 監査ログが見つかりません",
-
+  "cron_audit.no_logs": "選択範囲に Cron 監査ログがありません",
   "profile.title": "プロフィール",
   "profile.subtitle": "アカウント設定の管理",
   "profile.name": "名前",
@@ -246,7 +233,6 @@
   "profile.email_oauth_hint": "メールは OAuth2 プロバイダーによって管理されています。",
   "profile.unnamed": "未設定",
   "profile.joined": "{date} に参加",
-
   "time.all": "すべて",
   "time.last_1h": "過去 1 時間",
   "time.last_6h": "過去 6 時間",
@@ -254,7 +240,6 @@
   "time.last_7d": "過去 7 日間",
   "time.last_30d": "過去 30 日間",
   "time.custom": "カスタム",
-
   "error.unauthorized": "認証が必要です",
   "error.internal": "内部エラー",
   "error.bad_request": "リクエストが不正です",
@@ -267,7 +252,6 @@
   "error.resource_locked": "リソースはロックされています",
   "error.content_blocked": "コンテンツがポリシーに違反しています",
   "error.validation": "バリデーションエラー",
-
   "monitor.title": "モニター",
   "monitor.subtitle": "リアルタイムのランタイムおよびビジネスメトリクス（5秒間隔）",
   "monitor.telemetry": "ランタイムテレメトリー",
@@ -285,7 +269,6 @@
   "monitor.live": "ライブ",
   "monitor.collecting": "データ収集中…",
   "monitor.current": "現在",
-
   "schedule.title": "Cron スケジュールの編集",
   "schedule.description": "{name} のスケジュールを設定",
   "schedule.repeat": "繰り返し",
@@ -310,7 +293,6 @@
   "schedule.thursday": "木曜日",
   "schedule.friday": "金曜日",
   "schedule.saturday": "土曜日",
-
   "time_range.hide_time": "時間を非表示",
   "time_range.add_time": "時間を追加",
   "time_range.start": "開始",
@@ -321,7 +303,6 @@
   "time_range.start_before_end": "開始は終了より前である必要があります",
   "time_range.cancel": "キャンセル",
   "time_range.apply": "適用",
-
   "share.invalid_link": "無効な共有リンク",
   "share.invalid_link_desc": "この共有リンクに必要な識別子がありません。送信者に新しいリンクを依頼してください。",
   "share.expired": "リンクの有効期限切れまたは利用不可",
@@ -333,7 +314,6 @@
   "share.toggle_tools": "利用可能なツールを切り替え",
   "share.available_tools": "利用可能なツール",
   "share.session_title": "共有セッション #{id}",
-
   "callback.login_failed": "ログイン失敗",
   "callback.missing_params": "認可コードまたはステートが不足しています",
   "callback.token_exchange_failed": "トークン交換に失敗しました",
@@ -341,7 +321,6 @@
   "callback.completing": "ログインを完了中...",
   "callback.please_wait": "しばらくお待ちください",
   "callback.back_to_login": "ログインに戻る",
-
   "models.subtitle": "モデルエイリアスとルーティングの管理",
   "models.all_models": "すべてのモデル",
   "models.search_placeholder": "モデルを検索...",
@@ -359,7 +338,6 @@
   "models.alias_placeholder": "例: gpt-4o",
   "models.model_name_placeholder": "例: gpt-4o-2024-08-06",
   "models.select_endpoint": "エンドポイントを選択",
-
   "share_dialog.title": "セッションを共有",
   "share_dialog.desc_created": "以下の公開リンクをコピーして会話を共有できます。リンクは共有ページからいつでも取り消せます。",
   "share_dialog.desc_create": "この会話の公開リンクを生成します。リンクの有効期間を選択してください。",
@@ -381,7 +359,6 @@
   "share_dialog.create_failed": "共有リンクの作成に失敗しました",
   "share_dialog.copied_to_clipboard": "リンクをクリップボードにコピーしました",
   "share_dialog.copy_failed": "リンクのコピーに失敗しました",
-
   "session_detail.invalid_id": "無効なセッション ID",
   "session_detail.back_to_sessions": "セッション一覧に戻る",
   "session_detail.session_not_found": "セッションが見つかりません",
@@ -403,43 +380,34 @@
   "session_detail.delete_dialog_title": "セッションを削除しますか？",
   "session_detail.delete_dialog_desc": "セッション #{id} とそのすべてのメッセージが完全に削除されます。この操作は元に戻せません。",
   "session_detail.home_aria": "ホーム",
-
   "score_dots.rated": "評価 {score}/5",
   "score_dots.rating": "セッション評価",
   "score_dots.rate": "評価 {value}",
   "score_dots.remove": "評価を削除",
-
   "collapsible.show_less": "折りたたむ",
   "collapsible.show_more": "もっと見る",
-
   "tool_sidebar.no_description": "説明なし",
   "tool_sidebar.description": "説明",
   "tool_sidebar.parameters": "パラメータ",
   "tool_sidebar.required": "必須",
   "tool_sidebar.schema_type": "スキーマタイプ：{type}",
-
   "reading_layout.available_tools": "利用可能なツール",
   "reading_layout.close_tools": "ツールパネルを閉じる",
-
   "permission_guard.loading": "読み込み中",
   "permission_guard.preparing": "コンソールを準備中...",
   "permission_guard.access_denied": "アクセス拒否",
   "permission_guard.access_denied_desc": "このページにアクセスするには管理者権限が必要です。",
   "permission_guard.access_pending": "アクセス承認待ち",
   "permission_guard.access_pending_desc": "アカウントは管理者の承認を待っています。",
-
   "markdown.copy_code_aria": "コードをコピー",
   "markdown.copied": "コピーしました",
   "markdown.copy": "コピー",
-
   "system_message.system": "システム",
   "system_message.show_less": "折りたたむ",
   "system_message.show_more": "もっと見る",
-
   "multi_select.no_options": "現在の範囲にオプションがありません",
   "multi_select.filter": "フィルター",
   "multi_select.clear": "選択をクリア",
-
   "shares.subtitle": "会話の公開リンクを管理します。期限切れのリンクは無効になってから3日間表示されます。",
   "shares.share_links": "共有リンク",
   "shares.status": "ステータス",
@@ -452,7 +420,6 @@
   "shares.create_hint": "セッションを開いて「共有」をクリックすると公開リンクが作成されます。",
   "shares.delete_dialog_desc": "セッション #{id} のリンクは直ちに無効になります。既に開いているユーザーはアクセスできなくなります。",
   "shares.copy_error": "リンクのコピーに失敗しました",
-
   "blocked.subtitle": "機密ワードのブラックリストを管理します。プロキシリクエストで一致したワードはブロックされます。",
   "blocked.all_words": "すべてのブロックワード",
   "blocked.search_placeholder": "ワードを検索...",
@@ -462,7 +429,6 @@
   "blocked.deleted_success": "ブロックワードを削除しました",
   "blocked.delete_error": "ブロックワードの削除に失敗しました",
   "blocked.load_error": "ブロックワードの読み込みに失敗しました",
-
   "audit.model_page_title": "モデル呼び出し監査",
   "audit.model_page_subtitle": "モデル呼び出しレコード、レイテンシ、エラー、トレース ID を確認します。",
   "audit.logs_title": "監査ログ",
@@ -491,13 +457,11 @@
   "audit.output_tokens_label": "出力トークン",
   "audit.endpoint_name": "エンドポイント",
   "audit.error_label": "エラー：",
-
   "cron_audit.page_title": "Cron 監査",
   "cron_audit.page_subtitle": "Cron ジョブの実行レコード、ステータス、時間、トレース ID を確認します。",
   "cron_audit.logs_title": "Cron 呼び出し監査ログ",
   "cron_audit.clear_filters": "フィルターをクリア",
   "cron_audit.search_placeholder": "Cron 名または TraceID で検索...",
-  "cron_audit.no_logs": "選択範囲に Cron 監査ログがありません",
   "cron_audit.trace_copied": "TraceID をコピーしました",
   "cron_audit.copy_failed": "コピーに失敗しました",
   "cron_audit.copy_traceid_title": "クリックして完全な TraceID をコピー",
@@ -512,17 +476,14 @@
   "cron_audit.status_skipped": "スキップ",
   "cron_audit.filter_type": "タイプ",
   "cron_audit.filter_status": "ステータス",
-
   "login.secure_access": "OAuth2 によるセキュアアクセス",
   "login.welcome_back": "おかえりなさい",
   "login.sign_in": "サインインして管理コンソールにアクセス",
   "login.failed": "ログインに失敗しました",
   "login.failed_no_tokens": "ログイン失敗：トークンを受信できませんでした",
-
   "layout.aris_proxy": "Aris Proxy",
   "layout.user": "ユーザー",
   "layout.sidebar_toggle": "サイドバーの切り替え",
-
   "charts.failed_to_load": "読み込みに失敗しました",
   "charts.retry": "再試行",
   "charts.no_data": "この期間のデータがありません",
@@ -531,23 +492,18 @@
   "charts.input": "入力",
   "charts.output": "出力",
   "charts.total": "合計",
-
   "model_chart.rank": "#",
   "model_chart.model": "モデル",
-
   "endpoints.openai_chat_badge": "Chat Completions",
   "endpoints.response_badge": "Response",
   "endpoints.messages_badge": "Messages",
   "endpoints.key_label": "キー：{key}",
   "endpoints.openai_url_label": "O: {url}",
   "endpoints.anthropic_url_label": "A: {url}",
-
   "share_page.network_error": "予期しないネットワークエラー",
   "share_page.request_failed": "リクエストに失敗しました（{status}）",
-
   "session_history.session_label": "セッション #{id}",
   "session_history.message_count": "{count} 件のメッセージ",
-
   "pagination.items": "件",
   "pagination.shares": "件の共有",
   "pagination.logs": "件のログ",
@@ -556,12 +512,10 @@
   "pagination.page": "ページ",
   "pagination.per_page": "件/ページ",
   "pagination.total": "合計",
-
   "lang.switch": "言語を切り替え",
   "lang.en": "English",
   "lang.zh": "中文",
   "lang.ja": "日本語",
-
   "dataset.title": "訓練データ",
   "dataset.subtitle": "高品質な会話をフィルタリング・プレビューして、ShareGPT 形式の訓練データとして SFT 用にエクスポート",
   "dataset.filter_title": "フィルター",
@@ -589,5 +543,20 @@
   "dataset.empty_hint": "最低スコアを下げるか、期間を調整してみてください",
   "dataset.export_complete": "エクスポート完了",
   "dataset.summary_title": "データセット概要",
-  "dataset.conversations_label": "件の会話"
+  "dataset.conversations_label": "件の会話",
+  "dataset.step_configure": "設定",
+  "dataset.step_review": "確認",
+  "dataset.step_export": "エクスポート",
+  "dataset.step_configure_desc": "スコア、モデル、期間",
+  "dataset.step_review_desc": "分布とプレビュー",
+  "dataset.step_export_desc": "確認してダウンロード",
+  "dataset.export_summary": "エクスポート概要",
+  "dataset.export_format": "形式",
+  "dataset.export_format_value": "ShareGPT JSONL",
+  "dataset.export_filter_score": "最低スコア",
+  "dataset.export_filter_models": "モデル",
+  "dataset.export_filter_time": "期間",
+  "dataset.export_filter_all_models": "全モデル",
+  "dataset.preview_toggle_show": "ShareGPT 形式をプレビュー",
+  "dataset.preview_toggle_hide": "プレビューを隠す"
 }

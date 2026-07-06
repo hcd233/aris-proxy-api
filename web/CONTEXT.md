@@ -35,3 +35,17 @@ _Avoid_: font zoom, cjk shrink
 **Layout-Pattern Height Fix（布局高度约定）**:
 按布局类型分别约束高度：表格表头不换行 + 单行单元格截断带提示；卡片网格等高 + 描述限两行；对话框正文按最长语言的行数预留最小高度。自由描述文本不受约束。
 _Avoid_: row lock, height freeze
+
+## Dataset Page（训练数据页）
+
+**Stepper（向导步骤指示器）**:
+Dataset 页面顶部的三段式进度指示器，标记 `Configure → Review → Export` 三个阶段。纯视觉叙事设备，不做导航控制——所有步骤同时可见，用户自由滚动。改筛选条件时统计原地刷新。
+_Avoid_: wizard controller, step locker
+
+**Filter-Explore-Export Flow（筛选-探索-导出流）**:
+Dataset 页面的用户心智模型。用户先配置筛选条件（Step 1），再查看数据分布和样本预览确认质量（Step 2），最后导出 ShareGPT JSONL（Step 3）。"探索"先于"导出"——统计信息应比导出按钮先进入视野。
+_Avoid_: filter-export shortcut
+
+**Export Confirmation Panel（导出确认面板）**:
+Step 3 中的导出确认区域，展示筛选摘要（分数阈值、模型、时间范围）、匹配总数、输出格式说明，配合主导出按钮。将导出从"底部浮动按钮"升级为"确认动作"，强化最终步骤的仪式感。
+_Avoid_: export bar, download footer
