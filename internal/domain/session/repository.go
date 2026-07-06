@@ -107,7 +107,7 @@ type SessionDetailProjection struct {
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
 type ExportFilter struct {
-	MinScore   *int
+	MinScore   int
 	Models     []string
 	StartTime  time.Time
 	EndTime    time.Time

@@ -220,7 +220,7 @@ export default function DatasetPage() {
       setExportCurrent(Math.floor(total * 0.8));
       setExportProgress(80);
 
-      const fmtMinScore = params.minScore ?? 1;
+      const fmtMinScore = params.minScore || 0;
       const fmtModels = params.models?.length ?? 0;
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
       const filename = `dataset_${dateStr}_minScore${fmtMinScore}_models${fmtModels}_${total}sessions.jsonl`;
@@ -258,7 +258,7 @@ export default function DatasetPage() {
   }, [formatData?.sharegptJson]);
 
   const hasFilters =
-    minScore > 1 || filterModels.length > 0 || customStart || customEnd;
+    minScore > 0 || filterModels.length > 0 || customStart || customEnd;
   const totalSessions = preview?.totalSessions ?? 0;
 
   return (
@@ -318,7 +318,7 @@ export default function DatasetPage() {
                   size="sm"
                   className="w-full text-muted-foreground"
                   onClick={() => {
-                    setMinScore(1);
+                    setMinScore(0);
                     setFilterModels([]);
                     setTimeRange("30d");
                     setCustomStart("");
