@@ -44,10 +44,11 @@ type ShareGPTFuncCall struct {
 // ShareGPTTool ShareGPT 工具定义
 //
 //	@author centonhuang
-//	@update 2026-07-03 10:00:00
+//	@update 2026-07-06 10:00:00
 type ShareGPTTool struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description,omitempty"`
+	Parameters  *vo.JSONSchemaProperty `json:"parameters,omitempty"`
 }
 
 // ConvertSession 将一条会话的投影转换为 ShareGPT 对话记录。
@@ -79,6 +80,7 @@ func ConvertSession(
 			conv.Tools = append(conv.Tools, ShareGPTTool{
 				Name:        t.Tool.Name,
 				Description: t.Tool.Description,
+				Parameters:  t.Tool.Parameters,
 			})
 		}
 	}

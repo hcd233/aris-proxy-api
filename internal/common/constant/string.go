@@ -191,15 +191,20 @@ const (
 	LocalePrimaryJA       = "ja"
 	LocaleAcceptSeparator = "-_;"
 
-	// ── Dataset export ──
-	ShareGPTFromSystem              = "system"
-	ShareGPTFromUser                = "user"
-	ShareGPTFromAssistant           = "assistant"
-	ShareGPTFromFunction            = "function"
-	ThinkTagClose                   = "</think>"
-	DatasetExportContentType        = "application/x-jsonlines"
-	DatasetExportFilename           = "dataset.jsonl"
-	DatasetExportContentDisposition = "attachment; filename=\"dataset.jsonl\""
+	// ── Dataset export SSE ──
+	ShareGPTFromSystem      = "system"
+	ShareGPTFromUser        = "user"
+	ShareGPTFromAssistant   = "assistant"
+	ShareGPTFromFunction    = "function"
+	ThinkTagClose           = "\n"
+	DatasetExportEventStart = "start"
+	DatasetExportEventData  = "data"
+	DatasetExportEventDone  = "done"
+	DatasetExportEventError = "error"
 
 	ContentPartTypeText = "text"
+
+	// ── Dataset export progress ──
+	DatasetExportNoMatchError = "no sessions match the filter"
+	DatasetExportProgressFull = 100
 )

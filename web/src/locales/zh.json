@@ -28,7 +28,6 @@
   "common.copied_to_clipboard": "已复制到剪贴板",
   "common.created": "创建时间",
   "common.clear": "清除",
-
   "nav.dashboard": "仪表盘",
   "nav.sessions": "会话记录",
   "nav.shares": "分享记录",
@@ -43,7 +42,6 @@
   "nav.dataset": "训练数据",
   "nav.profile": "个人中心",
   "nav.logout": "退出登录",
-
   "auth.session_expired": "会话已过期",
   "auth.please_login": "请重新登录以继续",
   "auth.login": "登录",
@@ -51,7 +49,6 @@
   "auth.login_google": "Google 登录",
   "auth.login_title": "Aris Proxy",
   "auth.login_subtitle": "登录以继续",
-
   "dashboard.title": "仪表盘",
   "dashboard.overview": "Aris Proxy API 资源概览",
   "dashboard.model_trend": "模型调用趋势",
@@ -60,7 +57,6 @@
   "dashboard.token_volume": "Token 吞吐量",
   "dashboard.model_usage": "模型 Token 用量",
   "dashboard.first_token_latency": "首 Token 延迟",
-
   "sessions.title": "会话记录",
   "sessions.subtitle": "查看和管理会话记录",
   "sessions.all_sessions": "全部会话",
@@ -91,7 +87,6 @@
   "sessions.delete_dialog_desc": "这将永久删除会话 \"{name}\" 及其所有消息。此操作不可撤销。",
   "sessions.batch_delete_title": "批量删除会话？",
   "sessions.batch_delete_desc": "这将永久删除 {count} 个会话及其所有消息。此操作不可撤销。",
-
   "apikeys.subtitle": "管理您的 API 密钥",
   "apikeys.your_keys": "您的密钥",
   "apikeys.search_keys": "搜索密钥...",
@@ -107,7 +102,6 @@
   "apikeys.delete_description": "这将永久删除 API 密钥 {name}。此操作不可撤销。",
   "apikeys.deleted_success": "API 密钥已删除",
   "apikeys.created_success": "API 密钥创建成功",
-
   "endpoints.subtitle": "管理 LLM 提供商端点",
   "endpoints.all_endpoints": "全部端点",
   "endpoints.search_endpoints": "搜索端点...",
@@ -134,26 +128,22 @@
   "endpoints.anthropic_messages_label": "Anthropic Messages",
   "endpoints.update": "更新",
   "endpoints.saving": "保存中...",
-
   "shares.title": "分享记录",
   "shares.share_id": "分享 ID",
   "shares.session_id": "会话 ID",
   "shares.expires_at": "过期时间",
   "shares.no_shares": "暂无分享记录",
   "shares.delete_confirm": "确定要删除该分享吗？",
-
   "apikeys.title": "API 密钥",
   "apikeys.name": "名称",
   "apikeys.key": "密钥",
   "apikeys.create": "创建密钥",
   "apikeys.create_name_label": "名称",
   "apikeys.create_name_placeholder": "输入密钥名称",
-  "apikeys.created_success": "API 密钥创建成功",
   "apikeys.copy_key_warning": "请立即复制您的 API 密钥，关闭后将无法再次查看。",
   "apikeys.delete_confirm": "确定要删除该 API 密钥吗？",
   "apikeys.no_keys": "暂无 API 密钥",
   "apikeys.masked": "***************",
-
   "endpoints.title": "上游端点",
   "endpoints.name": "名称",
   "endpoints.openai_base_url": "OpenAI 基础 URL",
@@ -166,7 +156,6 @@
   "endpoints.edit": "编辑端点",
   "endpoints.delete_confirm": "确定要删除该端点吗？",
   "endpoints.no_endpoints": "暂无端点",
-
   "monitor.title": "运行时监控",
   "monitor.subtitle": "实时运行时与业务指标（5秒间隔）",
   "monitor.telemetry": "运行时遥测",
@@ -184,7 +173,6 @@
   "monitor.live": "实时",
   "monitor.collecting": "正在采集数据…",
   "monitor.current": "当前值",
-
   "schedule.title": "编辑定时调度",
   "schedule.description": "配置 {name} 的调度",
   "schedule.repeat": "重复",
@@ -209,7 +197,6 @@
   "schedule.thursday": "周四",
   "schedule.friday": "周五",
   "schedule.saturday": "周六",
-
   "time_range.hide_time": "隐藏时间",
   "time_range.add_time": "添加时间",
   "time_range.start": "开始",
@@ -220,7 +207,6 @@
   "time_range.start_before_end": "开始时间必须早于结束时间",
   "time_range.cancel": "取消",
   "time_range.apply": "应用",
-
   "share.invalid_link": "无效的分享链接",
   "share.invalid_link_desc": "此分享链接缺少必需的标识符。请联系发送者重新获取链接。",
   "share.expired": "链接已过期或不可用",
@@ -232,7 +218,6 @@
   "share.toggle_tools": "切换工具面板",
   "share.available_tools": "可用工具",
   "share.session_title": "分享的会话 #{id}",
-
   "callback.login_failed": "登录失败",
   "callback.missing_params": "缺少授权码或状态参数",
   "callback.token_exchange_failed": "令牌交换失败",
@@ -240,7 +225,6 @@
   "callback.completing": "正在完成登录...",
   "callback.please_wait": "请稍候",
   "callback.back_to_login": "返回登录",
-
   "models.title": "模型管理",
   "models.subtitle": "管理模型别名和路由",
   "models.all_models": "全部模型",
@@ -300,7 +284,6 @@
   "models.export_script_title": "生成的脚本",
   "models.export_script_hint": "在安装了 OpenCode 的机器上运行此脚本：",
   "models.export_footer": "运行前请修改脚本顶部的变量。",
-
   "models.export_claudecode": "Claude Code",
   "models.export_claudecode_hint": "生成 Claude Code 配置脚本",
   "models.export_claudecode_title": "导出到 Claude Code",
@@ -321,7 +304,6 @@
   "models.export_tier_clear": "清除",
   "models.export_no_tier_selected": "至少为一个档位选择模型",
   "models.export_tier_empty_hint": "在左侧为各档位分配模型以生成脚本",
-
   "blocked.title": "拦截词",
   "blocked.word": "词汇",
   "blocked.hit_count": "命中次数",
@@ -329,7 +311,6 @@
   "blocked.create_placeholder": "输入要拦截的词汇",
   "blocked.delete_confirm": "确定要删除该拦截词吗？",
   "blocked.no_words": "暂无拦截词",
-
   "audit.title": "模型调用审计",
   "audit.model": "模型",
   "audit.endpoint": "端点",
@@ -348,7 +329,6 @@
   "audit.filter_user": "用户",
   "audit.filter_model": "模型",
   "audit.filter_status": "状态",
-
   "cron.title": "定时任务",
   "cron.subtitle": "查看和管理定时任务。",
   "cron.all_jobs": "定时任务",
@@ -368,14 +348,12 @@
   "cron.update_error": "更新定时任务失败",
   "cron.update_schedule_error": "更新调度失败",
   "cron.schedule_updated": "调度已更新",
-
   "cron_audit.title": "任务审计",
   "cron_audit.name": "任务名称",
   "cron_audit.duration_ms": "耗时 (ms)",
   "cron_audit.status": "状态",
   "cron_audit.message": "消息",
-  "cron_audit.no_logs": "暂无审计日志",
-
+  "cron_audit.no_logs": "所选范围内无审计日志",
   "profile.title": "个人中心",
   "profile.subtitle": "管理您的账户设置",
   "profile.name": "昵称",
@@ -393,7 +371,6 @@
   "profile.email_oauth_hint": "邮箱由 OAuth2 提供商管理。",
   "profile.unnamed": "未命名",
   "profile.joined": "注册于 {date}",
-
   "time.all": "全部",
   "time.last_1h": "最近 1 小时",
   "time.last_6h": "最近 6 小时",
@@ -401,7 +378,6 @@
   "time.last_7d": "最近 7 天",
   "time.last_30d": "最近 30 天",
   "time.custom": "自定义",
-
   "error.unauthorized": "未登录",
   "error.internal": "内部错误",
   "error.bad_request": "请求参数错误",
@@ -414,7 +390,6 @@
   "error.resource_locked": "资源已锁定",
   "error.content_blocked": "内容违反策略",
   "error.validation": "参数校验失败",
-
   "share_dialog.title": "分享会话",
   "share_dialog.desc_created": "复制下面的公开链接来分享此会话。您可以随时在分享页面撤销该链接。",
   "share_dialog.desc_create": "为此会话生成公开链接。选择链接的有效期。",
@@ -436,7 +411,6 @@
   "share_dialog.create_failed": "创建分享链接失败",
   "share_dialog.copied_to_clipboard": "链接已复制到剪贴板",
   "share_dialog.copy_failed": "复制链接失败",
-
   "session_detail.invalid_id": "无效的会话 ID",
   "session_detail.back_to_sessions": "返回会话列表",
   "session_detail.session_not_found": "未找到会话",
@@ -458,43 +432,34 @@
   "session_detail.delete_dialog_title": "删除会话？",
   "session_detail.delete_dialog_desc": "这将永久删除会话 #{id} 及其所有消息。此操作不可撤销。",
   "session_detail.home_aria": "首页",
-
   "score_dots.rated": "评分 {score}/5",
   "score_dots.rating": "会话评分",
   "score_dots.rate": "评分 {value}",
   "score_dots.remove": "移除评分",
-
   "collapsible.show_less": "收起",
   "collapsible.show_more": "展开更多",
-
   "tool_sidebar.no_description": "暂无描述",
   "tool_sidebar.description": "描述",
   "tool_sidebar.parameters": "参数",
   "tool_sidebar.required": "必填",
   "tool_sidebar.schema_type": "Schema 类型：{type}",
-
   "reading_layout.available_tools": "可用工具",
   "reading_layout.close_tools": "关闭工具面板",
-
   "permission_guard.loading": "加载中",
   "permission_guard.preparing": "正在准备控制台...",
   "permission_guard.access_denied": "拒绝访问",
   "permission_guard.access_denied_desc": "您需要管理员权限才能访问此页面。",
   "permission_guard.access_pending": "待审批",
   "permission_guard.access_pending_desc": "您的账户正在等待管理员审批。",
-
   "markdown.copy_code_aria": "复制代码",
   "markdown.copied": "已复制",
   "markdown.copy": "复制",
-
   "system_message.system": "系统",
   "system_message.show_less": "收起",
   "system_message.show_more": "展开更多",
-
   "multi_select.no_options": "当前范围无可用选项",
   "multi_select.filter": "筛选",
   "multi_select.clear": "清除选择",
-
   "shares.subtitle": "管理会话的公开链接。过期链接在失效后仍会显示 3 天。",
   "shares.share_links": "分享链接",
   "shares.status": "状态",
@@ -507,7 +472,6 @@
   "shares.create_hint": "打开一个会话并点击「分享」来创建公开链接。",
   "shares.delete_dialog_desc": "会话 #{id} 的链接将立即失效。已打开的用户将失去访问权限。",
   "shares.copy_error": "复制链接失败",
-
   "blocked.subtitle": "管理敏感词黑名单。在代理请求中匹配到的词汇将被拦截。",
   "blocked.all_words": "全部拦截词",
   "blocked.search_placeholder": "搜索词汇...",
@@ -517,7 +481,6 @@
   "blocked.deleted_success": "拦截词已删除",
   "blocked.delete_error": "删除拦截词失败",
   "blocked.load_error": "加载拦截词失败",
-
   "audit.model_page_title": "模型调用审计",
   "audit.model_page_subtitle": "查看模型调用记录、延迟、错误和追踪 ID。",
   "audit.logs_title": "审计日志",
@@ -546,13 +509,11 @@
   "audit.output_tokens_label": "输出 Token",
   "audit.endpoint_name": "端点",
   "audit.error_label": "错误：",
-
   "cron_audit.page_title": "任务审计",
   "cron_audit.page_subtitle": "查看定时任务执行记录、状态、耗时和追踪 ID。",
   "cron_audit.logs_title": "任务调用审计日志",
   "cron_audit.clear_filters": "清除筛选",
   "cron_audit.search_placeholder": "按任务名称或 TraceID 搜索...",
-  "cron_audit.no_logs": "所选范围内无审计日志",
   "cron_audit.trace_copied": "TraceID 已复制",
   "cron_audit.copy_failed": "复制失败",
   "cron_audit.copy_traceid_title": "点击复制完整 TraceID",
@@ -567,17 +528,14 @@
   "cron_audit.status_skipped": "跳过",
   "cron_audit.filter_type": "类型",
   "cron_audit.filter_status": "状态",
-
   "login.secure_access": "OAuth2 安全认证",
   "login.welcome_back": "欢迎回来",
   "login.sign_in": "登录以继续管理。",
   "login.failed": "登录失败",
   "login.failed_no_tokens": "登录失败：未收到令牌",
-
   "layout.aris_proxy": "Aris Proxy",
   "layout.user": "用户",
   "layout.sidebar_toggle": "切换侧边栏",
-
   "charts.failed_to_load": "加载失败",
   "charts.retry": "重试",
   "charts.no_data": "该时段暂无数据",
@@ -586,23 +544,18 @@
   "charts.input": "输入",
   "charts.output": "输出",
   "charts.total": "总计",
-
   "model_chart.rank": "#",
   "model_chart.model": "模型",
-
   "endpoints.openai_chat_badge": "Chat Completions",
   "endpoints.response_badge": "Response",
   "endpoints.messages_badge": "Messages",
   "endpoints.key_label": "密钥：{key}",
   "endpoints.openai_url_label": "O：{url}",
   "endpoints.anthropic_url_label": "A：{url}",
-
   "share_page.network_error": "意外网络错误",
   "share_page.request_failed": "请求失败（{status}）",
-
   "session_history.session_label": "会话 #{id}",
   "session_history.message_count": "{count} 条消息",
-
   "pagination.items": "条",
   "pagination.shares": "条分享",
   "pagination.logs": "条日志",
@@ -611,11 +564,9 @@
   "pagination.page": "第",
   "pagination.per_page": "每页",
   "pagination.total": "共",
-
   "lang.switch": "切换语言",
   "lang.en": "English",
   "lang.zh": "中文",
-
   "dataset.title": "训练数据",
   "dataset.subtitle": "筛选、预览并导出高质量对话，生成 ShareGPT 格式训练数据，用于 SFT 微调",
   "dataset.filter_title": "筛选条件",
@@ -643,5 +594,20 @@
   "dataset.empty_hint": "请尝试降低最低评分或调整时间范围",
   "dataset.export_complete": "导出完成",
   "dataset.summary_title": "数据集概览",
-  "dataset.conversations_label": "条对话"
+  "dataset.conversations_label": "条对话",
+  "dataset.step_configure": "配置",
+  "dataset.step_review": "查看",
+  "dataset.step_export": "导出",
+  "dataset.step_configure_desc": "评分、模型、时间范围",
+  "dataset.step_review_desc": "分布与预览",
+  "dataset.step_export_desc": "确认并下载",
+  "dataset.export_summary": "导出摘要",
+  "dataset.export_format": "格式",
+  "dataset.export_format_value": "ShareGPT JSONL",
+  "dataset.export_filter_score": "最低评分",
+  "dataset.export_filter_models": "模型",
+  "dataset.export_filter_time": "时间范围",
+  "dataset.export_filter_all_models": "全部模型",
+  "dataset.preview_toggle_show": "预览 ShareGPT 格式",
+  "dataset.preview_toggle_hide": "收起预览"
 }

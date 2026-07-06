@@ -4,17 +4,20 @@ package query
 import (
 	"bufio"
 	"context"
-	"io"
+	"fmt"
 
+	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/dataset/converter"
 	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -69,22 +72,26 @@ func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo 
 	return &exportDatasetHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
 }
 
-func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportParams, w io.Writer) error {
+func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportParams, w *bufio.Writer) error {
 	log := logger.WithCtx(ctx)
 
 	f, err := h.buildFilter(ctx, p)
 	if err != nil {
+		h.writeSSEError(w, err.Error())
 		return err
 	}
 
 	rows, err := h.readRepo.ListSessionsForExport(ctx, *f)
 	if err != nil {
 		log.Error("[DatasetExport] Failed to list sessions for export", zap.Error(err))
+		h.writeSSEError(w, err.Error())
 		return err
 	}
 
-	if len(rows) == 0 {
-		return ierr.New(ierr.ErrDataNotExists, "no sessions match the filter")
+	total := len(rows)
+	if total == 0 {
+		h.writeSSEError(w, constant.DatasetExportNoMatchError)
+		return ierr.New(ierr.ErrDataNotExists, constant.DatasetExportNoMatchError)
 	}
 
 	allMsgIDs := lo.Uniq(lo.FlatMap(rows, func(r *session.ExportSessionRow, _ int) []uint { return r.MessageIDs }))
@@ -93,6 +100,7 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 	messages, err := h.readRepo.FindMessagesByIDs(ctx, allMsgIDs)
 	if err != nil {
 		log.Error("[DatasetExport] Failed to batch get messages", zap.Error(err))
+		h.writeSSEError(w, err.Error())
 		return err
 	}
 	msgMap := lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
@@ -104,6 +112,7 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 		toolRecords, toolErr := h.readRepo.FindToolsByIDs(ctx, allToolIDs)
 		if toolErr != nil {
 			log.Error("[DatasetExport] Failed to batch get tools", zap.Error(err))
+			h.writeSSEError(w, toolErr.Error())
 			return toolErr
 		}
 		tools = toolRecords
@@ -112,10 +121,9 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 		return t.ID, t
 	})
 
-	bw := bufio.NewWriter(w)
-	defer func() { _ = bw.Flush() }() //nolint:errcheck // best-effort flush on stream end
+	h.writeSSEStart(w, total)
 
-	for _, row := range rows {
+	for i, row := range rows {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -129,14 +137,12 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 			continue
 		}
 
-		if _, writeErr := bw.Write(line); writeErr != nil {
-			return writeErr
-		}
-		if _, writeErr := bw.WriteString("\n"); writeErr != nil {
-			return writeErr
-		}
+		current := i + 1
+		progress := current * constant.DatasetExportProgressFull / total
+		h.writeSSEData(w, current, total, progress, string(line))
 	}
 
+	h.writeSSEDone(w, total)
 	return nil
 }
 
@@ -158,6 +164,36 @@ func (h *exportDatasetHandler) buildFilter(ctx context.Context, p datasetport.Ex
 	}
 
 	return f, nil
+}
+
+func (h *exportDatasetHandler) writeSSEStart(w *bufio.Writer, total int) {
+	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEStart{TotalSessions: total}))
+	h.writeSSEEvent(w, constant.DatasetExportEventStart, payload)
+}
+
+func (h *exportDatasetHandler) writeSSEData(w *bufio.Writer, current, total, progress int, jsonLine string) {
+	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEData{
+		Current:  current,
+		Total:    total,
+		Progress: progress,
+		JSON:     jsonLine,
+	}))
+	h.writeSSEEvent(w, constant.DatasetExportEventData, payload)
+}
+
+func (h *exportDatasetHandler) writeSSEDone(w *bufio.Writer, total int) {
+	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEStart{TotalSessions: total}))
+	h.writeSSEEvent(w, constant.DatasetExportEventDone, payload)
+}
+
+func (h *exportDatasetHandler) writeSSEError(w *bufio.Writer, message string) {
+	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEError{Message: message}))
+	h.writeSSEEvent(w, constant.DatasetExportEventError, payload)
+}
+
+func (h *exportDatasetHandler) writeSSEEvent(w *bufio.Writer, event string, payload []byte) {
+	_, _ = fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload) //nolint:errcheck // best-effort write
+	_ = w.Flush()                                                         //nolint:errcheck // best-effort flush
 }
 
 func (h *previewDatasetHandler) buildFilter(ctx context.Context, p datasetport.ExportParams) (*session.ExportFilter, error) {
@@ -232,7 +268,7 @@ func (h *previewFormatDatasetHandler) Handle(ctx context.Context, p datasetport.
 
 	total := len(rows)
 	if total == 0 {
-		return nil, ierr.New(ierr.ErrDataNotExists, "no sessions match the filter")
+		return nil, ierr.New(ierr.ErrDataNotExists, constant.DatasetExportNoMatchError)
 	}
 
 	if offset >= total {

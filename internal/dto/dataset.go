@@ -61,3 +61,30 @@ type DatasetFormatPreviewRsp struct {
 	TotalCount   int    `json:"totalCount,omitempty" doc:"匹配会话总数"`
 	ShareGPTJSON string `json:"sharegptJson,omitempty" doc:"ShareGPT 格式的一行 JSON"`
 }
+
+// DatasetExportSSEStart SSE start 事件 payload
+//
+//	@author centonhuang
+//	@update 2026-07-06 10:00:00
+type DatasetExportSSEStart struct {
+	TotalSessions int `json:"totalSessions" doc:"匹配会话总数"`
+}
+
+// DatasetExportSSEData SSE data 事件 payload（单条 ShareGPT JSON + 进度）
+//
+//	@author centonhuang
+//	@update 2026-07-06 10:00:00
+type DatasetExportSSEData struct {
+	Current  int    `json:"current" doc:"已导出条数"`
+	Total    int    `json:"total" doc:"总条数"`
+	Progress int    `json:"progress" doc:"进度百分比(0-100)"`
+	JSON     string `json:"json" doc:"ShareGPT 格式的一行 JSON"`
+}
+
+// DatasetExportSSEError SSE error 事件 payload
+//
+//	@author centonhuang
+//	@update 2026-07-06 10:00:00
+type DatasetExportSSEError struct {
+	Message string `json:"message" doc:"错误信息"`
+}

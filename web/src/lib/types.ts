@@ -608,3 +608,24 @@ export interface DatasetFormatPreviewRsp extends CommonRsp {
   totalCount?: number;
   sharegptJson?: string;
 }
+
+export interface DatasetExportSSEStart {
+  totalSessions: number;
+}
+
+export interface DatasetExportSSEData {
+  current: number;
+  total: number;
+  progress: number;
+  json: string;
+}
+
+export interface DatasetExportSSEError {
+  message: string;
+}
+
+export type DatasetExportSSEEvent =
+  | { event: "start"; data: DatasetExportSSEStart }
+  | { event: "data"; data: DatasetExportSSEData }
+  | { event: "done"; data: DatasetExportSSEStart }
+  | { event: "error"; data: DatasetExportSSEError };

@@ -2,8 +2,8 @@
 package port
 
 import (
+	"bufio"
 	"context"
-	"io"
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -40,12 +40,12 @@ type PreviewDatasetHandler interface {
 	Handle(ctx context.Context, p ExportParams) (*PreviewResult, error)
 }
 
-// ExportDatasetHandler 流式导出处理器
+// ExportDatasetHandler 流式导出处理器（SSE）
 //
 //	@author centonhuang
-//	@update 2026-07-03 10:00:00
+//	@update 2026-07-06 10:00:00
 type ExportDatasetHandler interface {
-	Handle(ctx context.Context, p ExportParams, w io.Writer) error
+	Handle(ctx context.Context, p ExportParams, w *bufio.Writer) error
 }
 
 // FormatPreviewResult 单条会话格式预览结果

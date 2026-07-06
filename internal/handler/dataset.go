@@ -96,9 +96,11 @@ func (h *datasetHandler) HandleExport(ctx context.Context, req *dto.DatasetExpor
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			fiberCtx := humafiber.Unwrap(humaCtx)
-			fiberCtx.Set(constant.HTTPHeaderContentType, constant.DatasetExportContentType)
-			fiberCtx.Set(constant.HTTPHeaderContentDisposition, constant.DatasetExportContentDisposition)
+			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
 			fiberCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
+			fiberCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
+			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
+			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fiberCtx.Status(http.StatusOK)
 
 			_ = fiberCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // stream write errors propagate via Fiber
