@@ -45,7 +45,7 @@ func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHand
 	huma.Register(datasetGroup, huma.Operation{
 		OperationID: "previewDatasetFormat",
 		Method:      http.MethodGet,
-		Path:        "/dataset/preview-format",
+		Path:        "/dataset/sample",
 		Summary:     "PreviewDatasetFormat",
 		Description: "Preview one session's ShareGPT JSON format at the given offset in the filtered result set.",
 		Tags:        []string{constant.TagDataset},

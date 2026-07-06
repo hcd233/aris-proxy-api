@@ -705,7 +705,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.offset !== undefined) sp.set("offset", String(params.offset));
-    return this.request<DatasetFormatPreviewRsp>(`/api/v1/dataset/preview-format?${sp}`);
+    return this.request<DatasetFormatPreviewRsp>(`/api/v1/dataset/sample?${sp}`);
   }
 
   async exportDataset(params: {
