@@ -609,5 +609,11 @@
   "dataset.export_filter_time": "Time Range",
   "dataset.export_filter_all_models": "All models",
   "dataset.preview_toggle_show": "Preview ShareGPT format",
-  "dataset.preview_toggle_hide": "Hide preview"
+  "dataset.preview_toggle_hide": "Hide preview",
+  "dataset.pipeline_badge": "Lakehouse training pipeline",
+  "dataset.active_filters": "active filters",
+  "dataset.quality_gate": "quality gate",
+  "dataset.retained": "Retained",
+  "dataset.retained_hint": "sessions above score gate",
+  "dataset.top_model": "Top model"
 }
