@@ -4,7 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -287,6 +293,10 @@ export default function DatasetPage() {
     minScore > 0 || filterModels.length > 0 || customStart || customEnd;
   const totalSessions = preview?.totalSessions ?? 0;
   const hasData = totalSessions > 0;
+  const modelFilterLabel =
+    filterModels.length > 0
+      ? filterModels.join(", ")
+      : t("dataset.export_filter_all_models");
 
   const timeRangeLabel = useMemo(() => {
     const labels: Record<TimeRangeKey, string> = {
@@ -328,80 +338,76 @@ export default function DatasetPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-          {t("dataset.title")}
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {t("dataset.subtitle")}
-        </p>
-      </div>
+      <Card className="relative overflow-hidden border-primary/10 bg-gradient-to-br from-card via-card to-secondary/50 py-0">
+        <CardContent className="relative p-5 md:p-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl space-y-3">
+              <Badge variant="secondary" className="w-fit gap-1.5">
+                <Database className="size-3" />
+                {t("dataset.export_format_value")}
+              </Badge>
+              <div>
+                <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+                  {t("dataset.title")}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+                  {t("dataset.subtitle")}
+                </p>
+              </div>
+            </div>
 
-      <div className="flex items-center gap-2 md:gap-4">
-        {steps.map((step, i) => {
-          const Icon = step.icon;
-          return (
-            <div key={step.num} className="flex flex-1 items-center gap-2 md:gap-4">
-              <div className="flex items-center gap-2.5 md:gap-3">
-                <div
-                  className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                    step.active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-secondary/50 text-muted-foreground/50"
-                  )}
-                >
-                  <Icon className="size-4" />
-                </div>
-                <div className="hidden sm:block">
+            <div className="grid grid-cols-3 gap-2 rounded-xl border border-border/60 bg-background/60 p-2 shadow-sm backdrop-blur sm:min-w-[360px]">
+              {steps.map((step) => {
+                const Icon = step.icon;
+                return (
                   <div
+                    key={step.num}
                     className={cn(
-                      "text-sm font-semibold leading-tight",
-                      step.active ? "text-foreground" : "text-muted-foreground/50"
+                      "rounded-lg border px-3 py-2 transition-colors",
+                      step.active
+                        ? "border-primary/20 bg-primary/10 text-foreground"
+                        : "border-transparent bg-secondary/40 text-muted-foreground/60"
                     )}
                   >
-                    {step.label}
+                    <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                      <Icon className="size-3" />
+                      {step.num}
+                    </div>
+                    <div className="truncate text-sm font-medium">
+                      {step.label}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground/70 leading-tight">
-                    {step.desc}
-                  </div>
-                </div>
-              </div>
-              {i < steps.length - 1 && (
-                <div
-                  className={cn(
-                    "h-px flex-1 transition-colors",
-                    steps[i + 1].active ? "bg-primary/30" : "bg-border"
-                  )}
-                />
-              )}
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Step 1: Configure */}
-      <Card>
-        <CardContent className="p-5 md:p-6 space-y-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <SlidersHorizontal className="size-3.5" />
-            </div>
-            <h2 className="font-display text-lg font-semibold">
-              {t("dataset.step_configure")}
-            </h2>
-            <span className="text-sm text-muted-foreground/70 hidden md:inline">
-              {t("dataset.step_configure_desc")}
-            </span>
           </div>
+        </CardContent>
+      </Card>
 
-          <ScoreSlider
-            distribution={preview?.scoreDistribution ?? {}}
-            value={minScore}
-            onChange={setMinScore}
-          />
+      <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
+        <Card className="lg:sticky lg:top-4">
+          <CardHeader className="px-5 md:px-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <SlidersHorizontal className="size-4" />
+              </div>
+              <div>
+                <CardTitle className="font-display">
+                  {t("dataset.step_configure")}
+                </CardTitle>
+                <CardDescription>
+                  {t("dataset.step_configure_desc")}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5 px-5 md:px-6">
+            <ScoreSlider
+              distribution={preview?.scoreDistribution ?? {}}
+              value={minScore}
+              onChange={setMinScore}
+            />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
                 {t("sessions.filter_model")}
@@ -412,6 +418,7 @@ export default function DatasetPage() {
                 value={filterModels}
                 onChange={setFilterModels}
                 emptyText={t("dataset.no_models")}
+                className="min-h-9 rounded-lg"
               />
             </div>
 
@@ -430,340 +437,360 @@ export default function DatasetPage() {
                 }}
               />
             </div>
-          </div>
 
-          {hasFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={() => {
-                setMinScore(0);
-                setFilterModels([]);
-                setTimeRange("30d");
-                setCustomStart("");
-                setCustomEnd("");
-              }}
-            >
-              {t("dataset.clear_filters")}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Step 2: Review */}
-      {previewLoading && !preview ? (
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-32 w-full" />
-          </CardContent>
-        </Card>
-      ) : !hasData ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Database className="mb-3 size-10 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">
-              {t("dataset.no_data")}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/60">
-              {t("dataset.empty_hint")}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-5 md:p-6 space-y-5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <BarChart3 className="size-3.5" />
-              </div>
-              <h2 className="font-display text-lg font-semibold">
-                {t("dataset.step_review")}
-              </h2>
-              <span className="text-sm text-muted-foreground/70 hidden md:inline">
-                {t("dataset.step_review_desc")}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Database className="size-3.5 text-muted-foreground" />
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-                    {t("dataset.total_sessions")}
-                  </span>
-                </div>
-                <div className="font-display text-2xl md:text-3xl font-bold tabular-nums">
-                  {totalSessions.toLocaleString()}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {t("dataset.conversations_label")}
-                </div>
-              </div>
-
-              {preview?.scoreDistribution &&
-                Object.keys(preview.scoreDistribution).length > 0 && (
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-                      {t("dataset.score_distribution")}
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(preview.scoreDistribution)
-                        .sort(([a], [b]) => Number(a) - Number(b))
-                        .map(([score, count]) => (
-                          <Badge
-                            key={score}
-                            variant={
-                              Number(score) >= minScore
-                                ? "default"
-                                : "secondary"
-                            }
-                            className="gap-1"
-                          >
-                            <Star className="size-3" />
-                            {score}: {count}
-                          </Badge>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-              {preview?.modelDistribution &&
-                Object.keys(preview.modelDistribution).length > 0 && (
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-                      {t("dataset.model_distribution")}
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(preview.modelDistribution)
-                        .sort(([, a], [, b]) => b - a)
-                        .slice(0, 5)
-                        .map(([model, count]) => (
-                          <Badge
-                            key={model}
-                            variant="outline"
-                            className="text-[10px] font-mono"
-                          >
-                            {model}: {count}
-                          </Badge>
-                        ))}
-                    </div>
-                  </div>
-                )}
-            </div>
-
-            <div className="border-t border-border/60 pt-4">
-              <button
-                type="button"
-                onClick={() => setFormatExpanded((v) => !v)}
-                className="flex w-full items-center justify-between text-sm font-medium text-foreground transition-colors hover:text-primary"
-              >
-                <span className="flex items-center gap-2">
-                  <Hash className="size-4 text-muted-foreground" />
-                  {t("dataset.format_preview")}
+            <div className="space-y-2 rounded-xl border border-border/60 bg-secondary/30 p-3">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                  {t("dataset.export_filter_score")}
                 </span>
-                <ChevronDown
-                  className={cn(
-                    "size-4 text-muted-foreground transition-transform duration-200",
-                    formatExpanded && "rotate-180"
-                  )}
-                />
-              </button>
-
-              {formatExpanded && (
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      {t("dataset.preview_toggle_show")}
-                    </span>
-                    {formatData && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={formatOffset === 0 || formatLoading}
-                          onClick={handlePrevSession}
-                          className="size-7"
-                        >
-                          <ChevronLeft className="size-3.5" />
-                        </Button>
-                        <span className="text-xs text-muted-foreground tabular-nums min-w-[64px] text-center">
-                          {formatOffset + 1} /{" "}
-                          {formatData.totalCount?.toLocaleString()}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={
-                            formatLoading ||
-                            formatOffset >=
-                              (formatData.totalCount ?? 1) - 1
-                          }
-                          onClick={handleNextSession}
-                          className="size-7"
-                        >
-                          <ChevronRight className="size-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {formatLoading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </div>
-                  ) : formatData?.sharegptJson ? (
-                    <div className="flex items-start gap-3">
-                      <div className="flex shrink-0 flex-col items-center gap-1 pt-0.5">
-                        <Hash className="size-3.5 text-muted-foreground/50" />
-                        <span className="text-[10px] font-mono text-muted-foreground/50">
-                          #{formatData.sessionId}
-                        </span>
-                      </div>
-                      <pre className="flex-1 min-w-0 overflow-x-auto rounded-lg border border-border bg-[#1e1e2e] p-4 text-[12px] leading-[1.65] text-[#cdd6f4] max-h-[400px] overflow-y-auto">
-                        <code className="block whitespace-pre font-mono">
-                          {formattedJSON}
-                        </code>
-                      </pre>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: Export */}
-      {hasData && !previewLoading && (
-        <Card>
-          <CardContent className="p-5 md:p-6 space-y-5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <FileDown className="size-3.5" />
+                <span className="flex items-center gap-1 font-semibold tabular-nums">
+                  ≥ {minScore}
+                  <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                </span>
               </div>
-              <h2 className="font-display text-lg font-semibold">
-                {t("dataset.step_export")}
-              </h2>
-              <span className="text-sm text-muted-foreground/70 hidden md:inline">
-                {t("dataset.step_export_desc")}
-              </span>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                  {t("dataset.export_filter_models")}
+                </span>
+                <span className="max-w-[180px] truncate text-right font-semibold">
+                  {modelFilterLabel}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                  {t("dataset.export_filter_time")}
+                </span>
+                <span className="text-right font-semibold">
+                  {timeRangeLabel}
+                </span>
+              </div>
             </div>
 
-            {exporting ? (
-              <div className="flex flex-col items-center gap-6 py-6">
-                <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-secondary/50">
-                  <Download className="size-7 text-primary animate-pulse" />
-                </div>
-
-                <div className="text-center space-y-1.5">
-                  <h3 className="font-display text-lg font-semibold">
-                    {t("dataset.exporting")}
-                  </h3>
-                  <p className="text-sm text-muted-foreground tabular-nums">
-                    {exportCurrent} / {exportTotal}{" "}
-                    {t("dataset.conversations_label")}
-                  </p>
-                </div>
-
-                <div className="w-full max-w-md space-y-2">
-                  <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-                      style={{ width: `${exportProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
-                    <span>{exportProgress}%</span>
-                    <span>{exportTotal} total</span>
-                  </div>
-                </div>
-
-                {exportProgress >= 100 && (
-                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                    <Check className="size-4" />
-                    {t("dataset.export_complete")}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {t("dataset.export_filter_score")}
-                    </span>
-                    <span className="flex items-center gap-1 text-sm font-semibold tabular-nums">
-                      ≥ {minScore}
-                      <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {t("dataset.export_filter_models")}
-                    </span>
-                    <span className="text-sm font-semibold text-right max-w-[60%] truncate">
-                      {filterModels.length > 0
-                        ? filterModels.join(", ")
-                        : t("dataset.export_filter_all_models")}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {t("dataset.export_filter_time")}
-                    </span>
-                    <span className="text-sm font-semibold text-right">
-                      {timeRangeLabel}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {t("dataset.export_format")}
-                    </span>
-                    <span className="text-sm font-semibold font-mono">
-                      {t("dataset.export_format_value")}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-4">
-                  <div>
-                    <div className="text-xs font-medium uppercase tracking-[0.08em] text-primary/80">
-                      {t("dataset.total_sessions")}
-                    </div>
-                    <div className="font-display text-2xl font-bold tabular-nums text-foreground">
-                      {totalSessions.toLocaleString()}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleExport}
-                    disabled={exporting || totalSessions === 0}
-                    size="lg"
-                    className="gap-2 px-8"
-                  >
-                    <Download className="size-4" />
-                    {t("dataset.export")}
-                  </Button>
-                </div>
-
-                <p className="text-xs text-muted-foreground/70">
-                  {t("dataset.export_confirm_total").replace(
-                    "{total}",
-                    totalSessions.toLocaleString()
-                  )}
-                </p>
-              </>
+            {hasFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground"
+                onClick={() => {
+                  setMinScore(0);
+                  setFilterModels([]);
+                  setTimeRange("30d");
+                  setCustomStart("");
+                  setCustomEnd("");
+                }}
+              >
+                {t("dataset.clear_filters")}
+              </Button>
             )}
           </CardContent>
         </Card>
-      )}
+
+        <div className="space-y-6">
+          {previewLoading && !preview ? (
+            <Card>
+              <CardContent className="space-y-4 p-5 md:p-6">
+                <Skeleton className="h-9 w-48" />
+                <Skeleton className="h-40 w-full" />
+              </CardContent>
+            </Card>
+          ) : !hasData ? (
+            <Card className="min-h-[420px] justify-center">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-border bg-secondary/50">
+                  <Database className="size-7 text-muted-foreground/50" />
+                </div>
+                <p className="font-display text-lg font-semibold text-foreground">
+                  {t("dataset.no_data")}
+                </p>
+                <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                  {t("dataset.empty_hint")}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <Card className="py-0">
+                <CardContent className="p-0">
+                  <div className="grid lg:grid-cols-[minmax(0,1fr)_280px]">
+                    <div className="space-y-5 p-5 md:p-6">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <BarChart3 className="size-4" />
+                          </div>
+                          <div>
+                            <h2 className="font-display text-lg font-semibold">
+                              {t("dataset.step_review")}
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                              {t("dataset.step_review_desc")}
+                            </p>
+                          </div>
+                        </div>
+                        {previewLoading && (
+                          <Badge variant="secondary">
+                            {t("dataset.preview")}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                          <Database className="size-3.5" />
+                          {t("dataset.total_sessions")}
+                        </div>
+                        <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                          <div className="font-display text-4xl font-bold tabular-nums text-foreground md:text-5xl">
+                            {totalSessions.toLocaleString()}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {t("dataset.conversations_label")}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {preview?.scoreDistribution &&
+                          Object.keys(preview.scoreDistribution).length > 0 && (
+                            <div className="rounded-xl border border-border/60 p-4">
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                                {t("dataset.score_distribution")}
+                              </span>
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                {Object.entries(preview.scoreDistribution)
+                                  .sort(([a], [b]) => Number(a) - Number(b))
+                                  .map(([score, count]) => (
+                                    <Badge
+                                      key={score}
+                                      variant={
+                                        Number(score) >= minScore
+                                          ? "default"
+                                          : "secondary"
+                                      }
+                                      className="gap-1"
+                                    >
+                                      <Star className="size-3" />
+                                      {score}: {count}
+                                    </Badge>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                        {preview?.modelDistribution &&
+                          Object.keys(preview.modelDistribution).length > 0 && (
+                            <div className="rounded-xl border border-border/60 p-4">
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                                {t("dataset.model_distribution")}
+                              </span>
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                {Object.entries(preview.modelDistribution)
+                                  .sort(([, a], [, b]) => b - a)
+                                  .slice(0, 5)
+                                  .map(([model, count]) => (
+                                    <Badge
+                                      key={model}
+                                      variant="outline"
+                                      className="max-w-full font-mono text-[10px]"
+                                      title={`${model}: ${count}`}
+                                    >
+                                      <span className="truncate">
+                                        {model}: {count}
+                                      </span>
+                                    </Badge>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-border bg-secondary/25 p-5 lg:border-l lg:border-t-0 md:p-6">
+                      {exporting ? (
+                        <div className="flex h-full min-h-[260px] flex-col justify-center gap-6">
+                          <div className="flex items-center gap-3">
+                            <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card">
+                              <Download className="size-6 animate-pulse text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-display text-lg font-semibold">
+                                {t("dataset.exporting")}
+                              </h3>
+                              <p className="text-sm text-muted-foreground tabular-nums">
+                                {exportCurrent} / {exportTotal}{" "}
+                                {t("dataset.conversations_label")}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-background">
+                              <div
+                                className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+                                style={{ width: `${exportProgress}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+                              <span>{exportProgress}%</span>
+                              <span>{exportTotal} total</span>
+                            </div>
+                          </div>
+
+                          {exportProgress >= 100 && (
+                            <Badge variant="secondary" className="w-fit gap-1.5">
+                              <Check className="size-3" />
+                              {t("dataset.export_complete")}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex h-full min-h-[260px] flex-col justify-between gap-5">
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <FileDown className="size-4" />
+                              </div>
+                              <div>
+                                <h2 className="font-display text-lg font-semibold">
+                                  {t("dataset.step_export")}
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                  {t("dataset.step_export_desc")}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-2 text-sm">
+                              <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-3 py-2.5">
+                                <span className="text-muted-foreground">
+                                  {t("dataset.export_format")}
+                                </span>
+                                <span className="font-mono font-semibold">
+                                  {t("dataset.export_format_value")}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-3 py-2.5">
+                                <span className="text-muted-foreground">
+                                  {t("dataset.total_sessions")}
+                                </span>
+                                <span className="font-semibold tabular-nums">
+                                  {totalSessions.toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <Button
+                              onClick={handleExport}
+                              disabled={exporting || totalSessions === 0}
+                              size="lg"
+                              className="w-full gap-2"
+                            >
+                              <Download className="size-4" />
+                              {t("dataset.export")}
+                            </Button>
+                            <p className="text-xs leading-5 text-muted-foreground/80">
+                              {t("dataset.export_confirm_total").replace(
+                                "{total}",
+                                totalSessions.toLocaleString()
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="space-y-4 px-5 md:px-6">
+                  <button
+                    type="button"
+                    onClick={() => setFormatExpanded((v) => !v)}
+                    className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-4 rounded-lg text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    aria-expanded={formatExpanded}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Hash className="size-4 text-muted-foreground" />
+                      {t("dataset.format_preview")}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "size-4 text-muted-foreground transition-transform duration-200",
+                        formatExpanded && "rotate-180"
+                      )}
+                    />
+                  </button>
+
+                  {formatExpanded && (
+                    <div className="space-y-3 border-t border-border/60 pt-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {t("dataset.preview_toggle_show")}
+                        </span>
+                        {formatData && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={formatOffset === 0 || formatLoading}
+                              onClick={handlePrevSession}
+                              className="size-8"
+                            >
+                              <ChevronLeft className="size-3.5" />
+                            </Button>
+                            <span className="min-w-[64px] text-center text-xs tabular-nums text-muted-foreground">
+                              {formatOffset + 1} /{" "}
+                              {formatData.totalCount?.toLocaleString()}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={
+                                formatLoading ||
+                                formatOffset >=
+                                  (formatData.totalCount ?? 1) - 1
+                              }
+                              onClick={handleNextSession}
+                              className="size-8"
+                            >
+                              <ChevronRight className="size-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {formatLoading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-3/4" />
+                        </div>
+                      ) : formatData?.sharegptJson ? (
+                        <div className="space-y-2">
+                          <Badge variant="outline" className="gap-1.5 font-mono">
+                            <Hash className="size-3" />
+                            {formatData.sessionId}
+                          </Badge>
+                          <pre className="max-h-[440px] min-w-0 overflow-auto rounded-xl border border-border bg-foreground p-4 text-[12px] leading-[1.65] text-background">
+                            <code className="block whitespace-pre font-mono">
+                              {formattedJSON}
+                            </code>
+                          </pre>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
