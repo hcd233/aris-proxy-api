@@ -617,10 +617,8 @@
   "dataset.export_filter_all_models": "全部模型",
   "dataset.preview_toggle_show": "预览 ShareGPT 格式",
   "dataset.preview_toggle_hide": "收起预览",
-  "dataset.pipeline_badge": "Lakehouse 训练数据管线",
   "dataset.active_filters": "个生效筛选",
   "dataset.quality_gate": "质量门槛",
   "dataset.retained": "保留率",
-  "dataset.retained_hint": "高于评分门槛的会话",
   "dataset.top_model": "主要模型"
 }

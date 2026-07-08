@@ -324,12 +324,7 @@ export default function DatasetPage() {
       {/* Page Header — consistent with other dashboard pages */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="max-w-2xl">
-          <div className="mb-4 flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1.5">
-              <Database className="size-3" />
-              {t("dataset.pipeline_badge")}
-            </Badge>
-          </div>
+          
           <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("dataset.title")}
           </h1>
@@ -461,7 +456,7 @@ export default function DatasetPage() {
           <div className="grid gap-3 md:grid-cols-3">
             <MetricCard label={t("dataset.total_sessions")} value={formatNumber(totalSessions)} loading={loadingPreview} />
             <MetricCard label={t("dataset.top_model")} value={topModel} loading={loadingPreview} />
-            <MetricCard label={t("dataset.export_format")} value={t("dataset.export_format_value")} hint={t("dataset.retained_hint")} loading={loadingPreview} />
+            <MetricCard label={t("dataset.export_format")} value={t("dataset.export_format_value")} loading={loadingPreview} />
           </div>
 
           {totalSessions === 0 && !loadingPreview ? (
