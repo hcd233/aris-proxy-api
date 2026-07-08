@@ -112,7 +112,13 @@ function findProviderKey(protocol: string): string | undefined {
   const normalized = protocol.toLowerCase();
   return Object.keys(providerMap).find((key) => {
     if (normalized === key) return true;
-    return normalized.startsWith(key + "-") || normalized.startsWith(key + "_");
+    if (normalized.startsWith(key + "-") || normalized.startsWith(key + "_")) return true;
+    // 兼容无分隔符的短前缀（如 hy3）：前缀后紧跟非小写字母（数字/结尾/分隔符）
+    if (normalized.startsWith(key)) {
+      const next = normalized[key.length];
+      if (next === undefined || !/[a-z]/.test(next)) return true;
+    }
+    return false;
   });
 }
 
