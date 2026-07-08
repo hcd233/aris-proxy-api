@@ -22,19 +22,6 @@ type ResponseProtocolConverter struct {
 	namespaceMap map[string]string // flattened function name → namespace name
 }
 
-// unsupportedToolNames 记录 Chat Completions 无等价物的 Responses API 工具类型名称。
-// type=custom 工具若 name 匹配其中任一值，也一并丢弃，避免作为 function tool 传入上游。
-var unsupportedToolNames = map[string]struct{}{
-	enum.ResponseToolTypeWebSearch:          {},
-	enum.ResponseToolTypeWebSearchPreview:   {},
-	enum.ResponseToolTypeComputer:           {},
-	enum.ResponseToolTypeComputerUsePreview: {},
-	enum.ResponseToolTypeImageGeneration:    {},
-	enum.ResponseToolTypeLocalShell:         {},
-	enum.ResponseToolTypeShell:              {},
-	enum.ResponseToolTypeApplyPatch:         {},
-}
-
 func (c *ResponseProtocolConverter) FromResponseRequest(req *dto.OpenAICreateResponseReq) (*dto.OpenAIChatCompletionReq, error) {
 	chatReq := &dto.OpenAIChatCompletionReq{
 		Model:             lo.FromPtr(req.Model),
@@ -431,9 +418,6 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 			},
 		}, true
 	case tool.Custom != nil:
-		if _, drop := unsupportedToolNames[tool.Custom.Name]; drop {
-			return dto.OpenAIChatCompletionTool{}, false
-		}
 		desc := lo.FromPtr(tool.Custom.Description)
 		if tool.Custom.Format != nil && tool.Custom.Format.Definition != nil {
 			formatLabel := lo.FromPtr(tool.Custom.Format.Syntax)
