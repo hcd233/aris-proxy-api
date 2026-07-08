@@ -22,6 +22,8 @@ import { useT } from "@/lib/i18n";
 import type { DatasetFormatPreviewRsp, DatasetPreviewRsp } from "@/lib/types";
 import { computeRange, type TimeRangeKey } from "@/lib/time-range";
 import { cn } from "@/lib/utils";
+import hljs from "highlight.js/lib/core";
+import json from "highlight.js/lib/languages/json";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +37,19 @@ import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { Separator } from "@/components/ui/separator";
+
+
+hljs.registerLanguage("json", json);
+
+function formatAndHighlight(jsonStr: string): string {
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const prettified = JSON.stringify(parsed, null, 2);
+    return hljs.highlight(prettified, { language: "json" }).value;
+  } catch {
+    return jsonStr;
+  }
+}
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat().format(value);
@@ -497,8 +512,13 @@ export default function DatasetPage() {
                         total: String(formatPreview.totalCount ?? 0),
                       })}
                     </div>
-                    <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-muted/10 p-4 font-mono text-xs leading-6 text-foreground/85">
-                      {formatPreview.sharegptJson}
+                    <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-[#1e1e20] p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
+                      <code
+                        className="font-mono whitespace-pre"
+                        dangerouslySetInnerHTML={{
+                          __html: formatAndHighlight(formatPreview.sharegptJson),
+                        }}
+                      />
                     </pre>
                   </div>
                 ) : (
