@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bytedance/sonic"
 	"time"
 
 	"github.com/samber/lo"
@@ -593,7 +594,7 @@ func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
 		sql = sql.Where(constant.FieldScore+" >= ?", f.MinScore)
 	}
 	if len(f.Models) > 0 {
-		sql = sql.Where(constant.SessionExportModelFilterSQL, f.Models)
+		sql = sql.Where(constant.SessionExportModelFilterSQL, string(lo.Must1(sonic.Marshal(f.Models))))
 	}
 	if !f.StartTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" >= ?", f.StartTime)
