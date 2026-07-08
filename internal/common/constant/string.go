@@ -204,6 +204,11 @@ const (
 
 	ContentPartTypeText = "text"
 
+	// ── Custom tool conversion ──
+	CustomToolParamContent   = "content"
+	CustomToolFormatDefault  = "text"
+	CustomToolFormatLabelFmt = "\n\nExpected format (%s grammar):\n"
+
 	// ── Dataset export progress ──
 	DatasetExportNoMatchError = "no sessions match the filter"
 	DatasetExportProgressFull = 100
