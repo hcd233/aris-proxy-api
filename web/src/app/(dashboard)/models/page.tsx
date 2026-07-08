@@ -49,7 +49,8 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { ProviderIcon } from "@/components/provider-icon";
 import ExportDialog from "@/components/export-dialog";
 import ExportClaudecodeDialog from "@/components/export-claudecode-dialog";
-import { OpenCode, ClaudeCode } from "@lobehub/icons";
+import ExportCodexDialog from "@/components/export-codex-dialog";
+import { OpenCode, ClaudeCode, Codex } from "@lobehub/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,6 +114,7 @@ export default function ModelsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportClaudecodeDialogOpen, setExportClaudecodeDialogOpen] = useState(false);
+  const [exportCodexDialogOpen, setExportCodexDialogOpen] = useState(false);
 
   const fetchData = useCallback(async (page: number, pageSize: number, query?: string) => {
     setLoading(true);
@@ -299,6 +301,22 @@ export default function ModelsPage() {
                       </span>
                       <span className="truncate text-xs text-muted-foreground">
                         {t("models.export_claudecode_hint")}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setExportCodexDialogOpen(true)}
+                    className="items-start gap-2.5 rounded-lg px-2 py-2"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                      <Codex.Color size={17} />
+                    </span>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-medium leading-none">
+                        {t("models.export_codex")}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {t("models.export_codex_hint")}
                       </span>
                     </span>
                   </DropdownMenuItem>
@@ -634,6 +652,12 @@ export default function ModelsPage() {
         <ExportClaudecodeDialog
           open={exportClaudecodeDialogOpen}
           onOpenChange={setExportClaudecodeDialogOpen}
+          models={models}
+        />
+
+        <ExportCodexDialog
+          open={exportCodexDialogOpen}
+          onOpenChange={setExportCodexDialogOpen}
           models={models}
         />
       </div>
