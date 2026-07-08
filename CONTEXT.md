@@ -55,7 +55,7 @@ _Avoid_: model router, endpoint lookup
 _Avoid_: protocol translation, api bridge
 
 **ClientConfigExport（客户端配置导出）**:
-管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持两种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）与 Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）。生成的 bash 脚本内嵌 Python 做幂等 patch 并备份 `.bak`。
+管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持三种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）、Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）与 Codex（注册自定义 `model_providers`、设置默认 `model` 与 `model_context_window`，patch `~/.codex/config.toml`）。生成的 bash 脚本内嵌 Python 做幂等 patch 并备份 `.bak`。
 _Avoid_: config generator, setup wizard, integration script
 
 **ClaudeCodeModelTier（Claude Code 模型档位）**:
