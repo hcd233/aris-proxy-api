@@ -85,6 +85,7 @@ const providerMap: Record<string, IconComponent> = {
   siliconcloud: SiliconCloud,
   silicon: SiliconCloud,
   hunyuan: Hunyuan,
+  hy: Hunyuan,
   volcengine: Volcengine,
   stepfun: Stepfun,
   infinigence: Infinigence,
