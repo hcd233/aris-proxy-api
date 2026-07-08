@@ -11,7 +11,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
 // ResponseProtocolConverter 以 OpenAI ChatCompletion 作为 OpenAI Response API 的兼容基座。
@@ -416,11 +418,30 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 			},
 		}, true
 	case tool.Custom != nil:
+		desc := lo.FromPtr(tool.Custom.Description)
+		if tool.Custom.Format != nil && tool.Custom.Format.Definition != nil {
+			formatLabel := lo.FromPtr(tool.Custom.Format.Syntax)
+			if formatLabel == "" {
+				formatLabel = constant.CustomToolFormatDefault
+			}
+			desc += fmt.Sprintf(constant.CustomToolFormatLabelFmt, formatLabel) + *tool.Custom.Format.Definition
+		}
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIFunctionDefinition{
 				Name:        tool.Custom.Name,
-				Description: tool.Custom.Description,
+				Description: lo.ToPtr(desc),
+				Parameters: &schema.JSONSchemaProperty{
+					JSONSchemaProperty: vo.JSONSchemaProperty{
+						Type: lo.ToPtr(vo.JSONSchemaTypeValue{Single: enum.JSONSchemaTypeObject}),
+						Properties: &map[string]*vo.JSONSchemaProperty{
+							constant.CustomToolParamContent: {
+								Type: lo.ToPtr(vo.JSONSchemaTypeValue{Single: enum.JSONSchemaTypeString}),
+							},
+						},
+						Required: []string{constant.CustomToolParamContent},
+					},
+				},
 			},
 		}, true
 	case tool.FileSearch != nil:
@@ -432,37 +453,13 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 			},
 		}, true
 	case tool.WebSearch != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.WebSearch.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescWebSearch),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	case tool.WebSearchPreview != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.WebSearchPreview.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescWebSearchPreview),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	case tool.Computer != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.Computer.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescComputer),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	case tool.ComputerUsePreview != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.ComputerUsePreview.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescComputerPreview),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	case tool.Mcp != nil:
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
@@ -480,29 +477,11 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 			},
 		}, true
 	case tool.ImageGeneration != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.ImageGeneration.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescImageGeneration),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	case tool.LocalShell != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.LocalShell.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescLocalShell),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	case tool.Shell != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.Shell.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescShell),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	case tool.ToolSearch != nil:
 		return dto.OpenAIChatCompletionTool{
 			Type: enum.ToolTypeFunction,
@@ -512,13 +491,7 @@ func convertResponseToolToChat(tool *dto.ResponseTool) (dto.OpenAIChatCompletion
 			},
 		}, true
 	case tool.ApplyPatch != nil:
-		return dto.OpenAIChatCompletionTool{
-			Type: enum.ToolTypeFunction,
-			Function: &dto.OpenAIFunctionDefinition{
-				Name:        tool.ApplyPatch.Type,
-				Description: lo.ToPtr(constant.ChatCompletionConvertToolDescApplyPatch),
-			},
-		}, true
+		return dto.OpenAIChatCompletionTool{}, false
 	}
 	return dto.OpenAIChatCompletionTool{}, false
 }
