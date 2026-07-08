@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
@@ -545,6 +546,9 @@ func chatMessageToResponseOutputs(msg *dto.OpenAIChatCompletionMessageParam, too
 		case tc.Function != nil:
 			itemType := resolveToolCallOutputType(tc.Function.Name, toolTypeMap)
 			name, ns := splitNamespacedName(tc.Function.Name, namespaceMap)
+			if itemType == enum.ResponseInputItemTypeCustomToolCall {
+				return buildCustomToolCallItem(lo.FromPtr(tc.ID), name, ns, tc.Function.Arguments), true
+			}
 			return &dto.ResponseInputItem{
 				Type:      lo.ToPtr(itemType),
 				CallID:    tc.ID,
@@ -583,6 +587,33 @@ func resolveToolCallOutputType(functionName string, toolTypeMap map[string]strin
 		}
 	}
 	return enum.ResponseInputItemTypeFunctionCall
+}
+
+// buildCustomToolCallItem 构建 custom_tool_call 类型的 ResponseInputItem。
+// 将 Chat Completions function call 的 arguments（JSON 包装的 {"content": "..."}）
+// 拆包为 custom_tool_call 要求的 input 原始字符串。
+func buildCustomToolCallItem(callID, name, namespace, arguments string) *dto.ResponseInputItem {
+	input := unwrapCustomToolArguments(arguments)
+	return &dto.ResponseInputItem{
+		Type:      lo.ToPtr(enum.ResponseInputItemTypeCustomToolCall),
+		CallID:    lo.ToPtr(callID),
+		Name:      lo.ToPtr(name),
+		Namespace: lo.ToPtr(namespace),
+		Input:     lo.ToPtr(input),
+	}
+}
+
+func unwrapCustomToolArguments(arguments string) string {
+	var wrapper customToolArgumentsWrapper
+	if err := sonic.UnmarshalString(arguments, &wrapper); err == nil {
+		return wrapper.Content
+	}
+	return arguments
+}
+
+// customToolArgumentsWrapper 用于拆包 Chat Completions function call 的 arguments JSON。
+type customToolArgumentsWrapper struct {
+	Content string `json:"content"`
 }
 
 func buildTextOutputItem(msg *dto.OpenAIChatCompletionMessageParam) *dto.ResponseInputItem {
