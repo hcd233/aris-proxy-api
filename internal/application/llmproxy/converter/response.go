@@ -53,6 +53,11 @@ func (c *ResponseProtocolConverter) FromResponseRequest(req *dto.OpenAICreateRes
 	if req.StreamOptions != nil {
 		chatReq.StreamOptions = &dto.OpenAIChatCompletionStreamOptions{
 			IncludeObfuscation: req.StreamOptions.IncludeObfuscation,
+			IncludeUsage:       lo.ToPtr(true),
+		}
+	} else if req.Stream != nil && *req.Stream {
+		chatReq.StreamOptions = &dto.OpenAIChatCompletionStreamOptions{
+			IncludeUsage: lo.ToPtr(true),
 		}
 	}
 	if len(req.Tools) > 0 {
