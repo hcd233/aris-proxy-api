@@ -216,3 +216,41 @@ _Avoid_: detail cache, session cache, performance cache
 **Graceful Shutdown（优雅关闭）**:
 接收 SIGINT/SIGTERM 后按顺序执行 8 步关闭：停止 cron → 停止协程池 → draining 拒绝新请求 → 等待在途请求完成 → 关闭 HTTP Server → 同步日志 → 关闭 DB → 关闭 Redis。K8s 部署配合 `terminationGracePeriodSeconds: 660` + `preStop: sleep 10` 实现无损下线。
 _Avoid_: shutdown sequence, graceful stop, pod termination
+
+## Agent Runtime（Agent 运行时）
+
+**AgentRuntime（Agent 运行时）**:
+独立微服务，负责 Agent 的执行引擎。基于 eino v0.9 的 ChatModelAgent + TurnLoop 实现 ReAct 循环（LLM 推理 → 工具调用 → 执行结果 → 循环），通过 Docker 沙箱容器执行命令与文件操作。与 proxy-api 通过 gRPC stream 通信（proxy-api 下发控制指令 + 接收事件流），以 API Key 客户端方式通过 proxy-api 调用 LLM。共享 proxy-api 的 Postgres 实例，维护独立的 AgentSession 表。
+_Avoid_: agent engine, agent executor, agent worker
+
+**AgentSession（Agent 对话会话）**:
+一次 Agent 对话窗口的生命周期聚合。与 proxy-api 的 model-layer Session（一次 LLM API 调用）是包含关系：一个 AgentSession 包含多次 LLM 调用（对应多个 model-layer Session）。AgentSession 记录用户意图、LLM 调用序列、沙箱命令执行记录、文件变更、执行结果。由 agent-runtime 独立管理，存储在其 AgentSession 表中。
+_Avoid_: agent conversation, agent chat, agent thread
+
+**Channel（通道）**:
+用户与 Agent 交互的通信界面。第一期唯一 channel 为 Web 对话窗口。统一接入 proxy-api 控制平面，由 proxy-api 负责认证、会话路由和事件转发，agent-runtime 不直接暴露给外部。后续可扩展为更多 channel（企微、飞书等）。
+_Avoid_: platform, interface, adapter
+
+**Sandbox（沙箱）**:
+Agent 的命令与文件执行环境。第一期使用 Docker 容器（Alpine 镜像，内存限制 256m），通过 bind mount 持久化 workspace（`/data/agent-workspace/{user_id}:/workspace`）。提供六大工具：bash（执行任意 shell）、read（读取文件）、write（写入文件）、edit（精确替换文件片段）、ls（列出目录）、grep（文件搜索）。沙箱操作通过 Sandbox 接口抽象，底层可切换为 CubeSandbox 等替代实现。
+_Avoid_: container, execution environment, sandbox environment
+
+**TurnLoop（多轮循环）**:
+eino v0.9 提供的持续运行、外部驱动的多轮 Agent 运行时。通过 Push 接收外部消息，GenInput 组装输入，PrepareAgent 构建 Agent，OnAgentEvents 消费事件流。支持 Preempt（打断当前 turn）、Checkpoint/Resume（状态持久化与断点恢复）、Graceful Stop。agent-runtime 中每个 AgentSession 对应一个 TurnLoop 实例。
+_Avoid_: conversation loop, agent loop, event loop
+
+**ChatModelAgent（对话模型 Agent）**:
+eino ADK 的 Agent 实现，封装 ChatModel + Tools + ReAct 循环。通过 proxy-api 调用 LLM（以 API Key 客户端方式，复用 proxy-api 的 EndpointResolver、跨协议转换、限流与审计），工具调用在沙箱中执行。agent-runtime 中每个 Agent 定义对应一个 ChatModelAgent 实例。
+_Avoid_: ai agent, llm agent, model agent
+
+**SessionState（会话状态）**:
+AgentSession 的运行状态机，由 proxy-api 维护（消费 gRPC event stream 时更新）：`idle`（等待用户消息）、`running`（Agent 执行中）、`interrupted`（被中断/出错）。用户断线重连时 proxy-api 根据该状态决定续订事件流（ResumeStream）还是等待新消息。
+_Avoid_: session status, run state, execution state
+
+**CheckpointStore（检查点存储）**:
+eino TurnLoop 的状态持久化存储，基于 Redis。在每次 turn 完成后保存 checkpoint。agent-runtime 进程崩溃后可从 checkpoint 恢复，重放未完成的 turn。为 agent-runtime 专属的 Redis namespace，与 proxy-api 共享 Redis 实例。
+_Avoid_: state store, snapshot store, resume store
+
+**AgentEvent（Agent 事件）**:
+agent-runtime 通过 gRPC stream 返回给 proxy-api 的实时事件。包含：assistant 文本消息（流式分块）、reasoning/thinking 内容、工具调用开始、工具调用结果、interrupt（如询问用户）、turn 完成通知、错误、状态变更。proxy-api 接收到后通过 WebSocket 推送到 Web 前端 channel。
+_Avoid_: agent message, execution event, agent update
