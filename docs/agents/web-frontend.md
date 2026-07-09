@@ -40,7 +40,7 @@
 
 ## i18n 布局稳定性契约
 
-> 详见 [docs/adr/0005-i18n-layout-stability.md](../adr/0005-i18n-layout-stability.md) 与 [web/CONTEXT.md](../../web/CONTEXT.md)。切换语言（en/zh/ja）时组件不得发生宽高跳变。
+> 详见 [web/CONTEXT.md](../../web/CONTEXT.md)。切换语言（en/zh/ja）时组件不得发生宽高跳变。
 
 ### Category Reserve（刚性元素宽度预留）
 
