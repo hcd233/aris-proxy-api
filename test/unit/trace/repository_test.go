@@ -11,7 +11,7 @@ import (
 
 func TestFakeRepo_PaginateByOwners_Isolation(t *testing.T) {
 	t.Parallel()
-	repo := newFakeRepo()
+	repo := NewFakeRepo()
 	ctx := context.Background()
 
 	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"}); err != nil {
@@ -42,7 +42,7 @@ func TestFakeRepo_PaginateByOwners_Isolation(t *testing.T) {
 
 func TestFakeRepo_Events(t *testing.T) {
 	t.Parallel()
-	repo := newFakeRepo()
+	repo := NewFakeRepo()
 	ctx := context.Background()
 
 	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"})
@@ -70,7 +70,7 @@ func TestFakeRepo_Events(t *testing.T) {
 
 func TestFakeRepo_MarkDone(t *testing.T) {
 	t.Parallel()
-	repo := newFakeRepo()
+	repo := NewFakeRepo()
 	ctx := context.Background()
 	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"}); err != nil {
 		t.Fatalf("upsert: %v", err)

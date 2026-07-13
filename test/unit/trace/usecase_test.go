@@ -13,7 +13,7 @@ import (
 
 func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	t.Parallel()
-	repo := newFakeRepo()
+	repo := NewFakeRepo()
 	handler := command.NewReportTraceEventHandler(repo)
 	ctx := context.Background()
 
@@ -47,7 +47,7 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 
 func TestReportTraceEvent_MissingSessionID(t *testing.T) {
 	t.Parallel()
-	handler := command.NewReportTraceEventHandler(newFakeRepo())
+	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
 		RawPayload: []byte(`{"hook_event_name":"SessionStart"}`),
 		APIKeyName: "key1",
@@ -60,7 +60,7 @@ func TestReportTraceEvent_MissingSessionID(t *testing.T) {
 
 func TestReportTraceEvent_CreatesTraceOnFirstEvent(t *testing.T) {
 	t.Parallel()
-	repo := newFakeRepo()
+	repo := NewFakeRepo()
 	handler := command.NewReportTraceEventHandler(repo)
 	ctx := context.Background()
 
@@ -83,7 +83,7 @@ func TestReportTraceEvent_CreatesTraceOnFirstEvent(t *testing.T) {
 
 func TestListTraces_OwnerIsolation(t *testing.T) {
 	t.Parallel()
-	repo := newFakeRepo()
+	repo := NewFakeRepo()
 	ctx := context.Background()
 	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"})
 	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2", Status: "active"})

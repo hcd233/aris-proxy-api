@@ -10,8 +10,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 )
 
-// fakeRepo 内存版 trace 仓储，用于单元测试
-type fakeRepo struct {
+// FakeRepo 内存版 trace 仓储，用于单元测试
+type FakeRepo struct {
 	mu     sync.Mutex
 	traces map[string]*trace.Trace
 	byID   map[uint]*trace.Trace
@@ -19,14 +19,15 @@ type fakeRepo struct {
 	nextID uint
 }
 
-func newFakeRepo() *fakeRepo {
-	return &fakeRepo{
+// NewFakeRepo 构造内存版 trace 仓储
+func NewFakeRepo() *FakeRepo {
+	return &FakeRepo{
 		traces: map[string]*trace.Trace{},
 		byID:   map[uint]*trace.Trace{},
 	}
 }
 
-func (f *fakeRepo) UpsertBySessionID(_ context.Context, t *trace.Trace) (*trace.Trace, error) {
+func (f *FakeRepo) UpsertBySessionID(_ context.Context, t *trace.Trace) (*trace.Trace, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if t.ID == 0 {
@@ -41,19 +42,19 @@ func (f *fakeRepo) UpsertBySessionID(_ context.Context, t *trace.Trace) (*trace.
 	return t, nil
 }
 
-func (f *fakeRepo) FindBySessionID(_ context.Context, sid string) (*trace.Trace, error) {
+func (f *FakeRepo) FindBySessionID(_ context.Context, sid string) (*trace.Trace, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.traces[sid], nil
 }
 
-func (f *fakeRepo) FindByID(_ context.Context, id uint) (*trace.Trace, error) {
+func (f *FakeRepo) FindByID(_ context.Context, id uint) (*trace.Trace, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.byID[id], nil
 }
 
-func (f *fakeRepo) MarkDone(_ context.Context, sid string) error {
+func (f *FakeRepo) MarkDone(_ context.Context, sid string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if t, ok := f.traces[sid]; ok {
@@ -62,7 +63,7 @@ func (f *fakeRepo) MarkDone(_ context.Context, sid string) error {
 	return nil
 }
 
-func (f *fakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) error {
+func (f *FakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.nextID++
@@ -76,7 +77,7 @@ func (f *fakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) error {
 	return nil
 }
 
-func (f *fakeRepo) PaginateByOwners(_ context.Context, owners []string, p model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
+func (f *FakeRepo) PaginateByOwners(_ context.Context, owners []string, p model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	ownerSet := map[string]struct{}{}
@@ -104,7 +105,7 @@ func (f *fakeRepo) PaginateByOwners(_ context.Context, owners []string, p model.
 	return out, &model.PageInfo{Page: page, PageSize: pageSize, Total: int64(len(out))}, nil
 }
 
-func (f *fakeRepo) CountEvents(_ context.Context, tid uint) (int64, error) {
+func (f *FakeRepo) CountEvents(_ context.Context, tid uint) (int64, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var c int64
@@ -116,7 +117,7 @@ func (f *fakeRepo) CountEvents(_ context.Context, tid uint) (int64, error) {
 	return c, nil
 }
 
-func (f *fakeRepo) ListEvents(_ context.Context, tid uint, p model.CommonParam) ([]*trace.TraceEvent, *model.PageInfo, error) {
+func (f *FakeRepo) ListEvents(_ context.Context, tid uint, p model.CommonParam) ([]*trace.TraceEvent, *model.PageInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []*trace.TraceEvent
