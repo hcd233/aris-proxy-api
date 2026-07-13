@@ -87,3 +87,8 @@ type ListTraceEventsReq struct {
 type ReportTraceEventRsp struct {
 	CommonRsp
 }
+
+// ReportTraceEventReq 上报请求（API Key 鉴权，body 为原始 codex hook JSON）
+type ReportTraceEventReq struct {
+	Body []byte `doc:"原始 hook 输入（透传）"`
+}
