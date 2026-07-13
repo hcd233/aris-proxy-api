@@ -286,4 +286,15 @@ var (
 	TraceStatusActive  = "active"
 	TraceStatusDone    = "done"
 	TraceAgentCodex    = "codex"
+
+	// ── Trace hook 事件名 ──
+	TraceEventSessionStart     = "SessionStart"
+	TraceEventUserPromptSubmit = "UserPromptSubmit"
+	TraceEventPreToolUse       = "PreToolUse"
+	TraceEventPostToolUse      = "PostToolUse"
+	TraceEventStop             = "Stop"
+	TraceEventSubagentStart    = "SubagentStart"
+	TraceEventSubagentStop     = "SubagentStop"
+	TraceEventPreCompact       = "PreCompact"
+	TraceEventPostCompact      = "PostCompact"
 )

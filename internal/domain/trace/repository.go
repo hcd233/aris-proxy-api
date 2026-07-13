@@ -41,6 +41,8 @@ type TraceRepository interface {
 	UpsertBySessionID(ctx context.Context, t *Trace) (*Trace, error)
 	// FindBySessionID 按 session_id 查询；未找到返回 (nil, nil)
 	FindBySessionID(ctx context.Context, sessionID string) (*Trace, error)
+	// FindByID 按 ID 查询；未找到返回 (nil, nil)
+	FindByID(ctx context.Context, id uint) (*Trace, error)
 	// MarkDone 将 trace 标记为 done
 	MarkDone(ctx context.Context, sessionID string) error
 	// InsertEvent 插入一条事件

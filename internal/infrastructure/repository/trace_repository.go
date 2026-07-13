@@ -74,6 +74,18 @@ func (r *traceRepository) FindBySessionID(ctx context.Context, sessionID string)
 	return toTraceDomain(rec), nil
 }
 
+func (r *traceRepository) FindByID(ctx context.Context, id uint) (*trace.Trace, error) {
+	db := r.db.WithContext(ctx)
+	rec, err := r.traceDAO.Get(db, &dbmodel.Trace{BaseModel: dbmodel.BaseModel{ID: id}}, []string{constant.DBSelectAll})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find trace by id")
+	}
+	return toTraceDomain(rec), nil
+}
+
 func (r *traceRepository) MarkDone(ctx context.Context, sessionID string) error {
 	db := r.db.WithContext(ctx)
 	err := db.Model(&dbmodel.Trace{}).Where(constant.FieldSessionID+" = ?", sessionID).
