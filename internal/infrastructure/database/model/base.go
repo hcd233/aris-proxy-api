@@ -30,4 +30,6 @@ var Models = []any{
 	&Blocked{},
 	&CronJob{},
 	&CronCallAudit{},
+	&Trace{},
+	&TraceEvent{},
 }
