@@ -53,6 +53,7 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewMetricsHandler,
 		NewDatasetDependencies,
 		handler.NewDatasetHandler,
+		NewTraceDependencies,
 		handler.NewTraceHandler,
 	),
 )
