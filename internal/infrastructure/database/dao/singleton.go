@@ -12,6 +12,8 @@ var (
 	blockedDAOSingleton        *BlockedDAO
 	cronJobDAOSingleton        *CronJobDAO
 	cronCallAuditDAOSingleton  *CronCallAuditDAO
+	traceDAOSingleton          *TraceDAO
+	eventDAOSingleton          *EventDAO
 )
 
 func init() {
@@ -26,6 +28,8 @@ func init() {
 	blockedDAOSingleton = &BlockedDAO{}
 	cronJobDAOSingleton = &CronJobDAO{}
 	cronCallAuditDAOSingleton = &CronCallAuditDAO{}
+	traceDAOSingleton = &TraceDAO{}
+	eventDAOSingleton = &EventDAO{}
 }
 
 // GetUserDAO 获取用户DAO
@@ -112,4 +116,18 @@ func GetCronJobDAO() *CronJobDAO {
 //	@update 2026-06-17 10:00:00
 func GetCronCallAuditDAO() *CronCallAuditDAO {
 	return cronCallAuditDAOSingleton
+}
+
+// GetTraceDAO 获取 Trace DAO
+//
+//	@return *TraceDAO
+func GetTraceDAO() *TraceDAO {
+	return traceDAOSingleton
+}
+
+// GetEventDAO 获取 TraceEvent DAO
+//
+//	@return *EventDAO
+func GetEventDAO() *EventDAO {
+	return eventDAOSingleton
 }

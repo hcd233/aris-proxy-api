@@ -41,6 +41,7 @@ import {
   Timer,
   Activity,
   Database,
+  Radar,
 } from "lucide-react";
 
 interface NavItem {
@@ -64,6 +65,7 @@ function getNavItems(): NavItem[] {
     { labelKey: "nav.cron_audit", href: "/audit/cron/", icon: <ScrollText className="size-4" />, adminOnly: true },
     { labelKey: "nav.monitor", href: "/monitor/", icon: <Activity className="size-4" />, adminOnly: true },
     { labelKey: "nav.dataset", href: "/dataset/", icon: <Database className="size-4" /> },
+    { labelKey: "nav.trace", href: "/trace/", icon: <Radar className="size-4" /> },
     { labelKey: "nav.profile", href: "/profile/", icon: <User className="size-4" /> },
   ];
 }

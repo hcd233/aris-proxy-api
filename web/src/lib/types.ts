@@ -629,3 +629,54 @@ export type DatasetExportSSEEvent =
   | { event: "data"; data: DatasetExportSSEData }
   | { event: "done"; data: DatasetExportSSEStart }
   | { event: "error"; data: DatasetExportSSEError };
+
+// ─── Trace (codex hooks) ─────────────────────────────────────────────────────
+
+export interface TraceSummary {
+  id: number;
+  sessionId: string;
+  agent: string;
+  apiKeyName: string;
+  model: string;
+  source: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TraceDetail {
+  id: number;
+  sessionId: string;
+  agent: string;
+  apiKeyName: string;
+  model: string;
+  cwd: string;
+  source: string;
+  status: string;
+  metadata?: Record<string, string>;
+  eventCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TraceEventItem {
+  id: number;
+  event: string;
+  turnId?: string;
+  payload?: unknown;
+  createdAt: string;
+}
+
+export interface ListTracesRsp extends CommonRsp {
+  traces?: TraceSummary[];
+  pageInfo?: PageInfo;
+}
+
+export interface GetTraceRsp extends CommonRsp {
+  trace?: TraceDetail;
+}
+
+export interface ListTraceEventsRsp extends CommonRsp {
+  events?: TraceEventItem[];
+  pageInfo?: PageInfo;
+}
