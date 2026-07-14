@@ -61,6 +61,15 @@ const (
 	FieldHitCount                 = "hit_count"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
+
+	FieldSessionID = "session_id"
+	FieldCWD       = "cwd"
+	FieldSource    = "source"
+	FieldEvent     = "event"
+	FieldTurnID    = "turn_id"
+	FieldAgent     = "agent"
+
+	DBSelectAll = "*"
 )
 
 const (
@@ -270,4 +279,22 @@ var (
 
 	CronPanicMessageTemplate = "panic: %v"
 	CronJobNotFoundMessage   = "cron job not found: "
+
+	// ── Trace 分页/状态常量 ──
+	TraceListPageSize  = 20
+	TraceEventPageSize = 50
+	TraceStatusActive  = "active"
+	TraceStatusDone    = "done"
+	TraceAgentCodex    = "codex"
+
+	// ── Trace hook 事件名 ──
+	TraceEventSessionStart     = "SessionStart"
+	TraceEventUserPromptSubmit = "UserPromptSubmit"
+	TraceEventPreToolUse       = "PreToolUse"
+	TraceEventPostToolUse      = "PostToolUse"
+	TraceEventStop             = "Stop"
+	TraceEventSubagentStart    = "SubagentStart"
+	TraceEventSubagentStop     = "SubagentStop"
+	TraceEventPreCompact       = "PreCompact"
+	TraceEventPostCompact      = "PostCompact"
 )
