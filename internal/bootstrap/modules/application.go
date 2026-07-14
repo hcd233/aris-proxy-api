@@ -34,6 +34,9 @@ import (
 	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
+	tracecommand "github.com/hcd233/aris-proxy-api/internal/application/trace/command"
+	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
+	tracequery "github.com/hcd233/aris-proxy-api/internal/application/trace/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	cronpkg "github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -45,8 +48,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
 
 var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
@@ -113,6 +119,11 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewPreviewDatasetHandler,
 		NewExportDatasetHandler,
 		NewPreviewFormatDatasetHandler,
+		NewTraceRepository,
+		NewReportTraceEventHandler,
+		NewListTracesHandler,
+		NewGetTraceHandler,
+		NewListTraceEventsHandler,
 	),
 )
 
@@ -348,4 +359,24 @@ func NewListCronCallAuditsHandler(repo cronauditport.CronCallAuditRepository) cr
 
 func NewListCronCallAuditOptionsHandler(repo cronauditport.CronCallAuditRepository) cronauditport.ListCronCallAuditOptionsHandler {
 	return cronauditquery.NewListCronCallAuditOptionsHandler(repo)
+}
+
+func NewTraceRepository(db *gorm.DB) trace.TraceRepository {
+	return repository.NewTraceRepository(db)
+}
+
+func NewReportTraceEventHandler(repo trace.TraceRepository) traceport.ReportTraceEventHandler {
+	return tracecommand.NewReportTraceEventHandler(repo)
+}
+
+func NewListTracesHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.ListTracesHandler {
+	return tracequery.NewListTracesHandler(repo, apiKeyRepo)
+}
+
+func NewGetTraceHandler(repo trace.TraceRepository) traceport.GetTraceHandler {
+	return tracequery.NewGetTraceHandler(repo)
+}
+
+func NewListTraceEventsHandler(repo trace.TraceRepository) traceport.ListTraceEventsHandler {
+	return tracequery.NewListTraceEventsHandler(repo)
 }

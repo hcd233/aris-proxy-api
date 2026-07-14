@@ -29,6 +29,9 @@ import type {
   ListShareMessagesRsp,
   ListShareToolsRsp,
   ListSharesRsp,
+  ListTracesRsp,
+  GetTraceRsp,
+  ListTraceEventsRsp,
   CommonRsp,
   ScoreSessionReqBody,
   ScoreSessionRsp,
@@ -611,6 +614,33 @@ class ApiClient {
 
   async deleteBlocked(id: number): Promise<CommonRsp> {
     return this.request<CommonRsp>(`/api/v1/block?id=${id}`, { method: "DELETE" });
+  }
+
+  // ─── Trace (codex hooks) ─────────────────────────────────────────────────────
+
+  async listTraces(
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<ListTracesRsp> {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    return this.request<ListTracesRsp>(`/api/v1/trace/list?${params}`);
+  }
+
+  async getTrace(id: number): Promise<GetTraceRsp> {
+    return this.request<GetTraceRsp>(`/api/v1/trace?id=${id}`);
+  }
+
+  async listTraceEvents(
+    traceId: number,
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<ListTraceEventsRsp> {
+    const params = new URLSearchParams({
+      traceId: String(traceId),
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    return this.request<ListTraceEventsRsp>(`/api/v1/trace/event/list?${params}`);
   }
 
   // ─── Cron (admin) ──────────────────────────────────────────────────────────

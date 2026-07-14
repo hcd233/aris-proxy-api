@@ -33,6 +33,7 @@ type APIRouterDependencies struct {
 	BlockedHandler   handler.BlockedHandler
 	MetricsHandler   handler.MetricsHandler
 	DatasetHandler   handler.DatasetHandler
+	TraceHandler     handler.TraceHandler
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -115,4 +116,7 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	datasetGroup := huma.NewGroup(v1Group, "/dataset")
 	initDatasetRouter(datasetGroup, deps.DatasetHandler, deps.DB, deps.Cache, deps.AccessSigner)
+
+	traceGroup := huma.NewGroup(v1Group, "/trace")
+	initTraceRouter(traceGroup, TraceRouterDependencies{TraceHandler: deps.TraceHandler}, deps.DB, deps.Cache, deps.AccessSigner)
 }
