@@ -95,33 +95,33 @@ type ReportTraceEventReq struct {
 
 // ReportTraceEventReqBody codex hook stdin 输入
 //
-// 仅建模服务端需要解析使用的业务字段；其余动态字段（prompt / tool_input /
-// tool_response 等）通过 RawPayload 原样透传存储到 events.payload，不丢失。
+// 显式建模 codex hook 各事件的字段；任意 JSON 字段（tool_input / tool_response）
+// 用 sonic.NoCopyRawMessage 承载。handler 序列化整个结构体作为完整 hook JSON
+// 透传存储到 events.payload。
 type ReportTraceEventReqBody struct {
-	HookEventName string `json:"hook_event_name" required:"true" minLength:"1" doc:"hook 事件名"`
-	SessionID     string `json:"session_id" required:"true" minLength:"1" doc:"codex session_id"`
-	Model         string `json:"model,omitempty" doc:"模型"`
-	CWD           string `json:"cwd,omitempty" doc:"工作目录"`
-	Source        string `json:"source,omitempty" doc:"startup/resume/clear/compact"`
-	TurnID        string `json:"turn_id,omitempty" doc:"turn id"`
-
-	// raw 原始 stdin JSON，透传存储用，不参与序列化与 schema
-	raw []byte `json:"-"`
-}
-
-// UnmarshalJSON 保留原始 stdin JSON（透传存储用）并解析业务字段
-func (b *ReportTraceEventReqBody) UnmarshalJSON(data []byte) error {
-	type alias ReportTraceEventReqBody
-	var a alias
-	if err := sonic.Unmarshal(data, &a); err != nil {
-		return err
-	}
-	*b = ReportTraceEventReqBody(a)
-	b.raw = append([]byte(nil), data...)
-	return nil
-}
-
-// RawPayload 返回原始 codex hook stdin JSON（完整 hook 输入，透传存储到 events.payload）
-func (b *ReportTraceEventReqBody) RawPayload() []byte {
-	return b.raw
+	// 公共字段（所有 hook 事件均携带）
+	HookEventName  string `json:"hook_event_name" required:"true" minLength:"1" doc:"hook 事件名"`
+	SessionID      string `json:"session_id" required:"true" minLength:"1" doc:"codex session_id"`
+	Model          string `json:"model,omitempty" doc:"模型"`
+	CWD            string `json:"cwd,omitempty" doc:"工作目录"`
+	TranscriptPath string `json:"transcript_path,omitempty" doc:"transcript 路径"`
+	PermissionMode string `json:"permission_mode,omitempty" doc:"权限模式"`
+	// turn 级事件携带
+	TurnID string `json:"turn_id,omitempty" doc:"turn id"`
+	// SessionStart
+	Source string `json:"source,omitempty" doc:"startup/resume/clear/compact"`
+	// UserPromptSubmit
+	Prompt string `json:"prompt,omitempty" doc:"用户输入文本"`
+	// PreToolUse / PostToolUse
+	ToolName     string                 `json:"tool_name,omitempty" doc:"工具名"`
+	ToolUseID    string                 `json:"tool_use_id,omitempty" doc:"工具调用 ID"`
+	ToolInput    sonic.NoCopyRawMessage `json:"tool_input,omitempty" doc:"工具输入（任意 JSON）"`
+	ToolResponse sonic.NoCopyRawMessage `json:"tool_response,omitempty" doc:"工具响应（任意 JSON）"`
+	// Stop / SubagentStop
+	LastAssistantMessage string `json:"last_assistant_message,omitempty" doc:"最后 assistant 消息"`
+	// SubagentStart / SubagentStop
+	AgentID   string `json:"agent_id,omitempty" doc:"subagent ID"`
+	AgentType string `json:"agent_type,omitempty" doc:"subagent 类型"`
+	// PreCompact / PostCompact
+	Trigger string `json:"trigger,omitempty" doc:"manual/auto"`
 }

@@ -55,6 +55,13 @@ func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.Repo
 	}
 	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyAPIKeyName)
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	// 结构体序列化为完整 hook JSON，透传存储到 events.payload
+	rawPayload, err := sonic.Marshal(req.Body)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[TraceHandler] Marshal report body failed", zap.Error(err))
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
 	cmd := port.ReportTraceEventCommand{
 		HookEventName: req.Body.HookEventName,
 		SessionID:     req.Body.SessionID,
@@ -62,7 +69,7 @@ func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.Repo
 		CWD:           req.Body.CWD,
 		Source:        req.Body.Source,
 		TurnID:        req.Body.TurnID,
-		RawPayload:    req.Body.RawPayload(),
+		RawPayload:    rawPayload,
 		APIKeyName:    apiKeyName,
 		UserID:        userID,
 	}

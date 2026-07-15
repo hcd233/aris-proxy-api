@@ -5,8 +5,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bytedance/sonic"
-
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -25,18 +23,10 @@ func TestE2E_TraceReportFlow(t *testing.T) {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyUserID, uint(7))
 	ctx = context.WithValue(ctx, constant.CtxKeyAPIKeyName, "e2e-key")
 
-	payload, err := sonic.Marshal(map[string]any{
-		"hook_event_name": "UserPromptSubmit",
-		"session_id":      "e2e-s1",
-		"prompt":          "hello",
-	})
-	if err != nil {
-		t.Fatalf("marshal payload: %v", err)
-	}
-
-	body := &dto.ReportTraceEventReqBody{}
-	if err := sonic.Unmarshal(payload, body); err != nil {
-		t.Fatalf("unmarshal report body: %v", err)
+	body := &dto.ReportTraceEventReqBody{
+		HookEventName: "UserPromptSubmit",
+		SessionID:     "e2e-s1",
+		Prompt:        "hello",
 	}
 
 	rsp, err := h.HandleReportTraceEvent(ctx, &dto.ReportTraceEventReq{Body: body})
