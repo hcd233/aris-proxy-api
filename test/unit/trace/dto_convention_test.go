@@ -12,7 +12,7 @@ import (
 
 // TestReportTraceEventReq_DTOFollowsHumaBodyConvention 防回归：上报接口的请求体必须是
 // 实打实的结构体（*ReportTraceEventReqBody），而不是 []byte 透传。[]byte 会让 OpenAPI
-// 契约丢失字段定义、校验下沉到 usecase 层。业务字段 + RawPayload() 透传存储才是正确模式。
+// 契约丢失字段定义、校验下沉到 usecase 层。
 func TestReportTraceEventReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	t.Parallel()
 	reqType := reflect.TypeOf(dto.ReportTraceEventReq{})
@@ -23,7 +23,6 @@ func TestReportTraceEventReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	if bodyField.Tag.Get("json") != "body" {
 		t.Errorf(`ReportTraceEventReq.Body json tag = %q, want "body"`, bodyField.Tag.Get("json"))
 	}
-	// Body 必须是结构体指针，禁止回退到 []byte 透传
 	if bodyField.Type.Kind() != reflect.Pointer || bodyField.Type.Elem().Name() != "ReportTraceEventReqBody" {
 		t.Fatalf("ReportTraceEventReq.Body must be *ReportTraceEventReqBody, got %s", bodyField.Type)
 	}
@@ -52,24 +51,40 @@ func TestReportTraceEventReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	}
 }
 
-// TestReportTraceEventReqBody_RawPayloadPreservesDynamicFields 验证自定义 UnmarshalJSON
-// 在解析业务字段的同时保留原始 stdin JSON，动态字段（prompt / tool_input 等）不丢失，
-// 供 events.payload 完整透传存储。
-func TestReportTraceEventReqBody_RawPayloadPreservesDynamicFields(t *testing.T) {
+// TestReportTraceEventReqBody_HasNoByteFields 防回归：DTO 不得出现任何 []byte 字段
+// （含 json:"-" 的隐藏透传字段）。任意 JSON 必须用 sonic.NoCopyRawMessage 建模。
+func TestReportTraceEventReqBody_HasNoByteFields(t *testing.T) {
 	t.Parallel()
-	raw := []byte(`{"hook_event_name":"UserPromptSubmit","session_id":"s1","prompt":"hello","tool_input":{"cmd":"ls"}}`)
-	body := &dto.ReportTraceEventReqBody{}
-	if err := sonic.Unmarshal(raw, body); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	bodyType := reflect.TypeOf(dto.ReportTraceEventReqBody{})
+	byteType := reflect.TypeOf([]byte(nil))
+	for i := 0; i < bodyType.NumField(); i++ {
+		f := bodyType.Field(i)
+		// 只拦匿名 []byte；sonic.NoCopyRawMessage 是 named type，允许用于任意 JSON
+		if f.Type == byteType {
+			t.Errorf("ReportTraceEventReqBody.%s is []byte — DTO must use concrete types, not []byte passthrough", f.Name)
+		}
 	}
-	if body.HookEventName != "UserPromptSubmit" || body.SessionID != "s1" {
-		t.Fatalf("business fields not parsed: %+v", body)
+}
+
+// TestReportTraceEventReqBody_MarshalPreservesDynamicFields 验证结构体序列化后任意 JSON
+// 字段（tool_input 等）完整保留，供 events.payload 透传存储。
+func TestReportTraceEventReqBody_MarshalPreservesDynamicFields(t *testing.T) {
+	t.Parallel()
+	body := &dto.ReportTraceEventReqBody{
+		HookEventName: "PreToolUse",
+		SessionID:     "s1",
+		ToolName:      "Bash",
+		ToolInput:     sonic.NoCopyRawMessage(`{"command":"ls"}`),
 	}
-	got := string(body.RawPayload())
-	if !strings.Contains(got, `"prompt":"hello"`) {
-		t.Errorf("RawPayload lost dynamic field prompt: %s", got)
+	raw, err := sonic.Marshal(body)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
 	}
-	if !strings.Contains(got, `"tool_input":{"cmd":"ls"}`) {
-		t.Errorf("RawPayload lost dynamic field tool_input: %s", got)
+	got := string(raw)
+	if !strings.Contains(got, `"hook_event_name":"PreToolUse"`) {
+		t.Errorf("marshal lost hook_event_name: %s", got)
+	}
+	if !strings.Contains(got, `"tool_input":{"command":"ls"}`) {
+		t.Errorf("marshal lost tool_input: %s", got)
 	}
 }
