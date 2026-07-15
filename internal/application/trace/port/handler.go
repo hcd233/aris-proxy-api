@@ -48,9 +48,15 @@ type TraceEventView struct {
 
 // ReportTraceEventCommand 上报事件命令
 type ReportTraceEventCommand struct {
-	RawPayload []byte
-	APIKeyName string
-	UserID     uint
+	HookEventName string
+	SessionID     string
+	Model         string
+	CWD           string
+	Source        string
+	TurnID        string
+	RawPayload    []byte
+	APIKeyName    string
+	UserID        uint
 }
 
 // ReportTraceEventHandler 上报 handler 接口

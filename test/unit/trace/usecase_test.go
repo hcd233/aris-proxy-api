@@ -18,11 +18,16 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	ctx := context.Background()
 
 	start := []byte(`{"hook_event_name":"SessionStart","session_id":"s1","model":"gpt-4o","source":"startup","cwd":"/work"}`)
-	if err := handler.Handle(ctx, port.ReportTraceEventCommand{RawPayload: start, APIKeyName: "key1", UserID: 1}); err != nil {
+	if err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		HookEventName: "SessionStart", SessionID: "s1", Model: "gpt-4o", Source: "startup", CWD: "/work",
+		RawPayload: start, APIKeyName: "key1", UserID: 1,
+	}); err != nil {
 		t.Fatalf("SessionStart failed: %v", err)
 	}
 	stop := []byte(`{"hook_event_name":"Stop","session_id":"s1"}`)
-	if err := handler.Handle(ctx, port.ReportTraceEventCommand{RawPayload: stop, APIKeyName: "key1", UserID: 1}); err != nil {
+	if err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		HookEventName: "Stop", SessionID: "s1", RawPayload: stop, APIKeyName: "key1", UserID: 1,
+	}); err != nil {
 		t.Fatalf("Stop failed: %v", err)
 	}
 
@@ -49,9 +54,9 @@ func TestReportTraceEvent_MissingSessionID(t *testing.T) {
 	t.Parallel()
 	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
-		RawPayload: []byte(`{"hook_event_name":"SessionStart"}`),
-		APIKeyName: "key1",
-		UserID:     1,
+		HookEventName: "SessionStart",
+		APIKeyName:    "key1",
+		UserID:        1,
 	})
 	if err == nil {
 		t.Fatal("expected error for missing session_id")
@@ -66,7 +71,10 @@ func TestReportTraceEvent_CreatesTraceOnFirstEvent(t *testing.T) {
 
 	// First event for an unknown session still creates an owned trace.
 	payload := []byte(`{"hook_event_name":"PreToolUse","session_id":"u1","turn_id":"t1"}`)
-	if err := handler.Handle(ctx, port.ReportTraceEventCommand{RawPayload: payload, APIKeyName: "key1", UserID: 1}); err != nil {
+	if err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		HookEventName: "PreToolUse", SessionID: "u1", TurnID: "t1",
+		RawPayload: payload, APIKeyName: "key1", UserID: 1,
+	}); err != nil {
 		t.Fatalf("PreToolUse failed: %v", err)
 	}
 	tr, _ := repo.FindBySessionID(ctx, "u1")

@@ -70,3 +70,4 @@ k8s/secret.yaml.local
 migrate_think_extract
 .codebuddy/settings.local.json
 .worktrees/
+.serena

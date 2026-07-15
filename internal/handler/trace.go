@@ -49,9 +49,24 @@ func NewTraceHandler(deps TraceDependencies) TraceHandler {
 // HandleReportTraceEvent 上报 codex hook 事件（API Key 鉴权）
 func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.ReportTraceEventReq) (*dto.HTTPResponse[*dto.ReportTraceEventRsp], error) {
 	rsp := &dto.ReportTraceEventRsp{}
+	if req.Body == nil {
+		rsp.Error = ierr.ErrValidation.BizError()
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
 	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyAPIKeyName)
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	if err := h.report.Handle(ctx, port.ReportTraceEventCommand{RawPayload: req.Body, APIKeyName: apiKeyName, UserID: userID}); err != nil {
+	cmd := port.ReportTraceEventCommand{
+		HookEventName: req.Body.HookEventName,
+		SessionID:     req.Body.SessionID,
+		Model:         req.Body.Model,
+		CWD:           req.Body.CWD,
+		Source:        req.Body.Source,
+		TurnID:        req.Body.TurnID,
+		RawPayload:    req.Body.RawPayload(),
+		APIKeyName:    apiKeyName,
+		UserID:        userID,
+	}
+	if err := h.report.Handle(ctx, cmd); err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] Report event failed", zap.Error(err))
 		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
 	}
