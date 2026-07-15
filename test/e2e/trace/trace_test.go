@@ -34,7 +34,12 @@ func TestE2E_TraceReportFlow(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	rsp, err := h.HandleReportTraceEvent(ctx, &dto.ReportTraceEventReq{Body: payload})
+	body := &dto.ReportTraceEventReqBody{}
+	if err := sonic.Unmarshal(payload, body); err != nil {
+		t.Fatalf("unmarshal report body: %v", err)
+	}
+
+	rsp, err := h.HandleReportTraceEvent(ctx, &dto.ReportTraceEventReq{Body: body})
 	if err != nil {
 		t.Fatalf("handler returned error: %v", err)
 	}

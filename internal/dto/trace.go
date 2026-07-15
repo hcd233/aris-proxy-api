@@ -88,7 +88,40 @@ type ReportTraceEventRsp struct {
 	CommonRsp
 }
 
-// ReportTraceEventReq 上报请求（API Key 鉴权，body 为原始 codex hook JSON）
+// ReportTraceEventReq 上报请求（API Key 鉴权，codex hook stdin JSON）
 type ReportTraceEventReq struct {
-	Body []byte `doc:"原始 hook 输入（透传）"`
+	Body *ReportTraceEventReqBody `json:"body" doc:"codex hook stdin 输入"`
+}
+
+// ReportTraceEventReqBody codex hook stdin 输入
+//
+// 仅建模服务端需要解析使用的业务字段；其余动态字段（prompt / tool_input /
+// tool_response 等）通过 RawPayload 原样透传存储到 events.payload，不丢失。
+type ReportTraceEventReqBody struct {
+	HookEventName string `json:"hook_event_name" required:"true" minLength:"1" doc:"hook 事件名"`
+	SessionID     string `json:"session_id" required:"true" minLength:"1" doc:"codex session_id"`
+	Model         string `json:"model,omitempty" doc:"模型"`
+	CWD           string `json:"cwd,omitempty" doc:"工作目录"`
+	Source        string `json:"source,omitempty" doc:"startup/resume/clear/compact"`
+	TurnID        string `json:"turn_id,omitempty" doc:"turn id"`
+
+	// raw 原始 stdin JSON，透传存储用，不参与序列化与 schema
+	raw []byte `json:"-"`
+}
+
+// UnmarshalJSON 保留原始 stdin JSON（透传存储用）并解析业务字段
+func (b *ReportTraceEventReqBody) UnmarshalJSON(data []byte) error {
+	type alias ReportTraceEventReqBody
+	var a alias
+	if err := sonic.Unmarshal(data, &a); err != nil {
+		return err
+	}
+	*b = ReportTraceEventReqBody(a)
+	b.raw = append([]byte(nil), data...)
+	return nil
+}
+
+// RawPayload 返回原始 codex hook stdin JSON（完整 hook 输入，透传存储到 events.payload）
+func (b *ReportTraceEventReqBody) RawPayload() []byte {
+	return b.raw
 }
