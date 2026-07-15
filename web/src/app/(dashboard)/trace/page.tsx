@@ -28,8 +28,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Radar, RefreshCw, Search, Eye } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Radar, Search, Eye, ChevronDown } from "lucide-react";
+import { Codex } from "@lobehub/icons";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -157,26 +165,38 @@ export default function TracePage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("trace.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <TooltipRoot>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("trace.refresh")}
-                    onClick={() => fetchTraces(persistedPage, persistedPageSize)}
-                  >
-                    <RefreshCw />
-                  </Button>
-                }
-              />
-              <TooltipContent>{t("trace.refresh_tooltip")}</TooltipContent>
-            </TooltipRoot>
-          </TooltipProvider>
-          <Button size="sm" onClick={() => setInstallOpen(true)}>
-            <Radar /> {t("trace.install")}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant="outline" className="gap-1.5" />}
+            >
+              <Radar className="size-4" />
+              {t("trace.install")}
+              <ChevronDown className="size-3.5 opacity-50 transition-transform duration-150 group-aria-expanded/button:rotate-180" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 p-1.5">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
+                  {t("trace.install_target")}
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => setInstallOpen(true)}
+                  className="items-start gap-2.5 rounded-lg px-2 py-2"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                    <Codex.Color size={17} />
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-sm font-medium leading-none">
+                      {t("trace.install_codex")}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {t("trace.install_codex_hint")}
+                    </span>
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
