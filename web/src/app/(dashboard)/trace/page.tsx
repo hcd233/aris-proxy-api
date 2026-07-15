@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Radar, RefreshCw, Search, Eye } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
@@ -156,9 +157,23 @@ export default function TracePage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("trace.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => fetchTraces(persistedPage, persistedPageSize)}>
-            <RefreshCw /> {t("trace.refresh")}
-          </Button>
+          <TooltipProvider>
+            <TooltipRoot>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("trace.refresh")}
+                    onClick={() => fetchTraces(persistedPage, persistedPageSize)}
+                  >
+                    <RefreshCw />
+                  </Button>
+                }
+              />
+              <TooltipContent>{t("trace.refresh_tooltip")}</TooltipContent>
+            </TooltipRoot>
+          </TooltipProvider>
           <Button size="sm" onClick={() => setInstallOpen(true)}>
             <Radar /> {t("trace.install")}
           </Button>
@@ -167,7 +182,7 @@ export default function TracePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">{t("trace.title")}</CardTitle>
+          <CardTitle className="font-display">{t("trace.all_traces")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
