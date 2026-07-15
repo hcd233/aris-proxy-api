@@ -23,21 +23,21 @@ interface TraceInstallDialogProps {
 }
 
 function generateScript(traceUrl: string, apiKey: string): string {
+  const hookUrl = `${traceUrl.replace(/\/$/, "")}/trace/event`;
   return `#!/usr/bin/env bash
 # Install aris-proxy-api trace hooks for Codex
 set -euo pipefail
 
-TRACE_URL="\${TRACE_URL:-${traceUrl}}"
-API_KEY="\${API_KEY:-${apiKey}}"
 HOOKS_DIR="$HOME/.aris/trace"
-HOOKS_FILE="$HOME/.codex/hooks.json"
 mkdir -p "$HOOKS_DIR"
 
+# Hook is written with TRACE_URL and API_KEY baked in, because Codex
+# invokes the hook in a fresh subprocess that does not inherit these vars.
 cat > "$HOOKS_DIR/codex-hook.sh" <<'HOOKEOF'
 #!/usr/bin/env bash
 set -u
-TRACE_URL="\${TRACE_URL:-http://localhost:8080/api/v1/trace/event}"
-API_KEY="\${API_KEY:-}"
+TRACE_URL="${hookUrl}"
+API_KEY="${apiKey}"
 payload="$(cat)"
 event_name="$(printf '%s' "$payload" | jq -r '.hook_event_name // empty' 2>/dev/null)"
 if [ "$event_name" = "Stop" ]; then printf '{}'; fi
@@ -50,9 +50,9 @@ chmod +x "$HOOKS_DIR/codex-hook.sh"
 
 HOOK_CMD="$HOOKS_DIR/codex-hook.sh"
 python3 - "$HOOK_CMD" <<'PYEOF'
-import json, os
-hook_cmd = os.environ.get('HOOK_CMD')
-hooks_path = os.path.expanduser('$HOME/.codex/hooks.json')
+import json, os, sys
+hook_cmd = sys.argv[1]
+hooks_path = os.path.expanduser('~/.codex/hooks.json')
 events = ["SessionStart","UserPromptSubmit","PreToolUse","PostToolUse","Stop","SubagentStart","SubagentStop","PreCompact","PostCompact"]
 cfg = {}
 if os.path.exists(hooks_path):
@@ -62,7 +62,11 @@ if os.path.exists(hooks_path):
 hooks = cfg.setdefault("hooks", {})
 for ev in events:
     grp = {"matcher": "", "hooks": [{"type": "command", "command": hook_cmd, "timeout": 30}]}
-    hooks.setdefault(ev, []).append(grp)
+    # Idempotent: drop any existing group that points at this same hook command.
+    existing = [g for g in hooks.setdefault(ev, []) if not (
+        len(g.get("hooks", [])) == 1 and g["hooks"][0].get("command") == hook_cmd)]
+    existing.append(grp)
+    hooks[ev] = existing
 os.makedirs(os.path.dirname(hooks_path), exist_ok=True)
 with open(hooks_path, "w") as f:
     json.dump(cfg, f, indent=2)
