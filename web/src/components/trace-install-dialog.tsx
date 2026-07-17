@@ -38,7 +38,7 @@ cat > "$HOOKS_DIR/codex-hook.sh" <<'HOOKEOF'
 set -u
 TRACE_URL="${hookUrl}"
 API_KEY="${apiKey}"
-LOG_DIR="${LOG_DIR:-$HOME/.aris/trace/logs}"
+LOG_DIR="\${LOG_DIR:-$HOME/.aris/trace/logs}"
 LOG_FILE="$LOG_DIR/trace-$(date +%Y-%m-%d).log"
 payload="$(cat)"
 event_name="$(printf '%s' "$payload" | jq -r '.hook_event_name // empty' 2>/dev/null)"
