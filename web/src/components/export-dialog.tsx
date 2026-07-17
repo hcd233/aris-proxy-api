@@ -287,7 +287,7 @@ export default function ExportDialog({
         </DialogHeader>
 
         {/* ─── Body: two independently-scrolling panes ─── */}
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto md:overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)]">
+        <div className="flex flex-1 min-h-0 flex-col overflow-y-auto md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] md:overflow-hidden">
           {/* ── Left: configuration ── */}
           <div className="md:min-h-0 md:overflow-y-auto md:border-r border-border px-6 py-5 space-y-6">
             {/* Connection */}
@@ -395,7 +395,7 @@ export default function ExportDialog({
                     return (
                       <label
                         key={model.id}
-                        className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-all ${
+                        className={`group relative flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-all focus-within:ring-2 focus-within:ring-ring/40 ${
                           selected
                             ? "border-primary/40 bg-primary/[0.06]"
                             : "border-transparent hover:border-border hover:bg-secondary/60"
@@ -412,7 +412,7 @@ export default function ExportDialog({
                         </span>
                         <input
                           type="checkbox"
-                          className="sr-only"
+                          className="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                           checked={selected}
                           onChange={() => handleToggle(model.id)}
                         />
