@@ -38,9 +38,16 @@ cat > "$HOOKS_DIR/codex-hook.sh" <<'HOOKEOF'
 set -u
 TRACE_URL="${hookUrl}"
 API_KEY="${apiKey}"
+LOG_DIR="${LOG_DIR:-$HOME/.aris/trace/logs}"
+LOG_FILE="$LOG_DIR/trace-$(date +%Y-%m-%d).log"
 payload="$(cat)"
 event_name="$(printf '%s' "$payload" | jq -r '.hook_event_name // empty' 2>/dev/null)"
 if [ "$event_name" = "Stop" ]; then printf '{}'; fi
+(
+  mkdir -p "$LOG_DIR" 2>/dev/null
+  printf '%s' "$payload" | jq -c --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '. + {_trace_local_ts: $ts}' >> "$LOG_FILE" 2>/dev/null
+  find "$LOG_DIR" -name 'trace-*.log' -mtime +7 -delete 2>/dev/null
+) >/dev/null 2>&1 &
 if [ -n "$API_KEY" ]; then
   printf '%s' "$payload" | curl -sS -X POST "$TRACE_URL" -H "Content-Type: application/json" -H "Authorization: Bearer $API_KEY" -d @- >/dev/null 2>&1 &
 fi
