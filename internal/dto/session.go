@@ -126,7 +126,7 @@ type SessionMetadata struct {
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
 type GetSessionMetadataReq struct {
-	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
 }
 
 // GetSessionMetadataRsp 获取 Session 元数据响应
@@ -143,7 +143,7 @@ type GetSessionMetadataRsp struct {
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
 type ListSessionMessagesReq struct {
-	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
 	Page      int  `query:"page" required:"true" minimum:"1" doc:"页码"`
 	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"50" doc:"每页条数"`
 }
@@ -163,7 +163,7 @@ type ListSessionMessagesRsp struct {
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
 type ListSessionToolsReq struct {
-	SessionID uint `query:"sessionId" required:"true" minimum:"1" doc:"Session ID"`
+	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
 	Page      int  `query:"page" required:"true" minimum:"1" doc:"页码"`
 	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"20" doc:"每页条数"`
 }

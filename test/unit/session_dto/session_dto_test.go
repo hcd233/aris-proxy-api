@@ -2,6 +2,7 @@ package session_dto
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -246,5 +247,30 @@ func TestListSessionToolsRsp_EmptyTools(t *testing.T) {
 	}
 	if strings.Contains(payload, `"tools"`) {
 		t.Errorf("nil tools should be omitted, got: %s", payload)
+	}
+}
+
+func TestSessionQueryReqs_UseIDQueryParameter(t *testing.T) {
+	t.Parallel()
+
+	for _, req := range []struct {
+		name   string
+		typeOf reflect.Type
+	}{
+		{name: "session metadata", typeOf: reflect.TypeOf(dto.GetSessionMetadataReq{})},
+		{name: "session messages", typeOf: reflect.TypeOf(dto.ListSessionMessagesReq{})},
+		{name: "session tools", typeOf: reflect.TypeOf(dto.ListSessionToolsReq{})},
+	} {
+		t.Run(req.name, func(t *testing.T) {
+			t.Parallel()
+
+			field, ok := req.typeOf.FieldByName("SessionID")
+			if !ok {
+				t.Fatal("session request must have SessionID field")
+			}
+			if got := field.Tag.Get("query"); got != "id" {
+				t.Errorf(`SessionID query tag = %q, want "id"`, got)
+			}
+		})
 	}
 }
