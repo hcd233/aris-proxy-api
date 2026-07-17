@@ -39,15 +39,31 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # 复制后端源码（先复制 internal，确保前端构建产物后覆盖）
 COPY cmd ./cmd
 COPY internal ./internal
-COPY main.go ./
 
 # 复制前端构建产物到 internal/web/dist/（两个前端阶段路径统一为 /app/out）
 COPY --from=frontend-final /app/out ./internal/web/dist
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -trimpath -ldflags="-s -w" -o /go/bin/aris-proxy-api \
+    go build -trimpath -ldflags="-s -w" -o /go/bin/aris-proxy-api ./cmd/server \
     && upx -9 /go/bin/aris-proxy-api
+
+# 交叉编译四平台客户端（不 UPX，保持 Darwin 兼容）
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    mkdir -p /go/trace-client \
+    && for pair in darwin-amd64:darwin/amd64 darwin-arm64:darwin/arm64 linux-amd64:linux/amd64 linux-arm64:linux/arm64; do \
+        name=$${pair%%:*}; \
+        target=$${pair##*:}; \
+        os=$${target%%/*}; \
+        arch=$${target##*/}; \
+        CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags="-s -w" \
+            -o /go/trace-client/aris-$$name ./cmd/client; \
+    done \
+    && test -s /go/trace-client/aris-darwin-amd64 \
+    && test -s /go/trace-client/aris-darwin-arm64 \
+    && test -s /go/trace-client/aris-linux-amd64 \
+    && test -s /go/trace-client/aris-linux-arm64
 
 # 阶段3: 运行时（distroless，自带 CA 证书，无 shell，nonroot）
 FROM gcr.io/distroless/static-debian12:nonroot AS final
@@ -55,6 +71,7 @@ FROM gcr.io/distroless/static-debian12:nonroot AS final
 WORKDIR /app
 
 COPY --from=builder /go/bin/aris-proxy-api /app/aris-proxy-api
+COPY --from=builder /go/trace-client /app/trace-client
 
 USER nonroot:nonroot
 EXPOSE 8080

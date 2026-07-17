@@ -4,34 +4,47 @@ import (
 	"context"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	apikeydomain "github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 )
 
 type getTraceHandler struct {
-	repo trace.TraceRepository
+	repo       trace.TraceRepository
+	authorizer *traceAuthorizer
 }
 
 // NewGetTraceHandler 构造详情 handler
-func NewGetTraceHandler(repo trace.TraceRepository) port.GetTraceHandler {
-	return &getTraceHandler{repo: repo}
+func NewGetTraceHandler(
+	repo trace.TraceRepository,
+	apiKeyRepo apikeydomain.APIKeyRepository,
+) port.GetTraceHandler {
+	return &getTraceHandler{repo: repo, authorizer: newTraceAuthorizer(repo, apiKeyRepo)}
 }
 
-func (h *getTraceHandler) Handle(ctx context.Context, q port.GetTraceQuery) (*port.TraceDetailView, error) {
-	t, err := h.repo.FindByID(ctx, q.TraceID)
+func (h *getTraceHandler) Handle(
+	ctx context.Context,
+	q port.GetTraceQuery,
+) (*port.TraceDetailView, error) {
+	item, err := h.authorizer.Find(ctx, q.UserID, q.IsAdmin, q.TraceID)
 	if err != nil {
 		return nil, err
 	}
-	if t == nil {
-		return nil, ierr.New(ierr.ErrDataNotExists, "trace not found")
-	}
-	count, err := h.repo.CountEvents(ctx, t.ID)
+	count, err := h.repo.CountEvents(ctx, item.ID)
 	if err != nil {
 		return nil, err
 	}
 	return &port.TraceDetailView{
-		ID: t.ID, SessionID: t.SessionID, Agent: t.Agent, APIKeyName: t.APIKeyName,
-		Model: t.Model, CWD: t.CWD, Source: t.Source, Status: t.Status,
-		Metadata: t.Metadata, EventCount: count, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt,
+		ID:         item.ID,
+		SessionID:  item.SessionID,
+		Agent:      item.Agent,
+		APIKeyName: item.APIKeyName,
+		Model:      item.Model,
+		CWD:        item.CWD,
+		Source:     item.Source,
+		Status:     item.Status,
+		Metadata:   item.Metadata,
+		EventCount: count,
+		CreatedAt:  item.CreatedAt,
+		UpdatedAt:  item.UpdatedAt,
 	}, nil
 }

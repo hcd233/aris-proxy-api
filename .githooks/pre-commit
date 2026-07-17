@@ -104,10 +104,10 @@ else
     # --------------------------------------------------------------------------
     printf "$INFO Running lint...\n"
 
-    if ! $GO_BIN run main.go lint conv ./... 2>&1; then
+    if ! $GO_BIN run ./cmd/server lint conv ./... 2>&1; then
         CONV_FAILED=1
     fi
-    if ! $GO_BIN run main.go lint static ./... 2>&1; then
+    if ! $GO_BIN run ./cmd/server lint static ./... 2>&1; then
         STATIC_FAILED=1
     fi
     if [ -n "$CONV_FAILED" ] || [ -n "$STATIC_FAILED" ]; then

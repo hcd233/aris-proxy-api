@@ -33,6 +33,7 @@ import type {
   GetTraceRsp,
   ListTraceEventsRsp,
   GetTraceConversationRsp,
+  IssueTraceClientTicketRsp,
   CommonRsp,
   ScoreSessionReqBody,
   ScoreSessionRsp,
@@ -618,6 +619,12 @@ class ApiClient {
   }
 
   // ─── Trace (codex hooks) ─────────────────────────────────────────────────────
+
+  async issueTraceClientTicket(): Promise<IssueTraceClientTicketRsp> {
+    return this.request<IssueTraceClientTicketRsp>("/api/v1/trace/client/ticket", {
+      method: "POST",
+    });
+  }
 
   async listTraces(
     page: number = 1,

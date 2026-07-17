@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/gofiber/fiber/v3"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -160,7 +161,11 @@ func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, k
 			ctx.SetHeader(constant.HTTPHeaderXRateLimitLimit, limitStr)
 			ctx.SetHeader(constant.HTTPHeaderXRateLimitRemaining, constant.ZeroString)
 			ctx.SetHeader(constant.HTTPHeaderRetryAfter, strconv.Itoa(retryAfterSeconds))
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrTooManyRequests.BizError().Localize(i18n.FromCtx(ctx.Context()))))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(
+				ctx,
+				fiber.StatusTooManyRequests,
+				ierr.ErrTooManyRequests.BizError().Localize(i18n.FromCtx(ctx.Context())),
+			))
 			return
 		}
 

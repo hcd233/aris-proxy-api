@@ -3,9 +3,31 @@ package schema
 
 import (
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 )
+
+// RawJSON preserves an arbitrary JSON value without base64 encoding.
+type RawJSON []byte
+
+func (m RawJSON) MarshalJSON() ([]byte, error) {
+	if m == nil {
+		return []byte(constant.NullJSONLiteral), nil
+	}
+	return m, nil
+}
+
+func (m *RawJSON) UnmarshalJSON(data []byte) error {
+	if m != nil {
+		*m = append((*m)[:0], data...)
+	}
+	return nil
+}
+
+func (RawJSON) Schema(_ huma.Registry) *huma.Schema {
+	return &huma.Schema{}
+}
 
 // JSONSchemaTypeValue 是 domain/common/vo.JSONSchemaTypeValue 的内嵌类型
 //
