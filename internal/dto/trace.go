@@ -67,7 +67,7 @@ type GetTraceRsp struct {
 
 // GetTraceReq 详情请求（JWT）
 type GetTraceReq struct {
-	TraceID uint `query:"traceId" required:"true" minimum:"1" doc:"Trace ID"`
+	TraceID uint `query:"id" required:"true" minimum:"1" doc:"Trace ID"`
 }
 
 // ListTraceEventsRsp 事件时间线响应
@@ -79,7 +79,7 @@ type ListTraceEventsRsp struct {
 
 // ListTraceEventsReq 事件时间线请求（JWT）
 type ListTraceEventsReq struct {
-	TraceID uint `query:"traceId" required:"true" minimum:"1" doc:"Trace ID"`
+	TraceID uint `query:"id" required:"true" minimum:"1" doc:"Trace ID"`
 	model.PageParam
 }
 

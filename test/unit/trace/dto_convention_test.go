@@ -51,6 +51,32 @@ func TestReportTraceEventReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	}
 }
 
+// TestTraceQueryReqs_UseIDQueryParameter keeps trace GET endpoints consistent
+// with the rest of the management API and the frontend client.
+func TestTraceQueryReqs_UseIDQueryParameter(t *testing.T) {
+	t.Parallel()
+
+	for _, req := range []struct {
+		name   string
+		typeOf reflect.Type
+	}{
+		{name: "get trace", typeOf: reflect.TypeOf(dto.GetTraceReq{})},
+		{name: "list trace events", typeOf: reflect.TypeOf(dto.ListTraceEventsReq{})},
+	} {
+		t.Run(req.name, func(t *testing.T) {
+			t.Parallel()
+
+			field, ok := req.typeOf.FieldByName("TraceID")
+			if !ok {
+				t.Fatal("trace request must have TraceID field")
+			}
+			if got := field.Tag.Get("query"); got != "id" {
+				t.Errorf(`TraceID query tag = %q, want "id"`, got)
+			}
+		})
+	}
+}
+
 // TestReportTraceEventReqBody_HasNoByteFields 防回归：DTO 不得出现任何 []byte 字段
 // （含 json:"-" 的隐藏透传字段）。任意 JSON 必须用 sonic.NoCopyRawMessage 建模。
 func TestReportTraceEventReqBody_HasNoByteFields(t *testing.T) {

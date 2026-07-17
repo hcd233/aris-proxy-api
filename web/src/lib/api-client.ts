@@ -271,7 +271,7 @@ class ApiClient {
 
   async getSessionMetadata(sessionId: number): Promise<GetSessionMetadataRsp> {
     return this.request<GetSessionMetadataRsp>(
-      `/api/v1/session/metadata?sessionId=${sessionId}`
+      `/api/v1/session/metadata?id=${sessionId}`
     );
   }
 
@@ -281,7 +281,7 @@ class ApiClient {
     pageSize: number = 50
   ): Promise<ListSessionMessagesRsp> {
     return this.request<ListSessionMessagesRsp>(
-      `/api/v1/session/message/list?sessionId=${sessionId}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/message/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`
     );
   }
 
@@ -291,7 +291,7 @@ class ApiClient {
     pageSize: number = 20
   ): Promise<ListSessionToolsRsp> {
     return this.request<ListSessionToolsRsp>(
-      `/api/v1/session/tool/list?sessionId=${sessionId}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/tool/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`
     );
   }
 
@@ -636,7 +636,7 @@ class ApiClient {
     pageSize: number = 50
   ): Promise<ListTraceEventsRsp> {
     const params = new URLSearchParams({
-      traceId: String(traceId),
+      id: String(traceId),
       page: String(page),
       pageSize: String(pageSize),
     });
