@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -32,11 +33,8 @@ func TestReportTraceEventReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	if !ok {
 		t.Fatal("ReportTraceEventReqBody must have HookEventName field")
 	}
-	if hookField.Tag.Get("json") != "hook_event_name" {
-		t.Errorf(`HookEventName json tag = %q, want "hook_event_name"`, hookField.Tag.Get("json"))
-	}
-	if hookField.Tag.Get("required") != "true" {
-		t.Errorf(`HookEventName required tag = %q, want "true"`, hookField.Tag.Get("required"))
+	if hookField.Tag.Get("json") != "hook_event_name,omitempty" {
+		t.Errorf(`HookEventName json tag = %q, want "hook_event_name,omitempty"`, hookField.Tag.Get("json"))
 	}
 
 	sessionField, ok := bodyType.FieldByName("SessionID")
@@ -112,5 +110,41 @@ func TestReportTraceEventReqBody_MarshalPreservesDynamicFields(t *testing.T) {
 	}
 	if !strings.Contains(got, `"tool_input":{"command":"ls"}`) {
 		t.Errorf("marshal lost tool_input: %s", got)
+	}
+}
+
+func TestReportTraceEventReq_PreservesUnknownRawRecordFields(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("./fixtures/raw_records.json")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	var body dto.ReportTraceEventReqBody
+	if err := sonic.Unmarshal(data, &body); err != nil {
+		t.Fatalf("unmarshal fixture: %v", err)
+	}
+	if len(body.Records) != 2 {
+		t.Fatalf("expected 2 records, got %d", len(body.Records))
+	}
+
+	var hookPayload map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(body.Records[0].Payload, &hookPayload); err != nil {
+		t.Fatalf("unmarshal hook payload: %v", err)
+	}
+	if _, ok := hookPayload["future_field"]; !ok {
+		t.Fatal("hook unknown field was dropped")
+	}
+
+	var rolloutEnvelope map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(body.Records[1].Payload, &rolloutEnvelope); err != nil {
+		t.Fatalf("unmarshal rollout payload: %v", err)
+	}
+	var rolloutPayload map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(rolloutEnvelope["payload"], &rolloutPayload); err != nil {
+		t.Fatalf("unmarshal rollout payload body: %v", err)
+	}
+	if string(rolloutPayload["future_field"]) != `"preserved"` {
+		t.Fatalf("rollout unknown field changed: %s", rolloutPayload["future_field"])
 	}
 }

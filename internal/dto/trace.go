@@ -40,11 +40,17 @@ type TraceDetail struct {
 
 // TraceEventItem trace 事件项
 type TraceEventItem struct {
-	ID        uint                   `json:"id" doc:"事件 ID"`
-	Event     string                 `json:"event" doc:"hook 事件名"`
-	TurnID    string                 `json:"turnId" doc:"turn id"`
-	Payload   sonic.NoCopyRawMessage `json:"payload" doc:"完整 hook 输入"`
-	CreatedAt time.Time              `json:"createdAt" doc:"时间"`
+	ID             uint                   `json:"id" doc:"事件 ID"`
+	Source         string                 `json:"source" doc:"记录来源"`
+	RecordType     string                 `json:"recordType" doc:"记录类型"`
+	Event          string                 `json:"event" doc:"hook 事件名或 rollout 类型"`
+	TurnID         string                 `json:"turnId,omitempty" doc:"turn id"`
+	CallID         string                 `json:"callId,omitempty" doc:"工具调用关联 ID"`
+	TranscriptLine *int64                 `json:"transcriptLine,omitempty" doc:"rollout 原文件行号"`
+	ClientSequence int64                  `json:"clientSequence" doc:"客户端序号"`
+	DedupKey       string                 `json:"dedupKey" doc:"幂等键"`
+	Payload        sonic.NoCopyRawMessage `json:"payload" doc:"完整原始输入"`
+	CreatedAt      time.Time              `json:"createdAt" doc:"时间"`
 }
 
 // ListTracesRsp 列表响应
@@ -99,8 +105,10 @@ type ReportTraceEventReq struct {
 // 用 sonic.NoCopyRawMessage 承载。handler 序列化整个结构体作为完整 hook JSON
 // 透传存储到 events.payload。
 type ReportTraceEventReqBody struct {
+	// Batch envelope fields.
+	Records []*ReportTraceRecordReq `json:"records,omitempty" doc:"批量原始记录"`
 	// 公共字段（所有 hook 事件均携带）
-	HookEventName  string `json:"hook_event_name" required:"true" minLength:"1" doc:"hook 事件名"`
+	HookEventName  string `json:"hook_event_name,omitempty" minLength:"1" doc:"hook 事件名（兼容单事件上报）"`
 	SessionID      string `json:"session_id" required:"true" minLength:"1" doc:"codex session_id"`
 	Model          string `json:"model,omitempty" doc:"模型"`
 	CWD            string `json:"cwd,omitempty" doc:"工作目录"`
@@ -124,4 +132,18 @@ type ReportTraceEventReqBody struct {
 	AgentType string `json:"agent_type,omitempty" doc:"subagent 类型"`
 	// PreCompact / PostCompact
 	Trigger string `json:"trigger,omitempty" doc:"manual/auto"`
+}
+
+// ReportTraceRecordReq 单条 Hook 或 rollout 原始记录。
+type ReportTraceRecordReq struct {
+	Source         string                 `json:"source" required:"true" enum:"hook,rollout" doc:"记录来源"`
+	RecordType     string                 `json:"record_type" required:"true" doc:"记录类型"`
+	HookEventName  string                 `json:"hook_event_name,omitempty" doc:"Hook 事件名"`
+	Event          string                 `json:"event,omitempty" doc:"rollout payload.type 或 Hook 事件名"`
+	TurnID         string                 `json:"turn_id,omitempty" doc:"turn id"`
+	CallID         string                 `json:"call_id,omitempty" doc:"工具调用关联 ID"`
+	TranscriptLine *int64                 `json:"transcript_line,omitempty" doc:"rollout 原文件行号"`
+	ClientSequence int64                  `json:"client_sequence,omitempty" doc:"客户端序号"`
+	DedupKey       string                 `json:"dedup_key,omitempty" doc:"幂等键"`
+	Payload        sonic.NoCopyRawMessage `json:"payload" required:"true" doc:"完整原始 JSON"`
 }
