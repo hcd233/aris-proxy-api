@@ -31,8 +31,8 @@ set -euo pipefail
 HOOKS_DIR="$HOME/.aris/trace"
 mkdir -p "$HOOKS_DIR"
 
-# Hook is written with TRACE_URL and API_KEY baked in, because Codex
-# invokes the hook in a fresh subprocess that does not inherit these vars.
+# Hook is written with TRACE_URL and API_KEY baked in,
+# because Codex invokes the hook in a fresh subprocess that does not inherit these vars.
 cat > "$HOOKS_DIR/codex-hook.sh" <<'HOOKEOF'
 #!/usr/bin/env bash
 set -u
@@ -49,7 +49,10 @@ if [ "$event_name" = "Stop" ]; then printf '{}'; fi
   find "$LOG_DIR" -name 'trace-*.log' -mtime +7 -delete 2>/dev/null
 ) >/dev/null 2>&1 &
 if [ -n "$API_KEY" ]; then
-  printf '%s' "$payload" | curl -sS -X POST "$TRACE_URL" -H "Content-Type: application/json" -H "Authorization: Bearer $API_KEY" -d @- >/dev/null 2>&1 &
+  printf '%s' "$payload" | curl -sS --connect-timeout 2 --max-time 5 -X POST "$TRACE_URL" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $API_KEY" \
+    -d @- >/dev/null 2>&1 || true
 fi
 exit 0
 HOOKEOF
@@ -60,7 +63,7 @@ python3 - "$HOOK_CMD" <<'PYEOF'
 import json, os, sys
 hook_cmd = sys.argv[1]
 hooks_path = os.path.expanduser('~/.codex/hooks.json')
-events = ["SessionStart","UserPromptSubmit","PreToolUse","PostToolUse","Stop","SubagentStart","SubagentStop","PreCompact","PostCompact"]
+events = ["SessionStart","UserPromptSubmit","PreToolUse","PermissionRequest","PostToolUse","Stop","SubagentStart","SubagentStop","PreCompact","PostCompact"]
 cfg = {}
 if os.path.exists(hooks_path):
     with open(hooks_path) as f:

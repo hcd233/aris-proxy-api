@@ -26,7 +26,17 @@ func (h *listTraceEventsHandler) Handle(ctx context.Context, q port.ListTraceEve
 	}
 	return lo.Map(events, func(item *trace.TraceEvent, _ int) *port.TraceEventView {
 		return &port.TraceEventView{
-			ID: item.ID, Event: item.Event, TurnID: item.TurnID, Payload: item.Payload, CreatedAt: item.CreatedAt,
+			ID:             item.ID,
+			Source:         item.Source,
+			RecordType:     item.RecordType,
+			Event:          item.Event,
+			TurnID:         item.TurnID,
+			CallID:         item.CallID,
+			TranscriptLine: item.TranscriptLine,
+			ClientSequence: item.ClientSequence,
+			DedupKey:       item.DedupKey,
+			Payload:        item.Payload,
+			CreatedAt:      item.CreatedAt,
 		}
 	}), pageInfo, nil
 }

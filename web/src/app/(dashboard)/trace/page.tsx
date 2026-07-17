@@ -7,6 +7,7 @@ import type {
   TraceDetail,
   TraceEventItem,
   TraceSummary,
+  TraceConversation,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +37,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Radar, Search, Eye, ChevronDown } from "lucide-react";
+import { Radar, Search, Eye, ChevronDown, Bot, Wrench, UserRound } from "lucide-react";
 import { Codex } from "@lobehub/icons";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
@@ -84,6 +85,9 @@ export default function TracePage() {
     total: 0,
   });
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [conversation, setConversation] = useState<TraceConversation | null>(null);
+  const [conversationLoading, setConversationLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState<"conversation" | "raw">("conversation");
   const t = useT();
   const isMobile = useIsMobile();
 
@@ -131,23 +135,40 @@ export default function TracePage() {
     [t]
   );
 
+  const fetchConversation = useCallback(async (traceId: number) => {
+    setConversationLoading(true);
+    try {
+      const rsp = await api.getTraceConversation(traceId);
+      setConversation(rsp.conversation ?? null);
+    } catch {
+      toast.error(t("trace.load_error"));
+    } finally {
+      setConversationLoading(false);
+    }
+  }, [t]);
+
   const openDetail = useCallback(
     async (trace: TraceSummary) => {
       setDetailOpen(true);
       setDetail(null);
       setEvents([]);
+      setConversation(null);
+      setDetailTab("conversation");
       setEventPageInfo({ page: 1, pageSize: EVENT_PAGE_SIZE, total: 0 });
       try {
         const rsp = await api.getTrace(trace.id);
         setDetail(rsp.trace ?? null);
         if (rsp.trace) {
-          await fetchEvents(trace.id, 1, EVENT_PAGE_SIZE);
+          await Promise.all([
+            fetchEvents(trace.id, 1, EVENT_PAGE_SIZE),
+            fetchConversation(trace.id),
+          ]);
         }
       } catch {
         toast.error(t("trace.load_error"));
       }
     },
-    [fetchEvents, t]
+    [fetchConversation, fetchEvents, t]
   );
 
   const handleSearch = useCallback(() => {
@@ -384,55 +405,90 @@ export default function TracePage() {
                 )}
 
                 <section className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-                      {t("trace.events")}
-                    </h3>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex rounded-lg border border-border bg-secondary/40 p-1">
+                      <Button
+                        variant={detailTab === "conversation" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setDetailTab("conversation")}
+                      >
+                        <Bot /> Conversation
+                      </Button>
+                      <Button
+                        variant={detailTab === "raw" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setDetailTab("raw")}
+                      >
+                        Raw Records
+                      </Button>
+                    </div>
                     <span className="text-xs text-muted-foreground">
-                      {eventPageInfo.total} {t("trace.event_count")}
+                      {detailTab === "raw" ? `${eventPageInfo.total} ${t("trace.event_count")}` : `${conversation?.turns.length ?? 0} turns`}
                     </span>
                   </div>
 
-                  {eventsLoading ? (
-                    <div className="space-y-3">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <Skeleton key={i} className="h-16 w-full" />
-                      ))}
-                    </div>
-                  ) : events.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {events.map((ev) => (
-                        <div key={ev.id} className="rounded-lg border border-border bg-card p-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs">
-                              {ev.event}
-                            </span>
-                            <span className="text-xs text-muted-foreground">{formatTime(ev.createdAt)}</span>
+                  {detailTab === "conversation" ? (
+                    conversationLoading ? (
+                      <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                      </div>
+                    ) : !conversation || conversation.turns.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
+                    ) : (
+                      <div className="space-y-5">
+                        {conversation.turns.map((turn) => (
+                          <div key={turn.turnId || "default"} className="space-y-3">
+                            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                              <span className="h-px flex-1 bg-border" />
+                              <span>{turn.turnId || "session"}</span>
+                              <span className="h-px flex-1 bg-border" />
+                            </div>
+                            {turn.items.map((item, index) => (
+                              <div key={`${item.recordIds.join("-")}-${index}`} className="rounded-xl border border-border bg-card p-3 shadow-sm">
+                                <div className="flex items-center gap-2 text-xs font-medium">
+                                  {item.kind === "tool_call" ? <Wrench className="size-3.5 text-amber-500" /> : item.role === "user" ? <UserRound className="size-3.5 text-sky-500" /> : <Bot className="size-3.5 text-emerald-500" />}
+                                  <span className="capitalize">{item.kind === "tool_call" ? item.toolName || "tool" : item.role || "message"}</span>
+                                  <Badge variant="outline" className="ml-auto text-[10px]">{item.source}</Badge>
+                                </div>
+                                {item.content ? <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{item.content}</p> : null}
+                                {item.arguments ? <pre className="mt-2 overflow-auto rounded-md bg-[#262624] p-3 font-mono text-[11px] text-[#E5E0D6]">{item.arguments}</pre> : null}
+                                {item.output ? <pre className="mt-2 overflow-auto rounded-md bg-secondary/50 p-3 font-mono text-[11px]">{item.output}</pre> : null}
+                              </div>
+                            ))}
                           </div>
-                          {ev.turnId ? (
-                            <p className="mt-1 text-[11px] text-muted-foreground">
-                              {t("trace.turn_id")}: {ev.turnId}
-                            </p>
-                          ) : null}
-                          <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-[#262624] p-3 font-mono text-[11px] leading-relaxed text-[#E5E0D6]">
-                            {ev.payload != null
-                              ? JSON.stringify(ev.payload, null, 2)
-                              : t("trace.empty_payload")}
-                          </pre>
+                        ))}
+                      </div>
+                    )
+                  ) : (
+                    <>
+                      {eventsLoading ? (
+                        <div className="space-y-3">
+                          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
-                      ))}
-                    </div>
+                      ) : events.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {events.map((ev) => (
+                            <div key={ev.id} className="rounded-lg border border-border bg-card p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs">{ev.event}</span>
+                                  <Badge variant="outline" className="text-[10px]">{ev.source}</Badge>
+                                </div>
+                                <span className="text-xs text-muted-foreground">{formatTime(ev.createdAt)}</span>
+                              </div>
+                              <p className="mt-1 text-[11px] text-muted-foreground">
+                                {ev.turnId ? `${t("trace.turn_id")}: ${ev.turnId} · ` : ""}{ev.callId ? `call: ${ev.callId} · ` : ""}record #{ev.id}
+                              </p>
+                              <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-[#262624] p-3 font-mono text-[11px] leading-relaxed text-[#E5E0D6]">{ev.payload != null ? JSON.stringify(ev.payload, null, 2) : t("trace.empty_payload")}</pre>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <PaginationBar pageInfo={eventPageInfo} onChange={(page, pageSize) => detail && fetchEvents(detail.id, page, pageSize)} totalLabel={t("trace.event_count")} />
+                    </>
                   )}
-
-                  <PaginationBar
-                    pageInfo={eventPageInfo}
-                    onChange={(page, pageSize) =>
-                      detail && fetchEvents(detail.id, page, pageSize)
-                    }
-                    totalLabel={t("trace.event_count")}
-                  />
                 </section>
               </>
             )}

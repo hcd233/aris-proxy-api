@@ -32,6 +32,7 @@ import type {
   ListTracesRsp,
   GetTraceRsp,
   ListTraceEventsRsp,
+  GetTraceConversationRsp,
   CommonRsp,
   ScoreSessionReqBody,
   ScoreSessionRsp,
@@ -641,6 +642,10 @@ class ApiClient {
       pageSize: String(pageSize),
     });
     return this.request<ListTraceEventsRsp>(`/api/v1/trace/event/list?${params}`);
+  }
+
+  async getTraceConversation(traceId: number): Promise<GetTraceConversationRsp> {
+    return this.request<GetTraceConversationRsp>(`/api/v1/trace/conversation?id=${traceId}`);
   }
 
   // ─── Cron (admin) ──────────────────────────────────────────────────────────

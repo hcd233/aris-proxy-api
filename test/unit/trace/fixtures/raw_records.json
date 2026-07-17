@@ -1,0 +1,39 @@
+{
+  "session_id": "session-1",
+  "transcript_path": "/tmp/rollout-session-1.jsonl",
+  "records": [
+    {
+      "source": "hook",
+      "record_type": "hook_event",
+      "hook_event_name": "PostToolUse",
+      "turn_id": "turn-1",
+      "call_id": "call-1",
+      "client_sequence": 2,
+      "dedup_key": "hook:session-1:2",
+      "payload": {
+        "hook_event_name": "PostToolUse",
+        "session_id": "session-1",
+        "future_field": {"nested": true}
+      }
+    },
+    {
+      "source": "rollout",
+      "record_type": "response_item",
+      "event": "function_call",
+      "turn_id": "turn-1",
+      "call_id": "call-1",
+      "transcript_line": 8,
+      "dedup_key": "rollout:session-1:8:hash",
+      "payload": {
+        "timestamp": "2026-07-17T06:17:17.924491Z",
+        "type": "response_item",
+        "payload": {
+          "type": "function_call",
+          "call_id": "call-1",
+          "arguments": "{\"cmd\":\"pwd\"}",
+          "future_field": "preserved"
+        }
+      }
+    }
+  ]
+}

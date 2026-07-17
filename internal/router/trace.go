@@ -47,6 +47,13 @@ func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listTraceEvents", enum.PermissionUser)},
 	}, deps.TraceHandler.HandleListTraceEvents)
 
+	huma.Register(queryGroup, huma.Operation{
+		OperationID: "getTraceConversation", Method: http.MethodGet, Path: "/conversation",
+		Summary: "GetTraceConversation", Description: "Get reconstructed Codex conversation",
+		Tags: []string{constant.TagTrace}, Security: []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getTraceConversation", enum.PermissionUser)},
+	}, deps.TraceHandler.HandleGetTraceConversation)
+
 	// 上报组（API Key 鉴权，codex hook 用 Bearer）
 	reportGroup := huma.NewGroup(traceGroup, "")
 	reportGroup.UseMiddleware(middleware.APIKeyMiddleware(db))

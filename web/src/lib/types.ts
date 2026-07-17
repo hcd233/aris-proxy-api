@@ -661,10 +661,39 @@ export interface TraceDetail {
 
 export interface TraceEventItem {
   id: number;
+  source: string;
+  recordType: string;
   event: string;
   turnId?: string;
+  callId?: string;
+  transcriptLine?: number;
+  clientSequence: number;
+  dedupKey: string;
   payload?: unknown;
   createdAt: string;
+}
+
+export interface TraceConversationItem {
+  kind: string;
+  role?: string;
+  content?: string;
+  toolName?: string;
+  callId?: string;
+  arguments?: string;
+  output?: string;
+  source: string;
+  recordIds: number[];
+}
+
+export interface TraceConversationTurn {
+  turnId: string;
+  items: TraceConversationItem[];
+}
+
+export interface TraceConversation {
+  traceId: number;
+  sessionId: string;
+  turns: TraceConversationTurn[];
 }
 
 export interface ListTracesRsp extends CommonRsp {
@@ -679,4 +708,8 @@ export interface GetTraceRsp extends CommonRsp {
 export interface ListTraceEventsRsp extends CommonRsp {
   events?: TraceEventItem[];
   pageInfo?: PageInfo;
+}
+
+export interface GetTraceConversationRsp extends CommonRsp {
+  conversation?: TraceConversation;
 }

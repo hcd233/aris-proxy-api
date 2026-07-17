@@ -24,26 +24,49 @@ type TraceHandler interface {
 	HandleListTraces(ctx context.Context, req *dto.ListTracesReq) (*dto.HTTPResponse[*dto.ListTracesRsp], error)
 	HandleGetTrace(ctx context.Context, req *dto.GetTraceReq) (*dto.HTTPResponse[*dto.GetTraceRsp], error)
 	HandleListTraceEvents(ctx context.Context, req *dto.ListTraceEventsReq) (*dto.HTTPResponse[*dto.ListTraceEventsRsp], error)
+	HandleGetTraceConversation(ctx context.Context, req *dto.GetTraceConversationReq) (*dto.HTTPResponse[*dto.GetTraceConversationRsp], error)
 }
 
 // TraceDependencies TraceHandler 依赖项
 type TraceDependencies struct {
-	Report port.ReportTraceEventHandler
-	List   port.ListTracesHandler
-	Get    port.GetTraceHandler
-	Events port.ListTraceEventsHandler
+	Report       port.ReportTraceEventHandler
+	List         port.ListTracesHandler
+	Get          port.GetTraceHandler
+	Events       port.ListTraceEventsHandler
+	Conversation port.ListTraceConversationHandler
 }
 
 type traceHandler struct {
-	report port.ReportTraceEventHandler
-	list   port.ListTracesHandler
-	get    port.GetTraceHandler
-	events port.ListTraceEventsHandler
+	report       port.ReportTraceEventHandler
+	list         port.ListTracesHandler
+	get          port.GetTraceHandler
+	events       port.ListTraceEventsHandler
+	conversation port.ListTraceConversationHandler
 }
 
 // NewTraceHandler 构造 TraceHandler
 func NewTraceHandler(deps TraceDependencies) TraceHandler {
-	return &traceHandler{report: deps.Report, list: deps.List, get: deps.Get, events: deps.Events}
+	return &traceHandler{report: deps.Report, list: deps.List, get: deps.Get, events: deps.Events, conversation: deps.Conversation}
+}
+
+// HandleGetTraceConversation 获取 Trace 对话投影（JWT）。
+func (h *traceHandler) HandleGetTraceConversation(ctx context.Context, req *dto.GetTraceConversationReq) (*dto.HTTPResponse[*dto.GetTraceConversationRsp], error) {
+	rsp := &dto.GetTraceConversationRsp{}
+	permission := util.CtxValuePermission(ctx)
+	view, err := h.conversation.Handle(ctx, port.ListTraceConversationQuery{
+		UserID: util.CtxValueUint(ctx, constant.CtxKeyUserID), IsAdmin: permission.Level() >= enum.PermissionAdmin.Level(), TraceID: req.TraceID,
+	})
+	if err != nil {
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	turns := lo.Map(view.Turns, func(turn *port.TraceConversationTurnView, _ int) *dto.TraceConversationTurn {
+		return &dto.TraceConversationTurn{TurnID: turn.TurnID, Items: lo.Map(turn.Items, func(item *port.TraceConversationItemView, _ int) *dto.TraceConversationItem {
+			return &dto.TraceConversationItem{Kind: item.Kind, Role: item.Role, Content: item.Content, ToolName: item.ToolName, CallID: item.CallID, Arguments: item.Arguments, Output: item.Output, Source: item.Source, RecordIDs: item.RecordIDs}
+		})}
+	})
+	rsp.Conversation = &dto.TraceConversation{TraceID: view.TraceID, SessionID: view.SessionID, Turns: turns}
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleReportTraceEvent 上报 codex hook 事件（API Key 鉴权）
@@ -55,13 +78,6 @@ func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.Repo
 	}
 	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyAPIKeyName)
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	// 结构体序列化为完整 hook JSON，透传存储到 events.payload
-	rawPayload, err := sonic.Marshal(req.Body)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[TraceHandler] Marshal report body failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
 	cmd := port.ReportTraceEventCommand{
 		HookEventName: req.Body.HookEventName,
 		SessionID:     req.Body.SessionID,
@@ -69,9 +85,33 @@ func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.Repo
 		CWD:           req.Body.CWD,
 		Source:        req.Body.Source,
 		TurnID:        req.Body.TurnID,
-		RawPayload:    rawPayload,
 		APIKeyName:    apiKeyName,
 		UserID:        userID,
+	}
+	if len(req.Body.Records) > 0 {
+		cmd.Records = lo.Map(req.Body.Records, func(record *dto.ReportTraceRecordReq, _ int) port.ReportTraceRecord {
+			return port.ReportTraceRecord{
+				Source:         record.Source,
+				RecordType:     record.RecordType,
+				HookEventName:  record.HookEventName,
+				Event:          record.Event,
+				TurnID:         record.TurnID,
+				CallID:         record.CallID,
+				TranscriptLine: record.TranscriptLine,
+				ClientSequence: record.ClientSequence,
+				DedupKey:       record.DedupKey,
+				Payload:        record.Payload,
+			}
+		})
+	} else {
+		// Legacy single-event clients are normalized by the application handler.
+		rawPayload, err := sonic.Marshal(req.Body)
+		if err != nil {
+			logger.WithCtx(ctx).Error("[TraceHandler] Marshal report body failed", zap.Error(err))
+			rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+			return apiutil.WrapHTTPResponse(rsp, nil)
+		}
+		cmd.RawPayload = rawPayload
 	}
 	if err := h.report.Handle(ctx, cmd); err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] Report event failed", zap.Error(err))
@@ -139,7 +179,17 @@ func (h *traceHandler) HandleListTraceEvents(ctx context.Context, req *dto.ListT
 	}
 	rsp.Events = lo.Map(views, func(item *port.TraceEventView, _ int) *dto.TraceEventItem {
 		return &dto.TraceEventItem{
-			ID: item.ID, Event: item.Event, TurnID: item.TurnID, Payload: sonic.NoCopyRawMessage(item.Payload), CreatedAt: item.CreatedAt,
+			ID:             item.ID,
+			Source:         item.Source,
+			RecordType:     item.RecordType,
+			Event:          item.Event,
+			TurnID:         item.TurnID,
+			CallID:         item.CallID,
+			TranscriptLine: item.TranscriptLine,
+			ClientSequence: item.ClientSequence,
+			DedupKey:       item.DedupKey,
+			Payload:        sonic.NoCopyRawMessage(item.Payload),
+			CreatedAt:      item.CreatedAt,
 		}
 	})
 	rsp.PageInfo = pageInfo

@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -98,11 +100,27 @@ func (r *traceRepository) MarkDone(ctx context.Context, sessionID string) error 
 
 func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) error {
 	db := r.db.WithContext(ctx)
-	rec := &dbmodel.TraceEvent{
-		TraceID: e.TraceID, SessionID: e.SessionID, Event: e.Event,
-		TurnID: e.TurnID, Payload: e.Payload,
+	if e.DedupKey == "" {
+		digest := sha256.Sum256(e.Payload)
+		e.DedupKey = constant.TraceLegacyDedupPrefix + e.SessionID + ":" + e.Event + ":" + hex.EncodeToString(digest[:])
 	}
-	if err := r.eventDAO.Create(db, rec); err != nil {
+	rec := &dbmodel.TraceEvent{
+		TraceID:        e.TraceID,
+		SessionID:      e.SessionID,
+		Source:         e.Source,
+		RecordType:     e.RecordType,
+		Event:          e.Event,
+		TurnID:         e.TurnID,
+		CallID:         e.CallID,
+		TranscriptLine: e.TranscriptLine,
+		ClientSequence: e.ClientSequence,
+		DedupKey:       e.DedupKey,
+		Payload:        e.Payload,
+	}
+	if err := db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: constant.TraceFieldDedupKey}},
+		DoNothing: true,
+	}).Create(rec).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBCreate, err, "insert trace event")
 	}
 	e.ID = rec.ID
@@ -162,8 +180,19 @@ func (r *traceRepository) ListEvents(ctx context.Context, traceID uint, param mo
 	}
 	return lo.Map(recs, func(item *dbmodel.TraceEvent, _ int) *trace.TraceEvent {
 		return &trace.TraceEvent{
-			ID: item.ID, TraceID: item.TraceID, SessionID: item.SessionID,
-			Event: item.Event, TurnID: item.TurnID, Payload: item.Payload, CreatedAt: item.CreatedAt,
+			ID:             item.ID,
+			TraceID:        item.TraceID,
+			SessionID:      item.SessionID,
+			Source:         item.Source,
+			RecordType:     item.RecordType,
+			Event:          item.Event,
+			TurnID:         item.TurnID,
+			CallID:         item.CallID,
+			TranscriptLine: item.TranscriptLine,
+			ClientSequence: item.ClientSequence,
+			DedupKey:       item.DedupKey,
+			Payload:        item.Payload,
+			CreatedAt:      item.CreatedAt,
 		}
 	}), pageInfo, nil
 }

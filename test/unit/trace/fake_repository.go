@@ -66,6 +66,14 @@ func (f *FakeRepo) MarkDone(_ context.Context, sid string) error {
 func (f *FakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if e.DedupKey != "" {
+		for _, existing := range f.events {
+			if existing.DedupKey == e.DedupKey {
+				e.ID = existing.ID
+				return nil
+			}
+		}
+	}
 	f.nextID++
 	e.ID = f.nextID
 	if e.TraceID == 0 {

@@ -26,13 +26,19 @@ type Trace struct {
 
 // TraceEvent 运行内单个事件（领域结构体）
 type TraceEvent struct {
-	ID        uint
-	TraceID   uint
-	SessionID string
-	Event     string
-	TurnID    string
-	Payload   []byte
-	CreatedAt time.Time
+	ID             uint
+	TraceID        uint
+	SessionID      string
+	Source         string
+	RecordType     string
+	Event          string
+	TurnID         string
+	CallID         string
+	TranscriptLine *int64
+	ClientSequence int64
+	DedupKey       string
+	Payload        []byte
+	CreatedAt      time.Time
 }
 
 // TraceRepository Trace 聚合仓储接口

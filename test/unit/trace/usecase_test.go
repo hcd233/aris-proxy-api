@@ -7,9 +7,47 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/query"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 )
+
+func TestReportTraceEvent_BatchPersistsAllRecordsAndDeduplicates(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	handler := command.NewReportTraceEventHandler(repo)
+	ctx := context.Background()
+
+	records := []port.ReportTraceRecord{
+		{Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent, HookEventName: "SessionStart", ClientSequence: 1, DedupKey: "hook:s1:1", Payload: []byte(`{"hook_event_name":"SessionStart","session_id":"s1"}`)},
+		{Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent, HookEventName: "UserPromptSubmit", TurnID: "t1", ClientSequence: 2, DedupKey: "hook:s1:2", Payload: []byte(`{"hook_event_name":"UserPromptSubmit","session_id":"s1","turn_id":"t1"}`)},
+		{Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent, HookEventName: "PreToolUse", TurnID: "t1", CallID: "call-1", ClientSequence: 3, DedupKey: "hook:s1:3", Payload: []byte(`{"hook_event_name":"PreToolUse","session_id":"s1","turn_id":"t1","tool_use_id":"call-1"}`)},
+		{Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent, HookEventName: "PostToolUse", TurnID: "t1", CallID: "call-1", ClientSequence: 4, DedupKey: "hook:s1:4", Payload: []byte(`{"hook_event_name":"PostToolUse","session_id":"s1","turn_id":"t1","tool_use_id":"call-1"}`)},
+		{Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent, HookEventName: "Stop", TurnID: "t1", ClientSequence: 5, DedupKey: "hook:s1:5", Payload: []byte(`{"hook_event_name":"Stop","session_id":"s1","turn_id":"t1"}`)},
+		{Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeResponseItem, Event: "function_call", TurnID: "t1", CallID: "call-1", ClientSequence: 6, DedupKey: "rollout:s1:6", Payload: []byte(`{"type":"response_item","payload":{"type":"function_call","call_id":"call-1"}}`)},
+		{Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeResponseItem, Event: "function_call_output", TurnID: "t1", CallID: "call-1", ClientSequence: 7, DedupKey: "rollout:s1:7", Payload: []byte(`{"type":"response_item","payload":{"type":"function_call_output","call_id":"call-1"}}`)},
+		{Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg, Event: "task_complete", TurnID: "t1", ClientSequence: 8, DedupKey: "rollout:s1:8", Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete","turn_id":"t1"}}`)},
+	}
+	cmd := port.ReportTraceEventCommand{SessionID: "s1", Model: "gpt-4o", CWD: "/work", APIKeyName: "key1", UserID: 1, Records: records}
+	if err := handler.Handle(ctx, cmd); err != nil {
+		t.Fatalf("first batch failed: %v", err)
+	}
+	if err := handler.Handle(ctx, cmd); err != nil {
+		t.Fatalf("duplicate batch failed: %v", err)
+	}
+
+	tr, _ := repo.FindBySessionID(ctx, "s1")
+	if tr == nil || tr.Status != constant.TraceStatusDone {
+		t.Fatalf("expected done trace, got %+v", tr)
+	}
+	if n, _ := repo.CountEvents(ctx, tr.ID); n != int64(len(records)) {
+		t.Fatalf("expected %d events, got %d", len(records), n)
+	}
+	events, _, _ := repo.ListEvents(ctx, tr.ID, model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 50}})
+	if events[2].CallID != "call-1" || events[5].CallID != "call-1" {
+		t.Fatalf("call identity not preserved: %+v", events)
+	}
+}
 
 func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	t.Parallel()
@@ -41,12 +79,12 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	if tr.APIKeyName != "key1" || tr.Model != "gpt-4o" || tr.CWD != "/work" {
 		t.Fatalf("unexpected trace fields: %+v", tr)
 	}
-	if n, _ := repo.CountEvents(ctx, tr.ID); n != 1 {
-		t.Fatalf("expected 1 event (Stop), got %d", n)
+	if n, _ := repo.CountEvents(ctx, tr.ID); n != 2 {
+		t.Fatalf("expected 2 events (SessionStart and Stop), got %d", n)
 	}
 	events, _, _ := repo.ListEvents(ctx, tr.ID, model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 50}})
-	if events[0].Event != "Stop" {
-		t.Fatalf("expected Stop event, got %s", events[0].Event)
+	if events[0].Event != "SessionStart" || events[1].Event != "Stop" {
+		t.Fatalf("expected SessionStart and Stop events, got %+v", events)
 	}
 }
 

@@ -124,6 +124,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewListTracesHandler,
 		NewGetTraceHandler,
 		NewListTraceEventsHandler,
+		NewListTraceConversationHandler,
 	),
 )
 
@@ -379,4 +380,8 @@ func NewGetTraceHandler(repo trace.TraceRepository) traceport.GetTraceHandler {
 
 func NewListTraceEventsHandler(repo trace.TraceRepository) traceport.ListTraceEventsHandler {
 	return tracequery.NewListTraceEventsHandler(repo)
+}
+
+func NewListTraceConversationHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.ListTraceConversationHandler {
+	return tracequery.NewListTraceConversationHandler(repo, apiKeyRepo)
 }

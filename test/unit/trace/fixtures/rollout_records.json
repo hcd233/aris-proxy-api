@@ -1,0 +1,11 @@
+[
+  {"timestamp":"2026-07-17T06:17:00Z","type":"session_meta","payload":{"session_id":"s1","cwd":"/work","cli_version":"0.142.5"}},
+  {"timestamp":"2026-07-17T06:17:01Z","type":"turn_context","payload":{"turn_id":"t1","model":"gpt-4o"}},
+  {"timestamp":"2026-07-17T06:17:02Z","type":"event_msg","payload":{"type":"task_started","turn_id":"t1"}},
+  {"timestamp":"2026-07-17T06:17:03Z","type":"event_msg","payload":{"type":"user_message","turn_id":"t1","message":"检查当前目录"}},
+  {"timestamp":"2026-07-17T06:17:04Z","type":"response_item","payload":{"type":"function_call","turn_id":"t1","name":"exec_command","call_id":"call-1","arguments":"{\"cmd\":\"pwd\"}"}},
+  {"timestamp":"2026-07-17T06:17:05Z","type":"response_item","payload":{"type":"function_call_output","turn_id":"t1","call_id":"call-1","output":"/work"}},
+  {"timestamp":"2026-07-17T06:17:06Z","type":"event_msg","payload":{"type":"agent_message","turn_id":"t1","message":"当前目录是 /work"}},
+  {"timestamp":"2026-07-17T06:17:07Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"t1","last_agent_message":"当前目录是 /work"}},
+  {"timestamp":"2026-07-17T06:17:08Z","type":"future_record","payload":{"future_field":"kept"}}
+]
