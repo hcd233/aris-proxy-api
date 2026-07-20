@@ -109,6 +109,9 @@ type DownloadTraceClientReq struct {
 // CheckTraceClientReq 验证 ProxyAPIKey 请求。
 type CheckTraceClientReq struct{}
 
+// InstallTraceClientReq 安装脚本请求（单次票据验证，不消费）。
+type InstallTraceClientReq struct{}
+
 // ReportTraceRecordResult 单条上报处理结果。
 type ReportTraceRecordResult struct {
 	DedupKey string `json:"dedupKey" doc:"幂等键"`

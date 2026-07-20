@@ -37,3 +37,36 @@ func TestTraceClientTicketStore_IssueHashesAndConsumesOnce(t *testing.T) {
 		t.Fatalf("second consume found = %v, err = %v", found, err)
 	}
 }
+
+func TestTraceClientTicketStore_ValidateDoesNotConsume(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = client.Close() })
+	store := cache.NewTraceClientTicketStore(client)
+
+	ticket, _, err := store.Issue(context.Background(), 7, 10*time.Minute)
+	if err != nil || ticket == "" {
+		t.Fatalf("issue = %q, %v", ticket, err)
+	}
+
+	userID, found, err := store.Validate(context.Background(), ticket)
+	if err != nil || !found || userID != 7 {
+		t.Fatalf("validate = %d, %v, %v", userID, found, err)
+	}
+
+	userID, found, err = store.Validate(context.Background(), ticket)
+	if err != nil || !found || userID != 7 {
+		t.Fatalf("second validate = %d, %v, %v", userID, found, err)
+	}
+
+	userID, found, err = store.Consume(context.Background(), ticket)
+	if err != nil || !found || userID != 7 {
+		t.Fatalf("consume after validate = %d, %v, %v", userID, found, err)
+	}
+
+	_, found, err = store.Consume(context.Background(), ticket)
+	if err != nil || found {
+		t.Fatalf("second consume found = %v, err = %v", found, err)
+	}
+}

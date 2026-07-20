@@ -5,8 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
@@ -34,6 +37,7 @@ type TraceHandler interface {
 	HandleIssueTraceClientTicket(ctx context.Context, req *dto.IssueTraceClientTicketReq) (*dto.HTTPResponse[*dto.IssueTraceClientTicketRsp], error)
 	HandleDownloadTraceClient(ctx context.Context, req *dto.DownloadTraceClientReq) (*huma.StreamResponse, error)
 	HandleCheckTraceClient(ctx context.Context, req *dto.CheckTraceClientReq) (*huma.StreamResponse, error)
+	HandleInstallTraceClient(ctx context.Context, req *dto.InstallTraceClientReq) (*huma.StreamResponse, error)
 }
 
 // TraceDependencies TraceHandler 依赖项
@@ -136,6 +140,88 @@ func (h *traceHandler) HandleCheckTraceClient(
 	return &huma.StreamResponse{Body: func(ctx huma.Context) {
 		ctx.SetStatus(fiber.StatusNoContent)
 	}}, nil
+}
+
+// HandleInstallTraceClient 返回嵌入单次票据的短安装脚本。
+// 票据在请求时仅验证不消费，脚本执行时用于下载二进制并完成初始化。
+func (h *traceHandler) HandleInstallTraceClient(
+	_ context.Context,
+	_ *dto.InstallTraceClientReq,
+) (*huma.StreamResponse, error) {
+	return &huma.StreamResponse{Body: func(humaCtx huma.Context) {
+		ticket := strings.TrimSpace(strings.TrimPrefix(
+			humaCtx.Header(constant.HTTPHeaderAuthorization),
+			constant.HTTPAuthBearerPrefix,
+		))
+
+		scheme := humaCtx.Header(constant.HTTPHeaderXForwardedProto)
+		if scheme == "" {
+			scheme = constant.HTTPSchemeHTTP
+		}
+		origin := scheme + "://" + humaCtx.Header(constant.HTTPHeaderHost)
+
+		script, err := buildTraceClientInstallScript(origin, ticket)
+		if err != nil {
+			logger.WithCtx(humaCtx.Context()).Warn(
+				"[TraceHandler] Failed to build install script",
+				zap.Error(err),
+			)
+			lo.Must0(apiutil.WriteErrorHTTPResponse(
+				humaCtx,
+				fiber.StatusBadRequest,
+				ierr.ErrValidation.BizError(),
+			))
+			return
+		}
+
+		humaCtx.SetStatus(fiber.StatusOK)
+		humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeTextPlain)
+		humaCtx.SetHeader(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoStore)
+		if _, writeErr := io.WriteString(humaCtx.BodyWriter(), script); writeErr != nil {
+			logger.WithCtx(humaCtx.Context()).Warn(
+				"[TraceHandler] Failed to write install script",
+				zap.Error(writeErr),
+			)
+		}
+	}}, nil
+}
+
+var traceClientTicketPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// buildTraceClientInstallScript 生成嵌入票据的 bash 安装脚本。
+// ticket 仅允许 base64 URL 字符；origin 必须是 http/https URL 且 host 非空。
+func buildTraceClientInstallScript(origin, ticket string) (string, error) {
+	if ticket == "" || !traceClientTicketPattern.MatchString(ticket) {
+		return "", ierr.New(ierr.ErrValidation, "invalid ticket format")
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil || (parsed.Scheme != constant.HTTPSchemeHTTP && parsed.Scheme != constant.HTTPSchemeHTTPS) || parsed.Host == "" {
+		return "", ierr.New(ierr.ErrValidation, "invalid origin")
+	}
+
+	return "#!/usr/bin/env bash\n" +
+		"# Install the Aris trace client and start guided setup\n" +
+		"set -euo pipefail\n\n" +
+		"ticket='" + ticket + "'\n" +
+		"host='" + origin + "'\n\n" +
+		"case \"$(uname -s)-$(uname -m)\" in\n" +
+		"  Darwin-x86_64) os=darwin; arch=amd64 ;;\n" +
+		"  Darwin-arm64) os=darwin; arch=arm64 ;;\n" +
+		"  Linux-x86_64) os=linux; arch=amd64 ;;\n" +
+		"  Linux-aarch64|Linux-arm64) os=linux; arch=arm64 ;;\n" +
+		"  *) echo \"Unsupported platform: $(uname -s)/$(uname -m)\" >&2; exit 1 ;;\n" +
+		"esac\n\n" +
+		"tmp=\"$(mktemp \"${TMPDIR:-/tmp}/aris.XXXXXX\")\"\n" +
+		"trap 'rm -f \"$tmp\"' EXIT\n" +
+		"curl -fsSL \\\n" +
+		"  -H \"Authorization: Bearer $ticket\" \\\n" +
+		"  \"$host/api/v1/trace/client?os=$os&arch=$arch\" \\\n" +
+		"  -o \"$tmp\"\n" +
+		"mkdir -p \"$HOME/.aris/bin\"\n" +
+		"chmod 700 \"$HOME/.aris\" \"$HOME/.aris/bin\" \"$tmp\"\n" +
+		"mv \"$tmp\" \"$HOME/.aris/bin/aris\"\n" +
+		"trap - EXIT\n" +
+		"exec \"$HOME/.aris/bin/aris\" trace init --host \"$host\"\n", nil
 }
 
 // HandleGetTraceConversation 获取 Trace 对话投影（JWT）。

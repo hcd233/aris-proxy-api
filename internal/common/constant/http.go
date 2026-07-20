@@ -50,12 +50,16 @@ const (
 	HTTPContentTypeJSON            = "application/json"
 	HTTPContentTypeProblemJSON     = "application/problem+json"
 	HTTPContentTypeEventStream     = "text/event-stream"
+	HTTPContentTypeTextPlain       = "text/plain; charset=utf-8"
 	HTTPAttachmentFilenameTemplate = "attachment; filename=%q"
 	HTTPCacheControlNoCache        = "no-cache"
 	HTTPCacheControlNoStore        = "no-store"
 	HTTPConnectionKeepAlive        = "keep-alive"
 	HTTPTransferEncodingChunked    = "chunked"
 	HTTPHeaderDisabled             = "no"
+
+	HTTPSchemeHTTP  = "http"
+	HTTPSchemeHTTPS = "https"
 
 	MIMETypeOctetStream = "application/octet-stream"
 

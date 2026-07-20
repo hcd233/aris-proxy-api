@@ -86,6 +86,34 @@ func (s *traceClientTicketStore) Consume(
 	return uint(parsed), true, nil
 }
 
+func (s *traceClientTicketStore) Validate(
+	ctx context.Context,
+	ticket string,
+) (userID uint, ok bool, err error) {
+	if s.cache == nil {
+		return 0, false, ierr.New(ierr.ErrInternal, constant.TraceClientTicketCacheNilMessage)
+	}
+	if ticket == "" {
+		return 0, false, nil
+	}
+
+	value, getErr := s.cache.Get(ctx, traceClientTicketKey(ticket)).Result()
+	if getErr != nil {
+		if getErr == redis.Nil {
+			return 0, false, nil
+		}
+		return 0, false, ierr.Wrap(ierr.ErrInternal, getErr, constant.TraceClientTicketConsumeMessage)
+	}
+	if value == "" {
+		return 0, false, nil
+	}
+	parsed, parseErr := strconv.ParseUint(value, constant.DecimalBase, strconv.IntSize)
+	if parseErr != nil {
+		return 0, false, ierr.Wrap(ierr.ErrInternal, parseErr, constant.TraceClientTicketOwnerParseMessage)
+	}
+	return uint(parsed), true, nil
+}
+
 func traceClientTicketKey(ticket string) string {
 	digest := sha256.Sum256([]byte(ticket))
 	return fmt.Sprintf(constant.TraceClientTicketKeyTemplate, hex.EncodeToString(digest[:]))

@@ -97,4 +97,13 @@ func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm
 		Summary: "DownloadTraceClient", Description: "Download a supported trace client binary",
 		Tags: []string{constant.TagTrace},
 	}, deps.TraceHandler.HandleDownloadTraceClient)
+
+	installGroup := huma.NewGroup(traceGroup, "")
+	installGroup.UseMiddleware(middleware.TraceClientTicketValidateMiddleware(deps.TicketStore))
+	huma.Register(installGroup, huma.Operation{
+		OperationID: "installTraceClient", Method: http.MethodGet, Path: "/client/install",
+		Summary:     "InstallTraceClient",
+		Description: "Return a short install script authenticated by a one-time ticket",
+		Tags:        []string{constant.TagTrace},
+	}, deps.TraceHandler.HandleInstallTraceClient)
 }
