@@ -98,9 +98,9 @@ func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm
 		Tags: []string{constant.TagTrace},
 	}, deps.TraceHandler.HandleDownloadTraceClient)
 
-	installGroup := huma.NewGroup(traceGroup, "")
-	installGroup.UseMiddleware(middleware.TraceClientTicketValidateMiddleware(deps.TicketStore))
-	huma.Register(installGroup, huma.Operation{
+	// install 不使用 middleware，handler 内部验证票据并统一返回 bash 脚本
+	// （包括错误路径），避免 curl|bash 执行到 JSON 报错。
+	huma.Register(traceGroup, huma.Operation{
 		OperationID: "installTraceClient", Method: http.MethodGet, Path: "/client/install",
 		Summary:     "InstallTraceClient",
 		Description: "Return a short install script authenticated by a one-time ticket",

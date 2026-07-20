@@ -72,6 +72,7 @@ const (
 	TraceClientFileIdentityFormat   = "%d:%d"
 
 	TraceClientInitNonInteractiveMessage = "trace init requires an interactive terminal"
+	TraceClientInstallErrorMessage       = "Failed to generate install script. Please retry from the web UI."
 	TraceClientInitStepConnect           = "[1/4] Connect to server"
 	TraceClientInitStepAgent             = "[2/4] Select agent"
 	TraceClientInitStepAPIKey            = "[3/4] Configure API key"

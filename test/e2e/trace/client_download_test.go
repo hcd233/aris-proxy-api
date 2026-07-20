@@ -139,6 +139,7 @@ func TestTraceClientInstall_ReturnsScriptWithoutConsumingTicket(t *testing.T) {
 	traceHandler := handler.NewTraceHandler(handler.TraceDependencies{
 		IssueTicket:      tracecommand.NewIssueTraceClientTicketHandler(store),
 		ArtifactResolver: traceclient.NewArtifactResolver(artifactDir),
+		TicketStore:      store,
 	})
 
 	app := fiber.New()
@@ -158,7 +159,6 @@ func TestTraceClientInstall_ReturnsScriptWithoutConsumingTicket(t *testing.T) {
 		OperationID: "installTraceClientTest",
 		Method:      http.MethodGet,
 		Path:        "/client/install",
-		Middlewares: huma.Middlewares{middleware.TraceClientTicketValidateMiddleware(store)},
 	}, traceHandler.HandleInstallTraceClient)
 	huma.Register(api, huma.Operation{
 		OperationID: "downloadTraceClientInstallTest",
@@ -218,6 +218,62 @@ func TestTraceClientInstall_ReturnsScriptWithoutConsumingTicket(t *testing.T) {
 	defer downloadResp.Body.Close()
 	if downloadResp.StatusCode != fiber.StatusOK {
 		t.Fatalf("download after install status = %d (ticket should not be consumed)", downloadResp.StatusCode)
+	}
+}
+
+func TestTraceClientInstall_InvalidTicketReturnsBashErrorScript(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = redisClient.Close() })
+
+	store := cache.NewTraceClientTicketStore(redisClient)
+	traceHandler := handler.NewTraceHandler(handler.TraceDependencies{
+		TicketStore: store,
+	})
+
+	app := fiber.New()
+	api := humafiber.New(app, huma.DefaultConfig("Trace Install Error Test", "1.0"))
+	huma.Register(api, huma.Operation{
+		OperationID: "installTraceClientInvalidTest",
+		Method:      http.MethodGet,
+		Path:        "/client/install",
+	}, traceHandler.HandleInstallTraceClient)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/client/install",
+		http.NoBody,
+	)
+	req.Host = "trace.example.com"
+	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+"invalid-ticket-value")
+	req.Header.Set(constant.HTTPHeaderXForwardedProto, "https")
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("status = %d, want 200 (bash error script)", resp.StatusCode)
+	}
+	if ct := resp.Header.Get(constant.HTTPHeaderContentType); !strings.HasPrefix(ct, "text/plain") {
+		t.Errorf("content type = %q, want text/plain", ct)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bodyStr := string(body)
+	if !strings.HasPrefix(bodyStr, "#!/usr/bin/env bash") {
+		t.Errorf("response is not a bash script: %s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, ">&2") {
+		t.Errorf("error script should echo to stderr: %s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, "exit 1") {
+		t.Errorf("error script should exit 1: %s", bodyStr)
 	}
 }
 
