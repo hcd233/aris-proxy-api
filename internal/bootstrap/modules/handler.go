@@ -168,6 +168,7 @@ func NewTraceDependencies(
 	conversation traceport.ListTraceConversationHandler,
 	issueTicket traceport.IssueTraceClientTicketHandler,
 	artifactResolver traceport.TraceClientArtifactResolver,
+	ticketStore traceport.TraceClientTicketStore,
 ) handler.TraceDependencies {
 	return handler.TraceDependencies{
 		Report:           report,
@@ -177,5 +178,6 @@ func NewTraceDependencies(
 		Conversation:     conversation,
 		IssueTicket:      issueTicket,
 		ArtifactResolver: artifactResolver,
+		TicketStore:      ticketStore,
 	}
 }

@@ -49,6 +49,7 @@ type TraceDependencies struct {
 	Conversation     port.ListTraceConversationHandler
 	IssueTicket      port.IssueTraceClientTicketHandler
 	ArtifactResolver port.TraceClientArtifactResolver
+	TicketStore      port.TraceClientTicketStore
 }
 
 type traceHandler struct {
@@ -59,6 +60,7 @@ type traceHandler struct {
 	conversation     port.ListTraceConversationHandler
 	issueTicket      port.IssueTraceClientTicketHandler
 	artifactResolver port.TraceClientArtifactResolver
+	ticketStore      port.TraceClientTicketStore
 }
 
 // NewTraceHandler 构造 TraceHandler
@@ -71,6 +73,7 @@ func NewTraceHandler(deps TraceDependencies) TraceHandler {
 		conversation:     deps.Conversation,
 		issueTicket:      deps.IssueTicket,
 		artifactResolver: deps.ArtifactResolver,
+		ticketStore:      deps.TicketStore,
 	}
 }
 
@@ -144,8 +147,9 @@ func (h *traceHandler) HandleCheckTraceClient(
 
 // HandleInstallTraceClient 返回嵌入单次票据的短安装脚本。
 // 票据在请求时仅验证不消费，脚本执行时用于下载二进制并完成初始化。
+// 所有错误路径都返回 bash 错误脚本，避免 curl|bash 执行到 JSON 报错。
 func (h *traceHandler) HandleInstallTraceClient(
-	_ context.Context,
+	ctx context.Context,
 	_ *dto.InstallTraceClientReq,
 ) (*huma.StreamResponse, error) {
 	return &huma.StreamResponse{Body: func(humaCtx huma.Context) {
@@ -160,17 +164,13 @@ func (h *traceHandler) HandleInstallTraceClient(
 		}
 		origin := scheme + "://" + humaCtx.Header(constant.HTTPHeaderHost)
 
-		script, err := buildTraceClientInstallScript(origin, ticket)
+		script, err := h.buildInstallScript(ctx, origin, ticket)
 		if err != nil {
-			logger.WithCtx(humaCtx.Context()).Warn(
+			logger.WithCtx(ctx).Warn(
 				"[TraceHandler] Failed to build install script",
 				zap.Error(err),
 			)
-			lo.Must0(apiutil.WriteErrorHTTPResponse(
-				humaCtx,
-				fiber.StatusBadRequest,
-				ierr.ErrValidation.BizError(),
-			))
+			writeInstallScriptError(humaCtx, constant.TraceClientInstallErrorMessage)
 			return
 		}
 
@@ -178,7 +178,7 @@ func (h *traceHandler) HandleInstallTraceClient(
 		humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeTextPlain)
 		humaCtx.SetHeader(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoStore)
 		if _, writeErr := io.WriteString(humaCtx.BodyWriter(), script); writeErr != nil {
-			logger.WithCtx(humaCtx.Context()).Warn(
+			logger.WithCtx(ctx).Warn(
 				"[TraceHandler] Failed to write install script",
 				zap.Error(writeErr),
 			)
@@ -186,13 +186,20 @@ func (h *traceHandler) HandleInstallTraceClient(
 	}}, nil
 }
 
-var traceClientTicketPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
-
-// buildTraceClientInstallScript 生成嵌入票据的 bash 安装脚本。
-// ticket 仅允许 base64 URL 字符；origin 必须是 http/https URL 且 host 非空。
-func buildTraceClientInstallScript(origin, ticket string) (string, error) {
+// buildInstallScript 验证票据并生成嵌入票据的 bash 安装脚本。
+func (h *traceHandler) buildInstallScript(ctx context.Context, origin, ticket string) (string, error) {
 	if ticket == "" || !traceClientTicketPattern.MatchString(ticket) {
 		return "", ierr.New(ierr.ErrValidation, "invalid ticket format")
+	}
+	if h.ticketStore == nil {
+		return "", ierr.New(ierr.ErrInternal, "ticket store unavailable")
+	}
+	_, found, err := h.ticketStore.Validate(ctx, ticket)
+	if err != nil {
+		return "", ierr.Wrap(ierr.ErrInternal, err, "validate ticket")
+	}
+	if !found {
+		return "", ierr.New(ierr.ErrUnauthorized, "ticket not found or expired")
 	}
 	parsed, err := url.Parse(origin)
 	if err != nil || (parsed.Scheme != constant.HTTPSchemeHTTP && parsed.Scheme != constant.HTTPSchemeHTTPS) || parsed.Host == "" {
@@ -222,6 +229,22 @@ func buildTraceClientInstallScript(origin, ticket string) (string, error) {
 		"mv \"$tmp\" \"$HOME/.aris/bin/aris\"\n" +
 		"trap - EXIT\n" +
 		"exec \"$HOME/.aris/bin/aris\" trace init --host \"$host\"\n", nil
+}
+
+var traceClientTicketPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// writeInstallScriptError 返回一个将错误输出到 stderr 并退出的 bash 脚本。
+// 用于 curl|bash 模式下服务端出错时给出可读提示，避免 bash 把 JSON 当命令执行。
+func writeInstallScriptError(humaCtx huma.Context, message string) {
+	humaCtx.SetStatus(fiber.StatusOK)
+	humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeTextPlain)
+	humaCtx.SetHeader(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoStore)
+	if _, writeErr := io.WriteString(humaCtx.BodyWriter(), "#!/usr/bin/env bash\necho '"+message+"' >&2\nexit 1\n"); writeErr != nil {
+		logger.WithCtx(humaCtx.Context()).Warn(
+			"[TraceHandler] Failed to write install error script",
+			zap.Error(writeErr),
+		)
+	}
 }
 
 // HandleGetTraceConversation 获取 Trace 对话投影（JWT）。
