@@ -4,6 +4,7 @@ package router
 import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
+	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/redis/go-redis/v9"
@@ -15,25 +16,26 @@ import (
 //	@author centonhuang
 //	@update 2026-04-28 10:00:00
 type APIRouterDependencies struct {
-	DB               *gorm.DB
-	Cache            *redis.Client
-	AccessSigner     jwt.TokenSigner
-	PingHandler      handler.PingHandler
-	TokenHandler     handler.TokenHandler
-	Oauth2Handler    handler.Oauth2Handler
-	UserHandler      handler.UserHandler
-	APIKeyHandler    handler.APIKeyHandler
-	SessionHandler   handler.SessionHandler
-	EndpointHandler  handler.EndpointHandler
-	ModelHandler     handler.ModelHandler
-	AuditHandler     handler.AuditHandler
-	CronHandler      handler.CronHandler
-	OpenAIHandler    handler.OpenAIHandler
-	AnthropicHandler handler.AnthropicHandler
-	BlockedHandler   handler.BlockedHandler
-	MetricsHandler   handler.MetricsHandler
-	DatasetHandler   handler.DatasetHandler
-	TraceHandler     handler.TraceHandler
+	DB                     *gorm.DB
+	Cache                  *redis.Client
+	AccessSigner           jwt.TokenSigner
+	PingHandler            handler.PingHandler
+	TokenHandler           handler.TokenHandler
+	Oauth2Handler          handler.Oauth2Handler
+	UserHandler            handler.UserHandler
+	APIKeyHandler          handler.APIKeyHandler
+	SessionHandler         handler.SessionHandler
+	EndpointHandler        handler.EndpointHandler
+	ModelHandler           handler.ModelHandler
+	AuditHandler           handler.AuditHandler
+	CronHandler            handler.CronHandler
+	OpenAIHandler          handler.OpenAIHandler
+	AnthropicHandler       handler.AnthropicHandler
+	BlockedHandler         handler.BlockedHandler
+	MetricsHandler         handler.MetricsHandler
+	DatasetHandler         handler.DatasetHandler
+	TraceHandler           handler.TraceHandler
+	TraceClientTicketStore traceport.TraceClientTicketStore
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -118,5 +120,8 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initDatasetRouter(datasetGroup, deps.DatasetHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	traceGroup := huma.NewGroup(v1Group, "/trace")
-	initTraceRouter(traceGroup, TraceRouterDependencies{TraceHandler: deps.TraceHandler}, deps.DB, deps.Cache, deps.AccessSigner)
+	initTraceRouter(traceGroup, TraceRouterDependencies{
+		TraceHandler: deps.TraceHandler,
+		TicketStore:  deps.TraceClientTicketStore,
+	}, deps.DB, deps.Cache, deps.AccessSigner)
 }

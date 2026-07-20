@@ -1,0 +1,94 @@
+package constant
+
+import "time"
+
+const (
+	TraceClientOSDarwin = "darwin"
+	TraceClientOSLinux  = "linux"
+
+	TraceClientArchAMD64 = "amd64"
+	TraceClientArchARM64 = "arm64"
+
+	TraceClientArtifactDarwinAMD64     = "aris-darwin-amd64"
+	TraceClientArtifactDarwinARM64     = "aris-darwin-arm64"
+	TraceClientArtifactLinuxAMD64      = "aris-linux-amd64"
+	TraceClientArtifactLinuxARM64      = "aris-linux-arm64"
+	TraceClientDownloadFilename        = "aris"
+	TraceClientDefaultArtifactDir      = "/app/trace-client"
+	TraceClientUnsupportedTarget       = "unsupported trace client target"
+	TraceClientArtifactUnavailable     = "trace client artifact unavailable"
+	TraceClientTicketRateLimitService  = "traceClientTicket"
+	TraceClientTicketCacheNilMessage   = "trace client ticket cache is nil"
+	TraceClientTicketInvalidMessage    = "invalid trace client ticket request"
+	TraceClientTicketGenerateMessage   = "generate trace client ticket"
+	TraceClientTicketStoreMessage      = "store trace client ticket"
+	TraceClientTicketConsumeMessage    = "consume trace client ticket"
+	TraceClientTicketOwnerParseMessage = "parse trace client ticket owner"
+
+	TraceClientRootDirName         = ".aris"
+	TraceClientBinDirName          = "bin"
+	TraceClientTraceDirName        = "trace"
+	TraceClientSpoolDirName        = "spool"
+	TraceClientPendingDirName      = "pending"
+	TraceClientStateDirName        = "state"
+	TraceClientRejectedDirName     = "rejected"
+	TraceClientLogDirName          = "logs"
+	TraceClientConfigFileName      = "config.json"
+	TraceClientBinaryFileName      = "aris"
+	TraceClientAgentCodex          = "codex"
+	TraceClientCodexDirName        = ".codex"
+	TraceClientCodexHooksFile      = "hooks.json"
+	TraceClientCodexBackupSuffix   = ".bak"
+	TraceClientHooksField          = "hooks"
+	TraceClientHookTypeCommand     = "command"
+	TraceClientIngestCommandSuffix = " trace ingest"
+	TraceClientHookTimeout         = 30
+
+	TraceClientSchemeHTTP           = "http"
+	TraceClientSchemeHTTPS          = "https"
+	TraceClientCheckPath            = "/api/v1/trace/client/check"
+	TraceClientHTTPTimeout          = 5 * time.Second
+	TraceClientSpoolLimit           = 256 << 20
+	TraceClientBatchMaxRecords      = 500
+	TraceClientBatchMaxBytes        = 4 << 20
+	TraceClientRejectedRetention    = 7 * 24 * time.Hour
+	TraceClientIngestPath           = "/api/v1/trace/event"
+	TraceClientRecordFileSuffix     = ".json"
+	TraceClientSpoolLockFile        = "spool.lock"
+	TraceClientStateLockFile        = "client.lock"
+	TraceClientStateFileName        = "client.json"
+	TraceClientSpoolIDRandomBytes   = 16
+	TraceClientHookInputLimit       = 16 << 20
+	TraceClientHookDedupFormat      = "hook:%s:%d"
+	TraceClientLogPrefix            = "trace-"
+	TraceClientLogSuffix            = ".log"
+	TraceClientLogDateFormat        = "2006-01-02"
+	TraceClientLogCategoryIngest    = "ingest_failed"
+	TraceClientLogCategoryRollout   = "rollout_failed"
+	TraceClientLogLineFormat        = "%s %s\n"
+	TraceClientTranscriptStateDir   = "transcripts"
+	TraceClientTranscriptLockSuffix = ".lock"
+	TraceClientRolloutDedupFormat   = "rollout:%s:%d:%s"
+	TraceClientFileIdentityFormat   = "%d:%d"
+
+	TraceClientInitNonInteractiveMessage = "trace init requires an interactive terminal"
+	TraceClientInitStepConnect           = "[1/4] Connect to server"
+	TraceClientInitStepAgent             = "[2/4] Select agent"
+	TraceClientInitStepAPIKey            = "[3/4] Configure API key"
+	TraceClientInitStepHook              = "[4/4] Configure Codex hooks"
+	TraceClientInitConnected             = "Connected"
+	TraceClientInitAgentPrompt           = "Press Enter to select Codex: "
+	TraceClientInitAPIKeyPrompt          = "API key: "
+	TraceClientInitKeepAPIKeyPrompt      = "API key (Enter keeps current): "
+	TraceClientInitMissingAPIKeyMessage  = "api key is required"
+	TraceClientInitInvalidAgentMessage   = "only Codex is supported"
+	TraceClientInitAPIKeyFailed          = "API key validation failed"
+	TraceClientInitRetryPrompt           = "Connection failed. Retry? [Y/n]: "
+	TraceClientInitAPIKeyRetryPrompt     = "Retry API key? [Y/n]: "
+	TraceClientInitDone                  = "Trace configuration completed"
+	TraceClientInitApprovalHint          = "In Codex, run /hooks and manually approve the new Aris hooks."
+	TraceClientInitConfigFormat          = "Config: %s"
+	TraceClientNegativeShort             = "n"
+	TraceClientNegative                  = "no"
+	TraceClientJSONIndent                = "  "
+)

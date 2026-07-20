@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	traceschema "github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
 // TestReportTraceEventReq_DTOFollowsHumaBodyConvention 防回归：上报接口的请求体必须是
@@ -98,7 +99,7 @@ func TestReportTraceEventReqBody_MarshalPreservesDynamicFields(t *testing.T) {
 		HookEventName: "PreToolUse",
 		SessionID:     "s1",
 		ToolName:      "Bash",
-		ToolInput:     sonic.NoCopyRawMessage(`{"command":"ls"}`),
+		ToolInput:     traceschema.RawJSON(`{"command":"ls"}`),
 	}
 	raw, err := sonic.Marshal(body)
 	if err != nil {

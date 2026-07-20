@@ -63,14 +63,14 @@ func (f *FakeRepo) MarkDone(_ context.Context, sid string) error {
 	return nil
 }
 
-func (f *FakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) error {
+func (f *FakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if e.DedupKey != "" {
 		for _, existing := range f.events {
 			if existing.DedupKey == e.DedupKey {
 				e.ID = existing.ID
-				return nil
+				return false, nil
 			}
 		}
 	}
@@ -82,7 +82,7 @@ func (f *FakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) error {
 		}
 	}
 	f.events = append(f.events, e)
-	return nil
+	return true, nil
 }
 
 func (f *FakeRepo) PaginateByOwners(_ context.Context, owners []string, p model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {

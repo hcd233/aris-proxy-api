@@ -52,6 +52,7 @@ const (
 	HTTPContentTypeEventStream     = "text/event-stream"
 	HTTPAttachmentFilenameTemplate = "attachment; filename=%q"
 	HTTPCacheControlNoCache        = "no-cache"
+	HTTPCacheControlNoStore        = "no-store"
 	HTTPConnectionKeepAlive        = "keep-alive"
 	HTTPTransferEncodingChunked    = "chunked"
 	HTTPHeaderDisabled             = "no"

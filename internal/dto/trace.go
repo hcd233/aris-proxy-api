@@ -7,6 +7,7 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	traceschema "github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
 // TraceSummary trace 列表项
@@ -89,9 +90,36 @@ type ListTraceEventsReq struct {
 	model.PageParam
 }
 
+// IssueTraceClientTicketReq 签发客户端下载票据请求（JWT）。
+type IssueTraceClientTicketReq struct{}
+
+// IssueTraceClientTicketRsp 签发客户端下载票据响应。
+type IssueTraceClientTicketRsp struct {
+	CommonRsp
+	Ticket    string    `json:"ticket" doc:"10 分钟有效的单次下载票据"`
+	ExpiresAt time.Time `json:"expiresAt" doc:"过期时间"`
+}
+
+// DownloadTraceClientReq 下载客户端请求。
+type DownloadTraceClientReq struct {
+	OS   string `query:"os" required:"true" enum:"darwin,linux" doc:"目标操作系统"`
+	Arch string `query:"arch" required:"true" enum:"amd64,arm64" doc:"目标架构"`
+}
+
+// CheckTraceClientReq 验证 ProxyAPIKey 请求。
+type CheckTraceClientReq struct{}
+
+// ReportTraceRecordResult 单条上报处理结果。
+type ReportTraceRecordResult struct {
+	DedupKey string `json:"dedupKey" doc:"幂等键"`
+	Status   string `json:"status" enum:"accepted,duplicate,rejected" doc:"处理状态"`
+	Message  string `json:"message,omitempty" doc:"拒绝原因"`
+}
+
 // ReportTraceEventRsp 上报响应
 type ReportTraceEventRsp struct {
 	CommonRsp
+	Results []*ReportTraceRecordResult `json:"results,omitempty" doc:"逐条处理结果"`
 }
 
 // ReportTraceEventReq 上报请求（API Key 鉴权，codex hook stdin JSON）
@@ -105,6 +133,8 @@ type ReportTraceEventReq struct {
 // 用 sonic.NoCopyRawMessage 承载。handler 序列化整个结构体作为完整 hook JSON
 // 透传存储到 events.payload。
 type ReportTraceEventReqBody struct {
+	_   struct{}            `json:"-" additionalProperties:"true"`
+	Raw traceschema.RawJSON `json:"-"`
 	// Batch envelope fields.
 	Records []*ReportTraceRecordReq `json:"records,omitempty" doc:"批量原始记录"`
 	// 公共字段（所有 hook 事件均携带）
@@ -121,10 +151,10 @@ type ReportTraceEventReqBody struct {
 	// UserPromptSubmit
 	Prompt string `json:"prompt,omitempty" doc:"用户输入文本"`
 	// PreToolUse / PostToolUse
-	ToolName     string                 `json:"tool_name,omitempty" doc:"工具名"`
-	ToolUseID    string                 `json:"tool_use_id,omitempty" doc:"工具调用 ID"`
-	ToolInput    sonic.NoCopyRawMessage `json:"tool_input,omitempty" doc:"工具输入（任意 JSON）"`
-	ToolResponse sonic.NoCopyRawMessage `json:"tool_response,omitempty" doc:"工具响应（任意 JSON）"`
+	ToolName     string              `json:"tool_name,omitempty" doc:"工具名"`
+	ToolUseID    string              `json:"tool_use_id,omitempty" doc:"工具调用 ID"`
+	ToolInput    traceschema.RawJSON `json:"tool_input,omitempty" doc:"工具输入（任意 JSON）"`
+	ToolResponse traceschema.RawJSON `json:"tool_response,omitempty" doc:"工具响应（任意 JSON）"`
 	// Stop / SubagentStop
 	LastAssistantMessage string `json:"last_assistant_message,omitempty" doc:"最后 assistant 消息"`
 	// SubagentStart / SubagentStop
@@ -134,16 +164,27 @@ type ReportTraceEventReqBody struct {
 	Trigger string `json:"trigger,omitempty" doc:"manual/auto"`
 }
 
+func (b *ReportTraceEventReqBody) UnmarshalJSON(data []byte) error {
+	type plainBody ReportTraceEventReqBody
+	var decoded plainBody
+	if err := sonic.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*b = ReportTraceEventReqBody(decoded)
+	b.Raw = append(b.Raw[:0], data...)
+	return nil
+}
+
 // ReportTraceRecordReq 单条 Hook 或 rollout 原始记录。
 type ReportTraceRecordReq struct {
-	Source         string                 `json:"source" required:"true" enum:"hook,rollout" doc:"记录来源"`
-	RecordType     string                 `json:"record_type" required:"true" doc:"记录类型"`
-	HookEventName  string                 `json:"hook_event_name,omitempty" doc:"Hook 事件名"`
-	Event          string                 `json:"event,omitempty" doc:"rollout payload.type 或 Hook 事件名"`
-	TurnID         string                 `json:"turn_id,omitempty" doc:"turn id"`
-	CallID         string                 `json:"call_id,omitempty" doc:"工具调用关联 ID"`
-	TranscriptLine *int64                 `json:"transcript_line,omitempty" doc:"rollout 原文件行号"`
-	ClientSequence int64                  `json:"client_sequence,omitempty" doc:"客户端序号"`
-	DedupKey       string                 `json:"dedup_key,omitempty" doc:"幂等键"`
-	Payload        sonic.NoCopyRawMessage `json:"payload" required:"true" doc:"完整原始 JSON"`
+	Source         string              `json:"source" required:"true" enum:"hook,rollout" doc:"记录来源"`
+	RecordType     string              `json:"record_type" required:"true" doc:"记录类型"`
+	HookEventName  string              `json:"hook_event_name,omitempty" doc:"Hook 事件名"`
+	Event          string              `json:"event,omitempty" doc:"rollout payload.type 或 Hook 事件名"`
+	TurnID         string              `json:"turn_id,omitempty" doc:"turn id"`
+	CallID         string              `json:"call_id,omitempty" doc:"工具调用关联 ID"`
+	TranscriptLine *int64              `json:"transcript_line,omitempty" doc:"rollout 原文件行号"`
+	ClientSequence int64               `json:"client_sequence,omitempty" doc:"客户端序号"`
+	DedupKey       string              `json:"dedup_key" required:"true" minLength:"1" doc:"幂等键"`
+	Payload        traceschema.RawJSON `json:"payload" required:"true" doc:"完整原始 JSON"`
 }

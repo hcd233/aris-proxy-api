@@ -120,6 +120,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewExportDatasetHandler,
 		NewPreviewFormatDatasetHandler,
 		NewTraceRepository,
+		NewIssueTraceClientTicketHandler,
 		NewReportTraceEventHandler,
 		NewListTracesHandler,
 		NewGetTraceHandler,
@@ -366,6 +367,12 @@ func NewTraceRepository(db *gorm.DB) trace.TraceRepository {
 	return repository.NewTraceRepository(db)
 }
 
+func NewIssueTraceClientTicketHandler(
+	store traceport.TraceClientTicketStore,
+) traceport.IssueTraceClientTicketHandler {
+	return tracecommand.NewIssueTraceClientTicketHandler(store)
+}
+
 func NewReportTraceEventHandler(repo trace.TraceRepository) traceport.ReportTraceEventHandler {
 	return tracecommand.NewReportTraceEventHandler(repo)
 }
@@ -374,12 +381,18 @@ func NewListTracesHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRe
 	return tracequery.NewListTracesHandler(repo, apiKeyRepo)
 }
 
-func NewGetTraceHandler(repo trace.TraceRepository) traceport.GetTraceHandler {
-	return tracequery.NewGetTraceHandler(repo)
+func NewGetTraceHandler(
+	repo trace.TraceRepository,
+	apiKeyRepo apikey.APIKeyRepository,
+) traceport.GetTraceHandler {
+	return tracequery.NewGetTraceHandler(repo, apiKeyRepo)
 }
 
-func NewListTraceEventsHandler(repo trace.TraceRepository) traceport.ListTraceEventsHandler {
-	return tracequery.NewListTraceEventsHandler(repo)
+func NewListTraceEventsHandler(
+	repo trace.TraceRepository,
+	apiKeyRepo apikey.APIKeyRepository,
+) traceport.ListTraceEventsHandler {
+	return tracequery.NewListTraceEventsHandler(repo, apiKeyRepo)
 }
 
 func NewListTraceConversationHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.ListTraceConversationHandler {
