@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
@@ -120,6 +121,103 @@ func TestTraceClientDownload_TicketLimitAndSingleUse(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != fiber.StatusUnauthorized {
 		t.Fatalf("reused ticket status = %d", resp.StatusCode)
+	}
+}
+
+func TestTraceClientInstall_ReturnsScriptWithoutConsumingTicket(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = redisClient.Close() })
+
+	artifactDir := t.TempDir()
+	artifactPath := filepath.Join(artifactDir, constant.TraceClientArtifactDarwinARM64)
+	if err := os.WriteFile(artifactPath, []byte("trace-client-binary"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store := cache.NewTraceClientTicketStore(redisClient)
+	traceHandler := handler.NewTraceHandler(handler.TraceDependencies{
+		IssueTicket:      tracecommand.NewIssueTraceClientTicketHandler(store),
+		ArtifactResolver: traceclient.NewArtifactResolver(artifactDir),
+	})
+
+	app := fiber.New()
+	api := humafiber.New(app, huma.DefaultConfig("Trace Install Test", "1.0"))
+	userMiddleware := func(ctx huma.Context, next func(huma.Context)) {
+		ctx = huma.WithValue(ctx, constant.CtxKeyUserID, uint(7))
+		ctx = huma.WithValue(ctx, constant.CtxKeyPermission, enum.PermissionUser)
+		next(ctx)
+	}
+	huma.Register(api, huma.Operation{
+		OperationID: "issueTraceClientTicketInstall",
+		Method:      http.MethodPost,
+		Path:        "/ticket",
+		Middlewares: huma.Middlewares{userMiddleware},
+	}, traceHandler.HandleIssueTraceClientTicket)
+	huma.Register(api, huma.Operation{
+		OperationID: "installTraceClientTest",
+		Method:      http.MethodGet,
+		Path:        "/client/install",
+		Middlewares: huma.Middlewares{middleware.TraceClientTicketValidateMiddleware(store)},
+	}, traceHandler.HandleInstallTraceClient)
+	huma.Register(api, huma.Operation{
+		OperationID: "downloadTraceClientInstallTest",
+		Method:      http.MethodGet,
+		Path:        "/client",
+		Middlewares: huma.Middlewares{middleware.TraceClientTicketMiddleware(store)},
+	}, traceHandler.HandleDownloadTraceClient)
+
+	issueResp := request(t, app, http.MethodPost, "/ticket", "")
+	if issueResp.StatusCode != fiber.StatusOK {
+		t.Fatalf("issue status = %d", issueResp.StatusCode)
+	}
+	var issueBody dto.IssueTraceClientTicketRsp
+	if err := sonic.ConfigDefault.NewDecoder(issueResp.Body).Decode(&issueBody); err != nil {
+		t.Fatal(err)
+	}
+	_ = issueResp.Body.Close()
+	ticket := issueBody.Ticket
+	if ticket == "" {
+		t.Fatal("empty ticket")
+	}
+
+	installReq := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/client/install",
+		http.NoBody,
+	)
+	installReq.Host = "trace.example.com"
+	installReq.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ticket)
+	installReq.Header.Set(constant.HTTPHeaderXForwardedProto, "https")
+	installResp, err := app.Test(installReq, fiber.TestConfig{Timeout: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if installResp.StatusCode != fiber.StatusOK {
+		t.Fatalf("install status = %d", installResp.StatusCode)
+	}
+	script, err := io.ReadAll(installResp.Body)
+	_ = installResp.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scriptStr := string(script)
+
+	if !strings.Contains(scriptStr, ticket) {
+		t.Errorf("script does not contain ticket")
+	}
+	if !strings.Contains(scriptStr, "https://trace.example.com") {
+		t.Errorf("script does not contain origin: %s", scriptStr)
+	}
+	if ct := installResp.Header.Get(constant.HTTPHeaderContentType); !strings.HasPrefix(ct, "text/plain") {
+		t.Errorf("content type = %q", ct)
+	}
+
+	downloadResp := request(t, app, http.MethodGet, "/client?os=darwin&arch=arm64", ticket)
+	defer downloadResp.Body.Close()
+	if downloadResp.StatusCode != fiber.StatusOK {
+		t.Fatalf("download after install status = %d (ticket should not be consumed)", downloadResp.StatusCode)
 	}
 }
 

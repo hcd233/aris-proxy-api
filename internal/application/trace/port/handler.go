@@ -56,6 +56,7 @@ type TraceEventView struct {
 type TraceClientTicketStore interface {
 	Issue(ctx context.Context, userID uint, ttl time.Duration) (ticket string, expiresAt time.Time, err error)
 	Consume(ctx context.Context, ticket string) (userID uint, found bool, err error)
+	Validate(ctx context.Context, ticket string) (userID uint, found bool, err error)
 }
 
 // IssueTraceClientTicketCommand 签发客户端下载票据命令。

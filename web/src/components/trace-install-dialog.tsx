@@ -29,36 +29,9 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
-function generateScript(hostValue: string, ticketValue: string): string {
-  const host = shellQuote(hostValue.replace(/\/$/, ""));
-  const ticket = shellQuote(ticketValue);
-  return `#!/usr/bin/env bash
-# Install the Aris trace client and start guided setup
-set -euo pipefail
-
-host=${host}
-ticket=${ticket}
-
-case "$(uname -s)-$(uname -m)" in
-  Darwin-x86_64) os=darwin; arch=amd64 ;;
-  Darwin-arm64) os=darwin; arch=arm64 ;;
-  Linux-x86_64) os=linux; arch=amd64 ;;
-  Linux-aarch64|Linux-arm64) os=linux; arch=arm64 ;;
-  *) echo "Unsupported platform: $(uname -s)/$(uname -m)" >&2; exit 1 ;;
-esac
-
-tmp="$(mktemp "\${TMPDIR:-/tmp}/aris.XXXXXX")"
-trap 'rm -f "$tmp"' EXIT
-curl -fsSL \
-  -H "Authorization: Bearer $ticket" \
-  "$host/api/v1/trace/client?os=$os&arch=$arch" \
-  -o "$tmp"
-mkdir -p "$HOME/.aris/bin"
-chmod 700 "$HOME/.aris" "$HOME/.aris/bin" "$tmp"
-mv "$tmp" "$HOME/.aris/bin/aris"
-trap - EXIT
-exec "$HOME/.aris/bin/aris" trace init --host "$host"
-`;
+function generateInstallCommand(hostValue: string, ticketValue: string): string {
+  const host = hostValue.replace(/\/$/, "");
+  return `curl -fsSL -H ${shellQuote(`Authorization: Bearer ${ticketValue}`)} ${shellQuote(`${host}/api/v1/trace/client/install`)} | bash`;
 }
 
 hljs.registerLanguage("bash", bash);
@@ -84,22 +57,21 @@ export default function TraceInstallDialog({
   const [copied, setCopied] = useState(false);
   const [copying, setCopying] = useState(false);
 
-  const previewScript = useMemo(
-    () => generateScript(host || "https://your-aris-server.example", TICKET_PLACEHOLDER),
+  const previewCommand = useMemo(
+    () => generateInstallCommand(host || "https://your-aris-server.example", TICKET_PLACEHOLDER),
     [host]
   );
   const highlighted = useMemo(
-    () => hljs.highlight(previewScript, { language: "bash" }).value,
-    [previewScript]
+    () => hljs.highlight(previewCommand, { language: "bash" }).value,
+    [previewCommand]
   );
-  const lineCount = useMemo(() => previewScript.split("\n").length, [previewScript]);
 
   const handleCopy = useCallback(async () => {
     setCopying(true);
     try {
       const response = await api.issueTraceClientTicket();
       if (!response.ticket) throw new Error("missing ticket");
-      await navigator.clipboard.writeText(generateScript(host, response.ticket));
+      await navigator.clipboard.writeText(generateInstallCommand(host, response.ticket));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -188,9 +160,6 @@ export default function TraceInstallDialog({
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <span className="hidden font-mono text-[10px] tabular-nums text-white/25 sm:inline">
-                  {lineCount} {t("trace.install_lines")}
-                </span>
                 <button
                   type="button"
                   onClick={handleCopy}
