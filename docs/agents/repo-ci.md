@@ -5,7 +5,7 @@
 ## CI 与仓库
 
 - `.github/workflows/docker-publish.yml` 在推送到 `master`、`v*.*.*` tag、PR 到 `master` 和定时任务时构建多架构 GHCR 镜像。
-- 影响镜像构建的 path filter 包含 `internal/**`、`docker/**`、`cmd/**`、`main.go`、`go.mod`、`go.sum`。
+- 影响镜像构建的 path filter 包含 `internal/**`、`docker/**`、`cmd/**`、`go.mod`、`go.sum`。
 - 本地 hook 可通过 `bash .githooks/setup.sh` 安装；除非用户明确要求，不要绕过 hook。
 - 使用 `.worktrees/` 作为 git worktree 目录。
 - `AGENTS.md`、`CLAUDE.md`、`CODEBUDDY.md` 是项目级持久规范，修改其中一个时保持同步。
@@ -14,7 +14,7 @@
 ## K8s 部署
 
 - Deployment：`k8s/deployment.yaml`，副本数 2，`maxUnavailable: 0` 蓝绿更新。
-- 优雅关闭：`terminationGracePeriodSeconds: 660`（11 分钟），`preStop: sleep 10` 等待 `/ready` 探针失效；应用内部 8 步关闭（`cmd/server.go:124`），超时后强制退出。
+- 优雅关闭：`terminationGracePeriodSeconds: 660`（11 分钟），`preStop: sleep 10` 等待 `/ready` 探针失效；应用内部 8 步关闭（`cmd/server/server.go`），超时后强制退出。
 - 存活探针：`GET /health`（15s 初始延迟，20s 间隔，失败 3 次重启）。
 - 就绪探针：`GET /ready`（5s 初始延迟，10s 间隔，失败 6 次下线），draining 期间返回 503。
 

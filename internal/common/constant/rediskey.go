@@ -1,13 +1,14 @@
 package constant
 
 const (
-	LockKeyTemplateMiddleware = "%s:%s:%v"
-	JWTUserCacheKeyTemplate   = "jwt:user:%d"
-	TokenBucketKeyTemplate    = "tb:%s:%s:%v"
-	ScannerBanKeyTemplate     = "scanner:ban:%s"
-	ScannerStrikeKeyTemplate  = "scanner:strike:%s"
-	ShareKeyTemplate          = "share:%s"
-	UserSharesKeyTemplate     = "user_shares:%d"
+	LockKeyTemplateMiddleware    = "%s:%s:%v"
+	JWTUserCacheKeyTemplate      = "jwt:user:%d"
+	TokenBucketKeyTemplate       = "tb:%s:%s:%v"
+	TraceClientTicketKeyTemplate = "trace:client:ticket:%s"
+	ScannerBanKeyTemplate        = "scanner:ban:%s"
+	ScannerStrikeKeyTemplate     = "scanner:strike:%s"
+	ShareKeyTemplate             = "share:%s"
+	UserSharesKeyTemplate        = "user_shares:%d"
 	// CronLockKeyTemplate cron 任务互斥锁的 Redis key 模板（%s = CronModule*）
 	CronLockKeyTemplate      = "cron:lock:%s"
 	SessionSharesKeyTemplate = "session_shares:%d"

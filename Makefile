@@ -1,7 +1,9 @@
 # Makefile for aris-proxy-api
 
 APP_NAME   := aris-proxy-api
-MAIN       := main.go
+SERVER_MAIN := ./cmd/server
+CLIENT_MAIN := ./cmd/client
+CLIENT_OUTPUT_DIR := build/trace-client
 OUTPUT     := $(APP_NAME)
 
 # 并行编译：默认使用全部 CPU 核心
@@ -17,15 +19,46 @@ BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 GOLANGCI_LINT_VERSION ?= v2.11.4
 GOLANGCI_LINT         := $(shell which golangci-lint 2>/dev/null || echo $(HOME)/go/bin/golangci-lint)
 
-.PHONY: build build-upx build-dev build-debug clean test test-cover lint lint-conv lint-static fgprof web-build web-clean help
+.PHONY: build build-server build-client build-client-all build-upx build-dev build-debug clean test test-cover lint lint-conv lint-static fgprof web-build web-clean help
 
-## build: 生产构建（strip 符号，含前端）
-build: web-build
+## build: 生产构建（strip 符号，含前端和四平台客户端）
+build: build-server build-client-all
+
+## build-server: 生产构建服务端（strip 符号，含前端）
+build-server: web-build
 	CGO_ENABLED=0 go build \
 		$(BUILD_FLAGS) \
 		-ldflags="$(LDFLAGS)" \
-		-o $(OUTPUT) $(MAIN)
+		-o $(OUTPUT) $(SERVER_MAIN)
 	@echo "Built $(OUTPUT) ($$(du -h $(OUTPUT) | cut -f1))"
+
+## build-client: 构建当前平台的客户端
+build-client:
+	CGO_ENABLED=0 go build \
+		$(BUILD_FLAGS) \
+		-ldflags="$(LDFLAGS)" \
+		-o aris $(CLIENT_MAIN)
+	@echo "Built aris ($$(du -h aris | cut -f1))"
+
+## build-client-all: 交叉编译四个平台的客户端
+build-client-all:
+	@mkdir -p $(CLIENT_OUTPUT_DIR)
+	@for pair in \
+		darwin-amd64:darwin/amd64 \
+		darwin-arm64:darwin/arm64 \
+		linux-amd64:linux/amd64 \
+		linux-arm64:linux/arm64; do \
+		name=$${pair%%:*}; \
+		target=$${pair##*:}; \
+		os=$${target%%/*}; \
+		arch=$${target##*/}; \
+		echo "Building aris-$$name..."; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build \
+			$(BUILD_FLAGS) \
+			-ldflags="$(LDFLAGS)" \
+			-o $(CLIENT_OUTPUT_DIR)/aris-$$name $(CLIENT_MAIN) || exit 1; \
+	done
+	@echo "Built 4 client binaries in $(CLIENT_OUTPUT_DIR)/"
 
 ## build-upx: 极致压缩构建（strip + UPX，体积最小，需安装 upx）
 build-upx: build
@@ -35,24 +68,25 @@ build-upx: build
 ## build-dev: 开发构建（保留调试信息，最快编译速度）
 build-dev:
 	go build -p $(GOMAXPROCS) \
-		-o $(OUTPUT) $(MAIN)
+		-o $(OUTPUT) $(SERVER_MAIN)
 	@echo "Built $(OUTPUT) ($$(du -h $(OUTPUT) | cut -f1))"
 
 ## build-debug: 带完整调试信息的构建（用于 dlv 调试）
 build-debug:
 	go build -p $(GOMAXPROCS) \
 		-gcflags="all=-N -l" \
-		-o $(OUTPUT) $(MAIN)
+		-o $(OUTPUT) $(SERVER_MAIN)
 	@echo "Built $(OUTPUT) ($$(du -h $(OUTPUT) | cut -f1))"
 
 ## warm-cache: 预热编译缓存（CI 首次运行后可加速后续编译）
 warm-cache:
-	CGO_ENABLED=0 go build $(BUILD_FLAGS) -ldflags="$(LDFLAGS)" -o /dev/null $(MAIN)
+	CGO_ENABLED=0 go build $(BUILD_FLAGS) -ldflags="$(LDFLAGS)" -o /dev/null $(SERVER_MAIN)
 	@echo "Build cache warmed"
 
 ## clean: 清理构建产物
 clean:
-	rm -f $(OUTPUT)
+	rm -f $(OUTPUT) aris
+	rm -rf $(CLIENT_OUTPUT_DIR)
 
 ## web-build: 构建前端静态文件
 web-build:
@@ -84,11 +118,11 @@ lint: lint-conv lint-static
 
 ## lint-conv: 扫描项目自定义编码规范
 lint-conv: web-build
-	@go run $(MAIN) lint conv ./...
+	@go run $(SERVER_MAIN) lint conv ./...
 
 ## lint-static: run go vet + staticcheck + golangci-lint
 lint-static: web-build
-	@go run $(MAIN) lint static ./...
+	@go run $(SERVER_MAIN) lint static ./...
 
 ## fgprof: 从远程服务拉取 fgprof profile 并打开 Web 可视化（火焰图+调用图）
 fgprof:

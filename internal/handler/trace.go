@@ -3,8 +3,14 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"os"
+	"strconv"
 
 	"github.com/bytedance/sonic"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
@@ -25,28 +31,111 @@ type TraceHandler interface {
 	HandleGetTrace(ctx context.Context, req *dto.GetTraceReq) (*dto.HTTPResponse[*dto.GetTraceRsp], error)
 	HandleListTraceEvents(ctx context.Context, req *dto.ListTraceEventsReq) (*dto.HTTPResponse[*dto.ListTraceEventsRsp], error)
 	HandleGetTraceConversation(ctx context.Context, req *dto.GetTraceConversationReq) (*dto.HTTPResponse[*dto.GetTraceConversationRsp], error)
+	HandleIssueTraceClientTicket(ctx context.Context, req *dto.IssueTraceClientTicketReq) (*dto.HTTPResponse[*dto.IssueTraceClientTicketRsp], error)
+	HandleDownloadTraceClient(ctx context.Context, req *dto.DownloadTraceClientReq) (*huma.StreamResponse, error)
+	HandleCheckTraceClient(ctx context.Context, req *dto.CheckTraceClientReq) (*huma.StreamResponse, error)
 }
 
 // TraceDependencies TraceHandler 依赖项
 type TraceDependencies struct {
-	Report       port.ReportTraceEventHandler
-	List         port.ListTracesHandler
-	Get          port.GetTraceHandler
-	Events       port.ListTraceEventsHandler
-	Conversation port.ListTraceConversationHandler
+	Report           port.ReportTraceEventHandler
+	List             port.ListTracesHandler
+	Get              port.GetTraceHandler
+	Events           port.ListTraceEventsHandler
+	Conversation     port.ListTraceConversationHandler
+	IssueTicket      port.IssueTraceClientTicketHandler
+	ArtifactResolver port.TraceClientArtifactResolver
 }
 
 type traceHandler struct {
-	report       port.ReportTraceEventHandler
-	list         port.ListTracesHandler
-	get          port.GetTraceHandler
-	events       port.ListTraceEventsHandler
-	conversation port.ListTraceConversationHandler
+	report           port.ReportTraceEventHandler
+	list             port.ListTracesHandler
+	get              port.GetTraceHandler
+	events           port.ListTraceEventsHandler
+	conversation     port.ListTraceConversationHandler
+	issueTicket      port.IssueTraceClientTicketHandler
+	artifactResolver port.TraceClientArtifactResolver
 }
 
 // NewTraceHandler 构造 TraceHandler
 func NewTraceHandler(deps TraceDependencies) TraceHandler {
-	return &traceHandler{report: deps.Report, list: deps.List, get: deps.Get, events: deps.Events, conversation: deps.Conversation}
+	return &traceHandler{
+		report:           deps.Report,
+		list:             deps.List,
+		get:              deps.Get,
+		events:           deps.Events,
+		conversation:     deps.Conversation,
+		issueTicket:      deps.IssueTicket,
+		artifactResolver: deps.ArtifactResolver,
+	}
+}
+
+// HandleIssueTraceClientTicket 签发短期单次客户端下载票据。
+func (h *traceHandler) HandleIssueTraceClientTicket(
+	ctx context.Context,
+	_ *dto.IssueTraceClientTicketReq,
+) (*dto.HTTPResponse[*dto.IssueTraceClientTicketRsp], error) {
+	rsp := &dto.IssueTraceClientTicketRsp{}
+	view, err := h.issueTicket.Handle(ctx, port.IssueTraceClientTicketCommand{
+		UserID: util.CtxValueUint(ctx, constant.CtxKeyUserID),
+	})
+	if err != nil {
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+	rsp.Ticket = view.Ticket
+	rsp.ExpiresAt = view.ExpiresAt
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleDownloadTraceClient 下载白名单平台的客户端二进制。
+func (h *traceHandler) HandleDownloadTraceClient(
+	ctx context.Context,
+	req *dto.DownloadTraceClientReq,
+) (*huma.StreamResponse, error) {
+	artifact, err := h.artifactResolver.Resolve(req.OS, req.Arch)
+	if err != nil {
+		return nil, err
+	}
+	log := logger.WithCtx(ctx)
+	return &huma.StreamResponse{Body: func(humaCtx huma.Context) {
+		file, openErr := os.Open(artifact.Path)
+		if openErr != nil {
+			log.Error("[TraceHandler] Failed to open trace client artifact", zap.Error(openErr))
+			_ = apiutil.WriteErrorHTTPResponse( //nolint:errcheck // already in error path
+				humaCtx,
+				fiber.StatusInternalServerError,
+				ierr.ErrInternal.BizError(),
+			)
+			return
+		}
+		defer func() { _ = file.Close() }() //nolint:errcheck // best-effort close
+
+		humaCtx.SetStatus(fiber.StatusOK)
+		humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.MIMETypeOctetStream)
+		humaCtx.SetHeader(
+			constant.HTTPHeaderContentDisposition,
+			fmt.Sprintf(constant.HTTPAttachmentFilenameTemplate, artifact.Filename),
+		)
+		humaCtx.SetHeader(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoStore)
+		humaCtx.SetHeader(
+			constant.HTTPHeaderContentLength,
+			strconv.FormatInt(artifact.Size, constant.DecimalBase),
+		)
+		if _, copyErr := io.Copy(humaCtx.BodyWriter(), file); copyErr != nil {
+			log.Error("[TraceHandler] Failed to stream trace client artifact", zap.Error(copyErr))
+		}
+	}}, nil
+}
+
+// HandleCheckTraceClient validates the API key through middleware.
+func (h *traceHandler) HandleCheckTraceClient(
+	_ context.Context,
+	_ *dto.CheckTraceClientReq,
+) (*huma.StreamResponse, error) {
+	return &huma.StreamResponse{Body: func(ctx huma.Context) {
+		ctx.SetStatus(fiber.StatusNoContent)
+	}}, nil
 }
 
 // HandleGetTraceConversation 获取 Trace 对话投影（JWT）。
@@ -70,14 +159,15 @@ func (h *traceHandler) HandleGetTraceConversation(ctx context.Context, req *dto.
 }
 
 // HandleReportTraceEvent 上报 codex hook 事件（API Key 鉴权）
-func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.ReportTraceEventReq) (*dto.HTTPResponse[*dto.ReportTraceEventRsp], error) {
+func (h *traceHandler) HandleReportTraceEvent(
+	ctx context.Context,
+	req *dto.ReportTraceEventReq,
+) (*dto.HTTPResponse[*dto.ReportTraceEventRsp], error) {
 	rsp := &dto.ReportTraceEventRsp{}
-	if req.Body == nil {
+	if req.Body == nil || (len(req.Body.Records) == 0 && req.Body.HookEventName == "") {
 		rsp.Error = ierr.ErrValidation.BizError()
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	apiKeyName := util.CtxValueString(ctx, constant.CtxKeyAPIKeyName)
-	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	cmd := port.ReportTraceEventCommand{
 		HookEventName: req.Body.HookEventName,
 		SessionID:     req.Body.SessionID,
@@ -85,11 +175,14 @@ func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.Repo
 		CWD:           req.Body.CWD,
 		Source:        req.Body.Source,
 		TurnID:        req.Body.TurnID,
-		APIKeyName:    apiKeyName,
-		UserID:        userID,
+		APIKeyName:    util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		UserID:        util.CtxValueUint(ctx, constant.CtxKeyUserID),
 	}
 	if len(req.Body.Records) > 0 {
-		cmd.Records = lo.Map(req.Body.Records, func(record *dto.ReportTraceRecordReq, _ int) port.ReportTraceRecord {
+		cmd.Records = lo.Map(req.Body.Records, func(
+			record *dto.ReportTraceRecordReq,
+			_ int,
+		) port.ReportTraceRecord {
 			return port.ReportTraceRecord{
 				Source:         record.Source,
 				RecordType:     record.RecordType,
@@ -104,19 +197,34 @@ func (h *traceHandler) HandleReportTraceEvent(ctx context.Context, req *dto.Repo
 			}
 		})
 	} else {
-		// Legacy single-event clients are normalized by the application handler.
-		rawPayload, err := sonic.Marshal(req.Body)
-		if err != nil {
-			logger.WithCtx(ctx).Error("[TraceHandler] Marshal report body failed", zap.Error(err))
-			rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-			return apiutil.WrapHTTPResponse(rsp, nil)
+		cmd.RawPayload = req.Body.Raw
+		if len(cmd.RawPayload) == 0 {
+			rawPayload, err := sonic.Marshal(req.Body)
+			if err != nil {
+				logger.WithCtx(ctx).Error("[TraceHandler] Marshal report body failed", zap.Error(err))
+				rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+				return apiutil.WrapHTTPResponse(rsp, nil)
+			}
+			cmd.RawPayload = rawPayload
 		}
-		cmd.RawPayload = rawPayload
 	}
-	if err := h.report.Handle(ctx, cmd); err != nil {
+
+	results, err := h.report.Handle(ctx, cmd)
+	if err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] Report event failed", zap.Error(err))
 		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
+	rsp.Results = lo.Map(results, func(
+		result port.ReportTraceRecordResult,
+		_ int,
+	) *dto.ReportTraceRecordResult {
+		return &dto.ReportTraceRecordResult{
+			DedupKey: result.DedupKey,
+			Status:   result.Status,
+			Message:  result.Message,
+		}
+	})
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

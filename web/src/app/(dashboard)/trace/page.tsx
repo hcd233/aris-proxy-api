@@ -412,18 +412,20 @@ export default function TracePage() {
                         size="sm"
                         onClick={() => setDetailTab("conversation")}
                       >
-                        <Bot /> Conversation
+                        <Bot /> {t("trace.conversation")}
                       </Button>
                       <Button
                         variant={detailTab === "raw" ? "secondary" : "ghost"}
                         size="sm"
                         onClick={() => setDetailTab("raw")}
                       >
-                        Raw Records
+                        {t("trace.raw_records")}
                       </Button>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {detailTab === "raw" ? `${eventPageInfo.total} ${t("trace.event_count")}` : `${conversation?.turns.length ?? 0} turns`}
+                      {detailTab === "raw"
+                        ? `${eventPageInfo.total} ${t("trace.event_count")}`
+                        : `${conversation?.turns.length ?? 0} ${t("trace.turns")}`}
                     </span>
                   </div>
 

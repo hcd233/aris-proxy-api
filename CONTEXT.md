@@ -195,6 +195,24 @@ _Avoid_: cron mutex, scheduled lock, scheduler lock
 对订阅制 Agentic 工具（Claude Code、Codex）流量的离线捕获方式。读取工具写在本地的会话文件后摄取进平台。沉淀为 Trace（沉淀会话）。与 Proxy Capture 是两条互斥的数据入口。
 _Avoid_: log scraping, import, sync, ingestion
 
+## Trace & Codex Client（Trace 与 Codex 客户端）
+
+**TraceClient（Trace 客户端）**:
+独立编译的 `aris` 二进制，从 `cmd/client` 构建，只包含 `trace init` 和 `trace ingest` 两个子命令，不链接数据库、Server、lint 或 Web 静态资源。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物随服务镜像发布到 `/app/trace-client/`。替代旧版 shell + curl hook 脚本。
+_Avoid_: trace cli, codex hook script, install script
+
+**TraceDownloadTicket（下载票据）**:
+JWT 用户通过 `POST /api/v1/trace/client/ticket` 换取的短期单次下载凭证。Redis 只保存 SHA-256 哈希，TTL 10 分钟，使用 `GETDEL` 原子消费。票据签发按用户维度令牌桶限流（容量 3，补充速率 3 req/min）。安装脚本在点击复制时实时签发，不将 JWT 写入脚本。
+_Avoid_: download token, client token, install credential
+
+**TraceSpool（本地 spool）**:
+`aris trace ingest` 在 `~/.aris/trace/spool/` 维护的待上报记录队列。Hook 事件和 rollout 记录先原子落盘（0600），再以 5 秒超时批量 POST。服务端确认 `accepted` / `duplicate` 后删除 pending，`rejected` 移入隔离区。spool 全局上限 256 MiB，达到上限后停止接收新记录但保留既有未确认记录，始终 fail-open。
+_Avoid_: trace queue, pending records, ingest buffer
+
+**TraceConversation（Trace 对话投影）**:
+从 Trace 原始记录（Hook + rollout）非持久化投影出的结构化对话视图。rollout 优先、Hook fallback，按 turn 分组，工具调用和结果按 `call_id` 关联。通过 `GET /api/v1/trace/conversation` 返回，供 Web 前端 Conversation 标签页展示。
+_Avoid_: trace view, conversation model, trace projection
+
 ## Metrics & Monitoring（指标与监控）
 
 （继续使用现有 CONTEXT.md 中的 Metrics、Data Capture 部分，不做改动。）

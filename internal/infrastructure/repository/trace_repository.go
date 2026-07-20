@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -98,12 +96,8 @@ func (r *traceRepository) MarkDone(ctx context.Context, sessionID string) error 
 	return nil
 }
 
-func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) error {
+func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) (bool, error) {
 	db := r.db.WithContext(ctx)
-	if e.DedupKey == "" {
-		digest := sha256.Sum256(e.Payload)
-		e.DedupKey = constant.TraceLegacyDedupPrefix + e.SessionID + ":" + e.Event + ":" + hex.EncodeToString(digest[:])
-	}
 	rec := &dbmodel.TraceEvent{
 		TraceID:        e.TraceID,
 		SessionID:      e.SessionID,
@@ -117,14 +111,19 @@ func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) 
 		DedupKey:       e.DedupKey,
 		Payload:        e.Payload,
 	}
-	if err := db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: constant.TraceFieldDedupKey}},
-		DoNothing: true,
-	}).Create(rec).Error; err != nil {
-		return ierr.Wrap(ierr.ErrDBCreate, err, "insert trace event")
+	query := db
+	if e.DedupKey != "" {
+		query = query.Clauses(clause.OnConflict{DoNothing: true})
+	}
+	result := query.Create(rec)
+	if result.Error != nil {
+		return false, ierr.Wrap(ierr.ErrDBCreate, result.Error, "insert trace event")
+	}
+	if result.RowsAffected == 0 {
+		return false, nil
 	}
 	e.ID = rec.ID
-	return nil
+	return true, nil
 }
 
 func (r *traceRepository) PaginateByOwners(ctx context.Context, owners []string, param model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {

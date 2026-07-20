@@ -696,6 +696,11 @@ export interface TraceConversation {
   turns: TraceConversationTurn[];
 }
 
+export interface IssueTraceClientTicketRsp extends CommonRsp {
+  ticket?: string;
+  expiresAt?: string;
+}
+
 export interface ListTracesRsp extends CommonRsp {
   traces?: TraceSummary[];
   pageInfo?: PageInfo;

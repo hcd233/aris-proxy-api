@@ -28,6 +28,20 @@ func TestBuildConversation_PrefersRolloutAndPairsToolOutput(t *testing.T) {
 	}
 }
 
+func TestBuildConversation_ReplacesEarlierHookWithRollout(t *testing.T) {
+	t.Parallel()
+
+	conversation := trace.BuildConversation([]*trace.TraceEvent{
+		{ID: 1, Source: constant.TraceRecordSourceHook, Event: constant.TraceEventUserPromptSubmit, TurnID: "t1", Payload: []byte(`{"prompt":"hello"}`)},
+		{ID: 2, Source: constant.TraceRecordSourceRollout, Event: constant.TraceConversationEventUserMessage, TurnID: "t1", Payload: []byte(`{"type":"event_msg","payload":{"type":"user_message","turn_id":"t1","message":"hello"}}`)},
+	})
+	item := conversation.Turns[0].Items[0]
+	if len(conversation.Turns[0].Items) != 1 || item.Source != constant.TraceRecordSourceRollout ||
+		len(item.RecordIDs) != 1 || item.RecordIDs[0] != 2 {
+		t.Fatalf("rollout did not replace Hook fallback: %+v", conversation.Turns[0].Items)
+	}
+}
+
 func TestBuildConversation_UsesHookFallback(t *testing.T) {
 	t.Parallel()
 

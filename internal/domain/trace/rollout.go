@@ -93,7 +93,7 @@ type ConversationItem struct {
 func BuildConversation(records []*TraceEvent) *Conversation {
 	conversation := &Conversation{Turns: []*ConversationTurn{}}
 	turns := map[string]*ConversationTurn{}
-	seenMessages := map[string]bool{}
+	seenMessages := map[string]*ConversationItem{}
 	tools := map[string]*ConversationItem{}
 	for _, record := range records {
 		turnID := record.TurnID
@@ -127,10 +127,15 @@ func BuildConversation(records []*TraceEvent) *Conversation {
 		}
 		if item.Kind == constant.TraceConversationKindMessage {
 			key := item.Role + constant.TraceConversationMessageKeySeparator + item.Content
-			if seenMessages[key] {
+			if existing := seenMessages[key]; existing != nil {
+				isRolloutUpgrade := existing.Source == constant.TraceRecordSourceHook &&
+					item.Source == constant.TraceRecordSourceRollout
+				if isRolloutUpgrade {
+					*existing = *item
+				}
 				continue
 			}
-			seenMessages[key] = true
+			seenMessages[key] = item
 		}
 		turn.Items = append(turn.Items, item)
 		if item.Kind == constant.TraceConversationKindToolCall && item.CallID != "" {

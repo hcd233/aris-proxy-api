@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"

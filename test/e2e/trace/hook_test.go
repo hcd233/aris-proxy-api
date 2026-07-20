@@ -1,98 +1,111 @@
 package trace_e2e
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/bytedance/sonic"
+	client "github.com/hcd233/aris-proxy-api/internal/tracecli"
 )
 
 func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 	t.Parallel()
-
 	var mu sync.Mutex
-	var requests []struct {
-		Event string `json:"hook_event_name"`
-	}
-	requestCh := make(chan struct{}, 16)
+	seen := map[string]bool{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "read body", http.StatusBadRequest)
-			return
-		}
 		var request struct {
-			Event string `json:"hook_event_name"`
+			Records []struct {
+				Event    string `json:"hook_event_name"`
+				DedupKey string `json:"dedup_key"`
+			} `json:"records"`
 		}
-		if err := sonic.Unmarshal(body, &request); err != nil {
-			http.Error(w, "invalid json", http.StatusBadRequest)
+		if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&request); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
 			return
 		}
+		results := make([]client.RecordResult, 0, len(request.Records))
 		mu.Lock()
-		requests = append(requests, request)
+		for _, record := range request.Records {
+			seen[record.Event] = true
+			results = append(results, client.RecordResult{DedupKey: record.DedupKey, Status: "accepted"})
+		}
 		mu.Unlock()
-		requestCh <- struct{}{}
-		w.WriteHeader(http.StatusNoContent)
+		data, err := sonic.Marshal(struct {
+			Results []client.RecordResult `json:"results"`
+		}{Results: results})
+		if err != nil {
+			http.Error(w, "encode response", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
-	root := t.TempDir()
-	script := filepath.Join("..", "..", "..", "web", "src", "scripts", "codex-hook.sh")
+	home := t.TempDir()
+	paths := client.Paths{Root: filepath.Join(home, ".aris")}
+	if err := client.NewConfigStore(paths).Save(context.Background(), client.Config{
+		Host: server.URL, Agent: "codex", APIKey: "test-key",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	binary := buildTraceClient(t)
 	events := []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"}
-	for i, event := range events {
-		payload := []byte(`{"hook_event_name":"` + event + `","session_id":"hook-test-session","turn_id":"turn-1"}`)
-		stdout := runHook(t, script, root, server.URL, payload)
+	for _, event := range events {
+		payload := `{"hook_event_name":"` + event + `","session_id":"hook-test-session","turn_id":"turn-1"}`
+		stdout := runTraceIngest(t, binary, home, payload)
 		if event == "Stop" && stdout != "{}" {
 			t.Fatalf("Stop stdout = %q, want {}", stdout)
 		}
-		if i < len(events)-1 && stdout != "" {
+		if event != "Stop" && stdout != "" {
 			t.Fatalf("%s stdout = %q, want empty", event, stdout)
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	select {
-	case <-requestCh:
-	case <-ctx.Done():
-		t.Fatal("hook did not report a request")
-	}
-
 	mu.Lock()
 	defer mu.Unlock()
-	seen := map[string]bool{}
-	for _, request := range requests {
-		seen[request.Event] = true
-	}
 	for _, event := range events {
 		if !seen[event] {
-			t.Errorf("event %s was not reported; requests=%d", event, len(requests))
+			t.Errorf("event %s was not reported", event)
 		}
 	}
 }
 
-func runHook(t *testing.T, script, root, traceURL string, payload []byte) string {
+func buildTraceClient(t *testing.T) string {
 	t.Helper()
-	cmd := exec.CommandContext(context.Background(), "bash", script)
-	cmd.Stdin = bytes.NewReader(payload)
-	cmd.Env = append(os.Environ(),
-		"TRACE_URL="+traceURL,
-		"API_KEY=test-key",
-		"TRACE_ROOT="+root,
-		"LOG_DIR="+filepath.Join(root, "logs"),
-	)
+	binary := filepath.Join(t.TempDir(), "aris")
+	cmd := exec.CommandContext(t.Context(), "go", "build", "-o", binary, "./cmd/client")
+	cmd.Dir = projectRoot(t)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("build client: %v\n%s", err, output)
+	}
+	return binary
+}
+
+func runTraceIngest(t *testing.T, binary, home, payload string) string {
+	t.Helper()
+	cmd := exec.CommandContext(t.Context(), binary, "trace", "ingest")
+	cmd.Env = append(os.Environ(), "HOME="+home)
+	cmd.Stdin = strings.NewReader(payload)
 	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("run hook: %v", err)
+		t.Fatalf("trace ingest: %v", err)
 	}
 	return string(output)
+}
+
+func projectRoot(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Join(wd, "..", "..", "..")
 }

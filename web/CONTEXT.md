@@ -49,3 +49,9 @@ _Avoid_: filter-export shortcut
 **Export Confirmation Panel（导出确认面板）**:
 Step 3 中的导出确认区域，展示筛选摘要（分数阈值、模型、时间范围）、匹配总数、输出格式说明，配合主导出按钮。将导出从"底部浮动按钮"升级为"确认动作"，强化最终步骤的仪式感。
 _Avoid_: export bar, download footer
+
+## Trace Install（Trace 安装）
+
+**Trace Install Dialog（Trace 安装弹窗）**:
+Trace 页面的安装入口。用户点击复制时，前端通过 JWT 实时签发单次下载票据（`POST /api/v1/trace/client/ticket`），生成一段短安装脚本：自动探测 `uname` 映射到 `darwin/linux` × `amd64/arm64`，携带票据 `curl` 下载对应 `aris` 二进制，原子安装到 `~/.aris/bin/aris`，然后执行 `aris trace init --host <origin>`。脚本预览使用占位符，不缓存真实票据；API Key 不出现在脚本中，由终端四步向导以隐藏输入方式收集。
+_Avoid_: codex hook dialog, setup script generator, install wizard

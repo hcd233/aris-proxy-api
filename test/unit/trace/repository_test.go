@@ -50,10 +50,10 @@ func TestFakeRepo_Events(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
-	if err := repo.InsertEvent(ctx, &trace.TraceEvent{SessionID: "s1", Event: constant.TraceEventSessionStart, Payload: []byte(`{}`)}); err != nil {
+	if _, err := repo.InsertEvent(ctx, &trace.TraceEvent{SessionID: "s1", Event: constant.TraceEventSessionStart, Payload: []byte(`{}`)}); err != nil {
 		t.Fatalf("insert: %v", err)
 	}
-	if err := repo.InsertEvent(ctx, &trace.TraceEvent{SessionID: "s1", Event: constant.TraceEventStop, Payload: []byte(`{}`)}); err != nil {
+	if _, err := repo.InsertEvent(ctx, &trace.TraceEvent{SessionID: "s1", Event: constant.TraceEventStop, Payload: []byte(`{}`)}); err != nil {
 		t.Fatalf("insert stop: %v", err)
 	}
 
@@ -103,10 +103,10 @@ func TestFakeRepo_Events_PreserveRecordIdentity(t *testing.T) {
 		DedupKey:       "hook:s1:2",
 		Payload:        []byte(`{"unknown":{"value":"kept-2"}}`),
 	}
-	if err := repo.InsertEvent(ctx, first); err != nil {
+	if _, err := repo.InsertEvent(ctx, first); err != nil {
 		t.Fatalf("insert first: %v", err)
 	}
-	if err := repo.InsertEvent(ctx, second); err != nil {
+	if _, err := repo.InsertEvent(ctx, second); err != nil {
 		t.Fatalf("insert second: %v", err)
 	}
 	duplicate := &trace.TraceEvent{
@@ -116,7 +116,7 @@ func TestFakeRepo_Events_PreserveRecordIdentity(t *testing.T) {
 		DedupKey:  first.DedupKey,
 		Payload:   []byte(`{"duplicate":true}`),
 	}
-	if err := repo.InsertEvent(ctx, duplicate); err != nil {
+	if _, err := repo.InsertEvent(ctx, duplicate); err != nil {
 		t.Fatalf("insert duplicate: %v", err)
 	}
 

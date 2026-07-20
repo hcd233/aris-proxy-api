@@ -19,7 +19,6 @@ on:
       - 'k8s/**'
       - 'script/**'
       - '.github/workflows/docker-publish.yml'
-      - 'main.go'
       - 'go.mod'
       - 'go.sum'
   pull_request:
@@ -32,7 +31,6 @@ on:
       - 'k8s/**'
       - 'script/**'
       - '.github/workflows/docker-publish.yml'
-      - 'main.go'
       - 'go.mod'
       - 'go.sum'
 

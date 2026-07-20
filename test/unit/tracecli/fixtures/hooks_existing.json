@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "future_top_level": {"keep": true},
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "future_group": "keep",
+        "hooks": [
+          {"type": "command", "command": "/usr/local/bin/other-hook", "timeout": 9}
+        ]
+      }
+    ]
+  }
+}

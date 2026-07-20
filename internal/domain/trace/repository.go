@@ -51,8 +51,8 @@ type TraceRepository interface {
 	FindByID(ctx context.Context, id uint) (*Trace, error)
 	// MarkDone 将 trace 标记为 done
 	MarkDone(ctx context.Context, sessionID string) error
-	// InsertEvent 插入一条事件
-	InsertEvent(ctx context.Context, e *TraceEvent) error
+	// InsertEvent 插入一条事件；重复幂等键返回 inserted=false。
+	InsertEvent(ctx context.Context, e *TraceEvent) (inserted bool, err error)
 	// PaginateByOwners 按 owner 名称列表分页（admin 传空切片表示不过滤）
 	PaginateByOwners(ctx context.Context, owners []string, param model.CommonParam) ([]*Trace, *model.PageInfo, error)
 	// CountEvents 统计某 trace 的事件数

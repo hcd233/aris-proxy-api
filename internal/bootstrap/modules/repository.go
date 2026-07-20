@@ -6,6 +6,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
+	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
@@ -24,6 +25,7 @@ import (
 	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/traceclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
@@ -47,6 +49,8 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 			fx.As(new(sessionport.ShareCreator)),
 		),
 		NewSessionDetailCache,
+		NewTraceClientTicketStore,
+		NewTraceClientArtifactResolver,
 		NewOpenAIProxy,
 		NewAnthropicProxy,
 		NewAPIKeyGenerator,
@@ -114,6 +118,14 @@ func NewShareCache(redisClient *redis.Client) cache.ShareCache {
 
 func NewSessionDetailCache(redisClient *redis.Client) sessionport.SessionDetailCache {
 	return cache.NewSessionDetailCache(redisClient)
+}
+
+func NewTraceClientTicketStore(redisClient *redis.Client) traceport.TraceClientTicketStore {
+	return cache.NewTraceClientTicketStore(redisClient)
+}
+
+func NewTraceClientArtifactResolver() traceport.TraceClientArtifactResolver {
+	return traceclient.NewArtifactResolver(config.TraceClientArtifactDir)
 }
 
 func NewOpenAIProxy() usecase.OpenAIProxyPort {

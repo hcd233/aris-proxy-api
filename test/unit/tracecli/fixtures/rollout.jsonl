@@ -1,0 +1,4 @@
+{"timestamp":"2026-07-18T00:00:00Z","type":"session_meta","payload":{"id":"s1","cwd":"/work"}}
+{"timestamp":"2026-07-18T00:00:01Z","type":"event_msg","payload":{"type":"user_message","turn_id":"t1","message":"hello"}}
+{"timestamp":"2026-07-18T00:00:02Z","type":"response_item","payload":{"type":"function_call","turn_id":"t1","call_id":"call-1","name":"bash"}}
+{"timestamp":"2026-07-18T00:00:03Z","type":"event_msg","payload":{"type":"agent_message","turn_id":"t1","message":"hel
