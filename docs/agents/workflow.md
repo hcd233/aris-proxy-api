@@ -1,6 +1,6 @@
 # Skill 路由与开发工作流
 
-> **使用场景**：收到新任务时加载。确定走哪个流程、加载哪个 skill、遵循哪些步骤。
+> **使用场景**：收到新任务时加载。确定走哪个流程、加载哪个 skill、遵循哪些步骤，以及 Git 分支与 worktree 规范。
 
 ## Skill 路由
 
@@ -16,6 +16,7 @@
 - **使用 `github.com/samber/lo` 函数式编程**：使用 `golang-samber-lo`。
 - **使用 `github.com/samber/mo` Monadic 类型**：使用 `golang-samber-mo`。
 - **需求 / 设计方案评审**：在动手编码前，使用 `brainstorming`（superpowers）对设计方案进行压力测试——逐步澄清问题、提出 2-3 个方案及权衡、输出设计文档（`docs/superpowers/specs/`），暴露假设、权衡和边界。
+- **superpowers 文档语言**：由 superpowers 生成的设计、实施计划及其他项目文档必须使用中文撰写；代码标识符、命令、路径、配置键和协议原文可保留其必要的英文形式。
 - **需求澄清 / 快速决策**：在 `brainstorming` 中按"一次一个问题"的交互式方式厘清需求与设计分支。
 - **实现阶段 / 防止过度工程**：使用 `ponytail`（默认 `full` 级别）强制走最简可行阶梯：YAGNI → 复用已有代码 → 标准库 → 原生平台特性 → 已有依赖 → 一行代码 → 最小可行代码。刻意简化处用 `// ponytail: <ceiling>, <upgrade path>` 注释标记。
 - **diff 过度工程审查**：实现完成后、提交前，使用 `ponytail-review` 审查 diff 中的过度工程（投机抽象、重复造轮子、死代码），逐行列出可删项。与 lint 互补——lint 查规范，ponytail-review 查复杂度。
@@ -23,6 +24,9 @@
 
 ## 开发工作流
 
+- **Git 分支与 worktree**：任何开发任务都必须先在 `.worktrees/` 下创建或切换 git worktree，并在该 worktree 上 checkout 分支进行开发，禁止直接在主工作区开发。开发完成后询问用户是否需要提 MR 或直接合并到 `master`，禁止擅自操作。
+- **分支命名规范**：`{feature|bugfix|refactor|chore|docs|test|hotfix}/{5个以内小写英文单词描述功能或修复，使用连字符}-{当前 datetime，例如 2026-05-28}`。
+- **分支示例**：`feature/session-share-2026-05-28`、`bugfix/token-expiry-2026-05-28`、`refactor/split-endpoint-model-2026-05-28`。
 - **Brainstorming-first 设计先行**：收到需求或 bug 任务后，在着手编码前优先加载 `brainstorming`（superpowers）skill 对设计方案进行压力测试。需求模糊或存在多种方案时先进入 brainstorming 的澄清循环厘清。process skill（设计评审、调试等）优先于 implementation skill。禁止以"这不是正式任务""我先收集信息"等理由跳过设计评审。
 - **开发前先读 `CONTEXT.md`**：动手前阅读根 `CONTEXT.md`（涉前端时一并读 `web/CONTEXT.md`），确认相关领域概念与术语；开发中新出现的领域概念、术语或语义边界，及时回写 `CONTEXT.md`。
 - **编写或修改 Go 代码时，必须加载 `golang-samber-lo` 和 `golang-samber-mo` skill**，确保正确使用 `github.com/samber/lo` 函数式编程工具和 `github.com/samber/mo` Monadic 类型。
