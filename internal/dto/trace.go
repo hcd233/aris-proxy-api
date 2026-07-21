@@ -112,6 +112,9 @@ type CheckTraceClientReq struct{}
 // InstallTraceClientReq 安装脚本请求（单次票据验证，不消费）。
 type InstallTraceClientReq struct{}
 
+// InstallScriptReq 安装脚本请求（无鉴权，服务端嵌入 host）。
+type InstallScriptReq struct{}
+
 // ReportTraceRecordResult 单条上报处理结果。
 type ReportTraceRecordResult struct {
 	DedupKey string `json:"dedupKey" doc:"幂等键"`

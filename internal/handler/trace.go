@@ -2,7 +2,9 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/url"
@@ -10,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
@@ -27,6 +30,15 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
+//go:embed install_trace_client.sh.tmpl
+var installScriptTemplate string
+
+var installScriptTmpl = template.Must(template.New(constant.TraceClientInstallScriptTmplName).Parse(installScriptTemplate))
+
+type installScriptData struct {
+	Host string
+}
+
 // TraceHandler Trace 处理器接口
 type TraceHandler interface {
 	HandleReportTraceEvent(ctx context.Context, req *dto.ReportTraceEventReq) (*dto.HTTPResponse[*dto.ReportTraceEventRsp], error)
@@ -38,6 +50,7 @@ type TraceHandler interface {
 	HandleDownloadTraceClient(ctx context.Context, req *dto.DownloadTraceClientReq) (*huma.StreamResponse, error)
 	HandleCheckTraceClient(ctx context.Context, req *dto.CheckTraceClientReq) (*huma.StreamResponse, error)
 	HandleInstallTraceClient(ctx context.Context, req *dto.InstallTraceClientReq) (*huma.StreamResponse, error)
+	HandleInstallScript(ctx context.Context, req *dto.InstallScriptReq) (*huma.StreamResponse, error)
 }
 
 // TraceDependencies TraceHandler 依赖项
@@ -248,6 +261,50 @@ func writeInstallScriptError(humaCtx huma.Context, message string) {
 			zap.Error(writeErr),
 		)
 	}
+}
+
+// HandleInstallScript 返回自包含的安装脚本（无票据，host 从请求头推导）。
+func (h *traceHandler) HandleInstallScript(
+	_ context.Context,
+	_ *dto.InstallScriptReq,
+) (*huma.StreamResponse, error) {
+	return &huma.StreamResponse{Body: func(humaCtx huma.Context) {
+		scheme := humaCtx.Header(constant.HTTPHeaderXForwardedProto)
+		if scheme == "" {
+			scheme = constant.HTTPSchemeHTTP
+		}
+		origin := scheme + "://" + humaCtx.Header(constant.HTTPHeaderHost)
+
+		parsed, err := url.Parse(origin)
+		if err != nil || (parsed.Scheme != constant.HTTPSchemeHTTP && parsed.Scheme != constant.HTTPSchemeHTTPS) || parsed.Host == "" {
+			logger.WithCtx(humaCtx.Context()).Warn(
+				"[TraceHandler] Invalid origin for install script",
+				zap.String("origin", origin),
+			)
+			writeInstallScriptError(humaCtx, constant.TraceClientInstallOriginErrorMessage)
+			return
+		}
+
+		var buf bytes.Buffer
+		if err := installScriptTmpl.Execute(&buf, installScriptData{Host: origin}); err != nil {
+			logger.WithCtx(humaCtx.Context()).Warn(
+				"[TraceHandler] Failed to execute install script template",
+				zap.Error(err),
+			)
+			writeInstallScriptError(humaCtx, constant.TraceClientInstallGenErrorMessage)
+			return
+		}
+
+		humaCtx.SetStatus(fiber.StatusOK)
+		humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeTextPlain)
+		humaCtx.SetHeader(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoStore)
+		if _, writeErr := io.WriteString(humaCtx.BodyWriter(), buf.String()); writeErr != nil {
+			logger.WithCtx(humaCtx.Context()).Warn(
+				"[TraceHandler] Failed to write install script",
+				zap.Error(writeErr),
+			)
+		}
+	}}, nil
 }
 
 // HandleGetTraceConversation 获取 Trace 对话投影（JWT）。

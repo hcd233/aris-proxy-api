@@ -73,6 +73,9 @@ const (
 
 	TraceClientInitNonInteractiveMessage = "trace init requires an interactive terminal"
 	TraceClientInstallErrorMessage       = "Failed to generate install script. Please retry from the web UI."
+	TraceClientInstallOriginErrorMessage = "Failed to determine server origin."
+	TraceClientInstallGenErrorMessage    = "Failed to generate install script."
+	TraceClientInstallScriptTmplName     = "install"
 	TraceClientInitStepConnect           = "[1/4] Connect to server"
 	TraceClientInitStepAgent             = "[2/4] Select agent"
 	TraceClientInitStepAPIKey            = "[3/4] Configure API key"
