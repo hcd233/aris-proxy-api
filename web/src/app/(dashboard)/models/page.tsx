@@ -51,7 +51,7 @@ import ExportDialog from "@/components/export-dialog";
 import ExportClaudecodeDialog from "@/components/export-claudecode-dialog";
 import ExportCodexDialog from "@/components/export-codex-dialog";
 import ExportPiDialog from "@/components/export-pi-dialog";
-import { OpenCode, ClaudeCode, Codex } from "@lobehub/icons";
+import { OpenCode, ClaudeCode, Codex, Pi } from "@lobehub/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,7 +60,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine, Terminal } from "lucide-react";
+import { Plus, Trash2, Pencil, Cpu, AlertTriangle, Search, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -327,7 +327,7 @@ export default function ModelsPage() {
                     className="items-start gap-2.5 rounded-lg px-2 py-2"
                   >
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                      <Terminal className="size-4" />
+                      <Pi size={17} />
                     </span>
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <span className="text-sm font-medium leading-none">

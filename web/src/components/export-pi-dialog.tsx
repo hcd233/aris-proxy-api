@@ -15,7 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/lib/i18n";
-import { Check, Copy, Search, Terminal, X } from "lucide-react";
+import { Pi } from "@lobehub/icons";
+import { Check, Copy, Search, X } from "lucide-react";
 
 interface ExportPiDialogProps {
   open: boolean;
@@ -288,7 +289,7 @@ export default function ExportPiDialog({
       >
         <DialogHeader className="shrink-0 flex-row items-center gap-3 px-6 py-4 border-b border-border">
           <span className="flex size-9 items-center justify-center rounded-xl border border-border bg-gradient-to-b from-secondary to-muted shadow-sm">
-            <Terminal className="size-4.5" />
+            <Pi size={18} />
           </span>
           <div className="flex flex-col gap-0.5 min-w-0">
             <DialogTitle className="font-display text-base leading-tight">
@@ -452,7 +453,7 @@ export default function ExportPiDialog({
           <div className="flex flex-col md:min-h-0 md:overflow-hidden bg-[#262624]">
             <div className="shrink-0 flex items-center justify-between gap-3 border-b border-white/[0.07] bg-[#30302E] px-4 py-2.5">
               <div className="flex items-center gap-2 min-w-0">
-                <Terminal className="size-3.5 shrink-0 text-white/35" />
+                <Pi size={14} className="shrink-0 text-white/35" />
                 <span className="truncate font-mono text-xs text-white/50">
                   {t("models.export_pi_script_filename")}
                 </span>
@@ -504,7 +505,7 @@ export default function ExportPiDialog({
               ) : (
                 <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
                   <span className="flex size-14 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
-                    <Terminal className="size-7 opacity-30" />
+                    <Pi size={28} className="opacity-30" />
                   </span>
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-white/45">
