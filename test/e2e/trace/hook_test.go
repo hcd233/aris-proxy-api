@@ -1,7 +1,6 @@
 package trace_e2e
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -51,9 +50,12 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 
 	home := t.TempDir()
 	paths := client.Paths{Root: filepath.Join(home, ".aris")}
-	if err := client.NewConfigStore(paths).Save(context.Background(), client.Config{
-		Host: server.URL, Agent: "codex", APIKey: "test-key",
-	}); err != nil {
+	configDir := paths.TraceDir()
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	configJSON := `{"host":"` + server.URL + `","agent":"codex","apiKey":"test-key"}`
+	if err := os.WriteFile(paths.ConfigFile(), []byte(configJSON), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	binary := buildTraceClient(t)
