@@ -163,9 +163,7 @@ export default function ExportPiDialog({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [providerId, setProviderId] = useState("aris-proxy");
-  const [baseUrl, setBaseUrl] = useState(() =>
-    typeof window === "undefined" ? "" : `${window.location.origin}/api/openai/v1`
-  );
+  const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("YOUR_API_KEY");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [copied, setCopied] = useState(false);
@@ -268,6 +266,13 @@ export default function ExportPiDialog({
     },
     [onOpenChange]
   );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setBaseUrl(`${window.location.origin}/api/openai/v1`);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (open && searchInputRef.current) {
