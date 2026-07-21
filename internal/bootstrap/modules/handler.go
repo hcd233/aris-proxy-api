@@ -166,18 +166,12 @@ func NewTraceDependencies(
 	get traceport.GetTraceHandler,
 	events traceport.ListTraceEventsHandler,
 	conversation traceport.ListTraceConversationHandler,
-	issueTicket traceport.IssueTraceClientTicketHandler,
-	artifactResolver traceport.TraceClientArtifactResolver,
-	ticketStore traceport.TraceClientTicketStore,
 ) handler.TraceDependencies {
 	return handler.TraceDependencies{
-		Report:           report,
-		List:             list,
-		Get:              get,
-		Events:           events,
-		Conversation:     conversation,
-		IssueTicket:      issueTicket,
-		ArtifactResolver: artifactResolver,
-		TicketStore:      ticketStore,
+		Report:       report,
+		List:         list,
+		Get:          get,
+		Events:       events,
+		Conversation: conversation,
 	}
 }

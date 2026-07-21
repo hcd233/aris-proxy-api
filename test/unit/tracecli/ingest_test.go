@@ -69,9 +69,12 @@ func TestRunIngestCommand_FlushesAcceptedRecord(t *testing.T) {
 	defer server.Close()
 
 	paths := client.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
-	if err := client.NewConfigStore(paths).Save(context.Background(), client.Config{
-		Host: server.URL, Agent: "codex", APIKey: "proxy-key",
-	}); err != nil {
+	configDir := paths.TraceDir()
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	configJSON := `{"host":"` + server.URL + `","agent":"codex","apiKey":"proxy-key"}`
+	if err := os.WriteFile(paths.ConfigFile(), []byte(configJSON), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer

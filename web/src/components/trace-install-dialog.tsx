@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
 import { Codex } from "@lobehub/icons";
-import { Check, Copy, KeyRound, LoaderCircle, ShieldCheck, Terminal, X } from "lucide-react";
-import { toast } from "sonner";
+import { Check, Copy, ShieldCheck, Terminal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 
 interface TraceInstallDialogProps {
@@ -23,15 +21,9 @@ interface TraceInstallDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const TICKET_PLACEHOLDER = "<single-use-ticket>";
-
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", `'"'"'`)}'`;
-}
-
-function generateInstallCommand(hostValue: string, ticketValue: string): string {
+function generateInstallCommand(hostValue: string): string {
   const host = hostValue.replace(/\/$/, "");
-  return `curl -fsSL -H ${shellQuote(`Authorization: Bearer ${ticketValue}`)} ${shellQuote(`${host}/api/v1/trace/client/install`)} | bash`;
+  return `curl -fsSL ${host}/install.sh | sh`;
 }
 
 hljs.registerLanguage("bash", bash);
@@ -55,10 +47,9 @@ export default function TraceInstallDialog({
     typeof window === "undefined" ? "" : window.location.origin
   );
   const [copied, setCopied] = useState(false);
-  const [copying, setCopying] = useState(false);
 
   const previewCommand = useMemo(
-    () => generateInstallCommand(host || "https://your-aris-server.example", TICKET_PLACEHOLDER),
+    () => generateInstallCommand(host || "https://your-aris-server.example"),
     [host]
   );
   const highlighted = useMemo(
@@ -67,19 +58,14 @@ export default function TraceInstallDialog({
   );
 
   const handleCopy = useCallback(async () => {
-    setCopying(true);
     try {
-      const response = await api.issueTraceClientTicket();
-      if (!response.ticket) throw new Error("missing ticket");
-      await navigator.clipboard.writeText(generateInstallCommand(host, response.ticket));
+      await navigator.clipboard.writeText(generateInstallCommand(host));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error(t("trace.install_copy_failed"));
-    } finally {
-      setCopying(false);
+      /* noop */
     }
-  }, [host, t]);
+  }, [host]);
 
   const handleClose = useCallback(() => {
     setCopied(false);
@@ -130,7 +116,6 @@ export default function TraceInstallDialog({
             <ol className="space-y-3">
               {[
                 [Terminal, "trace.install_step_download"],
-                [KeyRound, "trace.install_step_key"],
                 [ShieldCheck, "trace.install_step_approve"],
               ].map(([Icon, key], index) => (
                 <li key={key as string} className="flex gap-3 rounded-xl border border-border bg-secondary/35 p-3.5">
@@ -146,9 +131,6 @@ export default function TraceInstallDialog({
                 </li>
               ))}
             </ol>
-            <div className="rounded-xl border border-border bg-muted/45 p-3.5 text-xs leading-relaxed text-muted-foreground">
-              {t("trace.install_ticket_note")}
-            </div>
           </div>
 
           <div className="flex flex-col bg-[#262624] md:min-h-0 md:overflow-hidden">
@@ -163,21 +145,15 @@ export default function TraceInstallDialog({
                 <button
                   type="button"
                   onClick={handleCopy}
-                  disabled={copying || !host}
+                  disabled={!host}
                   className="inline-flex h-9 min-w-20 items-center justify-center gap-1.5 rounded-md px-3 text-[11px] font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:pointer-events-none disabled:opacity-35"
                 >
-                  {copying ? (
-                    <LoaderCircle className="size-3.5 animate-spin" />
-                  ) : copied ? (
+                  {copied ? (
                     <Check className="size-3.5 text-[#9CB071]" />
                   ) : (
                     <Copy className="size-3.5" />
                   )}
-                  {copying
-                    ? t("trace.install_copying")
-                    : copied
-                      ? t("trace.install_copied")
-                      : t("trace.install_copy")}
+                  {copied ? t("trace.install_copied") : t("trace.install_copy")}
                 </button>
               </div>
             </div>
@@ -188,11 +164,6 @@ export default function TraceInstallDialog({
                   dangerouslySetInnerHTML={{ __html: highlighted }}
                 />
               </pre>
-            </div>
-            <div className="shrink-0 border-t border-white/[0.07] bg-[#30302E] px-4 py-2">
-              <p className="font-mono text-[10.5px] leading-relaxed text-white/35">
-                {t("trace.install_footer")}
-              </p>
             </div>
           </div>
         </div>

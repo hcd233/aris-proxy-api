@@ -51,7 +51,7 @@ func TestClientCommandTreeContainsOnlyTrace(t *testing.T) {
 		}
 	}
 	traceOut := runGo(t, "run", "./cmd/client", "trace", "--help")
-	for _, name := range []string{"init", "ingest"} {
+	for _, name := range []string{"ingest"} {
 		if !strings.Contains(traceOut, name) {
 			t.Errorf("trace help missing %q:\n%s", name, traceOut)
 		}
@@ -69,7 +69,7 @@ func TestClientBuildsForSupportedPlatforms(t *testing.T) {
 	for _, target := range targets {
 		out := filepath.Join(t.TempDir(), "aris")
 		cmd := exec.CommandContext(context.Background(), "go", "build",
-			"-trimpath", "-ldflags=-s -w", "-o", out, "./cmd/client")
+			"-buildvcs=false", "-trimpath", "-ldflags=-s -w", "-o", out, "./cmd/client")
 		cmd.Dir = repoRoot(t)
 		cmd.Env = append(append([]string{}, os.Environ()...),
 			"CGO_ENABLED=0",

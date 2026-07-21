@@ -52,41 +52,6 @@ type TraceEventView struct {
 	CreatedAt      time.Time
 }
 
-// TraceClientTicketStore 管理短期单次客户端下载票据。
-type TraceClientTicketStore interface {
-	Issue(ctx context.Context, userID uint, ttl time.Duration) (ticket string, expiresAt time.Time, err error)
-	Consume(ctx context.Context, ticket string) (userID uint, found bool, err error)
-	Validate(ctx context.Context, ticket string) (userID uint, found bool, err error)
-}
-
-// IssueTraceClientTicketCommand 签发客户端下载票据命令。
-type IssueTraceClientTicketCommand struct {
-	UserID uint
-}
-
-// TraceClientTicketView 下载票据视图。
-type TraceClientTicketView struct {
-	Ticket    string
-	ExpiresAt time.Time
-}
-
-// IssueTraceClientTicketHandler 签发客户端下载票据。
-type IssueTraceClientTicketHandler interface {
-	Handle(ctx context.Context, cmd IssueTraceClientTicketCommand) (*TraceClientTicketView, error)
-}
-
-// TraceClientArtifact 客户端二进制文件。
-type TraceClientArtifact struct {
-	Path     string
-	Filename string
-	Size     int64
-}
-
-// TraceClientArtifactResolver 按白名单平台解析客户端产物。
-type TraceClientArtifactResolver interface {
-	Resolve(osName, arch string) (*TraceClientArtifact, error)
-}
-
 // ReportTraceRecord 单条原始 Trace 记录。
 type ReportTraceRecord struct {
 	Source         string
