@@ -1,0 +1,32 @@
+name: Release Trace Client
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+
+      - name: Build client binaries
+        run: make build-client-all
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/trace-client/aris-darwin-amd64
+            build/trace-client/aris-darwin-arm64
+            build/trace-client/aris-linux-amd64
+            build/trace-client/aris-linux-arm64
