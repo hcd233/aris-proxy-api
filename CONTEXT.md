@@ -213,10 +213,6 @@ _Avoid_: trace queue, pending records, ingest buffer
 从 Trace 原始记录（Hook + rollout）非持久化投影出的结构化对话视图。rollout 优先、Hook fallback，按 turn 分组，工具调用和结果按 `call_id` 关联。通过 `GET /api/v1/trace/conversation` 返回，供 Web 前端 Conversation 标签页展示。
 _Avoid_: trace view, conversation model, trace projection
 
-## Metrics & Monitoring（指标与监控）
-
-（继续使用现有 CONTEXT.md 中的 Metrics、Data Capture 部分，不做改动。）
-
 ## Infrastructure（基础设施）
 
 **Dig Container（DI 容器）**:
