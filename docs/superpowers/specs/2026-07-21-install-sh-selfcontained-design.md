@@ -20,14 +20,15 @@
 3. `aris` 二进制只保留 `trace ingest`（Hook 回调），移除 `trace init`。
 4. 移除票据系统（签发、存储、中间件、消费），二进制下载改为公开。
 5. Web 安装对话框简化：不再签发票据，直接展示 `curl | sh` 命令。
-6. `trace ingest` 逻辑、config.json 格式、hooks.json 结构、二进制构建产物不变。
+6. 客户端二进制发布到 GitHub Releases，install.sh 从 GitHub 下载，不经过服务端 API（避免流量滥用）。
+7. `trace ingest` 逻辑、config.json 格式、hooks.json 结构不变。
 
 ### 2.2 非目标
 
 1. 不实现 install.sh 的 reinstall/uninstall 交互（首期只做全新安装）。
 2. 不实现 logo 动画等 UI 打磨（首期关注功能正确性）。
 3. 不改造 `trace ingest` 的 spool、rollout、上报链路。
-4. 不改变二进制构建和发布流程（仍随服务镜像发布到 `/app/trace-client/`）。
+4. 不实现二进制校验和（checksum）验证（首期信任 GitHub Releases 传输完整性）。
 
 ## 3. 整体架构
 
@@ -36,7 +37,7 @@
 
 install.sh (服务端用 text/template 生成，嵌入 host，无票据):
   ├─ preflight: 检查 curl/jq，检测 OS/arch
-  ├─ 下载二进制: GET <host>/api/v1/trace/client?os=X&arch=Y (公开，无 auth)
+  ├─ 下载二进制: https://github.com/hcd233/aris-proxy-api/releases/latest/download/aris-<os>-<arch>
   ├─ 安装到 ~/.aris/bin/aris (0700)
   ├─ [1/4] 连接服务器: curl <host>/health (失败可重试)
   ├─ [2/4] 选择 Agent: 仅 Codex (按 Enter 确认)
@@ -53,7 +54,7 @@ aris 二进制 (cmd/client):
 
 1. 用户从 Web UI 复制 `curl -fsSL <host>/install.sh | sh` 并在终端执行。
 2. `GET /install.sh` 返回嵌入 host 的 POSIX sh 脚本（`text/plain`，`no-store`）。
-3. 脚本执行 `GET /api/v1/trace/client?os=<os>&arch=<arch>` 下载二进制（公开，无 auth）。
+3. 脚本从 GitHub Releases 下载二进制：`https://github.com/hcd233/aris-proxy-api/releases/latest/download/aris-<os>-<arch>`。
 4. 脚本交互式收集 API Key，通过 `GET /api/v1/trace/client/check`（Bearer auth）验证。
 5. 脚本用 `jq` 修改 `~/.codex/hooks.json`，写入 `~/.aris/trace/config.json`。
 6. 后续 Codex 触发 hook 时调用 `aris trace ingest`，读取 config 上报事件（不变）。
@@ -77,7 +78,7 @@ aris 二进制 (cmd/client):
 
 **下载二进制：**
 - `mktemp` 创建临时文件，`trap 'rm -f "$tmp"' EXIT`。
-- `curl -fsSL -o "$tmp" "$host/api/v1/trace/client?os=$os&arch=$arch"`。
+- GitHub Releases 下载：`curl -fsSL -o "$tmp" "https://github.com/hcd233/aris-proxy-api/releases/latest/download/aris-$os-$arch"`。
 - HTTP 非 200 报错退出，不覆盖已有二进制。
 - `mkdir -p -m 0700 ~/.aris/bin`，`chmod 0700 "$tmp"`，`mv "$tmp" ~/.aris/bin/aris`，清除 trap。
 
@@ -170,36 +171,52 @@ Handler `HandleInstallScript`：
 - 返回 `text/plain`、`no-store`。
 - 错误时返回 `#!/bin/sh\necho 'Failed to generate install script.' >&2\nexit 1\n`。
 
-### 5.2 修改路由
-
-| 方法 | 路径 | 变更 |
-|------|------|------|
-| GET | `/api/v1/trace/client` | 移除 `TraceClientTicketMiddleware`，下载公开 |
-
-### 5.3 保留路由
+### 5.2 保留路由
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/v1/trace/client/check` | API Key 验证（Bearer auth），install.sh 调用 |
 
-### 5.4 删除路由
+### 5.3 删除路由
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| GET | `/api/v1/trace/client` | 二进制下载端点（改为 GitHub Releases） |
 | GET | `/api/v1/trace/client/install` | 旧票据 install.sh |
 | POST | `/api/v1/trace/client/ticket` | 签发票据 |
 
-### 5.5 删除组件
+### 5.4 删除组件
 
 - `internal/application/trace/command/issue_client_ticket.go` — 票据签发 command
 - `TraceClientTicketMiddleware` — 票据验证中间件
 - 票据 store（Redis）及相关 port/command
 - `HandleInstallTraceClient`、`buildInstallScript`、`writeInstallScriptError` — 旧 install handler
 - `HandleIssueTraceClientTicket` — 票据签发 handler
+- `HandleDownloadTraceClient` — 二进制下载 handler（改为 GitHub Releases）
+- `ArtifactResolver` 及相关 artifact 解析逻辑 — 二进制文件查找
+- `DownloadTraceClientReq` DTO — 下载请求
 - `IssueTraceClientTicketReq`/`Rsp`、`InstallTraceClientReq` — DTO
 - 票据相关常量（`TraceClientTicket*`、`PeriodIssueTraceClientTicket`、`LimitIssueTraceClientTicket`）
+- `TraceClientArtifactDir` 配置项及 `TRACE_CLIENT_ARTIFACT_DIR` 环境变量
+- `TraceClientArtifactDarwinAMD64` 等产物文件名常量
 - `TraceClientInstallErrorMessage` — 旧错误消息
 - `TraceClientInit*` 常量 — init 向导消息（移到 install.sh 内联）
+- Dockerfile 交叉编译客户端步骤及 `COPY /go/trace-client /app/trace-client`
+
+### 5.5 CI/CD 变更
+
+新增 GitHub Actions workflow（或在现有 `docker-publish.yml` 中添加 job），在 tag push（`v*.*.*`）时：
+
+1. 交叉编译 4 平台客户端二进制（`make build-client-all`）。
+2. 创建 GitHub Release（如果不存在）。
+3. 上传 4 个产物到 Release assets：
+   - `aris-darwin-amd64`
+   - `aris-darwin-arm64`
+   - `aris-linux-amd64`
+   - `aris-linux-arm64`
+4. install.sh 使用 `releases/latest/download/` URL 自动指向最新版本。
+
+Dockerfile 移除客户端交叉编译步骤和 `/app/trace-client/` COPY，减小镜像体积。
 
 ### 5.6 模板文件
 
@@ -267,7 +284,7 @@ Handler `HandleInstallScript`：
 
 ## 8. 安全考虑
 
-1. **二进制公开下载**：aris 二进制本身不含密钥或敏感信息，下载公开不影响安全。API Key（交互式输入）才是鉴证手段。
+1. **二进制公开下载**：aris 二进制通过 GitHub Releases 分发，不经过服务端 API，不会被刷流量。二进制本身不含密钥或敏感信息，API Key（交互式输入）才是鉴证手段。
 2. **API Key 不入脚本**：API Key 通过 `read -s` 隐藏输入收集，不出现在命令行参数、脚本内容或 shell 历史中。
 3. **文件权限**：`~/.aris/`（0700）、`~/.aris/bin/`（0700）、`~/.aris/trace/config.json`（0600）、`~/.codex/hooks.json`（0600）、备份文件（0600）。
 4. **Host 验证**：服务端验证 origin scheme 和 host，防止注入恶意 URL。
@@ -295,9 +312,8 @@ Handler `HandleInstallScript`：
 ### 9.3 E2E 测试
 
 - 更新 `test/e2e/trace/client_download_test.go`：
-  - 移除票据签发和票据消费测试。
-  - 新增 `GET /install.sh` 测试。
-  - 验证 `GET /api/v1/trace/client` 无需票据即可下载。
+  - 移除票据签发、票据消费和二进制下载测试（端点已删除）。
+  - 新增 `GET /install.sh` 测试：验证返回脚本包含 host、content-type 正确。
 
 ### 9.4 客户端测试
 
@@ -308,4 +324,5 @@ Handler `HandleInstallScript`：
 
 - 旧版客户端（已有 `aris trace init`）不受影响——已安装的二进制仍可 `trace ingest`。
 - 已安装的 `config.json` 和 `hooks.json` 格式不变，无需迁移。
-- 旧版 `GET /api/v1/trace/client/install` 和 `POST /api/v1/trace/client/ticket` 删除后，旧版 Web UI 的 copy 按钮会失败——需前后端同步发布。
+- 旧版 `GET /api/v1/trace/client`、`GET /api/v1/trace/client/install` 和 `POST /api/v1/trace/client/ticket` 删除后，旧版 Web UI 的 copy 按钮会失败——需前后端同步发布。
+- 首次发布前需先创建一个 GitHub Release 并上传 4 平台二进制，否则 `releases/latest/download/` URL 不可用。
