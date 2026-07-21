@@ -384,6 +384,7 @@
   "models.export_pi_desc": "Generate a bash script to add selected models to Pi via ~/.pi/agent/models.json.",
   "models.export_pi_empty_hint": "Pick models on the left to build the script",
   "models.export_pi_script_filename": "pi-setup.sh",
+  "models.export_duplicate_aliases": "Selected models contain duplicate aliases. Select only one model for each alias.",
   "models.export_claudecode_hint": "Generate a setup script for Claude Code",
   "models.export_claudecode_title": "Export to Claude Code",
   "models.export_claudecode_desc": "Generate a bash script to point Claude Code at this proxy via ~/.claude/settings.json. Models with a 1M context window get the [1m] suffix automatically.",

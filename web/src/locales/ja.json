@@ -623,6 +623,7 @@
   "models.export_pi_desc": "選択したモデルを ~/.pi/agent/models.json に追加する bash スクリプトを生成します。",
   "models.export_pi_empty_hint": "左側でモデルを選択してスクリプトを生成",
   "models.export_pi_script_filename": "pi-setup.sh",
+  "models.export_duplicate_aliases": "選択したモデルに重複するエイリアスがあります。各エイリアスは 1 つだけ選択してください。",
   "nav.trace": "エージェントトレース",
   "trace.title": "エージェントトレース",
   "trace.subtitle": "エージェントの実行を記録し、各セッションのイベントの流れを追跡します。",

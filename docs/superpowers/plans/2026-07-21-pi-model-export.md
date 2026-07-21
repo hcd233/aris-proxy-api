@@ -19,6 +19,8 @@
 - 只导出模型页当前已经加载的模型，弹窗内由用户选择具体模型。
 - 复用现有 UI 组件和 Tailwind 类名，不新增基础 UI 组件，不使用内联定值样式。
 - 新增界面文案必须同步写入 `en.json`、`zh.json`、`ja.json`。
+- 配置、备份和临时文件使用 `0600`，默认配置目录使用 `0700`，并通过 `os.replace` 原子替换配置文件。
+- 选中模型存在重复 alias 时不生成脚本，界面显示重复 alias 提示。
 - superpowers 生成的文档使用中文；必要的代码标识符、命令、路径、配置键和协议原文保留英文。
 - 不执行 git commit，除非用户明确要求提交。
 
@@ -119,25 +121,30 @@ function buildPiModels(models: ModelItem[]) {
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROVIDER_ID="${PROVIDER_ID:-aris-proxy}"
-BASE_URL="${BASE_URL:-https://example.com/api/openai/v1}"
-API_KEY="${API_KEY:-YOUR_API_KEY}"
+export PROVIDER_ID="${PROVIDER_ID:-}"
+export BASE_URL="${BASE_URL:-}"
+export API_KEY="${API_KEY:-}"
 PI_MODELS_CONFIG="${PI_MODELS_CONFIG:-$HOME/.pi/agent/models.json}"
 
 python3 << 'PYEOF'
 import json
 import os
 import shutil
+import tempfile
 
 config_path = os.path.expanduser(os.environ["PI_MODELS_CONFIG"])
-provider_id = os.environ["PROVIDER_ID"]
-base_url = os.environ["BASE_URL"]
-api_key = os.environ["API_KEY"]
-models = ${modelsJson}
+provider_id = os.environ.get("PROVIDER_ID") or ${providerIdJson}
+base_url = os.environ.get("BASE_URL") or ${baseUrlJson}
+api_key = os.environ.get("API_KEY") or ${apiKeyJson}
+models = json.loads(${JSON.stringify(modelsJson)})
 
-os.makedirs(os.path.dirname(config_path), exist_ok=True)
+config_dir = os.path.dirname(config_path) or "."
+os.makedirs(config_dir, exist_ok=True)
+if os.path.normpath(config_path) == os.path.expanduser("~/.pi/agent/models.json"):
+    os.chmod(config_dir, 0o700)
 if os.path.exists(config_path):
     shutil.copyfile(config_path, config_path + ".bak")
+    os.chmod(config_path + ".bak", 0o600)
     with open(config_path, "r", encoding="utf-8") as file:
         config = json.load(file)
 else:
@@ -152,15 +159,22 @@ provider["apiKey"] = api_key
 existing_models = provider.get("models", [])
 selected_by_id = {model["id"]: model for model in models}
 merged_models = [
-    selected_by_id.pop(model.get("id"), model)
+    model
     for model in existing_models
+    if model.get("id") not in selected_by_id
 ]
 merged_models.extend(selected_by_id.values())
 provider["models"] = merged_models
 
-with open(config_path, "w", encoding="utf-8") as file:
+with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=config_dir, prefix=".models.json.", delete=False) as file:
+    temp_path = file.name
+    os.chmod(temp_path, 0o600)
     json.dump(config, file, indent=2, ensure_ascii=False)
     file.write("\n")
+    file.flush()
+    os.fsync(file.fileno())
+os.replace(temp_path, config_path)
+os.chmod(config_path, 0o600)
 PYEOF
 ```
 
@@ -174,6 +188,9 @@ PYEOF
 - 未选中的已有模型继续保留。
 - 新选中模型追加到 provider 模型数组。
 - 写入前备份为同路径加 `.bak` 后缀。
+- 配置、备份和临时文件使用 `0600`，默认配置目录使用 `0700`。
+- 通过同目录临时文件、`flush`、`fsync` 和 `os.replace` 原子替换配置。
+- 选中模型存在重复 alias 时阻止脚本生成，并显示重复 alias 提示。
 
 - [ ] **步骤 4：实现弹窗状态与模型选择**
 
@@ -347,7 +364,8 @@ cd web && npm run lint
 "models.export_pi_title": "Export to Pi",
 "models.export_pi_desc": "Generate a bash script to add selected models to Pi via ~/.pi/agent/models.json.",
 "models.export_pi_empty_hint": "Pick models on the left to build the script",
-"models.export_pi_script_filename": "pi-setup.sh"
+"models.export_pi_script_filename": "pi-setup.sh",
+"models.export_duplicate_aliases": "Selected models contain duplicate aliases. Select only one model for each alias."
 ```
 
 - [ ] **步骤 2：加入中文文案**
@@ -360,7 +378,8 @@ cd web && npm run lint
 "models.export_pi_title": "导出到 Pi",
 "models.export_pi_desc": "生成 bash 脚本，将选中的模型合并写入 ~/.pi/agent/models.json。",
 "models.export_pi_empty_hint": "在左侧选择模型以生成脚本",
-"models.export_pi_script_filename": "pi-setup.sh"
+"models.export_pi_script_filename": "pi-setup.sh",
+"models.export_duplicate_aliases": "所选模型包含重复的别名。每个别名只能选择一个模型。"
 ```
 
 - [ ] **步骤 3：加入日文文案**
@@ -373,7 +392,8 @@ cd web && npm run lint
 "models.export_pi_title": "Pi にエクスポート",
 "models.export_pi_desc": "選択したモデルを ~/.pi/agent/models.json に追加する bash スクリプトを生成します。",
 "models.export_pi_empty_hint": "左側でモデルを選択してスクリプトを生成",
-"models.export_pi_script_filename": "pi-setup.sh"
+"models.export_pi_script_filename": "pi-setup.sh",
+"models.export_duplicate_aliases": "選択したモデルに重複するエイリアスがあります。各エイリアスは 1 つだけ選択してください。"
 ```
 
 - [ ] **步骤 4：检查 JSON 和键名一致性**

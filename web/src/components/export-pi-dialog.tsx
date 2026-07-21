@@ -40,10 +40,6 @@ function buildPiModels(models: ModelItem[]) {
   }));
 }
 
-function escapeShellDoubleQuoted(value: string): string {
-  return value.replace(/[\\"$`]/g, "\\$&").replace(/\r?\n/g, "\\n");
-}
-
 function generateScript(
   providerId: string,
   baseUrl: string,
@@ -63,9 +59,9 @@ set -euo pipefail
 
 # ─── Configuration ────────────────────────────────────────────
 # Edit these or set as environment variables before running
-export PROVIDER_ID="\${PROVIDER_ID:-${escapeShellDoubleQuoted(providerId)}}"
-export BASE_URL="\${BASE_URL:-${escapeShellDoubleQuoted(baseUrl)}}"
-export API_KEY="\${API_KEY:-${escapeShellDoubleQuoted(apiKey)}}"
+export PROVIDER_ID="\${PROVIDER_ID:-}"
+export BASE_URL="\${BASE_URL:-}"
+export API_KEY="\${API_KEY:-}"
 export PI_MODELS_CONFIG="\${PI_MODELS_CONFIG:-\$HOME/.pi/agent/models.json}"
 # ───────────────────────────────────────────────────────────────
 
@@ -73,6 +69,7 @@ python3 << 'PYEOF'
 import json
 import os
 import shutil
+import tempfile
 
 config_path = os.path.expanduser(os.environ["PI_MODELS_CONFIG"])
 provider_id = os.environ.get("PROVIDER_ID") or ${providerIdJson}
@@ -82,9 +79,12 @@ models = json.loads(${JSON.stringify(modelsJson)})
 
 config_dir = os.path.dirname(config_path) or "."
 os.makedirs(config_dir, exist_ok=True)
+if os.path.normpath(config_path) == os.path.expanduser("~/.pi/agent/models.json"):
+    os.chmod(config_dir, 0o700)
 
 if os.path.exists(config_path):
     shutil.copyfile(config_path, config_path + ".bak")
+    os.chmod(config_path + ".bak", 0o600)
     with open(config_path, "r", encoding="utf-8") as file:
         config = json.load(file)
 else:
@@ -99,15 +99,24 @@ provider["apiKey"] = api_key
 existing_models = provider.get("models", [])
 selected_by_id = {model["id"]: model for model in models}
 merged_models = [
-    selected_by_id.pop(model.get("id"), model)
+    model
     for model in existing_models
+    if model.get("id") not in selected_by_id
 ]
 merged_models.extend(selected_by_id.values())
 provider["models"] = merged_models
 
-with open(config_path, "w", encoding="utf-8") as file:
+with tempfile.NamedTemporaryFile(
+    mode="w", encoding="utf-8", dir=config_dir, prefix=".models.json.", delete=False
+) as file:
+    temp_path = file.name
+    os.chmod(temp_path, 0o600)
     json.dump(config, file, indent=2, ensure_ascii=False)
     file.write("\\n")
+    file.flush()
+    os.fsync(file.fileno())
+os.replace(temp_path, config_path)
+os.chmod(config_path, 0o600)
 
 print(f"Pi configured: provider '{provider_id}' with {len(models)} selected models")
 PYEOF`;
@@ -179,9 +188,22 @@ export default function ExportPiDialog({
     [models, selectedIds]
   );
 
+  const duplicateAliases = useMemo(() => {
+    const counts = new Map<string, number>();
+    selectedModels.forEach((model) => {
+      counts.set(model.alias, (counts.get(model.alias) ?? 0) + 1);
+    });
+    return [...counts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([alias]) => alias);
+  }, [selectedModels]);
+
   const script = useMemo(
-    () => generateScript(providerId, baseUrl, apiKey, selectedModels),
-    [providerId, baseUrl, apiKey, selectedModels]
+    () =>
+      duplicateAliases.length > 0
+        ? ""
+        : generateScript(providerId, baseUrl, apiKey, selectedModels),
+    [providerId, baseUrl, apiKey, selectedModels, duplicateAliases]
   );
 
   const highlighted = useMemo(
@@ -267,7 +289,7 @@ export default function ExportPiDialog({
             <DialogTitle className="font-display text-base leading-tight">
               {t("models.export_pi_title")}
             </DialogTitle>
-            <DialogDescription className="text-xs leading-snug">
+            <DialogDescription className="min-h-[2.5rem] text-xs leading-snug">
               {t("models.export_pi_desc")}
             </DialogDescription>
           </div>
@@ -343,7 +365,7 @@ export default function ExportPiDialog({
                   <button
                     type="button"
                     onClick={handleToggleAll}
-                    className="text-[11px] font-medium text-primary/80 transition-colors hover:text-primary"
+                    className="min-w-14 text-[11px] font-medium text-primary/80 transition-colors hover:text-primary"
                   >
                     {allFilteredSelected
                       ? t("models.export_clear_all")
@@ -357,6 +379,7 @@ export default function ExportPiDialog({
                 <Input
                   ref={searchInputRef}
                   placeholder={t("models.search_placeholder")}
+                  aria-label={t("models.search_placeholder")}
                   value={modelSearch}
                   onChange={(event) => setModelSearch(event.target.value)}
                   className="h-8 pl-8 text-sm"
@@ -413,6 +436,11 @@ export default function ExportPiDialog({
                   })
                 )}
               </div>
+              {duplicateAliases.length > 0 && (
+                <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  {t("models.export_duplicate_aliases")}
+                </p>
+              )}
             </section>
           </div>
 
@@ -434,7 +462,7 @@ export default function ExportPiDialog({
                   type="button"
                   onClick={handleCopy}
                   disabled={!script}
-                  className="inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[11px] font-medium text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                  className="inline-flex h-7 min-w-20 items-center justify-center gap-1.5 rounded-md px-2.5 text-[11px] font-medium text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white disabled:pointer-events-none disabled:opacity-30"
                 >
                   {copied ? (
                     <>
@@ -452,13 +480,22 @@ export default function ExportPiDialog({
             </div>
 
             <div className="flex-1 md:min-h-0 overflow-auto">
-              {selectedIds.size > 0 ? (
+              {selectedIds.size > 0 && duplicateAliases.length === 0 ? (
                 <pre className="px-5 py-4 text-[12.5px] leading-[1.65] text-[#E5E0D6]">
                   <code
                     className={`block font-mono whitespace-pre ${CLAUDE_SYNTAX}`}
                     dangerouslySetInnerHTML={{ __html: highlighted }}
                   />
                 </pre>
+              ) : duplicateAliases.length > 0 ? (
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+                  <span className="flex size-14 items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/[0.06]">
+                    <X className="size-7 text-destructive/60" />
+                  </span>
+                  <p className="max-w-sm text-sm font-medium text-white/55">
+                    {t("models.export_duplicate_aliases")}
+                  </p>
+                </div>
               ) : (
                 <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
                   <span className="flex size-14 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
