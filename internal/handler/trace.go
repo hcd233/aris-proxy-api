@@ -220,10 +220,13 @@ func (h *traceHandler) buildInstallScript(ctx context.Context, origin, ticket st
 		"esac\n\n" +
 		"tmp=\"$(mktemp \"${TMPDIR:-/tmp}/aris.XXXXXX\")\"\n" +
 		"trap 'rm -f \"$tmp\"' EXIT\n" +
-		"curl -fsSL \\\n" +
+		"status=$(curl -sSL -w '%{http_code}' -o \"$tmp\" \\\n" +
 		"  -H \"Authorization: Bearer $ticket\" \\\n" +
-		"  \"$host/api/v1/trace/client?os=$os&arch=$arch\" \\\n" +
-		"  -o \"$tmp\"\n" +
+		"  \"$host/api/v1/trace/client?os=$os&arch=$arch\")\n" +
+		"if [ \"$status\" != \"200\" ]; then\n" +
+		"  echo \"Download failed (HTTP $status): $(cat \"$tmp\" 2>/dev/null)\" >&2\n" +
+		"  exit 1\n" +
+		"fi\n" +
 		"mkdir -p \"$HOME/.aris/bin\"\n" +
 		"chmod 700 \"$HOME/.aris\" \"$HOME/.aris/bin\" \"$tmp\"\n" +
 		"mv \"$tmp\" \"$HOME/.aris/bin/aris\"\n" +
