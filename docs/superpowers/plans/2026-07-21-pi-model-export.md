@@ -19,6 +19,8 @@
 - 只导出模型页当前已经加载的模型，弹窗内由用户选择具体模型。
 - 复用现有 UI 组件和 Tailwind 类名，不新增基础 UI 组件，不使用内联定值样式。
 - 新增界面文案必须同步写入 `en.json`、`zh.json`、`ja.json`。
+- 配置、备份和临时文件使用 `0600`，默认配置目录使用 `0700`，并通过 `os.replace` 原子替换配置文件。
+- 选中模型存在重复 alias 时不生成脚本，界面显示重复 alias 提示。
 - superpowers 生成的文档使用中文；必要的代码标识符、命令、路径、配置键和协议原文保留英文。
 - 不执行 git commit，除非用户明确要求提交。
 
@@ -58,7 +60,7 @@
 - 输出：默认导出 React 组件 `ExportPiDialog`。
 - 复用：`ModelItem`、`Button`、`Dialog`、`Input`、`Label`、`useT`、`highlight.js` Bash 语言和现有导出弹窗的布局约定。
 
-- [ ] **步骤 1：复制现有导出弹窗的基础结构**
+- [x] **步骤 1：复制现有导出弹窗的基础结构**
 
 以 `web/src/components/export-dialog.tsx` 为结构参考，创建客户端组件并加入以下导入：
 
@@ -86,7 +88,7 @@ import { Pi } from "@lobehub/icons";
 
 如果当前版本的 `@lobehub/icons` 没有可用的 `Pi` 导出，不要新增图标依赖；改用 `Terminal` 图标作为 Pi 的入口和空状态图标，并保持其他导出组件不变。
 
-- [ ] **步骤 2：实现模型到 Pi JSON 的映射**
+- [x] **步骤 2：实现模型到 Pi JSON 的映射**
 
 在组件内定义脚本生成前使用的映射逻辑，确保数值默认值和字段固定值明确：
 
@@ -111,7 +113,7 @@ function buildPiModels(models: ModelItem[]) {
 
 不要把 `modelName` 写入 Pi 的 `id`，也不要为当前 DTO 未提供的 reasoning、价格或输入模态增加表单字段。
 
-- [ ] **步骤 3：实现 Bash 脚本生成逻辑**
+- [x] **步骤 3：实现 Bash 脚本生成逻辑**
 
 实现 `generateScript(providerId, baseUrl, apiKey, selectedModels)`，空数组返回空字符串；非空时生成可直接复制的 Bash 脚本。脚本必须包含以下完整行为：
 
@@ -119,25 +121,30 @@ function buildPiModels(models: ModelItem[]) {
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROVIDER_ID="${PROVIDER_ID:-aris-proxy}"
-BASE_URL="${BASE_URL:-https://example.com/api/openai/v1}"
-API_KEY="${API_KEY:-YOUR_API_KEY}"
+export PROVIDER_ID="${PROVIDER_ID:-}"
+export BASE_URL="${BASE_URL:-}"
+export API_KEY="${API_KEY:-}"
 PI_MODELS_CONFIG="${PI_MODELS_CONFIG:-$HOME/.pi/agent/models.json}"
 
 python3 << 'PYEOF'
 import json
 import os
 import shutil
+import tempfile
 
 config_path = os.path.expanduser(os.environ["PI_MODELS_CONFIG"])
-provider_id = os.environ["PROVIDER_ID"]
-base_url = os.environ["BASE_URL"]
-api_key = os.environ["API_KEY"]
-models = ${modelsJson}
+provider_id = os.environ.get("PROVIDER_ID") or ${providerIdJson}
+base_url = os.environ.get("BASE_URL") or ${baseUrlJson}
+api_key = os.environ.get("API_KEY") or ${apiKeyJson}
+models = json.loads(${JSON.stringify(modelsJson)})
 
-os.makedirs(os.path.dirname(config_path), exist_ok=True)
+config_dir = os.path.dirname(config_path) or "."
+os.makedirs(config_dir, exist_ok=True)
+if os.path.normpath(config_path) == os.path.expanduser("~/.pi/agent/models.json"):
+    os.chmod(config_dir, 0o700)
 if os.path.exists(config_path):
     shutil.copyfile(config_path, config_path + ".bak")
+    os.chmod(config_path + ".bak", 0o600)
     with open(config_path, "r", encoding="utf-8") as file:
         config = json.load(file)
 else:
@@ -152,15 +159,22 @@ provider["apiKey"] = api_key
 existing_models = provider.get("models", [])
 selected_by_id = {model["id"]: model for model in models}
 merged_models = [
-    selected_by_id.pop(model.get("id"), model)
+    model
     for model in existing_models
+    if model.get("id") not in selected_by_id
 ]
 merged_models.extend(selected_by_id.values())
 provider["models"] = merged_models
 
-with open(config_path, "w", encoding="utf-8") as file:
+with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=config_dir, prefix=".models.json.", delete=False) as file:
+    temp_path = file.name
+    os.chmod(temp_path, 0o600)
     json.dump(config, file, indent=2, ensure_ascii=False)
     file.write("\n")
+    file.flush()
+    os.fsync(file.fileno())
+os.replace(temp_path, config_path)
+os.chmod(config_path, 0o600)
 PYEOF
 ```
 
@@ -174,8 +188,11 @@ PYEOF
 - 未选中的已有模型继续保留。
 - 新选中模型追加到 provider 模型数组。
 - 写入前备份为同路径加 `.bak` 后缀。
+- 配置、备份和临时文件使用 `0600`，默认配置目录使用 `0700`。
+- 通过同目录临时文件、`flush`、`fsync` 和 `os.replace` 原子替换配置。
+- 选中模型存在重复 alias 时阻止脚本生成，并显示重复 alias 提示。
 
-- [ ] **步骤 4：实现弹窗状态与模型选择**
+- [x] **步骤 4：实现弹窗状态与模型选择**
 
 组件状态和派生值使用以下结构：
 
@@ -209,7 +226,7 @@ const selectedModels = useMemo(
 
 模型列表使用复选框和“全选/清空”操作；弹窗关闭时清空选择、搜索和复制状态。脚本、HTML 高亮结果和行数均通过 `useMemo` 从当前状态生成；复制按钮沿用现有 `navigator.clipboard.writeText` 行为。
 
-- [ ] **步骤 5：实现双栏响应式 UI**
+- [x] **步骤 5：实现双栏响应式 UI**
 
 使用与现有导出弹窗一致的容器尺寸和布局：
 
@@ -234,7 +251,7 @@ const selectedModels = useMemo(
 
 左侧字段使用现有 `Label`、`Input`；右侧使用现有 Bash 高亮颜色类。动态按钮沿用现有 `Button` size 预留，不新增固定宽度翻译例外。
 
-- [ ] **步骤 6：进行组件级静态检查**
+- [x] **步骤 6：进行组件级静态检查**
 
 运行：
 
@@ -259,7 +276,7 @@ cd web && npm run lint
 - 消费：任务 1 的默认导出组件 `ExportPiDialog`。
 - 产生：模型页导出菜单中的 Pi 入口，以及传入当前 `models` 列表的弹窗实例。
 
-- [ ] **步骤 1：增加导入和开关状态**
+- [x] **步骤 1：增加导入和开关状态**
 
 在现有导出组件导入旁增加：
 
@@ -273,7 +290,7 @@ import ExportPiDialog from "@/components/export-pi-dialog";
 const [exportPiDialogOpen, setExportPiDialogOpen] = useState(false);
 ```
 
-- [ ] **步骤 2：在导出菜单增加 Pi 菜单项**
+- [x] **步骤 2：在导出菜单增加 Pi 菜单项**
 
 在 Codex 菜单项后增加一个 `DropdownMenuItem`，保持已有 `items-start gap-2.5 rounded-lg px-2 py-2` 样式：
 
@@ -298,7 +315,7 @@ const [exportPiDialogOpen, setExportPiDialogOpen] = useState(false);
 
 如果 `Terminal` 尚未在当前 import 列表中，加入现有 `lucide-react` 导入；不要引入第二套图标库。
 
-- [ ] **步骤 3：挂载 Pi 弹窗**
+- [x] **步骤 3：挂载 Pi 弹窗**
 
 在现有 `ExportCodexDialog` 后增加：
 
@@ -312,7 +329,7 @@ const [exportPiDialogOpen, setExportPiDialogOpen] = useState(false);
 
 确认传入的是当前页面的 `models`，不新增额外请求，也不改变分页行为。
 
-- [ ] **步骤 4：验证入口类型检查**
+- [x] **步骤 4：验证入口类型检查**
 
 运行：
 
@@ -337,7 +354,7 @@ cd web && npm run lint
 - 消费：任务 1 和任务 2 使用的 `useT` 键。
 - 产生：三种 Locale 下完整的 Pi 导出文案。
 
-- [ ] **步骤 1：加入英文文案**
+- [x] **步骤 1：加入英文文案**
 
 在 `web/src/locales/en.json` 的 Codex 导出文案附近加入：
 
@@ -347,10 +364,11 @@ cd web && npm run lint
 "models.export_pi_title": "Export to Pi",
 "models.export_pi_desc": "Generate a bash script to add selected models to Pi via ~/.pi/agent/models.json.",
 "models.export_pi_empty_hint": "Pick models on the left to build the script",
-"models.export_pi_script_filename": "pi-setup.sh"
+"models.export_pi_script_filename": "pi-setup.sh",
+"models.export_duplicate_aliases": "Selected models contain duplicate aliases. Select only one model for each alias."
 ```
 
-- [ ] **步骤 2：加入中文文案**
+- [x] **步骤 2：加入中文文案**
 
 在 `web/src/locales/zh.json` 的 Codex 导出文案附近加入：
 
@@ -360,10 +378,11 @@ cd web && npm run lint
 "models.export_pi_title": "导出到 Pi",
 "models.export_pi_desc": "生成 bash 脚本，将选中的模型合并写入 ~/.pi/agent/models.json。",
 "models.export_pi_empty_hint": "在左侧选择模型以生成脚本",
-"models.export_pi_script_filename": "pi-setup.sh"
+"models.export_pi_script_filename": "pi-setup.sh",
+"models.export_duplicate_aliases": "所选模型包含重复的别名。每个别名只能选择一个模型。"
 ```
 
-- [ ] **步骤 3：加入日文文案**
+- [x] **步骤 3：加入日文文案**
 
 在 `web/src/locales/ja.json` 的 Codex 导出文案附近加入：
 
@@ -373,10 +392,11 @@ cd web && npm run lint
 "models.export_pi_title": "Pi にエクスポート",
 "models.export_pi_desc": "選択したモデルを ~/.pi/agent/models.json に追加する bash スクリプトを生成します。",
 "models.export_pi_empty_hint": "左側でモデルを選択してスクリプトを生成",
-"models.export_pi_script_filename": "pi-setup.sh"
+"models.export_pi_script_filename": "pi-setup.sh",
+"models.export_duplicate_aliases": "選択したモデルに重複するエイリアスがあります。各エイリアスは 1 つだけ選択してください。"
 ```
 
-- [ ] **步骤 4：检查 JSON 和键名一致性**
+- [x] **步骤 4：检查 JSON 和键名一致性**
 
 运行：
 
@@ -403,7 +423,7 @@ node -e 'for (const file of ["web/src/locales/en.json", "web/src/locales/zh.json
 - 消费：任务 1 至任务 3 的完整实现。
 - 产生：可验证的 lint、构建和浏览器交互证据。
 
-- [ ] **步骤 1：执行前端 lint**
+- [x] **步骤 1：执行前端 lint**
 
 运行：
 
@@ -413,7 +433,7 @@ cd web && npm run lint
 
 预期：退出码为 0。
 
-- [ ] **步骤 2：执行前端生产构建**
+- [x] **步骤 2：执行前端生产构建**
 
 运行：
 
@@ -423,7 +443,7 @@ cd web && npm run build
 
 预期：Next.js 静态构建成功，生成 `web/out/`，没有 TypeScript、静态导出或页面编译错误。
 
-- [ ] **步骤 3：检查生成脚本的关键内容**
+- [x] **步骤 3：检查生成脚本的关键内容**
 
 在浏览器中打开 Pi 导出弹窗，选择至少一个模型，检查右侧预览文本包含以下字面量：
 
@@ -443,7 +463,7 @@ selected_by_id
 
 检查至少两种模型：一个 `contextLength` 和 `maxOutputTokens` 为正数的模型，以及一个无效限制值的模型；预览应分别出现实际值和 `128000`/`16384` 回退值。
 
-- [ ] **步骤 4：使用 Chrome MCP 验证模型页入口**
+- [ ] **步骤 4：使用 Chrome MCP 验证模型页入口（Chrome MCP 当前连接超时，待环境恢复后补验）**
 
 启动本地前端或使用现有联调服务，打开模型页并验证：
 
@@ -456,7 +476,7 @@ selected_by_id
 7. 关闭再打开弹窗后，选择、搜索和复制状态已重置。
 8. 切换中文、英文、日文后，Pi 文案存在且双栏布局没有明显跳变。
 
-- [ ] **步骤 5：检查工作区差异**
+- [x] **步骤 5：检查工作区差异**
 
 运行：
 
