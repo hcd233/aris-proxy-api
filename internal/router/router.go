@@ -2,9 +2,12 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
 	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/redis/go-redis/v9"
@@ -73,6 +76,13 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	v1Group := huma.NewGroup(apiGroup, "/v1")
 
 	initHealthRouter(humaAPI, deps.PingHandler)
+
+	huma.Register(humaAPI, huma.Operation{
+		OperationID: "installTraceScript", Method: http.MethodGet, Path: "/install.sh",
+		Summary:     "InstallTraceScript",
+		Description: "Return the self-contained Aris trace client install script",
+		Tags:        []string{constant.TagTrace},
+	}, deps.TraceHandler.HandleInstallScript)
 
 	tokenGroup := huma.NewGroup(v1Group, "/token")
 	initTokenRouter(tokenGroup, deps.TokenHandler, deps.Cache)
