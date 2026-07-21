@@ -5,13 +5,8 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"fmt"
 	"io"
 	"net/url"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
 	"text/template"
 
 	"github.com/bytedance/sonic"
@@ -46,106 +41,36 @@ type TraceHandler interface {
 	HandleGetTrace(ctx context.Context, req *dto.GetTraceReq) (*dto.HTTPResponse[*dto.GetTraceRsp], error)
 	HandleListTraceEvents(ctx context.Context, req *dto.ListTraceEventsReq) (*dto.HTTPResponse[*dto.ListTraceEventsRsp], error)
 	HandleGetTraceConversation(ctx context.Context, req *dto.GetTraceConversationReq) (*dto.HTTPResponse[*dto.GetTraceConversationRsp], error)
-	HandleIssueTraceClientTicket(ctx context.Context, req *dto.IssueTraceClientTicketReq) (*dto.HTTPResponse[*dto.IssueTraceClientTicketRsp], error)
-	HandleDownloadTraceClient(ctx context.Context, req *dto.DownloadTraceClientReq) (*huma.StreamResponse, error)
 	HandleCheckTraceClient(ctx context.Context, req *dto.CheckTraceClientReq) (*huma.StreamResponse, error)
-	HandleInstallTraceClient(ctx context.Context, req *dto.InstallTraceClientReq) (*huma.StreamResponse, error)
 	HandleInstallScript(ctx context.Context, req *dto.InstallScriptReq) (*huma.StreamResponse, error)
 }
 
 // TraceDependencies TraceHandler 依赖项
 type TraceDependencies struct {
-	Report           port.ReportTraceEventHandler
-	List             port.ListTracesHandler
-	Get              port.GetTraceHandler
-	Events           port.ListTraceEventsHandler
-	Conversation     port.ListTraceConversationHandler
-	IssueTicket      port.IssueTraceClientTicketHandler
-	ArtifactResolver port.TraceClientArtifactResolver
-	TicketStore      port.TraceClientTicketStore
+	Report       port.ReportTraceEventHandler
+	List         port.ListTracesHandler
+	Get          port.GetTraceHandler
+	Events       port.ListTraceEventsHandler
+	Conversation port.ListTraceConversationHandler
 }
 
 type traceHandler struct {
-	report           port.ReportTraceEventHandler
-	list             port.ListTracesHandler
-	get              port.GetTraceHandler
-	events           port.ListTraceEventsHandler
-	conversation     port.ListTraceConversationHandler
-	issueTicket      port.IssueTraceClientTicketHandler
-	artifactResolver port.TraceClientArtifactResolver
-	ticketStore      port.TraceClientTicketStore
+	report       port.ReportTraceEventHandler
+	list         port.ListTracesHandler
+	get          port.GetTraceHandler
+	events       port.ListTraceEventsHandler
+	conversation port.ListTraceConversationHandler
 }
 
 // NewTraceHandler 构造 TraceHandler
 func NewTraceHandler(deps TraceDependencies) TraceHandler {
 	return &traceHandler{
-		report:           deps.Report,
-		list:             deps.List,
-		get:              deps.Get,
-		events:           deps.Events,
-		conversation:     deps.Conversation,
-		issueTicket:      deps.IssueTicket,
-		artifactResolver: deps.ArtifactResolver,
-		ticketStore:      deps.TicketStore,
+		report:       deps.Report,
+		list:         deps.List,
+		get:          deps.Get,
+		events:       deps.Events,
+		conversation: deps.Conversation,
 	}
-}
-
-// HandleIssueTraceClientTicket 签发短期单次客户端下载票据。
-func (h *traceHandler) HandleIssueTraceClientTicket(
-	ctx context.Context,
-	_ *dto.IssueTraceClientTicketReq,
-) (*dto.HTTPResponse[*dto.IssueTraceClientTicketRsp], error) {
-	rsp := &dto.IssueTraceClientTicketRsp{}
-	view, err := h.issueTicket.Handle(ctx, port.IssueTraceClientTicketCommand{
-		UserID: util.CtxValueUint(ctx, constant.CtxKeyUserID),
-	})
-	if err != nil {
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-	rsp.Ticket = view.Ticket
-	rsp.ExpiresAt = view.ExpiresAt
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-// HandleDownloadTraceClient 下载白名单平台的客户端二进制。
-func (h *traceHandler) HandleDownloadTraceClient(
-	ctx context.Context,
-	req *dto.DownloadTraceClientReq,
-) (*huma.StreamResponse, error) {
-	artifact, err := h.artifactResolver.Resolve(req.OS, req.Arch)
-	if err != nil {
-		return nil, err
-	}
-	log := logger.WithCtx(ctx)
-	return &huma.StreamResponse{Body: func(humaCtx huma.Context) {
-		file, openErr := os.Open(artifact.Path)
-		if openErr != nil {
-			log.Error("[TraceHandler] Failed to open trace client artifact", zap.Error(openErr))
-			_ = apiutil.WriteErrorHTTPResponse( //nolint:errcheck // already in error path
-				humaCtx,
-				fiber.StatusInternalServerError,
-				ierr.ErrInternal.BizError(),
-			)
-			return
-		}
-		defer func() { _ = file.Close() }() //nolint:errcheck // best-effort close
-
-		humaCtx.SetStatus(fiber.StatusOK)
-		humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.MIMETypeOctetStream)
-		humaCtx.SetHeader(
-			constant.HTTPHeaderContentDisposition,
-			fmt.Sprintf(constant.HTTPAttachmentFilenameTemplate, artifact.Filename),
-		)
-		humaCtx.SetHeader(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoStore)
-		humaCtx.SetHeader(
-			constant.HTTPHeaderContentLength,
-			strconv.FormatInt(artifact.Size, constant.DecimalBase),
-		)
-		if _, copyErr := io.Copy(humaCtx.BodyWriter(), file); copyErr != nil {
-			log.Error("[TraceHandler] Failed to stream trace client artifact", zap.Error(copyErr))
-		}
-	}}, nil
 }
 
 // HandleCheckTraceClient validates the API key through middleware.
@@ -157,97 +82,6 @@ func (h *traceHandler) HandleCheckTraceClient(
 		ctx.SetStatus(fiber.StatusNoContent)
 	}}, nil
 }
-
-// HandleInstallTraceClient 返回嵌入单次票据的短安装脚本。
-// 票据在请求时仅验证不消费，脚本执行时用于下载二进制并完成初始化。
-// 所有错误路径都返回 bash 错误脚本，避免 curl|bash 执行到 JSON 报错。
-func (h *traceHandler) HandleInstallTraceClient(
-	ctx context.Context,
-	_ *dto.InstallTraceClientReq,
-) (*huma.StreamResponse, error) {
-	return &huma.StreamResponse{Body: func(humaCtx huma.Context) {
-		ticket := strings.TrimSpace(strings.TrimPrefix(
-			humaCtx.Header(constant.HTTPHeaderAuthorization),
-			constant.HTTPAuthBearerPrefix,
-		))
-
-		scheme := humaCtx.Header(constant.HTTPHeaderXForwardedProto)
-		if scheme == "" {
-			scheme = constant.HTTPSchemeHTTP
-		}
-		origin := scheme + "://" + humaCtx.Header(constant.HTTPHeaderHost)
-
-		script, err := h.buildInstallScript(ctx, origin, ticket)
-		if err != nil {
-			logger.WithCtx(ctx).Warn(
-				"[TraceHandler] Failed to build install script",
-				zap.Error(err),
-			)
-			writeInstallScriptError(humaCtx, constant.TraceClientInstallErrorMessage)
-			return
-		}
-
-		humaCtx.SetStatus(fiber.StatusOK)
-		humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeTextPlain)
-		humaCtx.SetHeader(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoStore)
-		if _, writeErr := io.WriteString(humaCtx.BodyWriter(), script); writeErr != nil {
-			logger.WithCtx(ctx).Warn(
-				"[TraceHandler] Failed to write install script",
-				zap.Error(writeErr),
-			)
-		}
-	}}, nil
-}
-
-// buildInstallScript 验证票据并生成嵌入票据的 bash 安装脚本。
-func (h *traceHandler) buildInstallScript(ctx context.Context, origin, ticket string) (string, error) {
-	if ticket == "" || !traceClientTicketPattern.MatchString(ticket) {
-		return "", ierr.New(ierr.ErrValidation, "invalid ticket format")
-	}
-	if h.ticketStore == nil {
-		return "", ierr.New(ierr.ErrInternal, "ticket store unavailable")
-	}
-	_, found, err := h.ticketStore.Validate(ctx, ticket)
-	if err != nil {
-		return "", ierr.Wrap(ierr.ErrInternal, err, "validate ticket")
-	}
-	if !found {
-		return "", ierr.New(ierr.ErrUnauthorized, "ticket not found or expired")
-	}
-	parsed, err := url.Parse(origin)
-	if err != nil || (parsed.Scheme != constant.HTTPSchemeHTTP && parsed.Scheme != constant.HTTPSchemeHTTPS) || parsed.Host == "" {
-		return "", ierr.New(ierr.ErrValidation, "invalid origin")
-	}
-
-	return "#!/usr/bin/env bash\n" +
-		"# Install the Aris trace client and start guided setup\n" +
-		"set -euo pipefail\n\n" +
-		"ticket='" + ticket + "'\n" +
-		"host='" + origin + "'\n\n" +
-		"case \"$(uname -s)-$(uname -m)\" in\n" +
-		"  Darwin-x86_64) os=darwin; arch=amd64 ;;\n" +
-		"  Darwin-arm64) os=darwin; arch=arm64 ;;\n" +
-		"  Linux-x86_64) os=linux; arch=amd64 ;;\n" +
-		"  Linux-aarch64|Linux-arm64) os=linux; arch=arm64 ;;\n" +
-		"  *) echo \"Unsupported platform: $(uname -s)/$(uname -m)\" >&2; exit 1 ;;\n" +
-		"esac\n\n" +
-		"tmp=\"$(mktemp \"${TMPDIR:-/tmp}/aris.XXXXXX\")\"\n" +
-		"trap 'rm -f \"$tmp\"' EXIT\n" +
-		"status=$(curl -sSL -w '%{http_code}' -o \"$tmp\" \\\n" +
-		"  -H \"Authorization: Bearer $ticket\" \\\n" +
-		"  \"$host/api/v1/trace/client?os=$os&arch=$arch\")\n" +
-		"if [ \"$status\" != \"200\" ]; then\n" +
-		"  echo \"Download failed (HTTP $status): $(cat \"$tmp\" 2>/dev/null)\" >&2\n" +
-		"  exit 1\n" +
-		"fi\n" +
-		"mkdir -p \"$HOME/.aris/bin\"\n" +
-		"chmod 700 \"$HOME/.aris\" \"$HOME/.aris/bin\" \"$tmp\"\n" +
-		"mv \"$tmp\" \"$HOME/.aris/bin/aris\"\n" +
-		"trap - EXIT\n" +
-		"exec \"$HOME/.aris/bin/aris\" trace init --host \"$host\"\n", nil
-}
-
-var traceClientTicketPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 // writeInstallScriptError 返回一个将错误输出到 stderr 并退出的 bash 脚本。
 // 用于 curl|bash 模式下服务端出错时给出可读提示，避免 bash 把 JSON 当命令执行。

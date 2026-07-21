@@ -120,7 +120,6 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewExportDatasetHandler,
 		NewPreviewFormatDatasetHandler,
 		NewTraceRepository,
-		NewIssueTraceClientTicketHandler,
 		NewReportTraceEventHandler,
 		NewListTracesHandler,
 		NewGetTraceHandler,
@@ -365,12 +364,6 @@ func NewListCronCallAuditOptionsHandler(repo cronauditport.CronCallAuditReposito
 
 func NewTraceRepository(db *gorm.DB) trace.TraceRepository {
 	return repository.NewTraceRepository(db)
-}
-
-func NewIssueTraceClientTicketHandler(
-	store traceport.TraceClientTicketStore,
-) traceport.IssueTraceClientTicketHandler {
-	return tracecommand.NewIssueTraceClientTicketHandler(store)
 }
 
 func NewReportTraceEventHandler(repo trace.TraceRepository) traceport.ReportTraceEventHandler {

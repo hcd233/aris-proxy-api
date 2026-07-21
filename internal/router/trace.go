@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -17,7 +16,6 @@ import (
 // TraceRouterDependencies trace 路由依赖
 type TraceRouterDependencies struct {
 	TraceHandler handler.TraceHandler
-	TicketStore  traceport.TraceClientTicketStore
 }
 
 func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
@@ -56,22 +54,6 @@ func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getTraceConversation", enum.PermissionUser)},
 	}, deps.TraceHandler.HandleGetTraceConversation)
 
-	huma.Register(queryGroup, huma.Operation{
-		OperationID: "issueTraceClientTicket", Method: http.MethodPost, Path: "/client/ticket",
-		Summary: "IssueTraceClientTicket", Description: "Issue a one-time trace client download ticket",
-		Tags: []string{constant.TagTrace}, Security: []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{
-			middleware.TokenBucketRateLimiterMiddleware(
-				cache,
-				constant.TraceClientTicketRateLimitService,
-				constant.CtxKeyUserID,
-				constant.PeriodIssueTraceClientTicket,
-				constant.LimitIssueTraceClientTicket,
-			),
-			middleware.LimitUserPermissionMiddleware("issueTraceClientTicket", enum.PermissionUser),
-		},
-	}, deps.TraceHandler.HandleIssueTraceClientTicket)
-
 	// 上报组（API Key 鉴权，codex hook 用 Bearer）
 	reportGroup := huma.NewGroup(traceGroup, "")
 	reportGroup.UseMiddleware(middleware.APIKeyMiddleware(db))
@@ -89,21 +71,4 @@ func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm
 		Tags:     []string{constant.TagTrace},
 		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
 	}, deps.TraceHandler.HandleCheckTraceClient)
-
-	downloadGroup := huma.NewGroup(traceGroup, "")
-	downloadGroup.UseMiddleware(middleware.TraceClientTicketMiddleware(deps.TicketStore))
-	huma.Register(downloadGroup, huma.Operation{
-		OperationID: "downloadTraceClient", Method: http.MethodGet, Path: "/client",
-		Summary: "DownloadTraceClient", Description: "Download a supported trace client binary",
-		Tags: []string{constant.TagTrace},
-	}, deps.TraceHandler.HandleDownloadTraceClient)
-
-	// install 不使用 middleware，handler 内部验证票据并统一返回 bash 脚本
-	// （包括错误路径），避免 curl|bash 执行到 JSON 报错。
-	huma.Register(traceGroup, huma.Operation{
-		OperationID: "installTraceClient", Method: http.MethodGet, Path: "/client/install",
-		Summary:     "InstallTraceClient",
-		Description: "Return a short install script authenticated by a one-time ticket",
-		Tags:        []string{constant.TagTrace},
-	}, deps.TraceHandler.HandleInstallTraceClient)
 }
