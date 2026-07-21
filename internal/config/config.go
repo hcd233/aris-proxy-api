@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
@@ -194,9 +193,6 @@ var (
 	// UpstreamRetryJitterFactor float64 上游请求重试退避抖动因子 (0~1)
 	//	@update 2026-06-23 10:00:00
 	UpstreamRetryJitterFactor float64
-
-	// TraceClientArtifactDir 客户端二进制产物目录。
-	TraceClientArtifactDir string
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -253,7 +249,6 @@ func initEnvironment() {
 	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
 	config.SetDefault("upstream.retry.max_backoff", 2*time.Second)
 	config.SetDefault("upstream.retry.jitter_factor", 0.3)
-	config.SetDefault("trace.client.artifact_dir", constant.TraceClientDefaultArtifactDir)
 
 	config.AutomaticEnv()
 
@@ -319,7 +314,6 @@ func initEnvironment() {
 	UpstreamRetryInitialBackoff = config.GetDuration("upstream.retry.initial_backoff")
 	UpstreamRetryMaxBackoff = config.GetDuration("upstream.retry.max_backoff")
 	UpstreamRetryJitterFactor = config.GetFloat64("upstream.retry.jitter_factor")
-	TraceClientArtifactDir = config.GetString("trace.client.artifact_dir")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{

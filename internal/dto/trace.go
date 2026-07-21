@@ -90,27 +90,11 @@ type ListTraceEventsReq struct {
 	model.PageParam
 }
 
-// IssueTraceClientTicketReq 签发客户端下载票据请求（JWT）。
-type IssueTraceClientTicketReq struct{}
-
-// IssueTraceClientTicketRsp 签发客户端下载票据响应。
-type IssueTraceClientTicketRsp struct {
-	CommonRsp
-	Ticket    string    `json:"ticket" doc:"10 分钟有效的单次下载票据"`
-	ExpiresAt time.Time `json:"expiresAt" doc:"过期时间"`
-}
-
-// DownloadTraceClientReq 下载客户端请求。
-type DownloadTraceClientReq struct {
-	OS   string `query:"os" required:"true" enum:"darwin,linux" doc:"目标操作系统"`
-	Arch string `query:"arch" required:"true" enum:"amd64,arm64" doc:"目标架构"`
-}
-
 // CheckTraceClientReq 验证 ProxyAPIKey 请求。
 type CheckTraceClientReq struct{}
 
-// InstallTraceClientReq 安装脚本请求（单次票据验证，不消费）。
-type InstallTraceClientReq struct{}
+// InstallScriptReq 安装脚本请求（无鉴权，服务端嵌入 host）。
+type InstallScriptReq struct{}
 
 // ReportTraceRecordResult 单条上报处理结果。
 type ReportTraceRecordResult struct {

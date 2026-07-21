@@ -12,11 +12,6 @@ const (
 	PeriodRefreshToken = 1 * time.Minute
 	LimitRefreshToken  = 10
 
-	PeriodIssueTraceClientTicket = 1 * time.Minute
-	LimitIssueTraceClientTicket  = 3
-	TraceClientTicketTTL         = 10 * time.Minute
-	TraceClientTicketRandomBytes = 32
-
 	RateLimitKeyByIP = "ip"
 
 	PeriodGetShareMetadata = 1 * time.Minute
