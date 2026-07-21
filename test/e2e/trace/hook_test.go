@@ -83,7 +83,7 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 func buildTraceClient(t *testing.T) string {
 	t.Helper()
 	binary := filepath.Join(t.TempDir(), "aris")
-	cmd := exec.CommandContext(t.Context(), "go", "build", "-o", binary, "./cmd/client")
+	cmd := exec.CommandContext(t.Context(), "go", "build", "-buildvcs=false", "-o", binary, "./cmd/client")
 	cmd.Dir = projectRoot(t)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("build client: %v\n%s", err, output)
