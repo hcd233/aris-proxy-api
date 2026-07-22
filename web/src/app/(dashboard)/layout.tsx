@@ -101,14 +101,14 @@ function SidebarNav({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
               isActive
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-2xs"
+                : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
             } ${collapsed ? "justify-center" : ""}`}
             title={collapsed ? label : undefined}
           >
-            <span className={isActive ? "text-white" : ""}>{item.icon}</span>
+            <span className={isActive ? "text-sidebar-primary" : ""}>{item.icon}</span>
             {!collapsed && <span>{label}</span>}
           </Link>
         );
@@ -210,8 +210,13 @@ export default function DashboardLayout({
         >
           <div className="flex h-14 items-center justify-between border-b border-sidebar-border/50 px-3">
             {!collapsed && (
-              <span className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground">
-                {t("layout.aris_proxy")}
+              <span className="flex items-center gap-2.5">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
+                  A
+                </span>
+                <span className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground">
+                  {t("layout.aris_proxy")}
+                </span>
               </span>
             )}
             <Button
@@ -243,7 +248,7 @@ export default function DashboardLayout({
           {/* Main content */}
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Mobile top bar */}
-            <header className="flex h-14 items-center gap-3 border-b border-border bg-card/60 px-4 backdrop-blur-sm md:hidden">
+            <header className="flex h-14 items-center gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-md md:hidden">
               <SheetTrigger
                 render={
                   <Button
@@ -255,7 +260,12 @@ export default function DashboardLayout({
               >
                 <Menu className="size-5" />
               </SheetTrigger>
-              <span className="font-display text-xl font-semibold tracking-tight">{t("layout.aris_proxy")}</span>
+              <span className="flex items-center gap-2.5">
+                <span className="flex size-6 items-center justify-center rounded-md bg-primary font-display text-xs font-semibold text-primary-foreground shadow-2xs">
+                  A
+                </span>
+                <span className="font-display text-lg font-semibold tracking-tight">{t("layout.aris_proxy")}</span>
+              </span>
             </header>
 
             <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
@@ -267,7 +277,12 @@ export default function DashboardLayout({
 
           <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
             <SheetHeader className="border-b border-sidebar-border/50 px-4 py-3">
-              <SheetTitle className="font-display text-xl font-semibold tracking-tight">{t("layout.aris_proxy")}</SheetTitle>
+              <SheetTitle className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
+                  A
+                </span>
+                {t("layout.aris_proxy")}
+              </SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto py-3">
               <SidebarNav items={navItems} onNavigate={closeMobileSidebar} />
