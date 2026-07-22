@@ -17,13 +17,17 @@ import (
 
 // IsRetryableError 判断上游错误是否可重试
 //
-// 可重试：UpstreamConnectionError（网络层错误）、UpstreamError 且 StatusCode >= 500（5xx 瞬时错误）
-// 不可重试：UpstreamError 且 StatusCode < 500（4xx 永久错误）、其他错误（请求构建失败等）
+// 可重试：
+//   - UpstreamConnectionError（网络层错误）
+//   - UpstreamError 且 StatusCode >= 500（5xx 瞬时错误）
+//   - UpstreamError 且 StatusCode == 429（Too Many Requests，限流）
+//
+// 不可重试：UpstreamError 且 StatusCode 为其他 4xx（客户端错误）、其他错误（请求构建失败等）
 //
 //	@param err error 错误
 //	@return bool 是否可重试
 //	@author centonhuang
-//	@update 2026-06-23 10:00:00
+//	@update 2026-07-22 11:00:00
 func IsRetryableError(err error) bool {
 	var connErr *model.UpstreamConnectionError
 	if errors.As(err, &connErr) {
@@ -31,7 +35,8 @@ func IsRetryableError(err error) bool {
 	}
 	var upstreamErr *model.UpstreamError
 	if errors.As(err, &upstreamErr) {
-		return upstreamErr.StatusCode >= constant.UpstreamRetryableStatusThreshold
+		return upstreamErr.StatusCode >= constant.UpstreamRetryableStatusThreshold ||
+			upstreamErr.StatusCode == http.StatusTooManyRequests
 	}
 	return false
 }
