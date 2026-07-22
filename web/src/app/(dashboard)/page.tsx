@@ -38,11 +38,13 @@ function StatCard({
   loading: boolean;
 }) {
   return (
-    <Card className="hover:border-border/60">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          {icon}
-          <span className="text-xs font-medium uppercase tracking-wider">{title}</span>
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            {icon}
+          </span>
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</span>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
