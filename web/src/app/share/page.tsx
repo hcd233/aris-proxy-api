@@ -62,7 +62,7 @@ function ShareErrorView({ error }: { error: ShareError }) {
 
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-3xl border bg-card p-8 text-center shadow-[0_24px_70px_rgba(92,62,29,0.14)]">
+      <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card p-8 text-center shadow-xl">
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
           <Share2 className="size-5 text-muted-foreground" />
         </div>
