@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -176,9 +177,16 @@ func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggre
 }
 
 func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+	startTime := time.Now()
+	stream, err := u.openAIProxy.OpenCreateResponseStream(ctx, upstream, body)
+	if err != nil {
+		totalMs := time.Since(startTime).Milliseconds()
+		auditFailure(ctx, m, u.taskSubmitter, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
+		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+	}
 	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		h := newNativeStreamHandler(ctx, u, req)
-		proxyErr := u.openAIProxy.ForwardCreateResponseStream(ctx, upstream, body, func(event string, data []byte) error {
+		proxyErr := u.openAIProxy.ReadCreateResponseStream(ctx, stream, func(event string, data []byte) error {
 			return h.onEvent(w, event, data)
 		})
 		h.finalize(w, proxyErr, m, ep)
@@ -236,6 +244,13 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	exposedModel := lo.FromPtr(req.Body.Model)
 	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
 	itemState := converter.NewStreamItemState()
+	startTime := time.Now()
+	stream, openErr := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
+	if openErr != nil {
+		totalMs := time.Since(startTime).Milliseconds()
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIResponse, totalMs, openErr)
+		return upstreamStreamErrorResponse(ctx, openErr, openAIInternalErrorBody)
+	}
 	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		timer := newStreamTimer()
 
@@ -247,7 +262,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 			log.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
 		}
 
-		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
+		completion, err := u.openAIProxy.ReadChatCompletionStream(ctx, stream, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			hasWritten, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, itemState, responseID, conv)
 			if hasWritten {
 				timer.markFirstToken()
@@ -313,7 +328,15 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 }
 
 func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(ctx, u.forwardResponseViaAnthropicStreamBody(ctx, req, m, upstream, endpoint, body))
+	startTime := time.Now()
+	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
+	if err != nil {
+		totalMs := time.Since(startTime).Milliseconds()
+		exposedModel := lo.FromPtr(req.Body.Model)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
+		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+	}
+	return apiutil.WrapStreamResponse(ctx, u.forwardResponseViaAnthropicStreamBody(ctx, req, m, stream, endpoint))
 }
 
 type anthropicStreamHandler struct {
@@ -388,7 +411,7 @@ func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, e
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) func(w *bufio.Writer) {
+func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, stream io.ReadCloser, endpoint string) func(w *bufio.Writer) {
 	h := newAnthropicStreamHandler(ctx, u, req)
 	return func(w *bufio.Writer) {
 		h.timer = newStreamTimer()
@@ -398,7 +421,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Contex
 		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, h.exposedModel, h.responseID); err != nil {
 			h.logger.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
 		}
-		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
+		anthropicMsg, err := u.anthropicProxy.ReadCreateMessageStream(ctx, stream, func(event dto.AnthropicSSEEvent) error {
 			return h.onAnthropicEvent(w, event)
 		})
 		h.finalize(w, m, endpoint, anthropicMsg, err)

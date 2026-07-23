@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -47,11 +48,18 @@ func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.Op
 
 func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
+	startTime := time.Now()
+	stream, err := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
+	if err != nil {
+		totalMs := time.Since(startTime).Milliseconds()
+		auditFailure(ctx, m, u.taskSubmitter, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+	}
 	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		timer := newStreamTimer()
 		toolCallIDs := make(map[int]string)
 
-		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, func(chunk *dto.OpenAIChatCompletionChunk) error {
+		completion, err := u.openAIProxy.ReadChatCompletionStream(ctx, stream, func(chunk *dto.OpenAIChatCompletionChunk) error {
 			if proxyutil.HasNonEmptyDelta(chunk) {
 				timer.markFirstToken()
 			}
@@ -128,10 +136,17 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 }
 
 func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(ctx, u.forwardChatViaAnthropicStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
+	startTime := time.Now()
+	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
+	if err != nil {
+		totalMs := time.Since(startTime).Milliseconds()
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+	}
+	return apiutil.WrapStreamResponse(ctx, u.forwardChatViaAnthropicStreamBody(ctx, req, m, stream, exposedModel, endpoint))
 }
 
-func (u *openAIUseCase) forwardChatViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) func(w *bufio.Writer) {
+func (u *openAIUseCase) forwardChatViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, stream io.ReadCloser, exposedModel, endpoint string) func(w *bufio.Writer) {
 	conv := &converter.AnthropicProtocolConverter{}
 	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
 	return func(w *bufio.Writer) {
@@ -139,7 +154,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStreamBody(ctx context.Context, r
 		var allChunks []*dto.OpenAIChatCompletionChunk
 
 		onEvent := u.buildOpenAIChatStreamCallback(conv, w, chunkID, exposedModel, timer, &allChunks)
-		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, onEvent)
+		anthropicMsg, err := u.anthropicProxy.ReadCreateMessageStream(ctx, stream, onEvent)
 		timer.finish()
 		u.finalizeOpenAIChatStream(ctx, w, err)
 		completion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails

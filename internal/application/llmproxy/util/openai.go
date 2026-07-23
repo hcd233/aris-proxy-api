@@ -2,12 +2,9 @@ package proxyutil
 
 import (
 	"cmp"
-	"fmt"
 	"strings"
 
 	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
@@ -258,36 +255,4 @@ func FillResponseTerminalOutput(data []byte, accumulatedOutput []*dto.ResponseIn
 //	@update 2026-04-18 17:00:00
 func IsResponseAPIDeltaEvent(event string) bool {
 	return strings.HasSuffix(event, enum.ResponseStreamEventDeltaSuffix)
-}
-
-// SendOpenAIUpstreamError 发送上游错误响应
-//
-//	@param statusCode int
-//	@param body string
-//	@return rsp
-//	@author centonhuang
-//	@update 2026-03-31 10:00:00
-func SendOpenAIUpstreamError(statusCode int, body string) (rsp *huma.StreamResponse) {
-	// 尝试从上游错误响应中提取安全的 error message
-	var errMsg string
-	var errResp dto.OpenAIErrorResponse
-	if err := sonic.UnmarshalString(body, &errResp); err == nil && errResp.Error != nil && errResp.Error.Message != "" {
-		errMsg = errResp.Error.Message
-	} else {
-		errMsg = fmt.Sprintf(constant.UpstreamStatusMessageTemplate, statusCode)
-	}
-
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(statusCode)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{ //nolint:errcheck // best-effort write in error handler
-				Error: &dto.OpenAIError{
-					Message: errMsg,
-					Type:    constant.UpstreamErrorType,
-					Code:    constant.UpstreamErrorType,
-				},
-			})))
-		},
-	}
 }

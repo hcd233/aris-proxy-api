@@ -58,18 +58,21 @@ func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamE
 	return completion, nil
 }
 
-func (p *openAIProxy) ForwardChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
-	log := logger.WithCtx(ctx)
-
+func (p *openAIProxy) OpenChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (io.ReadCloser, error) {
 	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIChatCompletions)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
+	return resp.Body, nil
+}
+
+func (p *openAIProxy) ReadChatCompletionStream(ctx context.Context, stream io.ReadCloser, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+	log := logger.WithCtx(ctx)
+	defer func() { _ = stream.Close() }() //nolint:errcheck // ensure stream closed on return
 
 	var collectedChunks []*dto.OpenAIChatCompletionChunk
 
-	reader := bufio.NewReader(resp.Body)
+	reader := bufio.NewReader(stream)
 	for {
 		raw, readErr := reader.ReadString('\n')
 		line := strings.TrimRight(raw, constant.NewlineCRLF)
@@ -193,16 +196,19 @@ func (p *openAIProxy) ForwardCreateResponse(ctx context.Context, ep vo.UpstreamE
 	return respBody, nil
 }
 
-func (p *openAIProxy) ForwardCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(event string, data []byte) error) error {
-	log := logger.WithCtx(ctx)
-
+func (p *openAIProxy) OpenCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (io.ReadCloser, error) {
 	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIResponses)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
+	return resp.Body, nil
+}
 
-	reader := bufio.NewReader(resp.Body)
+func (p *openAIProxy) ReadCreateResponseStream(ctx context.Context, stream io.ReadCloser, onEvent func(event string, data []byte) error) error {
+	log := logger.WithCtx(ctx)
+	defer func() { _ = stream.Close() }() //nolint:errcheck // ensure stream closed on return
+
+	reader := bufio.NewReader(stream)
 	var currentEvent string
 
 	for {

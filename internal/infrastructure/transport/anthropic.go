@@ -57,19 +57,22 @@ func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep vo.Upstrea
 	return message, nil
 }
 
-func (p *anthropicProxy) ForwardCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
-	log := logger.WithCtx(ctx)
-
+func (p *anthropicProxy) OpenCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (io.ReadCloser, error) {
 	resp, err := p.sendRequest(ctx, ep, constant.UpstreamPathAnthropicMessages, body)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
+	return resp.Body, nil
+}
+
+func (p *anthropicProxy) ReadCreateMessageStream(ctx context.Context, stream io.ReadCloser, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+	log := logger.WithCtx(ctx)
+	defer func() { _ = stream.Close() }() //nolint:errcheck // ensure stream closed on return
 
 	var collectedEvents []dto.AnthropicSSEEvent
 	var currentEvent string
 
-	reader := bufio.NewReader(resp.Body)
+	reader := bufio.NewReader(stream)
 	for {
 		raw, readErr := reader.ReadString('\n')
 		line := strings.TrimRight(raw, constant.NewlineCRLF)

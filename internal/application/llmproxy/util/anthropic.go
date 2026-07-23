@@ -213,38 +213,6 @@ func buildAnthropicContentBlocks(blocks map[int]*blockState, blockOrder []int) (
 	return content, nil
 }
 
-// SendAnthropicUpstreamError 发送上游错误响应
-//
-//	@param statusCode int
-//	@param body string
-//	@return rsp
-//	@author centonhuang
-//	@update 2026-03-31 10:00:00
-func SendAnthropicUpstreamError(statusCode int, body string) (rsp *huma.StreamResponse) {
-	// 尝试从上游错误响应中提取安全的 error message
-	var errMsg string
-	var errResp dto.AnthropicErrorResponse
-	if err := sonic.UnmarshalString(body, &errResp); err == nil && errResp.Error != nil && errResp.Error.Message != "" {
-		errMsg = errResp.Error.Message
-	} else {
-		errMsg = fmt.Sprintf(constant.UpstreamStatusMessageTemplate, statusCode)
-	}
-
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(statusCode)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write in error handler
-				Type: constant.AnthropicInternalErrorBodyType,
-				Error: &dto.AnthropicError{
-					Type:    constant.UpstreamErrorType,
-					Message: errMsg,
-				},
-			})))
-		},
-	}
-}
-
 // ExtractAnthropicMetadata 将 Anthropic 元数据转换为通用 map
 //
 //	@param meta *dto.AnthropicMetadata
