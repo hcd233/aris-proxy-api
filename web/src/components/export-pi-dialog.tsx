@@ -94,6 +94,7 @@ provider = providers.setdefault(provider_id, {})
 provider["baseUrl"] = base_url
 provider["api"] = "openai-completions"
 provider["apiKey"] = api_key
+provider["compat"] = {"supportsDeveloperRole": False}
 
 existing_models = provider.get("models", [])
 selected_by_id = {model["id"]: model for model in models}
