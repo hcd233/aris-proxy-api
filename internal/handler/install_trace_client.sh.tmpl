@@ -23,11 +23,29 @@ esac
 aris_bin="$HOME/.aris/bin/aris"
 mkdir -p -m 0700 "$(dirname "$aris_bin")"
 tmp=$(mktemp "${TMPDIR:-/tmp}/aris.XXXXXX")
-trap 'rm -f "$tmp"' EXIT
+checksum_tmp=$(mktemp "${TMPDIR:-/tmp}/aris-checksum.XXXXXX")
+trap 'rm -f "$tmp" "$checksum_tmp"' EXIT
 echo "Downloading aris-$os-$arch..."
 curl -fsSL -o "$tmp" "$gh_base/aris-$os-$arch"
+curl -fsSL -o "$checksum_tmp" "$gh_base/aris-$os-$arch.sha256"
+checksum=$(awk 'NF == 1 { print $1 } NF == 2 { print $1; next } { exit 1 }' "$checksum_tmp")
+[ "$(printf '%s\n' "$checksum" | awk 'NF == 1 { count++ } END { print count + 0 }')" -eq 1 ] || { echo "Invalid checksum file" >&2; exit 1; }
+case "$checksum" in
+  (*[!0-9a-fA-F]*) echo "Invalid checksum file" >&2; exit 1 ;;
+  (*) [ "$(printf '%s' "$checksum" | awk '{ print length }')" -eq 64 ] || { echo "Invalid checksum file" >&2; exit 1; } ;;
+esac
+if command -v sha256sum >/dev/null 2>&1; then
+  actual=$(sha256sum "$tmp" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  actual=$(shasum -a 256 "$tmp" | awk '{print $1}')
+else
+  echo "sha256sum or shasum is required" >&2
+  exit 1
+fi
+[ "$checksum" = "$actual" ] || { echo "Checksum verification failed" >&2; exit 1; }
 chmod 0700 "$tmp"
 mv "$tmp" "$aris_bin"
+rm -f "$checksum_tmp"
 trap - EXIT
 echo "Installed to $aris_bin"
 
