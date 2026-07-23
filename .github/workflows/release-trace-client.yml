@@ -22,11 +22,20 @@ jobs:
       - name: Build client binaries
         run: make build-client-all
 
+      - name: Generate checksums
+        run: |
+          for binary in build/trace-client/aris-*; do
+            sha256sum "$binary" > "$binary.sha256"
+          done
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             build/trace-client/aris-darwin-amd64
+            build/trace-client/aris-darwin-amd64.sha256
             build/trace-client/aris-darwin-arm64
+            build/trace-client/aris-darwin-arm64.sha256
             build/trace-client/aris-linux-amd64
+            build/trace-client/aris-linux-amd64.sha256
             build/trace-client/aris-linux-arm64
+            build/trace-client/aris-linux-arm64.sha256

@@ -104,8 +104,10 @@ clean-all: clean
 	go clean -cache
 
 ## test: 运行全量测试
+GO_TEST_PACKAGES := ./cmd/... ./internal/... ./test/...
+
 test:
-	go test -count=1 ./...
+	go test -count=1 $(GO_TEST_PACKAGES)
 
 ## test-cover: 带覆盖率的测试
 test-cover:
