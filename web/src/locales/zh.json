@@ -503,7 +503,7 @@
   "audit.no_logs_range": "所选范围内无审计日志",
   "audit.trace_copied": "TraceID 已复制",
   "audit.copy_failed": "复制失败",
-  "audit.copy_traceid": "复制 TraceID",
+  "audit.copy_traceid": "TraceID",
   "audit.copy_traceid_title": "点击复制完整 TraceID",
   "audit.time": "时间",
   "audit.protocol": "协议",

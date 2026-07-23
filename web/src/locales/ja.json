@@ -437,7 +437,7 @@
   "audit.no_logs_range": "選択範囲に監査ログがありません",
   "audit.trace_copied": "TraceID をコピーしました",
   "audit.copy_failed": "コピーに失敗しました",
-  "audit.copy_traceid": "TraceID をコピー",
+  "audit.copy_traceid": "TraceID",
   "audit.copy_traceid_title": "クリックして完全な TraceID をコピー",
   "audit.time": "時間",
   "audit.protocol": "プロトコル",
