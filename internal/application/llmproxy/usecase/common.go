@@ -3,6 +3,9 @@ package usecase
 import (
 	"context"
 
+	"github.com/danielgtaylor/huma/v2"
+
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ratelimit"
@@ -24,6 +27,15 @@ func auditFailureWithProviders(ctx context.Context, m *aggregate.Model, submitte
 		apiProtocol:         apiProtocol,
 		firstTokenLatencyMs: totalMs,
 		err:                 err,
+	})
+}
+
+// upstreamStreamErrorResponse 透传"打开上游流"阶段的错误：复用非流式的 WriteUpstreamError，
+// 保证上游状态码/响应头/错误体原样下发，而不是包进 200 的 SSE 流。
+// 仅适用于流式请求在流开始前即失败的场景；流开始后的中断仍走 WriteUpstreamSSEError。
+func upstreamStreamErrorResponse(ctx context.Context, err error, fallbackBody []byte) *huma.StreamResponse {
+	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
+		apiutil.WriteUpstreamError(writer, err, fallbackBody)
 	})
 }
 

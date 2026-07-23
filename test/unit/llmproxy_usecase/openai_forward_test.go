@@ -2,13 +2,21 @@ package llmproxy_usecase
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/gofiber/fiber/v3"
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -20,6 +28,7 @@ type mockOpenAIProxy struct {
 	responseUnaryCalled  bool
 	responseStreamCalled bool
 	lastChatBody         []byte
+	openChatStreamErr    error
 }
 
 func (p *mockOpenAIProxy) ForwardChatCompletion(_ context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
@@ -39,12 +48,18 @@ func (p *mockOpenAIProxy) ForwardChatCompletion(_ context.Context, ep vo.Upstrea
 	}, nil
 }
 
-func (p *mockOpenAIProxy) ForwardChatCompletionStream(_ context.Context, ep vo.UpstreamEndpoint, body []byte, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+func (p *mockOpenAIProxy) OpenChatCompletionStream(_ context.Context, _ vo.UpstreamEndpoint, body []byte) (io.ReadCloser, error) {
 	p.chatStreamCalled = true
 	p.lastChatBody = append([]byte(nil), body...)
+	if p.openChatStreamErr != nil {
+		return nil, p.openChatStreamErr
+	}
+	return io.NopCloser(strings.NewReader("")), nil
+}
+
+func (p *mockOpenAIProxy) ReadChatCompletionStream(_ context.Context, _ io.ReadCloser, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
 	chunk := &dto.OpenAIChatCompletionChunk{
-		ID:    "chatcmpl-test",
-		Model: ep.Model,
+		ID: "chatcmpl-test",
 		Choices: []*dto.OpenAIChatCompletionChunkChoice{{
 			Index: 0,
 			Delta: &dto.OpenAIChatCompletionChunkDelta{Content: lo.ToPtr("ok")},
@@ -54,8 +69,7 @@ func (p *mockOpenAIProxy) ForwardChatCompletionStream(_ context.Context, ep vo.U
 		_ = onChunk(chunk)
 	}
 	return &dto.OpenAIChatCompletion{
-		ID:    "chatcmpl-test",
-		Model: ep.Model,
+		ID: "chatcmpl-test",
 		Choices: []*dto.OpenAIChatCompletionChoice{{
 			Message:      &dto.OpenAIChatCompletionMessageParam{Role: enum.RoleAssistant, Content: &dto.OpenAIMessageContent{Text: "ok"}},
 			FinishReason: enum.FinishReasonStop,
@@ -69,8 +83,12 @@ func (p *mockOpenAIProxy) ForwardCreateResponse(_ context.Context, _ vo.Upstream
 	return []byte(`{"id":"resp_test","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}`), nil
 }
 
-func (p *mockOpenAIProxy) ForwardCreateResponseStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte, onEvent func(string, []byte) error) error {
+func (p *mockOpenAIProxy) OpenCreateResponseStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.responseStreamCalled = true
+	return io.NopCloser(strings.NewReader("")), nil
+}
+
+func (p *mockOpenAIProxy) ReadCreateResponseStream(_ context.Context, _ io.ReadCloser, onEvent func(string, []byte) error) error {
 	if onEvent != nil {
 		_ = onEvent("response.completed", []byte(`{"type":"response.completed","response":{"id":"resp_test","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}}`))
 	}
@@ -137,8 +155,12 @@ func (p *mockAnthropicProxyForOpenAI) ForwardCreateMessage(_ context.Context, ep
 	}, nil
 }
 
-func (p *mockAnthropicProxyForOpenAI) ForwardCreateMessageStream(_ context.Context, ep vo.UpstreamEndpoint, _ []byte, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+func (p *mockAnthropicProxyForOpenAI) OpenCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.messageStreamCalled = true
+	return io.NopCloser(strings.NewReader("")), nil
+}
+
+func (p *mockAnthropicProxyForOpenAI) ReadCreateMessageStream(_ context.Context, _ io.ReadCloser, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
 	if onEvent != nil {
 		_ = onEvent(dto.AnthropicSSEEvent{Event: enum.AnthropicSSEEventTypeContentBlockDelta, Data: []byte(`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ok"}}`)})
 	}
@@ -146,7 +168,6 @@ func (p *mockAnthropicProxyForOpenAI) ForwardCreateMessageStream(_ context.Conte
 		ID:      "msg-test",
 		Type:    "message",
 		Role:    enum.RoleAssistant,
-		Model:   ep.Model,
 		Content: []*dto.AnthropicContentBlock{{Type: enum.AnthropicContentBlockTypeText, Text: lo.ToPtr("ok")}},
 		Usage:   &dto.AnthropicUsage{InputTokens: 1, OutputTokens: 1},
 	}, nil
@@ -182,6 +203,53 @@ func TestOpenAICreateChatCompletion_NativeStream(t *testing.T) {
 	}
 	if rsp == nil {
 		t.Fatal("CreateChatCompletion() returned nil response")
+	}
+}
+
+// 流式请求在上游建连即失败时，HTTP 状态码与错误体必须透传上游，而非 200 + SSE 错误帧。
+func TestOpenAICreateChatCompletion_StreamOpenErrorPassthrough(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusTooManyRequests,
+		Body:       `{"error":{"message":"rate limited"}}`,
+	}
+	proxy := &mockOpenAIProxy{openChatStreamErr: upstreamErr}
+	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
+		Model:    "test-alias",
+		Messages: []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleUser, Content: &dto.OpenAIMessageContent{Text: "Hello"}}},
+		Stream:   &stream,
+	}}
+
+	app := fiber.New()
+	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))
+	huma.Register(api, huma.Operation{
+		OperationID: "chatStream",
+		Method:      http.MethodPost,
+		Path:        "/chat",
+	}, func(ctx context.Context, _ *struct{}) (*huma.StreamResponse, error) {
+		return uc.CreateChatCompletion(ctx, req)
+	})
+
+	httpReq := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/chat", http.NoBody)
+	resp, err := app.Test(httpReq, fiber.TestConfig{Timeout: 0})
+	if err != nil {
+		t.Fatalf("chat stream request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusTooManyRequests)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if string(body) != upstreamErr.Body {
+		t.Fatalf("body = %q, want upstream body %q", string(body), upstreamErr.Body)
 	}
 }
 

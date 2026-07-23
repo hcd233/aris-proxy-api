@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -46,10 +47,17 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 
 func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
 	log := logger.WithCtx(ctx)
+	startTime := time.Now()
+	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
+	if err != nil {
+		totalMs := time.Since(startTime).Milliseconds()
+		auditFailure(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
+		return upstreamStreamErrorResponse(ctx, err, anthropicInternalErrorBody)
+	}
 	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
 		timer := newStreamTimer()
 
-		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessageStream(ctx, upstream, body, func(event dto.AnthropicSSEEvent) error {
+		anthropicMsg, err := u.anthropicProxy.ReadCreateMessageStream(ctx, stream, func(event dto.AnthropicSSEEvent) error {
 			if event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
 				timer.markFirstToken()
 			}
@@ -114,17 +122,24 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 }
 
 func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	return apiutil.WrapStreamResponse(ctx, u.forwardMessageViaChatStreamBody(ctx, req, m, upstream, exposedModel, endpoint, body))
+	startTime := time.Now()
+	stream, err := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
+	if err != nil {
+		totalMs := time.Since(startTime).Milliseconds()
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
+		return upstreamStreamErrorResponse(ctx, err, anthropicInternalErrorBody)
+	}
+	return apiutil.WrapStreamResponse(ctx, u.forwardMessageViaChatStreamBody(ctx, req, m, stream, exposedModel, endpoint))
 }
 
-func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) func(w *bufio.Writer) {
+func (u *anthropicUseCase) forwardMessageViaChatStreamBody(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, stream io.ReadCloser, exposedModel, endpoint string) func(w *bufio.Writer) {
 	conv := &converter.OpenAIProtocolConverter{}
 	tracker := converter.NewSSEContentBlockTracker()
 	return func(w *bufio.Writer) {
 		timer := newStreamTimer()
 		isFirst := true
 		onChunk := u.buildAnthropicChatStreamCallback(conv, tracker, w, exposedModel, timer, &isFirst)
-		completion, err := u.openAIProxy.ForwardChatCompletionStream(ctx, upstream, body, onChunk)
+		completion, err := u.openAIProxy.ReadChatCompletionStream(ctx, stream, onChunk)
 		timer.finish()
 		anthropicMsg := u.finalizeAnthropicChatStream(ctx, conv, w, completion, err, exposedModel)
 		u.storeAnthropicFromMsg(ctx, req, anthropicMsg, err, m.Alias().String())

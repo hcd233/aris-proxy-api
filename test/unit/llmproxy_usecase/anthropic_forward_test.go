@@ -2,6 +2,8 @@ package llmproxy_usecase
 
 import (
 	"context"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
@@ -22,8 +24,12 @@ func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessage(_ context.Context,
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
-func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte, _ func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+func (p *mockAnthropicProxyForAnthropic) OpenCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.messageStreamCalled = true
+	return io.NopCloser(strings.NewReader("")), nil
+}
+
+func (p *mockAnthropicProxyForAnthropic) ReadCreateMessageStream(_ context.Context, _ io.ReadCloser, _ func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
