@@ -36,7 +36,7 @@ func TestIsRetryableError(t *testing.T) {
 		{"500 可重试", &model.UpstreamError{StatusCode: 500}, true},
 		{"404 不可重试", &model.UpstreamError{StatusCode: 404}, false},
 		{"401 不可重试", &model.UpstreamError{StatusCode: 401}, false},
-		{"429 不可重试", &model.UpstreamError{StatusCode: 429}, false},
+		{"429 可重试", &model.UpstreamError{StatusCode: 429}, true},
 		{"400 不可重试", &model.UpstreamError{StatusCode: 400}, false},
 		{"网络错误可重试", &model.UpstreamConnectionError{Cause: ierr.New(ierr.ErrProxyRequest, "connection refused")}, true},
 		{"ierr 不可重试", ierr.New(ierr.ErrProxyRequest, "create request"), false},

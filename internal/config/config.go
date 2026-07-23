@@ -245,7 +245,7 @@ func initEnvironment() {
 	config.SetDefault("cron.session.deduplicate.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 
-	config.SetDefault("upstream.retry.max_attempts", 2)
+	config.SetDefault("upstream.retry.max_attempts", 5)
 	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
 	config.SetDefault("upstream.retry.max_backoff", 2*time.Second)
 	config.SetDefault("upstream.retry.jitter_factor", 0.3)
