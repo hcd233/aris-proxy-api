@@ -16,7 +16,36 @@ import (
 func MarshalOpenAIChatCompletionBodyForModel(req *dto.OpenAIChatCompletionReq, modelName string) []byte {
 	body := *req
 	body.Model = modelName
+	body.Messages = normalizeMessagesForUpstream(body.Messages)
 	return lo.Must1(MarshalUpstreamBody(&body))
+}
+
+// normalizeMessagesForUpstream 将请求消息中的角色标准化为上游兼容格式。
+//
+// OpenAI 的 "developer" 角色（o1 系列及以上）并非所有上游都支持，
+// 统一转为等价的 "system" 角色以保证兼容性。
+func normalizeMessagesForUpstream(msgs []*dto.OpenAIChatCompletionMessageParam) []*dto.OpenAIChatCompletionMessageParam {
+	hasDev := false
+	for _, msg := range msgs {
+		if msg != nil && msg.Role == enum.RoleDeveloper {
+			hasDev = true
+			break
+		}
+	}
+	if !hasDev {
+		return msgs
+	}
+	normalized := make([]*dto.OpenAIChatCompletionMessageParam, len(msgs))
+	for i, msg := range msgs {
+		if msg != nil && msg.Role == enum.RoleDeveloper {
+			cp := *msg
+			cp.Role = enum.RoleSystem
+			normalized[i] = &cp
+		} else {
+			normalized[i] = msg
+		}
+	}
+	return normalized
 }
 
 // MarshalOpenAIResponseBodyForModel 使用上游模型名序列化 Response API 请求体，且不修改原请求。
