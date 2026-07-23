@@ -503,7 +503,7 @@
   "audit.no_logs_range": "No audit logs in selected range",
   "audit.trace_copied": "TraceID copied",
   "audit.copy_failed": "Copy failed",
-  "audit.copy_traceid": "Copy TraceID",
+  "audit.copy_traceid": "TraceID",
   "audit.copy_traceid_title": "Click to copy full traceID",
   "audit.time": "Time",
   "audit.protocol": "Protocol",
