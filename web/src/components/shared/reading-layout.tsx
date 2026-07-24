@@ -43,7 +43,7 @@ export function ReadingLayout({
 
   if (isMobile) {
     return (
-      <div className="-mx-4 -mt-4 flex min-h-[calc(100dvh-3.5rem)] flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div className="page-surface -mx-4 -mt-4 flex min-h-[calc(100dvh-3.5rem)] flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <div ref={headerSentinelRef} aria-hidden className="h-px w-full" />
 
         <header
@@ -109,7 +109,7 @@ export function ReadingLayout({
   }
 
   return (
-    <div className="-mx-4 -mt-4 -mb-4 flex h-[100dvh] overflow-hidden bg-background md:-mx-8 md:-mt-8 md:-mb-8 lg:-mx-10 lg:-mt-10 lg:-mb-10">
+    <div className="page-surface -mx-4 -mt-4 -mb-4 flex h-[100dvh] overflow-hidden bg-background md:-mx-8 md:-mt-8 md:-mb-8 lg:-mx-10 lg:-mt-10 lg:-mb-10">
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="relative z-30 shrink-0 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:backdrop-blur">
           <div className="mx-auto flex max-w-[768px] items-center gap-3 px-4 pt-[calc(1rem+0.25rem)] pb-3 md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]">

@@ -676,5 +676,7 @@
   "trace.install_copied": "Copied",
   "trace.install_copy_failed": "Could not create the install script",
   "trace.install_close": "Close",
-  "common.id": "ID"
+  "common.id": "ID",
+  "theme.to_moonshot": "Switch to Moonshot theme",
+  "theme.to_anthropic": "Switch to Anthropic theme"
 }

@@ -17,7 +17,7 @@ function GuardState({
   description: string;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-3xl border bg-card p-8 text-center shadow-[0_24px_70px_rgba(92,62,29,0.14)]">
         <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">
           {title}
