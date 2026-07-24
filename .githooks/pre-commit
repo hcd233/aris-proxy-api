@@ -21,7 +21,29 @@ fail() {
 }
 
 # --------------------------------------------------------------------------
-# 0. skills symlink sync — mirror .agents/skills into IDE skill directories
+# 0. agent instructions symlink sync — mirror AGENTS.md to CODEBUDDY.md / CLAUDE.md
+# --------------------------------------------------------------------------
+printf "$INFO Running agent instructions symlink sync ...\n"
+
+if [ -f script/sync-agent-instructions-symlinks.sh ]; then
+    chmod +x script/sync-agent-instructions-symlinks.sh 2>/dev/null || true
+    if ! sh script/sync-agent-instructions-symlinks.sh; then
+        fail "agent instructions symlink sync failed. Please fix the issues above before committing."
+    fi
+    AGENTS_LINK_CHANGES=$(git status --porcelain -- CODEBUDDY.md CLAUDE.md)
+    if [ -n "$AGENTS_LINK_CHANGES" ]; then
+        printf "$INFO agent instructions symlinks changed after sync (auto-staging):\n"
+        echo "$AGENTS_LINK_CHANGES" | sed 's/^/       /'
+        echo ""
+        git add CODEBUDDY.md CLAUDE.md
+    fi
+else
+    printf "$INFO script/sync-agent-instructions-symlinks.sh not found — skipping\n"
+fi
+printf "$PASS agent instructions symlink sync\n"
+
+# --------------------------------------------------------------------------
+# 0b. skills symlink sync — mirror .agents/skills into IDE skill directories
 # --------------------------------------------------------------------------
 printf "$INFO Running skills symlink sync ...\n"
 
