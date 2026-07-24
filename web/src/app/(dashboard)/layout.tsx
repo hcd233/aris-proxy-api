@@ -133,15 +133,15 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
       .slice(0, 2);
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 p-2 text-sidebar-foreground transition-all duration-150 ${collapsed ? "justify-center" : ""}`}>
-      <Avatar size="sm">
-        {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
-        <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-medium">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
-      {!collapsed && (
-        <>
+    <div className="flex flex-col gap-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 p-2 text-sidebar-foreground transition-all duration-150">
+      <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
+        <Avatar size="sm">
+          {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
+          <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-medium">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        {!collapsed && (
           <div className="hidden min-w-0 flex-1 md:block">
             <p className="truncate text-sm font-medium leading-none">
               {user.name ?? user.email ?? t("layout.user")}
@@ -152,12 +152,18 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
               </Badge>
             </div>
           </div>
+        )}
+      </div>
+      {!collapsed && (
+        <div className="flex items-center justify-between">
           <LanguageSwitcher />
-          <ThemeSwitcher variant="inline" />
-          <Button variant="ghost" size="icon-sm" onClick={logout} title={t("nav.logout")} className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
-            <LogOut className="size-4" />
-          </Button>
-        </>
+          <div className="flex items-center gap-1">
+            <ThemeSwitcher variant="inline" />
+            <Button variant="ghost" size="icon-sm" onClick={logout} title={t("nav.logout")} className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+              <LogOut className="size-4" />
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
