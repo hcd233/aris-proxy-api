@@ -63,7 +63,7 @@ export default function LoginPage() {
 
   if (processing) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
           <p className="font-display text-3xl font-semibold text-foreground">
             Aris Proxy
@@ -77,7 +77,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--sidebar-primary)_14%,transparent),transparent_55%)]">
           <div>

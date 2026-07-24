@@ -217,3 +217,148 @@
     background: transparent;
   }
 }
+
+/* === Moonshot deep-space theme (fixed dark; independent of .dark) === */
+[data-theme="moonshot"] {
+  --background: #06070d;
+  --foreground: #e6e8f0;
+  --card: rgb(13 15 26 / 0.72);
+  --card-foreground: #e6e8f0;
+  --popover: rgb(15 17 28 / 0.85);
+  --popover-foreground: #e6e8f0;
+  --primary: #7c8cff;
+  --primary-foreground: #ffffff;
+  --primary-hover: #93a2ff;
+  --secondary: rgb(22 26 42 / 0.8);
+  --secondary-foreground: #e6e8f0;
+  --muted: rgb(22 26 42 / 0.8);
+  --muted-foreground: #8a90a8;
+  --accent: rgb(30 35 64 / 0.8);
+  --accent-foreground: #e6e8f0;
+  --destructive: #e06c75;
+  --border: rgb(35 40 65 / 0.8);
+  --input: rgb(35 40 65 / 0.8);
+  --ring: #7c8cff;
+  --chart-1: #7c8cff;
+  --chart-2: #5e6ee0;
+  --chart-3: #9db4ff;
+  --chart-4: #6fe3e0;
+  --chart-5: #2a3050;
+  --sidebar: rgb(10 12 22 / 0.8);
+  --sidebar-foreground: #e6e8f0;
+  --sidebar-primary: #7c8cff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(30 35 64 / 0.65);
+  --sidebar-accent-foreground: #e6e8f0;
+  --sidebar-border: rgb(35 40 65 / 0.8);
+  --sidebar-ring: #7c8cff;
+  --font-heading: var(--font-geist), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --shadow-2xs: 0 1px 2px 0 rgb(90 100 200 / 0.1);
+  --shadow-xs: 0 1px 3px 0 rgb(90 100 200 / 0.14);
+  --shadow-sm: 0 1px 3px 0 rgb(90 100 200 / 0.16), 0 2px 8px -1px rgb(90 100 200 / 0.12);
+  --shadow-md: 0 2px 6px -1px rgb(90 100 200 / 0.18), 0 6px 16px -4px rgb(90 100 200 / 0.14);
+  --shadow-lg: 0 4px 10px -2px rgb(90 100 200 / 0.2), 0 12px 28px -8px rgb(90 100 200 / 0.16);
+  --shadow-xl: 0 8px 18px -4px rgb(90 100 200 / 0.22), 0 20px 44px -12px rgb(90 100 200 / 0.2);
+}
+
+/* Moonshot: page roots become transparent so the starfield shows through.
+ * Only full-page containers carry the marker class; small widgets with
+ * bg-background (switch knob, tabs, tooltips) stay opaque. */
+[data-theme="moonshot"] :where(.page-surface) {
+  background-color: transparent;
+}
+
+/* Moonshot: glassmorphism on cards / sidebar / popovers */
+[data-theme="moonshot"] :where(.bg-card, .bg-sidebar, .bg-popover) {
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+}
+
+/* Moonshot: glow on primary surfaces and active nav items */
+[data-theme="moonshot"] :where(.bg-primary) {
+  box-shadow: 0 0 16px rgb(124 140 255 / 0.35);
+}
+[data-theme="moonshot"] :where(.bg-primary):hover {
+  box-shadow: 0 0 24px rgb(124 140 255 / 0.5);
+}
+[data-theme="moonshot"] :where(.bg-sidebar-accent) {
+  box-shadow: inset 0 0 0 1px rgb(124 140 255 / 0.25);
+}
+
+/* Moonshot: cool-tinted selection & scrollbar */
+[data-theme="moonshot"] ::selection {
+  background: rgb(124 140 255 / 0.3);
+}
+[data-theme="moonshot"] ::-webkit-scrollbar-thumb {
+  background: rgb(124 140 255 / 0.2);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+/* Starfield container + gradient auras (used by ParticleBackground) */
+.particle-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+[data-theme="moonshot"] .particle-bg {
+  opacity: 1;
+}
+.particle-bg canvas {
+  position: absolute;
+  inset: 0;
+}
+.particle-bg .aura {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+}
+.particle-bg .aura-blue {
+  width: 42vw;
+  height: 42vw;
+  left: -12vw;
+  top: -14vh;
+  background: radial-gradient(circle, rgb(59 79 216 / 0.38), transparent 70%);
+  animation: aura-drift-a 26s ease-in-out infinite alternate;
+}
+.particle-bg .aura-violet {
+  width: 38vw;
+  height: 38vw;
+  right: -10vw;
+  bottom: -16vh;
+  background: radial-gradient(circle, rgb(122 79 216 / 0.32), transparent 70%);
+  animation: aura-drift-b 32s ease-in-out infinite alternate;
+}
+@keyframes aura-drift-a {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(7vw, 5vh) scale(1.12); }
+}
+@keyframes aura-drift-b {
+  from { transform: translate(0, 0) scale(1.08); }
+  to { transform: translate(-6vw, -7vh) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .particle-bg .aura {
+    animation: none;
+  }
+}
+
+/* Theme switch transition: color properties only, never width/height */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition:
+    background-color 350ms ease,
+    border-color 350ms ease,
+    color 350ms ease,
+    box-shadow 350ms ease,
+    fill 350ms ease,
+    stroke 350ms ease !important;
+}

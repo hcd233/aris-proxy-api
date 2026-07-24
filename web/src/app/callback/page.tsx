@@ -53,7 +53,7 @@ export default function CallbackPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center">
           <h1 className="font-display text-2xl font-semibold text-destructive">{t("callback.login_failed")}</h1>
           <p className="mt-3 text-sm text-muted-foreground">{error}</p>
@@ -69,7 +69,7 @@ export default function CallbackPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="page-surface flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
         <p className="font-display text-xl font-semibold text-foreground">{t("callback.completing")}</p>
         <p className="mt-2 text-sm text-muted-foreground">{t("callback.please_wait")}</p>
