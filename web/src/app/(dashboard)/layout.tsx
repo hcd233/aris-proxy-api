@@ -201,7 +201,7 @@ export default function DashboardLayout({
 
   return (
     <PermissionGuard>
-      <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      <div className="page-surface flex h-screen overflow-hidden bg-background text-foreground">
         {/* Desktop sidebar */}
         <aside
           className={`hidden md:flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${

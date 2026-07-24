@@ -672,5 +672,7 @@
   "trace.install_copied": "コピーしました",
   "trace.install_copy_failed": "インストールスクリプトを作成できませんでした",
   "trace.install_close": "閉じる",
-  "common.id": "ID"
+  "common.id": "ID",
+  "theme.to_moonshot": "Moonshot テーマに切り替え",
+  "theme.to_anthropic": "Anthropic テーマに切り替え"
 }

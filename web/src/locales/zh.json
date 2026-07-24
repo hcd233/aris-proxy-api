@@ -676,5 +676,7 @@
   "trace.install_copied": "已复制",
   "trace.install_copy_failed": "无法生成安装脚本",
   "trace.install_close": "关闭",
-  "common.id": "ID"
+  "common.id": "ID",
+  "theme.to_moonshot": "切换为 Moonshot 深空主题",
+  "theme.to_anthropic": "切换为 Anthropic 经典主题"
 }

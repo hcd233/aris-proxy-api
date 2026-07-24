@@ -55,3 +55,9 @@ _Avoid_: export bar, download footer
 **Trace Install Dialog（Trace 安装弹窗）**:
 Trace 页面的安装入口。用户点击复制时，前端通过 JWT 实时签发单次下载票据（`POST /api/v1/trace/client/ticket`），生成一段短安装脚本：自动探测 `uname` 映射到 `darwin/linux` × `amd64/arm64`，携带票据 `curl` 下载对应 `aris` 二进制，原子安装到 `~/.aris/bin/aris`，然后执行 `aris trace init --host <origin>`。脚本预览使用占位符，不缓存真实票据；API Key 不出现在脚本中，由终端四步向导以隐藏输入方式收集。
 _Avoid_: codex hook dialog, setup script generator, install wizard
+
+## Theme（主题皮肤）
+
+**Theme（主题皮肤）**:
+整套视觉皮肤的命名集合，取值 `anthropic`（默认，暖色纸质）| `moonshot`（深空科技，固定深色）。持久化于 `localStorage("theme")`，由根布局内联脚本在 hydration 前反映到 `<html data-theme>`，是所有 per-theme 行为的单一事实来源。与明暗模式正交：moonshot 主题不受 `.dark` class 影响。整页根容器携带 `page-surface` 标记类，moonshot 下背景透明以透出星空；小组件不携带。
+_Avoid_: color scheme, dark mode toggle
