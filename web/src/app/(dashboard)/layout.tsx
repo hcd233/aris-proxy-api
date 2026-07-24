@@ -24,6 +24,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import {
@@ -152,6 +153,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
             </div>
           </div>
           <LanguageSwitcher />
+          <ThemeSwitcher variant="inline" />
           <Button variant="ghost" size="icon-sm" onClick={logout} title={t("nav.logout")} className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
             <LogOut className="size-4" />
           </Button>
