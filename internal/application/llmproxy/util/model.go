@@ -17,6 +17,20 @@ func MarshalOpenAIChatCompletionBodyForModel(req *dto.OpenAIChatCompletionReq, m
 	body := *req
 	body.Model = modelName
 	body.Messages = normalizeMessagesForUpstream(body.Messages)
+
+	// 流式请求强制要求上游返回 usage 信息，确保审计 token 计数准确。
+	// 部分上游（如 tokenhub.tencentmaas.com）在 standard streaming 中不返回
+	// usage，必须通过 stream_options.include_usage 显式请求。
+	if body.Stream != nil && *body.Stream {
+		if body.StreamOptions == nil {
+			body.StreamOptions = &dto.OpenAIChatCompletionStreamOptions{
+				IncludeUsage: lo.ToPtr(true),
+			}
+		} else if body.StreamOptions.IncludeUsage == nil || !*body.StreamOptions.IncludeUsage {
+			body.StreamOptions.IncludeUsage = lo.ToPtr(true)
+		}
+	}
+
 	return lo.Must1(MarshalUpstreamBody(&body))
 }
 
