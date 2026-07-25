@@ -23,12 +23,15 @@ import (
 )
 
 type mockOpenAIProxy struct {
-	chatUnaryCalled      bool
-	chatStreamCalled     bool
-	responseUnaryCalled  bool
-	responseStreamCalled bool
-	lastChatBody         []byte
-	openChatStreamErr    error
+	chatUnaryCalled          bool
+	chatStreamCalled         bool
+	responseUnaryCalled      bool
+	responseStreamCalled     bool
+	readChatStreamCalled     bool
+	readResponseStreamCalled bool
+	lastChatBody             []byte
+	openChatStreamErr        error
+	openResponseStreamErr    error
 }
 
 func (p *mockOpenAIProxy) ForwardChatCompletion(_ context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
@@ -58,6 +61,7 @@ func (p *mockOpenAIProxy) OpenChatCompletionStream(_ context.Context, _ vo.Upstr
 }
 
 func (p *mockOpenAIProxy) ReadChatCompletionStream(_ context.Context, _ io.ReadCloser, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+	p.readChatStreamCalled = true
 	chunk := &dto.OpenAIChatCompletionChunk{
 		ID: "chatcmpl-test",
 		Choices: []*dto.OpenAIChatCompletionChunkChoice{{
@@ -85,10 +89,14 @@ func (p *mockOpenAIProxy) ForwardCreateResponse(_ context.Context, _ vo.Upstream
 
 func (p *mockOpenAIProxy) OpenCreateResponseStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.responseStreamCalled = true
+	if p.openResponseStreamErr != nil {
+		return nil, p.openResponseStreamErr
+	}
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
 func (p *mockOpenAIProxy) ReadCreateResponseStream(_ context.Context, _ io.ReadCloser, onEvent func(string, []byte) error) error {
+	p.readResponseStreamCalled = true
 	if onEvent != nil {
 		_ = onEvent("response.completed", []byte(`{"type":"response.completed","response":{"id":"resp_test","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}}`))
 	}
@@ -139,8 +147,10 @@ func buildCompatEndpoint(name string, supportChat, supportResponse, supportMessa
 }
 
 type mockAnthropicProxyForOpenAI struct {
-	messageUnaryCalled  bool
-	messageStreamCalled bool
+	messageUnaryCalled   bool
+	messageStreamCalled  bool
+	readMessageStreamErr error
+	readMessageStreamCnt int
 }
 
 func (p *mockAnthropicProxyForOpenAI) ForwardCreateMessage(_ context.Context, ep vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
@@ -157,10 +167,14 @@ func (p *mockAnthropicProxyForOpenAI) ForwardCreateMessage(_ context.Context, ep
 
 func (p *mockAnthropicProxyForOpenAI) OpenCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.messageStreamCalled = true
+	if p.readMessageStreamErr != nil {
+		return nil, p.readMessageStreamErr
+	}
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
 func (p *mockAnthropicProxyForOpenAI) ReadCreateMessageStream(_ context.Context, _ io.ReadCloser, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+	p.readMessageStreamCnt++
 	if onEvent != nil {
 		_ = onEvent(dto.AnthropicSSEEvent{Event: enum.AnthropicSSEEventTypeContentBlockDelta, Data: []byte(`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ok"}}`)})
 	}
@@ -472,4 +486,97 @@ func TestOpenAICreateResponse_ChatAndAnthropicPrefersChatCompatibility(t *testin
 	}
 	_ = openAIProxy
 	_ = anthropicProxy
+}
+
+// 流式请求上游 Open 阶段失败时，usecase 不得调用 ReadChatCompletionStream。
+// 现有实现通过 upstreamStreamErrorResponse 构造 Huma JSON 响应，Body callback 不消费流。
+// 本测试锁定该行为，避免后续迁移把 Open 错误误延后到 SSE body 阶段。
+func TestOpenAICreateChatCompletion_NativeStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusTooManyRequests,
+		Body:       `{"error":{"message":"rate limited"}}`,
+	}
+	proxy := &mockOpenAIProxy{openChatStreamErr: upstreamErr}
+	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
+		Model:    "test-alias",
+		Messages: []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleUser, Content: &dto.OpenAIMessageContent{Text: "Hello"}}},
+		Stream:   &stream,
+	}}
+
+	rsp, err := uc.CreateChatCompletion(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateChatCompletion() error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("CreateChatCompletion() returned nil response")
+	}
+	if proxy.readChatStreamCalled {
+		t.Fatal("ReadChatCompletionStream must not be called when Open fails")
+	}
+}
+
+// Response API 流式请求上游 Open 阶段失败时，usecase 不得调用 ReadCreateResponseStream。
+func TestOpenAICreateResponse_NativeStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusTooManyRequests,
+		Body:       `{"error":{"message":"rate limited"}}`,
+	}
+	proxy := &mockOpenAIProxy{openResponseStreamErr: upstreamErr}
+	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
+		Model:  lo.ToPtr("test-alias"),
+		Stream: &stream,
+	}}
+
+	rsp, err := uc.CreateResponse(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateResponse() error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("CreateResponse() returned nil response")
+	}
+	if proxy.readResponseStreamCalled {
+		t.Fatal("ReadCreateResponseStream must not be called when Open fails")
+	}
+}
+
+// OpenAI Chat 跨协议（经 Anthropic 上游）流式请求 Open 失败时，不得调用 Anthropic ReadCreateMessageStream。
+func TestOpenAICreateChatCompletion_ViaAnthropicStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusUnauthorized,
+		Body:       `{"error":{"message":"unauthorized"}}`,
+	}
+	anthropicProxy := &mockAnthropicProxyForOpenAI{readMessageStreamErr: upstreamErr}
+	openAIProxy := &mockOpenAIProxy{}
+	// 只支持 Anthropic，强制走 ViaAnthropicMessage 跨协议路径
+	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("anthropic-only", false, false, true), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
+		Model:    "test-alias",
+		Messages: []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleUser, Content: &dto.OpenAIMessageContent{Text: "Hello"}}},
+		Stream:   &stream,
+	}}
+
+	rsp, err := uc.CreateChatCompletion(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateChatCompletion() error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("CreateChatCompletion() returned nil response")
+	}
+	if anthropicProxy.readMessageStreamCnt != 0 {
+		t.Fatalf("ReadCreateMessageStream must not be called when Open fails; got cnt=%d", anthropicProxy.readMessageStreamCnt)
+	}
 }

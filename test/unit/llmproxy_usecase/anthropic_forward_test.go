@@ -3,20 +3,24 @@ package llmproxy_usecase
 import (
 	"context"
 	"io"
+	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
 type mockAnthropicProxyForAnthropic struct {
-	messageUnaryCalled  bool
-	messageStreamCalled bool
+	messageUnaryCalled   bool
+	messageStreamCalled  bool
+	openMessageStreamErr error
+	readMessageStreamCnt int
 }
 
 func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessage(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
@@ -26,10 +30,14 @@ func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessage(_ context.Context,
 
 func (p *mockAnthropicProxyForAnthropic) OpenCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.messageStreamCalled = true
+	if p.openMessageStreamErr != nil {
+		return nil, p.openMessageStreamErr
+	}
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
 func (p *mockAnthropicProxyForAnthropic) ReadCreateMessageStream(_ context.Context, _ io.ReadCloser, _ func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+	p.readMessageStreamCnt++
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
@@ -232,4 +240,75 @@ func TestAnthropicCreateMessage_ChatResponseEndpointUsesChatCompatibility(t *tes
 	}
 	_ = openAIProxy
 	_ = anthropicProxy
+}
+
+// Anthropic Message native 流式请求上游 Open 阶段失败时，usecase 不得调用 ReadCreateMessageStream。
+// 现有实现通过 upstreamStreamErrorResponse 构造 Huma JSON 响应，Body callback 不消费流。
+// 本测试锁定该行为，避免后续迁移把 Open 错误误延后到 SSE body 阶段。
+func TestAnthropicCreateMessage_NativeStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusTooManyRequests,
+		Body:       `{"type":"error","error":{"type":"rate_limit_error","message":"rate limited"}}`,
+	}
+	proxy := &mockAnthropicProxyForAnthropic{openMessageStreamErr: upstreamErr}
+	mockResolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildAnthropicTestModel()}
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
+		Model: "claude-alias",
+		Messages: []*dto.AnthropicMessageParam{
+			{Role: "user", Content: &dto.AnthropicMessageContent{Text: "Hello"}},
+		},
+		Stream: &stream,
+	}}
+
+	rsp, err := uc.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage() error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("CreateMessage() returned nil response")
+	}
+	if proxy.readMessageStreamCnt != 0 {
+		t.Fatalf("ReadCreateMessageStream must not be called when Open fails; got cnt=%d", proxy.readMessageStreamCnt)
+	}
+}
+
+// Anthropic Message 跨协议（经 OpenAI Chat 上游）流式请求 Open 失败时，不得调用 ReadChatCompletionStream。
+func TestAnthropicCreateMessage_ViaChatStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusUnauthorized,
+		Body:       `{"error":{"message":"unauthorized"}}`,
+	}
+	openAIProxy := &mockOpenAIProxy{openChatStreamErr: upstreamErr}
+	anthropicProxy := &mockAnthropicProxyForAnthropic{}
+	// 只支持 OpenAI Chat，强制走 ViaOpenAIChat 跨协议路径
+	mockResolver := &mockResolver{
+		resolveEndpoint: buildCompatEndpoint("chat-only", true, false, false),
+		resolveModel:    buildAnthropicTestModel(),
+	}
+	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, anthropicProxy, openAIProxy, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
+		Model: "claude-alias",
+		Messages: []*dto.AnthropicMessageParam{
+			{Role: "user", Content: &dto.AnthropicMessageContent{Text: "Hello"}},
+		},
+		Stream: &stream,
+	}}
+
+	rsp, err := uc.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage() error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("CreateMessage() returned nil response")
+	}
+	if openAIProxy.readChatStreamCalled {
+		t.Fatal("ReadChatCompletionStream must not be called when Open fails")
+	}
 }
