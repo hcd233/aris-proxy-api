@@ -34,7 +34,10 @@
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
 - 设计方案不确定时，优先启动 `brainstorming` 做快速方案验证，在设计文档中记录决策。
 - 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
-- 修改前先定位相关 handler/usecase/converter/transport/DTO，不做大范围重写。
+- **开发前先读历史经验**：开始开发、排障或重构前，先按 [docs/agents/code-tools.md](code-tools.md) 使用 Serena 读取相关 memory，再使用 CodeGraph 搜索代码上下文。
+- **代码搜索与重构工具分工**：代码符号搜索、调用链和影响分析必须使用 CodeGraph；跨文件代码或符号重构必须使用 Serena。详细规则见 [docs/agents/code-tools.md](code-tools.md)。
+- **提交前沉淀经验**：准备提交代码前，必须使用 Serena 写入本次稳定、可复用的工程经验，再执行提交。
+- **修改前先定位相关 handler/usecase/converter/transport/DTO，不做大范围重写。**
 - 新需求和 bugfix 都应先补或更新测试；bugfix 必须有能复现问题的回归用例。
 - 端到端用例**必须**沉淀到代码仓库，放 `test/e2e/<topic>/` 并按下文 E2E 工程骨架维护，测试通过后再提交并推送；**不允许**只用 `curl` 跑完就算闭环。
 - 测试和 lint 通过后，使用 `ponytail-review` 审查本次 diff 的过度工程（投机抽象、重复造轮子、死代码），与 lint 互补——lint 查规范，ponytail-review 查复杂度。审查通过后，只有用户明确要求提交、推送或部署时才执行 git 提交/发布流程。
