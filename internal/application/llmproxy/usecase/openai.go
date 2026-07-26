@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
@@ -56,7 +55,7 @@ func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRs
 	return u.modelsQuery.Handle(ctx)
 }
 
-func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error) {
+func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (port.Result, error) {
 	log := logger.WithCtx(ctx)
 
 	var compatRoute enum.CompatRoute
@@ -66,7 +65,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
-		return proxyutil.SendOpenAIModelNotFoundError(req.Body.Model), nil
+		return nil, proxyutil.SendOpenAIModelNotFoundError(req.Body.Model)
 	}
 
 	if matched := u.checkContent(req); len(matched) > 0 {
@@ -90,23 +89,23 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 			ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
 		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
-		return proxyutil.SendOpenAIContentBlockedError(), nil   //nolint:nilerr // error returned in response body
+		return nil, proxyutil.SendOpenAIContentBlockedError()   //nolint:nilerr // error returned in response body
 	}
 
 	switch compatRoute {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
-		return u.forwardChatNative(ctx, req, m, ep, upstream, stream), nil
+		return u.forwardChatNative(ctx, req, m, ep, upstream, stream)
 	case enum.CompatRouteViaAnthropicMessage:
-		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model), nil
+		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model)
 	default:
 		log.Error("[OpenAIUseCase] Unsupported chat compatibility route", zap.String("model", req.Body.Model))
-		return proxyutil.SendOpenAIModelNotFoundError(req.Body.Model), nil
+		return nil, proxyutil.SendOpenAIModelNotFoundError(req.Body.Model)
 	}
 }
 
-func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error) {
+func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (port.Result, error) {
 	log := logger.WithCtx(ctx)
 
 	model := lo.FromPtr(req.Body.Model)
@@ -117,21 +116,21 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
-		return proxyutil.SendOpenAIModelNotFoundError(model), nil
+		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
 
 	switch compatRoute {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
-		return u.forwardResponseNative(ctx, req, m, ep, upstream, stream), nil
+		return u.forwardResponseNative(ctx, req, m, ep, upstream, stream)
 	case enum.CompatRouteViaOpenAIChat:
-		return u.forwardResponseViaChat(ctx, req, m, ep), nil
+		return u.forwardResponseViaChat(ctx, req, m, ep)
 	case enum.CompatRouteViaAnthropicMessage:
-		return u.forwardResponseViaAnthropic(ctx, req, m, ep), nil
+		return u.forwardResponseViaAnthropic(ctx, req, m, ep)
 	default:
 		log.Error("[OpenAIUseCase] Unsupported response compatibility route", zap.String("model", model))
-		return proxyutil.SendOpenAIModelNotFoundError(model), nil
+		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
 }
 

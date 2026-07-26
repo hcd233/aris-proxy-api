@@ -1,7 +1,6 @@
 package apiutil
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -56,7 +54,7 @@ var streamLifecycleKey streamLifecycleKeyType
 // WithStreamLifecycle 在 ctx 上挂载流式写入的起止回调。
 //
 // onStart 在真正开始向客户端写流时触发，onEnd 在流结束（含异常/中断）时触发；
-// 二者由 WrapStreamResponse 在 SendStreamWriter 回调内部 bracket 真实写入过程。
+// 二者由 adapter.wrapStreamResult 在 SendStreamWriter 回调内部 bracket 真实写入过程。
 //
 //	@param ctx context.Context
 //	@param onStart func()
@@ -71,36 +69,6 @@ func WithStreamLifecycle(ctx context.Context, onStart, onEnd func()) context.Con
 func streamLifecycleFromContext(ctx context.Context) streamLifecycle {
 	lc, _ := ctx.Value(streamLifecycleKey).(streamLifecycle)
 	return lc
-}
-
-func WrapStreamResponse(ctx context.Context, handler func(w *bufio.Writer)) *huma.StreamResponse {
-	lc := streamLifecycleFromContext(ctx)
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			fiberCtx := humafiber.Unwrap(humaCtx)
-			if headers := util.GetPassthroughResponseHeaders(humaCtx.Context()); headers != nil {
-				for k, hv := range headers {
-					fiberCtx.Set(k, hv)
-				}
-			}
-			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
-			fiberCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fiberCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
-			fiberCtx.Status(fiber.StatusOK)
-			// 在 SendStreamWriter 回调内部 bracket，确保 onStart/onEnd 覆盖真实流式写入全程。
-			_ = fiberCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // stream write errors propagate via the Fiber error handler
-				if lc.onStart != nil {
-					lc.onStart()
-				}
-				if lc.onEnd != nil {
-					defer lc.onEnd()
-				}
-				handler(w)
-			})
-		},
-	}
 }
 
 type JSONResponseWriter struct {

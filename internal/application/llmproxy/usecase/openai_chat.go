@@ -1,18 +1,19 @@
 package usecase
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
+	"maps"
+	"net/http"
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -20,9 +21,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-func (u *openAIUseCase) forwardChatNative(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatNative(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) (port.Result, error) {
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(req.Body, upstream.Model)
 	if stream {
 		return u.forwardChatNativeStream(ctx, req, m, ep, upstream, body)
@@ -30,12 +32,12 @@ func (u *openAIUseCase) forwardChatNative(ctx context.Context, req *dto.OpenAICh
 	return u.forwardChatNativeUnary(ctx, req, m, ep, upstream, body)
 }
 
-func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, exposedModel string) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, exposedModel string) (port.Result, error) {
 	conv := &converter.AnthropicProtocolConverter{}
 	anthropicReq, convErr := conv.FromOpenAIRequest(req.Body)
 	if convErr != nil {
 		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat request to anthropic", zap.Error(convErr))
-		return proxyutil.SendOpenAIModelNotFoundError(exposedModel)
+		return nil, proxyutil.SendOpenAIModelNotFoundError(exposedModel)
 	}
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	upstream := toTransportEndpoint(m, ep, true)
@@ -46,142 +48,219 @@ func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.Op
 	return u.forwardChatViaAnthropicUnary(ctx, req, m, upstream, exposedModel, ep.Name(), body)
 }
 
-func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) (port.Result, error) {
 	log := logger.WithCtx(ctx)
 	startTime := time.Now()
 	stream, err := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailure(ctx, m, u.taskSubmitter, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
-		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
-	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
-		timer := newStreamTimer()
-		toolCallIDs := make(map[int]string)
-
-		completion, err := u.openAIProxy.ReadChatCompletionStream(ctx, stream, func(chunk *dto.OpenAIChatCompletionChunk) error {
-			if proxyutil.HasNonEmptyDelta(chunk) {
-				timer.markFirstToken()
-			}
-			proxyutil.NormalizeOpenAIStreamToolCalls(chunk, toolCallIDs)
-			chunk.Model = req.Body.Model
-			chunkData, marshalErr := sonic.Marshal(chunk)
-			if marshalErr != nil {
-				log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
-				return marshalErr
-			}
-			if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData); writeErr != nil {
-				log.Debug("[OpenAIUseCase] Failed to write SSE chunk", zap.Error(writeErr))
-			}
-			return w.Flush()
-		})
-		timer.finish()
-		if err == nil {
-			if _, doneErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal); doneErr != nil {
-				log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(doneErr))
-			}
-			if flushErr := w.Flush(); flushErr != nil {
-				log.Debug("[OpenAIUseCase] Failed to flush SSE writer", zap.Error(flushErr))
-			}
-		} else {
-			proxyutil.WriteUpstreamSSEError(ctx, w, err)
-		}
-
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, m.Alias().String())
-
-		var usage *dto.OpenAICompletionUsage
-		if completion != nil {
-			usage = completion.Usage
-		}
-		recordModelCall(ctx, u.taskSubmitter, callOutcome{
-			model:               m,
-			exposedModel:        req.Body.Model,
-			endpoint:            ep.Name(),
-			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
-			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
-			firstTokenLatencyMs: timer.firstLatencyMs,
-			streamDurationMs:    timer.durationMs,
-			usage:               openAITokenUsage{usage},
-			err:                 err,
-		})
-	})
+	return &port.StreamResult{
+		Protocol: enum.ProtocolKindOpenAI,
+		Open: func(ctx context.Context) (port.Stream, error) {
+			return &openAIChatNativeStream{
+				u:      u,
+				ctx:    ctx,
+				req:    req,
+				m:      m,
+				ep:     ep,
+				stream: stream,
+				timer:  newStreamTimer(),
+				log:    log,
+			}, nil
+		},
+	}, nil
 }
 
-func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
-	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
-		startTime := time.Now()
-		completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
-		totalMs := time.Since(startTime).Milliseconds()
-		if err != nil {
-			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(ctx, m, u.taskSubmitter, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
-			return
-		}
-		completion.Model = req.Body.Model
-		writer.WriteJSON(completion)
+func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) (port.Result, error) {
+	startTime := time.Now()
+	completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
+	totalMs := time.Since(startTime).Milliseconds()
+	if err != nil {
+		auditFailure(ctx, m, u.taskSubmitter, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+	}
+	completion.Model = req.Body.Model
+	bodyBytes := lo.Must1(sonic.Marshal(completion))
 
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
-
-		recordModelCall(ctx, u.taskSubmitter, callOutcome{
-			model:               m,
-			exposedModel:        req.Body.Model,
-			endpoint:            ep.Name(),
-			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
-			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
-			firstTokenLatencyMs: totalMs,
-			usage:               openAITokenUsage{completion.Usage},
-			successStatus:       true,
-		})
+	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
+	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+		model:               m,
+		exposedModel:        req.Body.Model,
+		endpoint:            ep.Name(),
+		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+		apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+		firstTokenLatencyMs: totalMs,
+		usage:               openAITokenUsage{completion.Usage},
+		successStatus:       true,
 	})
+
+	headers := buildPassthroughHeaders(ctx)
+	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
+	return &port.JSONResult{
+		StatusCode: http.StatusOK,
+		Headers:    headers,
+		Body:       bodyBytes,
+		Protocol:   enum.ProtocolKindOpenAI,
+	}, nil
 }
 
-func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) (port.Result, error) {
 	startTime := time.Now()
 	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
-		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
-	return apiutil.WrapStreamResponse(ctx, u.forwardChatViaAnthropicStreamBody(ctx, req, m, stream, exposedModel, endpoint))
+	return &port.StreamResult{
+		Protocol: enum.ProtocolKindOpenAI,
+		Open: func(ctx context.Context) (port.Stream, error) {
+			return &openAIChatViaAnthropicStream{
+				u:            u,
+				ctx:          ctx,
+				req:          req,
+				m:            m,
+				stream:       stream,
+				exposedModel: exposedModel,
+				endpoint:     endpoint,
+				timer:        newStreamTimer(),
+				conv:         &converter.AnthropicProtocolConverter{},
+				chunkID:      fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
+				allChunks:    make([]*dto.OpenAIChatCompletionChunk, 0),
+			}, nil
+		},
+	}, nil
 }
 
-func (u *openAIUseCase) forwardChatViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, stream io.ReadCloser, exposedModel, endpoint string) func(w *bufio.Writer) {
+func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) (port.Result, error) {
 	conv := &converter.AnthropicProtocolConverter{}
-	chunkID := fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix)
-	return func(w *bufio.Writer) {
-		timer := newStreamTimer()
-		var allChunks []*dto.OpenAIChatCompletionChunk
-
-		onEvent := u.buildOpenAIChatStreamCallback(conv, w, chunkID, exposedModel, timer, &allChunks)
-		anthropicMsg, err := u.anthropicProxy.ReadCreateMessageStream(ctx, stream, onEvent)
-		timer.finish()
-		u.finalizeOpenAIChatStream(ctx, w, err)
-		completion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails
-		if completion != nil {
-			completion.Model = exposedModel
-		}
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, err, m.Alias().String())
-		recordModelCall(ctx, u.taskSubmitter, callOutcome{
-			model:               m,
-			exposedModel:        exposedModel,
-			endpoint:            endpoint,
-			upstreamProtocol:    enum.ProtocolAnthropicMessage,
-			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
-			firstTokenLatencyMs: timer.firstLatencyMs,
-			streamDurationMs:    timer.durationMs,
-			usage:               anthropicTokenUsage{anthropicMsg},
-			err:                 err,
-		})
+	startTime := time.Now()
+	anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
+	totalMs := time.Since(startTime).Milliseconds()
+	if err != nil {
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
+	completion, convErr := conv.ToOpenAIResponse(anthropicMsg)
+	if convErr != nil {
+		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert anthropic message to chat completion", zap.Error(convErr))
+		return nil, &port.ProxyError{
+			StatusCode: http.StatusInternalServerError,
+			Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+			Body:       openAIInternalErrorBody,
+			Cause:      convErr,
+			Protocol:   enum.ProtocolKindOpenAI,
+		}
+	}
+	completion.Model = exposedModel
+	bodyBytes := lo.Must1(sonic.Marshal(completion))
+
+	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
+	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+		model:               m,
+		exposedModel:        exposedModel,
+		endpoint:            endpoint,
+		upstreamProtocol:    enum.ProtocolAnthropicMessage,
+		apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+		firstTokenLatencyMs: totalMs,
+		usage:               anthropicTokenUsage{anthropicMsg},
+		successStatus:       true,
+	})
+
+	headers := buildPassthroughHeaders(ctx)
+	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
+	return &port.JSONResult{
+		StatusCode: http.StatusOK,
+		Headers:    headers,
+		Body:       bodyBytes,
+		Protocol:   enum.ProtocolKindOpenAI,
+	}, nil
 }
 
-func (u *openAIUseCase) buildOpenAIChatStreamCallback(conv *converter.AnthropicProtocolConverter, w *bufio.Writer, chunkID, exposedModel string, timer *streamTimer, allChunks *[]*dto.OpenAIChatCompletionChunk) func(dto.AnthropicSSEEvent) error {
-	return func(event dto.AnthropicSSEEvent) error {
-		if event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
-			timer.markFirstToken()
+// openAIChatNativeStream 实现 port.Stream，消费 OpenAI Chat Completion 上游流。
+type openAIChatNativeStream struct {
+	u      *openAIUseCase
+	ctx    context.Context
+	req    *dto.OpenAIChatCompletionRequest
+	m      *aggregate.Model
+	ep     *aggregate.Endpoint
+	stream io.ReadCloser
+	timer  *streamTimer
+	log    *zap.Logger
+}
+
+func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) error {
+	toolCallIDs := make(map[int]string)
+	completion, err := s.u.openAIProxy.ReadChatCompletionStream(ctx, s.stream, func(chunk *dto.OpenAIChatCompletionChunk) error {
+		if proxyutil.HasNonEmptyDelta(chunk) {
+			s.timer.markFirstToken()
 		}
-		chunks, convErr := conv.ToOpenAISSEResponse(event, exposedModel, chunkID)
+		proxyutil.NormalizeOpenAIStreamToolCalls(chunk, toolCallIDs)
+		chunk.Model = s.req.Body.Model
+		chunkData, marshalErr := sonic.Marshal(chunk)
+		if marshalErr != nil {
+			s.log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
+			return marshalErr
+		}
+		return sink.WriteEvent("", chunkData)
+	})
+	s.timer.finish()
+	if err == nil {
+		if writeErr := sink.WriteEvent("", []byte(constant.SSEDoneSignal)); writeErr != nil {
+			s.log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(writeErr))
+		}
+	} else {
+		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
+	}
+
+	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.Alias().String())
+
+	var usage *dto.OpenAICompletionUsage
+	if completion != nil {
+		usage = completion.Usage
+	}
+	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+		model:               s.m,
+		exposedModel:        s.req.Body.Model,
+		endpoint:            s.ep.Name(),
+		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+		apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+		firstTokenLatencyMs: s.timer.firstLatencyMs,
+		streamDurationMs:    s.timer.durationMs,
+		usage:               openAITokenUsage{usage},
+		err:                 err,
+	})
+	return nil
+}
+
+func (s *openAIChatNativeStream) Close() error {
+	return nil // ReadChatCompletionStream 内部已经关闭 stream
+}
+
+// openAIChatViaAnthropicStream 实现 port.Stream，消费 Anthropic 上游流并转换为 OpenAI Chat chunk。
+type openAIChatViaAnthropicStream struct {
+	u            *openAIUseCase
+	ctx          context.Context
+	req          *dto.OpenAIChatCompletionRequest
+	m            *aggregate.Model
+	stream       io.ReadCloser
+	exposedModel string
+	endpoint     string
+	timer        *streamTimer
+	conv         *converter.AnthropicProtocolConverter
+	chunkID      string
+	allChunks    []*dto.OpenAIChatCompletionChunk
+}
+
+func (s *openAIChatViaAnthropicStream) Read(ctx context.Context, sink port.EventSink) error {
+	anthropicMsg, err := s.u.anthropicProxy.ReadCreateMessageStream(ctx, s.stream, func(event dto.AnthropicSSEEvent) error {
+		if event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
+			s.timer.markFirstToken()
+		}
+		chunks, convErr := s.conv.ToOpenAISSEResponse(event, s.exposedModel, s.chunkID)
 		if convErr != nil {
 			return convErr
 		}
@@ -189,55 +268,57 @@ func (u *openAIUseCase) buildOpenAIChatStreamCallback(conv *converter.AnthropicP
 			if chunk == nil {
 				continue
 			}
-			*allChunks = append(*allChunks, chunk)
+			s.allChunks = append(s.allChunks, chunk)
 			chunkData, marshalErr := sonic.Marshal(chunk)
 			if marshalErr != nil {
 				return marshalErr
 			}
-			fmt.Fprintf(w, constant.SSEDataFrameTemplate, chunkData) //nolint:errcheck // best-effort write
+			if writeErr := sink.WriteEvent("", chunkData); writeErr != nil {
+				return writeErr
+			}
 		}
-		return w.Flush()
+		return nil
+	})
+	s.timer.finish()
+	s.finalizeOpenAIChatStream(ctx, sink, err)
+
+	completion, _ := proxyutil.ConcatChatCompletionChunks(s.allChunks) //nolint:errcheck // store even if concat fails
+	if completion != nil {
+		completion.Model = s.exposedModel
 	}
+	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.Alias().String())
+	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+		model:               s.m,
+		exposedModel:        s.exposedModel,
+		endpoint:            s.endpoint,
+		upstreamProtocol:    enum.ProtocolAnthropicMessage,
+		apiProtocol:         enum.ProtocolOpenAIChatCompletion,
+		firstTokenLatencyMs: s.timer.firstLatencyMs,
+		streamDurationMs:    s.timer.durationMs,
+		usage:               anthropicTokenUsage{anthropicMsg},
+		err:                 err,
+	})
+	return nil
 }
 
-func (u *openAIUseCase) finalizeOpenAIChatStream(ctx context.Context, w *bufio.Writer, err error) {
+func (s *openAIChatViaAnthropicStream) Close() error {
+	return nil // ReadCreateMessageStream 内部已经关闭 stream
+}
+
+func (s *openAIChatViaAnthropicStream) finalizeOpenAIChatStream(ctx context.Context, sink port.EventSink, err error) {
 	if err != nil {
-		proxyutil.WriteUpstreamSSEError(ctx, w, err)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
 		return
 	}
-	fmt.Fprintf(w, constant.SSEDataFrameTemplate, constant.SSEDoneSignal) //nolint:errcheck // best-effort write
-	_ = w.Flush()                                                         //nolint:errcheck // flush best effort on stream close
+	_ = sink.WriteEvent("", []byte(constant.SSEDoneSignal)) //nolint:errcheck // best-effort write
 }
 
-func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) *huma.StreamResponse {
-	conv := &converter.AnthropicProtocolConverter{}
-	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
-		startTime := time.Now()
-		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
-		totalMs := time.Since(startTime).Milliseconds()
-		if err != nil {
-			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
-			return
-		}
-		completion, convErr := conv.ToOpenAIResponse(anthropicMsg)
-		if convErr != nil {
-			logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert anthropic message to chat completion", zap.Error(convErr))
-			writer.WriteJSON(openAIInternalErrorBody)
-			return
-		}
-		completion.Model = exposedModel
-		writer.WriteJSON(completion)
-		u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
-		recordModelCall(ctx, u.taskSubmitter, callOutcome{
-			model:               m,
-			exposedModel:        exposedModel,
-			endpoint:            endpoint,
-			upstreamProtocol:    enum.ProtocolAnthropicMessage,
-			apiProtocol:         enum.ProtocolOpenAIChatCompletion,
-			firstTokenLatencyMs: totalMs,
-			usage:               anthropicTokenUsage{anthropicMsg},
-			successStatus:       true,
-		})
-	})
+// buildPassthroughHeaders 从 context 取出允许透传的上游响应 header。
+// application 只收集 header map，不写入 HTTP context；由 adapter 写入 Huma response。
+func buildPassthroughHeaders(ctx context.Context) map[string]string {
+	headers := map[string]string{}
+	if passthrough := util.GetPassthroughResponseHeaders(ctx); passthrough != nil {
+		maps.Copy(headers, passthrough)
+	}
+	return headers
 }

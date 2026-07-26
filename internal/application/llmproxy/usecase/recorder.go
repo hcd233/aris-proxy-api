@@ -2,11 +2,9 @@ package usecase
 
 import (
 	"context"
+	"net/http"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
-
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -135,9 +133,9 @@ func recordModelCall(ctx context.Context, submitter TaskSubmitter, out callOutco
 	}
 
 	if out.successStatus {
-		task.UpstreamStatusCode = fiber.StatusOK
+		task.UpstreamStatusCode = http.StatusOK
 	} else {
-		task.UpstreamStatusCode, task.ErrorMessage = apiutil.ExtractUpstreamStatusAndError(out.err)
+		task.UpstreamStatusCode, task.ErrorMessage = extractUpstreamStatusAndError(out.err)
 	}
 	if out.responseStatus != nil {
 		task.SetErrorFromResponseStatus(out.responseStatus)

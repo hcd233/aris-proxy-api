@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
@@ -46,7 +47,7 @@ func TestWriteAnthropicMessageStop_Frame(t *testing.T) {
 			var buf bytes.Buffer
 			w := bufio.NewWriter(&buf)
 
-			if err := proxyutil.WriteAnthropicMessageStop(w); err != nil {
+			if err := proxyutil.WriteAnthropicMessageStop(apiutil.NewSSEWriter(w)); err != nil {
 				t.Fatalf("WriteAnthropicMessageStop unexpected error: %v", err)
 			}
 

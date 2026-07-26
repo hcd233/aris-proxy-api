@@ -5,21 +5,19 @@ import (
 	"fmt"
 
 	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
+	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/util"
-
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 var anthropicInternalErrorBody = lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
@@ -65,7 +63,7 @@ func (u *anthropicUseCase) CountTokens(ctx context.Context, req *dto.AnthropicCo
 	return u.countTokensQuery.Handle(ctx, req)
 }
 
-func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
+func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (port.Result, error) {
 	log := logger.WithCtx(ctx)
 
 	var compatRoute enum.CompatRoute
@@ -75,7 +73,7 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	})
 	if err != nil {
 		log.Error("[AnthropicUseCase] Model not found or unsupported for messages API", zap.String("model", req.Body.Model), zap.Error(err))
-		return proxyutil.SendAnthropicModelNotFoundError(req.Body.Model), nil
+		return nil, proxyutil.SendAnthropicModelNotFoundError(req.Body.Model)
 	}
 
 	if matched := u.checkContent(req); len(matched) > 0 {
@@ -99,7 +97,7 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 			ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
 		}
 		_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask)  //nolint:errcheck // best-effort audit
-		return proxyutil.SendAnthropicContentBlockedError(), nil //nolint:nilerr // error returned in response body
+		return nil, proxyutil.SendAnthropicContentBlockedError() //nolint:nilerr // error returned in response body
 	}
 
 	exposedModel := req.Body.Model
@@ -107,11 +105,11 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	case enum.CompatRouteNative:
 		stream := req.Body.Stream != nil && *req.Body.Stream
 		upstream := toTransportEndpoint(m, ep, true)
-		return u.forwardMessageNative(ctx, req, m, ep, upstream, exposedModel, stream), nil
+		return u.forwardMessageNative(ctx, req, m, ep, upstream, exposedModel, stream)
 	case enum.CompatRouteViaOpenAIChat:
-		return u.forwardMessageViaChat(ctx, req, m, ep, exposedModel), nil
+		return u.forwardMessageViaChat(ctx, req, m, ep, exposedModel)
 	default:
 		log.Error("[AnthropicUseCase] Unsupported messages compatibility route", zap.String("model", req.Body.Model))
-		return proxyutil.SendAnthropicModelNotFoundError(req.Body.Model), nil
+		return nil, proxyutil.SendAnthropicModelNotFoundError(req.Body.Model)
 	}
 }
