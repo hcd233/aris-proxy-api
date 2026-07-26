@@ -2,17 +2,15 @@ package llmproxy_usecase
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
-	"github.com/gofiber/fiber/v3"
 	"github.com/samber/lo"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -23,12 +21,15 @@ import (
 )
 
 type mockOpenAIProxy struct {
-	chatUnaryCalled      bool
-	chatStreamCalled     bool
-	responseUnaryCalled  bool
-	responseStreamCalled bool
-	lastChatBody         []byte
-	openChatStreamErr    error
+	chatUnaryCalled          bool
+	chatStreamCalled         bool
+	responseUnaryCalled      bool
+	responseStreamCalled     bool
+	readChatStreamCalled     bool
+	readResponseStreamCalled bool
+	lastChatBody             []byte
+	openChatStreamErr        error
+	openResponseStreamErr    error
 }
 
 func (p *mockOpenAIProxy) ForwardChatCompletion(_ context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
@@ -58,6 +59,7 @@ func (p *mockOpenAIProxy) OpenChatCompletionStream(_ context.Context, _ vo.Upstr
 }
 
 func (p *mockOpenAIProxy) ReadChatCompletionStream(_ context.Context, _ io.ReadCloser, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+	p.readChatStreamCalled = true
 	chunk := &dto.OpenAIChatCompletionChunk{
 		ID: "chatcmpl-test",
 		Choices: []*dto.OpenAIChatCompletionChunkChoice{{
@@ -85,10 +87,14 @@ func (p *mockOpenAIProxy) ForwardCreateResponse(_ context.Context, _ vo.Upstream
 
 func (p *mockOpenAIProxy) OpenCreateResponseStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.responseStreamCalled = true
+	if p.openResponseStreamErr != nil {
+		return nil, p.openResponseStreamErr
+	}
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
 func (p *mockOpenAIProxy) ReadCreateResponseStream(_ context.Context, _ io.ReadCloser, onEvent func(string, []byte) error) error {
+	p.readResponseStreamCalled = true
 	if onEvent != nil {
 		_ = onEvent("response.completed", []byte(`{"type":"response.completed","response":{"id":"resp_test","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}}`))
 	}
@@ -139,8 +145,10 @@ func buildCompatEndpoint(name string, supportChat, supportResponse, supportMessa
 }
 
 type mockAnthropicProxyForOpenAI struct {
-	messageUnaryCalled  bool
-	messageStreamCalled bool
+	messageUnaryCalled   bool
+	messageStreamCalled  bool
+	readMessageStreamErr error
+	readMessageStreamCnt int
 }
 
 func (p *mockAnthropicProxyForOpenAI) ForwardCreateMessage(_ context.Context, ep vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
@@ -157,10 +165,14 @@ func (p *mockAnthropicProxyForOpenAI) ForwardCreateMessage(_ context.Context, ep
 
 func (p *mockAnthropicProxyForOpenAI) OpenCreateMessageStream(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (io.ReadCloser, error) {
 	p.messageStreamCalled = true
+	if p.readMessageStreamErr != nil {
+		return nil, p.readMessageStreamErr
+	}
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
 func (p *mockAnthropicProxyForOpenAI) ReadCreateMessageStream(_ context.Context, _ io.ReadCloser, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+	p.readMessageStreamCnt++
 	if onEvent != nil {
 		_ = onEvent(dto.AnthropicSSEEvent{Event: enum.AnthropicSSEEventTypeContentBlockDelta, Data: []byte(`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ok"}}`)})
 	}
@@ -182,6 +194,7 @@ func buildTestModel() *aggregate.Model {
 	return m
 }
 
+// Native 流式请求成功时返回 *port.StreamResult，Protocol 为 OpenAI；Open callback 在 adapter 调用前不执行。
 func TestOpenAICreateChatCompletion_NativeStream(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
@@ -197,16 +210,32 @@ func TestOpenAICreateChatCompletion_NativeStream(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateChatCompletion(context.Background(), req)
+	result, err := uc.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateChatCompletion() error: %v", err)
 	}
-	if rsp == nil {
-		t.Fatal("CreateChatCompletion() returned nil response")
+	streamResult, ok := result.(*port.StreamResult)
+	if !ok {
+		t.Fatalf("result = %T, want *port.StreamResult", result)
+	}
+	if streamResult.Protocol != enum.ProtocolKindOpenAI {
+		t.Fatalf("protocol = %v, want %v", streamResult.Protocol, enum.ProtocolKindOpenAI)
+	}
+	if streamResult.Open == nil {
+		t.Fatal("StreamResult.Open callback is nil")
+	}
+	// 上游 Open 已在 usecase 内建立连接；Read 阶段需等 adapter 调用 Stream.Read
+	if !proxy.chatStreamCalled {
+		t.Fatal("OpenChatCompletionStream must be called by usecase to establish upstream")
+	}
+	if proxy.readChatStreamCalled {
+		t.Fatal("ReadChatCompletionStream must not be called until adapter invokes Stream.Read")
 	}
 }
 
-// 流式请求在上游建连即失败时，HTTP 状态码与错误体必须透传上游，而非 200 + SSE 错误帧。
+// 流式请求在上游建连即失败时，application 必须以 *port.ProxyError 透传上游状态码与错误体，
+// 而非返回 200 + SSE 错误帧（Open 错误发生在 SSE 头写出之前，不应进入流）。
+// HTTP 状态码与错误体透传由 adapter 根据 ProxyError 写出，本测试在 application 边界锁定该契约。
 func TestOpenAICreateChatCompletion_StreamOpenErrorPassthrough(t *testing.T) {
 	t.Parallel()
 	upstreamErr := &model.UpstreamError{
@@ -224,35 +253,26 @@ func TestOpenAICreateChatCompletion_StreamOpenErrorPassthrough(t *testing.T) {
 		Stream:   &stream,
 	}}
 
-	app := fiber.New()
-	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))
-	huma.Register(api, huma.Operation{
-		OperationID: "chatStream",
-		Method:      http.MethodPost,
-		Path:        "/chat",
-	}, func(ctx context.Context, _ *struct{}) (*huma.StreamResponse, error) {
-		return uc.CreateChatCompletion(ctx, req)
-	})
-
-	httpReq := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/chat", http.NoBody)
-	resp, err := app.Test(httpReq, fiber.TestConfig{Timeout: 0})
-	if err != nil {
-		t.Fatalf("chat stream request: %v", err)
+	result, err := uc.CreateChatCompletion(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (Open error must not produce a Result)", result)
 	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusTooManyRequests {
-		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusTooManyRequests)
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
+	if proxyErr.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want %d", proxyErr.StatusCode, http.StatusTooManyRequests)
 	}
-	if string(body) != upstreamErr.Body {
-		t.Fatalf("body = %q, want upstream body %q", string(body), upstreamErr.Body)
+	if string(proxyErr.Body) != upstreamErr.Body {
+		t.Fatalf("body = %q, want upstream body %q", string(proxyErr.Body), upstreamErr.Body)
+	}
+	if proxyErr.Protocol != enum.ProtocolKindOpenAI {
+		t.Fatalf("protocol = %v, want %v", proxyErr.Protocol, enum.ProtocolKindOpenAI)
 	}
 }
 
+// Native unary 请求成功时返回 *port.JSONResult(200)，Protocol 为 OpenAI，body 为非空 JSON。
 func TestOpenAICreateChatCompletion_NativeUnary(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
@@ -268,15 +288,26 @@ func TestOpenAICreateChatCompletion_NativeUnary(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateChatCompletion(context.Background(), req)
+	result, err := uc.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateChatCompletion() error: %v", err)
 	}
-	if rsp == nil {
-		t.Fatal("CreateChatCompletion() returned nil response")
+	jsonResult, ok := result.(*port.JSONResult)
+	if !ok {
+		t.Fatalf("result = %T, want *port.JSONResult", result)
+	}
+	if jsonResult.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", jsonResult.StatusCode, http.StatusOK)
+	}
+	if jsonResult.Protocol != enum.ProtocolKindOpenAI {
+		t.Fatalf("protocol = %v, want %v", jsonResult.Protocol, enum.ProtocolKindOpenAI)
+	}
+	if len(jsonResult.Body) == 0 {
+		t.Fatal("JSONResult.Body is empty")
 	}
 }
 
+// Model not found 时，application 必须以 *port.ProxyError(404) 返回，由 adapter 写为 HTTP 404 JSON 响应。
 func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
 	t.Parallel()
 	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
@@ -291,15 +322,23 @@ func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateChatCompletion(context.Background(), req)
-	if err != nil {
-		t.Fatalf("CreateChatCompletion() error: %v", err)
+	result, err := uc.CreateChatCompletion(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (model not found must not produce a Result)", result)
 	}
-	if rsp == nil {
-		t.Fatal("CreateChatCompletion() returned nil response")
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
+	}
+	if proxyErr.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", proxyErr.StatusCode, http.StatusNotFound)
+	}
+	if proxyErr.Protocol != enum.ProtocolKindOpenAI {
+		t.Fatalf("protocol = %v, want %v", proxyErr.Protocol, enum.ProtocolKindOpenAI)
 	}
 }
 
+// Responses API native 流式请求成功时返回 *port.StreamResult，Protocol 为 OpenAI。
 func TestOpenAICreateResponse_NativeStream(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
@@ -312,15 +351,26 @@ func TestOpenAICreateResponse_NativeStream(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateResponse(context.Background(), req)
+	result, err := uc.CreateResponse(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateResponse() error: %v", err)
 	}
-	if rsp == nil {
-		t.Fatal("CreateResponse() returned nil response")
+	streamResult, ok := result.(*port.StreamResult)
+	if !ok {
+		t.Fatalf("result = %T, want *port.StreamResult", result)
+	}
+	if streamResult.Protocol != enum.ProtocolKindOpenAI {
+		t.Fatalf("protocol = %v, want %v", streamResult.Protocol, enum.ProtocolKindOpenAI)
+	}
+	if streamResult.Open == nil {
+		t.Fatal("StreamResult.Open callback is nil")
+	}
+	if proxy.readResponseStreamCalled {
+		t.Fatal("ReadCreateResponseStream must not be called until adapter invokes Stream.Read")
 	}
 }
 
+// Responses API native unary 请求成功时返回 *port.JSONResult(200)，Protocol 为 OpenAI。
 func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
@@ -333,12 +383,22 @@ func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateResponse(context.Background(), req)
+	result, err := uc.CreateResponse(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateResponse() error: %v", err)
 	}
-	if rsp == nil {
-		t.Fatal("CreateResponse() returned nil response")
+	jsonResult, ok := result.(*port.JSONResult)
+	if !ok {
+		t.Fatalf("result = %T, want *port.JSONResult", result)
+	}
+	if jsonResult.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", jsonResult.StatusCode, http.StatusOK)
+	}
+	if jsonResult.Protocol != enum.ProtocolKindOpenAI {
+		t.Fatalf("protocol = %v, want %v", jsonResult.Protocol, enum.ProtocolKindOpenAI)
+	}
+	if len(jsonResult.Body) == 0 {
+		t.Fatal("JSONResult.Body is empty")
 	}
 }
 
@@ -353,12 +413,19 @@ func TestOpenAICreateResponse_ModelNotFound(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateResponse(context.Background(), req)
-	if err != nil {
-		t.Fatalf("CreateResponse() error: %v", err)
+	result, err := uc.CreateResponse(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (model not found must not produce a Result)", result)
 	}
-	if rsp == nil {
-		t.Fatal("CreateResponse() returned nil response")
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
+	}
+	if proxyErr.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", proxyErr.StatusCode, http.StatusNotFound)
+	}
+	if proxyErr.Protocol != enum.ProtocolKindOpenAI {
+		t.Fatalf("protocol = %v, want %v", proxyErr.Protocol, enum.ProtocolKindOpenAI)
 	}
 }
 
@@ -472,4 +539,100 @@ func TestOpenAICreateResponse_ChatAndAnthropicPrefersChatCompatibility(t *testin
 	}
 	_ = openAIProxy
 	_ = anthropicProxy
+}
+
+// 流式请求上游 Open 阶段失败时，usecase 不得调用 ReadChatCompletionStream。
+// 新契约下 Open 错误以 *port.ProxyError 返回（result=nil），由 adapter 在写出 SSE 头之前映射为 HTTP 错误。
+// 本测试锁定该行为，避免后续迁移把 Open 错误误延后到 SSE body 阶段。
+func TestOpenAICreateChatCompletion_NativeStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusTooManyRequests,
+		Body:       `{"error":{"message":"rate limited"}}`,
+	}
+	proxy := &mockOpenAIProxy{openChatStreamErr: upstreamErr}
+	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
+		Model:    "test-alias",
+		Messages: []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleUser, Content: &dto.OpenAIMessageContent{Text: "Hello"}}},
+		Stream:   &stream,
+	}}
+
+	result, err := uc.CreateChatCompletion(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (Open error must not produce a Result)", result)
+	}
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
+	}
+	if proxy.readChatStreamCalled {
+		t.Fatal("ReadChatCompletionStream must not be called when Open fails")
+	}
+}
+
+// Response API 流式请求上游 Open 阶段失败时，usecase 不得调用 ReadCreateResponseStream。
+func TestOpenAICreateResponse_NativeStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusTooManyRequests,
+		Body:       `{"error":{"message":"rate limited"}}`,
+	}
+	proxy := &mockOpenAIProxy{openResponseStreamErr: upstreamErr}
+	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
+		Model:  lo.ToPtr("test-alias"),
+		Stream: &stream,
+	}}
+
+	result, err := uc.CreateResponse(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (Open error must not produce a Result)", result)
+	}
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
+	}
+	if proxy.readResponseStreamCalled {
+		t.Fatal("ReadCreateResponseStream must not be called when Open fails")
+	}
+}
+
+// OpenAI Chat 跨协议（经 Anthropic 上游）流式请求 Open 失败时，不得调用 Anthropic ReadCreateMessageStream。
+func TestOpenAICreateChatCompletion_ViaAnthropicStream_OpenErrorSkipsRead(t *testing.T) {
+	t.Parallel()
+	upstreamErr := &model.UpstreamError{
+		StatusCode: http.StatusUnauthorized,
+		Body:       `{"error":{"message":"unauthorized"}}`,
+	}
+	anthropicProxy := &mockAnthropicProxyForOpenAI{readMessageStreamErr: upstreamErr}
+	openAIProxy := &mockOpenAIProxy{}
+	// 只支持 Anthropic，强制走 ViaAnthropicMessage 跨协议路径
+	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("anthropic-only", false, false, true), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil)
+
+	stream := true
+	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
+		Model:    "test-alias",
+		Messages: []*dto.OpenAIChatCompletionMessageParam{{Role: enum.RoleUser, Content: &dto.OpenAIMessageContent{Text: "Hello"}}},
+		Stream:   &stream,
+	}}
+
+	result, err := uc.CreateChatCompletion(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (Open error must not produce a Result)", result)
+	}
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
+	}
+	if anthropicProxy.readMessageStreamCnt != 0 {
+		t.Fatalf("ReadCreateMessageStream must not be called when Open fails; got cnt=%d", anthropicProxy.readMessageStreamCnt)
+	}
 }

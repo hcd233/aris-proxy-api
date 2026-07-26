@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	convapi "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -93,7 +94,7 @@ func TestStreamingToolCall_FunctionCall_OutputItemAdded(t *testing.T) {
 		}},
 	}
 
-	if _, err := convapi.WriteResponseDeltaFromChatChunk(w, chunk, state, "resp_123", conv); err != nil {
+	if _, err := convapi.WriteResponseDeltaFromChatChunk(apiutil.NewSSEWriter(w), chunk, state, "resp_123", conv); err != nil {
 		t.Fatalf("WriteResponseDeltaFromChatChunk() error: %v", err)
 	}
 	_ = w.Flush()
@@ -181,10 +182,10 @@ func TestStreamingToolCall_FunctionCall_ArgumentsDelta(t *testing.T) {
 		}},
 	}
 
-	if _, err := convapi.WriteResponseDeltaFromChatChunk(w, chunk1, state, "resp_123", conv); err != nil {
+	if _, err := convapi.WriteResponseDeltaFromChatChunk(apiutil.NewSSEWriter(w), chunk1, state, "resp_123", conv); err != nil {
 		t.Fatalf("chunk1 error: %v", err)
 	}
-	if _, err := convapi.WriteResponseDeltaFromChatChunk(w, chunk2, state, "resp_123", conv); err != nil {
+	if _, err := convapi.WriteResponseDeltaFromChatChunk(apiutil.NewSSEWriter(w), chunk2, state, "resp_123", conv); err != nil {
 		t.Fatalf("chunk2 error: %v", err)
 	}
 	_ = w.Flush()
@@ -243,7 +244,7 @@ func TestStreamingToolCall_FunctionCall_OutputItemDone(t *testing.T) {
 		}},
 	}
 
-	if _, err := convapi.WriteResponseDeltaFromChatChunk(w, chunk, state, "resp_123", conv); err != nil {
+	if _, err := convapi.WriteResponseDeltaFromChatChunk(apiutil.NewSSEWriter(w), chunk, state, "resp_123", conv); err != nil {
 		t.Fatalf("chunk error: %v", err)
 	}
 
@@ -268,7 +269,7 @@ func TestStreamingToolCall_FunctionCall_OutputItemDone(t *testing.T) {
 		}},
 	}
 
-	rsp := convapi.FinalizeResponseFromChatCompletion(w, completion, "test", "resp_123", conv)
+	rsp := convapi.FinalizeResponseFromChatCompletion(apiutil.NewSSEWriter(w), completion, "test", "resp_123", conv)
 	_ = w.Flush()
 
 	if rsp == nil {
@@ -336,7 +337,7 @@ func TestStreamingToolCall_CustomToolCall_OutputItemAdded(t *testing.T) {
 		}},
 	}
 
-	if _, err := convapi.WriteResponseDeltaFromChatChunk(w, chunk, state, "resp_123", conv); err != nil {
+	if _, err := convapi.WriteResponseDeltaFromChatChunk(apiutil.NewSSEWriter(w), chunk, state, "resp_123", conv); err != nil {
 		t.Fatalf("WriteResponseDeltaFromChatChunk() error: %v", err)
 	}
 	_ = w.Flush()

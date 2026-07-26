@@ -4,7 +4,9 @@ package handler
 import (
 	"context"
 
+	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/samber/lo"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
@@ -12,6 +14,13 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 )
+
+// anthropicInternalFallbackBody 是 application 返回非 ProxyError 错误时的 fallback 响应体。
+// 正常路径下所有错误都由 usecase 包装为 *port.ProxyError；此 fallback 仅用于防御性兜底。
+var anthropicInternalFallbackBody = lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+	Type:  constant.AnthropicInternalErrorBodyType,
+	Error: &dto.AnthropicError{Type: constant.AnthropicInternalErrorType, Message: constant.AnthropicInternalErrorMessage},
+}))
 
 // AnthropicHandler Anthropic兼容接口处理器
 //
@@ -71,13 +80,14 @@ func (h *anthropicHandler) HandleListModels(ctx context.Context, _ *dto.EmptyReq
 //	@return *huma.StreamResponse
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-22 21:00:00
+//	@update 2026-07-25 10:00:00
 func (h *anthropicHandler) HandleCreateMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest) (*huma.StreamResponse, error) {
 	ctx = apiutil.WithStreamLifecycle(ctx,
 		func() { h.sseGauge.Inc(constant.SSEProviderAnthropic) },
 		func() { h.sseGauge.Dec(constant.SSEProviderAnthropic) },
 	)
-	return h.uc.CreateMessage(ctx, req)
+	result, err := h.uc.CreateMessage(ctx, req)
+	return apiutil.AdaptProxyResult(ctx, result, err, anthropicInternalFallbackBody)
 }
 
 // HandleCountTokens 处理Token计数请求

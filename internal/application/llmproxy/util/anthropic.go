@@ -6,54 +6,37 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
+	"github.com/samber/lo"
+
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/samber/lo"
 )
 
-// SendAnthropicModelNotFoundError 发送Anthropic模型不存在错误
+// SendAnthropicModelNotFoundError 构造 Anthropic 模型不存在错误。
+//
+// 返回 *port.ProxyError 由 adapter 映射为 HTTP JSON 响应；
+// application 不构造 Huma response，也不设置 HTTP status/header。
 //
 //	@param model string
-//	@return rsp
+//	@return *port.ProxyError
 //	@author centonhuang
-//	@update 2026-03-17 10:00:00
-func SendAnthropicModelNotFoundError(model string) (rsp *huma.StreamResponse) {
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(http.StatusNotFound)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write in error handler
-				Type: constant.AnthropicInternalErrorBodyType,
-				Error: &dto.AnthropicError{
-					Type:    constant.AnthropicNotFoundErrorType,
-					Message: fmt.Sprintf(constant.AnthropicModelNotFoundMessageTemplate, model),
-				},
-			})))
+//	@update 2026-07-25 10:00:00
+func SendAnthropicModelNotFoundError(model string) *port.ProxyError {
+	body := lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+		Type: constant.AnthropicInternalErrorBodyType,
+		Error: &dto.AnthropicError{
+			Type:    constant.AnthropicNotFoundErrorType,
+			Message: fmt.Sprintf(constant.AnthropicModelNotFoundMessageTemplate, model),
 		},
-	}
-}
-
-// SendAnthropicInternalError 发送Anthropic内部错误
-//
-//	@return rsp
-//	@author centonhuang
-//	@update 2026-03-17 10:00:00
-func SendAnthropicInternalError() (rsp *huma.StreamResponse) {
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(http.StatusInternalServerError)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write in error handler
-				Type: constant.AnthropicInternalErrorBodyType,
-				Error: &dto.AnthropicError{
-					Type:    constant.AnthropicInternalErrorType,
-					Message: constant.AnthropicInternalErrorMessage,
-				},
-			})))
-		},
+	}))
+	return &port.ProxyError{
+		StatusCode: http.StatusNotFound,
+		Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+		Body:       body,
+		Protocol:   enum.ProtocolKindAnthropic,
 	}
 }
 

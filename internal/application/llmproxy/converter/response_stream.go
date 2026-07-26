@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"bufio"
 	"fmt"
 	"strings"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -37,7 +37,7 @@ func NewStreamItemState() *StreamItemState {
 // 对文本和推理内容，使用 choice.Index 对应的 message output item。
 // 对工具调用，为每个工具调用创建独立的 output item（function_call / custom_tool_call），
 // 发送 output_item.added 携带函数名和 call_id，然后发送 arguments.delta / input.delta。
-func WriteResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompletionChunk, state *StreamItemState, responseID string, conv *ResponseProtocolConverter) (bool, error) {
+func WriteResponseDeltaFromChatChunk(sink port.EventSink, chunk *dto.OpenAIChatCompletionChunk, state *StreamItemState, responseID string, conv *ResponseProtocolConverter) (bool, error) {
 	if chunk == nil {
 		return false, nil
 	}
@@ -52,47 +52,43 @@ func WriteResponseDeltaFromChatChunk(w *bufio.Writer, chunk *dto.OpenAIChatCompl
 
 		// 文本 / 推理内容：使用 message output item
 		if hasTextOrReasoning(delta) {
-			if err := initMessageOutputItem(w, state, messageItemID, outputIndex); err != nil {
+			if err := initMessageOutputItem(sink, state, messageItemID, outputIndex); err != nil {
 				return wroteDelta, err
 			}
 		}
 
-		wrote, err := writeDeltaField(w, enum.ResponseStreamEventOutputTextDelta, delta.Content, messageItemID, outputIndex, 0)
+		wrote, err := writeDeltaField(sink, enum.ResponseStreamEventOutputTextDelta, delta.Content, messageItemID, outputIndex, 0)
 		if err != nil {
 			return wroteDelta || wrote, err
 		}
 		wroteDelta = wroteDelta || wrote
 
-		wrote, err = writeDeltaField(w, enum.ResponseStreamEventReasoningTextDelta, delta.ReasoningContent, messageItemID, outputIndex, 0)
+		wrote, err = writeDeltaField(sink, enum.ResponseStreamEventReasoningTextDelta, delta.ReasoningContent, messageItemID, outputIndex, 0)
 		if err != nil {
 			return wroteDelta || wrote, err
 		}
 		wroteDelta = wroteDelta || wrote
 
 		// 工具调用：每个 tool call 使用独立的 output item
-		wrote, err = writeToolCallDeltas(w, delta.ToolCalls, state, conv)
+		wrote, err = writeToolCallDeltas(sink, delta.ToolCalls, state, conv)
 		if err != nil {
 			return wroteDelta || wrote, err
 		}
 		wroteDelta = wroteDelta || wrote
 	}
-	if wroteDelta {
-		return true, w.Flush()
-	}
-	return false, nil
+	return wroteDelta, nil
 }
 
 // FinalizeResponseFromChatCompletion 在流式结束时，
 // 将最终的 ChatCompletion 转换为 Response API 响应，
 // 并发送所有 output item 的 done 事件 + response.completed 终态事件。
-func FinalizeResponseFromChatCompletion(w *bufio.Writer, completion *dto.OpenAIChatCompletion, exposedModel, responseID string, conv *ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
+func FinalizeResponseFromChatCompletion(sink port.EventSink, completion *dto.OpenAIChatCompletion, exposedModel, responseID string, conv *ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if completion == nil {
 		return nil
 	}
 	completion.Model = exposedModel
 	rsp, _ := conv.ToResponseResponse(completion) //nolint:errcheck // best-effort conversion, don't block stream finalize
 	if rsp == nil {
-		_ = w.Flush() //nolint:errcheck // flush best effort on stream close
 		return nil
 	}
 	rsp.ID = responseID
@@ -105,17 +101,16 @@ func FinalizeResponseFromChatCompletion(w *bufio.Writer, completion *dto.OpenAIC
 		ensureItemID(item, itemType, responseID)
 		switch itemType {
 		case enum.ResponseInputItemTypeMessage:
-			writeMessageOutputItemDone(w, item)
+			writeMessageOutputItemDone(sink, item)
 		case enum.ResponseInputItemTypeFunctionCall, enum.ResponseInputItemTypeCustomToolCall,
 			enum.ResponseInputItemTypeLocalShellCall:
-			writeToolCallOutputItemDone(w, item, itemType)
+			writeToolCallOutputItemDone(sink, item, itemType)
 		case enum.ResponseInputItemTypeReasoning:
-			writeReasoningOutputItemDone(w, item)
+			writeReasoningOutputItemDone(sink, item)
 		}
 	}
 
-	_ = writeResponseTerminalEvent(w, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
-	_ = w.Flush()                                                             //nolint:errcheck // flush best effort on stream close
+	_ = writeResponseTerminalEvent(sink, enum.ResponseStreamEventCompleted, rsp) //nolint:errcheck // best-effort write on stream close
 	return rsp
 }
 
@@ -134,15 +129,15 @@ func hasTextOrReasoning(delta *dto.OpenAIChatCompletionChunkDelta) bool {
 }
 
 // initMessageOutputItem 初始化 message output item（发送 output_item.added + content_part.added）
-func initMessageOutputItem(w *bufio.Writer, state *StreamItemState, itemID string, outputIndex int) error {
+func initMessageOutputItem(sink port.EventSink, state *StreamItemState, itemID string, outputIndex int) error {
 	if state.initializedMessages[outputIndex] {
 		return nil
 	}
 	state.initializedMessages[outputIndex] = true
-	if err := writeOutputItemAddedEvent(w, itemID, outputIndex, constant.ResponseStreamFieldTypeValue); err != nil {
+	if err := writeOutputItemAddedEvent(sink, itemID, outputIndex, constant.ResponseStreamFieldTypeValue); err != nil {
 		return err
 	}
-	return writeContentPartAddedEvent(w, itemID, outputIndex)
+	return writeContentPartAddedEvent(sink, itemID, outputIndex)
 }
 
 // toolCallItemID 生成工具调用 output item 的 ID
@@ -175,7 +170,7 @@ func ensureItemID(item *dto.ResponseInputItem, itemType, responseID string) {
 // writeToolCallDeltas 处理工具调用 delta：
 // - 首次出现时发送 output_item.added（携带 type/call_id/name）
 // - 发送 arguments.delta（function）或 input.delta（custom）
-func writeToolCallDeltas(w *bufio.Writer, toolCalls []*dto.OpenAIChatCompletionMessageToolCall, state *StreamItemState, conv *ResponseProtocolConverter) (bool, error) {
+func writeToolCallDeltas(sink port.EventSink, toolCalls []*dto.OpenAIChatCompletionMessageToolCall, state *StreamItemState, conv *ResponseProtocolConverter) (bool, error) {
 	wrote := false
 	for _, tc := range toolCalls {
 		if tc == nil {
@@ -196,13 +191,13 @@ func writeToolCallDeltas(w *bufio.Writer, toolCalls []*dto.OpenAIChatCompletionM
 			itemType := resolveToolCallOutputType(info.name, conv.ToolTypeMap())
 			outputIndex := len(state.initializedToolCalls)
 			name, ns := splitNamespacedName(info.name, conv.NamespaceMap())
-			if err := writeToolCallOutputItemAdded(w, itemID, outputIndex, itemType, info.callID, name, ns); err != nil {
+			if err := writeToolCallOutputItemAdded(sink, itemID, outputIndex, itemType, info.callID, name, ns); err != nil {
 				return wrote, err
 			}
 			wrote = true
 		}
 
-		w2, err := writeToolCallArgumentDelta(w, tc, info, itemID)
+		w2, err := writeToolCallArgumentDelta(sink, tc, info, itemID)
 		if err != nil {
 			return wrote || w2, err
 		}
@@ -239,15 +234,15 @@ func resolveToolCallItemID(state *StreamItemState, info *toolCallInfo, tcIdx int
 	return itemID, true
 }
 
-func writeToolCallArgumentDelta(w *bufio.Writer, tc *dto.OpenAIChatCompletionMessageToolCall, info *toolCallInfo, itemID string) (bool, error) {
+func writeToolCallArgumentDelta(sink port.EventSink, tc *dto.OpenAIChatCompletionMessageToolCall, info *toolCallInfo, itemID string) (bool, error) {
 	if info.isCustom && tc.Custom != nil && tc.Custom.Input != "" {
-		if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventCustomToolCallInputDelta, tc.Custom.Input, itemID, 0, 0); err != nil {
+		if err := writeResponseDeltaEvent(sink, enum.ResponseStreamEventCustomToolCallInputDelta, tc.Custom.Input, itemID, 0, 0); err != nil {
 			return true, err
 		}
 		return true, nil
 	}
 	if !info.isCustom && tc.Function != nil && tc.Function.Arguments != "" {
-		if err := writeResponseDeltaEvent(w, enum.ResponseStreamEventFunctionCallArgumentsDelta, tc.Function.Arguments, itemID, 0, 0); err != nil {
+		if err := writeResponseDeltaEvent(sink, enum.ResponseStreamEventFunctionCallArgumentsDelta, tc.Function.Arguments, itemID, 0, 0); err != nil {
 			return true, err
 		}
 		return true, nil
@@ -256,18 +251,18 @@ func writeToolCallArgumentDelta(w *bufio.Writer, tc *dto.OpenAIChatCompletionMes
 }
 
 // writeDeltaField 写入增量事件（值为空时跳过）
-func writeDeltaField(w *bufio.Writer, event enum.ResponseStreamEventType, value *string, itemID string, outputIndex, contentIndex int) (bool, error) {
+func writeDeltaField(sink port.EventSink, event enum.ResponseStreamEventType, value *string, itemID string, outputIndex, contentIndex int) (bool, error) {
 	if value == nil || *value == "" {
 		return false, nil
 	}
-	if err := writeResponseDeltaEvent(w, event, *value, itemID, outputIndex, contentIndex); err != nil {
+	if err := writeResponseDeltaEvent(sink, event, *value, itemID, outputIndex, contentIndex); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
 // writeResponseDeltaEvent 写入增量 SSE 事件
-func writeResponseDeltaEvent(w *bufio.Writer, event enum.ResponseStreamEventType, delta, itemID string, outputIndex, contentIndex int) error {
+func writeResponseDeltaEvent(sink port.EventSink, event enum.ResponseStreamEventType, delta, itemID string, outputIndex, contentIndex int) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:         event,
 		constant.ResponseStreamFieldDelta:        delta,
@@ -275,12 +270,11 @@ func writeResponseDeltaEvent(w *bufio.Writer, event enum.ResponseStreamEventType
 		constant.ResponseStreamFieldOutputIndex:  outputIndex,
 		constant.ResponseStreamFieldContentIndex: contentIndex,
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
-	return err
+	return sink.WriteEvent(event, payload)
 }
 
 // writeOutputItemAddedEvent 写入 message 类型的 output_item.added 事件
-func writeOutputItemAddedEvent(w *bufio.Writer, itemID string, outputIndex int, itemType string) error {
+func writeOutputItemAddedEvent(sink port.EventSink, itemID string, outputIndex int, itemType string) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemAdded,
 		constant.ResponseStreamFieldOutputItem: outputIndex,
@@ -292,12 +286,11 @@ func writeOutputItemAddedEvent(w *bufio.Writer, itemID string, outputIndex int, 
 			constant.ResponseStreamFieldContent: []any{},
 		},
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputItemAdded, payload)
-	return err
+	return sink.WriteEvent(enum.ResponseStreamEventOutputItemAdded, payload)
 }
 
 // writeToolCallOutputItemAdded 写入工具调用的 output_item.added 事件
-func writeToolCallOutputItemAdded(w *bufio.Writer, itemID string, outputIndex int, itemType, callID, name, namespace string) error {
+func writeToolCallOutputItemAdded(sink port.EventSink, itemID string, outputIndex int, itemType, callID, name, namespace string) error {
 	item := map[string]any{
 		constant.ResponseStreamFieldID:     itemID,
 		constant.ResponseStreamFieldType:   itemType,
@@ -317,12 +310,11 @@ func writeToolCallOutputItemAdded(w *bufio.Writer, itemID string, outputIndex in
 		constant.ResponseStreamFieldOutputItem: outputIndex,
 		constant.ResponseStreamFieldItem:       item,
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputItemAdded, payload)
-	return err
+	return sink.WriteEvent(enum.ResponseStreamEventOutputItemAdded, payload)
 }
 
 // writeContentPartAddedEvent 写入 content_part.added 事件
-func writeContentPartAddedEvent(w *bufio.Writer, itemID string, outputIndex int) error {
+func writeContentPartAddedEvent(sink port.EventSink, itemID string, outputIndex int) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:         enum.ResponseStreamEventContentPartAdded,
 		constant.ResponseStreamFieldItemID:       itemID,
@@ -334,12 +326,11 @@ func writeContentPartAddedEvent(w *bufio.Writer, itemID string, outputIndex int)
 			constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 		},
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventContentPartAdded, payload)
-	return err
+	return sink.WriteEvent(enum.ResponseStreamEventContentPartAdded, payload)
 }
 
 // writeMessageOutputItemDone 写入 message 的 done 事件序列
-func writeMessageOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem) {
+func writeMessageOutputItemDone(sink port.EventSink, item *dto.ResponseInputItem) {
 	if item.Content == nil {
 		return
 	}
@@ -357,18 +348,18 @@ func writeMessageOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem) {
 	itemID := lo.FromPtr(item.ID)
 	outputIndex := 0
 
-	_ = writeOutputTextDoneEvent(w, itemID, outputIndex, text)  //nolint:errcheck // best-effort write on stream close
-	_ = writeContentPartDoneEvent(w, itemID, outputIndex, text) //nolint:errcheck // best-effort write on stream close
+	_ = writeOutputTextDoneEvent(sink, itemID, outputIndex, text)  //nolint:errcheck // best-effort write on stream close
+	_ = writeContentPartDoneEvent(sink, itemID, outputIndex, text) //nolint:errcheck // best-effort write on stream close
 	content := []map[string]any{{
 		constant.ResponseStreamFieldType:        constant.ResponseStreamFieldOutputTextType,
 		constant.ResponseStreamFieldText:        text,
 		constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 	}}
-	_ = writeOutputItemDoneEvent(w, itemID, outputIndex, content) //nolint:errcheck // best-effort write on stream close
+	_ = writeOutputItemDoneEvent(sink, itemID, outputIndex, content) //nolint:errcheck // best-effort write on stream close
 }
 
 // writeToolCallOutputItemDone 写入工具调用的 output_item.done 事件
-func writeToolCallOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem, itemType string) {
+func writeToolCallOutputItemDone(sink port.EventSink, item *dto.ResponseInputItem, itemType string) {
 	itemID := lo.FromPtr(item.ID)
 	outputIndex := 0
 
@@ -398,11 +389,11 @@ func writeToolCallOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem, i
 		constant.ResponseStreamFieldOutputItem: outputIndex,
 		constant.ResponseStreamFieldItem:       doneItem,
 	}))
-	_, _ = fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputItemDone, payload) //nolint:errcheck // best-effort write on stream close
+	_ = sink.WriteEvent(enum.ResponseStreamEventOutputItemDone, payload) //nolint:errcheck // best-effort write on stream close
 }
 
 // writeReasoningOutputItemDone 写入推理内容的 output_item.done 事件
-func writeReasoningOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem) {
+func writeReasoningOutputItemDone(sink port.EventSink, item *dto.ResponseInputItem) {
 	itemID := lo.FromPtr(item.ID)
 	outputIndex := 0
 
@@ -434,11 +425,11 @@ func writeReasoningOutputItemDone(w *bufio.Writer, item *dto.ResponseInputItem) 
 		constant.ResponseStreamFieldOutputItem: outputIndex,
 		constant.ResponseStreamFieldItem:       doneItem,
 	}))
-	_, _ = fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputItemDone, payload) //nolint:errcheck // best-effort write on stream close
+	_ = sink.WriteEvent(enum.ResponseStreamEventOutputItemDone, payload) //nolint:errcheck // best-effort write on stream close
 }
 
 // writeOutputTextDoneEvent 写入 output_text.done 事件
-func writeOutputTextDoneEvent(w *bufio.Writer, itemID string, outputIndex int, text string) error {
+func writeOutputTextDoneEvent(sink port.EventSink, itemID string, outputIndex int, text string) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:         enum.ResponseStreamEventOutputTextDone,
 		constant.ResponseStreamFieldItemID:       itemID,
@@ -446,12 +437,11 @@ func writeOutputTextDoneEvent(w *bufio.Writer, itemID string, outputIndex int, t
 		constant.ResponseStreamFieldContentIndex: 0,
 		constant.ResponseStreamFieldText:         text,
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputTextDone, payload)
-	return err
+	return sink.WriteEvent(enum.ResponseStreamEventOutputTextDone, payload)
 }
 
 // writeContentPartDoneEvent 写入 content_part.done 事件
-func writeContentPartDoneEvent(w *bufio.Writer, itemID string, outputIndex int, text string) error {
+func writeContentPartDoneEvent(sink port.EventSink, itemID string, outputIndex int, text string) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:         enum.ResponseStreamEventContentPartDone,
 		constant.ResponseStreamFieldItemID:       itemID,
@@ -463,12 +453,11 @@ func writeContentPartDoneEvent(w *bufio.Writer, itemID string, outputIndex int, 
 			constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 		},
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventContentPartDone, payload)
-	return err
+	return sink.WriteEvent(enum.ResponseStreamEventContentPartDone, payload)
 }
 
 // writeOutputItemDoneEvent 写入 message 类型的 output_item.done 事件
-func writeOutputItemDoneEvent(w *bufio.Writer, itemID string, outputIndex int, content []map[string]any) error {
+func writeOutputItemDoneEvent(sink port.EventSink, itemID string, outputIndex int, content []map[string]any) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemDone,
 		constant.ResponseStreamFieldOutputItem: outputIndex,
@@ -480,13 +469,11 @@ func writeOutputItemDoneEvent(w *bufio.Writer, itemID string, outputIndex int, c
 			constant.ResponseStreamFieldContent: content,
 		},
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, enum.ResponseStreamEventOutputItemDone, payload)
-	return err
+	return sink.WriteEvent(enum.ResponseStreamEventOutputItemDone, payload)
 }
 
 // writeResponseTerminalEvent 写入终态事件
-func writeResponseTerminalEvent(w *bufio.Writer, event enum.ResponseStreamEventType, rsp *dto.OpenAICreateResponseRsp) error {
+func writeResponseTerminalEvent(sink port.EventSink, event enum.ResponseStreamEventType, rsp *dto.OpenAICreateResponseRsp) error {
 	payload := lo.Must1(sonic.Marshal(&dto.ResponseStreamTerminalEvent{Type: event, Response: rsp}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
-	return err
+	return sink.WriteEvent(event, payload)
 }

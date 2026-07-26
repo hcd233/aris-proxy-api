@@ -1,21 +1,19 @@
 package usecase
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -23,10 +21,9 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-func (u *openAIUseCase) forwardResponseNative(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseNative(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, stream bool) (port.Result, error) {
 	body := proxyutil.MarshalOpenAIResponseBodyForModel(req.Body, upstream.Model)
 	if stream {
 		return u.forwardResponseNativeStream(ctx, req, m, ep, upstream, body)
@@ -34,12 +31,12 @@ func (u *openAIUseCase) forwardResponseNative(ctx context.Context, req *dto.Open
 	return u.forwardResponseNativeUnary(ctx, req, m, ep, upstream, body)
 }
 
-func (u *openAIUseCase) forwardResponseViaChat(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaChat(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
 	conv := &converter.ResponseProtocolConverter{}
 	chatReq, convErr := conv.FromResponseRequest(req.Body)
 	if convErr != nil {
 		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert response request to chat", zap.Error(convErr))
-		return proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
+		return nil, proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
 	}
 	upstream := toTransportEndpoint(m, ep, false)
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(chatReq, upstream.Model)
@@ -50,12 +47,12 @@ func (u *openAIUseCase) forwardResponseViaChat(ctx context.Context, req *dto.Ope
 	return u.forwardResponseViaChatUnary(ctx, req, m, upstream, ep.Name(), body)
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
 	conv := &converter.AnthropicProtocolConverter{}
 	anthropicReq, convErr := conv.FromResponseAPIRequest(req.Body)
 	if convErr != nil {
 		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert response request to anthropic", zap.Error(convErr))
-		return proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
+		return nil, proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
 	}
 	upstream := toTransportEndpoint(m, ep, true)
 	body := proxyutil.MarshalAnthropicMessageBodyForModel(anthropicReq, upstream.Model)
@@ -66,413 +63,499 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 	return u.forwardResponseViaAnthropicUnary(ctx, req, m, upstream, ep.Name(), body)
 }
 
-type nativeStreamHandler struct {
-	u                 *openAIUseCase
-	ctx               context.Context
-	req               *dto.OpenAICreateResponseRequest
-	timer             *streamTimer
-	finalResponse     *dto.OpenAICreateResponseRsp
-	accumulatedOutput []*dto.ResponseInputItem
-	logger            *zap.Logger
-}
-
-func newNativeStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *nativeStreamHandler {
-	return &nativeStreamHandler{
-		u:                 u,
-		ctx:               ctx,
-		req:               req,
-		timer:             newStreamTimer(),
-		accumulatedOutput: make([]*dto.ResponseInputItem, 0),
-		logger:            logger.WithCtx(ctx),
-	}
-}
-
-func (h *nativeStreamHandler) onEvent(w *bufio.Writer, event string, data []byte) error {
-	if proxyutil.IsResponseAPIDeltaEvent(event) {
-		h.timer.markFirstToken()
-	}
-	h.handleOutputItemDone(event, data)
-	h.handleTerminalEvent(event, data)
-
-	outgoingData := h.patchTerminalOutput(event, data)
-	replaced := proxyutil.ReplaceModelInSSEData(outgoingData, lo.FromPtr(h.req.Body.Model))
-	if _, writeErr := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, replaced); writeErr != nil {
-		h.logger.Debug("[OpenAIUseCase] Failed to write SSE event frame", zap.Error(writeErr))
-	}
-	return w.Flush()
-}
-
-func (h *nativeStreamHandler) handleOutputItemDone(event string, data []byte) {
-	if event != enum.ResponseStreamEventOutputItemDone {
-		return
-	}
-	var ev dto.ResponseStreamOutputItemDoneEvent
-	if err := sonic.Unmarshal(data, &ev); err != nil {
-		h.logger.Debug("[OpenAIUseCase] Failed to parse output_item.done event", zap.Error(err))
-		return
-	}
-	if ev.Item == nil {
-		return
-	}
-	h.accumulatedOutput = append(h.accumulatedOutput, ev.Item)
-}
-
-func (h *nativeStreamHandler) handleTerminalEvent(event string, data []byte) {
-	if h.finalResponse != nil || !proxyutil.IsResponseAPITerminalEvent(event) {
-		return
-	}
-	var ev dto.ResponseStreamTerminalEvent
-	if err := sonic.Unmarshal(data, &ev); err != nil {
-		h.logger.Warn("[OpenAIUseCase] Failed to parse response terminal event",
-			zap.String("event", event), zap.Error(err))
-		return
-	}
-	h.finalResponse = ev.Response
-	if h.finalResponse == nil {
-		return
-	}
-}
-
-func (h *nativeStreamHandler) patchTerminalOutput(event string, data []byte) []byte {
-	if !proxyutil.IsResponseAPITerminalEvent(event) {
-		return data
-	}
-	patched, changed, err := proxyutil.FillResponseTerminalOutput(data, h.accumulatedOutput)
-	if err != nil {
-		h.logger.Warn("[OpenAIUseCase] Failed to fill response terminal output", zap.String("event", event), zap.Error(err))
-		return data
-	}
-	if !changed {
-		return data
-	}
-	if h.finalResponse != nil {
-		h.finalResponse.Output = h.accumulatedOutput
-	}
-	return patched
-}
-
-func (h *nativeStreamHandler) finalize(w *bufio.Writer, proxyErr error, m *aggregate.Model, ep *aggregate.Endpoint) {
-	h.timer.finish()
-	if proxyErr != nil {
-		h.logger.Error("[OpenAIUseCase] Native response stream error", zap.Error(proxyErr))
-		proxyutil.WriteUpstreamSSEError(h.ctx, w, proxyErr)
-	}
-	if h.finalResponse != nil && len(h.finalResponse.Output) == 0 && len(h.accumulatedOutput) > 0 {
-		h.finalResponse.Output = h.accumulatedOutput
-	}
-	h.u.storeResponseFromRsp(h.ctx, h.req, h.finalResponse, proxyErr, m.Alias().String())
-
-	recordModelCall(h.ctx, h.u.taskSubmitter, callOutcome{
-		model:               m,
-		exposedModel:        lo.FromPtr(h.req.Body.Model),
-		endpoint:            ep.Name(),
-		upstreamProtocol:    enum.ProtocolOpenAIResponse,
-		apiProtocol:         enum.ProtocolOpenAIResponse,
-		firstTokenLatencyMs: h.timer.firstLatencyMs,
-		streamDurationMs:    h.timer.durationMs,
-		usage:               responseTokenUsage{h.finalResponse},
-		err:                 proxyErr,
-		responseStatus:      h.finalResponse,
-	})
-}
-
-func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) (port.Result, error) {
 	startTime := time.Now()
 	stream, err := u.openAIProxy.OpenCreateResponseStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailure(ctx, m, u.taskSubmitter, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
-		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
-	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
-		h := newNativeStreamHandler(ctx, u, req)
-		proxyErr := u.openAIProxy.ReadCreateResponseStream(ctx, stream, func(event string, data []byte) error {
-			return h.onEvent(w, event, data)
-		})
-		h.finalize(w, proxyErr, m, ep)
-	})
+	return &port.StreamResult{
+		Protocol: enum.ProtocolKindOpenAI,
+		Open: func(ctx context.Context) (port.Stream, error) {
+			return &responseNativeStream{
+				u:                 u,
+				ctx:               ctx,
+				req:               req,
+				m:                 m,
+				ep:                ep,
+				stream:            stream,
+				timer:             newStreamTimer(),
+				accumulatedOutput: make([]*dto.ResponseInputItem, 0),
+				logger:            logger.WithCtx(ctx),
+			}, nil
+		},
+	}, nil
 }
 
-func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) (port.Result, error) {
 	log := logger.WithCtx(ctx)
-	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
-		startTime := time.Now()
-		respBody, err := u.openAIProxy.ForwardCreateResponse(ctx, upstream, body)
-		totalMs := time.Since(startTime).Milliseconds()
-		if err != nil {
-			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(ctx, m, u.taskSubmitter, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
-			return
-		}
+	startTime := time.Now()
+	respBody, err := u.openAIProxy.ForwardCreateResponse(ctx, upstream, body)
+	totalMs := time.Since(startTime).Milliseconds()
+	if err != nil {
+		auditFailure(ctx, m, u.taskSubmitter, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+	}
 
-		replaced := proxyutil.ReplaceModelInBody(respBody, lo.FromPtr(req.Body.Model))
-		if headers := util.GetPassthroughResponseHeaders(ctx); headers != nil {
-			for k, v := range headers {
-				writer.HumaCtx.SetHeader(k, v)
-			}
-		}
-		writer.HumaCtx.SetStatus(fiber.StatusOK)
-		writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-		_, _ = writer.HumaCtx.BodyWriter().Write(replaced) //nolint:errcheck // best-effort write in stream response handler
+	replaced := proxyutil.ReplaceModelInBody(respBody, lo.FromPtr(req.Body.Model))
+	headers := buildPassthroughHeaders(ctx)
+	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
 
-		var rsp dto.OpenAICreateResponseRsp
-		parseErr := sonic.Unmarshal(respBody, &rsp)
-		out := callOutcome{
-			model:               m,
-			exposedModel:        lo.FromPtr(req.Body.Model),
-			endpoint:            ep.Name(),
-			upstreamProtocol:    enum.ProtocolOpenAIResponse,
-			apiProtocol:         enum.ProtocolOpenAIResponse,
-			firstTokenLatencyMs: totalMs,
-			successStatus:       true,
-		}
-		if parseErr != nil {
-			log.Debug("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
-		} else {
-			u.storeResponseFromRsp(ctx, req, &rsp, nil, m.Alias().String())
-			out.usage = responseTokenUsage{&rsp}
-			out.responseStatus = &rsp
-		}
-		recordModelCall(ctx, u.taskSubmitter, out)
-	})
+	var rsp dto.OpenAICreateResponseRsp
+	out := callOutcome{
+		model:               m,
+		exposedModel:        lo.FromPtr(req.Body.Model),
+		endpoint:            ep.Name(),
+		upstreamProtocol:    enum.ProtocolOpenAIResponse,
+		apiProtocol:         enum.ProtocolOpenAIResponse,
+		firstTokenLatencyMs: totalMs,
+		successStatus:       true,
+	}
+	if parseErr := sonic.Unmarshal(replaced, &rsp); parseErr != nil {
+		log.Debug("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
+	} else {
+		u.storeResponseFromRsp(ctx, req, &rsp, nil, m.Alias().String())
+		out.usage = responseTokenUsage{&rsp}
+		out.responseStatus = &rsp
+	}
+	recordModelCall(ctx, u.taskSubmitter, out)
+
+	return &port.JSONResult{
+		StatusCode: http.StatusOK,
+		Headers:    headers,
+		Body:       replaced,
+		Protocol:   enum.ProtocolKindOpenAI,
+	}, nil
 }
 
-func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) (port.Result, error) {
 	log := logger.WithCtx(ctx)
-	conv := &converter.ResponseProtocolConverter{}
-	assertRespConvInit(conv, req)
 	exposedModel := lo.FromPtr(req.Body.Model)
 	responseID := fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String())
-	itemState := converter.NewStreamItemState()
 	startTime := time.Now()
 	stream, openErr := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
 	if openErr != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIResponse, totalMs, openErr)
-		return upstreamStreamErrorResponse(ctx, openErr, openAIInternalErrorBody)
+		return nil, upstreamProxyError(openErr, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
-	return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
-		timer := newStreamTimer()
-
-		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, exposedModel, responseID); err != nil {
-			log.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
-		}
-
-		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, exposedModel, responseID); err != nil {
-			log.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
-		}
-
-		completion, err := u.openAIProxy.ReadChatCompletionStream(ctx, stream, func(chunk *dto.OpenAIChatCompletionChunk) error {
-			hasWritten, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, itemState, responseID, conv)
-			if hasWritten {
-				timer.markFirstToken()
-			}
-			return writeErr
-		})
-		timer.finish()
-
-		var rsp *dto.OpenAICreateResponseRsp
-		if err != nil {
-			proxyutil.WriteUpstreamSSEError(ctx, w, err)
-		} else {
-			rsp = converter.FinalizeResponseFromChatCompletion(w, completion, exposedModel, responseID, conv)
-		}
-		u.storeResponseFromRsp(ctx, req, rsp, err, m.Alias().String())
-		recordModelCall(ctx, u.taskSubmitter, callOutcome{
-			model:               m,
-			exposedModel:        exposedModel,
-			endpoint:            endpoint,
-			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
-			apiProtocol:         enum.ProtocolOpenAIResponse,
-			firstTokenLatencyMs: timer.firstLatencyMs,
-			streamDurationMs:    timer.durationMs,
-			usage:               responseTokenUsage{rsp},
-			err:                 err,
-		})
-	})
+	return &port.StreamResult{
+		Protocol: enum.ProtocolKindOpenAI,
+		Open: func(ctx context.Context) (port.Stream, error) {
+			return &responseViaChatStream{
+				u:            u,
+				ctx:          ctx,
+				req:          req,
+				m:            m,
+				endpoint:     endpoint,
+				exposedModel: exposedModel,
+				responseID:   responseID,
+				stream:       stream,
+				timer:        newStreamTimer(),
+				conv:         &converter.ResponseProtocolConverter{},
+				itemState:    converter.NewStreamItemState(),
+				log:          log,
+			}, nil
+		},
+	}, nil
 }
 
-func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) (port.Result, error) {
 	conv := &converter.ResponseProtocolConverter{}
 	assertRespConvInit(conv, req)
 	exposedModel := lo.FromPtr(req.Body.Model)
-	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
-		startTime := time.Now()
-		completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
-		totalMs := time.Since(startTime).Milliseconds()
-		if err != nil {
-			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailure(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIResponse, totalMs, err)
-			return
+	startTime := time.Now()
+	completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
+	totalMs := time.Since(startTime).Milliseconds()
+	if err != nil {
+		auditFailure(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIResponse, totalMs, err)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+	}
+	completion.Model = exposedModel
+	rsp, convErr := conv.ToResponseResponse(completion)
+	if convErr != nil {
+		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
+		return nil, &port.ProxyError{
+			StatusCode: http.StatusInternalServerError,
+			Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+			Body:       openAIInternalErrorBody,
+			Cause:      convErr,
+			Protocol:   enum.ProtocolKindOpenAI,
 		}
-		completion.Model = exposedModel
-		rsp, convErr := conv.ToResponseResponse(completion)
-		if convErr != nil {
-			logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
-			writer.WriteJSON(openAIInternalErrorBody)
-			return
-		}
-		writer.WriteJSON(rsp)
-		u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
-		recordModelCall(ctx, u.taskSubmitter, callOutcome{
-			model:               m,
-			exposedModel:        exposedModel,
-			endpoint:            endpoint,
-			upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
-			apiProtocol:         enum.ProtocolOpenAIResponse,
-			firstTokenLatencyMs: totalMs,
-			usage:               responseTokenUsage{rsp},
-			successStatus:       true,
-		})
+	}
+	bodyBytes := lo.Must1(sonic.Marshal(rsp))
+
+	u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
+	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+		model:               m,
+		exposedModel:        exposedModel,
+		endpoint:            endpoint,
+		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+		apiProtocol:         enum.ProtocolOpenAIResponse,
+		firstTokenLatencyMs: totalMs,
+		usage:               responseTokenUsage{rsp},
+		successStatus:       true,
 	})
+
+	headers := buildPassthroughHeaders(ctx)
+	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
+	return &port.JSONResult{
+		StatusCode: http.StatusOK,
+		Headers:    headers,
+		Body:       bodyBytes,
+		Protocol:   enum.ProtocolKindOpenAI,
+	}, nil
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
+func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) (port.Result, error) {
 	startTime := time.Now()
 	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		exposedModel := lo.FromPtr(req.Body.Model)
 		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
-		return upstreamStreamErrorResponse(ctx, err, openAIInternalErrorBody)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
-	return apiutil.WrapStreamResponse(ctx, u.forwardResponseViaAnthropicStreamBody(ctx, req, m, stream, endpoint))
+	return &port.StreamResult{
+		Protocol: enum.ProtocolKindOpenAI,
+		Open: func(ctx context.Context) (port.Stream, error) {
+			return newResponseViaAnthropicStream(ctx, u, req, m, stream, endpoint), nil
+		},
+	}, nil
 }
 
-type anthropicStreamHandler struct {
+func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) (port.Result, error) {
+	anthropicConv := &converter.AnthropicProtocolConverter{}
+	responseConv := &converter.ResponseProtocolConverter{}
+	assertRespConvInit(responseConv, req)
+	exposedModel := lo.FromPtr(req.Body.Model)
+	startTime := time.Now()
+	anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
+	totalMs := time.Since(startTime).Milliseconds()
+	if err != nil {
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
+		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+	}
+	chatCompletion, convErr := anthropicConv.ToOpenAIResponse(anthropicMsg)
+	if convErr != nil {
+		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert anthropic message to chat completion", zap.Error(convErr))
+		return nil, &port.ProxyError{
+			StatusCode: http.StatusInternalServerError,
+			Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+			Body:       openAIInternalErrorBody,
+			Cause:      convErr,
+			Protocol:   enum.ProtocolKindOpenAI,
+		}
+	}
+	chatCompletion.Model = exposedModel
+	rsp, convErr := responseConv.ToResponseResponse(chatCompletion)
+	if convErr != nil {
+		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
+		return nil, &port.ProxyError{
+			StatusCode: http.StatusInternalServerError,
+			Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+			Body:       openAIInternalErrorBody,
+			Cause:      convErr,
+			Protocol:   enum.ProtocolKindOpenAI,
+		}
+	}
+	bodyBytes := lo.Must1(sonic.Marshal(rsp))
+
+	u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
+	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+		model:               m,
+		exposedModel:        exposedModel,
+		endpoint:            endpoint,
+		upstreamProtocol:    enum.ProtocolAnthropicMessage,
+		apiProtocol:         enum.ProtocolOpenAIResponse,
+		firstTokenLatencyMs: totalMs,
+		usage:               anthropicTokenUsage{anthropicMsg},
+		successStatus:       true,
+	})
+
+	headers := buildPassthroughHeaders(ctx)
+	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
+	return &port.JSONResult{
+		StatusCode: http.StatusOK,
+		Headers:    headers,
+		Body:       bodyBytes,
+		Protocol:   enum.ProtocolKindOpenAI,
+	}, nil
+}
+
+// responseNativeStream 实现 port.Stream，消费 OpenAI Responses API 上游流。
+type responseNativeStream struct {
+	u                 *openAIUseCase
+	ctx               context.Context
+	req               *dto.OpenAICreateResponseRequest
+	m                 *aggregate.Model
+	ep                *aggregate.Endpoint
+	stream            io.ReadCloser
+	timer             *streamTimer
+	finalResponse     *dto.OpenAICreateResponseRsp
+	accumulatedOutput []*dto.ResponseInputItem
+	logger            *zap.Logger
+}
+
+func (s *responseNativeStream) Read(ctx context.Context, sink port.EventSink) error {
+	proxyErr := s.u.openAIProxy.ReadCreateResponseStream(ctx, s.stream, func(event string, data []byte) error {
+		return s.onEvent(sink, event, data)
+	})
+	s.finalize(sink, proxyErr)
+	return nil
+}
+
+func (s *responseNativeStream) Close() error {
+	return nil // ReadCreateResponseStream 内部已经关闭 stream
+}
+
+func (s *responseNativeStream) onEvent(sink port.EventSink, event string, data []byte) error {
+	if proxyutil.IsResponseAPIDeltaEvent(event) {
+		s.timer.markFirstToken()
+	}
+	s.handleOutputItemDone(event, data)
+	s.handleTerminalEvent(event, data)
+
+	outgoingData := s.patchTerminalOutput(event, data)
+	replaced := proxyutil.ReplaceModelInSSEData(outgoingData, lo.FromPtr(s.req.Body.Model))
+	return sink.WriteEvent(event, replaced)
+}
+
+func (s *responseNativeStream) handleOutputItemDone(event string, data []byte) {
+	if event != enum.ResponseStreamEventOutputItemDone {
+		return
+	}
+	var ev dto.ResponseStreamOutputItemDoneEvent
+	if err := sonic.Unmarshal(data, &ev); err != nil {
+		s.logger.Debug("[OpenAIUseCase] Failed to parse output_item.done event", zap.Error(err))
+		return
+	}
+	if ev.Item == nil {
+		return
+	}
+	s.accumulatedOutput = append(s.accumulatedOutput, ev.Item)
+}
+
+func (s *responseNativeStream) handleTerminalEvent(event string, data []byte) {
+	if s.finalResponse != nil || !proxyutil.IsResponseAPITerminalEvent(event) {
+		return
+	}
+	var ev dto.ResponseStreamTerminalEvent
+	if err := sonic.Unmarshal(data, &ev); err != nil {
+		s.logger.Warn("[OpenAIUseCase] Failed to parse response terminal event",
+			zap.String("event", event), zap.Error(err))
+		return
+	}
+	s.finalResponse = ev.Response
+	if s.finalResponse == nil {
+		return
+	}
+}
+
+func (s *responseNativeStream) patchTerminalOutput(event string, data []byte) []byte {
+	if !proxyutil.IsResponseAPITerminalEvent(event) {
+		return data
+	}
+	patched, changed, err := proxyutil.FillResponseTerminalOutput(data, s.accumulatedOutput)
+	if err != nil {
+		s.logger.Warn("[OpenAIUseCase] Failed to fill response terminal output", zap.String("event", event), zap.Error(err))
+		return data
+	}
+	if !changed {
+		return data
+	}
+	if s.finalResponse != nil {
+		s.finalResponse.Output = s.accumulatedOutput
+	}
+	return patched
+}
+
+func (s *responseNativeStream) finalize(sink port.EventSink, proxyErr error) {
+	s.timer.finish()
+	if proxyErr != nil {
+		s.logger.Error("[OpenAIUseCase] Native response stream error", zap.Error(proxyErr))
+		proxyutil.WriteUpstreamSSEError(s.ctx, sink, proxyErr)
+	}
+	if s.finalResponse != nil && len(s.finalResponse.Output) == 0 && len(s.accumulatedOutput) > 0 {
+		s.finalResponse.Output = s.accumulatedOutput
+	}
+	s.u.storeResponseFromRsp(s.ctx, s.req, s.finalResponse, proxyErr, s.m.Alias().String())
+
+	recordModelCall(s.ctx, s.u.taskSubmitter, callOutcome{
+		model:               s.m,
+		exposedModel:        lo.FromPtr(s.req.Body.Model),
+		endpoint:            s.ep.Name(),
+		upstreamProtocol:    enum.ProtocolOpenAIResponse,
+		apiProtocol:         enum.ProtocolOpenAIResponse,
+		firstTokenLatencyMs: s.timer.firstLatencyMs,
+		streamDurationMs:    s.timer.durationMs,
+		usage:               responseTokenUsage{s.finalResponse},
+		err:                 proxyErr,
+		responseStatus:      s.finalResponse,
+	})
+}
+
+// responseViaChatStream 实现 port.Stream，消费 OpenAI Chat 上游流并转换为 Responses API 事件。
+type responseViaChatStream struct {
+	u            *openAIUseCase
+	ctx          context.Context
+	req          *dto.OpenAICreateResponseRequest
+	m            *aggregate.Model
+	endpoint     string
+	exposedModel string
+	responseID   string
+	stream       io.ReadCloser
+	timer        *streamTimer
+	conv         *converter.ResponseProtocolConverter
+	itemState    *converter.StreamItemState
+	log          *zap.Logger
+}
+
+func (s *responseViaChatStream) Read(ctx context.Context, sink port.EventSink) error {
+	if err := writeResponseLifecycleEvent(sink, enum.ResponseStreamEventCreated, s.exposedModel, s.responseID); err != nil {
+		s.log.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
+	}
+	if err := writeResponseLifecycleEvent(sink, enum.ResponseStreamEventInProgress, s.exposedModel, s.responseID); err != nil {
+		s.log.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
+	}
+
+	completion, err := s.u.openAIProxy.ReadChatCompletionStream(ctx, s.stream, func(chunk *dto.OpenAIChatCompletionChunk) error {
+		hasWritten, writeErr := converter.WriteResponseDeltaFromChatChunk(sink, chunk, s.itemState, s.responseID, s.conv)
+		if hasWritten {
+			s.timer.markFirstToken()
+		}
+		return writeErr
+	})
+	s.timer.finish()
+
+	var rsp *dto.OpenAICreateResponseRsp
+	if err != nil {
+		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
+	} else {
+		rsp = converter.FinalizeResponseFromChatCompletion(sink, completion, s.exposedModel, s.responseID, s.conv)
+	}
+	s.u.storeResponseFromRsp(ctx, s.req, rsp, err, s.m.Alias().String())
+	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+		model:               s.m,
+		exposedModel:        s.exposedModel,
+		endpoint:            s.endpoint,
+		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
+		apiProtocol:         enum.ProtocolOpenAIResponse,
+		firstTokenLatencyMs: s.timer.firstLatencyMs,
+		streamDurationMs:    s.timer.durationMs,
+		usage:               responseTokenUsage{rsp},
+		err:                 err,
+	})
+	return nil
+}
+
+func (s *responseViaChatStream) Close() error {
+	return nil // ReadChatCompletionStream 内部已经关闭 stream
+}
+
+// responseViaAnthropicStream 实现 port.Stream，消费 Anthropic 上游流并转换为 Responses API 事件。
+type responseViaAnthropicStream struct {
 	u             *openAIUseCase
 	ctx           context.Context
 	req           *dto.OpenAICreateResponseRequest
-	responseConv  *converter.ResponseProtocolConverter
-	anthropicConv *converter.AnthropicProtocolConverter
+	m             *aggregate.Model
+	endpoint      string
 	exposedModel  string
 	responseID    string
 	chunkID       string
+	stream        io.ReadCloser
 	timer         *streamTimer
-	allChunks     []*dto.OpenAIChatCompletionChunk
+	responseConv  *converter.ResponseProtocolConverter
+	anthropicConv *converter.AnthropicProtocolConverter
 	itemState     *converter.StreamItemState
+	allChunks     []*dto.OpenAIChatCompletionChunk
 	logger        *zap.Logger
 }
 
-func newAnthropicStreamHandler(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest) *anthropicStreamHandler {
+func newResponseViaAnthropicStream(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, stream io.ReadCloser, endpoint string) *responseViaAnthropicStream {
 	exposedModel := lo.FromPtr(req.Body.Model)
-	h := &anthropicStreamHandler{
+	h := &responseViaAnthropicStream{
 		u:             u,
 		ctx:           ctx,
 		req:           req,
-		responseConv:  &converter.ResponseProtocolConverter{},
-		anthropicConv: &converter.AnthropicProtocolConverter{},
+		m:             m,
+		endpoint:      endpoint,
 		exposedModel:  exposedModel,
 		responseID:    fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String()),
 		chunkID:       fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
+		stream:        stream,
+		timer:         newStreamTimer(),
+		responseConv:  &converter.ResponseProtocolConverter{},
+		anthropicConv: &converter.AnthropicProtocolConverter{},
 		itemState:     converter.NewStreamItemState(),
+		allChunks:     make([]*dto.OpenAIChatCompletionChunk, 0),
 		logger:        logger.WithCtx(ctx),
 	}
 	assertRespConvInit(h.responseConv, req)
 	return h
 }
 
-func (h *anthropicStreamHandler) onAnthropicEvent(w *bufio.Writer, event dto.AnthropicSSEEvent) error {
-	if event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
-		h.timer.markFirstToken()
+func (s *responseViaAnthropicStream) Read(ctx context.Context, sink port.EventSink) error {
+	if err := writeResponseLifecycleEvent(sink, enum.ResponseStreamEventCreated, s.exposedModel, s.responseID); err != nil {
+		s.logger.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
 	}
-	chunks, convErr := h.anthropicConv.ToOpenAISSEResponse(event, h.exposedModel, h.chunkID)
+	if err := writeResponseLifecycleEvent(sink, enum.ResponseStreamEventInProgress, s.exposedModel, s.responseID); err != nil {
+		s.logger.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
+	}
+	anthropicMsg, err := s.u.anthropicProxy.ReadCreateMessageStream(ctx, s.stream, func(event dto.AnthropicSSEEvent) error {
+		return s.onAnthropicEvent(sink, event)
+	})
+	s.finalize(sink, anthropicMsg, err)
+	return nil
+}
+
+func (s *responseViaAnthropicStream) Close() error {
+	return nil // ReadCreateMessageStream 内部已经关闭 stream
+}
+
+func (s *responseViaAnthropicStream) onAnthropicEvent(sink port.EventSink, event dto.AnthropicSSEEvent) error {
+	if event.Event == enum.AnthropicSSEEventTypeContentBlockDelta {
+		s.timer.markFirstToken()
+	}
+	chunks, convErr := s.anthropicConv.ToOpenAISSEResponse(event, s.exposedModel, s.chunkID)
 	if convErr != nil {
-		h.logger.Error("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
+		s.logger.Error("[OpenAIUseCase] Failed to convert anthropic SSE to chat chunk", zap.Error(convErr))
 		return convErr
 	}
 	for _, chunk := range chunks {
 		if chunk == nil {
 			continue
 		}
-		h.allChunks = append(h.allChunks, chunk)
-		if _, writeErr := converter.WriteResponseDeltaFromChatChunk(w, chunk, h.itemState, h.responseID, h.responseConv); writeErr != nil {
+		s.allChunks = append(s.allChunks, chunk)
+		if _, writeErr := converter.WriteResponseDeltaFromChatChunk(sink, chunk, s.itemState, s.responseID, s.responseConv); writeErr != nil {
 			return writeErr
 		}
 	}
 	return nil
 }
 
-func (h *anthropicStreamHandler) finalize(w *bufio.Writer, m *aggregate.Model, endpoint string, anthropicMsg *dto.AnthropicMessage, err error) {
-	h.timer.finish()
-
-	rsp := finalizeResponseFromAnthropicStream(h.ctx, w, err, h.allChunks, anthropicMsg, h.exposedModel, h.responseID, h.anthropicConv, h.responseConv)
-	h.u.storeResponseFromRsp(h.ctx, h.req, rsp, err, m.Alias().String())
-	recordModelCall(h.ctx, h.u.taskSubmitter, callOutcome{
-		model:               m,
-		exposedModel:        h.exposedModel,
-		endpoint:            endpoint,
+func (s *responseViaAnthropicStream) finalize(sink port.EventSink, anthropicMsg *dto.AnthropicMessage, err error) {
+	s.timer.finish()
+	rsp := finalizeResponseFromAnthropicStream(s.ctx, sink, err, s.allChunks, anthropicMsg, s.exposedModel, s.responseID, s.anthropicConv, s.responseConv)
+	s.u.storeResponseFromRsp(s.ctx, s.req, rsp, err, s.m.Alias().String())
+	recordModelCall(s.ctx, s.u.taskSubmitter, callOutcome{
+		model:               s.m,
+		exposedModel:        s.exposedModel,
+		endpoint:            s.endpoint,
 		upstreamProtocol:    enum.ProtocolAnthropicMessage,
 		apiProtocol:         enum.ProtocolOpenAIResponse,
-		firstTokenLatencyMs: h.timer.firstLatencyMs,
-		streamDurationMs:    h.timer.durationMs,
+		firstTokenLatencyMs: s.timer.firstLatencyMs,
+		streamDurationMs:    s.timer.durationMs,
 		usage:               anthropicTokenUsage{anthropicMsg},
 		err:                 err,
 	})
 }
 
-func (u *openAIUseCase) forwardResponseViaAnthropicStreamBody(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, stream io.ReadCloser, endpoint string) func(w *bufio.Writer) {
-	h := newAnthropicStreamHandler(ctx, u, req)
-	return func(w *bufio.Writer) {
-		h.timer = newStreamTimer()
-		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventCreated, h.exposedModel, h.responseID); err != nil {
-			h.logger.Debug("[OpenAIUseCase] Failed to write response.created", zap.Error(err))
-		}
-		if err := writeResponseLifecycleEvent(w, enum.ResponseStreamEventInProgress, h.exposedModel, h.responseID); err != nil {
-			h.logger.Debug("[OpenAIUseCase] Failed to write response.in_progress", zap.Error(err))
-		}
-		anthropicMsg, err := u.anthropicProxy.ReadCreateMessageStream(ctx, stream, func(event dto.AnthropicSSEEvent) error {
-			return h.onAnthropicEvent(w, event)
-		})
-		h.finalize(w, m, endpoint, anthropicMsg, err)
-	}
-}
-
-func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, endpoint string, body []byte) *huma.StreamResponse {
-	anthropicConv := &converter.AnthropicProtocolConverter{}
-	responseConv := &converter.ResponseProtocolConverter{}
-	assertRespConvInit(responseConv, req)
-	exposedModel := lo.FromPtr(req.Body.Model)
-	return apiutil.WrapJSONResponse(ctx, func(writer apiutil.JSONResponseWriter) {
-		startTime := time.Now()
-		anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
-		totalMs := time.Since(startTime).Milliseconds()
-		if err != nil {
-			apiutil.WriteUpstreamError(writer, err, openAIInternalErrorBody)
-			auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
-			return
-		}
-		chatCompletion, convErr := anthropicConv.ToOpenAIResponse(anthropicMsg)
-		if convErr != nil {
-			logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert anthropic message to chat completion", zap.Error(convErr))
-			writer.WriteJSON(openAIInternalErrorBody)
-			return
-		}
-		chatCompletion.Model = exposedModel
-		rsp, convErr := responseConv.ToResponseResponse(chatCompletion)
-		if convErr != nil {
-			logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert chat completion to response", zap.Error(convErr))
-			writer.WriteJSON(openAIInternalErrorBody)
-			return
-		}
-		writer.WriteJSON(rsp)
-		u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
-		recordModelCall(ctx, u.taskSubmitter, callOutcome{
-			model:               m,
-			exposedModel:        exposedModel,
-			endpoint:            endpoint,
-			upstreamProtocol:    enum.ProtocolAnthropicMessage,
-			apiProtocol:         enum.ProtocolOpenAIResponse,
-			firstTokenLatencyMs: totalMs,
-			usage:               anthropicTokenUsage{anthropicMsg},
-			successStatus:       true,
-		})
-	})
-}
-
-func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, upstreamErr error, allChunks []*dto.OpenAIChatCompletionChunk, anthropicMsg *dto.AnthropicMessage, exposedModel, responseID string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
+func finalizeResponseFromAnthropicStream(ctx context.Context, sink port.EventSink, upstreamErr error, allChunks []*dto.OpenAIChatCompletionChunk, anthropicMsg *dto.AnthropicMessage, exposedModel, responseID string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if upstreamErr != nil {
-		proxyutil.WriteUpstreamSSEError(ctx, w, upstreamErr)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, upstreamErr)
 		return nil
 	}
 	chatCompletion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails
@@ -482,7 +565,7 @@ func finalizeResponseFromAnthropicStream(ctx context.Context, w *bufio.Writer, u
 	if chatCompletion == nil {
 		return nil
 	}
-	return converter.FinalizeResponseFromChatCompletion(w, chatCompletion, exposedModel, responseID, responseConv)
+	return converter.FinalizeResponseFromChatCompletion(sink, chatCompletion, exposedModel, responseID, responseConv)
 }
 
 func assertRespConvInit(conv *converter.ResponseProtocolConverter, req *dto.OpenAICreateResponseRequest) {
@@ -493,7 +576,7 @@ func assertRespConvInit(conv *converter.ResponseProtocolConverter, req *dto.Open
 	conv.SetNamespaceMap(converter.BuildNamespaceMap(req.Body.Tools))
 }
 
-func writeResponseLifecycleEvent(w *bufio.Writer, event enum.ResponseStreamEventType, model, responseID string) error {
+func writeResponseLifecycleEvent(sink port.EventSink, event enum.ResponseStreamEventType, model, responseID string) error {
 	payload := lo.Must1(sonic.Marshal(map[string]any{
 		constant.ResponseStreamFieldType: event,
 		constant.ResponseStreamFieldResponse: map[string]any{
@@ -505,6 +588,5 @@ func writeResponseLifecycleEvent(w *bufio.Writer, event enum.ResponseStreamEvent
 			constant.ResponseStreamFieldOutput:    []any{},
 		},
 	}))
-	_, err := fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload)
-	return err
+	return sink.WriteEvent(event, payload)
 }
