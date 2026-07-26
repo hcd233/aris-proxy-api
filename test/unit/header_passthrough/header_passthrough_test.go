@@ -3,7 +3,6 @@ package headerpassthrough
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +16,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
@@ -181,7 +182,7 @@ func TestHeaderPassthroughMiddleware_ExcludesReverseProxyHeaders(t *testing.T) {
 	}
 }
 
-func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
+func TestStreamResult_AppliesPassthroughResponseHeaders(t *testing.T) {
 	t.Parallel()
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("Aris Test", "1.0"))
@@ -196,10 +197,13 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 		Method:      http.MethodGet,
 		Path:        "/stream",
 	}, func(ctx context.Context, _ *struct{}) (*huma.StreamResponse, error) {
-		return apiutil.WrapStreamResponse(ctx, func(w *bufio.Writer) {
-			_, _ = fmt.Fprintf(w, constant.SSEDataFrameTemplate, []byte(`{"ok":true}`))
-			_ = w.Flush()
-		}), nil
+		result := &port.StreamResult{
+			Protocol: enum.ProtocolKindOpenAI,
+			Open: func(ctx context.Context) (port.Stream, error) {
+				return &passthroughSSEStream{}, nil
+			},
+		}
+		return apiutil.AdaptProxyResult(ctx, result, nil, nil)
 	})
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/stream", http.NoBody)
@@ -213,6 +217,15 @@ func TestWrapStreamResponse_AppliesPassthroughResponseHeaders(t *testing.T) {
 		t.Fatalf("X-Upstream-Cache = %q, want hit", resp.Header.Get("X-Upstream-Cache"))
 	}
 }
+
+// passthroughSSEStream 是测试用的 port.Stream 实现，写入一条简单 SSE 数据后结束。
+type passthroughSSEStream struct{}
+
+func (s *passthroughSSEStream) Read(_ context.Context, sink port.EventSink) error {
+	return sink.WriteEvent("", []byte(`{"ok":true}`))
+}
+
+func (s *passthroughSSEStream) Close() error { return nil }
 
 func TestOpenAIProxy_CanonicalizesPassthroughHeader(t *testing.T) {
 	t.Parallel()

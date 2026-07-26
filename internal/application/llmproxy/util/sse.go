@@ -1,62 +1,22 @@
 package proxyutil
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/bytedance/sonic"
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
+	"github.com/samber/lo"
+	"go.uber.org/zap"
+
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/samber/lo"
-	"go.uber.org/zap"
 )
-
-// WrapErrorSSE 包装错误响应
-//
-//	@param ctx
-//	@param err
-//	@return rsp
-//	@author centonhuang
-//	@update 2025-11-11 17:46:36
-func WrapErrorSSE(ctx context.Context, err *model.Error) (rsp *huma.StreamResponse) {
-	return &huma.StreamResponse{
-		Body: func(hCtx huma.Context) {
-			fCtx := humafiber.Unwrap(hCtx)
-			fCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
-			fCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
-			fCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
-
-			_ = fCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // best-effort stream write on error
-				writeSSEErrorResponse(ctx, w, err)
-			})
-		},
-	}
-}
-
-func writeSSEErrorResponse(ctx context.Context, w *bufio.Writer, err *model.Error) {
-	logger := logger.WithCtx(ctx)
-	rsp := &dto.SSEResponse{
-		DataType: enum.SSEDataTypeError,
-		Status:   enum.SSEStatusError,
-		Data:     lo.Must1(sonic.Marshal(&dto.CommonRsp{Error: err})),
-	}
-	if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, lo.Must1(sonic.Marshal(rsp))); writeErr != nil {
-		logger.Debug("[WriteErrorResponse] Failed to write sse data frame", zap.Error(writeErr))
-	}
-	if err := w.Flush(); err != nil {
-		logger.Error("[WriteErrorResponse] Flush error", zap.Error(err))
-	}
-}
 
 // WriteAnthropicMessageStop 向客户端写入 Anthropic 协议的 message_stop 结束帧。
 //
@@ -64,15 +24,12 @@ func writeSSEErrorResponse(ctx context.Context, w *bufio.Writer, err *model.Erro
 // 保证 event 类型和 data payload 一致（参见提交 184dcf9 的回归修复）。
 // 返回 flush 错误而不 panic，调用方可按需处理（通常忽略即可）。
 //
-//	@param w *bufio.Writer
+//	@param sink port.EventSink
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-20 11:00:00
-func WriteAnthropicMessageStop(w *bufio.Writer) error {
-	if _, err := w.WriteString(constant.AnthropicMessageStopSSEFrame); err != nil {
-		return err
-	}
-	return w.Flush()
+//	@update 2026-07-25 10:00:00
+func WriteAnthropicMessageStop(sink port.EventSink) error {
+	return sink.WriteEvent(enum.AnthropicSSEEventTypeMessageStop, []byte(constant.AnthropicMessageStopData))
 }
 
 // WriteUpstreamSSEError 在 SSE 流中写入上游错误。
@@ -80,103 +37,95 @@ func WriteAnthropicMessageStop(w *bufio.Writer) error {
 // 以 SSE data 帧的形式写入客户端，避免客户端收到空的截断流。
 //
 //	@param ctx context.Context
-//	@param w *bufio.Writer
+//	@param sink port.EventSink
 //	@param err error
 //	@author centonhuang
-//	@update 2026-04-26 12:00:00
-func WriteUpstreamSSEError(ctx context.Context, w *bufio.Writer, err error) {
+//	@update 2026-07-25 10:00:00
+func WriteUpstreamSSEError(ctx context.Context, sink port.EventSink, err error) {
 	log := logger.WithCtx(ctx)
 	var upstreamErr *model.UpstreamError
 	if !errors.As(err, &upstreamErr) {
 		log.Error("[WriteUpstreamSSEError] Non-upstream error in SSE stream", zap.Error(err))
-		if _, writeErr := fmt.Fprint(w, constant.SSEOpenAIInternalErrorFrame); writeErr != nil {
+		if writeErr := sink.WriteEvent("", []byte(constant.SSEOpenAIInternalErrorData)); writeErr != nil {
 			log.Debug("[WriteUpstreamSSEError] Failed to write internal error frame", zap.Error(writeErr))
-		}
-		if flushErr := w.Flush(); flushErr != nil {
-			log.Debug("[WriteUpstreamSSEError] Failed to flush SSE writer", zap.Error(flushErr))
 		}
 		return
 	}
 	if upstreamErr.Body != "" {
-		if _, writeErr := fmt.Fprintf(w, constant.SSEDataFrameTemplate, upstreamErr.Body); writeErr != nil {
+		if writeErr := sink.WriteEvent("", []byte(upstreamErr.Body)); writeErr != nil {
 			log.Debug("[WriteUpstreamSSEError] Failed to write upstream error body", zap.Error(writeErr))
 		}
-	} else {
-		if _, writeErr := fmt.Fprintf(w, constant.SSEOpenAIUpstreamErrorFrame, upstreamErr.StatusCode); writeErr != nil {
-			log.Debug("[WriteUpstreamSSEError] Failed to write upstream status frame", zap.Error(writeErr))
-		}
+		return
 	}
-	if flushErr := w.Flush(); flushErr != nil {
-		log.Debug("[WriteUpstreamSSEError] Failed to flush SSE writer", zap.Error(flushErr))
+	data := fmt.Sprintf(constant.SSEOpenAIUpstreamErrorData, upstreamErr.StatusCode)
+	if writeErr := sink.WriteEvent("", []byte(data)); writeErr != nil {
+		log.Debug("[WriteUpstreamSSEError] Failed to write upstream status frame", zap.Error(writeErr))
 	}
 }
 
-// SendOpenAIModelNotFoundError 发送OpenAI模型不存在错误
+// SendOpenAIModelNotFoundError 构造 OpenAI 模型不存在错误。
 //
-//	@return rsp
-//	@author centonhuang
-//	@update 2026-03-06 15:58:35
-func SendOpenAIModelNotFoundError(modelName string) (rsp *huma.StreamResponse) {
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(http.StatusNotFound)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write in error handler
-				Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
-				Type:    constant.OpenAIInvalidRequestErrorType,
-				Code:    constant.OpenAIModelNotFoundCode,
-			})))
-		},
-	}
-}
-
-// SendOpenAIInternalError 发送OpenAI内部错误
+// 返回 *port.ProxyError 由 adapter 映射为 HTTP JSON 响应；
+// application 不构造 Huma response，也不设置 HTTP status/header。
 //
-//	@return rsp
+//	@param modelName string
+//	@return *port.ProxyError
 //	@author centonhuang
-//	@update 2026-03-06 16:00:05
-func SendOpenAIInternalError() (rsp *huma.StreamResponse) {
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(http.StatusInternalServerError)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write in error handler
-				Message: constant.OpenAIInternalErrorShortMessage,
-				Type:    constant.OpenAIInternalErrorType,
-				Code:    constant.OpenAIInternalErrorCode,
-			})))
-		},
+//	@update 2026-07-25 10:00:00
+func SendOpenAIModelNotFoundError(modelName string) *port.ProxyError {
+	body := lo.Must1(sonic.Marshal(&dto.OpenAIError{
+		Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
+		Type:    constant.OpenAIInvalidRequestErrorType,
+		Code:    constant.OpenAIModelNotFoundCode,
+	}))
+	return &port.ProxyError{
+		StatusCode: http.StatusNotFound,
+		Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+		Body:       body,
+		Protocol:   enum.ProtocolKindOpenAI,
 	}
 }
 
-// SendOpenAIContentBlockedError 发送OpenAI内容被拦截错误 (403)
-func SendOpenAIContentBlockedError() *huma.StreamResponse {
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(http.StatusForbidden)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.OpenAIError{ //nolint:errcheck // best-effort write in error handler
-				Message: constant.BlockedContentBlockedErrorMessage,
-				Type:    constant.BlockedContentBlockedErrorType,
-				Code:    constant.BlockedContentBlockedErrorCode,
-			}))) //nolint:errcheck // best-effort write in error handler
-		},
+// SendOpenAIContentBlockedError 构造 OpenAI 内容被拦截错误 (403)。
+//
+// 返回 *port.ProxyError 由 adapter 映射为 HTTP JSON 响应。
+//
+//	@return *port.ProxyError
+//	@author centonhuang
+//	@update 2026-07-25 10:00:00
+func SendOpenAIContentBlockedError() *port.ProxyError {
+	body := lo.Must1(sonic.Marshal(&dto.OpenAIError{
+		Message: constant.BlockedContentBlockedErrorMessage,
+		Type:    constant.BlockedContentBlockedErrorType,
+		Code:    constant.BlockedContentBlockedErrorCode,
+	}))
+	return &port.ProxyError{
+		StatusCode: http.StatusForbidden,
+		Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+		Body:       body,
+		Protocol:   enum.ProtocolKindOpenAI,
 	}
 }
 
-// SendAnthropicContentBlockedError 发送Anthropic内容被拦截错误 (403)
-func SendAnthropicContentBlockedError() *huma.StreamResponse {
-	return &huma.StreamResponse{
-		Body: func(humaCtx huma.Context) {
-			humaCtx.SetStatus(http.StatusForbidden)
-			humaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-			_, _ = humaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{ //nolint:errcheck // best-effort write in error handler
-				Type: constant.AnthropicInternalErrorBodyType,
-				Error: &dto.AnthropicError{
-					Type:    constant.BlockedContentBlockedErrorType,
-					Message: constant.BlockedContentBlockedErrorMessage,
-				},
-			})))
+// SendAnthropicContentBlockedError 构造 Anthropic 内容被拦截错误 (403)。
+//
+// 返回 *port.ProxyError 由 adapter 映射为 HTTP JSON 响应。
+//
+//	@return *port.ProxyError
+//	@author centonhuang
+//	@update 2026-07-25 10:00:00
+func SendAnthropicContentBlockedError() *port.ProxyError {
+	body := lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+		Type: constant.AnthropicInternalErrorBodyType,
+		Error: &dto.AnthropicError{
+			Type:    constant.BlockedContentBlockedErrorType,
+			Message: constant.BlockedContentBlockedErrorMessage,
 		},
+	}))
+	return &port.ProxyError{
+		StatusCode: http.StatusForbidden,
+		Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+		Body:       body,
+		Protocol:   enum.ProtocolKindAnthropic,
 	}
 }

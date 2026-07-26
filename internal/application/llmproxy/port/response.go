@@ -9,6 +9,33 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 )
 
+// Result 是 application 层向 adapter 返回的代理结果标记接口。
+//
+// 实现类型：JSONResult（unary JSON 响应）、StreamResult（SSE 流式响应）。
+// 错误通过 error 返回（通常为 *ProxyError）；adapter 用类型断言区分成功结果的形态。
+// 标记方法 isProxyResult 未导出，确保只有 port 包内定义的类型能实现 Result。
+type Result interface {
+	isProxyResult()
+}
+
+// JSONResult 是 application 层向 adapter 返回的非流式 JSON 结果。
+//
+// 携带 adapter 写入 HTTP 所需的 status、可透传 header 和协议 JSON body。
+// 用于 model-not-found、content-blocked、unary 成功响应等非流式路径。
+type JSONResult struct {
+	// StatusCode 是 adapter 应写入的 HTTP 状态码。
+	StatusCode int
+	// Headers 是允许透传给客户端的上游/协议 header。
+	Headers map[string]string
+	// Body 是协议层已经确定的 JSON 字节，可直接写入 HTTP body。
+	Body []byte
+	// Protocol 指示入口协议，决定 adapter 使用哪种 envelope。
+	Protocol enum.ProtocolKind
+}
+
+// isProxyResult 标记 JSONResult 为 port.Result 实现。
+func (*JSONResult) isProxyResult() {}
+
 // ProxyError 是 application 层向 adapter 透传的协议错误载体。
 //
 // 携带上游或业务错误的 HTTP 状态语义、可透传 header、协议错误 body 和底层 cause；
@@ -53,6 +80,9 @@ type StreamResult struct {
 	// Open 建立上游流并返回 Stream；adapter 在写出 SSE headers 之后调用。
 	Open func(ctx context.Context) (Stream, error)
 }
+
+// isProxyResult 标记 StreamResult 为 port.Result 实现。
+func (*StreamResult) isProxyResult() {}
 
 // Stream 是 application 定义的流消费接口。
 //

@@ -2,11 +2,13 @@ package llmproxy_usecase
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -85,6 +87,7 @@ func buildAnthropicTestModel() *aggregate.Model {
 	return m
 }
 
+// Native 流式请求成功时返回 *port.StreamResult，Protocol 为 Anthropic；Read 阶段需等 adapter 调用。
 func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
@@ -101,15 +104,26 @@ func TestAnthropicCreateMessage_NativeStream(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateMessage(context.Background(), req)
+	result, err := uc.CreateMessage(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateMessage() error: %v", err)
 	}
-	if rsp == nil {
-		t.Fatal("CreateMessage() returned nil response")
+	streamResult, ok := result.(*port.StreamResult)
+	if !ok {
+		t.Fatalf("result = %T, want *port.StreamResult", result)
+	}
+	if streamResult.Protocol != enum.ProtocolKindAnthropic {
+		t.Fatalf("protocol = %v, want %v", streamResult.Protocol, enum.ProtocolKindAnthropic)
+	}
+	if streamResult.Open == nil {
+		t.Fatal("StreamResult.Open callback is nil")
+	}
+	if mockProxy.readMessageStreamCnt != 0 {
+		t.Fatal("ReadCreateMessageStream must not be called until adapter invokes Stream.Read")
 	}
 }
 
+// Native unary 请求成功时返回 *port.JSONResult(200)，Protocol 为 Anthropic。
 func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 	t.Parallel()
 	mockProxy := &mockAnthropicProxyForAnthropic{}
@@ -126,15 +140,26 @@ func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateMessage(context.Background(), req)
+	result, err := uc.CreateMessage(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateMessage() error: %v", err)
 	}
-	if rsp == nil {
-		t.Fatal("CreateMessage() returned nil response")
+	jsonResult, ok := result.(*port.JSONResult)
+	if !ok {
+		t.Fatalf("result = %T, want *port.JSONResult", result)
+	}
+	if jsonResult.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", jsonResult.StatusCode, http.StatusOK)
+	}
+	if jsonResult.Protocol != enum.ProtocolKindAnthropic {
+		t.Fatalf("protocol = %v, want %v", jsonResult.Protocol, enum.ProtocolKindAnthropic)
+	}
+	if len(jsonResult.Body) == 0 {
+		t.Fatal("JSONResult.Body is empty")
 	}
 }
 
+// Model not found 时，application 必须以 *port.ProxyError(404) 返回，由 adapter 写为 HTTP 404 JSON 响应。
 func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 	t.Parallel()
 	mockResolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
@@ -150,12 +175,19 @@ func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateMessage(context.Background(), req)
-	if err != nil {
-		t.Fatalf("CreateMessage() error: %v", err)
+	result, err := uc.CreateMessage(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (model not found must not produce a Result)", result)
 	}
-	if rsp == nil {
-		t.Fatal("CreateMessage() returned nil response")
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
+	}
+	if proxyErr.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", proxyErr.StatusCode, http.StatusNotFound)
+	}
+	if proxyErr.Protocol != enum.ProtocolKindAnthropic {
+		t.Fatalf("protocol = %v, want %v", proxyErr.Protocol, enum.ProtocolKindAnthropic)
 	}
 }
 
@@ -243,7 +275,7 @@ func TestAnthropicCreateMessage_ChatResponseEndpointUsesChatCompatibility(t *tes
 }
 
 // Anthropic Message native 流式请求上游 Open 阶段失败时，usecase 不得调用 ReadCreateMessageStream。
-// 现有实现通过 upstreamStreamErrorResponse 构造 Huma JSON 响应，Body callback 不消费流。
+// 新契约下 Open 错误以 *port.ProxyError 返回（result=nil），由 adapter 在写出 SSE 头之前映射为 HTTP 错误。
 // 本测试锁定该行为，避免后续迁移把 Open 错误误延后到 SSE body 阶段。
 func TestAnthropicCreateMessage_NativeStream_OpenErrorSkipsRead(t *testing.T) {
 	t.Parallel()
@@ -264,12 +296,13 @@ func TestAnthropicCreateMessage_NativeStream_OpenErrorSkipsRead(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateMessage(context.Background(), req)
-	if err != nil {
-		t.Fatalf("CreateMessage() error: %v", err)
+	result, err := uc.CreateMessage(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (Open error must not produce a Result)", result)
 	}
-	if rsp == nil {
-		t.Fatal("CreateMessage() returned nil response")
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
 	}
 	if proxy.readMessageStreamCnt != 0 {
 		t.Fatalf("ReadCreateMessageStream must not be called when Open fails; got cnt=%d", proxy.readMessageStreamCnt)
@@ -301,12 +334,13 @@ func TestAnthropicCreateMessage_ViaChatStream_OpenErrorSkipsRead(t *testing.T) {
 		Stream: &stream,
 	}}
 
-	rsp, err := uc.CreateMessage(context.Background(), req)
-	if err != nil {
-		t.Fatalf("CreateMessage() error: %v", err)
+	result, err := uc.CreateMessage(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (Open error must not produce a Result)", result)
 	}
-	if rsp == nil {
-		t.Fatal("CreateMessage() returned nil response")
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
 	}
 	if openAIProxy.readChatStreamCalled {
 		t.Fatal("ReadChatCompletionStream must not be called when Open fails")

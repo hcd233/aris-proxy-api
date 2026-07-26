@@ -13,17 +13,7 @@ import (
 //
 // 通过源码扫描而非编译器错误信息判定，确保后续迁移过程中能够即时暴露越界依赖。
 // 路径基于测试文件本身定位（runtime.Caller），不依赖 go test 的 CWD。
-//
-// NOTE: P3-2 迁移期间 (Task 1-5) 此测试 t.Skip 跳过，因为 pre-commit hook 要求 `go test ./...`
-// 全部通过才能 commit；当前 usecase/port 仍存在大量 huma/fiber/apiutil 依赖（按 plan 分阶段迁移）。
-// Task 6 完成所有迁移后移除 t.Skip，启用最终验证。
-// 迁移期间通过 `rg` 命令在每个 Task commit 前手动监控越界状态：
-//
-//	rg -n 'huma|humafiber|internal/api/util|github.com/gofiber/fiber/v3' \
-//	  internal/application/llmproxy/usecase internal/application/llmproxy/port
 func TestLLMProxyApplicationDoesNotImportHTTPTransport(t *testing.T) {
-	t.Skip("P3-2 migration in progress; enabled in Task 6 once all paths migrated to transport-neutral results")
-
 	t.Parallel()
 
 	_, testFile, _, ok := runtime.Caller(0)
