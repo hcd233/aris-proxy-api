@@ -116,11 +116,6 @@ jobs:
       - name: Prepare Docker File
         run: cp docker/dockerfile dockerfile
 
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3.5.0
-        with:
-          cosign-release: 'v2.2.4'
-
       # 只在非原生平台时设置QEMU (实际上现在都是原生的，但保留以防未来需要)
       - name: Set up QEMU
         if: ${{ matrix.platform != 'linux/amd64' && matrix.runner == 'ubuntu-latest' }}
