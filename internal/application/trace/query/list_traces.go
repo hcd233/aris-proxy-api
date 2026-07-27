@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	apikeydomain "github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
@@ -27,7 +28,10 @@ func (h *listTracesHandler) Handle(ctx context.Context, q port.ListTracesQuery) 
 	if err != nil {
 		return nil, nil, err
 	}
-	traces, pageInfo, err := h.repo.PaginateByOwners(ctx, owners, model.CommonParam{PageParam: model.PageParam{Page: q.Page, PageSize: q.PageSize}})
+	traces, pageInfo, err := h.repo.PaginateByOwners(ctx, owners, model.CommonParam{
+		PageParam:  model.PageParam{Page: q.Page, PageSize: q.PageSize},
+		QueryParam: model.QueryParam{Query: q.Query, QueryFields: []string{constant.FieldSessionID, constant.FieldModel, constant.FieldAPIKeyName}},
+	})
 	if err != nil {
 		return nil, nil, err
 	}

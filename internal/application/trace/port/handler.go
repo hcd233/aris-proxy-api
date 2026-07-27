@@ -98,6 +98,7 @@ type ListTracesQuery struct {
 	IsAdmin  bool
 	Page     int
 	PageSize int
+	Query    string
 }
 
 // ListTracesHandler 列表 handler 接口

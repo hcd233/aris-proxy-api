@@ -132,6 +132,22 @@ func (r *traceRepository) PaginateByOwners(ctx context.Context, owners []string,
 	if len(owners) > 0 {
 		q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), owners)
 	}
+	if param.Query != "" && len(param.QueryFields) > 0 {
+		like := "%" + param.Query + "%"
+		expressions := lo.FilterMap(param.QueryFields, func(field string, _ int) (clause.Expression, bool) {
+			if field == "" {
+				return nil, false
+			}
+			return clause.Like{Column: clause.Column{Name: field}, Value: like}, true
+		})
+		if len(expressions) > 0 {
+			sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])
+			for _, expr := range expressions[1:] {
+				sub = sub.Or(expr)
+			}
+			q = q.Where(sub)
+		}
+	}
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
 	if pageInfo.Page < 1 {
 		pageInfo.Page = 1
