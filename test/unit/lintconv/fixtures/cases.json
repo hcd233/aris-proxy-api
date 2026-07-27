@@ -72,6 +72,31 @@
     ]
   },
   {
+    "name": "zap logger struct field is rejected",
+    "files": [
+      {
+        "path": "internal/application/demo/zap_field.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\ntype worker struct {\n\tname string\n\tlog  *zap.Logger\n}\n\ntype valued struct {\n\tlog zap.Logger\n}\n\ntype embedded struct {\n\t*zap.Logger\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "logging.zap_logger_field", "severity": "error"}
+    ]
+  },
+  {
+    "name": "struct holding other zap types is allowed",
+    "files": [
+      {
+        "path": "internal/application/demo/zap_ok.go",
+        "content": "package demo\n\nimport \"go.uber.org/zap\"\n\ntype event struct {\n\tfields []zap.Field\n\tsugar  *zap.SugaredLogger\n}\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "logging.zap_logger_field", "severity": "error"},
+      {"rule": "logging.zap_logger_param", "severity": "error"}
+    ]
+  },
+  {
     "name": "internal test file is rejected",
     "files": [
       {

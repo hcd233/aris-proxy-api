@@ -18,6 +18,8 @@ func (c *checker) checkLogging() {
 			switch current := node.(type) {
 			case *ast.FuncType:
 				c.checkZapLoggerParams(file, current.Params, zapAliases)
+			case *ast.StructType:
+				c.checkZapLoggerFields(file, current.Fields, zapAliases)
 			case *ast.CallExpr:
 				if !isUnder(file.Path, constant.ConvCheckPathInternal) {
 					return
@@ -36,8 +38,19 @@ func (c *checker) checkZapLoggerParams(file SourceFile, fields *ast.FieldList, z
 		return
 	}
 	for _, field := range fields.List {
-		if isZapLoggerParamType(field.Type, zapAliases) {
+		if isZapLoggerType(field.Type, zapAliases) {
 			c.report(file, field, enum.SeverityError, constant.RuleLoggingZapLoggerParam, constant.ConvCheckMsgZapLoggerParam)
+		}
+	}
+}
+
+func (c *checker) checkZapLoggerFields(file SourceFile, fields *ast.FieldList, zapAliases map[string]bool) {
+	if fields == nil || len(zapAliases) == 0 {
+		return
+	}
+	for _, field := range fields.List {
+		if isZapLoggerType(field.Type, zapAliases) {
+			c.report(file, field, enum.SeverityError, constant.RuleLoggingZapLoggerField, constant.ConvCheckMsgZapLoggerField)
 		}
 	}
 }
@@ -61,15 +74,14 @@ func zapImportAliases(file SourceFile) map[string]bool {
 	return aliases
 }
 
-func isZapLoggerParamType(expr ast.Expr, zapAliases map[string]bool) bool {
+func isZapLoggerType(expr ast.Expr, zapAliases map[string]bool) bool {
 	if variadic, ok := expr.(*ast.Ellipsis); ok {
 		expr = variadic.Elt
 	}
-	star, ok := expr.(*ast.StarExpr)
-	if !ok {
-		return false
+	if star, ok := expr.(*ast.StarExpr); ok {
+		expr = star.X
 	}
-	selector, ok := star.X.(*ast.SelectorExpr)
+	selector, ok := expr.(*ast.SelectorExpr)
 	if !ok || selector.Sel.Name != constant.ConvCheckTypeLogger {
 		return false
 	}
