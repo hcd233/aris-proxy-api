@@ -621,9 +621,11 @@ class ApiClient {
 
   async listTraces(
     page: number = 1,
-    pageSize: number = 20
+    pageSize: number = 20,
+    query?: string
   ): Promise<ListTracesRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (query) params.set("query", query);
     return this.request<ListTracesRsp>(`/api/v1/trace/list?${params}`);
   }
 

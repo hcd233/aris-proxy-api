@@ -238,7 +238,7 @@ func (h *traceHandler) HandleListTraces(ctx context.Context, req *dto.ListTraces
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
-	views, pageInfo, err := h.list.Handle(ctx, port.ListTracesQuery{UserID: userID, IsAdmin: isAdmin, Page: req.Page, PageSize: req.PageSize})
+	views, pageInfo, err := h.list.Handle(ctx, port.ListTracesQuery{UserID: userID, IsAdmin: isAdmin, Page: req.Page, PageSize: req.PageSize, Query: req.Query})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] List traces failed", zap.Error(err))
 		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())

@@ -64,6 +64,7 @@ type ListTracesRsp struct {
 // ListTracesReq 列表请求（JWT）
 type ListTracesReq struct {
 	model.PageParam
+	Query string `query:"query" maxLength:"100" doc:"关键词（会话 ID / 模型 / API Key 模糊匹配）"`
 }
 
 // GetTraceRsp 详情响应
