@@ -1,13 +1,15 @@
 "use client";
 
 import { useT } from "@/lib/i18n";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, UserRound, Wrench } from "lucide-react";
+import { ArrowLeft, Bot } from "lucide-react";
 import { api } from "@/lib/api-client";
 import type {
+  MessageItem,
   PageInfo,
   TraceConversation,
+  TraceConversationItem,
   TraceDetail,
   TraceEventItem,
 } from "@/lib/types";
@@ -16,9 +18,59 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
+import { ChatMessage, buildToolResultsByID } from "@/components/chat/chat-message";
 import { toast } from "sonner";
 
 const EVENT_PAGE_SIZE = 50;
+
+/**
+ * 将 trace 对话项映射为 session 聊天消息结构，复用 ChatMessage 气泡渲染。
+ * tool_call 拆成 assistant(tool_calls) + tool(output) 两条消息，
+ * 由 buildToolResultsByID 配对后内联进 ToolCallCard。
+ */
+function itemToMessages(item: TraceConversationItem, model: string): MessageItem[] {
+  const id = item.recordIds[0] ?? 0;
+  if (item.kind === "tool_call") {
+    const messages: MessageItem[] = [
+      {
+        id,
+        model,
+        createdAt: "",
+        message: {
+          role: "assistant",
+          tool_calls: [
+            {
+              id: item.callId,
+              name: item.toolName || "tool",
+              arguments: item.arguments ?? "",
+            },
+          ],
+        },
+      },
+    ];
+    if (item.output) {
+      messages.push({
+        id: item.recordIds[1] ?? id,
+        model,
+        createdAt: "",
+        message: {
+          role: "tool",
+          tool_call_id: item.callId,
+          content: item.output,
+        },
+      });
+    }
+    return messages;
+  }
+  return [
+    {
+      id,
+      model,
+      createdAt: "",
+      message: { role: item.role || "assistant", content: item.content },
+    },
+  ];
+}
 
 function statusBadge(status: string, t: (k: string, f?: string) => string) {
   if (status === "active") {
@@ -61,6 +113,15 @@ export default function TraceDetailClient({
   const [conversation, setConversation] = useState<TraceConversation | null>(null);
   const [conversationLoading, setConversationLoading] = useState(false);
   const [detailTab, setDetailTab] = useState<"conversation" | "raw">("conversation");
+
+  const chatMessages = useMemo(
+    () =>
+      (conversation?.turns ?? []).flatMap((turn) =>
+        turn.items.flatMap((item) => itemToMessages(item, detail?.model ?? ""))
+      ),
+    [conversation, detail?.model]
+  );
+  const toolResultsByID = useMemo(() => buildToolResultsByID(chatMessages), [chatMessages]);
 
   const fetchEvents = useCallback(
     async (id: number, page: number, pageSize: number) => {
@@ -303,26 +364,26 @@ export default function TraceDetailClient({
             ) : !conversation || conversation.turns.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
             ) : (
-              <div className="space-y-5">
+              <div className="mx-auto w-full max-w-[768px] space-y-6">
                 {conversation.turns.map((turn) => (
-                  <div key={turn.turnId || "default"} className="space-y-3">
+                  <div key={turn.turnId || "default"} className="space-y-4">
                     <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
                       <span className="h-px flex-1 bg-border" />
                       <span>{turn.turnId || "session"}</span>
                       <span className="h-px flex-1 bg-border" />
                     </div>
-                    {turn.items.map((item, index) => (
-                      <div key={`${item.recordIds.join("-")}-${index}`} className="rounded-xl border border-border bg-card p-3 shadow-sm">
-                        <div className="flex items-center gap-2 text-xs font-medium">
-                          {item.kind === "tool_call" ? <Wrench className="size-3.5 text-amber-500" /> : item.role === "user" ? <UserRound className="size-3.5 text-sky-500" /> : <Bot className="size-3.5 text-emerald-500" />}
-                          <span className="capitalize">{item.kind === "tool_call" ? item.toolName || "tool" : item.role || "message"}</span>
-                          <Badge variant="outline" className="ml-auto text-[10px]">{item.source}</Badge>
-                        </div>
-                        {item.content ? <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{item.content}</p> : null}
-                        {item.arguments ? <pre className="mt-2 overflow-auto rounded-md bg-[#262624] p-3 font-mono text-[11px] text-[#E5E0D6]">{item.arguments}</pre> : null}
-                        {item.output ? <pre className="mt-2 overflow-auto rounded-md bg-secondary/50 p-3 font-mono text-[11px]">{item.output}</pre> : null}
-                      </div>
-                    ))}
+                    <div className="space-y-5">
+                      {turn.items
+                        .flatMap((item) => itemToMessages(item, detail.model))
+                        .map((m, i) => (
+                          <ChatMessage
+                            key={`${turn.turnId || "default"}-${i}`}
+                            message={m}
+                            index={i}
+                            toolResultsByID={toolResultsByID}
+                          />
+                        ))}
+                    </div>
                   </div>
                 ))}
               </div>
