@@ -149,7 +149,8 @@ const (
 	ConvCheckMsgMustStartUppercase = "log message after [ModuleName] must start with uppercase letter"
 	ConvCheckMsgMustNotChinese     = "log messages must not contain Chinese characters"
 	ConvCheckMsgUseMaskSecret      = "logging Key/Token/Secret/Password must use commonutil.MaskSecret()"
-	ConvCheckMsgZapLoggerParam     = "*zap.Logger must not be used as a function parameter; get logger from context or logger package inside the function"
+	ConvCheckMsgZapLoggerParam     = "zap.Logger must not be used as a function parameter; get logger from context or logger package inside the function"
+	ConvCheckMsgZapLoggerField     = "zap.Logger must not be used as a struct field; get logger from context or logger package inside the method"
 	ConvCheckTypeLogger            = "Logger"
 
 	ConvCheckSensitiveAPIKey   = "apikey"

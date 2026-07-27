@@ -217,7 +217,6 @@ func CronInstanceCount(crons []Cron) int {
 
 type cronLoggerAdapter struct {
 	module string
-	logger *zap.Logger
 }
 
 func newCronLoggerAdapter(module string) *cronLoggerAdapter {
@@ -225,18 +224,18 @@ func newCronLoggerAdapter(module string) *cronLoggerAdapter {
 		module = constant.CronDefaultModule
 	}
 	module = strings.TrimSpace(strings.TrimRight(strings.TrimLeft(strings.TrimSpace(module), "["), "]"))
-	return &cronLoggerAdapter{module: module, logger: logger.Logger()}
+	return &cronLoggerAdapter{module: module}
 }
 
 func (l *cronLoggerAdapter) Error(err error, msg string, keysAndValues ...any) {
 	zapKeyValues := []zap.Field{zap.Error(err)}
 	zapKeyValues = append(zapKeyValues, convertZapKeyValues(keysAndValues...)...)
-	l.logger.Error(fmt.Sprintf("[%s] %s", l.module, capitalizeFirst(msg)), zapKeyValues...)
+	logger.Logger().Error(fmt.Sprintf("[%s] %s", l.module, capitalizeFirst(msg)), zapKeyValues...)
 }
 
 func (l *cronLoggerAdapter) Info(msg string, keysAndValues ...any) {
 	zapKeyValues := convertZapKeyValues(keysAndValues...)
-	l.logger.Info(fmt.Sprintf("[%s] %s", l.module, capitalizeFirst(msg)), zapKeyValues...)
+	logger.Logger().Info(fmt.Sprintf("[%s] %s", l.module, capitalizeFirst(msg)), zapKeyValues...)
 }
 
 func capitalizeFirst(s string) string {

@@ -49,7 +49,6 @@ func (u *openAIUseCase) forwardChatViaAnthropic(ctx context.Context, req *dto.Op
 }
 
 func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint, upstream vo.UpstreamEndpoint, body []byte) (port.Result, error) {
-	log := logger.WithCtx(ctx)
 	startTime := time.Now()
 	stream, err := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
 	if err != nil {
@@ -68,7 +67,6 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 				ep:     ep,
 				stream: stream,
 				timer:  newStreamTimer(),
-				log:    log,
 			}, nil
 		},
 	}, nil
@@ -189,7 +187,6 @@ type openAIChatNativeStream struct {
 	ep     *aggregate.Endpoint
 	stream io.ReadCloser
 	timer  *streamTimer
-	log    *zap.Logger
 }
 
 func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) error {
@@ -202,7 +199,7 @@ func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) 
 		chunk.Model = s.req.Body.Model
 		chunkData, marshalErr := sonic.Marshal(chunk)
 		if marshalErr != nil {
-			s.log.Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
+			logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to marshal chunk", zap.Error(marshalErr))
 			return marshalErr
 		}
 		return sink.WriteEvent("", chunkData)
@@ -210,7 +207,7 @@ func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) 
 	s.timer.finish()
 	if err == nil {
 		if writeErr := sink.WriteEvent("", []byte(constant.SSEDoneSignal)); writeErr != nil {
-			s.log.Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(writeErr))
+			logger.WithCtx(ctx).Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(writeErr))
 		}
 	} else {
 		proxyutil.WriteUpstreamSSEError(ctx, sink, err)

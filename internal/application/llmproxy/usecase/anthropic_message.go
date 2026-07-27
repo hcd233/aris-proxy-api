@@ -46,7 +46,6 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 }
 
 func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, upstream vo.UpstreamEndpoint, exposedModel, endpoint string, body []byte) (port.Result, error) {
-	log := logger.WithCtx(ctx)
 	startTime := time.Now()
 	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
 	if err != nil {
@@ -66,7 +65,6 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 				exposedModel: exposedModel,
 				stream:       stream,
 				timer:        newStreamTimer(),
-				log:          log,
 			}, nil
 		},
 	}, nil
@@ -187,7 +185,6 @@ type anthropicMessageNativeStream struct {
 	exposedModel string
 	stream       io.ReadCloser
 	timer        *streamTimer
-	log          *zap.Logger
 }
 
 func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.EventSink) error {
@@ -201,7 +198,7 @@ func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.Event
 	s.timer.finish()
 	if err == nil {
 		if writeErr := proxyutil.WriteAnthropicMessageStop(sink); writeErr != nil {
-			s.log.Debug("[AnthropicUseCase] Failed to write message_stop", zap.Error(writeErr))
+			logger.WithCtx(ctx).Debug("[AnthropicUseCase] Failed to write message_stop", zap.Error(writeErr))
 		}
 	} else {
 		proxyutil.WriteUpstreamSSEError(ctx, sink, err)

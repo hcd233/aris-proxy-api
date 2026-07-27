@@ -34,6 +34,7 @@ const (
 	RuleLoggingChinese        = "logging.chinese"
 	RuleLoggingSensitive      = "logging.sensitive"
 	RuleLoggingZapLoggerParam = "logging.zap_logger_param"
+	RuleLoggingZapLoggerField = "logging.zap_logger_field"
 
 	RuleTestingInternalFile = "testing.internal_file"
 	RuleTestingRootFile     = "testing.root_file"
