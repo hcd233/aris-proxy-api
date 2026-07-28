@@ -1,6 +1,6 @@
 //go:build darwin || linux
 
-package tracecli
+package trace
 
 import (
 	"fmt"

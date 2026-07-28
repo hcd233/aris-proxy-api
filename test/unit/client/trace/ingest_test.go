@@ -1,4 +1,4 @@
-package tracecli
+package trace
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	client "github.com/hcd233/aris-proxy-api/internal/tracecli"
+	client "github.com/hcd233/aris-proxy-api/internal/client/trace"
 )
 
 func TestRunIngestCommand_FailOpenStdoutContract(t *testing.T) {

@@ -1,4 +1,4 @@
-package tracecli
+package trace
 
 import (
 	"bytes"

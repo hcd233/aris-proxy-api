@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/tracecli"
+	"github.com/hcd233/aris-proxy-api/internal/client/trace"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ func newTraceIngestCommand() *cobra.Command {
 		Short: "Ingest one agent hook event",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return tracecli.RunIngestCommand(cmd.Context(), tracecli.IngestCommandOptions{
+			return trace.RunIngestCommand(cmd.Context(), trace.IngestCommandOptions{
 				In:  cmd.InOrStdin(),
 				Out: cmd.OutOrStdout(),
 			})

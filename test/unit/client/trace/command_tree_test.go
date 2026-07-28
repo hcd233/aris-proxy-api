@@ -1,4 +1,4 @@
-package tracecli
+package trace
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 func repoRoot(t *testing.T) string {
 	t.Helper()
-	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	root, err := filepath.Abs(filepath.Join("..", "..", "..", ".."))
 	if err != nil {
 		t.Fatal(err)
 	}
