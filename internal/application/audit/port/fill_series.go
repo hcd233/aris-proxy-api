@@ -18,12 +18,12 @@ import (
 // GROUP BY date_trunc 不会为没有调用的时间槽生成行；前端折线图需要这些槽位才能连续绘制。
 // 缺失槽位以 count=0 填充。start/end 非零时，按请求区间补齐完整时间轴。
 func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, granularity enum.Granularity) []*dto.ModelTrendItem {
-	modelOrder, byModel, timeSet := indexSeries(points,
+	modelOrder, byModel, timeSet := IndexSeries(points,
 		func(p *modelcall.ModelTrendPoint) string { return p.Model },
 		func(p *modelcall.ModelTrendPoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.ModelTrendPoint) int { return p.Count },
 	)
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
+	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	items := lo.Map(modelOrder, func(m string, _ int) *dto.ModelTrendItem {
 		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TrendPoint {
 			return &dto.TrendPoint{Time: t, Count: byModel[m][t]}
@@ -36,12 +36,12 @@ func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, 
 // FillRateSeries 同 FillTrendSeries，并计算 successRate 与 failed。
 func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, granularity enum.Granularity) []*dto.RequestRateItem {
 	type slot struct{ total, success int }
-	modelOrder, byModel, timeSet := indexSeries(points,
+	modelOrder, byModel, timeSet := IndexSeries(points,
 		func(p *modelcall.RequestRatePoint) string { return p.Model },
 		func(p *modelcall.RequestRatePoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.RequestRatePoint) slot { return slot{total: p.Total, success: p.Success} },
 	)
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
+	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	items := lo.Map(modelOrder, func(m string, _ int) *dto.RequestRateItem {
 		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.RatePoint {
 			s := byModel[m][t]
@@ -62,8 +62,8 @@ func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, 
 	return items
 }
 
-// indexSeries 提取 (model, time) 索引：返回 model 出现顺序 + 嵌套 map + 全局 time 桶集合。
-func indexSeries[P any, V any](
+// IndexSeries 提取 (model, time) 索引：返回 model 出现顺序 + 嵌套 map + 全局 time 桶集合。
+func IndexSeries[P any, V any](
 	points []P,
 	modelOf func(P) string,
 	timeOf func(P) time.Time,
@@ -87,7 +87,8 @@ func indexSeries[P any, V any](
 	return modelOrder, byModel, timeSet
 }
 
-func buildBuckets(start, end time.Time, granularity enum.Granularity, fallback map[time.Time]struct{}) []time.Time {
+// BuildBuckets 生成完整时间桶序列；start/end 无效时退化为 fallback 集合中的桶。
+func BuildBuckets(start, end time.Time, granularity enum.Granularity, fallback map[time.Time]struct{}) []time.Time {
 	if start.IsZero() || end.IsZero() || start.After(end) {
 		buckets := lo.Keys(fallback)
 		sort.Slice(buckets, func(i, j int) bool { return buckets[i].Before(buckets[j]) })
@@ -154,7 +155,7 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 		s.cacheCreationTokens += p.CacheCreationTokens
 		s.cacheReadTokens += p.CacheReadTokens
 	}
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
+	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TokenThroughputPoint {
 		tp := &dto.TokenThroughputPoint{Time: t}
 		if s, ok := aggregated[t]; ok {
