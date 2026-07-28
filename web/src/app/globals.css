@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant moonshot (&:is([data-theme="moonshot"] *));
 
 @theme inline {
   --color-background: var(--background);
@@ -94,6 +95,9 @@
   --sidebar-accent-foreground: #1F1A14;
   --sidebar-border: #E8E0D8;
   --sidebar-ring: #D97757;
+  --code-bg: #26211C;
+  --code-border: #3A322B;
+  --code-text: #E8DDD3;
 }
 
 .dark {
@@ -252,6 +256,9 @@
   --sidebar-accent-foreground: #e6e8f0;
   --sidebar-border: rgb(35 40 65 / 0.8);
   --sidebar-ring: #7c8cff;
+  --code-bg: #0b0d18;
+  --code-border: #232a45;
+  --code-text: #dde3f5;
   --font-heading: var(--font-geist), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-geist), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
   --shadow-2xs: 0 1px 2px 0 rgb(90 100 200 / 0.1);

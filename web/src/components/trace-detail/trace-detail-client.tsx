@@ -410,7 +410,7 @@ export default function TraceDetailClient({
                       <p className="mt-1 text-[11px] text-muted-foreground">
                         {ev.turnId ? `${t("trace.turn_id")}: ${ev.turnId} · ` : ""}{ev.callId ? `call: ${ev.callId} · ` : ""}record #{ev.id}
                       </p>
-                      <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-[#262624] p-3 font-mono text-[11px] leading-relaxed text-[#E5E0D6]">{ev.payload != null ? JSON.stringify(ev.payload, null, 2) : t("trace.empty_payload")}</pre>
+                      <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">{ev.payload != null ? JSON.stringify(ev.payload, null, 2) : t("trace.empty_payload")}</pre>
                     </div>
                   ))}
                 </div>
