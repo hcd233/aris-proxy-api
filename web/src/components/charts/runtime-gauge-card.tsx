@@ -15,10 +15,10 @@ interface RuntimeGaugeCardProps {
 
 const toneClasses = {
   primary: "text-primary",
-  blue: "text-[#4F7FA8] dark:text-[#8AB4D6]",
-  green: "text-[#3D8769] dark:text-[#78C3A3]",
-  violet: "text-[#6E5C98] dark:text-[#A99AD1]",
-  rose: "text-[#B85B7A] dark:text-[#E79AB4]",
+  blue: "text-[#4F7FA8] moonshot:text-[#8AB4D6]",
+  green: "text-[#3D8769] moonshot:text-[#78C3A3]",
+  violet: "text-[#6E5C98] moonshot:text-[#A99AD1]",
+  rose: "text-[#B85B7A] moonshot:text-[#E79AB4]",
 };
 
 export function RuntimeGaugeCard({

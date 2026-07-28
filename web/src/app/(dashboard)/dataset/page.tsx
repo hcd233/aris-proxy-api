@@ -512,7 +512,7 @@ export default function DatasetPage() {
                         total: String(formatPreview.totalCount ?? 0),
                       })}
                     </div>
-                    <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-[#1e1e20] p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
+                    <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-(--code-bg) p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
                       <code
                         className="font-mono whitespace-pre"
                         dangerouslySetInnerHTML={{

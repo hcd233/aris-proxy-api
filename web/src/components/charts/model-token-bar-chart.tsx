@@ -11,13 +11,9 @@ import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
+import { useTokenLayerColors } from "@/lib/theme";
 
 type SortField = "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
-
-const CACHE_READ_COLOR = "#F2D0B8";
-const INPUT_COLOR = "#E6733F";
-const CACHE_CREATED_COLOR = "#F2D5BE";
-const OUTPUT_COLOR = "#D46A3E";
 
 function formatTokenCount(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -131,6 +127,7 @@ function BarWithTooltip({
 
 export function ModelTokenBarChart() {
   const t = useT();
+  const tokenColors = useTokenLayerColors();
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTokenBar.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTokenBar.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTokenBar.customEnd", "");
@@ -261,20 +258,20 @@ export function ModelTokenBarChart() {
                         <BarWithTooltip
                           cacheLabel={t("charts.cache_read")}
                           cacheValue={item.cacheReadTokens}
-                          cacheColor={CACHE_READ_COLOR}
+                          cacheColor={tokenColors.cacheRead}
                           mainLabel={t("charts.input")}
                           mainValue={item.inputTokens}
-                          mainColor={INPUT_COLOR}
+                          mainColor={tokenColors.input}
                         />
                       </td>
                       <td className="w-[220px] py-3 pr-6">
                         <BarWithTooltip
                           cacheLabel={t("charts.cache_write")}
                           cacheValue={item.cacheCreationTokens}
-                          cacheColor={CACHE_CREATED_COLOR}
+                          cacheColor={tokenColors.cacheCreated}
                           mainLabel={t("charts.output")}
                           mainValue={item.outputTokens}
-                          mainColor={OUTPUT_COLOR}
+                          mainColor={tokenColors.output}
                         />
                       </td>
                     </tr>
