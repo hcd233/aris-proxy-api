@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	client "github.com/hcd233/aris-proxy-api/internal/tracecli"
+	client "github.com/hcd233/aris-proxy-api/internal/client/trace"
 )
 
 func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {

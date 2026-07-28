@@ -1,4 +1,4 @@
-package tracecli
+package trace
 
 import (
 	"bufio"
@@ -30,9 +30,21 @@ type rolloutEnvelope struct {
 }
 
 type rolloutPayload struct {
-	Type   string `json:"type"`
-	TurnID string `json:"turn_id,omitempty"`
-	CallID string `json:"call_id,omitempty"`
+	Type        string `json:"type"`
+	TurnID      string `json:"turn_id,omitempty"`
+	CallID      string `json:"call_id,omitempty"`
+	Passthrough struct {
+		TurnID string `json:"turn_id,omitempty"`
+	} `json:"internal_chat_message_metadata_passthrough"`
+}
+
+// turnID 优先取顶层 turn_id；response_item 记录的 turn_id 嵌套在
+// internal_chat_message_metadata_passthrough 中，顶层缺失时回退读取该字段。
+func (p rolloutPayload) turnID() string {
+	if p.TurnID != "" {
+		return p.TurnID
+	}
+	return p.Passthrough.TurnID
 }
 
 type RolloutReader struct {
@@ -149,7 +161,7 @@ func rolloutRecord(sessionID string, line int64, raw []byte) (PendingRecord, err
 		Source:         constant.TraceRecordSourceRollout,
 		RecordType:     rolloutRecordType(envelope.Type),
 		Event:          payload.Type,
-		TurnID:         payload.TurnID,
+		TurnID:         payload.turnID(),
 		CallID:         payload.CallID,
 		TranscriptLine: &lineCopy,
 		DedupKey: fmt.Sprintf(

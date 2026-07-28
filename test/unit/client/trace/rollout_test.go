@@ -1,4 +1,4 @@
-package tracecli
+package trace
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	client "github.com/hcd233/aris-proxy-api/internal/tracecli"
+	client "github.com/hcd233/aris-proxy-api/internal/client/trace"
 )
 
 func TestRolloutReader_ReadsOnlyNewCompleteLines(t *testing.T) {
@@ -48,6 +48,25 @@ func TestRolloutReader_ReadsOnlyNewCompleteLines(t *testing.T) {
 	third, err := reader.ReadNew(context.Background(), "s1", transcript)
 	if err != nil || len(third) != 0 {
 		t.Fatalf("third = %d, %v", len(third), err)
+	}
+}
+
+func TestRolloutReader_ExtractsNestedTurnIDFromPassthroughMetadata(t *testing.T) {
+	t.Parallel()
+	paths := client.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
+	spool := client.NewSpool(paths, 1<<20)
+	reader := client.NewRolloutReader(paths, spool)
+	transcript := filepath.Join(t.TempDir(), "rollout.jsonl")
+	line := []byte(`{"type":"response_item","payload":{"type":"function_call","call_id":"call-1","name":"bash","internal_chat_message_metadata_passthrough":{"turn_id":"t1"}}}` + "\n")
+	if err := os.WriteFile(transcript, line, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	records, err := reader.ReadNew(context.Background(), "s1", transcript)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("records = %d, %v", len(records), err)
+	}
+	if records[0].TurnID != "t1" {
+		t.Fatalf("turn_id = %q, want %q", records[0].TurnID, "t1")
 	}
 }
 
