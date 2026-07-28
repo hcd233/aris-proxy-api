@@ -9,6 +9,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
+	"github.com/samber/mo/option"
 
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -68,108 +70,70 @@ func (s *sessionDetailCache) DeleteSessionMeta(ctx context.Context, sessionID ui
 	return nil
 }
 
-func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (results map[uint]*sessionport.MessageCacheRecord, missed []uint, err error) {
+// mgetRecords 按 key 模板批量 MGet 缓存记录；未命中或反序列化失败的 ID 归入 missing。
+func mgetRecords[T any](ctx context.Context, cache *redis.Client, ids []uint, keyTemplate string) (hits map[uint]*T, missing []uint, err error) {
 	if len(ids) == 0 {
-		return map[uint]*sessionport.MessageCacheRecord{}, nil, nil
+		return map[uint]*T{}, nil, nil
 	}
-	keys := lo.Map(ids, func(id uint, _ int) string { return fmt.Sprintf(constant.MessageKeyTemplate, id) })
-	values, err := s.cache.MGet(ctx, keys...).Result()
+	keys := lo.Map(ids, func(id uint, _ int) string { return fmt.Sprintf(keyTemplate, id) })
+	values, err := cache.MGet(ctx, keys...).Result()
 	if err != nil {
-		return nil, ids, ierr.Wrap(ierr.ErrInternal, err, "failed to mget messages cache")
+		return nil, ids, ierr.Wrap(ierr.ErrInternal, err, "failed to mget session detail cache")
 	}
-	hits := make(map[uint]*sessionport.MessageCacheRecord, len(values))
-	missing := make([]uint, 0, len(ids))
+	hits = make(map[uint]*T, len(values))
+	missing = make([]uint, 0, len(ids))
 	for i, v := range values {
-		if v == nil {
-			missing = append(missing, ids[i])
-			continue
-		}
 		raw, ok := v.(string)
-		if !ok {
+		record := option.FlatMap(func(raw string) mo.Option[*T] {
+			var r T
+			if unmarshalErr := sonic.UnmarshalString(raw, &r); unmarshalErr != nil {
+				return mo.None[*T]()
+			}
+			return mo.Some(&r)
+		})(mo.TupleToOption(raw, ok))
+		if rec, ok := record.Get(); ok {
+			hits[ids[i]] = rec
+		} else {
 			missing = append(missing, ids[i])
-			continue
 		}
-		var record sessionport.MessageCacheRecord
-		if unmarshalErr := sonic.UnmarshalString(raw, &record); unmarshalErr != nil {
-			missing = append(missing, ids[i])
-			continue
-		}
-		hits[ids[i]] = &record
 	}
 	return hits, missing, nil
+}
+
+// msetRecords 按 key 模板批量 Pipeline Set 缓存记录，跳过 nil 记录。
+func msetRecords[T any](ctx context.Context, cache *redis.Client, records []*T, keyTemplate string, idOf func(*T) uint) error {
+	if len(records) == 0 {
+		return nil
+	}
+	pipe := cache.Pipeline()
+	for _, r := range records {
+		if r == nil {
+			continue
+		}
+		payload, err := sonic.MarshalString(r)
+		if err != nil {
+			return ierr.Wrap(ierr.ErrInternal, err, "failed to marshal session detail cache record")
+		}
+		pipe.Set(ctx, fmt.Sprintf(keyTemplate, idOf(r)), payload, constant.SessionDetailCacheTTL)
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
+		return ierr.Wrap(ierr.ErrInternal, err, "failed to pipeline set session detail cache")
+	}
+	return nil
+}
+
+func (s *sessionDetailCache) GetMessages(ctx context.Context, ids []uint) (results map[uint]*sessionport.MessageCacheRecord, missed []uint, err error) {
+	return mgetRecords[sessionport.MessageCacheRecord](ctx, s.cache, ids, constant.MessageKeyTemplate)
 }
 
 func (s *sessionDetailCache) SetMessages(ctx context.Context, records []*sessionport.MessageCacheRecord) error {
-	if len(records) == 0 {
-		return nil
-	}
-	pipe := s.cache.Pipeline()
-	for _, r := range records {
-		if r == nil {
-			continue
-		}
-		payload, err := sonic.MarshalString(r)
-		if err != nil {
-			return ierr.Wrap(ierr.ErrInternal, err, "failed to marshal message cache")
-		}
-		key := fmt.Sprintf(constant.MessageKeyTemplate, r.ID)
-		pipe.Set(ctx, key, payload, constant.SessionDetailCacheTTL)
-	}
-	if _, err := pipe.Exec(ctx); err != nil {
-		return ierr.Wrap(ierr.ErrInternal, err, "failed to pipeline set messages cache")
-	}
-	return nil
+	return msetRecords(ctx, s.cache, records, constant.MessageKeyTemplate, func(r *sessionport.MessageCacheRecord) uint { return r.ID })
 }
 
 func (s *sessionDetailCache) GetTools(ctx context.Context, ids []uint) (results map[uint]*sessionport.ToolCacheRecord, missed []uint, err error) {
-	if len(ids) == 0 {
-		return map[uint]*sessionport.ToolCacheRecord{}, nil, nil
-	}
-	keys := lo.Map(ids, func(id uint, _ int) string { return fmt.Sprintf(constant.ToolKeyTemplate, id) })
-	values, err := s.cache.MGet(ctx, keys...).Result()
-	if err != nil {
-		return nil, ids, ierr.Wrap(ierr.ErrInternal, err, "failed to mget tools cache")
-	}
-	hits := make(map[uint]*sessionport.ToolCacheRecord, len(values))
-	missing := make([]uint, 0, len(ids))
-	for i, v := range values {
-		if v == nil {
-			missing = append(missing, ids[i])
-			continue
-		}
-		raw, ok := v.(string)
-		if !ok {
-			missing = append(missing, ids[i])
-			continue
-		}
-		var record sessionport.ToolCacheRecord
-		if unmarshalErr := sonic.UnmarshalString(raw, &record); unmarshalErr != nil {
-			missing = append(missing, ids[i])
-			continue
-		}
-		hits[ids[i]] = &record
-	}
-	return hits, missing, nil
+	return mgetRecords[sessionport.ToolCacheRecord](ctx, s.cache, ids, constant.ToolKeyTemplate)
 }
 
 func (s *sessionDetailCache) SetTools(ctx context.Context, records []*sessionport.ToolCacheRecord) error {
-	if len(records) == 0 {
-		return nil
-	}
-	pipe := s.cache.Pipeline()
-	for _, r := range records {
-		if r == nil {
-			continue
-		}
-		payload, err := sonic.MarshalString(r)
-		if err != nil {
-			return ierr.Wrap(ierr.ErrInternal, err, "failed to marshal tool cache")
-		}
-		key := fmt.Sprintf(constant.ToolKeyTemplate, r.ID)
-		pipe.Set(ctx, key, payload, constant.SessionDetailCacheTTL)
-	}
-	if _, err := pipe.Exec(ctx); err != nil {
-		return ierr.Wrap(ierr.ErrInternal, err, "failed to pipeline set tools cache")
-	}
-	return nil
+	return msetRecords(ctx, s.cache, records, constant.ToolKeyTemplate, func(r *sessionport.ToolCacheRecord) uint { return r.ID })
 }
