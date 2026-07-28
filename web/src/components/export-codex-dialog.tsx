@@ -82,7 +82,10 @@ in_provider = False
 provider_header = re.compile(
     r'^\\s*\\[\\s*model_providers\\s*\\.\\s*(?:' + re.escape(provider_id) + r'|' + re.escape(provider_id_toml) + r')\\s*\\]\\s*$'
 )
-table_header = re.compile(r'^\\s*\\[')
+toml_key = r"""(?:[A-Za-z0-9_-]+|"(?:[^"\\\\]|\\\\.)*"|'[^']*')"""
+table_header = re.compile(
+    r'^\\s*\\[{1,2}\\s*' + toml_key + r'(?:\\s*\\.\\s*' + toml_key + r')*\\s*\\]{1,2}\\s*(?:#.*)?$'
+)
 
 for line in lines:
     stripped = line.strip()
@@ -96,14 +99,41 @@ for line in lines:
         continue
     cleaned.append(line)
 
+memories_header = re.compile(
+    r"""^\\s*\\[\\s*(?:memories|"memories"|'memories')\\s*\\]\\s*(?:#.*)?$"""
+)
+memory_model_key = re.compile(
+    r"""^\\s*(?:extract_model|"extract_model"|'extract_model'|consolidation_model|"consolidation_model"|'consolidation_model')\\s*="""
+)
+memory_model_block = [
+    f'extract_model = {json.dumps(model)}',
+    f'consolidation_model = {json.dumps(model)}',
+]
+
 root_cleaned = []
 in_table = False
+in_memories = False
+memories_found = False
 for line in cleaned:
+    if memories_header.match(line):
+        in_table = True
+        in_memories = True
+        memories_found = True
+        root_cleaned.extend([line, *memory_model_block])
+        continue
     if table_header.match(line):
         in_table = True
+        in_memories = False
     if not in_table and re.match(r'^\\s*(model|model_provider|model_context_window)\\s*=', line):
         continue
+    if in_memories and memory_model_key.match(line):
+        continue
     root_cleaned.append(line)
+
+if not memories_found:
+    while root_cleaned and root_cleaned[-1].strip() == '':
+        root_cleaned.pop()
+    root_cleaned.extend(['', '[memories]', *memory_model_block, ''])
 
 first_table = next((i for i, line in enumerate(root_cleaned) if table_header.match(line)), len(root_cleaned))
 
