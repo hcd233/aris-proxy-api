@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // endpointRepository EndpointRepository 的 GORM 实现
@@ -153,15 +154,9 @@ func (r *endpointRepository) List(ctx context.Context) ([]*aggregate.Endpoint, e
 	if err := db.Find(&models).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list endpoints")
 	}
-	result := make([]*aggregate.Endpoint, 0, len(models))
-	for _, m := range models {
-		ep, err := toEndpointAggregate(m)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, ep)
-	}
-	return result, nil
+	return util.MapErr(models, func(m *dbmodel.Endpoint, _ int) (*aggregate.Endpoint, error) {
+		return toEndpointAggregate(m)
+	})
 }
 
 // Paginate 分页查询端点列表
