@@ -96,53 +96,101 @@ func BuildConversation(records []*TraceEvent) *Conversation {
 	seenMessages := map[string]*ConversationItem{}
 	tools := map[string]*ConversationItem{}
 	for _, record := range records {
-		turnID := record.TurnID
-		turn := turns[turnID]
-		if turn == nil {
-			turn = &ConversationTurn{TurnID: turnID, Items: []*ConversationItem{}}
-			turns[turnID] = turn
-			conversation.Turns = append(conversation.Turns, turn)
-		}
-		var item *ConversationItem
-		switch record.Event {
-		case constant.TraceConversationEventUserPrompt:
-			item = hookMessage(record, constant.TraceConversationRoleUser, constant.TracePayloadFieldPrompt)
-		case constant.TraceConversationEventStop:
-			item = hookMessage(record, constant.TraceConversationRoleAssistant, constant.TracePayloadFieldLastMessage)
-		case constant.TraceConversationEventUserMessage:
-			item = rolloutMessage(record, constant.TraceConversationRoleUser, constant.TracePayloadFieldMessage)
-		case constant.TraceConversationEventAgentMessage:
-			item = rolloutMessage(record, constant.TraceConversationRoleAssistant, constant.TracePayloadFieldMessage)
-		case constant.TraceConversationEventFunctionCall:
-			item = rolloutToolCall(record)
-		case constant.TraceConversationEventFunctionOutput:
-			if tool := tools[record.CallID]; tool != nil {
-				tool.Output = rolloutString(record, constant.TracePayloadFieldOutput)
-				tool.RecordIDs = append(tool.RecordIDs, record.ID)
-				continue
-			}
-		}
-		if item == nil || item.Content == "" && item.Kind == constant.TraceConversationKindMessage {
+		item := projectConversationItem(record, tools)
+		if item == nil {
 			continue
 		}
-		if item.Kind == constant.TraceConversationKindMessage {
-			key := item.Role + constant.TraceConversationMessageKeySeparator + item.Content
-			if existing := seenMessages[key]; existing != nil {
-				isRolloutUpgrade := existing.Source == constant.TraceRecordSourceHook &&
-					item.Source == constant.TraceRecordSourceRollout
-				if isRolloutUpgrade {
-					*existing = *item
-				}
-				continue
-			}
-			seenMessages[key] = item
+		if item.Kind == constant.TraceConversationKindMessage && dedupeMessage(seenMessages, item) {
+			continue
 		}
-		turn.Items = append(turn.Items, item)
-		if item.Kind == constant.TraceConversationKindToolCall && item.CallID != "" {
-			tools[item.CallID] = item
+		if item.Kind == constant.TraceConversationKindToolCall && item.CallID != "" && dedupeToolCall(tools, item) {
+			continue
 		}
+		appendToTurn(conversation, turns, record.TurnID, item)
 	}
 	return conversation
+}
+
+// projectConversationItem 把单条原始记录投影为对话项；配对类事件（function/tool 输出）
+// 直接回填已存在的 tool_call，本身不产生新的对话项。
+func projectConversationItem(record *TraceEvent, tools map[string]*ConversationItem) *ConversationItem {
+	var item *ConversationItem
+	switch record.Event {
+	case constant.TraceConversationEventUserPrompt:
+		item = hookMessage(record, constant.TraceConversationRoleUser, constant.TracePayloadFieldPrompt)
+	case constant.TraceConversationEventStop:
+		item = hookMessage(record, constant.TraceConversationRoleAssistant, constant.TracePayloadFieldLastMessage)
+	case constant.TraceConversationEventUserMessage:
+		item = rolloutMessage(record, constant.TraceConversationRoleUser, constant.TracePayloadFieldMessage)
+	case constant.TraceConversationEventAgentMessage:
+		item = rolloutMessage(record, constant.TraceConversationRoleAssistant, constant.TracePayloadFieldMessage)
+	case constant.TraceConversationEventFunctionCall:
+		item = rolloutToolCall(record)
+	case constant.TraceConversationEventFunctionOutput:
+		pairToolOutput(tools, record.CallID, record, rolloutString(record, constant.TracePayloadFieldOutput))
+	case constant.TraceConversationEventPreToolUse:
+		item = hookToolCall(record)
+	case constant.TraceConversationEventPostToolUse:
+		pairToolOutput(tools, hookCallID(record), record, hookRaw(record, constant.TracePayloadFieldToolResponse))
+	}
+	if item == nil || item.Kind == constant.TraceConversationKindMessage && item.Content == "" {
+		return nil
+	}
+	return item
+}
+
+// pairToolOutput 把工具输出回填到已存在的 tool_call 上；找不到对应 tool_call 时忽略。
+func pairToolOutput(tools map[string]*ConversationItem, callID string, record *TraceEvent, output string) {
+	tool := tools[callID]
+	if tool == nil {
+		return
+	}
+	tool.Output = output
+	tool.RecordIDs = append(tool.RecordIDs, record.ID)
+}
+
+// dedupeMessage 按 role+content 去重消息；rollout 来源的消息会升级覆盖 hook 版本。
+// 返回 true 表示该条记录不应再追加为新对话项。
+func dedupeMessage(seenMessages map[string]*ConversationItem, item *ConversationItem) bool {
+	key := item.Role + constant.TraceConversationMessageKeySeparator + item.Content
+	existing := seenMessages[key]
+	if existing == nil {
+		seenMessages[key] = item
+		return false
+	}
+	if isRolloutUpgrade(existing, item) {
+		*existing = *item
+	}
+	return true
+}
+
+// dedupeToolCall 按 CallID 去重工具调用；rollout 来源会升级覆盖 hook 版本并合并 RecordIDs。
+// 返回 true 表示该条记录不应再追加为新对话项。
+func dedupeToolCall(tools map[string]*ConversationItem, item *ConversationItem) bool {
+	existing := tools[item.CallID]
+	if existing == nil {
+		tools[item.CallID] = item
+		return false
+	}
+	if isRolloutUpgrade(existing, item) {
+		item.RecordIDs = append(item.RecordIDs, existing.RecordIDs...)
+		*existing = *item
+	}
+	return true
+}
+
+func isRolloutUpgrade(existing, item *ConversationItem) bool {
+	return existing.Source == constant.TraceRecordSourceHook && item.Source == constant.TraceRecordSourceRollout
+}
+
+func appendToTurn(conversation *Conversation, turns map[string]*ConversationTurn, turnID string, item *ConversationItem) {
+	turn := turns[turnID]
+	if turn == nil {
+		turn = &ConversationTurn{TurnID: turnID, Items: []*ConversationItem{}}
+		turns[turnID] = turn
+		conversation.Turns = append(conversation.Turns, turn)
+	}
+	turn.Items = append(turn.Items, item)
 }
 
 func hookMessage(record *TraceEvent, role, field string) *ConversationItem {
@@ -151,6 +199,21 @@ func hookMessage(record *TraceEvent, role, field string) *ConversationItem {
 
 func rolloutMessage(record *TraceEvent, role, field string) *ConversationItem {
 	return &ConversationItem{Kind: constant.TraceConversationKindMessage, Role: role, Content: rolloutString(record, field), Source: record.Source, RecordIDs: []uint{record.ID}}
+}
+
+func hookToolCall(record *TraceEvent) *ConversationItem {
+	return &ConversationItem{
+		Kind: constant.TraceConversationKindToolCall, Role: constant.TraceConversationRoleAssistant,
+		ToolName: hookString(record, constant.TracePayloadFieldToolName), CallID: hookCallID(record),
+		Arguments: hookRaw(record, constant.TracePayloadFieldToolInput), Source: record.Source, RecordIDs: []uint{record.ID},
+	}
+}
+
+func hookCallID(record *TraceEvent) string {
+	if callID := hookString(record, constant.TracePayloadFieldToolUseID); callID != "" {
+		return callID
+	}
+	return record.CallID
 }
 
 func rolloutToolCall(record *TraceEvent) *ConversationItem {
@@ -170,6 +233,23 @@ func hookString(record *TraceEvent, field string) string {
 		return ""
 	}
 	return value
+}
+
+// hookRaw 读取 hook payload 字段，字符串字段取值，其余类型保留原始 JSON 文本。
+func hookRaw(record *TraceEvent, field string) string {
+	var payload map[string]sonic.NoCopyRawMessage
+	if sonic.Unmarshal(record.Payload, &payload) != nil {
+		return ""
+	}
+	raw := payload[field]
+	if len(raw) == 0 {
+		return ""
+	}
+	var value string
+	if err := sonic.Unmarshal(raw, &value); err == nil {
+		return value
+	}
+	return string(raw)
 }
 
 func rolloutString(record *TraceEvent, field string) string {
