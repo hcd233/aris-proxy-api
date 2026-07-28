@@ -178,13 +178,11 @@ func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonPar
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate endpoints")
 	}
-	out := make([]*aggregate.Endpoint, 0, len(records))
-	for _, m := range records {
-		ep, convErr := toEndpointAggregate(m)
-		if convErr != nil {
-			return nil, nil, convErr
-		}
-		out = append(out, ep)
+	out, convErr := util.MapErr(records, func(m *dbmodel.Endpoint, _ int) (*aggregate.Endpoint, error) {
+		return toEndpointAggregate(m)
+	})
+	if convErr != nil {
+		return nil, nil, convErr
 	}
 	return out, pageInfo, nil
 }
