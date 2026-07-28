@@ -20,6 +20,7 @@ import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime } from "@/lib/time-range";
+import { useTokenLayerColors } from "@/lib/theme";
 
 function formatTokenCount(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -29,11 +30,12 @@ function formatTokenCount(v: number): string {
 
 export function TokenVolumeChart() {
   const t = useT();
+  const tokenColors = useTokenLayerColors();
   const TOKEN_LAYERS = [
-    { key: "cacheReadTokens", label: t("charts.cache_read"), color: "#F2D0B8" },
-    { key: "inputTokens", label: t("charts.input"), color: "#E6733F" },
-    { key: "cacheCreationTokens", label: t("charts.cache_write"), color: "#F2D5BE" },
-    { key: "outputTokens", label: t("charts.output"), color: "#D46A3E" },
+    { key: "cacheReadTokens", label: t("charts.cache_read"), color: tokenColors.cacheRead },
+    { key: "inputTokens", label: t("charts.input"), color: tokenColors.input },
+    { key: "cacheCreationTokens", label: t("charts.cache_write"), color: tokenColors.cacheCreated },
+    { key: "outputTokens", label: t("charts.output"), color: tokenColors.output },
   ] as const;
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
   const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");

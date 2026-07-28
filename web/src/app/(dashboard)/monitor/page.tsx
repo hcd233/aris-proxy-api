@@ -10,6 +10,7 @@ import type { RuntimePoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeChart } from "@/components/charts/runtime-chart";
+import { useChartSeriesColors } from "@/lib/theme";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -22,8 +23,6 @@ const RANGE_WINDOW_SEC: Record<RangeKey, number> = {
   "6h": 21600,
   "24h": 86400,
 };
-
-const SSE_COLORS = ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355"];
 
 type Pt = RuntimePoint;
 
@@ -136,10 +135,11 @@ export default function MonitorPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const sseProviders = Object.keys(state.sseActive).sort();
+  const seriesColors = useChartSeriesColors();
   const sseSeries = sseProviders.map((prov, i) => ({
     key: prov,
     label: prov,
-    color: SSE_COLORS[i % SSE_COLORS.length],
+    color: seriesColors[i % seriesColors.length],
   }));
   const sseTotal = sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0);
 
@@ -187,11 +187,11 @@ export default function MonitorPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <RuntimeChart title={t("monitor.cpu_usage")} data={toChartData(state.cpuPercent)} series={[{ key: "value", label: t("monitor.cpu_usage"), color: "#D97757" }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.heap_memory")} data={toChartData(state.heapMB)} series={[{ key: "value", label: t("monitor.heap_memory"), color: "#5B8DB8" }]} unit=" MB" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: "#4A9E7D" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: "#7C6BA5" }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.goroutines_chart")} data={toChartData(state.goroutines)} series={[{ key: "value", label: t("monitor.goroutines_chart"), color: "#4A9E7D" }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.cpu_usage")} data={toChartData(state.cpuPercent)} series={[{ key: "value", label: t("monitor.cpu_usage"), color: seriesColors[0] }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.heap_memory")} data={toChartData(state.heapMB)} series={[{ key: "value", label: t("monitor.heap_memory"), color: seriesColors[1] }]} unit=" MB" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.goroutines_chart")} data={toChartData(state.goroutines)} series={[{ key: "value", label: t("monitor.goroutines_chart"), color: seriesColors[3] }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
       </div>
     </div>
