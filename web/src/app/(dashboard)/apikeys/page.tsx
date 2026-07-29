@@ -26,19 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Key, Plus, Trash2, Copy, Check, AlertTriangle, Search } from "lucide-react";
+import { Key, Plus, Copy, Check, Search } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 
@@ -266,15 +258,11 @@ export default function APIKeysPage() {
                             {key.key}
                           </p>
                         </div>
-                        <Button
-                          variant="destructive"
-                          size="xs"
+                        <DeleteButton
+                          label={t("common.delete")}
                           disabled={deleting === key.id}
                           onClick={() => openDeleteConfirm(key)}
-                        >
-                          <Trash2 className="mr-1 size-3" />
-                          {t("common.delete")}
-                        </Button>
+                        />
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">
                         {t("apikeys.created")} {new Date(key.createdAt).toLocaleDateString()}
@@ -303,15 +291,11 @@ export default function APIKeysPage() {
                         {new Date(key.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="destructive"
-                          size="xs"
+                        <DeleteButton
+                          label={t("common.delete")}
                           disabled={deleting === key.id}
                           onClick={() => openDeleteConfirm(key)}
-                        >
-                          <Trash2 className="mr-1 size-3" />
-                          {t("common.delete")}
-                        </Button>
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -329,25 +313,16 @@ export default function APIKeysPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-destructive" />
-              {t("common.are_you_sure")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("apikeys.delete_description").replace("{name}", deleteTarget?.name ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
-              {deleting !== null ? t("common.deleting") : t("common.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t("common.are_you_sure")}
+        description={t("apikeys.delete_description").replace("{name}", deleteTarget?.name ?? "")}
+        confirmLabel={t("common.delete")}
+        loadingLabel={t("common.deleting")}
+        loading={deleting !== null}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

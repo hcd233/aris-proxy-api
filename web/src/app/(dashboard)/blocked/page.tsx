@@ -24,17 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Ban, Plus, Search, Trash2, AlertTriangle } from "lucide-react";
+import { DeleteButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { Ban, Plus, Search } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -166,10 +158,10 @@ export default function BlockPage() {
                             <p className="text-sm font-medium">{item.word}</p>
                             <p className="mt-0.5 text-xs text-muted-foreground">{t("blocked.hit_count")}: {item.hitCount}</p>
                           </div>
-                          <Button variant="destructive" size="sm"
-                            onClick={() => { setDeleteTarget(item); setDeleteConfirmOpen(true); }}>
-                            <Trash2 />
-                          </Button>
+                          <DeleteButton
+                            label={t("common.delete")}
+                            onClick={() => { setDeleteTarget(item); setDeleteConfirmOpen(true); }}
+                          />
                         </div>
                       </div>
                     ))}
@@ -193,10 +185,10 @@ export default function BlockPage() {
                           <TableCell>{item.hitCount}</TableCell>
                           <TableCell className="text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                           <TableCell>
-                            <Button variant="destructive" size="sm"
-                              onClick={() => { setDeleteTarget(item); setDeleteConfirmOpen(true); }}>
-                              <Trash2 />
-                            </Button>
+                            <DeleteButton
+                              label={t("common.delete")}
+                              onClick={() => { setDeleteTarget(item); setDeleteConfirmOpen(true); }}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -236,22 +228,14 @@ export default function BlockPage() {
           </DialogContent>
         </Dialog>
 
-        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-destructive" /> {t("common.are_you_sure")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("blocked.delete_confirm")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          title={t("common.are_you_sure")}
+          description={t("blocked.delete_confirm")}
+          confirmLabel={t("common.delete")}
+          onConfirm={handleDelete}
+        />
       </div>
     </PermissionGuard>
   );

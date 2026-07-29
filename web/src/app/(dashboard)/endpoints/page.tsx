@@ -28,19 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, Server, AlertTriangle, Search } from "lucide-react";
+import { Plus, Pencil, Server, Search } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PaginationBar } from "@/components/pagination-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -270,15 +262,11 @@ export default function EndpointsPage() {
                             <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
                               <Pencil size={14} />
                             </Button>
-                            <Button
-                              variant="destructive"
-                              size="xs"
+                            <DeleteButton
+                              label={t("common.delete")}
                               disabled={deleting === ep.id}
                               onClick={() => openDeleteConfirm(ep)}
-                            >
-                              <Trash2 className="mr-1 size-3" />
-                              {t("common.delete")}
-                            </Button>
+                            />
                           </div>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -390,15 +378,11 @@ export default function EndpointsPage() {
                             <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
                               <Pencil size={14} />
                             </Button>
-                            <Button
-                              variant="destructive"
-                              size="xs"
+                            <DeleteButton
+                              label={t("common.delete")}
                               disabled={deleting === ep.id}
                               onClick={() => openDeleteConfirm(ep)}
-                            >
-                              <Trash2 className="mr-1 size-3" />
-                              {t("common.delete")}
-                            </Button>
+                            />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -417,25 +401,16 @@ export default function EndpointsPage() {
           </CardContent>
         </Card>
 
-        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-destructive" />
-              {t("common.are_you_sure")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("endpoints.delete_description").replace("{name}", deleteTarget?.name ?? "")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
-              {deleting !== null ? t("common.deleting") : t("common.delete")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          title={t("common.are_you_sure")}
+          description={t("endpoints.delete_description").replace("{name}", deleteTarget?.name ?? "")}
+          confirmLabel={t("common.delete")}
+          loadingLabel={t("common.deleting")}
+          loading={deleting !== null}
+          onConfirm={handleDelete}
+        />
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-md">

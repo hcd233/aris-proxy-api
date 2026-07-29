@@ -23,7 +23,6 @@ import {
   ArrowUp,
   ArrowDown,
   Trash2,
-  AlertTriangle,
   Search,
   X,
 } from "lucide-react";
@@ -34,16 +33,8 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteIconButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { ProviderIcon } from "@/components/provider-icon";
@@ -456,16 +447,11 @@ export default function SessionsPage() {
                           <Badge variant="secondary" className="text-xs">
                             {s.messageCount ?? 0} msgs
                           </Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
+                          <DeleteIconButton
                             disabled={deleting === s.id}
                             onClick={(e) => openDeleteConfirm(s, e)}
-                            className="size-8 text-muted-foreground hover:text-destructive"
                             aria-label="Delete session"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
+                          />
                         </div>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -592,16 +578,11 @@ export default function SessionsPage() {
                         </TableCell>
                         <TableCell className="w-16">
                           <div className="flex justify-center">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
+                            <DeleteIconButton
                               disabled={deleting === s.id}
                               onClick={(e) => openDeleteConfirm(s, e)}
-                              className="size-8 text-muted-foreground hover:text-destructive"
                               aria-label="Delete session"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
+                            />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -621,45 +602,27 @@ export default function SessionsPage() {
           </CardContent>
         </Card>
 
-        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-destructive" />
-                {t("sessions.delete_dialog_title")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("sessions.delete_dialog_desc").replace("{name}", deleteTarget?.summary ?? "")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting !== null}>
-                {deleting !== null ? t("common.deleting") : t("common.delete")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          title={t("sessions.delete_dialog_title")}
+          description={t("sessions.delete_dialog_desc").replace("{name}", deleteTarget?.summary ?? "")}
+          confirmLabel={t("common.delete")}
+          loadingLabel={t("common.deleting")}
+          loading={deleting !== null}
+          onConfirm={handleDelete}
+        />
 
-        <AlertDialog open={batchDeleteConfirmOpen} onOpenChange={setBatchDeleteConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-destructive" />
-                {t("sessions.batch_delete_title")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("sessions.batch_delete_desc").replace("{count}", String(selected.size))}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleBatchDelete} disabled={batchDeleting}>
-                {batchDeleting ? t("common.deleting") : `${t("common.delete")} ${selected.size}`}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirmDialog
+          open={batchDeleteConfirmOpen}
+          onOpenChange={setBatchDeleteConfirmOpen}
+          title={t("sessions.batch_delete_title")}
+          description={t("sessions.batch_delete_desc").replace("{count}", String(selected.size))}
+          confirmLabel={`${t("common.delete")} ${selected.size}`}
+          loadingLabel={t("common.deleting")}
+          loading={batchDeleting}
+          onConfirm={handleBatchDelete}
+        />
       </div>
   );
 }

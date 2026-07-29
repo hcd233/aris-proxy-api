@@ -8,28 +8,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import {
-  AlertTriangle,
   Check,
   Copy,
   ExternalLink,
   Share2,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api, ApiError } from "@/lib/api-client";
 import type { PageInfo, ShareItem } from "@/lib/types";
 import { buildShareURL } from "@/components/share/share-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -257,20 +247,15 @@ export default function SharesPage() {
                                 </>
                               )}
                             </Button>
-                            <Button
-                              variant="destructive"
-                              size="xs"
+                            <DeleteButton
+                              label={t("shares.revoke")}
                               onClick={() =>
                                 setDeleteTarget({
                                   shareId: share.shareId,
                                   sessionId: share.sessionId,
                                 })
                               }
-                              className="gap-1"
-                            >
-                              <Trash2 className="size-3" />
-                              {t("shares.revoke")}
-                            </Button>
+                            />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -289,34 +274,18 @@ export default function SharesPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-destructive" />
-              {t("shares.delete_confirm")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("shares.delete_dialog_desc").replace("{id}", String(deleteTarget?.sessionId ?? ""))}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? t("shares.revoking") : t("shares.revoke")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("shares.delete_confirm")}
+        description={t("shares.delete_dialog_desc").replace("{id}", String(deleteTarget?.sessionId ?? ""))}
+        confirmLabel={t("shares.revoke")}
+        loadingLabel={t("shares.revoking")}
+        loading={deleting}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
