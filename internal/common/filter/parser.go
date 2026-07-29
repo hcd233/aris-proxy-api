@@ -253,18 +253,14 @@ func buildFuzzyCondition(column string, f Filter) (sql string, args []any, err e
 			return column + constant.FilterSQLNOTLIKE, []any{"%" + f.Values[0] + "%"}, nil
 		}
 	}
-	parts := make([]string, 0, len(f.Values))
-	args = make([]any, 0, len(f.Values))
 	frag := constant.FilterSQLLIKE
 	joiner := constant.FilterSQLOR
 	if f.Operator == enum.OpNotEqual {
 		frag = constant.FilterSQLNOTLIKE
 		joiner = constant.FilterSQLAND
 	}
-	for _, v := range f.Values {
-		parts = append(parts, column+frag)
-		args = append(args, "%"+v+"%")
-	}
+	parts := lo.RepeatBy(len(f.Values), func(_ int) string { return column + frag })
+	args = lo.Map(f.Values, func(v string, _ int) any { return "%" + v + "%" })
 	return "(" + strings.Join(parts, joiner) + ")", args, nil
 }
 
