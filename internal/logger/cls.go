@@ -4,6 +4,7 @@ package logger
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 
@@ -139,9 +140,7 @@ func (c *clsCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 		contents[constant.CLSFieldStack] = entry.Stack
 	}
 
-	allFields := make([]zapcore.Field, 0, len(c.fields)+len(fields))
-	allFields = append(allFields, c.fields...)
-	allFields = append(allFields, fields...)
+	allFields := slices.Concat(c.fields, fields)
 
 	for k, v := range encodeFields(allFields) {
 		if _, exists := contents[k]; !exists {
