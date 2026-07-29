@@ -39,11 +39,13 @@ func TestServerCommandTreePreservesExistingCommands(t *testing.T) {
 	}
 }
 
-func TestClientCommandTreeContainsOnlyTrace(t *testing.T) {
+func TestClientCommandTree(t *testing.T) {
 	t.Parallel()
 	out := runGo(t, "run", "./cmd/client", "--help")
-	if !strings.Contains(out, "trace") {
-		t.Fatalf("client help missing trace:\n%s", out)
+	for _, name := range []string{"init", "status", "trace"} {
+		if !strings.Contains(out, name) {
+			t.Errorf("client help missing %q:\n%s", name, out)
+		}
 	}
 	for _, forbidden := range []string{"server", "database", "object", "lint"} {
 		if strings.Contains(out, forbidden) {
