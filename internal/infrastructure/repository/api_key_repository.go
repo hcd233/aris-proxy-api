@@ -15,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // apiKeyRepository APIKeyRepository 的 GORM 实现
@@ -259,13 +260,7 @@ func toAPIKeyAggregate(m *dbmodel.ProxyAPIKey) (*aggregate.ProxyAPIKey, error) {
 
 // toAPIKeyAggregateList 批量映射
 func toAPIKeyAggregateList(records []*dbmodel.ProxyAPIKey) ([]*aggregate.ProxyAPIKey, error) {
-	out := make([]*aggregate.ProxyAPIKey, 0, len(records))
-	for _, r := range records {
-		agg, err := toAPIKeyAggregate(r)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, agg)
-	}
-	return out, nil
+	return util.MapErr(records, func(r *dbmodel.ProxyAPIKey, _ int) (*aggregate.ProxyAPIKey, error) {
+		return toAPIKeyAggregate(r)
+	})
 }
