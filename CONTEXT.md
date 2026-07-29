@@ -54,8 +54,12 @@ _Avoid_: model router, endpoint lookup
 网关的核心能力：客户端使用 OpenAI 协议，网关可将其转换为 Anthropic 协议再转发，反之亦然。覆盖 7 条转发路径（OpenAI Chat native、Chat→Anthropic、Response native、Response→Chat、Response→Anthropic、Anthropic Message native、Message→Chat）。
 _Avoid_: protocol translation, api bridge
 
+**ModelCapabilities（模型能力）**:
+模型支持的输入模态集合，持久化为 `Model` 表 `capabilities` 列（text 列 + serializer:json，如 `["text","image"]`），成员为已知枚举 `InputModality`（`text` / `image`，后续可扩展更多模态）。集合必须非空且包含 `text`。与 Endpoint 的协议能力（端点支持哪些 LLM 接口协议）是不同概念：前者描述模型能接收的输入模态，后者描述端点能讲什么协议。管理页以两个开关配置、徽标展示；ClientConfigExport 据此生成 OpenCode `modalities.input`（含 `image` 时附 `attachment: true`）与 Pi `input` 数组。存量行默认 `["text"]`。
+_Avoid_: model features, model flags
+
 **ClientConfigExport（客户端配置导出）**:
-管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持四种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）、Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）、Codex（注册自定义 `model_providers`、设置默认 `model` 与 `model_context_window`，并同步 `[memories]` 的 `extract_model` / `consolidation_model`，patch `~/.codex/config.toml`）与 Pi（生成 provider 和模型数组，patch `~/.pi/agent/models.json`）。Pi 模型使用 `alias` 作为 ID，脚本合并 provider/model、备份 `.bak`，以 `0600` 保存凭证配置并使用同目录临时文件原子替换。生成的 bash 脚本内嵌 Python 做幂等 patch。
+管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持四种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）、Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）、Codex（注册自定义 `model_providers`、设置默认 `model` 与 `model_context_window`，并同步 `[memories]` 的 `extract_model` / `consolidation_model`，patch `~/.codex/config.toml`）与 Pi（生成 provider 和模型数组，patch `~/.pi/agent/models.json`）。Pi 模型使用 `alias` 作为 ID，脚本合并 provider/model、备份 `.bak`，以 `0600` 保存凭证配置并使用同目录临时文件原子替换。生成的 bash 脚本内嵌 Python 做幂等 patch。OpenCode 模型条目含 `modalities` 字段（且图片输入模型附 `attachment: true`），Pi 模型含 `input` 数组，两者均由 **ModelCapabilities** 生成。
 _Avoid_: config generator, setup wizard, integration script
 
 **ClaudeCodeModelTier（Claude Code 模型档位）**:

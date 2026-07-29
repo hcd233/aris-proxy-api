@@ -4,6 +4,7 @@ package dto
 import (
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
@@ -14,11 +15,12 @@ type CreateModelReq struct {
 
 // CreateModelReqBody 创建 Model 请求体
 type CreateModelReqBody struct {
-	Alias           string `json:"alias" required:"true" minLength:"1" doc:"模型别名（对外暴露）"`
-	ModelName       string `json:"modelName" required:"true" minLength:"1" doc:"上游实际模型名"`
-	EndpointID      uint   `json:"endpointID" required:"true" minimum:"1" doc:"关联 Endpoint ID"`
-	ContextLength   int    `json:"contextLength,omitempty" minimum:"0" default:"128000" doc:"上下文窗口长度（tokens）"`
-	MaxOutputTokens int    `json:"maxOutputTokens,omitempty" minimum:"0" default:"64000" doc:"最大输出长度（tokens）"`
+	Alias           string               `json:"alias" required:"true" minLength:"1" doc:"模型别名（对外暴露）"`
+	ModelName       string               `json:"modelName" required:"true" minLength:"1" doc:"上游实际模型名"`
+	EndpointID      uint                 `json:"endpointID" required:"true" minimum:"1" doc:"关联 Endpoint ID"`
+	ContextLength   int                  `json:"contextLength,omitempty" minimum:"0" default:"128000" doc:"上下文窗口长度（tokens）"`
+	MaxOutputTokens int                  `json:"maxOutputTokens,omitempty" minimum:"0" default:"64000" doc:"最大输出长度（tokens）"`
+	Capabilities    []enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image；必须包含 text；缺省为 [text]）"`
 }
 
 // UpdateModelReq 更新 Model 请求
@@ -29,12 +31,13 @@ type UpdateModelReq struct {
 
 // UpdateModelReqBody 更新 Model 请求体
 type UpdateModelReqBody struct {
-	Alias           *string `json:"alias,omitempty" doc:"模型别名"`
-	ModelName       *string `json:"modelName,omitempty" doc:"上游实际模型名"`
-	EndpointID      *uint   `json:"endpointID,omitempty" minimum:"1" doc:"关联 Endpoint ID"`
-	Enabled         *bool   `json:"enabled,omitempty" doc:"是否启用"`
-	ContextLength   *int    `json:"contextLength,omitempty" minimum:"0" doc:"上下文窗口长度（tokens）"`
-	MaxOutputTokens *int    `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
+	Alias           *string               `json:"alias,omitempty" doc:"模型别名"`
+	ModelName       *string               `json:"modelName,omitempty" doc:"上游实际模型名"`
+	EndpointID      *uint                 `json:"endpointID,omitempty" minimum:"1" doc:"关联 Endpoint ID"`
+	Enabled         *bool                 `json:"enabled,omitempty" doc:"是否启用"`
+	ContextLength   *int                  `json:"contextLength,omitempty" minimum:"0" doc:"上下文窗口长度（tokens）"`
+	MaxOutputTokens *int                  `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
+	Capabilities    *[]enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image；必须包含 text）"`
 }
 
 // DeleteModelReq 删除 Model 请求
@@ -59,13 +62,14 @@ type ListModelsRsp struct {
 
 // ModelItem Model 列表项
 type ModelItem struct {
-	ID              uint          `json:"id" doc:"Model ID"`
-	Alias           string        `json:"alias" doc:"模型别名"`
-	ModelName       string        `json:"modelName" doc:"上游实际模型名"`
-	Enabled         bool          `json:"enabled" doc:"是否启用"`
-	ContextLength   int           `json:"contextLength" doc:"上下文窗口长度（tokens）"`
-	MaxOutputTokens int           `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
-	Endpoint        *EndpointItem `json:"endpoint,omitempty" doc:"关联 Endpoint 详细信息"`
-	CreatedAt       time.Time     `json:"createdAt" doc:"创建时间"`
-	UpdatedAt       time.Time     `json:"updatedAt" doc:"更新时间"`
+	ID              uint                 `json:"id" doc:"Model ID"`
+	Alias           string               `json:"alias" doc:"模型别名"`
+	ModelName       string               `json:"modelName" doc:"上游实际模型名"`
+	Enabled         bool                 `json:"enabled" doc:"是否启用"`
+	ContextLength   int                  `json:"contextLength" doc:"上下文窗口长度（tokens）"`
+	MaxOutputTokens int                  `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
+	Capabilities    []enum.InputModality `json:"capabilities" doc:"模型能力（输入模态集合）"`
+	Endpoint        *EndpointItem        `json:"endpoint,omitempty" doc:"关联 Endpoint 详细信息"`
+	CreatedAt       time.Time            `json:"createdAt" doc:"创建时间"`
+	UpdatedAt       time.Time            `json:"updatedAt" doc:"更新时间"`
 }

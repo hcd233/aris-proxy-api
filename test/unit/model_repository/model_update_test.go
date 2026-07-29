@@ -28,6 +28,7 @@ func TestModelUpdateColumnConstantsMatchGORMTags(t *testing.T) {
 		{goField: "EndpointID", constant: constant.FieldModelEndpointID},
 		{goField: "ContextLength", constant: constant.FieldModelContextLength},
 		{goField: "MaxOutputTokens", constant: constant.FieldModelMaxOutputTokens},
+		{goField: "Capabilities", constant: constant.FieldModelCapabilities},
 	}
 
 	for _, c := range checks {

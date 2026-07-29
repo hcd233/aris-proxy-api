@@ -39,6 +39,11 @@ export function formatTokens(n: number): string {
   return String(n);
 }
 
+// 解析模型输入模态集合（能力）；空值/缺省兜底为 ["text"]，与服务端 DB 默认值一致
+export function modelCapabilities(model: ModelItem): string[] {
+  return model.capabilities && model.capabilities.length > 0 ? model.capabilities : ["text"];
+}
+
 // 按 alias / modelName 过滤模型列表
 export function useFilteredModels(
   models: ModelItem[],

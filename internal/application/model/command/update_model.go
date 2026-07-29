@@ -40,7 +40,9 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 		aliasPtr = &a
 	}
 
-	m.Update(aliasPtr, cmd.ModelName, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens)
+	if uerr := m.Update(aliasPtr, cmd.ModelName, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens, cmd.Capabilities); uerr != nil {
+		return uerr
+	}
 
 	if err := h.repo.Update(ctx, m); err != nil {
 		log.Error("[ModelCommand] Update model failed", zap.Error(err))
