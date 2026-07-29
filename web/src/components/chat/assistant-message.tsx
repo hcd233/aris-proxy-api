@@ -1,6 +1,8 @@
 import { Sparkles, ShieldAlert } from "lucide-react";
 import type { MessageItem, UnifiedToolCall } from "@/lib/types";
 import { ProviderIcon } from "@/components/provider-icon";
+import { CopyButton } from "@/components/ui/copy-button";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { extractContent, lookupToolResult, type ToolResultInfo } from "./content-extract";
 import { MultimodalParts } from "./multimodal-parts";
@@ -32,6 +34,7 @@ export function AssistantMessage({
   index,
   toolResultsByID,
 }: AssistantMessageProps) {
+  const t = useT();
   const { role, content, tool_calls, reasoning_content, refusal } =
     message.message;
   const { model } = message;
@@ -51,7 +54,7 @@ export function AssistantMessage({
   return (
     <div
       style={style}
-      className="animate-in fade-in slide-in-from-bottom-1 flex gap-3 duration-300"
+      className="group/msg animate-in fade-in slide-in-from-bottom-1 flex gap-3 duration-300"
     >
       <div className="flex flex-col items-center gap-1 pt-0.5">
         <div
@@ -92,6 +95,16 @@ export function AssistantMessage({
               <span className="text-muted-foreground/60">—</span>
             )}
         </div>
+
+        {text && (
+          <div className="-ml-1.5 mt-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
+            <CopyButton
+              value={text}
+              variant="icon"
+              ariaLabel={t("chat_message.copy_aria")}
+            />
+          </div>
+        )}
 
         {refusal && <PartRefusal text={refusal} />}
 
