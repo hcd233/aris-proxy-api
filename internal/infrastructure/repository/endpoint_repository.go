@@ -205,15 +205,9 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}
-	out := make([]*aggregate.Model, 0, len(models))
-	for _, m := range models {
-		agg, convErr := toModelAggregate(m)
-		if convErr != nil {
-			return nil, convErr
-		}
-		out = append(out, agg)
-	}
-	return out, nil
+	return util.MapErr(models, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
 }
 
 func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
