@@ -59,18 +59,6 @@ func TestCheckRowWarn(t *testing.T) {
 	}
 }
 
-func TestKeyValueAlignsColons(t *testing.T) {
-	t.Parallel()
-	got := clientui.KeyValue(
-		[2]string{"Config", "/tmp/config.json"},
-		[2]string{"Agent", "codex"},
-	)
-	want := "Config: /tmp/config.json\nAgent:  codex"
-	if got != want {
-		t.Fatalf("KeyValue = %q, want %q", got, want)
-	}
-}
-
 func TestSummaryPanel(t *testing.T) {
 	t.Parallel()
 	got := clientui.SummaryPanel(

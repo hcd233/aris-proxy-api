@@ -19,19 +19,17 @@ const (
 	ClientUIIconOK      = "✓"
 	ClientUIIconFail    = "✗"
 	ClientUIIconWarn    = "!"
-	ClientUIIconInfo    = "·"
 	ClientUIIconSection = "◆"
 )
 
 // aris 客户端 TUI 布局格式
 const (
-	ClientUIKeyPaddingFormat = "%-*s"
-	ClientUIRowIndent        = "  "
-	ClientUISeparatorComma   = ", "
-	ClientUIMaskPrefix       = "••••"
-	ClientUIBytesBFormat     = "%d B"
-	ClientUIBytesKBFormat    = "%.1f KB"
-	ClientUIBytesMBFormat    = "%.1f MB"
+	ClientUIRowIndent      = "  "
+	ClientUISeparatorComma = ", "
+	ClientUIMaskPrefix     = "••••"
+	ClientUIBytesBFormat   = "%d B"
+	ClientUIBytesKBFormat  = "%.1f KB"
+	ClientUIBytesMBFormat  = "%.1f MB"
 )
 
 // aris status 面板文案

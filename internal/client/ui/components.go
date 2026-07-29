@@ -45,27 +45,6 @@ func CheckRowWarn(label, detail string) string {
 	return checkRow(constant.ClientUIIconWarn, colorWarning, label, detail)
 }
 
-// CheckRowInfo 渲染中性信息行
-func CheckRowInfo(label, detail string) string {
-	return checkRow(constant.ClientUIIconInfo, colorMuted, label, detail)
-}
-
-// KeyValue 渲染冒号对齐的键值行
-func KeyValue(pairs ...[2]string) string {
-	width := 0
-	for _, pair := range pairs {
-		if len(pair[0]) > width {
-			width = len(pair[0])
-		}
-	}
-	lines := make([]string, 0, len(pairs))
-	for _, pair := range pairs {
-		key := lipgloss.NewStyle().Foreground(colorMuted).Render(fmt.Sprintf(constant.ClientUIKeyPaddingFormat, width+1, pair[0]+":"))
-		lines = append(lines, key+" "+pair[1])
-	}
-	return strings.Join(lines, "\n")
-}
-
 // SummaryPanel 渲染带圆角边框的总结面板
 func SummaryPanel(lines ...string) string {
 	return lipgloss.NewStyle().
