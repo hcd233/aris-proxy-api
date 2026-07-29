@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
@@ -15,6 +16,7 @@ type CreateModelCommand struct {
 	EndpointID      uint
 	ContextLength   int
 	MaxOutputTokens int
+	Capabilities    []enum.InputModality
 }
 
 // CreateModelResult 创建命令结果
@@ -36,6 +38,7 @@ type UpdateModelCommand struct {
 	Enabled         *bool
 	ContextLength   *int
 	MaxOutputTokens *int
+	Capabilities    *[]enum.InputModality
 }
 
 // UpdateModelHandler 更新命令处理器
@@ -75,6 +78,7 @@ type ModelView struct {
 	Enabled         bool
 	ContextLength   int
 	MaxOutputTokens int
+	Capabilities    []enum.InputModality
 	Endpoint        *EndpointView
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
