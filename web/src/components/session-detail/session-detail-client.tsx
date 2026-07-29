@@ -4,12 +4,10 @@ import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
   ArrowLeft,
   History,
   MessagesSquare,
   Share2,
-  Trash2,
   Wrench,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -30,16 +28,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteIconButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SessionHistoryList } from "./session-history-list";
 import { ScoreDots } from "./score-dots";
 import { ToolsRail } from "./tools-rail";
@@ -374,16 +364,13 @@ export default function SessionDetailClient({
         <Share2 className="size-5" />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
+      <DeleteIconButton
+        className="size-10 text-foreground/70"
+        iconClassName="size-5"
         onClick={() => setDeleteConfirmOpen(true)}
-        className="size-10 text-foreground/70 hover:text-destructive"
         aria-label={t("session_detail.delete_aria")}
         title={t("session_detail.delete_title")}
-      >
-        <Trash2 className="size-5" />
-      </Button>
+      />
 
       {metadata.toolCount > 0 && (
         <Button
@@ -481,29 +468,16 @@ export default function SessionDetailClient({
         onOpenChange={setShareOpen}
       />
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-destructive" />
-              {t("session_detail.delete_dialog_title")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("session_detail.delete_dialog_desc").replace("{id}", String(metadata.id))}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? t("common.deleting") : t("common.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t("session_detail.delete_dialog_title")}
+        description={t("session_detail.delete_dialog_desc").replace("{id}", String(metadata.id))}
+        confirmLabel={t("common.delete")}
+        loadingLabel={t("common.deleting")}
+        loading={deleting}
+        onConfirm={handleDelete}
+      />
 
     </>
   );
