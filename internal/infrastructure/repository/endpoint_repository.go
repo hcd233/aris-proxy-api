@@ -320,13 +320,11 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate models")
 	}
-	out := make([]*aggregate.Model, 0, len(records))
-	for _, m := range records {
-		agg, convErr := toModelAggregate(m)
-		if convErr != nil {
-			return nil, nil, convErr
-		}
-		out = append(out, agg)
+	out, convErr := util.MapErr(records, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
+	if convErr != nil {
+		return nil, nil, convErr
 	}
 	return out, pageInfo, nil
 }
