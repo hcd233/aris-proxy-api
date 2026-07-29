@@ -55,6 +55,9 @@ const (
 	TraceClientRolloutDedupFormat   = "rollout:%s:%d:%s"
 	TraceClientFileIdentityFormat   = "%d:%d"
 
+	TraceClientAPIKeyEnv  = "ARIS_API_KEY"
+	TraceClientDevTTYPath = "/dev/tty"
+
 	TraceClientInitNonInteractiveMessage = "trace init requires an interactive terminal"
 	TraceClientInstallOriginErrorMessage = "Failed to determine server origin."
 	TraceClientInstallGenErrorMessage    = "Failed to generate install script."
@@ -78,4 +81,38 @@ const (
 	TraceClientNegativeShort             = "n"
 	TraceClientNegative                  = "no"
 	TraceClientJSONIndent                = "  "
+
+	TraceClientInitTitleConnect        = "Connect to server"
+	TraceClientInitTitleAgent          = "Select agent"
+	TraceClientInitTitleAPIKey         = "Configure API key"
+	TraceClientInitTitleHook           = "Configure Codex hooks"
+	TraceClientInitSteps               = 4
+	TraceClientInitConnectingFormat    = "Connecting to %s..."
+	TraceClientInitReachableFormat     = "reachable (%s)"
+	TraceClientInitAgentConfirmTitle   = "Agent: Codex"
+	TraceClientInitContinueLabel       = "Continue"
+	TraceClientInitCancelLabel         = "Cancel"
+	TraceClientInitAPIKeyTitle         = "API key"
+	TraceClientInitKeepAPIKeyHint      = "press Enter to keep current"
+	TraceClientInitValidatingKey       = "Validating API key..."
+	TraceClientInitInstallingHooks     = "Installing Codex hooks..."
+	TraceClientInitHooksFormat         = "Hooks: %d/%d registered"
+	TraceClientInitHostPrompt          = "Server host"
+	TraceClientInitHostPlaceholder     = "https://aris.example.com"
+	TraceClientInitHostSchemeMessage   = "host must start with http:// or https://"
+	TraceClientInitHostRequiredMessage = "host is required"
 )
+
+// TraceClientCodexHookEvents aris hook 需要注册的 codex 事件
+var TraceClientCodexHookEvents = []string{
+	TraceEventSessionStart,
+	TraceEventUserPromptSubmit,
+	TraceEventPreToolUse,
+	TraceEventPermissionRequest,
+	TraceEventPostToolUse,
+	TraceEventStop,
+	TraceEventSubagentStart,
+	TraceEventSubagentStop,
+	TraceEventPreCompact,
+	TraceEventPostCompact,
+}
