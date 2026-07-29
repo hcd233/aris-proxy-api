@@ -272,14 +272,13 @@ func percentileP95(buckets map[string]float64, total float64) float64 {
 		le    float64
 		count float64
 	}
-	points := make([]lePoint, 0, len(buckets))
-	for le, c := range buckets {
-		v, err := strconv.ParseFloat(le, constant.ParseFloat64BitSize)
+	points := lo.FilterMap(lo.Entries(buckets), func(e lo.Entry[string, float64], _ int) (lePoint, bool) {
+		v, err := strconv.ParseFloat(e.Key, constant.ParseFloat64BitSize)
 		if err != nil {
-			continue
+			return lePoint{}, false
 		}
-		points = append(points, lePoint{le: v, count: c})
-	}
+		return lePoint{le: v, count: e.Value}, true
+	})
 	sort.Slice(points, func(i, j int) bool { return points[i].le < points[j].le })
 
 	target := total * constant.RuntimeMetricsP95Percentile
