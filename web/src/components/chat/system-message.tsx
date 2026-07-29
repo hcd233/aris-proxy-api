@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { MarkdownLite } from "./markdown-lite";
+import { CopyButton } from "@/components/ui/copy-button";
 import { useT } from "@/lib/i18n";
 
 const SYSTEM_MSG_PREVIEW_CHARS = 200;
@@ -25,7 +26,7 @@ export function SystemMessage({ text, time, index }: SystemMessageProps) {
   return (
     <div
       style={style}
-      className="animate-in fade-in slide-in-from-bottom-1 duration-300"
+      className="group/msg animate-in fade-in slide-in-from-bottom-1 duration-300"
     >
       <div className="mb-1.5 flex items-center gap-2 text-[11px] text-muted-foreground/70">
         <span className="font-medium uppercase tracking-[0.14em]">{t("system_message.system")}</span>
@@ -35,6 +36,12 @@ export function SystemMessage({ text, time, index }: SystemMessageProps) {
             <span>{time}</span>
           </>
         )}
+        <CopyButton
+          value={trimmed}
+          variant="icon"
+          ariaLabel={t("chat_message.copy_aria")}
+          className="opacity-0 transition-opacity group-hover/msg:opacity-100"
+        />
       </div>
       <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-[13.5px] leading-relaxed text-muted-foreground">
         <MarkdownLite text={display} />

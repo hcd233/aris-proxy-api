@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
+import { CopyButton } from "@/components/ui/copy-button";
 import type { UnifiedToolCall } from "@/lib/types";
 import type { ToolResultInfo } from "./content-extract";
 
@@ -34,6 +36,7 @@ interface ToolCallCardProps {
 }
 
 export function ToolCallCard({ call, result }: ToolCallCardProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const args = prettyJSON(call.arguments);
   const out = result ? prettyJSON(result.text) : undefined;
@@ -81,9 +84,15 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
             </div>
           )}
           <div className="px-3 py-2.5">
-            <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              Input
-            </p>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                Input
+              </p>
+              <CopyButton
+                value={args || "{}"}
+                ariaLabel={t("tool_call.copy_input_aria")}
+              />
+            </div>
             <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
               {args || "{}"}
             </pre>
@@ -94,6 +103,10 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   Output
                 </p>
+                <CopyButton
+                  value={out}
+                  ariaLabel={t("tool_call.copy_output_aria")}
+                />
               </div>
               <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
                 {out}
