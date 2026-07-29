@@ -39,27 +39,20 @@ func MarshalOpenAIChatCompletionBodyForModel(req *dto.OpenAIChatCompletionReq, m
 // OpenAI 的 "developer" 角色（o1 系列及以上）并非所有上游都支持，
 // 统一转为等价的 "system" 角色以保证兼容性。
 func normalizeMessagesForUpstream(msgs []*dto.OpenAIChatCompletionMessageParam) []*dto.OpenAIChatCompletionMessageParam {
-	hasDev := false
-	for _, msg := range msgs {
-		if msg != nil && msg.Role == enum.RoleDeveloper {
-			hasDev = true
-			break
-		}
+	isDev := func(msg *dto.OpenAIChatCompletionMessageParam) bool {
+		return msg != nil && msg.Role == enum.RoleDeveloper
 	}
-	if !hasDev {
+	if !lo.SomeBy(msgs, isDev) {
 		return msgs
 	}
-	normalized := make([]*dto.OpenAIChatCompletionMessageParam, len(msgs))
-	for i, msg := range msgs {
-		if msg != nil && msg.Role == enum.RoleDeveloper {
-			cp := *msg
-			cp.Role = enum.RoleSystem
-			normalized[i] = &cp
-		} else {
-			normalized[i] = msg
+	return lo.Map(msgs, func(msg *dto.OpenAIChatCompletionMessageParam, _ int) *dto.OpenAIChatCompletionMessageParam {
+		if !isDev(msg) {
+			return msg
 		}
-	}
-	return normalized
+		cp := *msg
+		cp.Role = enum.RoleSystem
+		return &cp
+	})
 }
 
 // MarshalOpenAIResponseBodyForModel 使用上游模型名序列化 Response API 请求体，且不修改原请求。

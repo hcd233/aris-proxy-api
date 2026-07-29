@@ -753,21 +753,22 @@ func parseCommaSeparatedIDs(s string) ([]uint, error) {
 	if s == "" {
 		return nil, ierr.New(ierr.ErrValidation, "ids is required")
 	}
-	parts := strings.Split(s, ",")
-	ids := make([]uint, 0, len(parts))
-	for _, p := range parts {
+	parts := lo.Filter(strings.Split(s, ","), func(p string, _ int) bool {
+		return strings.TrimSpace(p) != ""
+	})
+	ids, err := util.MapErr(parts, func(p string, _ int) (uint, error) {
 		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
 		id, err := strconv.ParseUint(p, constant.DecimalBase, constant.ParseFloat64BitSize)
 		if err != nil {
-			return nil, ierr.Wrap(ierr.ErrValidation, err, "invalid id: "+p)
+			return 0, ierr.Wrap(ierr.ErrValidation, err, "invalid id: "+p)
 		}
 		if id == 0 {
-			return nil, ierr.New(ierr.ErrValidation, "id must be >= 1")
+			return 0, ierr.New(ierr.ErrValidation, "id must be >= 1")
 		}
-		ids = append(ids, uint(id))
+		return uint(id), nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	if len(ids) == 0 {
 		return nil, ierr.New(ierr.ErrValidation, "no valid ids provided")

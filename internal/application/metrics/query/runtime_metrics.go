@@ -5,12 +5,15 @@
 package query
 
 import (
+	"cmp"
 	"context"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -132,15 +135,13 @@ func newBucketAggs(n int) []bucketAgg {
 }
 
 func decodeSnapshots(payloads [][]byte) []metrics.Snapshot {
-	snaps := make([]metrics.Snapshot, 0, len(payloads))
-	for _, p := range payloads {
+	return lo.FilterMap(payloads, func(p []byte, _ int) (metrics.Snapshot, bool) {
 		var s metrics.Snapshot
 		if err := sonic.Unmarshal(p, &s); err != nil {
-			continue
+			return metrics.Snapshot{}, false
 		}
-		snaps = append(snaps, s)
-	}
-	return snaps
+		return s, true
+	})
 }
 
 func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart, bucket int64, n int) {
@@ -257,12 +258,7 @@ func collectProviders(agg []bucketAgg) []string {
 			set[prov] = struct{}{}
 		}
 	}
-	providers := make([]string, 0, len(set))
-	for prov := range set {
-		providers = append(providers, prov)
-	}
-	sort.Strings(providers)
-	return providers
+	return slices.Sorted(maps.Keys(set))
 }
 
 func percentileP95(buckets map[string]float64, total float64) float64 {
@@ -273,15 +269,14 @@ func percentileP95(buckets map[string]float64, total float64) float64 {
 		le    float64
 		count float64
 	}
-	points := make([]lePoint, 0, len(buckets))
-	for le, c := range buckets {
-		v, err := strconv.ParseFloat(le, constant.ParseFloat64BitSize)
+	points := lo.FilterMap(lo.Entries(buckets), func(e lo.Entry[string, float64], _ int) (lePoint, bool) {
+		v, err := strconv.ParseFloat(e.Key, constant.ParseFloat64BitSize)
 		if err != nil {
-			continue
+			return lePoint{}, false
 		}
-		points = append(points, lePoint{le: v, count: c})
-	}
-	sort.Slice(points, func(i, j int) bool { return points[i].le < points[j].le })
+		return lePoint{le: v, count: e.Value}, true
+	})
+	slices.SortFunc(points, func(a, b lePoint) int { return cmp.Compare(a.le, b.le) })
 
 	target := total * constant.RuntimeMetricsP95Percentile
 	for _, p := range points {

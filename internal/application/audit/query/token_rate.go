@@ -72,14 +72,14 @@ func (h *tokenRateByUserHandler) Handle(ctx context.Context, q TokenRateByUserQu
 
 func fillTokenRateSeries(points []*modelcall.TokenThroughputPoint, start, end time.Time, granularity enum.Granularity) []*dto.TokenRateItem {
 	type rateSlot struct{ outputTokensPerSec float64 }
-	modelOrder, byModel, timeSet := indexSeries(points,
+	modelOrder, byModel, timeSet := port.IndexSeries(points,
 		func(p *modelcall.TokenThroughputPoint) string { return p.Model },
 		func(p *modelcall.TokenThroughputPoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.TokenThroughputPoint) rateSlot {
 			return rateSlot{outputTokensPerSec: p.OutputTokensPerSecond}
 		},
 	)
-	buckets := buildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
+	buckets := port.BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
 	items := lo.Map(modelOrder, func(m string, _ int) *dto.TokenRateItem {
 		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TokenRatePoint {
 			s := byModel[m][t]
