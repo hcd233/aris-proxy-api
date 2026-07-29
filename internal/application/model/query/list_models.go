@@ -48,6 +48,7 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 			Enabled:         m.Enabled(),
 			ContextLength:   m.ContextLength(),
 			MaxOutputTokens: m.MaxOutputTokens(),
+			Capabilities:    m.Capabilities(),
 			Endpoint:        toEndpointView(endpointsByID[m.EndpointID()]),
 			CreatedAt:       m.CreatedAt(),
 			UpdatedAt:       m.UpdatedAt(),

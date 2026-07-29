@@ -52,7 +52,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Cpu, Search, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine } from "lucide-react";
+import { Plus, Pencil, Cpu, Search, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine, Type, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -63,6 +63,8 @@ interface ModelForm {
   endpointID: number;
   contextLength: number;
   maxOutputTokens: number;
+  supportText: boolean;
+  supportImage: boolean;
 }
 
 const emptyForm: ModelForm = {
@@ -71,7 +73,31 @@ const emptyForm: ModelForm = {
   endpointID: 0,
   contextLength: 128000,
   maxOutputTokens: 64000,
+  supportText: true,
+  supportImage: false,
 };
+
+// 能力徽标：按模型输入模态渲染图标（text / image），未知模态回退为 Type 图标
+function CapabilityBadges({ capabilities }: { capabilities?: string[] }) {
+  const caps = capabilities && capabilities.length > 0 ? capabilities : ["text"];
+  return (
+    <div className="flex items-center gap-1.5">
+      {caps.map((cap) => (
+        <span
+          key={cap}
+          className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground"
+          title={cap}
+        >
+          {cap === "image" ? (
+            <ImageIcon className="size-3 text-muted-foreground" />
+          ) : (
+            <Type className="size-3 text-muted-foreground" />
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 // 将 token 数格式化为紧凑可读形式：128000 -> 128K，1048576 -> 1M
 function formatTokens(n: number): string {
@@ -163,6 +189,8 @@ export default function ModelsPage() {
       endpointID: model.endpoint.id,
       contextLength: model.contextLength || 128000,
       maxOutputTokens: model.maxOutputTokens || 64000,
+      supportText: (model.capabilities ?? ["text"]).includes("text"),
+      supportImage: (model.capabilities ?? []).includes("image"),
     });
     // Ensure the model's current endpoint is present in the select options,
     // even if it falls outside the first page of endpoints.
@@ -177,6 +205,14 @@ export default function ModelsPage() {
       toast.error(t("models.fields_required"));
       return;
     }
+    if (!form.supportText) {
+      toast.error(t("models.capabilities_require_text"));
+      return;
+    }
+    const capabilities = [
+      ...(form.supportText ? (["text"] as const) : []),
+      ...(form.supportImage ? (["image"] as const) : []),
+    ];
     setSaving(true);
     try {
       if (editingId) {
@@ -186,6 +222,7 @@ export default function ModelsPage() {
           endpointID: form.endpointID,
           contextLength: form.contextLength,
           maxOutputTokens: form.maxOutputTokens,
+          capabilities,
         });
         toast.success(t("models.updated_success"));
       } else {
@@ -195,6 +232,7 @@ export default function ModelsPage() {
           endpointID: form.endpointID,
           contextLength: form.contextLength,
           maxOutputTokens: form.maxOutputTokens,
+          capabilities,
         });
         toast.success(t("models.created_success"));
       }
@@ -399,6 +437,7 @@ export default function ModelsPage() {
                                 <ArrowUpFromLine className="size-3 text-muted-foreground" />
                                 {formatTokens(model.maxOutputTokens)}
                               </span>
+                              <CapabilityBadges capabilities={model.capabilities} />
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
@@ -438,6 +477,7 @@ export default function ModelsPage() {
                         <TableHead>{t("models.alias")}</TableHead>
                         <TableHead>{t("models.model_name")}</TableHead>
                         <TableHead>{t("models.limits")}</TableHead>
+                        <TableHead>{t("models.capabilities")}</TableHead>
                         <TableHead>{t("models.enabled")}</TableHead>
                         <TableHead>{t("models.endpoint")}</TableHead>
                         <TableHead>{t("common.created")}</TableHead>
@@ -471,6 +511,9 @@ export default function ModelsPage() {
                                 {formatTokens(model.maxOutputTokens)}
                               </span>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <CapabilityBadges capabilities={model.capabilities} />
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -597,6 +640,33 @@ export default function ModelsPage() {
                     }
                   />
                   <p className="text-[11px] text-muted-foreground">{t("models.max_output_hint")}</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>{t("models.capabilities")}</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between rounded-lg border border-input px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-sm">
+                      <Type className="size-3.5 text-muted-foreground" />
+                      {t("models.capability_text")}
+                    </span>
+                    <Switch
+                      size="sm"
+                      checked={form.supportText}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, supportText: v }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-input px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-sm">
+                      <ImageIcon className="size-3.5 text-muted-foreground" />
+                      {t("models.capability_image")}
+                    </span>
+                    <Switch
+                      size="sm"
+                      checked={form.supportImage}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, supportImage: v }))}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="space-y-1">

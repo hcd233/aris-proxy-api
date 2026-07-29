@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -60,7 +61,7 @@ func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) (
 	}
 	switch b {
 	case "hit":
-		m, _ := aggregate.CreateModel(1, alias, "test-model", 1, true, 128000, 64000)
+		m, _ := aggregate.CreateModel(1, alias, "test-model", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 		return []*aggregate.Model{m}, nil
 	case "miss":
 		return nil, nil
@@ -222,8 +223,8 @@ func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
 	ctx := context.Background()
 	alias := vo.EndpointAlias("test-model")
 	ep, _ := aggregate.CreateEndpoint(1, "test-endpoint", "https://api.openai.com", "", "sk-test", true, false, false)
-	disabledModel, _ := aggregate.CreateModel(1, alias, "disabled-upstream", 1, false, 128000, 64000)
-	enabledModel, _ := aggregate.CreateModel(2, alias, "enabled-upstream", 1, true, 128000, 64000)
+	disabledModel, _ := aggregate.CreateModel(1, alias, "disabled-upstream", 1, false, 128000, 64000, []enum.InputModality{enum.InputModalityText})
+	enabledModel, _ := aggregate.CreateModel(2, alias, "enabled-upstream", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 	resolver := service.NewEndpointResolver(
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: ep}},
 		&staticModelRepo{models: []*aggregate.Model{disabledModel, enabledModel}},
@@ -249,8 +250,8 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 	alias := vo.EndpointAlias("test-model")
 	anthropicOnly, _ := aggregate.CreateEndpoint(1, "anthropic-only", "", "https://api.anthropic.com", "sk-ant", false, false, true)
 	openAIOnly, _ := aggregate.CreateEndpoint(2, "openai-only", "https://api.openai.com", "", "sk-openai", true, false, false)
-	anthropicModel, _ := aggregate.CreateModel(1, alias, "claude-upstream", 1, true, 128000, 64000)
-	openAIModel, _ := aggregate.CreateModel(2, alias, "gpt-upstream", 2, true, 128000, 64000)
+	anthropicModel, _ := aggregate.CreateModel(1, alias, "claude-upstream", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
+	openAIModel, _ := aggregate.CreateModel(2, alias, "gpt-upstream", 2, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 	resolver := service.NewEndpointResolver(
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: anthropicOnly, 2: openAIOnly}},
 		&staticModelRepo{models: []*aggregate.Model{anthropicModel, openAIModel}},
