@@ -198,12 +198,8 @@ _Avoid_: log scraping, import, sync, ingestion
 ## Trace & Codex Client（Trace 与 Codex 客户端）
 
 **TraceClient（Trace 客户端）**:
-独立编译的 `aris` 二进制，从 `cmd/client` 构建，只包含 `trace init` 和 `trace ingest` 两个子命令，不链接数据库、Server、lint 或 Web 静态资源。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物随服务镜像发布到 `/app/trace-client/`。替代旧版 shell + curl hook 脚本。
+独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent → API Key → 配 Codex hooks）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）三个命令，不链接数据库、Server、lint 或 Web 静态资源。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本只负责下载、校验、原子安装，末尾 `exec aris init --host <origin>` 进入配置向导。
 _Avoid_: trace cli, codex hook script, install script
-
-**TraceDownloadTicket（下载票据）**:
-JWT 用户通过 `POST /api/v1/trace/client/ticket` 换取的短期单次下载凭证。Redis 只保存 SHA-256 哈希，TTL 10 分钟，使用 `GETDEL` 原子消费。票据签发按用户维度令牌桶限流（容量 3，补充速率 3 req/min）。安装脚本在点击复制时实时签发，不将 JWT 写入脚本。
-_Avoid_: download token, client token, install credential
 
 **TraceSpool（本地 spool）**:
 `aris trace ingest` 在 `~/.aris/trace/spool/` 维护的待上报记录队列。Hook 事件和 rollout 记录先原子落盘（0600），再以 5 秒超时批量 POST。服务端确认 `accepted` / `duplicate` 后删除 pending，`rejected` 移入隔离区。spool 全局上限 256 MiB，达到上限后停止接收新记录但保留既有未确认记录，始终 fail-open。

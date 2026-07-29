@@ -18,6 +18,7 @@ type Config struct {
 
 type ConfigStore interface {
 	Load(ctx context.Context) (Config, error)
+	Save(ctx context.Context, config Config) error
 }
 
 type configStore struct {
@@ -44,6 +45,17 @@ func (s *configStore) Load(ctx context.Context) (Config, error) {
 		return Config{}, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode trace client config")
 	}
 	return config, nil
+}
+
+func (s *configStore) Save(ctx context.Context, config Config) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	data, err := sonic.Marshal(config)
+	if err != nil {
+		return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode trace client config")
+	}
+	return writePrivateFile(s.paths.ConfigFile(), data)
 }
 
 func writePrivateFile(path string, data []byte) error {

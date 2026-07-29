@@ -55,27 +55,53 @@ const (
 	TraceClientRolloutDedupFormat   = "rollout:%s:%d:%s"
 	TraceClientFileIdentityFormat   = "%d:%d"
 
+	TraceClientAPIKeyEnv  = "ARIS_API_KEY"
+	TraceClientDevTTYPath = "/dev/tty"
+
 	TraceClientInitNonInteractiveMessage = "trace init requires an interactive terminal"
 	TraceClientInstallOriginErrorMessage = "Failed to determine server origin."
 	TraceClientInstallGenErrorMessage    = "Failed to generate install script."
 	TraceClientInstallScriptTmplName     = "install"
-	TraceClientInitStepConnect           = "[1/4] Connect to server"
-	TraceClientInitStepAgent             = "[2/4] Select agent"
-	TraceClientInitStepAPIKey            = "[3/4] Configure API key"
-	TraceClientInitStepHook              = "[4/4] Configure Codex hooks"
-	TraceClientInitConnected             = "Connected"
-	TraceClientInitAgentPrompt           = "Press Enter to select Codex: "
-	TraceClientInitAPIKeyPrompt          = "API key: "
-	TraceClientInitKeepAPIKeyPrompt      = "API key (Enter keeps current): "
 	TraceClientInitMissingAPIKeyMessage  = "api key is required"
-	TraceClientInitInvalidAgentMessage   = "only Codex is supported"
 	TraceClientInitAPIKeyFailed          = "API key validation failed"
-	TraceClientInitRetryPrompt           = "Connection failed. Retry? [Y/n]: "
-	TraceClientInitAPIKeyRetryPrompt     = "Retry API key? [Y/n]: "
+	TraceClientInitRetryPrompt           = "Connection failed. Retry?"
+	TraceClientInitAPIKeyRetryPrompt     = "Retry API key?"
 	TraceClientInitDone                  = "Trace configuration completed"
 	TraceClientInitApprovalHint          = "In Codex, run /hooks and manually approve the new Aris hooks."
 	TraceClientInitConfigFormat          = "Config: %s"
-	TraceClientNegativeShort             = "n"
-	TraceClientNegative                  = "no"
 	TraceClientJSONIndent                = "  "
+
+	TraceClientInitTitleConnect        = "Connect to server"
+	TraceClientInitTitleAgent          = "Select agent"
+	TraceClientInitTitleAPIKey         = "Configure API key"
+	TraceClientInitTitleHook           = "Configure Codex hooks"
+	TraceClientInitSteps               = 4
+	TraceClientInitConnectingFormat    = "Connecting to %s..."
+	TraceClientReachableFormat         = "reachable (%s)"
+	TraceClientInitAgentConfirmTitle   = "Agent: Codex"
+	TraceClientInitContinueLabel       = "Continue"
+	TraceClientInitCancelLabel         = "Cancel"
+	TraceClientInitAPIKeyTitle         = "API key"
+	TraceClientInitKeepAPIKeyHint      = "press Enter to keep current"
+	TraceClientInitValidatingKey       = "Validating API key..."
+	TraceClientInitInstallingHooks     = "Installing Codex hooks..."
+	TraceClientInitHooksFormat         = "Hooks: %d/%d registered"
+	TraceClientInitHostPrompt          = "Server host"
+	TraceClientInitHostPlaceholder     = "https://aris.example.com"
+	TraceClientInitHostSchemeMessage   = "host must start with http:// or https://"
+	TraceClientInitHostRequiredMessage = "host is required"
 )
+
+// TraceClientCodexHookEvents aris hook 需要注册的 codex 事件
+var TraceClientCodexHookEvents = []string{
+	TraceEventSessionStart,
+	TraceEventUserPromptSubmit,
+	TraceEventPreToolUse,
+	TraceEventPermissionRequest,
+	TraceEventPostToolUse,
+	TraceEventStop,
+	TraceEventSubagentStart,
+	TraceEventSubagentStop,
+	TraceEventPreCompact,
+	TraceEventPostCompact,
+}
