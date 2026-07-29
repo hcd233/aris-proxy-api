@@ -58,6 +58,14 @@ func TestInstallScript_ReturnsScriptWithHost(t *testing.T) {
 	if !strings.HasPrefix(script, "#!/bin/sh") {
 		t.Fatalf("script must start with #!/bin/sh")
 	}
+	if !strings.Contains(script, "init --host") {
+		t.Fatalf("script must exec aris init --host after install, got:\n%s", script)
+	}
+	for _, removed := range []string{"jq", "stty", "[1/4]", "/dev/tty"} {
+		if strings.Contains(script, removed) {
+			t.Fatalf("script must not contain %q (wizard moved into the binary), got:\n%s", removed, script)
+		}
+	}
 }
 
 func TestInstallScript_InvalidSchemeReturnsErrorScript(t *testing.T) {
