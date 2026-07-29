@@ -138,6 +138,7 @@ const (
 	FieldModelEnabled                        = "enabled"
 	FieldModelContextLength                  = "context_length"
 	FieldModelMaxOutputTokens                = "max_output_tokens"
+	FieldModelCapabilities                   = "capabilities"
 
 	// Router tag names
 	TagAnthropic = "Anthropic"

@@ -91,7 +91,7 @@ var DefaultModelCapabilities = []string{"text"}
 Run: `go test -count=1 ./test/unit/model_repository/`
 Expected: PASS
 
-- [ ] **Step 6: 本地迁移验证（临时 PG 容器）**
+- [ ] **Step 6: 本地迁移验证（临时 PG 容器）** —— ⚠️ 执行环境无 docker CLI / 无本地 PG，**顺延到部署期**：`script/deploy-k8s.sh` 的 K8s `db-migrate` Job 会先于新 Deployment 跑 `database migrate`，部署后 E2E（Task 4）验证列行为与默认值。以下为参考命令：
 
 ```bash
 docker run -d --name aris-cap-pg -e POSTGRES_USER=captest -e POSTGRES_PASSWORD=captest -e POSTGRES_DB=captestdb -p 55432:5432 postgres:16-alpine
