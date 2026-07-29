@@ -296,15 +296,9 @@ func (r *modelRepository) List(ctx context.Context) ([]*aggregate.Model, error) 
 	if err := db.Find(&models).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list models")
 	}
-	result := make([]*aggregate.Model, 0, len(models))
-	for _, m := range models {
-		agg, err := toModelAggregate(m)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, agg)
-	}
-	return result, nil
+	return util.MapErr(models, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
 }
 
 // Paginate 分页查询模型列表
