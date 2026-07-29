@@ -98,7 +98,7 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 	}
 
 	printStep(out, 4, constant.TraceClientInitTitleHook)
-	binPath, err := executablePath()
+	binPath, err := ExecutablePath()
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,8 @@ func terminalIO(in io.Reader) (io.Reader, io.Writer, func(), error) {
 	return tty, tty, func() { _ = tty.Close() }, nil //nolint:errcheck // best-effort close
 }
 
-func executablePath() (string, error) {
+// ExecutablePath 返回当前可执行文件的绝对路径（解析符号链接）
+func ExecutablePath() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return "", ierr.Wrap(ierr.ErrInternal, err, "resolve executable path")
@@ -243,7 +244,7 @@ func checkHealthWithRetry(ctx context.Context, client *api.Client, ttyIn io.Read
 			return checkErr
 		})
 		if err == nil {
-			printLine(out, ui.CheckRowOK(host, fmt.Sprintf(constant.TraceClientInitReachableFormat, latency.Round(time.Millisecond))))
+			printLine(out, ui.CheckRowOK(host, fmt.Sprintf(constant.TraceClientReachableFormat, latency.Round(time.Millisecond))))
 			return nil
 		}
 		printLine(out, ui.CheckRowFail(host, err.Error()))

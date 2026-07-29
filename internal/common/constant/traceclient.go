@@ -88,7 +88,7 @@ const (
 	TraceClientInitTitleHook           = "Configure Codex hooks"
 	TraceClientInitSteps               = 4
 	TraceClientInitConnectingFormat    = "Connecting to %s..."
-	TraceClientInitReachableFormat     = "reachable (%s)"
+	TraceClientReachableFormat         = "reachable (%s)"
 	TraceClientInitAgentConfirmTitle   = "Agent: Codex"
 	TraceClientInitContinueLabel       = "Continue"
 	TraceClientInitCancelLabel         = "Cancel"
