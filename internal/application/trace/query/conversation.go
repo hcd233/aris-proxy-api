@@ -40,7 +40,10 @@ func (h *listTraceConversationHandler) Handle(
 	if err != nil {
 		return nil, err
 	}
-	conversation := trace.BuildConversation(events)
+	conversation, err := trace.BuildConversationFor(item.Agent, events)
+	if err != nil {
+		return nil, err
+	}
 	return &port.TraceConversationView{
 		TraceID:   item.ID,
 		SessionID: item.SessionID,

@@ -317,7 +317,9 @@ var (
 	TraceClaudeEventToolResult       = "tool_result"
 	TraceClaudeEventAssistantMessage = "assistant_message"
 
-	TraceClaudeBlockToolUse = "tool_use"
+	TraceClaudeBlockText       = "text"
+	TraceClaudeBlockToolUse    = "tool_use"
+	TraceClaudeBlockToolResult = "tool_result"
 
 	TraceRecordSourceHook                = "hook"
 	TraceRecordSourceRollout             = "rollout"
@@ -350,6 +352,7 @@ var (
 	TracePayloadFieldToolInput           = "tool_input"
 	TracePayloadFieldToolUseID           = "tool_use_id"
 	TracePayloadFieldToolResponse        = "tool_response"
+	TracePayloadFieldAgentID             = "agent_id"
 	TraceConversationRoleUser            = "user"
 	TraceConversationRoleAssistant       = "assistant"
 	TraceConversationKindMessage         = "message"
