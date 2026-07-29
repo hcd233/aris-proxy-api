@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"sort"
+	"slices"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/samber/lo"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 func HashJSONBodyExcludingTopLevelModel(body []byte) string {
@@ -41,7 +42,7 @@ func canonicalizeJSONObject(obj map[string]sonic.NoCopyRawMessage, skipTopLevelM
 	keys := lo.Filter(lo.Keys(obj), func(key string, _ int) bool {
 		return !skipTopLevelModel || key != constant.FieldNameModel
 	})
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	out := make([]byte, 0, len(obj)*16)
 	out = append(out, '{')

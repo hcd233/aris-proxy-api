@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // endpointRepository EndpointRepository 的 GORM 实现
@@ -153,15 +154,9 @@ func (r *endpointRepository) List(ctx context.Context) ([]*aggregate.Endpoint, e
 	if err := db.Find(&models).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list endpoints")
 	}
-	result := make([]*aggregate.Endpoint, 0, len(models))
-	for _, m := range models {
-		ep, err := toEndpointAggregate(m)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, ep)
-	}
-	return result, nil
+	return util.MapErr(models, func(m *dbmodel.Endpoint, _ int) (*aggregate.Endpoint, error) {
+		return toEndpointAggregate(m)
+	})
 }
 
 // Paginate 分页查询端点列表
@@ -183,13 +178,11 @@ func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonPar
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate endpoints")
 	}
-	out := make([]*aggregate.Endpoint, 0, len(records))
-	for _, m := range records {
-		ep, convErr := toEndpointAggregate(m)
-		if convErr != nil {
-			return nil, nil, convErr
-		}
-		out = append(out, ep)
+	out, convErr := util.MapErr(records, func(m *dbmodel.Endpoint, _ int) (*aggregate.Endpoint, error) {
+		return toEndpointAggregate(m)
+	})
+	if convErr != nil {
+		return nil, nil, convErr
 	}
 	return out, pageInfo, nil
 }
@@ -212,15 +205,9 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}
-	out := make([]*aggregate.Model, 0, len(models))
-	for _, m := range models {
-		agg, convErr := toModelAggregate(m)
-		if convErr != nil {
-			return nil, convErr
-		}
-		out = append(out, agg)
-	}
-	return out, nil
+	return util.MapErr(models, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
 }
 
 func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
@@ -309,15 +296,9 @@ func (r *modelRepository) List(ctx context.Context) ([]*aggregate.Model, error) 
 	if err := db.Find(&models).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list models")
 	}
-	result := make([]*aggregate.Model, 0, len(models))
-	for _, m := range models {
-		agg, err := toModelAggregate(m)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, agg)
-	}
-	return result, nil
+	return util.MapErr(models, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
 }
 
 // Paginate 分页查询模型列表
@@ -339,13 +320,11 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate models")
 	}
-	out := make([]*aggregate.Model, 0, len(records))
-	for _, m := range records {
-		agg, convErr := toModelAggregate(m)
-		if convErr != nil {
-			return nil, nil, convErr
-		}
-		out = append(out, agg)
+	out, convErr := util.MapErr(records, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
+	if convErr != nil {
+		return nil, nil, convErr
 	}
 	return out, pageInfo, nil
 }

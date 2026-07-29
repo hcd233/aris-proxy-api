@@ -3,6 +3,8 @@ package query
 import (
 	"context"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -53,11 +55,9 @@ func tracePageParam() (param model.CommonParam) {
 }
 
 func mapConversationTurns(conversation *trace.Conversation) []*port.TraceConversationTurnView {
-	turns := make([]*port.TraceConversationTurnView, 0, len(conversation.Turns))
-	for _, turn := range conversation.Turns {
-		items := make([]*port.TraceConversationItemView, 0, len(turn.Items))
-		for _, item := range turn.Items {
-			items = append(items, &port.TraceConversationItemView{
+	return lo.Map(conversation.Turns, func(turn *trace.ConversationTurn, _ int) *port.TraceConversationTurnView {
+		items := lo.Map(turn.Items, func(item *trace.ConversationItem, _ int) *port.TraceConversationItemView {
+			return &port.TraceConversationItemView{
 				Kind:      item.Kind,
 				Role:      item.Role,
 				Content:   item.Content,
@@ -67,12 +67,11 @@ func mapConversationTurns(conversation *trace.Conversation) []*port.TraceConvers
 				Output:    item.Output,
 				Source:    item.Source,
 				RecordIDs: item.RecordIDs,
-			})
-		}
-		turns = append(turns, &port.TraceConversationTurnView{
+			}
+		})
+		return &port.TraceConversationTurnView{
 			TurnID: turn.TurnID,
 			Items:  items,
-		})
-	}
-	return turns
+		}
+	})
 }

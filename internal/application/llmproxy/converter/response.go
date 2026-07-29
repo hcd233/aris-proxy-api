@@ -252,28 +252,27 @@ func responseMessageContentToChat(content *dto.ResponseInputMessageContent) *dto
 	if len(content.Parts) == 0 {
 		return &dto.OpenAIMessageContent{Text: content.Text}
 	}
-	parts := make([]*dto.OpenAIChatCompletionContentPart, 0, len(content.Parts))
-	for _, part := range content.Parts {
+	parts := lo.FilterMap(content.Parts, func(part *dto.ResponseInputContent, _ int) (*dto.OpenAIChatCompletionContentPart, bool) {
 		if part == nil {
-			continue
+			return nil, false
 		}
 		switch part.Type {
 		case enum.ResponseContentTypeInputText, enum.ResponseContentTypeOutputText:
-			parts = append(parts, &dto.OpenAIChatCompletionContentPart{Type: enum.ContentPartTypeText, Text: part.Text})
+			return &dto.OpenAIChatCompletionContentPart{Type: enum.ContentPartTypeText, Text: part.Text}, true
 		case enum.ResponseContentTypeInputImage:
-			parts = append(parts, &dto.OpenAIChatCompletionContentPart{
+			return &dto.OpenAIChatCompletionContentPart{
 				Type: enum.ContentPartTypeImageURL,
 				ImageURL: &dto.OpenAIChatCompletionImageURL{
 					URL:    lo.FromPtr(part.ImageURL),
 					Detail: lo.FromPtr(part.Detail),
 				},
-			})
+			}, true
 		case enum.ResponseContentTypeRefusal:
-			parts = append(parts, &dto.OpenAIChatCompletionContentPart{Type: enum.ContentPartTypeText, Text: part.Refusal})
+			return &dto.OpenAIChatCompletionContentPart{Type: enum.ContentPartTypeText, Text: part.Refusal}, true
 		default:
-			continue
+			return nil, false
 		}
-	}
+	})
 	if len(parts) == 0 {
 		return &dto.OpenAIMessageContent{Text: content.Text}
 	}
