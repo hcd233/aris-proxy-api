@@ -13,6 +13,7 @@ import {
   ExportSectionTitle,
   ExportSelectionBadge,
   ExportTextButton,
+  modelCapabilities,
   useFilteredModels,
 } from "@/components/export-dialog-shared";
 
@@ -32,18 +33,24 @@ function generateScript(
 
   const modelsJson = JSON.stringify(
     Object.fromEntries(
-      selectedModels.map((m) => [
-        m.alias,
-        {
-          name: m.alias.charAt(0).toUpperCase() + m.alias.slice(1),
-          limit: {
-            context: m.contextLength > 0 ? m.contextLength : 128000,
-            output: m.maxOutputTokens > 0 ? m.maxOutputTokens : 64000,
+      selectedModels.map((m) => {
+        const caps = modelCapabilities(m);
+        return [
+          m.alias,
+          {
+            name: m.alias.charAt(0).toUpperCase() + m.alias.slice(1),
+            // 仅当模型支持图片输入时放开 OpenCode UI 的图片附件上传
+            ...(caps.includes("image") ? { attachment: true } : {}),
+            modalities: { input: caps, output: ["text"] },
+            limit: {
+              context: m.contextLength > 0 ? m.contextLength : 128000,
+              output: m.maxOutputTokens > 0 ? m.maxOutputTokens : 64000,
+            },
+            temperature: true,
+            tool_call: true,
           },
-          temperature: true,
-          tool_call: true,
-        },
-      ])
+        ];
+      })
     ),
     null,
     4

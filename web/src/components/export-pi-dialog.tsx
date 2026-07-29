@@ -13,6 +13,7 @@ import {
   ExportSectionTitle,
   ExportSelectionBadge,
   ExportTextButton,
+  modelCapabilities,
   useFilteredModels,
 } from "@/components/export-dialog-shared";
 
@@ -27,7 +28,7 @@ function buildPiModels(models: ModelItem[]) {
     id: model.alias,
     name: model.alias,
     reasoning: true,
-    input: ["text"],
+    input: modelCapabilities(model),
     contextWindow: model.contextLength > 0 ? model.contextLength : 128000,
     maxTokens: model.maxOutputTokens > 0 ? model.maxOutputTokens : 16384,
     cost: {
