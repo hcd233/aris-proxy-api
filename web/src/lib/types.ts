@@ -325,6 +325,8 @@ export interface ListEndpointsRsp extends CommonRsp {
 
 // ─── Model ─────────────────────────────────────────────────────────────────────
 
+export type ModelCapability = "text" | "image";
+
 export interface ModelItem {
   id: number;
   alias: string;
@@ -332,6 +334,7 @@ export interface ModelItem {
   enabled: boolean;
   contextLength: number;
   maxOutputTokens: number;
+  capabilities: ModelCapability[];
   endpoint: EndpointItem;
   createdAt: string;
   updatedAt: string;
@@ -343,6 +346,7 @@ export interface CreateModelReqBody {
   endpointID: number;
   contextLength?: number;
   maxOutputTokens?: number;
+  capabilities?: ModelCapability[];
 }
 
 export interface UpdateModelReqBody {
@@ -352,6 +356,7 @@ export interface UpdateModelReqBody {
   enabled?: boolean;
   contextLength?: number;
   maxOutputTokens?: number;
+  capabilities?: ModelCapability[];
 }
 
 export interface ListModelsRsp extends CommonRsp {
