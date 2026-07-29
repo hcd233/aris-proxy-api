@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 基于 charmbracelet 生态重构 `aris` 客户端：新增 `aris init`（huh 四步配置向导）与 `aris status`（状态面板），install.sh 退化为纯下载器，服务端新增 1 个 API Key 鉴权的 trace 摘要端点。
+**Goal:** 基于 charmbracelet 生态重构 `aris` 客户端：新增 `aris init`（huh 四步配置向导）与 `aris status`（状态面板），install.sh 退化为纯下载器。**服务端零改动**（复用现有 health / client check 端点）。
 
-**Architecture:** huh 表单（Input/Select/Confirm/Spinner，基于 bubbletea inline 模式）承担全部交互，lipgloss 提供主题与静态渲染；不编写自定义 bubbletea 模型。`aris status` 并发收集检查结果后用 lipgloss 一次性静态渲染。服务端摘要按 `CtxKeyAPIKeyName`（owner）聚合。
+**Architecture:** huh 表单（Input/Select/Confirm/Spinner，基于 bubbletea inline 模式）承担全部交互，lipgloss 提供主题与静态渲染；不编写自定义 bubbletea 模型。`aris status` 并发收集检查结果后用 lipgloss 一次性静态渲染。
 
-**Tech Stack:** Go 1.25（cobra、huh/bubbletea/bubbles/lipgloss、sonic、golang.org/x/term），huma/fiber（服务端端点），POSIX sh（install.sh 模板）。
+**Tech Stack:** Go 1.25（cobra、huh/bubbletea/bubbles/lipgloss、sonic、golang.org/x/term），POSIX sh（install.sh 模板）。
 
 **Spec:** `docs/superpowers/specs/2026-07-28-aris-client-tui-redesign-design.md`
 
@@ -18,7 +18,7 @@
 - API Key 不出现在 flag、命令行参数、日志中；来源优先级 `ARIS_API_KEY` env > 向导密码输入；status 中脱敏显示（仅末 4 位）
 - 10 个 hook 事件：`SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, Stop, SubagentStart, SubagentStop, PreCompact, PostCompact`；hook group 格式 `{"matcher":"","hooks":[{"type":"command","command":"<bin> trace ingest","timeout":30}]}`
 - 交互非 TTY 时：init 自动打开 `/dev/tty`（stdin 是 curl 管道场景）；无可用 TTY 报错退出
-- DTO 遵守 huma-dto-conventions：禁 any/json.RawMessage/dbmodel 导入；时间用 `time.Time`；GET 无 Body 包装
+- 服务端零改动：不新增端点；status 复用 `GET /health` 与 `GET /api/v1/trace/client/check`
 - Go lint：`go run ./cmd/server lint conv ./...` 必须通过；`go test ./cmd/... ./internal/... ./test/...` 必须通过
 - 语言：代码标识符英文；CLI 面向用户的文案英文（与现有 install.sh 输出口径一致）
 
@@ -29,57 +29,40 @@
 | File | Action | Responsibility |
 |------|--------|----------------|
 | `go.mod` / `go.sum` | Modify | 新增 huh/bubbletea/bubbles/lipgloss 依赖 |
-| `internal/domain/trace/repository.go` | Modify | 新增 `OwnerTraceSummary` 结构体 + `SummarizeByOwner` 接口方法 |
-| `internal/infrastructure/repository/trace_repository.go` | Modify | 实现 `SummarizeByOwner`（traces 聚合 + events join 计数） |
-| `internal/application/trace/port/handler.go` | Modify | 新增 `TraceClientSummaryView` / `GetTraceClientSummaryHandler` |
-| `internal/application/trace/query/get_client_summary.go` | Create | 摘要读侧 usecase |
-| `internal/dto/trace.go` | Modify | 新增 `GetTraceClientSummaryReq/Rsp` |
-| `internal/handler/trace.go` | Modify | 新增 `HandleGetTraceClientSummary`；`TraceDependencies` 加 `ClientSummary` |
-| `internal/router/trace.go` | Modify | reportGroup 注册 `GET /client/summary` |
-| `internal/bootstrap/modules/application.go` | Modify | fx 提供 `NewGetTraceClientSummaryHandler` |
-| `internal/bootstrap/modules/handler.go` | Modify | `NewTraceDependencies` 注入 ClientSummary |
 | `internal/client/ui/theme.go` | Create | lipgloss 语义色/图标/间距 token + huh 主题 |
 | `internal/client/ui/components.go` | Create | StepHeader/SectionTitle/CheckRow/KeyValue/SummaryPanel 渲染 |
-| `internal/client/api/client.go` | Create | 控制面 HTTP 客户端：CheckHealth/CheckAPIKey/FetchSummary |
+| `internal/client/api/client.go` | Create | 控制面 HTTP 客户端：CheckHealth/CheckAPIKey |
 | `internal/client/trace/config.go` | Modify | `ConfigStore` 恢复 `Save` 方法 |
 | `internal/client/setup/hooks.go` | Create | codex hooks.json 幂等合并（移植 install.sh jq 逻辑） |
 | `internal/client/setup/wizard.go` | Create | huh 向导编排 + /dev/tty 处理 + RunInit 入口 |
-| `internal/client/status/checks.go` | Create | 六节检查并发收集 |
+| `internal/client/status/checks.go` | Create | 五节检查并发收集 |
 | `internal/client/status/render.go` | Create | lipgloss 面板渲染 + `--json` 输出 |
 | `internal/client/status/status.go` | Create | RunStatus 编排（spinner + 渲染） |
 | `cmd/client/root.go` | Modify | 注册 `init`、`status` |
 | `cmd/client/init.go` / `status.go` | Create | cobra 命令定义（`--host` / `--json` flag） |
 | `internal/handler/install_trace_client.sh.tmpl` | Modify | 纯下载器 + `exec aris init --host` |
-| `internal/common/constant/traceclient.go` | Modify | 清理旧向导提示常量，新增 summary path 等 |
+| `internal/common/constant/traceclient.go` | Modify | 清理旧向导提示常量 |
 | `test/unit/client/trace/command_tree_test.go` | Modify | 断言 init/status/trace 存在 |
 | `test/unit/client/setup/*_test.go` | Create | hooks 合并、config 保存单测 |
 | `test/unit/client/api/*_test.go` | Create | httptest 客户端单测 |
 | `test/unit/client/status/*_test.go` | Create | checks/render 单测（golden） |
 | `test/unit/client/ui/*_test.go` | Create | 组件渲染快照 |
-| `test/unit/trace/client_summary_test.go` | Create | usecase 单测 |
-| `test/e2e/trace/client_summary_test.go` | Create | 摘要端点 e2e（huma 测试 app + stub port） |
 | `test/e2e/trace/install_script_test.go` | Modify | 断言脚本含 `init --host`、不含 jq/交互 |
 | `CONTEXT.md` | Modify | 更新客户端命令描述 |
 
 ---
 
-## Task 1: 依赖引入 + 服务端摘要端点
+## Task 1: 依赖引入 + `internal/client/ui` 主题与组件
 
 **Files:**
 - Modify: `go.mod`（新增依赖）
-- Modify: `internal/domain/trace/repository.go`
-- Modify: `internal/infrastructure/repository/trace_repository.go`
-- Modify: `internal/application/trace/port/handler.go`
-- Create: `internal/application/trace/query/get_client_summary.go`
-- Modify: `internal/dto/trace.go`
-- Modify: `internal/handler/trace.go`、`internal/router/trace.go`
-- Modify: `internal/bootstrap/modules/application.go`、`internal/bootstrap/modules/handler.go`
-- Test: `test/unit/trace/client_summary_test.go`、`test/e2e/trace/client_summary_test.go`
+- Create: `internal/client/ui/theme.go`
+- Create: `internal/client/ui/components.go`
+- Test: `test/unit/client/ui/components_test.go`
 
 **Interfaces:**
-- Produces: `trace.TraceRepository.SummarizeByOwner(ctx, owner string) (*trace.OwnerTraceSummary, error)`
-- Produces: `port.GetTraceClientSummaryHandler.Handle(ctx, port.GetTraceClientSummaryQuery) (*port.TraceClientSummaryView, error)`
-- Produces: `TraceHandler.HandleGetTraceClientSummary(ctx, *dto.GetTraceClientSummaryReq) (*dto.HTTPResponse[*dto.GetTraceClientSummaryRsp], error)`
+- Produces: `ui.StepHeader(step, total, title string) string`、`ui.SectionTitle(name string) string`、`ui.CheckRow(level Level, label, detail string) string`、`ui.KeyValue(pairs ...[2]string) string`、`ui.SummaryPanel(lines ...string) string`、`ui.HuhTheme() *huh.Theme`
+- Produces: `ui.Level`（`LevelOK / LevelFail / LevelWarn / LevelInfo`）
 
 - [ ] **Step 1: 引入 TUI 依赖**
 
@@ -89,124 +72,7 @@ go mod tidy
 ```
 （bubbletea、x/term 由 huh 传递引入；确认 `go build ./...` 通过）
 
-- [ ] **Step 2: domain 层 — `OwnerTraceSummary` + 接口方法**
-
-`internal/domain/trace/repository.go`：
-
-```go
-// OwnerTraceSummary 按 owner（API Key 名称）聚合的 trace 摘要
-type OwnerTraceSummary struct {
-	TraceCount   int64
-	ActiveCount  int64
-	EventCount   int64
-	LastActiveAt *time.Time
-	LastModel    string
-}
-
-// 接口新增：
-// SummarizeByOwner 按 owner 聚合 trace 统计（client summary 端点用）
-SummarizeByOwner(ctx context.Context, owner string) (*OwnerTraceSummary, error)
-```
-
-- [ ] **Step 3: repository 实现**
-
-`internal/infrastructure/repository/trace_repository.go` 新增方法。两条查询（值绑定，owner 过滤 + `DBConditionDeletedAtZero`）：
-
-```go
-// 1) traces 聚合：COUNT(*)、SUM(status='active')、MAX(updated_at)
-// 2) events 计数：JOIN trace_events ON trace_id，同 owner 过滤
-// LastModel：取 MAX(updated_at) 对应行的 model（子查询或单独 ORDER BY updated_at DESC LIMIT 1）
-```
-
-- [ ] **Step 4: port 视图与 usecase**
-
-`port/handler.go` 新增：
-
-```go
-// TraceClientSummaryView 客户端摘要视图
-type TraceClientSummaryView struct {
-	TraceCount   int64
-	ActiveCount  int64
-	EventCount   int64
-	LastActiveAt *time.Time
-	LastModel    string
-	APIKeyName   string
-}
-
-// GetTraceClientSummaryQuery 客户端摘要查询（owner 取自 API Key middleware context）
-type GetTraceClientSummaryQuery struct{ APIKeyName string }
-
-// GetTraceClientSummaryHandler 客户端摘要 handler
-type GetTraceClientSummaryHandler interface {
-	Handle(ctx context.Context, q GetTraceClientSummaryQuery) (*TraceClientSummaryView, error)
-}
-```
-
-`query/get_client_summary.go`：调用 `repo.SummarizeByOwner(ctx, q.APIKeyName)` 组装视图；`APIKeyName == ""` 返回 `ierr.ErrValidation`。
-
-- [ ] **Step 5: DTO**
-
-`internal/dto/trace.go`：
-
-```go
-// GetTraceClientSummaryReq 客户端摘要请求（API Key 鉴权，无参数）。
-type GetTraceClientSummaryReq struct{}
-
-// GetTraceClientSummaryRsp 客户端摘要响应
-type GetTraceClientSummaryRsp struct {
-	CommonRsp
-	TraceCount   int64      `json:"traceCount" doc:"trace 总数"`
-	ActiveCount  int64      `json:"activeCount" doc:"进行中 trace 数"`
-	EventCount   int64      `json:"eventCount" doc:"事件总数"`
-	LastActiveAt *time.Time `json:"lastActiveAt,omitempty" doc:"最近活跃时间"`
-	LastModel    string     `json:"lastModel,omitempty" doc:"最近使用模型"`
-	APIKeyName   string     `json:"apiKeyName" doc:"API Key 名称"`
-}
-```
-
-- [ ] **Step 6: handler + 路由 + DI**
-
-- `TraceHandler` 接口与实现新增 `HandleGetTraceClientSummary`：从 ctx 取 `constant.CtxKeyAPIKeyName` 调 usecase，映射到 Rsp（`apiutil.WrapHTTPResponse`）
-- `TraceDependencies` 新增 `ClientSummary port.GetTraceClientSummaryHandler` 字段
-- `internal/router/trace.go` reportGroup 注册：
-
-```go
-huma.Register(reportGroup, huma.Operation{
-	OperationID: "getTraceClientSummary", Method: http.MethodGet, Path: "/client/summary",
-	Summary: "GetTraceClientSummary", Description: "Aggregate trace stats for the calling API key",
-	Tags:     []string{constant.TagTrace},
-	Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
-}, deps.TraceHandler.HandleGetTraceClientSummary)
-```
-
-- bootstrap：`application.go` fx 提供 `query.NewGetTraceClientSummaryHandler`；`handler.go` `NewTraceDependencies` 注入
-
-- [ ] **Step 7: 写失败测试**
-
-- `test/unit/trace/client_summary_test.go`：mock `TraceRepository` 断言聚合映射、空 owner 报错、repo 错误透传
-- `test/e2e/trace/client_summary_test.go`：参照 `install_script_test.go` 模式（fiber + humafiber + stub port handler），断言 200、字段透出、无数据时 `lastActiveAt` 缺省
-
-- [ ] **Step 8: 验证 + 提交**
-
-```bash
-go build ./... && go test ./test/unit/trace/ ./test/e2e/trace/ -run Summary -v
-go run ./cmd/server lint conv ./...
-git add -A && git commit -m "feat(trace): 新增 API Key 鉴权的 client summary 端点"
-```
-
----
-
-## Task 2: `internal/client/ui` 主题与组件
-
-**Files:**
-- Create: `internal/client/ui/theme.go`
-- Create: `internal/client/ui/components.go`
-- Test: `test/unit/client/ui/components_test.go`
-
-**Interfaces:**
-- Produces: `ui.Theme`（语义色样式集）、`ui.StepHeader(step, total, title string) string`、`ui.SectionTitle(name string) string`、`ui.CheckRow(level Level, label, detail string) string`、`ui.KeyValue(pairs ...[2]string) string`、`ui.SummaryPanel(lines ...string) string`、`ui.HuhTheme() *huh.Theme`
-
-- [ ] **Step 1: theme.go**
+- [ ] **Step 2: theme.go**
 
 - 语义色（`lipgloss.AdaptiveColor`，明暗终端自适应）：Primary（clay 橙 `#CC785C`/`#D97757`）、Success（绿）、Warning（黄）、Error（红）、Muted（灰）
 - 图标常量：`IconOK="✓" IconFail="✗" IconWarn="!" IconSection="◆"`（非 emoji）
@@ -214,7 +80,7 @@ git add -A && git commit -m "feat(trace): 新增 API Key 鉴权的 client summar
 - `HuhTheme()`：基于 `huh.ThemeCharm()` 覆盖主色为 Primary，聚焦/错误样式对齐语义色
 - 导出 `Renderer(w io.Writer) *lipgloss.Renderer`；`NO_COLOR`/非 TTY 时 lipgloss 自动降级
 
-- [ ] **Step 2: components.go**
+- [ ] **Step 3: components.go**
 
 - `StepHeader`：`[1/4] Connect to server`（序号 Muted、标题 Primary Bold）
 - `SectionTitle`：`◆ Server`（accent 色）
@@ -223,7 +89,7 @@ git add -A && git commit -m "feat(trace): 新增 API Key 鉴权的 client summar
 - `SummaryPanel`：rounded border 成功面板
 - 全部纯函数返回 string，不直接写 stdout（可测试）
 
-- [ ] **Step 3: 快照测试 + 提交**
+- [ ] **Step 4: 快照测试 + 提交**
 
 各组件 golden 测试（固定 lipgloss renderer 强制无色彩，比对字面输出）。
 
@@ -233,7 +99,7 @@ go test ./test/unit/client/ui/ -v && git add -A && git commit -m "feat(client): 
 
 ---
 
-## Task 3: `internal/client/api` 控制面 HTTP 客户端
+## Task 2: `internal/client/api` 控制面 HTTP 客户端
 
 **Files:**
 - Create: `internal/client/api/client.go`
@@ -241,28 +107,26 @@ go test ./test/unit/client/ui/ -v && git add -A && git commit -m "feat(client): 
 
 **Interfaces:**
 - Produces: `api.New(baseURL, apiKey string, hc *http.Client) *Client`
-- Produces: `(c *Client) CheckHealth(ctx) (time.Duration, error)`、`CheckAPIKey(ctx) error`、`FetchSummary(ctx) (*Summary, error)`
-- Produces: `api.Summary`（与服务端 Rsp 对齐的客户端结构体）
+- Produces: `(c *Client) CheckHealth(ctx) (time.Duration, error)`、`(c *Client) CheckAPIKey(ctx) error`
 
 - [ ] **Step 1: client.go**
 
 - 超时沿用 `constant.TraceClientHTTPTimeout`；baseURL 去尾部 `/`
 - `CheckHealth`：`GET {base}/health`，返回 RTT；非 2xx 视为失败
-- `CheckAPIKey`：`GET {base}/api/v1/trace/client/check`（Bearer），2xx 通过
-- `FetchSummary`：`GET {base}/api/v1/trace/client/summary`（Bearer），sonic 解码；常量 `TraceClientSummaryPath = "/api/v1/trace/client/summary"` 加入 `constant/traceclient.go`
+- `CheckAPIKey`：`GET {base}{constant.TraceClientCheckPath}`（Bearer），2xx 通过
 - 错误统一 `ierr.Wrap`，不暴露 key
 
 - [ ] **Step 2: httptest 单测 + 提交**
 
-覆盖：health 延迟返回、check 401/200、summary 正常解码与空态、baseURL 尾斜杠处理。
+覆盖：health 延迟返回、check 401/200、baseURL 尾斜杠处理、超时。
 
 ```bash
-go test ./test/unit/client/api/ -v && git add -A && git commit -m "feat(client): 新增控制面 API 客户端（health/check/summary）"
+go test ./test/unit/client/api/ -v && git add -A && git commit -m "feat(client): 新增控制面 API 客户端（health/check）"
 ```
 
 ---
 
-## Task 4: `aris init` 向导
+## Task 3: `aris init` 向导
 
 **Files:**
 - Modify: `internal/client/trace/config.go`（恢复 Save）
@@ -271,9 +135,10 @@ go test ./test/unit/client/api/ -v && git add -A && git commit -m "feat(client):
 - Test: `test/unit/client/setup/hooks_test.go`、`test/unit/client/setup/wizard_test.go`
 
 **Interfaces:**
-- Produces: `setup.InstallCodexHooks(paths trace.Paths, binPath string) error`（幂等，返回前备份）
+- Produces: `setup.InstallCodexHooks(paths trace.Paths, binPath string) error`（幂等，写前备份）
+- Produces: `setup.InspectCodexHooks(paths trace.Paths, binPath string) (found int, missing []string)`（status 复用）
 - Produces: `setup.RunInit(ctx, setup.InitOptions) error`；`InitOptions{Host string, Paths trace.Paths, In io.Reader, Out io.Writer, HTTPClient *http.Client}`
-- Consumes: `api.Client`（Task 3）、`ui.*`（Task 2）
+- Consumes: `api.Client`（Task 2）、`ui.*`（Task 1）
 
 - [ ] **Step 1: config.go 恢复 Save**
 
@@ -297,6 +162,7 @@ type hookGroup struct {
 - 解码 `hooks` 字段为 `map[string][]hookGroup`；对 10 个事件逐一：过滤掉含 `command == <binPath> trace ingest` 的 group，再追加 aris group（去重逻辑与 install.sh jq 版一致）
 - 写前已存在文件则复制为 `.bak`（0600）；`writePrivateFile` 原子写回（0600，indent 两空格）
 - `InstallCodexHooks` 返回注册的事件数（恒 10）供向导展示
+- `InspectCodexHooks` 复用同一解析：统计 10 个事件中已注册 aris 命令的数量与缺失列表
 
 - [ ] **Step 3: wizard.go — 向导编排**
 
@@ -335,7 +201,7 @@ git add -A && git commit -m "feat(client): 新增 aris init huh 配置向导"
 
 ---
 
-## Task 5: `aris status` 面板
+## Task 4: `aris status` 面板
 
 **Files:**
 - Create: `internal/client/status/checks.go`、`render.go`、`status.go`
@@ -343,39 +209,37 @@ git add -A && git commit -m "feat(client): 新增 aris init huh 配置向导"
 - Test: `test/unit/client/status/checks_test.go`、`render_test.go`
 
 **Interfaces:**
-- Produces: `status.Report`（六节结果聚合结构体）、`status.Collect(ctx, paths, apiClient) *Report`（并发）、`status.Render(w, report, now time.Time)`、`status.RenderJSON(w, report)`
+- Produces: `status.Report`（五节结果聚合结构体）、`status.Collect(ctx, paths, apiClient) *Report`（并发）、`status.Render(w, report)`、`status.RenderJSON(w, report)`
 - Produces: `status.RunStatus(ctx, StatusOptions{Paths, Out, JSON bool, HTTPClient}) error`
 
 - [ ] **Step 1: checks.go — 并发收集**
 
 ```go
 type Report struct {
-	ConfigFound bool
-	Host        string
-	Agent       string
-	ServerOK    bool
+	ConfigFound   bool
+	Host          string
+	Agent         string
+	ServerOK      bool
 	ServerLatency time.Duration
-	ServerErr   string
-	AuthOK      bool
-	AuthDetail  string        // key 脱敏（末 4 位）或失败原因
-	HooksFound  int           // ~/.codex/hooks.json 中 aris hook 命令出现的事件数（满分 10）
-	HooksMissing []string
-	PendingCount int
-	PendingBytes int64
+	ServerErr     string
+	AuthOK        bool
+	AuthDetail    string   // key 脱敏（末 4 位）或失败原因
+	HooksFound    int      // ~/.codex/hooks.json 中 aris hook 注册的事件数（满分 10）
+	HooksMissing  []string
+	PendingCount  int
+	PendingBytes  int64
 	RejectedCount int
-	Summary     *api.Summary  // 失败时 nil + SummaryErr
-	SummaryErr  string
-	RecentErrors int           // 当日日志条目数
+	RecentErrors  int      // 当日日志条目数
 }
 ```
 
-- `Collect`：`sync.WaitGroup` 三路并发——本地文件扫描（config/spool/rejected/logs/hooks.json）、health、（有 config 才发）check+summary
+- `Collect`：`sync.WaitGroup` 三路并发——本地文件扫描（config/spool/rejected/logs/hooks.json）、health、（有 config 才发）key check
 - 无 config：仅本地节 + 引导提示，不发网络请求
-- hooks 检测复用 setup 包的解析函数（`setup.InspectCodexHooks(paths, binPath) (found int, missing []string)`，Task 4 同步抽出）
+- hooks 检测复用 `setup.InspectCodexHooks`（Task 3）
 
 - [ ] **Step 2: render.go — 面板渲染**
 
-- TTY：六节 `SectionTitle + CheckRow`（布局同 spec §4.2 示意）；时间用相对格式（`5m ago`，自实现短小 helper）；字节 human-readable（`12.4 KB`）
+- 五节 `SectionTitle + CheckRow`（布局同 spec §4.2 示意）；字节 human-readable（`12.4 KB`，自实现短 helper）
 - 非 TTY/`NO_COLOR`：同样结构，lipgloss 自动无色
 - `RenderJSON`：`Report` 的 JSON 投影（`--json`，sonic.MarshalIndent，key 脱敏保持一致）
 
@@ -399,7 +263,7 @@ git add -A && git commit -m "feat(client): 新增 aris status 状态面板"
 
 ---
 
-## Task 6: install.sh 瘦身 + 常量清理 + 收尾
+## Task 5: install.sh 瘦身 + 常量清理 + 收尾
 
 **Files:**
 - Modify: `internal/handler/install_trace_client.sh.tmpl`
@@ -450,22 +314,20 @@ git add -A && git commit -m "refactor(client): install.sh 退化为纯下载器�
 
 **Spec coverage:**
 
-- ✅ spec §2.1 命令树/包结构：Task 2/3/4/5 + `cmd/client` 接线（Task 4/5）
-- ✅ spec §3 init 向导（四步、/dev/tty、--host、ARIS_API_KEY、hooks 幂等、config 0600）：Task 4
-- ✅ spec §4 status 面板（六节、并发、--json、降级）：Task 5
-- ✅ spec §5 摘要端点（reportGroup、owner 聚合、DTO 规范）：Task 1
-- ✅ spec §6 install.sh 瘦身（去 jq、exec init）：Task 6
-- ✅ spec §7 视觉系统（语义色、图标、组件、降级）：Task 2
-- ✅ spec §8 测试计划：各 Task 测试步骤 + Task 6 收尾验证
-- ✅ spec §9 边界（ingest 零改动、包边界、交叉编译）：Global Constraints + Task 6 Step 5
+- ✅ spec §2.1 命令树/包结构：Task 1/2/3/4 + `cmd/client` 接线（Task 3/4）
+- ✅ spec §3 init 向导（四步、/dev/tty、--host、ARIS_API_KEY、hooks 幂等、config 0600）：Task 3
+- ✅ spec §4 status 面板（五节、并发、--json、降级；复用现有 check 端点，服务端零改动）：Task 2 + Task 4
+- ✅ spec §5 install.sh 瘦身（去 jq、exec init）：Task 5
+- ✅ spec §6 视觉系统（语义色、图标、组件、降级）：Task 1
+- ✅ spec §7 测试计划：各 Task 测试步骤 + Task 5 收尾验证
+- ✅ spec §8 边界（ingest 零改动、包边界、交叉编译）：Global Constraints + Task 5 Step 5
 
 **Placeholder scan:** 无 TBD/TODO。
 
 **Type consistency:**
 
-- `SummarizeByOwner` 签名在 domain 接口（Task 1 Step 2）、repository 实现（Step 3）、usecase（Step 4）一致
-- `TraceClientSummaryView` ↔ `GetTraceClientSummaryRsp` 字段一一对应（含 `*time.Time` 空态）
-- `api.Summary`（Task 3）与服务端 Rsp JSON 键一致
+- `api.Client`（Task 2）被 setup（Task 3）与 status（Task 4）共用，签名一致
+- `setup.InspectCodexHooks`（Task 3）与 status 的 hooks 节（Task 4）签名一致
 - `InitOptions.Paths` 复用 `trace.Paths`；hooks 事件清单与 install.sh / 常量一致（10 个）
 
 **简化说明（不偏离 spec）：** spec §3/§4 中"自定义 bubbletea 模型 + bubbles/spinner"统一落地为 huh 原生 Spinner/表单（huh 即 bubbletea inline 程序），交互与视觉等价，代码量更小；spec §2.1 包结构不变。

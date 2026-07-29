@@ -11,7 +11,7 @@
 **目标**：基于 charmbracelet 生态（bubbletea / huh / bubbles / lipgloss）重构客户端交互：
 
 1. 新增 `aris init`：四步配置向导搬回 Go 二进制，huh 表单 + 异步任务反馈
-2. 新增 `aris status`：状态面板，展示本地状态 + 服务端摘要（新增 1 个 API Key 鉴权端点）
+2. 新增 `aris status`：状态面板，展示本地状态 + 连通性（复用现有 health / check 端点，服务端零改动）
 3. `install.sh` 退化为纯下载器，末尾 `exec aris init --host <origin>`
 4. `trace ingest` 行为完全不变
 
@@ -21,7 +21,7 @@
 |---|--------|------|
 | 1 | 命令范围 | `init` 向导 + `status` 状态面板；不做全屏 trace 浏览 Dashboard |
 | 2 | install.sh 归宿 | 纯下载器；四步交互全部搬入 `aris init` |
-| 3 | status 信息源 | 本地状态 + 连通性 + 新增 API Key 鉴权的服务端摘要端点 |
+| 3 | status 信息源 | 本地状态 + 连通性（health + 现有 check 端点）；**不新增服务端端点**——投递失败经 spool rejected/本地日志已可观测，聚合计数 Web UI 已有，YAGNI |
 | 4 | TUI 方案 | 方案 A：huh 表单向导 + bubbletea inline 渲染，非全屏、非 alt-screen |
 
 ## 2. 架构
@@ -42,14 +42,15 @@ internal/client/
 ├── ui/             # 新增：lipgloss 主题 token + 共享组件
 │   ├── theme.go        # AdaptiveColor 语义色、字号节奏、图标常量
 │   └── components.go   # CheckRow / SectionTitle / KeyValue / SummaryPanel
+├── api/            # 新增：控制面 HTTP 客户端（health / client check）
+│   └── client.go       # CheckHealth / CheckAPIKey，setup 与 status 共用
 ├── setup/          # 新增：init 向导（避免包名 init 与 Go 保留字混淆）
 │   ├── wizard.go       # huh 多步表单编排 + /dev/tty 处理
-│   ├── steps.go        # 健康检查 / agent 选择 / API Key 校验 / hooks 安装
-│   └── hooks.go        # codex hooks.json 幂等写入（从 install.sh jq 逻辑移植）
+│   └── hooks.go        # codex hooks.json 幂等写入 + 安装状态检测（从 install.sh jq 逻辑移植）
 └── status/         # 新增：status 面板
-    ├── status.go       # bubbletea inline 程序（并发检查 → 一次性渲染 → 退出）
+    ├── status.go       # huh spinner 编排（并发检查 → 一次性渲染 → 退出）
     ├── checks.go       # 本地扫描 + 网络检查任务
-    └── render.go       # 六节渲染 + --json 输出
+    └── render.go       # 五节渲染 + --json 输出
 ```
 
 边界约束沿用 2026-07-17 spec：`internal/client/**` 不得导入 server / db / router / web embed；`cmd/client` 只注册 `init`、`status`、`trace ingest`。构建方式不变（`make build-client` / `build-client-all`，`CGO_ENABLED=0` 交叉编译 darwin/linux × amd64/arm64；bubbletea 系纯 Go，兼容）。
@@ -84,17 +85,15 @@ internal/client/
 
 bubbletea **inline 程序**（非 alt-screen）：启动后并发执行全部检查（本地扫描无依赖、网络检查并行），spinner 显示进行期，全部完成后一次性静态渲染并退出，输出保留在终端 scrollback（参照 `gh auth status`）。`--json` flag 输出机器可读 JSON 供脚本消费。
 
-### 4.2 信息架构（六节）
+### 4.2 信息架构（五节）
 
 ```
 aris status
 ─────────────────────────────────────────────
 ◆ Server       ✓ https://aris.example.com · reachable (42ms)
-◆ Auth         ✓ API key valid · sk-...•••• · my-key
+◆ Auth         ✓ API key valid · ••••ab12
 ◆ Agent        codex · hooks 10/10 registered
 ◆ Local queue  3 pending (12.4 KB) · 0 rejected
-◆ Traces       12 total · 1 active · 3,456 events
-               last active 5m ago · model gpt-5
 ◆ Diagnostics  no recent errors
 ```
 
@@ -103,36 +102,14 @@ aris status
 | 节 | 来源 | 失败/缺失降级 |
 |----|------|--------------|
 | Server | config.host + `GET /health`（含延迟） | 无 config → 引导运行 `aris init`；不可达 → ✗ + 错误 |
-| Auth | `GET /api/v1/trace/client/check` | key 无效/缺失 → ✗ + 引导重跑 `aris init`；key 脱敏显示 |
+| Auth | `GET /api/v1/trace/client/check`（现有端点） | key 无效/缺失 → ✗ + 引导重跑 `aris init`；key 脱敏显示 |
 | Agent | config.agent + 扫描 `~/.codex/hooks.json` 中 aris hook 数 | 缺失事件列出具体事件名 |
 | Local queue | 扫描 spool pending 目录（条数 + 字节数）、rejected 目录条数 | 目录不存在视为 0 |
-| Traces | `GET /api/v1/trace/client/summary`（新端点） | 端点失败 → 该节显示 ! + 原因，不影响其它节 |
 | Diagnostics | 读取最近日志文件（`trace-YYYY-MM-DD.log`）尾部条目计数 | 无日志 → "no recent errors" |
 
-## 5. 服务端摘要端点
+**不新增服务端端点**：投递失败（网络错误 → 本地日志；服务端拒绝 → rejected 目录）在本地已可观测，trace 聚合计数 Web UI 已提供，终端重复展示收益过低。
 
-新增 `GET /api/v1/trace/client/summary`，挂在 trace 路由 reportGroup（`APIKeyMiddleware`，Bearer API Key），按 context 中 `CtxKeyAPIKeyName`（owner）聚合：
-
-```json
-{
-  "traceCount": 12,
-  "activeCount": 1,
-  "eventCount": 3456,
-  "lastActiveAt": "2026-07-28T09:55:00Z",
-  "lastModel": "gpt-5",
-  "apiKeyName": "my-key"
-}
-```
-
-实现链路：
-
-1. `internal/domain/trace/repository.go`：`TraceRepository` 新增 `SummarizeByOwner(ctx, owner string) (*OwnerTraceSummary, error)`（与既有 `dto.TraceSummary` / `port.TraceSummaryView` 区分）——一条聚合 SQL（count traces、count active（status=active）、sum events、max(updated_at)、最新 trace 的 model）；无任何 trace 时 `lastActiveAt`/`lastModel` 为空值
-2. `internal/infrastructure/database/dao`（或对应实现）：实现该聚合查询，值绑定
-3. `internal/application/trace/query/get_client_summary.go`：读侧 usecase
-4. `internal/handler/trace.go`：`HandleGetTraceClientSummary`；`internal/router/trace.go` 注册到 reportGroup
-5. `internal/dto/trace.go`：新增 Req/Rsp，遵守 huma-dto-conventions 与 lint conv（禁 any / dbmodel 导入）
-
-## 6. install.sh 瘦身
+## 5. install.sh 瘦身
 
 `internal/handler/install_trace_client.sh.tmpl` 改为：
 
@@ -143,7 +120,7 @@ aris status
 
 删除：四步 bash 交互、`/dev/tty` 重定向、config.json 写入、hooks.json 配置。Web 端安装对话框文案保持不变（"下载二进制后引导完成 API Key 与 Hook 配置"的描述仍成立）。
 
-## 7. 视觉设计系统（ui/ 包）
+## 6. 视觉设计系统（ui/ 包）
 
 遵循 ui-ux-pro-max 原则（语义色 token、状态图标 + 文字双通道、loading 反馈 >300ms 显示 spinner、错误就近 + 恢复路径、多步进度指示）：
 
@@ -153,22 +130,20 @@ aris status
 - **节奏**：节间 1 空行，节内 4 格缩进；spinner 用 bubbles/spinner
 - **降级**：`NO_COLOR` 环境变量或非 TTY 输出时 lipgloss 自动降级无色
 
-## 8. 测试计划
+## 7. 测试计划
 
 - **单元**（`test/unit/client/`）：
   - `setup/`：hooks.json 幂等写入（新增/去重/备份/权限）、config 原子写、key 校验状态机（mock HTTP）；向导步骤逻辑与 huh 表单解耦为纯函数
   - `status/`：本地扫描（构造 spool/rejected/logs fixture）、渲染 golden 测试（strip ANSI 比对）、`--json` 输出 schema
   - `ui/`：组件渲染快照
   - 更新 `command_tree_test.go`（新增 init/status 注册断言）
-- **服务端**：`get_client_summary` usecase 单测 + handler 单测（沿用现有测试契约）
-- **E2E**（`test/e2e/trace/`）：新增 summary 端点用例（API Key 鉴权、聚合正确性、无数据空态）；现有 `hook_test.go` 不动
+- **E2E**（`test/e2e/trace/`）：现有 `hook_test.go`、`install_script_test.go` 适配（后者断言脚本瘦身后行为）；服务端零改动，无新增 e2e
 - **lint**：`make lint`（lint-conv + lint-static）；`go build ./cmd/client` + 四平台交叉编译验证
 - **手工验证**：`go run ./cmd/client init --host <本地服务>` 走通四步；`curl | sh` 管道场景验证 `/dev/tty` 打开
 
-## 9. 风险与边界
+## 8. 风险与边界
 
 - **`trace ingest` 零改动**：hook 回调路径（fail-open、spool、批量上报）不受任何影响；新增依赖不会链入该路径的热代码
 - **兼容性**：已通过旧 install.sh 安装的用户，其二进制无 `init`/`status`，重新运行新 install.sh 即可升级；config.json / hooks.json 格式不变
-- **摘要端点性能**：聚合 SQL 按 owner（APIKeyName 有索引）过滤，trace 表当前约 11 行（生产基线），无性能风险
 - **依赖体积**：huh/bubbletea 约增加二进制 2-3MB，可接受（当前客户端为独立分发）
 - **非 TTY 环境**：`aris init` 报错退出并提示；`aris status` 在非 TTY 下降级为纯文本输出（无色、无 spinner）
