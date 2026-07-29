@@ -57,14 +57,22 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 
 	start := []byte(`{"hook_event_name":"SessionStart","session_id":"s1","model":"gpt-4o","source":"startup","cwd":"/work"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		HookEventName: "SessionStart", SessionID: "s1", Model: "gpt-4o", Source: "startup", CWD: "/work",
-		RawPayload: start, APIKeyName: "key1", UserID: 1,
+		SessionID: "s1", Model: "gpt-4o", Source: "startup", CWD: "/work",
+		APIKeyName: "key1", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:s1:start", Payload: start,
+		}},
 	}); err != nil {
 		t.Fatalf("SessionStart failed: %v", err)
 	}
 	stop := []byte(`{"hook_event_name":"Stop","session_id":"s1"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		HookEventName: "Stop", SessionID: "s1", RawPayload: stop, APIKeyName: "key1", UserID: 1,
+		SessionID: "s1", APIKeyName: "key1", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "Stop", DedupKey: "hook:s1:stop", Payload: stop,
+		}},
 	}); err != nil {
 		t.Fatalf("Stop failed: %v", err)
 	}
@@ -92,12 +100,26 @@ func TestReportTraceEvent_MissingSessionID(t *testing.T) {
 	t.Parallel()
 	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	_, err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
-		HookEventName: "SessionStart",
-		APIKeyName:    "key1",
-		UserID:        1,
+		APIKeyName: "key1",
+		UserID:     1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:x:1", Payload: []byte(`{"hook_event_name":"SessionStart"}`),
+		}},
 	})
 	if err == nil {
 		t.Fatal("expected error for missing session_id")
+	}
+}
+
+func TestReportTraceEvent_EmptyRecords(t *testing.T) {
+	t.Parallel()
+	handler := command.NewReportTraceEventHandler(NewFakeRepo())
+	_, err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
+		SessionID: "s1", APIKeyName: "key1", UserID: 1,
+	})
+	if err == nil {
+		t.Fatal("expected error for empty records")
 	}
 }
 
@@ -110,8 +132,11 @@ func TestReportTraceEvent_CreatesTraceOnFirstEvent(t *testing.T) {
 	// First event for an unknown session still creates an owned trace.
 	payload := []byte(`{"hook_event_name":"PreToolUse","session_id":"u1","turn_id":"t1"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		HookEventName: "PreToolUse", SessionID: "u1", TurnID: "t1",
-		RawPayload: payload, APIKeyName: "key1", UserID: 1,
+		SessionID: "u1", APIKeyName: "key1", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "PreToolUse", TurnID: "t1", DedupKey: "hook:u1:1", Payload: payload,
+		}},
 	}); err != nil {
 		t.Fatalf("PreToolUse failed: %v", err)
 	}
@@ -124,6 +149,99 @@ func TestReportTraceEvent_CreatesTraceOnFirstEvent(t *testing.T) {
 	}
 	if n, _ := repo.CountEvents(ctx, tr.ID); n != 1 {
 		t.Fatalf("expected 1 event, got %d", n)
+	}
+}
+
+func TestReportTraceEvent_AgentDefaultsToCodex(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	h := command.NewReportTraceEventHandler(repo)
+	_, err := h.Handle(context.Background(), port.ReportTraceEventCommand{
+		SessionID: "s-agent-default",
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:x:1",
+			Payload: []byte(`{"session_id":"s-agent-default"}`),
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr, _ := repo.FindBySessionID(context.Background(), "s-agent-default")
+	if tr == nil || tr.Agent != constant.TraceAgentCodex {
+		t.Fatalf("agent must default to codex, got %+v", tr)
+	}
+}
+
+func TestReportTraceEvent_RejectsUnknownAgent(t *testing.T) {
+	t.Parallel()
+	h := command.NewReportTraceEventHandler(NewFakeRepo())
+	_, err := h.Handle(context.Background(), port.ReportTraceEventCommand{
+		SessionID: "s-bad-agent",
+		Agent:     "gemini",
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:x:2",
+			Payload: []byte(`{"session_id":"s-bad-agent"}`),
+		}},
+	})
+	if err == nil {
+		t.Fatal("unknown agent must be rejected")
+	}
+}
+
+func TestReportTraceEvent_RejectsAgentMismatch(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	h := command.NewReportTraceEventHandler(repo)
+	first := port.ReportTraceEventCommand{
+		SessionID: "s-mismatch", Agent: constant.TraceAgentCodex,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:m:1", Payload: []byte(`{"session_id":"s-mismatch"}`),
+		}},
+	}
+	if _, err := h.Handle(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+	second := first
+	second.Agent = constant.TraceAgentClaude
+	second.Records = []port.ReportTraceRecord{{
+		Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+		HookEventName: "UserPromptSubmit", DedupKey: "hook:m:2", Payload: []byte(`{"session_id":"s-mismatch"}`),
+	}}
+	if _, err := h.Handle(context.Background(), second); err == nil {
+		t.Fatal("agent mismatch on existing session must be rejected")
+	}
+}
+
+func TestReportTraceEvent_ClaudeDoneOnSessionEndNotStop(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	h := command.NewReportTraceEventHandler(repo)
+	report := func(event, dedup string) {
+		t.Helper()
+		_, err := h.Handle(context.Background(), port.ReportTraceEventCommand{
+			SessionID: "s-claude-done", Agent: constant.TraceAgentClaude,
+			Records: []port.ReportTraceRecord{{
+				Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+				HookEventName: event, Event: event, DedupKey: dedup,
+				Payload: []byte(`{"session_id":"s-claude-done"}`),
+			}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	report("Stop", "hook:c:1")
+	tr, _ := repo.FindBySessionID(context.Background(), "s-claude-done")
+	if tr == nil || tr.Status != constant.TraceStatusActive {
+		t.Fatalf("claude Stop must not finish trace, got %+v", tr)
+	}
+	report(constant.TraceEventSessionEnd, "hook:c:2")
+	tr, _ = repo.FindBySessionID(context.Background(), "s-claude-done")
+	if tr.Status != constant.TraceStatusDone {
+		t.Fatalf("claude SessionEnd must finish trace, got %+v", tr)
 	}
 }
 
