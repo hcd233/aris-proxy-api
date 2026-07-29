@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -132,15 +133,13 @@ func newBucketAggs(n int) []bucketAgg {
 }
 
 func decodeSnapshots(payloads [][]byte) []metrics.Snapshot {
-	snaps := make([]metrics.Snapshot, 0, len(payloads))
-	for _, p := range payloads {
+	return lo.FilterMap(payloads, func(p []byte, _ int) (metrics.Snapshot, bool) {
 		var s metrics.Snapshot
 		if err := sonic.Unmarshal(p, &s); err != nil {
-			continue
+			return metrics.Snapshot{}, false
 		}
-		snaps = append(snaps, s)
-	}
-	return snaps
+		return s, true
+	})
 }
 
 func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart, bucket int64, n int) {
