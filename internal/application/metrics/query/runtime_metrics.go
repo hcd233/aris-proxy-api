@@ -5,10 +5,10 @@
 package query
 
 import (
+	"cmp"
 	"context"
 	"maps"
 	"slices"
-	"sort"
 	"strconv"
 	"time"
 
@@ -276,7 +276,7 @@ func percentileP95(buckets map[string]float64, total float64) float64 {
 		}
 		return lePoint{le: v, count: e.Value}, true
 	})
-	sort.Slice(points, func(i, j int) bool { return points[i].le < points[j].le })
+	slices.SortFunc(points, func(a, b lePoint) int { return cmp.Compare(a.le, b.le) })
 
 	target := total * constant.RuntimeMetricsP95Percentile
 	for _, p := range points {

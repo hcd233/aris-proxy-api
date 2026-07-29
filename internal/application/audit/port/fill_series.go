@@ -2,7 +2,7 @@
 package port
 
 import (
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/samber/lo"
@@ -91,7 +91,7 @@ func IndexSeries[P any, V any](
 func BuildBuckets(start, end time.Time, granularity enum.Granularity, fallback map[time.Time]struct{}) []time.Time {
 	if start.IsZero() || end.IsZero() || start.After(end) {
 		buckets := lo.Keys(fallback)
-		sort.Slice(buckets, func(i, j int) bool { return buckets[i].Before(buckets[j]) })
+		slices.SortFunc(buckets, func(a, b time.Time) int { return a.Compare(b) })
 		return buckets
 	}
 
