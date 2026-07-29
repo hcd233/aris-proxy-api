@@ -82,6 +82,13 @@ caps 计算统一为一个共享 helper（放 `export-dialog-shared.tsx`）：`m
 - `CONTEXT.md`：新增 **ModelCapabilities** 词条；更新 **ClientConfigExport** 词条（OpenCode / Pi 导出已感知模型能力）
 - `web/CONTEXT.md`：无需新增词条（能力徽标属 models 页局部展示，不构成新领域概念）
 
+## 6.1 实现期修订（2026-07-29 执行时确认）
+
+1. **枚举落位改至 `internal/common/enum/input_modality.go`**：遵循「业务包禁止本地 const 块，用 `internal/common/enum`」契约；类型为 `= string` 别名（同 `enum.ModalityType` 先例），省去各层 `[]string ↔ []InputModality` 转换样板。
+2. **列类型为 text 而非 jsonb**：生产库实测所有 `serializer:json` 列均为 `text`（`messages.message`、`sessions.message_ids/models/metadata`）；text 列与项目惯例一致，避免 jsonb 与字符串参数写入的 cast 风险。
+3. **GORM 陷阱（已规避）**：`Updates(map[string]any)` 不经过 field serializer，raw 值直接进 SQL 参数。因此 `modelRepository.Update` 的 updates map 中 capabilities 手动 `sonic.Marshal` 为 JSON 字符串。注：`session_repository` 的 `message_ids` map-update 存在同类存量隐患（slice raw 值进 map），不在本次范围，仅备注。
+4. **本地迁移验证顺延**：执行环境无 docker CLI / 无本地 PG，未跑临时容器验证；迁移由部署链路 `script/deploy-k8s.sh` 的 K8s `db-migrate` Job 执行（先迁移后上线），部署后以 `test/e2e/model_capabilities/` 验证列行为与存量行默认值。
+
 ## 7. 不做的事（YAGNI）
 
 - 不做输出模态（output modalities）配置——导出 `modalities.output` 固定 `["text"]`
