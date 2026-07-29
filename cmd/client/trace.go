@@ -12,15 +12,19 @@ func newTraceCommand() *cobra.Command {
 }
 
 func newTraceIngestCommand() *cobra.Command {
-	return &cobra.Command{
+	var agentName string
+	cmd := &cobra.Command{
 		Use:   "ingest",
 		Short: "Ingest one agent hook event",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return trace.RunIngestCommand(cmd.Context(), trace.IngestCommandOptions{
-				In:  cmd.InOrStdin(),
-				Out: cmd.OutOrStdout(),
+				In:        cmd.InOrStdin(),
+				Out:       cmd.OutOrStdout(),
+				AgentName: agentName,
 			})
 		},
 	}
+	cmd.Flags().StringVar(&agentName, "agent", "", "agent whose hook fired (codex|claude)")
+	return cmd
 }

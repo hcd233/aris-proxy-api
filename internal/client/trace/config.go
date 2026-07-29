@@ -12,7 +12,6 @@ import (
 
 type Config struct {
 	Host   string `json:"host"`
-	Agent  string `json:"agent"`
 	APIKey string `json:"apiKey"`
 }
 

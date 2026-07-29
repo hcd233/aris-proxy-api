@@ -18,8 +18,10 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 	t.Parallel()
 	var mu sync.Mutex
 	seen := map[string]bool{}
+	var agents []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
+			Agent   string `json:"agent"`
 			Records []struct {
 				Event    string `json:"hook_event_name"`
 				DedupKey string `json:"dedup_key"`
@@ -31,6 +33,7 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 		}
 		results := make([]client.RecordResult, 0, len(request.Records))
 		mu.Lock()
+		agents = append(agents, request.Agent)
 		for _, record := range request.Records {
 			seen[record.Event] = true
 			results = append(results, client.RecordResult{DedupKey: record.DedupKey, Status: "accepted"})
@@ -62,7 +65,7 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 	events := []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"}
 	for _, event := range events {
 		payload := `{"hook_event_name":"` + event + `","session_id":"hook-test-session","turn_id":"turn-1"}`
-		stdout := runTraceIngest(t, binary, home, payload)
+		stdout := runTraceIngest(t, binary, home, "codex", payload)
 		if event == "Stop" && stdout != "{}" {
 			t.Fatalf("Stop stdout = %q, want {}", stdout)
 		}
@@ -78,6 +81,14 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 			t.Errorf("event %s was not reported", event)
 		}
 	}
+	if len(agents) == 0 {
+		t.Fatal("no envelopes reported")
+	}
+	for _, agent := range agents {
+		if agent != "codex" {
+			t.Fatalf("batch agent = %q, want codex", agent)
+		}
+	}
 }
 
 func buildTraceClient(t *testing.T) string {
@@ -91,9 +102,9 @@ func buildTraceClient(t *testing.T) string {
 	return binary
 }
 
-func runTraceIngest(t *testing.T, binary, home, payload string) string {
+func runTraceIngest(t *testing.T, binary, home, agent, payload string) string {
 	t.Helper()
-	cmd := exec.CommandContext(t.Context(), binary, "trace", "ingest")
+	cmd := exec.CommandContext(t.Context(), binary, "trace", "ingest", "--agent", agent)
 	cmd.Env = append(os.Environ(), "HOME="+home)
 	cmd.Stdin = strings.NewReader(payload)
 	output, err := cmd.Output()

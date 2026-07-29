@@ -15,17 +15,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
-type hookEnvelope struct {
-	HookEventName  string `json:"hook_event_name"`
-	SessionID      string `json:"session_id"`
-	Model          string `json:"model,omitempty"`
-	CWD            string `json:"cwd,omitempty"`
-	Source         string `json:"source,omitempty"`
-	TurnID         string `json:"turn_id,omitempty"`
-	ToolUseID      string `json:"tool_use_id,omitempty"`
-	TranscriptPath string `json:"transcript_path,omitempty"`
-}
-
 type ingestRecord struct {
 	Source         string                 `json:"source"`
 	RecordType     string                 `json:"record_type"`
@@ -40,6 +29,7 @@ type ingestRecord struct {
 
 type ingestBatch struct {
 	SessionID string         `json:"session_id"`
+	Agent     string         `json:"agent,omitempty"`
 	Model     string         `json:"model,omitempty"`
 	CWD       string         `json:"cwd,omitempty"`
 	Source    string         `json:"source,omitempty"`
@@ -51,6 +41,7 @@ type ingestResultEnvelope struct {
 }
 
 type Ingestor struct {
+	adapter AgentAdapter
 	paths   Paths
 	config  ConfigStore
 	spool   *Spool
@@ -63,9 +54,10 @@ type IngestCommandOptions struct {
 	In         io.Reader
 	Out        io.Writer
 	HTTPClient *http.Client
+	AgentName  string
 }
 
-func NewIngestor(paths Paths, client *http.Client) *Ingestor {
+func NewIngestor(paths Paths, client *http.Client, adapter AgentAdapter) *Ingestor {
 	if client == nil {
 		client = &http.Client{Timeout: constant.TraceClientHTTPTimeout}
 	} else if client.Timeout == 0 {
@@ -75,20 +67,21 @@ func NewIngestor(paths Paths, client *http.Client) *Ingestor {
 	}
 	spool := NewSpool(paths, constant.TraceClientSpoolLimit)
 	return &Ingestor{
+		adapter: adapter,
 		paths:   paths,
 		config:  NewConfigStore(paths),
 		spool:   spool,
-		rollout: NewRolloutReader(paths, spool),
+		rollout: NewRolloutReader(paths, spool, adapter),
 		client:  client,
 	}
 }
 
 func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
-	var hook hookEnvelope
-	if err := sonic.Unmarshal(raw, &hook); err != nil {
+	info, err := i.adapter.ParseHook(raw)
+	if err != nil {
 		return ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode hook input")
 	}
-	if hook.SessionID == "" || hook.HookEventName == "" {
+	if info.SessionID == "" || info.EventName == "" {
 		return ierr.New(ierr.ErrValidation, "hook input missing identity")
 	}
 	spoolID, sequence, err := nextSequence(ctx, i.paths)
@@ -96,15 +89,16 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 		return err
 	}
 	record := PendingRecord{
-		SessionID:      hook.SessionID,
-		Model:          hook.Model,
-		CWD:            hook.CWD,
-		SessionSource:  hook.Source,
+		SessionID:      info.SessionID,
+		Agent:          i.adapter.Name(),
+		Model:          info.Model,
+		CWD:            info.CWD,
+		SessionSource:  info.SessionSource,
 		Source:         constant.TraceRecordSourceHook,
 		RecordType:     constant.TraceRecordTypeHookEvent,
-		Event:          hook.HookEventName,
-		TurnID:         hook.TurnID,
-		CallID:         hook.ToolUseID,
+		Event:          info.EventName,
+		TurnID:         info.TurnID,
+		CallID:         info.CallID,
 		ClientSequence: sequence,
 		DedupKey:       fmt.Sprintf(constant.TraceClientHookDedupFormat, spoolID, sequence),
 		Payload:        append(sonic.NoCopyRawMessage{}, raw...),
@@ -112,8 +106,8 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 	if err := i.spool.Append(ctx, record); err != nil {
 		return err
 	}
-	if hook.TranscriptPath != "" {
-		if _, err := i.rollout.ReadNew(ctx, hook.SessionID, hook.TranscriptPath); err != nil {
+	if info.TranscriptPath != "" {
+		if _, err := i.rollout.ReadNew(ctx, info.SessionID, info.TranscriptPath); err != nil {
 			writeLocalError(i.paths, constant.TraceClientLogCategoryRollout)
 		}
 	}
@@ -138,6 +132,7 @@ func (i *Ingestor) flush(ctx context.Context, config Config) error {
 	}
 	request := ingestBatch{
 		SessionID: batch[0].SessionID,
+		Agent:     batch[0].Agent,
 		Records:   make([]ingestRecord, 0, len(batch)),
 	}
 	for _, record := range batch {
@@ -200,7 +195,7 @@ func RunIngestCommand(ctx context.Context, opts IngestCommandOptions) error {
 	if paths.Root == "" {
 		resolved, err := DefaultPaths()
 		if err != nil {
-			return nil //nolint:nilerr // fail-open: never block Codex
+			return nil //nolint:nilerr // fail-open: never block agent CLI
 		}
 		paths = resolved
 	}
@@ -212,18 +207,24 @@ func RunIngestCommand(ctx context.Context, opts IngestCommandOptions) error {
 	if out == nil {
 		out = os.Stdout
 	}
+	adapter, err := LookupAdapter(opts.AgentName)
+	if err != nil {
+		writeLocalError(paths, constant.TraceClientLogCategoryIngest)
+		return nil //nolint:nilerr // fail-open: never block agent CLI
+	}
 	raw, err := io.ReadAll(io.LimitReader(in, constant.TraceClientHookInputLimit+1))
 	if err != nil || len(raw) > constant.TraceClientHookInputLimit {
 		writeLocalError(paths, constant.TraceClientLogCategoryIngest)
-		return nil //nolint:nilerr // fail-open: never block Codex
+		return nil //nolint:nilerr // fail-open: never block agent CLI
 	}
-	var hook hookEnvelope
-	if sonic.Unmarshal(raw, &hook) == nil && hook.HookEventName == constant.TraceEventStop {
-		_, _ = io.WriteString(out, constant.EmptyJSONObject) //nolint:errcheck // best-effort stdout
+	if info, parseErr := adapter.ParseHook(raw); parseErr == nil {
+		if ack := adapter.StdoutAck(info); ack != "" {
+			_, _ = io.WriteString(out, ack) //nolint:errcheck // best-effort stdout
+		}
 	}
-	if err := NewIngestor(paths, opts.HTTPClient).Ingest(ctx, raw); err != nil {
+	if err := NewIngestor(paths, opts.HTTPClient, adapter).Ingest(ctx, raw); err != nil {
 		writeLocalError(paths, constant.TraceClientLogCategoryIngest)
-	} //nolint:nilerr // fail-open: never block Codex
+	} //nolint:nilerr // fail-open: never block agent CLI
 	return nil
 }
 

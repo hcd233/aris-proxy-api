@@ -23,7 +23,7 @@ func testPaths(t *testing.T) trace.Paths {
 func saveConfig(t *testing.T, paths trace.Paths, host, key string) {
 	t.Helper()
 	store := trace.NewConfigStore(paths)
-	if err := store.Save(context.Background(), trace.Config{Host: host, Agent: "codex", APIKey: key}); err != nil {
+	if err := store.Save(context.Background(), trace.Config{Host: host, APIKey: key}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -61,7 +61,7 @@ func TestCollectAgainstLiveServer(t *testing.T) {
 	saveConfig(t, paths, server.URL, "sk-12345678")
 
 	report := status.Collect(context.Background(), paths, nil)
-	if !report.ConfigFound || report.Host != server.URL || report.Agent != "codex" {
+	if !report.ConfigFound || report.Host != server.URL {
 		t.Fatalf("unexpected config projection: %+v", report)
 	}
 	if !report.ServerOK {

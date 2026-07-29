@@ -108,7 +108,7 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 		if registered, installErr = trace.InstallCodexHooks(paths, binPath); installErr != nil {
 			return installErr
 		}
-		return store.Save(ctx, trace.Config{Host: host, Agent: constant.TraceClientAgentCodex, APIKey: apiKey})
+		return store.Save(ctx, trace.Config{Host: host, APIKey: apiKey})
 	})
 	if err != nil {
 		return err

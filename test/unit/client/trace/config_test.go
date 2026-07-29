@@ -12,7 +12,7 @@ func TestConfigSaveLoadRoundTrip(t *testing.T) {
 	t.Parallel()
 	paths := trace.Paths{Root: t.TempDir()}
 	store := trace.NewConfigStore(paths)
-	want := trace.Config{Host: "https://aris.example.com", Agent: "codex", APIKey: "sk-test"}
+	want := trace.Config{Host: "https://aris.example.com", APIKey: "sk-test"}
 
 	if err := store.Save(context.Background(), want); err != nil {
 		t.Fatalf("Save error: %v", err)

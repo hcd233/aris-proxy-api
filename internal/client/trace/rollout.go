@@ -24,36 +24,16 @@ type transcriptState struct {
 	Line     int64  `json:"line"`
 }
 
-type rolloutEnvelope struct {
-	Type    string                 `json:"type"`
-	Payload sonic.NoCopyRawMessage `json:"payload"`
-}
-
-type rolloutPayload struct {
-	Type        string `json:"type"`
-	TurnID      string `json:"turn_id,omitempty"`
-	CallID      string `json:"call_id,omitempty"`
-	Passthrough struct {
-		TurnID string `json:"turn_id,omitempty"`
-	} `json:"internal_chat_message_metadata_passthrough"`
-}
-
-// turnID 优先取顶层 turn_id；response_item 记录的 turn_id 嵌套在
-// internal_chat_message_metadata_passthrough 中，顶层缺失时回退读取该字段。
-func (p rolloutPayload) turnID() string {
-	if p.TurnID != "" {
-		return p.TurnID
-	}
-	return p.Passthrough.TurnID
-}
-
+// RolloutReader 是通用 transcript 增量读取器（codex rollout / claude session 均适用）：
+// 按 transcript 文件路径哈希分派 offset 状态，逐行读取新内容并交给 adapter 分类。
 type RolloutReader struct {
-	paths Paths
-	spool *Spool
+	paths   Paths
+	spool   *Spool
+	adapter AgentAdapter
 }
 
-func NewRolloutReader(paths Paths, spool *Spool) *RolloutReader {
-	return &RolloutReader{paths: paths, spool: spool}
+func NewRolloutReader(paths Paths, spool *Spool, adapter AgentAdapter) *RolloutReader {
+	return &RolloutReader{paths: paths, spool: spool, adapter: adapter}
 }
 
 func (r *RolloutReader) ReadNew(
@@ -84,7 +64,7 @@ func (r *RolloutReader) readIncremental(
 	}
 	info, err := os.Stat(transcriptPath)
 	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDataNotExists, err, "inspect Codex rollout")
+		return nil, ierr.Wrap(ierr.ErrDataNotExists, err, "inspect transcript")
 	}
 	identity := fileIdentity(info)
 	if state.Identity != identity || info.Size() < state.Offset {
@@ -92,11 +72,11 @@ func (r *RolloutReader) readIncremental(
 	}
 	file, err := os.Open(transcriptPath)
 	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDataNotExists, err, "open Codex rollout")
+		return nil, ierr.Wrap(ierr.ErrDataNotExists, err, "open transcript")
 	}
 	defer func() { _ = file.Close() }() //nolint:errcheck // best-effort close
 	if _, err := file.Seek(state.Offset, io.SeekStart); err != nil {
-		return nil, ierr.Wrap(ierr.ErrInternal, err, "seek Codex rollout")
+		return nil, ierr.Wrap(ierr.ErrInternal, err, "seek transcript")
 	}
 	records, newState, err := r.parseRolloutLines(ctx, sessionID, file, state)
 	if err != nil {
@@ -123,7 +103,7 @@ func (r *RolloutReader) parseRolloutLines(
 			break
 		}
 		if readErr != nil {
-			return nil, state, ierr.Wrap(ierr.ErrInternal, readErr, "read Codex rollout")
+			return nil, state, ierr.Wrap(ierr.ErrInternal, readErr, "read transcript")
 		}
 		state.Offset += int64(len(line))
 		state.Line++
@@ -132,10 +112,7 @@ func (r *RolloutReader) parseRolloutLines(
 		if !sonic.Valid(raw) {
 			continue
 		}
-		record, err := rolloutRecord(sessionID, state.Line, raw)
-		if err != nil {
-			return nil, state, err
-		}
+		record := r.rolloutRecord(sessionID, state.Line, raw)
 		record.CreatedAt = time.Now().UTC()
 		if err := r.spool.Append(ctx, record); err != nil {
 			return nil, state, err
@@ -145,24 +122,18 @@ func (r *RolloutReader) parseRolloutLines(
 	return records, state, nil
 }
 
-func rolloutRecord(sessionID string, line int64, raw []byte) (PendingRecord, error) {
-	var envelope rolloutEnvelope
-	if err := sonic.Unmarshal(raw, &envelope); err != nil {
-		return PendingRecord{}, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode rollout envelope")
-	}
-	var payload rolloutPayload
-	if len(envelope.Payload) > 0 {
-		_ = sonic.Unmarshal(envelope.Payload, &payload) //nolint:errcheck // best-effort field extraction
-	}
+func (r *RolloutReader) rolloutRecord(sessionID string, line int64, raw []byte) PendingRecord {
+	meta := r.adapter.ClassifyTranscriptLine(raw)
 	digest := sha256.Sum256(raw)
 	lineCopy := line
 	return PendingRecord{
 		SessionID:      sessionID,
+		Agent:          r.adapter.Name(),
 		Source:         constant.TraceRecordSourceRollout,
-		RecordType:     rolloutRecordType(envelope.Type),
-		Event:          payload.Type,
-		TurnID:         payload.turnID(),
-		CallID:         payload.CallID,
+		RecordType:     meta.RecordType,
+		Event:          meta.Event,
+		TurnID:         meta.TurnID,
+		CallID:         meta.CallID,
 		TranscriptLine: &lineCopy,
 		DedupKey: fmt.Sprintf(
 			constant.TraceClientRolloutDedupFormat,
@@ -171,18 +142,6 @@ func rolloutRecord(sessionID string, line int64, raw []byte) (PendingRecord, err
 			hex.EncodeToString(digest[:]),
 		),
 		Payload: append(sonic.NoCopyRawMessage{}, raw...),
-	}, nil
-}
-
-func rolloutRecordType(recordType string) string {
-	switch recordType {
-	case constant.TraceRolloutTypeSessionMeta,
-		constant.TraceRolloutTypeTurnContext,
-		constant.TraceRolloutTypeResponseItem,
-		constant.TraceRolloutTypeEventMsg:
-		return recordType
-	default:
-		return constant.TraceRolloutTypeUnknown
 	}
 }
 

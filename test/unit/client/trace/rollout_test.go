@@ -9,11 +9,20 @@ import (
 	client "github.com/hcd233/aris-proxy-api/internal/client/trace"
 )
 
+func codexAdapter(t *testing.T) client.AgentAdapter {
+	t.Helper()
+	adapter, err := client.LookupAdapter("codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return adapter
+}
+
 func TestRolloutReader_ReadsOnlyNewCompleteLines(t *testing.T) {
 	t.Parallel()
 	paths := client.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 	spool := client.NewSpool(paths, 1<<20)
-	reader := client.NewRolloutReader(paths, spool)
+	reader := client.NewRolloutReader(paths, spool, codexAdapter(t))
 	transcript := filepath.Join(t.TempDir(), "rollout.jsonl")
 	fixture, err := os.ReadFile("./fixtures/rollout.jsonl")
 	if err != nil {
@@ -55,7 +64,7 @@ func TestRolloutReader_ExtractsNestedTurnIDFromPassthroughMetadata(t *testing.T)
 	t.Parallel()
 	paths := client.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 	spool := client.NewSpool(paths, 1<<20)
-	reader := client.NewRolloutReader(paths, spool)
+	reader := client.NewRolloutReader(paths, spool, codexAdapter(t))
 	transcript := filepath.Join(t.TempDir(), "rollout.jsonl")
 	line := []byte(`{"type":"response_item","payload":{"type":"function_call","call_id":"call-1","name":"bash","internal_chat_message_metadata_passthrough":{"turn_id":"t1"}}}` + "\n")
 	if err := os.WriteFile(transcript, line, 0o600); err != nil {
@@ -74,7 +83,7 @@ func TestRolloutReader_ResetsAfterTruncate(t *testing.T) {
 	t.Parallel()
 	paths := client.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 	spool := client.NewSpool(paths, 1<<20)
-	reader := client.NewRolloutReader(paths, spool)
+	reader := client.NewRolloutReader(paths, spool, codexAdapter(t))
 	transcript := filepath.Join(t.TempDir(), "rollout.jsonl")
 	line := []byte("{\"type\":\"event_msg\",\"payload\":{\"type\":\"user_message\",\"turn_id\":\"t1\"}}\n")
 	if err := os.WriteFile(transcript, line, 0o600); err != nil {

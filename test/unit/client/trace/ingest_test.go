@@ -29,15 +29,39 @@ func TestRunIngestCommand_FailOpenStdoutContract(t *testing.T) {
 			paths := client.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 			var out bytes.Buffer
 			err := client.RunIngestCommand(context.Background(), client.IngestCommandOptions{
-				Paths: paths,
-				In:    bytes.NewBufferString(tc.payload),
-				Out:   &out,
+				Paths:     paths,
+				In:        bytes.NewBufferString(tc.payload),
+				Out:       &out,
+				AgentName: "codex",
 			})
 			if err != nil {
 				t.Fatalf("command returned error: %v", err)
 			}
 			if out.String() != tc.stdout {
 				t.Fatalf("stdout = %q, want %q", out.String(), tc.stdout)
+			}
+		})
+	}
+}
+
+func TestRunIngestCommand_MissingOrUnknownAgentFailOpen(t *testing.T) {
+	t.Parallel()
+	for _, agentName := range []string{"", "nope"} {
+		t.Run("agent="+agentName, func(t *testing.T) {
+			t.Parallel()
+			paths := client.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
+			var out bytes.Buffer
+			err := client.RunIngestCommand(context.Background(), client.IngestCommandOptions{
+				Paths:     paths,
+				In:        bytes.NewBufferString(`{"session_id":"s1","hook_event_name":"Stop"}`),
+				Out:       &out,
+				AgentName: agentName,
+			})
+			if err != nil {
+				t.Fatalf("command must fail-open, got error: %v", err)
+			}
+			if out.String() != "" {
+				t.Fatalf("stdout = %q, want empty (no ack without adapter)", out.String())
 			}
 		})
 	}
@@ -85,6 +109,7 @@ func TestRunIngestCommand_FlushesAcceptedRecord(t *testing.T) {
 		),
 		Out:        &out,
 		HTTPClient: server.Client(),
+		AgentName:  "codex",
 	}); err != nil {
 		t.Fatal(err)
 	}
