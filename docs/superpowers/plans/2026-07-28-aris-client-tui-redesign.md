@@ -331,3 +331,17 @@ git add -A && git commit -m "refactor(client): install.sh 退化为纯下载器�
 - `InitOptions.Paths` 复用 `trace.Paths`；hooks 事件清单与 install.sh / 常量一致（10 个）
 
 **简化说明（不偏离 spec）：** spec §3/§4 中"自定义 bubbletea 模型 + bubbles/spinner"统一落地为 huh 原生 Spinner/表单（huh 即 bubbletea inline 程序），交互与视觉等价，代码量更小；spec §2.1 包结构不变。
+
+---
+
+## 实现偏差记录（2026-07-29）
+
+| # | 计划 | 实际 | 原因 |
+|---|------|------|------|
+| 1 | `setup/hooks.go` | 移至 `internal/client/trace/codex.go` | 与 `writePrivateFile` 同包复用，避免原子写逻辑重复；setup/status 均从 trace 包调用 |
+| 2 | huh.NewSpinner | huh v1.0.0 无 Spinner，新增 `ui.RunWithSpinner`（bubbles/spinner + bubbletea，非 TTY 自动降级静默执行） | 依赖实际 API |
+| 3 | `CheckRow(level Level, ...)` + Level 枚举 | `CheckRowOK/Fail/Warn` 包装函数 | lint style.type_alias 禁止业务包定义 `type Level int`；迁入 shared enum 会污染公共包 |
+| 4 | `Collect(ctx, paths, apiClient)` | `Collect(ctx, paths, hc *http.Client)` | apiClient 依赖 config（host/key），由 Collect 加载 config 后内部构造更内聚 |
+| 5 | Install 去重与 jq 精确路径一致 | 按 ` trace ingest` 后缀去重 | 清理任意旧路径的 aris hook，幂等性更强；Inspect 仍按当前 binPath 精确匹配 |
+| 6 | `KeyValue` / `CheckRowInfo` 组件 | 删除（含常量） | ponytail-review：无调用方 |
+| 7 | `ui.Renderer(w)` 导出 | 省略 | YAGNI：组件用默认 renderer，NO_COLOR/非 TTY 由 lipgloss 自动降级 |
