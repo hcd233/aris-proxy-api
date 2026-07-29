@@ -88,6 +88,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 			Enabled:         v.Enabled,
 			ContextLength:   v.ContextLength,
 			MaxOutputTokens: v.MaxOutputTokens,
+			Capabilities:    v.Capabilities,
 			CreatedAt:       v.CreatedAt,
 			UpdatedAt:       v.UpdatedAt,
 		}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/rand"
 
+	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 
@@ -228,6 +229,7 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 		Enabled:         m.Enabled(),
 		ContextLength:   m.ContextLength(),
 		MaxOutputTokens: m.MaxOutputTokens(),
+		Capabilities:    m.Capabilities(),
 	}
 }
 
@@ -257,6 +259,8 @@ func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model) (uint,
 // Update 更新模型（仅更新非零值字段）
 func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
 	db := r.db.WithContext(ctx)
+	// GORM 的 Updates(map) 不经过 field serializer，capabilities 需手动序列化为 JSON 字符串
+	capJSON, _ := sonic.Marshal(m.Capabilities()) //nolint:errcheck // []string 序列化不会失败，且值已经聚合校验
 	updates := map[string]any{
 		constant.FieldModelAlias:           m.Alias().String(),
 		constant.FieldModelModelName:       m.ModelName(),
@@ -264,6 +268,7 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 		constant.FieldModelEnabled:         m.Enabled(),
 		constant.FieldModelContextLength:   m.ContextLength(),
 		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
+		constant.FieldModelCapabilities:    string(capJSON),
 	}
 	if err := db.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update model")
