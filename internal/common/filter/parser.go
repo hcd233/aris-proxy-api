@@ -7,10 +7,12 @@ package filter
 import (
 	"strings"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/samber/lo"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // Filter 表达式
@@ -56,16 +58,9 @@ func Parse(expr string) ([]Filter, error) {
 	parts := lo.Filter(splitExpression(expr), func(part string, _ int) bool {
 		return strings.TrimSpace(part) != ""
 	})
-	filters := make([]Filter, 0, len(parts))
-	for _, part := range parts {
-		f, err := parsePart(part)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, f)
-	}
-
-	return filters, nil
+	return util.MapErr(parts, func(part string, _ int) (Filter, error) {
+		return parsePart(part)
+	})
 }
 
 // splitExpression 按空格分割表达式，但保留引号内的空格
