@@ -6,6 +6,8 @@ package query
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"time"
@@ -256,12 +258,7 @@ func collectProviders(agg []bucketAgg) []string {
 			set[prov] = struct{}{}
 		}
 	}
-	providers := make([]string, 0, len(set))
-	for prov := range set {
-		providers = append(providers, prov)
-	}
-	sort.Strings(providers)
-	return providers
+	return slices.Sorted(maps.Keys(set))
 }
 
 func percentileP95(buckets map[string]float64, total float64) float64 {
