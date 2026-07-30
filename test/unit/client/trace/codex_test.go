@@ -11,7 +11,7 @@ import (
 )
 
 const testBinPath = "/home/u/.aris/bin/aris"
-const testHookCommand = testBinPath + " trace ingest"
+const testHookCommand = testBinPath + " trace ingest --agent codex"
 
 func writeHooksFile(t *testing.T, paths trace.Paths, content string) {
 	t.Helper()
@@ -203,7 +203,7 @@ func TestInspectCodexHooksPartial(t *testing.T) {
 	paths := trace.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 	writeHooksFile(t, paths, `{
   "hooks": {
-    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "/home/u/.aris/bin/aris trace ingest", "timeout": 30}]}]
+    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "/home/u/.aris/bin/aris trace ingest --agent codex", "timeout": 30}]}]
   }
 }`)
 

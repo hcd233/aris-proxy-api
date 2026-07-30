@@ -23,6 +23,8 @@ const (
 	TraceClientCodexDirName        = ".codex"
 	TraceClientCodexHooksFile      = "hooks.json"
 	TraceClientCodexBackupSuffix   = ".bak"
+	TraceClientClaudeDirName       = ".claude"
+	TraceClientClaudeSettingsFile  = "settings.json"
 	TraceClientHooksField          = "hooks"
 	TraceClientHookTypeCommand     = "command"
 	TraceClientIngestCommandSuffix = " trace ingest"
@@ -74,18 +76,23 @@ const (
 	TraceClientInitTitleConnect        = "Connect to server"
 	TraceClientInitTitleAgent          = "Select agent"
 	TraceClientInitTitleAPIKey         = "Configure API key"
-	TraceClientInitTitleHook           = "Configure Codex hooks"
+	TraceClientInitTitleHook           = "Configure hooks"
 	TraceClientInitSteps               = 4
 	TraceClientInitConnectingFormat    = "Connecting to %s..."
 	TraceClientReachableFormat         = "reachable (%s)"
-	TraceClientInitAgentConfirmTitle   = "Agent: Codex"
+	TraceClientInitAgentSelectTitle    = "Agent"
+	TraceClientInitAgentOptionCodex    = "Codex"
+	TraceClientInitAgentOptionClaude   = "Claude Code"
+	TraceClientInitAgentOptionBoth     = "Both"
+	TraceClientAgentOptionBoth         = "both"
 	TraceClientInitContinueLabel       = "Continue"
 	TraceClientInitCancelLabel         = "Cancel"
 	TraceClientInitAPIKeyTitle         = "API key"
 	TraceClientInitKeepAPIKeyHint      = "press Enter to keep current"
 	TraceClientInitValidatingKey       = "Validating API key..."
-	TraceClientInitInstallingHooks     = "Installing Codex hooks..."
-	TraceClientInitHooksFormat         = "Hooks: %d/%d registered"
+	TraceClientInitInstallingHooks     = "Installing hooks..."
+	TraceClientInitHooksFormat         = "%s hooks: %d/%d registered"
+	TraceClientInitClaudeApprovalHint  = "Claude Code picks up ~/.claude/settings.json hooks automatically; review them with /hooks."
 	TraceClientInitHostPrompt          = "Server host"
 	TraceClientInitHostPlaceholder     = "https://aris.example.com"
 	TraceClientInitHostSchemeMessage   = "host must start with http:// or https://"
@@ -104,4 +111,19 @@ var TraceClientCodexHookEvents = []string{
 	TraceEventSubagentStop,
 	TraceEventPreCompact,
 	TraceEventPostCompact,
+}
+
+// TraceClientClaudeHookEvents aris hook 需要注册的 claude 事件
+var TraceClientClaudeHookEvents = []string{
+	TraceEventSessionStart,
+	TraceEventUserPromptSubmit,
+	TraceEventPreToolUse,
+	TraceEventPostToolUse,
+	TraceEventPostToolUseFailure,
+	TraceEventStop,
+	TraceEventSubagentStart,
+	TraceEventSubagentStop,
+	TraceEventPreCompact,
+	TraceEventPostCompact,
+	TraceEventSessionEnd,
 }

@@ -10,18 +10,25 @@ import (
 	traceschema "github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
-func TestReportTraceEventReqBody_HumaSchemaAcceptsDynamicJSON(t *testing.T) {
+func TestReportTraceEventReqBody_HumaSchema(t *testing.T) {
 	t.Parallel()
 	registry := huma.NewMapRegistry("#/components/schemas/", huma.DefaultSchemaNamer)
 	schema := huma.SchemaFromType(registry, reflect.TypeOf(dto.ReportTraceEventReqBody{}))
-	if schema.AdditionalProperties != true {
-		t.Fatal("request body must accept future Codex fields")
+	if schema.Properties["records"] == nil {
+		t.Fatal("request body must expose records")
 	}
-	for _, name := range []string{"tool_input", "tool_response"} {
-		field := schema.Properties[name]
-		if field == nil || field.Type != "" || field.ContentEncoding != "" {
-			t.Fatalf("schema for %s must be unrestricted JSON: %+v", name, field)
+	agent := schema.Properties["agent"]
+	if agent == nil {
+		t.Fatal("request body must expose agent")
+	}
+	found := false
+	for _, v := range agent.Enum {
+		if v == "claude" {
+			found = true
 		}
+	}
+	if !found {
+		t.Fatalf("agent enum must contain claude: %+v", agent.Enum)
 	}
 }
 

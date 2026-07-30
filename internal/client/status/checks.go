@@ -49,7 +49,6 @@ func Collect(ctx context.Context, paths trace.Paths, hc *http.Client) *Report {
 		report.ConfigFound = true
 	}
 	report.Host = config.Host
-	report.Agent = config.Agent
 	report.AuthMaskedKey = maskAPIKey(config.APIKey)
 
 	var wg sync.WaitGroup

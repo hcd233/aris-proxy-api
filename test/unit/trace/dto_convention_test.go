@@ -3,13 +3,11 @@ package trace
 import (
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	traceschema "github.com/hcd233/aris-proxy-api/internal/dto/schema"
 )
 
 // TestReportTraceEventReq_DTOFollowsHumaBodyConvention 防回归：上报接口的请求体必须是
@@ -30,12 +28,20 @@ func TestReportTraceEventReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	}
 
 	bodyType := reflect.TypeOf(dto.ReportTraceEventReqBody{})
-	hookField, ok := bodyType.FieldByName("HookEventName")
+	recordsField, ok := bodyType.FieldByName("Records")
 	if !ok {
-		t.Fatal("ReportTraceEventReqBody must have HookEventName field")
+		t.Fatal("ReportTraceEventReqBody must have Records field")
 	}
-	if hookField.Tag.Get("json") != "hook_event_name,omitempty" {
-		t.Errorf(`HookEventName json tag = %q, want "hook_event_name,omitempty"`, hookField.Tag.Get("json"))
+	if recordsField.Tag.Get("json") != "records" {
+		t.Errorf(`Records json tag = %q, want "records"`, recordsField.Tag.Get("json"))
+	}
+
+	agentField, ok := bodyType.FieldByName("Agent")
+	if !ok {
+		t.Fatal("ReportTraceEventReqBody must have Agent field")
+	}
+	if agentField.Tag.Get("json") != "agent,omitempty" {
+		t.Errorf(`Agent json tag = %q, want "agent,omitempty"`, agentField.Tag.Get("json"))
 	}
 
 	sessionField, ok := bodyType.FieldByName("SessionID")
@@ -88,29 +94,6 @@ func TestReportTraceEventReqBody_HasNoByteFields(t *testing.T) {
 		if f.Type == byteType {
 			t.Errorf("ReportTraceEventReqBody.%s is []byte — DTO must use concrete types, not []byte passthrough", f.Name)
 		}
-	}
-}
-
-// TestReportTraceEventReqBody_MarshalPreservesDynamicFields 验证结构体序列化后任意 JSON
-// 字段（tool_input 等）完整保留，供 events.payload 透传存储。
-func TestReportTraceEventReqBody_MarshalPreservesDynamicFields(t *testing.T) {
-	t.Parallel()
-	body := &dto.ReportTraceEventReqBody{
-		HookEventName: "PreToolUse",
-		SessionID:     "s1",
-		ToolName:      "Bash",
-		ToolInput:     traceschema.RawJSON(`{"command":"ls"}`),
-	}
-	raw, err := sonic.Marshal(body)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	got := string(raw)
-	if !strings.Contains(got, `"hook_event_name":"PreToolUse"`) {
-		t.Errorf("marshal lost hook_event_name: %s", got)
-	}
-	if !strings.Contains(got, `"tool_input":{"command":"ls"}`) {
-		t.Errorf("marshal lost tool_input: %s", got)
 	}
 }
 

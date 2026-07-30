@@ -161,28 +161,25 @@ func (h *traceHandler) HandleGetTraceConversation(ctx context.Context, req *dto.
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-// HandleReportTraceEvent 上报 codex hook 事件（API Key 鉴权）
+// HandleReportTraceEvent 上报 agent 批量记录（API Key 鉴权）
 func (h *traceHandler) HandleReportTraceEvent(
 	ctx context.Context,
 	req *dto.ReportTraceEventReq,
 ) (*dto.HTTPResponse[*dto.ReportTraceEventRsp], error) {
 	rsp := &dto.ReportTraceEventRsp{}
-	if req.Body == nil || (len(req.Body.Records) == 0 && req.Body.HookEventName == "") {
+	if req.Body == nil || len(req.Body.Records) == 0 {
 		rsp.Error = ierr.ErrValidation.BizError()
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	cmd := port.ReportTraceEventCommand{
-		HookEventName: req.Body.HookEventName,
-		SessionID:     req.Body.SessionID,
-		Model:         req.Body.Model,
-		CWD:           req.Body.CWD,
-		Source:        req.Body.Source,
-		TurnID:        req.Body.TurnID,
-		APIKeyName:    util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
-		UserID:        util.CtxValueUint(ctx, constant.CtxKeyUserID),
-	}
-	if len(req.Body.Records) > 0 {
-		cmd.Records = lo.Map(req.Body.Records, func(
+		SessionID:  req.Body.SessionID,
+		Agent:      req.Body.Agent,
+		Model:      req.Body.Model,
+		CWD:        req.Body.CWD,
+		Source:     req.Body.Source,
+		APIKeyName: util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		UserID:     util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		Records: lo.Map(req.Body.Records, func(
 			record *dto.ReportTraceRecordReq,
 			_ int,
 		) port.ReportTraceRecord {
@@ -198,18 +195,7 @@ func (h *traceHandler) HandleReportTraceEvent(
 				DedupKey:       record.DedupKey,
 				Payload:        record.Payload,
 			}
-		})
-	} else {
-		cmd.RawPayload = req.Body.Raw
-		if len(cmd.RawPayload) == 0 {
-			rawPayload, err := sonic.Marshal(req.Body)
-			if err != nil {
-				logger.WithCtx(ctx).Error("[TraceHandler] Marshal report body failed", zap.Error(err))
-				rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-				return apiutil.WrapHTTPResponse(rsp, nil)
-			}
-			cmd.RawPayload = rawPayload
-		}
+		}),
 	}
 
 	results, err := h.report.Handle(ctx, cmd)

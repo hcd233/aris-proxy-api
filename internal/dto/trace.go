@@ -110,57 +110,20 @@ type ReportTraceEventRsp struct {
 	Results []*ReportTraceRecordResult `json:"results,omitempty" doc:"逐条处理结果"`
 }
 
-// ReportTraceEventReq 上报请求（API Key 鉴权，codex hook stdin JSON）
+// ReportTraceEventReq 上报请求（API Key 鉴权，agent hook 批量记录）
 type ReportTraceEventReq struct {
-	Body *ReportTraceEventReqBody `json:"body" doc:"codex hook stdin 输入"`
+	Body *ReportTraceEventReqBody `json:"body" doc:"agent trace 批量记录"`
 }
 
-// ReportTraceEventReqBody codex hook stdin 输入
-//
-// 显式建模 codex hook 各事件的字段；任意 JSON 字段（tool_input / tool_response）
-// 用 sonic.NoCopyRawMessage 承载。handler 序列化整个结构体作为完整 hook JSON
-// 透传存储到 events.payload。
+// ReportTraceEventReqBody 批量上报 envelope。原始内容一律放在 records[i].payload，
+// envelope 只承担索引与归属字段。
 type ReportTraceEventReqBody struct {
-	_   struct{}            `json:"-" additionalProperties:"true"`
-	Raw traceschema.RawJSON `json:"-"`
-	// Batch envelope fields.
-	Records []*ReportTraceRecordReq `json:"records,omitempty" doc:"批量原始记录"`
-	// 公共字段（所有 hook 事件均携带）
-	HookEventName  string `json:"hook_event_name,omitempty" minLength:"1" doc:"hook 事件名（兼容单事件上报）"`
-	SessionID      string `json:"session_id" required:"true" minLength:"1" doc:"codex session_id"`
-	Model          string `json:"model,omitempty" doc:"模型"`
-	CWD            string `json:"cwd,omitempty" doc:"工作目录"`
-	TranscriptPath string `json:"transcript_path,omitempty" doc:"transcript 路径"`
-	PermissionMode string `json:"permission_mode,omitempty" doc:"权限模式"`
-	// turn 级事件携带
-	TurnID string `json:"turn_id,omitempty" doc:"turn id"`
-	// SessionStart
-	Source string `json:"source,omitempty" doc:"startup/resume/clear/compact"`
-	// UserPromptSubmit
-	Prompt string `json:"prompt,omitempty" doc:"用户输入文本"`
-	// PreToolUse / PostToolUse
-	ToolName     string              `json:"tool_name,omitempty" doc:"工具名"`
-	ToolUseID    string              `json:"tool_use_id,omitempty" doc:"工具调用 ID"`
-	ToolInput    traceschema.RawJSON `json:"tool_input,omitempty" doc:"工具输入（任意 JSON）"`
-	ToolResponse traceschema.RawJSON `json:"tool_response,omitempty" doc:"工具响应（任意 JSON）"`
-	// Stop / SubagentStop
-	LastAssistantMessage string `json:"last_assistant_message,omitempty" doc:"最后 assistant 消息"`
-	// SubagentStart / SubagentStop
-	AgentID   string `json:"agent_id,omitempty" doc:"subagent ID"`
-	AgentType string `json:"agent_type,omitempty" doc:"subagent 类型"`
-	// PreCompact / PostCompact
-	Trigger string `json:"trigger,omitempty" doc:"manual/auto"`
-}
-
-func (b *ReportTraceEventReqBody) UnmarshalJSON(data []byte) error {
-	type plainBody ReportTraceEventReqBody
-	var decoded plainBody
-	if err := sonic.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-	*b = ReportTraceEventReqBody(decoded)
-	b.Raw = append(b.Raw[:0], data...)
-	return nil
+	Records   []*ReportTraceRecordReq `json:"records" required:"true" minItems:"1" doc:"批量原始记录"`
+	SessionID string                  `json:"session_id" required:"true" minLength:"1" doc:"agent session id"`
+	Agent     string                  `json:"agent,omitempty" enum:"codex,claude" doc:"agent 类型（默认 codex）"`
+	Model     string                  `json:"model,omitempty" doc:"模型"`
+	CWD       string                  `json:"cwd,omitempty" doc:"工作目录"`
+	Source    string                  `json:"source,omitempty" doc:"startup/resume/clear/compact"`
 }
 
 // ReportTraceRecordReq 单条 Hook 或 rollout 原始记录。

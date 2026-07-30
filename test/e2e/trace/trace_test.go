@@ -8,6 +8,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/command"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	traceschema "github.com/hcd233/aris-proxy-api/internal/dto/schema"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	tracefake "github.com/hcd233/aris-proxy-api/test/unit/trace"
 )
@@ -24,9 +25,15 @@ func TestE2E_TraceReportFlow(t *testing.T) {
 	ctx = context.WithValue(ctx, constant.CtxKeyAPIKeyName, "e2e-key")
 
 	body := &dto.ReportTraceEventReqBody{
-		HookEventName: "UserPromptSubmit",
-		SessionID:     "e2e-s1",
-		Prompt:        "hello",
+		SessionID: "e2e-s1",
+		Agent:     constant.TraceAgentClaude,
+		Records: []*dto.ReportTraceRecordReq{{
+			Source:        constant.TraceRecordSourceHook,
+			RecordType:    constant.TraceRecordTypeHookEvent,
+			HookEventName: "UserPromptSubmit",
+			DedupKey:      "hook:e2e:1",
+			Payload:       traceschema.RawJSON(`{"hook_event_name":"UserPromptSubmit","session_id":"e2e-s1","prompt":"hello"}`),
+		}},
 	}
 
 	rsp, err := h.HandleReportTraceEvent(ctx, &dto.ReportTraceEventReq{Body: body})
@@ -43,6 +50,9 @@ func TestE2E_TraceReportFlow(t *testing.T) {
 	}
 	if tr == nil {
 		t.Fatal("trace not persisted")
+	}
+	if tr.Agent != constant.TraceAgentClaude {
+		t.Fatalf("trace agent = %q, want claude", tr.Agent)
 	}
 	if tr.APIKeyName != "e2e-key" || tr.UserID != 7 {
 		t.Fatalf("unexpected trace ownership: %+v", tr)

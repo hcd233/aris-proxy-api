@@ -199,10 +199,14 @@ _Avoid_: cron mutex, scheduled lock, scheduler lock
 对订阅制 Agentic 工具（Claude Code、Codex）流量的离线捕获方式。读取工具写在本地的会话文件后摄取进平台。沉淀为 Trace（沉淀会话）。与 Proxy Capture 是两条互斥的数据入口。
 _Avoid_: log scraping, import, sync, ingestion
 
-## Trace & Codex Client（Trace 与 Codex 客户端）
+## Trace & Agent Client（Trace 与 Agent 客户端）
+
+**AgentAdapter（Agent 适配器）**:
+客户端按 agent 抹平 hook 与 transcript 格式差异的抽象（`ParseHook` / `ClassifyTranscriptLine` / `StdoutAck`），经轻量注册表按 `--agent` 名称分发；服务端另有完成事件注册表（codex: Stop/task_complete；claude: SessionEnd）与对话投影构造器注册表。新 agent 接入 = 客户端 1 个 adapter 文件 + 服务端 2 行 registry 注册。hook 命令统一为 `aris trace ingest --agent <name>`。
+_Avoid_: agent plugin, hook parser
 
 **TraceClient（Trace 客户端）**:
-独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent → API Key → 配 Codex hooks）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）三个命令，不链接数据库、Server、lint 或 Web 静态资源。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本只负责下载、校验、原子安装，末尾 `exec aris init --host <origin>` 进入配置向导。
+独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent（Codex / Claude Code / Both）→ API Key → 注册对应 hooks：codex 写 `~/.codex/hooks.json`，claude 写 `~/.claude/settings.json`，均幂等去重、保留既有配置、写前 .bak 备份）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）三个命令，不链接数据库、Server、lint 或 Web 静态资源。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本只负责下载、校验、原子安装，末尾 `exec aris init --host <origin>` 进入配置向导。
 _Avoid_: trace cli, codex hook script, install script
 
 **TraceSpool（本地 spool）**:
@@ -210,7 +214,7 @@ _Avoid_: trace cli, codex hook script, install script
 _Avoid_: trace queue, pending records, ingest buffer
 
 **TraceConversation（Trace 对话投影）**:
-从 Trace 原始记录（Hook + rollout）非持久化投影出的结构化对话视图。rollout 优先、Hook fallback，按 turn 分组，工具调用和结果按 `call_id` 关联。通过 `GET /api/v1/trace/conversation` 返回，供 Web 前端 Conversation 标签页展示。
+从 Trace 原始记录（Hook + transcript）非持久化投影出的结构化对话视图，按 trace 的 agent 经注册表分发构造器。rollout/transcript 优先、Hook fallback 去重补齐，按 turn 分组（claude 以 transcript 真实输入记录的 `promptId→uuid` alias 归组），工具调用和结果按 `call_id` 关联；claude 的 thinking 块与 sidechain（子代理）记录不进入投影。通过 `GET /api/v1/trace/conversation` 返回，供 Web 前端 Conversation 标签页展示。
 _Avoid_: trace view, conversation model, trace projection
 
 ## Infrastructure（基础设施）
