@@ -135,8 +135,8 @@ func NewOauth2Platforms() map[string]oauthsvc.Platform {
 	}
 }
 
-func NewStateManager() oauthsvc.StateManager {
-	return infraoauth.NewStateManager()
+func NewStateManager(redisClient *redis.Client) oauthsvc.StateManager {
+	return infraoauth.NewRedisStateManager(redisClient)
 }
 
 func NewTaskSubmitter(pm *pool.PoolManager) usecase.TaskSubmitter {
