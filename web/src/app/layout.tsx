@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Source_Serif_4, JetBrains_Mono } from "next/font/google";
-import Script from "next/script";
 import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
+import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
 import { HtmlLangUpdater } from "@/components/html-lang-updater";
 import { Toaster } from "@/components/ui/sonner";
 import { ParticleBackground } from "@/components/theme/particle-background";
@@ -29,8 +29,6 @@ export const metadata: Metadata = {
   description: "Management interface for Aris Proxy API",
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t!=="moonshot")t="anthropic";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="anthropic";}})();`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,17 +41,22 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeScript }}
-        />
+        {/* Raw inline script: runs synchronously during HTML parsing as
+            the first element of <body>, before any visible content is
+            parsed/painted, so [data-theme] is correct on first paint
+            and there is no light→dark flash on full-page loads (login
+            OAuth flow). Do NOT switch to next/script — its
+            beforeInteractive strategy is deferred via the __next_s
+            queue and only runs after the React bundle loads. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <I18nProvider>
-          <HtmlLangUpdater />
-          <AuthProvider>{children}</AuthProvider>
-          <ParticleBackground />
-          <ThemeSwitcher />
-          <Toaster />
+          <ThemeProvider>
+            <HtmlLangUpdater />
+            <AuthProvider>{children}</AuthProvider>
+            <ParticleBackground />
+            <ThemeSwitcher />
+            <Toaster />
+          </ThemeProvider>
         </I18nProvider>
       </body>
     </html>
