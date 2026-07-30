@@ -104,9 +104,10 @@ export default function TracePage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("trace.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
+          <TraceInstallInline open={installOpen} onClose={() => setInstallOpen(false)} />
           <Button
             variant="outline"
-            className="gap-1.5"
+            className="gap-1.5 shrink-0"
             onClick={() => setInstallOpen((v) => !v)}
           >
             <Radar className="size-4" />
@@ -230,7 +231,6 @@ export default function TracePage() {
         </CardContent>
       </Card>
 
-      <TraceInstallInline open={installOpen} onClose={() => setInstallOpen(false)} />
     </div>
   );
 }
