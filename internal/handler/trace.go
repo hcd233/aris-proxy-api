@@ -157,7 +157,9 @@ func (h *traceHandler) HandleGetTraceConversation(ctx context.Context, req *dto.
 			return &dto.TraceConversationItem{Kind: item.Kind, Role: item.Role, Content: item.Content, ToolName: item.ToolName, CallID: item.CallID, Arguments: item.Arguments, Output: item.Output, Source: item.Source, RecordIDs: item.RecordIDs}
 		})}
 	})
-	rsp.Conversation = &dto.TraceConversation{TraceID: view.TraceID, SessionID: view.SessionID, Turns: turns}
+	rsp.Conversation = &dto.TraceConversation{TraceID: view.TraceID, SessionID: view.SessionID, Turns: turns, Tools: lo.Map(view.Tools, func(tool *port.TraceConversationToolView, _ int) *dto.TraceConversationTool {
+		return &dto.TraceConversationTool{Namespace: tool.Namespace, Name: tool.Name, Description: tool.Description, Parameters: tool.Parameters, RecordIDs: tool.RecordIDs}
+	})}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

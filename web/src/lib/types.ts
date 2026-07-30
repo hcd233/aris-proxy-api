@@ -699,6 +699,15 @@ export interface TraceConversation {
   traceId: number;
   sessionId: string;
   turns: TraceConversationTurn[];
+  tools?: TraceConversationTool[];
+}
+
+export interface TraceConversationTool {
+  namespace?: string;
+  name: string;
+  description?: string;
+  parameters?: string;
+  recordIds: number[];
 }
 
 export interface ListTracesRsp extends CommonRsp {

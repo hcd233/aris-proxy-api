@@ -214,7 +214,7 @@ _Avoid_: trace cli, codex hook script, install script
 _Avoid_: trace queue, pending records, ingest buffer
 
 **TraceConversation（Trace 对话投影）**:
-从 Trace 原始记录（Hook + transcript）非持久化投影出的结构化对话视图，按 trace 的 agent 经注册表分发构造器。rollout/transcript 优先、Hook fallback 去重补齐，按 turn 分组（claude 以 transcript 真实输入记录的 `promptId→uuid` alias 归组），工具调用和结果按 `call_id` 关联；claude 的 thinking 块与 sidechain（子代理）记录不进入投影。通过 `GET /api/v1/trace/conversation` 返回，供 Web 前端 Conversation 标签页展示。
+从 Trace 原始记录（Hook + transcript）非持久化投影出的结构化对话视图，按 trace 的 agent 经注册表分发构造器。rollout/transcript 优先、Hook fallback 去重补齐，按 turn 分组（claude 以 transcript 真实输入记录的 `promptId→uuid` alias 归组），工具调用和结果按 `call_id` 关联；claude 的 thinking 块与 sidechain（子代理）记录不进入投影。codex 的系统提示词（`session_meta.base_instructions.text`）投影为 `role=system` 的 message 项（经 `dedupeMessage` 去重），可用工具定义（`session_meta.dynamic_tools` 内层 `tools[]`）投影到顶层 `Tools` 字段（按 `namespace:name` 去重）。通过 `GET /api/v1/trace/conversation` 返回，供 Web 前端 Conversation 标签页展示（系统提示词复用 `SystemMessage` 组件，工具定义单独折叠区）。
 _Avoid_: trace view, conversation model, trace projection
 
 ## Infrastructure（基础设施）

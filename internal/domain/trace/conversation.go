@@ -10,6 +10,8 @@ import (
 // Conversation 是 Trace 的只读对话投影。
 type Conversation struct {
 	Turns []*ConversationTurn
+	// Tools 是该会话可用的工具定义（codex session_meta.dynamic_tools 投影）。
+	Tools []*ToolDefinition
 }
 
 // ConversationTurn 是一个 agent turn。
@@ -29,6 +31,15 @@ type ConversationItem struct {
 	Output    string
 	Source    string
 	RecordIDs []uint
+}
+
+// ToolDefinition 是会话可用工具的定义（codex dynamic_tools 命名空间组内层工具）。
+type ToolDefinition struct {
+	Namespace   string
+	Name        string
+	Description string
+	Parameters  string // 原始 JSON 文本；无 parameters 时为空
+	RecordIDs   []uint
 }
 
 func appendToTurn(conversation *Conversation, turns map[string]*ConversationTurn, turnID string, item *ConversationItem) {

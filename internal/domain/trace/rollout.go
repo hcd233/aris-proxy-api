@@ -1,6 +1,8 @@
 package trace
 
 import (
+	"bytes"
+
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
@@ -71,7 +73,10 @@ func buildCodexConversation(records []*TraceEvent) *Conversation {
 	turns := map[string]*ConversationTurn{}
 	seenMessages := map[string]*ConversationItem{}
 	tools := map[string]*ConversationItem{}
+	toolDefs := []*ToolDefinition{}
+	seenToolDefs := map[string]bool{}
 	for _, record := range records {
+		toolDefs = collectCodexToolDefinitions(record, toolDefs, seenToolDefs)
 		item := projectConversationItem(record, tools)
 		if item == nil {
 			continue
@@ -84,12 +89,16 @@ func buildCodexConversation(records []*TraceEvent) *Conversation {
 		}
 		appendToTurn(conversation, turns, record.TurnID, item)
 	}
+	conversation.Tools = toolDefs
 	return conversation
 }
 
 // projectConversationItem 把单条原始记录投影为对话项；配对类事件（function/tool 输出）
 // 直接回填已存在的 tool_call，本身不产生新的对话项。
 func projectConversationItem(record *TraceEvent, tools map[string]*ConversationItem) *ConversationItem {
+	if record.RecordType == constant.TraceRolloutTypeSessionMeta {
+		return codexSessionMetaSystemMessage(record)
+	}
 	var item *ConversationItem
 	switch record.Event {
 	case constant.TraceConversationEventUserPrompt:
@@ -159,4 +168,95 @@ func rolloutString(record *TraceEvent, field string) string {
 		return ""
 	}
 	return value
+}
+
+// rolloutNestedString 读取 payload.payload[field] 内嵌对象 objField 的字符串值。
+// 用于 session_meta.base_instructions.text 这类两层嵌套字段。
+func rolloutNestedString(record *TraceEvent, field, objField string) string {
+	var envelope map[string]sonic.NoCopyRawMessage
+	if sonic.Unmarshal(record.Payload, &envelope) != nil {
+		return ""
+	}
+	var payload map[string]sonic.NoCopyRawMessage
+	if sonic.Unmarshal(envelope["payload"], &payload) != nil {
+		return ""
+	}
+	var obj map[string]sonic.NoCopyRawMessage
+	if sonic.Unmarshal(payload[field], &obj) != nil {
+		return ""
+	}
+	var value string
+	if err := sonic.Unmarshal(obj[objField], &value); err != nil {
+		return ""
+	}
+	return value
+}
+
+// codexSessionMetaSystemMessage 从 session_meta 记录提取 base_instructions.text，
+// 投影为 role=system 的 message；base_instructions 缺失时返回 nil（不产生对话项）。
+func codexSessionMetaSystemMessage(record *TraceEvent) *ConversationItem {
+	instructions := rolloutNestedString(record, constant.TracePayloadFieldBaseInstructions, constant.TracePayloadFieldText)
+	if instructions == "" {
+		return nil
+	}
+	return &ConversationItem{
+		Kind:      constant.TraceConversationKindMessage,
+		Role:      constant.TraceConversationRoleSystem,
+		Content:   instructions,
+		Source:    record.Source,
+		RecordIDs: []uint{record.ID},
+	}
+}
+
+// codexToolNamespace 是 dynamic_tools 命名空间组，内层 Tools 是真实工具定义。
+type codexToolNamespace struct {
+	Name  string          `json:"name"`
+	Tools []codexToolSpec `json:"tools"`
+}
+
+// codexToolSpec 是 dynamic_tools 命名空间组内层工具定义。
+type codexToolSpec struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  sonic.NoCopyRawMessage `json:"parameters"`
+}
+
+// collectCodexToolDefinitions 从 session_meta 记录的 dynamic_tools 命名空间组提取内层工具定义，
+// 按 namespace:name 去重并保留首次出现顺序。
+func collectCodexToolDefinitions(record *TraceEvent, defs []*ToolDefinition, seen map[string]bool) []*ToolDefinition {
+	if record.RecordType != constant.TraceRolloutTypeSessionMeta {
+		return defs
+	}
+	var envelope map[string]sonic.NoCopyRawMessage
+	if sonic.Unmarshal(record.Payload, &envelope) != nil {
+		return defs
+	}
+	var payload map[string]sonic.NoCopyRawMessage
+	if sonic.Unmarshal(envelope["payload"], &payload) != nil {
+		return defs
+	}
+	var namespaces []codexToolNamespace
+	if sonic.Unmarshal(payload[constant.TracePayloadFieldDynamicTools], &namespaces) != nil {
+		return defs
+	}
+	for _, ns := range namespaces {
+		for _, tool := range ns.Tools {
+			if tool.Name == "" {
+				continue
+			}
+			key := ns.Name + ":" + tool.Name
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			defs = append(defs, &ToolDefinition{
+				Namespace:   ns.Name,
+				Name:        tool.Name,
+				Description: tool.Description,
+				Parameters:  string(bytes.TrimSpace(tool.Parameters)),
+				RecordIDs:   []uint{record.ID},
+			})
+		}
+	}
+	return defs
 }
