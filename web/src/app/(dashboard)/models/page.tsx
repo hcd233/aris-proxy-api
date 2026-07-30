@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { ModelItem, EndpointItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -146,8 +147,8 @@ export default function ModelsPage() {
         setPersistedPage(modelsRsp.pageInfo.page);
         setPersistedPageSize(modelsRsp.pageInfo.pageSize);
       }
-    } catch {
-      toast.error(t("models.load_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("models.load_error") });
     } finally {
       setLoading(false);
     }
@@ -159,8 +160,8 @@ export default function ModelsPage() {
       const list = endpointsRsp.endpoints ?? [];
       setEndpoints(list);
       return list;
-    } catch {
-      toast.error(t("endpoints.load_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("endpoints.load_error") });
       return [];
     }
   }, [t]);
@@ -239,7 +240,7 @@ export default function ModelsPage() {
       setDialogOpen(false);
       fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("models.save_error"));
+      showErrorToast(err, { title: t("models.save_error") });
     } finally {
       setSaving(false);
     }
@@ -258,7 +259,7 @@ export default function ModelsPage() {
       toast.success(t("models.deleted_success"));
       fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("models.delete_error"));
+      showErrorToast(err, { title: t("models.delete_error") });
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -272,7 +273,7 @@ export default function ModelsPage() {
       toast.success(model.enabled ? t("models.disabled") : t("models.enabled"));
       fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("models.toggle_error"));
+      showErrorToast(err, { title: t("models.toggle_error") });
     }
   };
 

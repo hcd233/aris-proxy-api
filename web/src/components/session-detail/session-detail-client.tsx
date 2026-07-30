@@ -11,6 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type { SessionMetadata, MessageItem, ToolItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -114,8 +115,8 @@ export default function SessionDetailClient({
         await api.scoreSession({ sessionId, score: value });
         setScore(value);
         toast.success(t("sessions.scored"));
-      } catch {
-        toast.error(t("sessions.score_error"));
+      } catch (err) {
+        showErrorToast(err, { title: t("sessions.score_error") });
       } finally {
         setScoring(false);
       }
@@ -130,8 +131,8 @@ export default function SessionDetailClient({
       await api.deleteScoreSession(sessionId);
       setScore(undefined);
       toast.success(t("sessions.score_removed"));
-    } catch {
-      toast.error(t("sessions.score_remove_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("sessions.score_remove_error") });
     } finally {
       setScoring(false);
     }

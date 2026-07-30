@@ -64,7 +64,7 @@ import type {
   DatasetExportSSEData,
   DatasetExportSSEError,
 } from "./types";
-import { BusinessErrorCode } from "./api-errors";
+import { BusinessErrorCode, type StructuredError, parseError } from "./api-error-handler";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const AUTH_TOAST_DURATION_MS = 10_000;
@@ -72,12 +72,26 @@ const AUTH_TOAST_DURATION_MS = 10_000;
 export class ApiError extends Error {
   status: number;
   body: string;
+  /** 解析得到的结构化错误（可能为空，如果 body 不是合法 JSON） */
+  structured?: StructuredError;
 
   constructor(status: number, body: string) {
     super(`API error ${status}: ${body}`);
     this.name = "ApiError";
     this.status = status;
     this.body = body;
+
+    // 自动尝试解析 body 中的结构化错误
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && typeof parsed === "object" && parsed.code !== undefined) {
+        this.structured = parseError(parsed);
+        this.structured.httpStatus = status;
+        this.structured.rawBody = body;
+      }
+    } catch {
+      // body 不是 JSON，不处理
+    }
   }
 }
 
