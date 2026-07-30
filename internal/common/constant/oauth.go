@@ -20,4 +20,24 @@ const (
 	// StateProviderPrefix + platform + StateProviderSeparator + random hex
 	StateProviderPrefix    = "provider:"
 	StateProviderSeparator = ":"
+
+	// RedisOAuthStateKeyPrefix OAuth state 的 Redis key 前缀
+	RedisOAuthStateKeyPrefix = "oauth:state:"
+
+	// RedisOAuthStateVerifyScript Lua 脚本：原子地 GET + DEL
+	// 如果 key 不存在返回空，存在则删除并返回创建时间戳
+	RedisOAuthStateVerifyScript = `
+local val = redis.call("GET", KEYS[1])
+if val then
+    redis.call("DEL", KEYS[1])
+    return val
+end
+return nil
+`
+
+	// DecimalBase10 十进制基数，用于 strconv.ParseInt
+	DecimalBase10 = 10
+
+	// BitSize64 64 位整数，用于 strconv.ParseInt 的 bitSize 参数
+	BitSize64 = 64
 )
