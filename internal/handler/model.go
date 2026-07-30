@@ -123,6 +123,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		Enabled:         req.Body.Enabled,
 		ContextLength:   req.Body.ContextLength,
 		MaxOutputTokens: req.Body.MaxOutputTokens,
+		Capabilities:    req.Body.Capabilities,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
