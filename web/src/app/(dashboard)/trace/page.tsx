@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import type { PageInfo, TraceSummary } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +21,7 @@ import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
-import TraceInstallInline from "@/components/trace-install-inline";
+import TraceInstallPopover from "@/components/trace-install-popover";
 
 function statusBadge(status: string, t: (k: string, f?: string) => string) {
   if (status === "active") {
@@ -55,7 +54,6 @@ export default function TracePage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [installOpen, setInstallOpen] = useState(false);
   const [keyword, setKeyword] = usePersistentState("dashboard.trace.keyword", "");
   const [searchInput, setSearchInput] = usePersistentState("dashboard.trace.searchInput", "");
   const t = useT();
@@ -104,15 +102,7 @@ export default function TracePage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("trace.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <TraceInstallInline open={installOpen} onClose={() => setInstallOpen(false)} />
-          <Button
-            variant="outline"
-            className="gap-1.5 shrink-0"
-            onClick={() => setInstallOpen((v) => !v)}
-          >
-            <Radar className="size-4" />
-            {t("trace.install")}
-          </Button>
+          <TraceInstallPopover />
         </div>
       </div>
 
