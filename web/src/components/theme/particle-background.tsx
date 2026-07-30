@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTheme } from "@/lib/theme";
 
 const STAR_COUNT = 70;
 const POINTER_RADIUS = 120;
@@ -17,15 +18,21 @@ interface Star {
   color: string;
 }
 
+/**
+ * Starfield canvas. Visibility + animation are driven by the active theme
+ * (only moonshot renders the starfield) via useTheme(), so this component
+ * re-renders on toggle. The effect below depends on `theme` and tears down
+ * / rebuilds listeners + rAF when it changes.
+ */
 export function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    const root = document.documentElement;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
@@ -123,7 +130,7 @@ export function ParticleBackground() {
       if (document.hidden) {
         cancelAnimationFrame(raf);
         running = false;
-      } else if (root.dataset.theme === "moonshot" && !reduced && !running) {
+      } else if (theme === "moonshot" && !reduced && !running) {
         raf = requestAnimationFrame(frame);
         running = true;
       }
@@ -139,9 +146,9 @@ export function ParticleBackground() {
       ctx.clearRect(0, 0, width, height);
     };
 
-    const sync = () => {
+    const start = () => {
       stop();
-      if (root.dataset.theme !== "moonshot") return;
+      if (theme !== "moonshot") return;
       if (reduced) {
         drawStatic();
         return;
@@ -153,18 +160,15 @@ export function ParticleBackground() {
       running = true;
     };
 
-    const observer = new MutationObserver(sync);
-    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
     document.addEventListener("visibilitychange", onVisibility);
-    sync();
+    start();
 
     return () => {
-      observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       stop();
       window.removeEventListener("resize", resize);
     };
-  }, []);
+  }, [theme]);
 
   return (
     <div aria-hidden="true" className="particle-bg">
