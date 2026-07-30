@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { EndpointItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -88,8 +89,8 @@ export default function EndpointsPage() {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       }
-    } catch {
-      toast.error(t("endpoints.load_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("endpoints.load_error") });
     } finally {
       setLoading(false);
     }
@@ -157,7 +158,7 @@ export default function EndpointsPage() {
       setDialogOpen(false);
       fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("endpoints.save_error"));
+      showErrorToast(err, { title: t("endpoints.save_error") });
     } finally {
       setSaving(false);
     }
@@ -176,7 +177,7 @@ export default function EndpointsPage() {
       toast.success(t("endpoints.deleted_success"));
       fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("endpoints.delete_error"));
+      showErrorToast(err, { title: t("endpoints.delete_error") });
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);

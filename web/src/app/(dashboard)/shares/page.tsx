@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { api, ApiError } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, ShareItem } from "@/lib/types";
 import { buildShareURL } from "@/components/share/share-dialog";
 import { DeleteButton } from "@/components/delete-button";
@@ -63,7 +64,7 @@ export default function SharesPage() {
     try {
       const rsp = await api.listShares(page, pageSize);
       if (rsp.error) {
-        toast.error(rsp.error.message || t("common.error"));
+        showErrorToast(rsp.error, { title: t("common.error") });
         setShares([]);
         return;
       }
@@ -75,13 +76,7 @@ export default function SharesPage() {
       }
       setRefreshedAt(Date.now());
     } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? `${t("common.error")} (${err.status})`
-          : err instanceof Error
-            ? err.message
-            : t("common.error");
-      toast.error(msg);
+      showErrorToast(err, { title: t("common.error") });
     } finally {
       setLoading(false);
     }
@@ -111,19 +106,13 @@ export default function SharesPage() {
     try {
       const rsp = await api.deleteShare(deleteTarget.shareId);
       if (rsp.error) {
-        toast.error(rsp.error.message || t("shares.revoke_error"));
+        showErrorToast(rsp.error, { title: t("shares.revoke_error") });
         return;
       }
       toast.success(t("shares.revoke_success"));
       fetchShares(pageInfo.page, pageInfo.pageSize);
     } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? `${t("shares.revoke_error")} (${err.status})`
-          : err instanceof Error
-            ? err.message
-            : t("shares.revoke_error");
-      toast.error(msg);
+      showErrorToast(err, { title: t("shares.revoke_error") });
     } finally {
       setDeleting(false);
       setDeleteTarget(null);

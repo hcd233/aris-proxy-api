@@ -18,6 +18,7 @@ import {
 
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import { useT } from "@/lib/i18n";
 import type { DatasetFormatPreviewRsp, DatasetPreviewRsp } from "@/lib/types";
 import { computeRange, type TimeRangeKey } from "@/lib/time-range";
@@ -216,12 +217,12 @@ export default function DatasetPage() {
       const params = buildParams();
       const rsp = await api.previewDataset(params);
       if (rsp.error) {
-        toast.error(rsp.error.message ?? t("dataset.preview_error"));
+        showErrorToast(rsp.error, { title: t("dataset.preview_error") });
         return;
       }
       setPreview(rsp);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("dataset.preview_error"));
+      showErrorToast(err, { title: t("dataset.preview_error") });
     } finally {
       setLoadingPreview(false);
     }
@@ -233,12 +234,12 @@ export default function DatasetPage() {
     try {
       const rsp = await api.previewDatasetFormat({ ...buildParams(), offset: 0 });
       if (rsp.error) {
-        toast.error(rsp.error.message ?? t("dataset.preview_error"));
+        showErrorToast(rsp.error, { title: t("dataset.preview_error") });
         return;
       }
       setFormatPreview(rsp);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("dataset.preview_error"));
+      showErrorToast(err, { title: t("dataset.preview_error") });
     } finally {
       setLoadingFormat(false);
     }
@@ -314,7 +315,7 @@ export default function DatasetPage() {
 
       toast.success(`${t("dataset.export_success")} · ${formatNumber(total)}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("dataset.export_error"));
+      showErrorToast(err, { title: t("dataset.export_error") });
     } finally {
       setExporting(false);
     }

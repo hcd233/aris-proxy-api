@@ -13,7 +13,8 @@ import { CalendarIcon, Check, Copy, Loader2, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-import { api, ApiError } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type { CreateShareReqBody } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -103,13 +104,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
       setShareURL(buildShareURL(rsp.shareId));
       setExpiresAt(rsp.expiresAt ?? null);
     } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? `${t("share_dialog.create_failed")} (${err.status})`
-          : err instanceof Error
-            ? err.message
-            : t("share_dialog.create_failed");
-      toast.error(msg);
+      showErrorToast(err, { title: t("share_dialog.create_failed") });
     } finally {
       setCreating(false);
     }

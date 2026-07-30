@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bot } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type {
   MessageItem,
   PageInfo,
@@ -166,8 +167,8 @@ export default function TraceDetailClient({
           fetchConversation(traceId),
         ]);
       }
-    } catch {
-      toast.error(t("trace.load_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("trace.load_error") });
     } finally {
       setLoading(false);
     }

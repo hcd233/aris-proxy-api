@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type { SessionSummary, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -207,7 +208,7 @@ export default function SessionsPage() {
       toast.success(t("sessions.delete_success"));
       fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel, true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("sessions.delete_error"));
+      showErrorToast(err, { title: t("sessions.delete_error") });
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -251,7 +252,7 @@ export default function SessionsPage() {
       setSelected(new Set());
       fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel, true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("sessions.batch_delete_error"));
+      showErrorToast(err, { title: t("sessions.batch_delete_error") });
     } finally {
       setBatchDeleting(false);
       setBatchDeleteConfirmOpen(false);
@@ -267,8 +268,8 @@ export default function SessionsPage() {
         prev.map((s) => (s.id === sessionId ? { ...s, score } : s)),
       );
       toast.success(t("sessions.scored"));
-    } catch {
-      toast.error(t("sessions.score_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("sessions.score_error") });
     } finally {
       setScoring(null);
     }
@@ -283,8 +284,8 @@ export default function SessionsPage() {
         prev.map((s) => (s.id === sessionId ? { ...s, score: undefined } : s)),
       );
       toast.success(t("sessions.score_removed"));
-    } catch {
-      toast.error(t("sessions.score_remove_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("sessions.score_remove_error") });
     } finally {
       setScoring(null);
     }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type { AuditLogItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,13 +124,13 @@ export default function AuditPage() {
           filter,
         });
         if (rsp.error) {
-          toast.error(rsp.error.message ?? t("common.error"));
+          showErrorToast(rsp.error, { title: t("common.error") });
           return;
         }
         setLogs(rsp.logs ?? []);
         if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("common.error"));
+        showErrorToast(err, { title: t("common.error") });
       } finally {
         setLoading(false);
       }

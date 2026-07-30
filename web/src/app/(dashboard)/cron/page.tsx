@@ -25,6 +25,7 @@ import { useI18n } from "@/lib/i18n";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
+import { showErrorToast } from "@/lib/api-error-handler";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 
 function formatTime(iso: string): string {
@@ -58,7 +59,7 @@ export default function CronPage() {
     try {
       const rsp = await api.listCronJobs({ page, pageSize, query: query || undefined });
       if (rsp.error) {
-        toast.error(rsp.error.message ?? t("cron.load_error"));
+        showErrorToast(rsp.error, { title: t("cron.load_error") });
         return;
       }
       setJobs(rsp.jobs ?? []);
@@ -68,7 +69,7 @@ export default function CronPage() {
         setPersistedPageSize(rsp.pageInfo.pageSize);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("cron.load_error"));
+      showErrorToast(err, { title: t("cron.load_error") });
     } finally {
       setLoading(false);
     }
@@ -89,7 +90,7 @@ export default function CronPage() {
     try {
       const rsp = await api.updateCronJob({ name: job.name, enabled: !job.enabled });
       if (rsp.error) {
-        toast.error(rsp.error.message ?? t("cron.update_error"));
+        showErrorToast(rsp.error, { title: t("cron.update_error") });
         return;
       }
       setJobs((prev) =>
@@ -97,7 +98,7 @@ export default function CronPage() {
       );
       toast.success(`${job.name} ${!job.enabled ? t("cron.enabled") : t("cron.disabled")}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("cron.update_error"));
+      showErrorToast(err, { title: t("cron.update_error") });
     } finally {
       setUpdating((prev) => ({ ...prev, [job.name]: false }));
     }
@@ -107,7 +108,7 @@ export default function CronPage() {
     if (!editingJob) return;
     const rsp = await api.updateCronJob({ name: editingJob.name, spec });
     if (rsp.error) {
-      toast.error(rsp.error.message ?? t("cron.update_schedule_error"));
+      showErrorToast(rsp.error, { title: t("cron.update_schedule_error") });
       return;
     }
     setJobs((prev) =>

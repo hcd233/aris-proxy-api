@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { BlockedItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -61,8 +62,8 @@ export default function BlockPage() {
         setPersistedPage(rsp.pageInfo.page);
         setPersistedPageSize(rsp.pageInfo.pageSize);
       }
-    } catch {
-      toast.error(t("blocked.load_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("blocked.load_error") });
     } finally {
       setLoading(false);
     }
@@ -86,8 +87,8 @@ export default function BlockPage() {
       setDialogOpen(false);
       setForm(emptyForm);
       fetchItems(persistedPage, persistedPageSize);
-    } catch {
-      toast.error(t("blocked.create_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("blocked.create_error") });
     } finally {
       setSaving(false);
     }
@@ -101,8 +102,8 @@ export default function BlockPage() {
       setDeleteConfirmOpen(false);
       setDeleteTarget(null);
       fetchItems(persistedPage, persistedPageSize);
-    } catch {
-      toast.error(t("blocked.delete_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("blocked.delete_error") });
     }
   }, [deleteTarget, fetchItems, persistedPage, persistedPageSize]);
 
