@@ -3,7 +3,7 @@
 import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot } from "lucide-react";
+import { ArrowLeft, Bot, ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type {
@@ -23,6 +23,66 @@ import { ChatMessage, buildToolResultsByID } from "@/components/chat/chat-messag
 import { toast } from "sonner";
 
 const EVENT_PAGE_SIZE = 50;
+
+/**
+ * 可用工具折叠区——与系统提示词一样复用项目现有代码块样式，不新建 UI 原语。
+ */
+function ToolsSection({
+  tools,
+  t,
+}: {
+  tools: NonNullable<TraceConversation["tools"]>;
+  t: (k: string, f?: string) => string;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="rounded-xl border border-border bg-card/60">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left"
+      >
+        <Wrench className="size-4 text-muted-foreground" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+          {t("trace.available_tools")}
+        </span>
+        <Badge variant="outline" className="text-[10px]">
+          {tools.length} {t("trace.tool_count")}
+        </Badge>
+        <span className="ml-auto text-muted-foreground">
+          {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </span>
+      </button>
+      {open && (
+        <div className="space-y-2 border-t border-border px-4 py-3">
+          {tools.map((tool, i) => (
+            <div key={`${tool.namespace ?? ""}-${tool.name}-${i}`} className="rounded-lg border border-border bg-secondary/30 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {tool.namespace && (
+                  <Badge variant="secondary" className="font-mono text-[10px]">
+                    {tool.namespace}
+                  </Badge>
+                )}
+                <span className="font-mono text-sm font-medium">{tool.name}</span>
+              </div>
+              {tool.description && (
+                <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+                  {tool.description}
+                </p>
+              )}
+              {tool.parameters && (
+                <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+                  {tool.parameters}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /**
  * 将 trace 对话项映射为 session 聊天消息结构，复用 ChatMessage 气泡渲染。
@@ -362,10 +422,15 @@ export default function TraceDetailClient({
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
               </div>
-            ) : !conversation || conversation.turns.length === 0 ? (
+            ) : !conversation ||
+              (conversation.turns.length === 0 &&
+                !(conversation.tools?.length)) ? (
               <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
             ) : (
               <div className="mx-auto w-full max-w-[768px] space-y-6">
+                {conversation.tools && conversation.tools.length > 0 && (
+                  <ToolsSection tools={conversation.tools} t={t} />
+                )}
                 {conversation.turns.map((turn) => (
                   <div key={turn.turnId || "default"} className="space-y-4">
                     <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">

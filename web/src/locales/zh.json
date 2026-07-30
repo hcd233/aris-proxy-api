@@ -675,6 +675,8 @@
   "trace.conversation": "对话",
   "trace.raw_records": "原始记录",
   "trace.turns": "轮次",
+  "trace.available_tools": "可用工具",
+  "trace.tool_count": "个工具",
   "trace.install_copy": "复制",
   "trace.install_copied": "已复制",
   "trace.install_close": "关闭",

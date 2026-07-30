@@ -48,6 +48,7 @@ func (h *listTraceConversationHandler) Handle(
 		TraceID:   item.ID,
 		SessionID: item.SessionID,
 		Turns:     mapConversationTurns(conversation),
+		Tools:     mapConversationTools(conversation),
 	}, nil
 }
 
@@ -75,6 +76,18 @@ func mapConversationTurns(conversation *trace.Conversation) []*port.TraceConvers
 		return &port.TraceConversationTurnView{
 			TurnID: turn.TurnID,
 			Items:  items,
+		}
+	})
+}
+
+func mapConversationTools(conversation *trace.Conversation) []*port.TraceConversationToolView {
+	return lo.Map(conversation.Tools, func(tool *trace.ToolDefinition, _ int) *port.TraceConversationToolView {
+		return &port.TraceConversationToolView{
+			Namespace:   tool.Namespace,
+			Name:        tool.Name,
+			Description: tool.Description,
+			Parameters:  tool.Parameters,
+			RecordIDs:   tool.RecordIDs,
 		}
 	})
 }
