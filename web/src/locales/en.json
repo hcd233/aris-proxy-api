@@ -675,6 +675,8 @@
   "trace.conversation": "Conversation",
   "trace.raw_records": "Raw records",
   "trace.turns": "turns",
+  "trace.available_tools": "Available tools",
+  "trace.tool_count": "tools",
   "trace.install_copy": "Copy",
   "trace.install_copied": "Copied",
   "trace.install_close": "Close",

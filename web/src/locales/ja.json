@@ -671,6 +671,8 @@
   "trace.conversation": "会話",
   "trace.raw_records": "生レコード",
   "trace.turns": "ターン",
+  "trace.available_tools": "利用可能なツール",
+  "trace.tool_count": "ツール",
   "trace.install_copy": "コピー",
   "trace.install_copied": "コピーしました",
   "trace.install_close": "閉じる",

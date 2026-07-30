@@ -5,6 +5,7 @@ type TraceConversation struct {
 	TraceID   uint                     `json:"traceId" doc:"Trace ID"`
 	SessionID string                   `json:"sessionId" doc:"Codex session ID"`
 	Turns     []*TraceConversationTurn `json:"turns" doc:"turn 列表"`
+	Tools     []*TraceConversationTool `json:"tools,omitempty" doc:"会话可用工具定义"`
 }
 
 // TraceConversationTurn 一个 Codex turn。
@@ -24,6 +25,15 @@ type TraceConversationItem struct {
 	Output    string `json:"output,omitempty" doc:"工具输出"`
 	Source    string `json:"source" doc:"数据来源"`
 	RecordIDs []uint `json:"recordIds" doc:"原始记录 ID"`
+}
+
+// TraceConversationTool 会话可用工具定义（codex session_meta.dynamic_tools 投影）。
+type TraceConversationTool struct {
+	Namespace   string `json:"namespace,omitempty" doc:"工具命名空间"`
+	Name        string `json:"name" doc:"工具名"`
+	Description string `json:"description,omitempty" doc:"工具描述"`
+	Parameters  string `json:"parameters,omitempty" doc:"参数 JSON schema"`
+	RecordIDs   []uint `json:"recordIds" doc:"原始记录 ID"`
 }
 
 // GetTraceConversationRsp Trace 对话响应。

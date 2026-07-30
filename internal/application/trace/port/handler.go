@@ -135,6 +135,7 @@ type TraceConversationView struct {
 	TraceID   uint
 	SessionID string
 	Turns     []*TraceConversationTurnView
+	Tools     []*TraceConversationToolView
 }
 
 // TraceConversationTurnView Trace turn 投影视图。
@@ -154,6 +155,15 @@ type TraceConversationItemView struct {
 	Output    string
 	Source    string
 	RecordIDs []uint
+}
+
+// TraceConversationToolView Trace 可用工具定义投影视图。
+type TraceConversationToolView struct {
+	Namespace   string
+	Name        string
+	Description string
+	Parameters  string
+	RecordIDs   []uint
 }
 
 // ListTraceConversationQuery Trace 对话查询。
