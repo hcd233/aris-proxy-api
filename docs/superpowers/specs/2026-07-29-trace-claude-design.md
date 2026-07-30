@@ -54,7 +54,7 @@ Claude Code 的数据链路同构但格式不同（格式事实见 `docs/anthrop
 | 8 | 子代理记录 | 摄取进库（hook 在子代理内触发时经 `transcript_path` 自动增量读取）；投影 v1 跳过 `isSidechain` 记录 |
 | 9 | Claude turn 归组 | 客户端不写 TurnID；投影两遍扫描：transcript 真实输入记录的 `promptId→uuid` 建 alias，hook `prompt_id` 经 alias 归并 |
 | 10 | thinking 块 | 投影跳过；原始记录仍在 |
-| 11 | 安装脚本 | 单脚本内选择 Codex / Claude Code / Both，按选择写对应配置文件 |
+| 11 | 安装脚本 | 单脚本内多选 Codex / Claude Code（默认全选），按选择写对应配置文件 |
 
 ## 4. 统一契约规范
 
@@ -178,7 +178,7 @@ var conversationBuilders = map[string]func([]*TraceEvent) *Conversation{
 
 `install_trace_client.sh.tmpl` 调整：
 
-- Step `[2/4]`：提示 `Select agent: 1) Codex  2) Claude Code  3) Both`，循环直到合法输入。
+- Step `[2/4]`：多选 `Select agent`（`huh.NewMultiSelect`，Space 勾选/取消，Enter 确认），默认 Codex、Claude Code 均选中，禁止空选；确认后回显 `✓ Agent · Codex, Claude Code`。
 - Step `[4/4]`：按选择执行一到两段 hook 注册：
   - Codex：`~/.codex/hooks.json`，命令 `~/.aris/bin/aris trace ingest --agent codex`，事件集不变（10 个）。
   - Claude：`~/.claude/settings.json`，命令 `~/.aris/bin/aris trace ingest --agent claude`，事件集：SessionStart UserPromptSubmit PreToolUse PostToolUse PostToolUseFailure Stop SubagentStart SubagentStop PreCompact PostCompact SessionEnd（11 个）。jq 表达式与 codex 段同构（`( .hooks[$event] // [] ) | map(select(...command 去重...)) + [$group]`），文件不存在时从 `{}` 起步，写前 `.bak` 备份 + 0600，临时文件原子替换。

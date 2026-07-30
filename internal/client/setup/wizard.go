@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -77,10 +78,11 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 	}
 
 	printStep(out, 2, constant.TraceClientInitTitleAgent)
-	agent, err := selectAgent(ttyIn, ttyOut)
+	agents, err := selectAgent(ttyIn, ttyOut)
 	if err != nil {
 		return err
 	}
+	printLine(out, ui.CheckRowOK(constant.TraceClientInitAgentSelectTitle, strings.Join(agentNames(agents), constant.ClientUISeparatorComma)))
 
 	printStep(out, 3, constant.TraceClientInitTitleAPIKey)
 	apiKey := os.Getenv(constant.TraceClientAPIKeyEnv)
@@ -96,7 +98,7 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 
 	printStep(out, 4, constant.TraceClientInitTitleHook)
 	return installHooksStep(ctx, installHooksOptions{
-		agent:   agent,
+		agents:  agents,
 		host:    host,
 		apiKey:  apiKey,
 		paths:   paths,
@@ -109,7 +111,7 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 
 // installHooksOptions hook 安装步骤的输入
 type installHooksOptions struct {
-	agent   string
+	agents  []string
 	host    string
 	apiKey  string
 	paths   trace.Paths
@@ -125,8 +127,8 @@ func installHooksStep(ctx context.Context, opts installHooksOptions) error {
 	if err != nil {
 		return err
 	}
-	installCodex := opts.agent == constant.TraceAgentCodex || opts.agent == constant.TraceClientAgentOptionBoth
-	installClaude := opts.agent == constant.TraceAgentClaude || opts.agent == constant.TraceClientAgentOptionBoth
+	installCodex := slices.Contains(opts.agents, constant.TraceAgentCodex)
+	installClaude := slices.Contains(opts.agents, constant.TraceAgentClaude)
 	var codexRegistered, claudeRegistered int
 	err = ui.RunWithSpinner(opts.ttyIn, opts.ttyOut, constant.TraceClientInitInstallingHooks, func() error {
 		var installErr error
@@ -244,21 +246,43 @@ func confirm(in io.Reader, out io.Writer, title string) (bool, error) {
 	return value, nil
 }
 
-// selectAgent 选择要注册 hook 的 agent：Codex / Claude Code / 两者
-func selectAgent(in io.Reader, out io.Writer) (string, error) {
-	agent := constant.TraceClientAgentOptionBoth
-	field := huh.NewSelect[string]().
+// selectAgent 多选要注册 hook 的 agent：Space 勾选/取消，Enter 确认
+func selectAgent(in io.Reader, out io.Writer) ([]string, error) {
+	agents := []string{constant.TraceAgentCodex, constant.TraceAgentClaude}
+	field := huh.NewMultiSelect[string]().
 		Title(constant.TraceClientInitAgentSelectTitle).
 		Options(
 			huh.NewOption(constant.TraceClientInitAgentOptionCodex, constant.TraceAgentCodex),
 			huh.NewOption(constant.TraceClientInitAgentOptionClaude, constant.TraceAgentClaude),
-			huh.NewOption(constant.TraceClientInitAgentOptionBoth, constant.TraceClientAgentOptionBoth),
 		).
-		Value(&agent)
+		Validate(func(selected []string) error {
+			if len(selected) == 0 {
+				return ierr.New(ierr.ErrValidation, constant.TraceClientInitAgentRequired)
+			}
+			return nil
+		}).
+		Value(&agents)
 	if err := newForm(in, out, field).Run(); err != nil {
-		return "", err
+		return nil, err
 	}
-	return agent, nil
+	return agents, nil
+}
+
+// agentNames 将内部 agent 标识映射为展示名（Codex / Claude Code）
+func agentNames(agents []string) []string {
+	label := map[string]string{
+		constant.TraceAgentCodex:  constant.TraceClientInitAgentOptionCodex,
+		constant.TraceAgentClaude: constant.TraceClientInitAgentOptionClaude,
+	}
+	names := make([]string, 0, len(agents))
+	for _, agent := range agents {
+		name, ok := label[agent]
+		if !ok {
+			name = agent
+		}
+		names = append(names, name)
+	}
+	return names
 }
 
 func promptHost(in io.Reader, out io.Writer) (string, error) {
