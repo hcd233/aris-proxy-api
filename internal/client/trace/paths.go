@@ -67,3 +67,15 @@ func (p Paths) CodexHooksFile() string {
 func (p Paths) CodexHooksBackupFile() string {
 	return p.CodexHooksFile() + constant.TraceClientCodexBackupSuffix
 }
+
+func (p Paths) ClaudeDir() string {
+	return filepath.Join(filepath.Dir(p.Root), constant.TraceClientClaudeDirName)
+}
+
+func (p Paths) ClaudeSettingsFile() string {
+	return filepath.Join(p.ClaudeDir(), constant.TraceClientClaudeSettingsFile)
+}
+
+func (p Paths) ClaudeSettingsBackupFile() string {
+	return p.ClaudeSettingsFile() + constant.TraceClientCodexBackupSuffix
+}

@@ -4,11 +4,20 @@ package command
 import (
 	"context"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 )
+
+// traceDoneEvents 按 agent 注册的完成事件集：命中即把 trace 置为 done。
+// 新 agent 接入在此登记。
+var traceDoneEvents = map[string][]string{
+	constant.TraceAgentCodex:  {constant.TraceEventStop, constant.TraceEventTaskComplete},
+	constant.TraceAgentClaude: {constant.TraceEventSessionEnd},
+}
 
 type reportTraceEventHandler struct {
 	repo trace.TraceRepository
@@ -26,10 +35,20 @@ func (h *reportTraceEventHandler) Handle(
 	if cmd.SessionID == "" {
 		return nil, ierr.New(ierr.ErrValidation, "hook payload missing session_id")
 	}
+	agent := cmd.Agent
+	if agent == "" {
+		agent = constant.TraceAgentCodex
+	}
+	doneEvents, ok := traceDoneEvents[agent]
+	if !ok {
+		return nil, ierr.New(ierr.ErrValidation, "unknown trace agent")
+	}
+	if len(cmd.Records) == 0 {
+		return nil, ierr.New(ierr.ErrValidation, "empty trace records")
+	}
 
-	isLegacy := len(cmd.Records) == 0
 	records := normalizeRecords(cmd)
-	t, err := h.ensureTrace(ctx, cmd)
+	t, err := h.ensureTrace(ctx, cmd, agent)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +58,7 @@ func (h *reportTraceEventHandler) Handle(
 		t.ID,
 		cmd.SessionID,
 		records,
-		!isLegacy,
+		doneEvents,
 	)
 	if isComplete {
 		if err := h.repo.MarkDone(ctx, cmd.SessionID); err != nil {
@@ -51,16 +70,6 @@ func (h *reportTraceEventHandler) Handle(
 
 func normalizeRecords(cmd port.ReportTraceEventCommand) []port.ReportTraceRecord {
 	records := cmd.Records
-	if len(records) == 0 {
-		return []port.ReportTraceRecord{{
-			Source:        constant.TraceRecordSourceHook,
-			RecordType:    constant.TraceRecordTypeHookEvent,
-			HookEventName: cmd.HookEventName,
-			Event:         cmd.HookEventName,
-			TurnID:        cmd.TurnID,
-			Payload:       cmd.RawPayload,
-		}}
-	}
 	for i := range records {
 		record := &records[i]
 		if record.Source == "" {
@@ -79,6 +88,7 @@ func normalizeRecords(cmd port.ReportTraceEventCommand) []port.ReportTraceRecord
 func (h *reportTraceEventHandler) ensureTrace(
 	ctx context.Context,
 	cmd port.ReportTraceEventCommand,
+	agent string,
 ) (*trace.Trace, error) {
 	t, err := h.repo.FindBySessionID(ctx, cmd.SessionID)
 	if err != nil {
@@ -86,7 +96,7 @@ func (h *reportTraceEventHandler) ensureTrace(
 	}
 	if t == nil {
 		return h.repo.UpsertBySessionID(ctx, &trace.Trace{
-			Agent:      constant.TraceAgentCodex,
+			Agent:      agent,
 			SessionID:  cmd.SessionID,
 			APIKeyName: cmd.APIKeyName,
 			UserID:     cmd.UserID,
@@ -95,6 +105,9 @@ func (h *reportTraceEventHandler) ensureTrace(
 			Source:     cmd.Source,
 			Status:     constant.TraceStatusActive,
 		})
+	}
+	if t.Agent != "" && t.Agent != agent {
+		return nil, ierr.New(ierr.ErrValidation, "trace agent mismatch for session")
 	}
 
 	modelName := t.Model
@@ -111,7 +124,7 @@ func (h *reportTraceEventHandler) ensureTrace(
 	}
 	return h.repo.UpsertBySessionID(ctx, &trace.Trace{
 		ID:         t.ID,
-		Agent:      constant.TraceAgentCodex,
+		Agent:      agent,
 		SessionID:  cmd.SessionID,
 		APIKeyName: t.APIKeyName,
 		UserID:     t.UserID,
@@ -129,13 +142,13 @@ func insertRecords(
 	traceID uint,
 	sessionID string,
 	records []port.ReportTraceRecord,
-	requireDedupKey bool,
+	doneEvents []string,
 ) ([]port.ReportTraceRecordResult, bool) {
 	results := make([]port.ReportTraceRecordResult, 0, len(records))
 	isComplete := false
 	for _, record := range records {
 		result := port.ReportTraceRecordResult{DedupKey: record.DedupKey}
-		if !validRecord(record, requireDedupKey) {
+		if !validRecord(record) {
 			result.Status = constant.TraceRecordStatusRejected
 			result.Message = constant.TraceRecordMessageInvalid
 			results = append(results, result)
@@ -165,22 +178,18 @@ func insertRecords(
 			result.Status = constant.TraceRecordStatusAccepted
 		}
 		results = append(results, result)
-		if result.Status != constant.TraceRecordStatusRejected && completeEvent(record.Event) {
+		if result.Status != constant.TraceRecordStatusRejected && lo.Contains(doneEvents, record.Event) {
 			isComplete = true
 		}
 	}
 	return results, isComplete
 }
 
-func validRecord(record port.ReportTraceRecord, requireDedupKey bool) bool {
+func validRecord(record port.ReportTraceRecord) bool {
 	isSourceValid := record.Source == constant.TraceRecordSourceHook ||
 		record.Source == constant.TraceRecordSourceRollout
 	if !isSourceValid || record.RecordType == "" || len(record.Payload) == 0 {
 		return false
 	}
-	return !requireDedupKey || record.DedupKey != ""
-}
-
-func completeEvent(event string) bool {
-	return event == constant.TraceEventStop || event == constant.TraceEventTaskComplete
+	return record.DedupKey != ""
 }

@@ -68,16 +68,14 @@ type ReportTraceRecord struct {
 
 // ReportTraceEventCommand 上报事件命令
 type ReportTraceEventCommand struct {
-	HookEventName string
-	SessionID     string
-	Model         string
-	CWD           string
-	Source        string
-	TurnID        string
-	RawPayload    []byte
-	APIKeyName    string
-	UserID        uint
-	Records       []ReportTraceRecord
+	SessionID  string
+	Agent      string
+	Model      string
+	CWD        string
+	Source     string
+	APIKeyName string
+	UserID     uint
+	Records    []ReportTraceRecord
 }
 
 // ReportTraceRecordResult 单条上报处理结果。

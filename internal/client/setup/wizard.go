@@ -77,12 +77,9 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 	}
 
 	printStep(out, 2, constant.TraceClientInitTitleAgent)
-	proceed, err := confirm(ttyIn, ttyOut, constant.TraceClientInitAgentConfirmTitle)
+	agent, err := selectAgent(ttyIn, ttyOut)
 	if err != nil {
 		return err
-	}
-	if !proceed {
-		return ierr.New(ierr.ErrValidation, "aborted by user")
 	}
 
 	printStep(out, 3, constant.TraceClientInitTitleAPIKey)
@@ -98,29 +95,74 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 	}
 
 	printStep(out, 4, constant.TraceClientInitTitleHook)
+	return installHooksStep(ctx, installHooksOptions{
+		agent:   agent,
+		host:    host,
+		apiKey:  apiKey,
+		paths:   paths,
+		store:   store,
+		ttyIn:   ttyIn,
+		ttyOut:  ttyOut,
+		summary: out,
+	})
+}
+
+// installHooksOptions hook 安装步骤的输入
+type installHooksOptions struct {
+	agent   string
+	host    string
+	apiKey  string
+	paths   trace.Paths
+	store   trace.ConfigStore
+	ttyIn   io.Reader
+	ttyOut  io.Writer
+	summary io.Writer
+}
+
+// installHooksStep 第四步：按 agent 选择幂等注册 hook 并保存配置，最后打印总结面板
+func installHooksStep(ctx context.Context, opts installHooksOptions) error {
 	binPath, err := ExecutablePath()
 	if err != nil {
 		return err
 	}
-	var registered int
-	err = ui.RunWithSpinner(ttyIn, ttyOut, constant.TraceClientInitInstallingHooks, func() error {
+	installCodex := opts.agent == constant.TraceAgentCodex || opts.agent == constant.TraceClientAgentOptionBoth
+	installClaude := opts.agent == constant.TraceAgentClaude || opts.agent == constant.TraceClientAgentOptionBoth
+	var codexRegistered, claudeRegistered int
+	err = ui.RunWithSpinner(opts.ttyIn, opts.ttyOut, constant.TraceClientInitInstallingHooks, func() error {
 		var installErr error
-		if registered, installErr = trace.InstallCodexHooks(paths, binPath); installErr != nil {
-			return installErr
+		if installCodex {
+			if codexRegistered, installErr = trace.InstallCodexHooks(opts.paths, binPath); installErr != nil {
+				return installErr
+			}
 		}
-		return store.Save(ctx, trace.Config{Host: host, Agent: constant.TraceClientAgentCodex, APIKey: apiKey})
+		if installClaude {
+			if claudeRegistered, installErr = trace.InstallClaudeHooks(opts.paths, binPath); installErr != nil {
+				return installErr
+			}
+		}
+		return opts.store.Save(ctx, trace.Config{Host: opts.host, APIKey: opts.apiKey})
 	})
 	if err != nil {
 		return err
 	}
 
-	printLine(out, "", ui.SummaryPanel(
+	summary := []string{
 		constant.TraceClientInitDone,
-		fmt.Sprintf(constant.TraceClientInitConfigFormat, paths.ConfigFile()),
-		fmt.Sprintf(constant.TraceClientInitHooksFormat, registered, len(constant.TraceClientCodexHookEvents)),
-		"",
-		constant.TraceClientInitApprovalHint,
-	))
+		fmt.Sprintf(constant.TraceClientInitConfigFormat, opts.paths.ConfigFile()),
+	}
+	if installCodex {
+		summary = append(summary,
+			fmt.Sprintf(constant.TraceClientInitHooksFormat, constant.TraceClientInitAgentOptionCodex, codexRegistered, len(constant.TraceClientCodexHookEvents)),
+			constant.TraceClientInitApprovalHint,
+		)
+	}
+	if installClaude {
+		summary = append(summary,
+			fmt.Sprintf(constant.TraceClientInitHooksFormat, constant.TraceClientInitAgentOptionClaude, claudeRegistered, len(constant.TraceClientClaudeHookEvents)),
+			constant.TraceClientInitClaudeApprovalHint,
+		)
+	}
+	printLine(opts.summary, "", ui.SummaryPanel(summary...))
 	return nil
 }
 
@@ -200,6 +242,23 @@ func confirm(in io.Reader, out io.Writer, title string) (bool, error) {
 		return false, err
 	}
 	return value, nil
+}
+
+// selectAgent 选择要注册 hook 的 agent：Codex / Claude Code / 两者
+func selectAgent(in io.Reader, out io.Writer) (string, error) {
+	agent := constant.TraceClientAgentOptionBoth
+	field := huh.NewSelect[string]().
+		Title(constant.TraceClientInitAgentSelectTitle).
+		Options(
+			huh.NewOption(constant.TraceClientInitAgentOptionCodex, constant.TraceAgentCodex),
+			huh.NewOption(constant.TraceClientInitAgentOptionClaude, constant.TraceAgentClaude),
+			huh.NewOption(constant.TraceClientInitAgentOptionBoth, constant.TraceClientAgentOptionBoth),
+		).
+		Value(&agent)
+	if err := newForm(in, out, field).Run(); err != nil {
+		return "", err
+	}
+	return agent, nil
 }
 
 func promptHost(in io.Reader, out io.Writer) (string, error) {

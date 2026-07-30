@@ -18,6 +18,7 @@ import (
 
 type PendingRecord struct {
 	SessionID      string                 `json:"session_id"`
+	Agent          string                 `json:"agent,omitempty"`
 	Model          string                 `json:"model,omitempty"`
 	CWD            string                 `json:"cwd,omitempty"`
 	SessionSource  string                 `json:"session_source,omitempty"`
