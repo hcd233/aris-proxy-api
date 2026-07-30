@@ -16,22 +16,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Radar, Search, ChevronDown, X } from "lucide-react";
-import { Codex } from "@lobehub/icons";
+import { Radar, Search, X } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
-import TraceInstallDialog from "@/components/trace-install-dialog";
+import TraceInstallInline from "@/components/trace-install-inline";
 
 function statusBadge(status: string, t: (k: string, f?: string) => string) {
   if (status === "active") {
@@ -113,38 +104,14 @@ export default function TracePage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("trace.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline" className="gap-1.5" />}
-            >
-              <Radar className="size-4" />
-              {t("trace.install")}
-              <ChevronDown className="size-3.5 opacity-50 transition-transform duration-150 group-aria-expanded/button:rotate-180" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-1.5">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
-                  {t("trace.install_target")}
-                </DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => setInstallOpen(true)}
-                  className="items-start gap-2.5 rounded-lg px-2 py-2"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                    <Codex.Color size={17} />
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm font-medium leading-none">
-                      {t("trace.install_codex")}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {t("trace.install_codex_hint")}
-                    </span>
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => setInstallOpen((v) => !v)}
+          >
+            <Radar className="size-4" />
+            {t("trace.install")}
+          </Button>
         </div>
       </div>
 
@@ -263,7 +230,7 @@ export default function TracePage() {
         </CardContent>
       </Card>
 
-      <TraceInstallDialog open={installOpen} onOpenChange={setInstallOpen} />
+      <TraceInstallInline open={installOpen} onClose={() => setInstallOpen(false)} />
     </div>
   );
 }
