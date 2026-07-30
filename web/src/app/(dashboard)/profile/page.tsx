@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { showErrorToast } from "@/lib/api-error-handler";
 import { useT } from "@/lib/i18n";
 import type { DetailedUser } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,7 +35,7 @@ export default function ProfilePage() {
     try {
       const rsp = await api.updateUser({ user: { name } });
       if (rsp.error) {
-        toast.error(rsp.error.message);
+        showErrorToast(rsp.error, { title: t("profile.update_error") });
         return;
       }
       if (rsp.user) {
@@ -42,7 +43,7 @@ export default function ProfilePage() {
         toast.success(t("profile.updated"));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("profile.update_error"));
+      showErrorToast(err, { title: t("profile.update_error") });
     } finally {
       setSaving(false);
     }

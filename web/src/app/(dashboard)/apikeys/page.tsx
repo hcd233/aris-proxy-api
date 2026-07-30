@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type { APIKeyItem, APIKeyDetail, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,8 +63,8 @@ export default function APIKeysPage() {
         setPersistedPage(rsp.pageInfo.page);
         setPersistedPageSize(rsp.pageInfo.pageSize);
       }
-    } catch {
-      toast.error(t("apikeys.load_error"));
+    } catch (err) {
+      showErrorToast(err, { title: t("apikeys.load_error") });
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export default function APIKeysPage() {
     try {
       const rsp = await api.createAPIKey({ name: newKeyName.trim() });
       if (rsp.error) {
-        toast.error(rsp.error.message);
+        showErrorToast(rsp.error, { title: t("apikeys.create_error") });
         return;
       }
       if (rsp.key) {
@@ -91,7 +92,7 @@ export default function APIKeysPage() {
         fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("apikeys.create_error"));
+      showErrorToast(err, { title: t("apikeys.create_error") });
     } finally {
       setCreating(false);
     }
@@ -110,7 +111,7 @@ export default function APIKeysPage() {
       toast.success(t("apikeys.deleted_success"));
       fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("apikeys.delete_error"));
+      showErrorToast(err, { title: t("apikeys.delete_error") });
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);

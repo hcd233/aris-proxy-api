@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, TraceSummary } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -71,8 +72,8 @@ export default function TracePage() {
           setPersistedPage(rsp.pageInfo.page);
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
-      } catch {
-        toast.error(t("trace.load_error"));
+      } catch (err) {
+        showErrorToast(err, { title: t("trace.load_error") });
       } finally {
         setLoading(false);
       }
