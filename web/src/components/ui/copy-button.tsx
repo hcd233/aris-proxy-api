@@ -11,6 +11,7 @@
 
 import { useState, type MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
@@ -34,10 +35,18 @@ export function CopyButton({
   const onCopy = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (!value) return;
-    void navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    });
+    // 非安全上下文（纯 HTTP 非 localhost）下 clipboard API 不存在
+    if (!navigator.clipboard) {
+      toast.error(t("common.copy_failed"));
+      return;
+    }
+    void navigator.clipboard.writeText(value).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+      },
+      () => toast.error(t("common.copy_failed")),
+    );
   };
 
   return (

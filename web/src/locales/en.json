@@ -26,6 +26,7 @@
   "common.saving": "Saving...",
   "common.update": "Update",
   "common.copied_to_clipboard": "Copied to clipboard",
+  "common.copy_failed": "Copy failed",
   "common.created": "Created",
   "common.clear": "Clear",
   "nav.dashboard": "Dashboard",

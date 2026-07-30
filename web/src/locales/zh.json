@@ -26,6 +26,7 @@
   "common.saving": "保存中...",
   "common.update": "更新",
   "common.copied_to_clipboard": "已复制到剪贴板",
+  "common.copy_failed": "复制失败",
   "common.created": "创建时间",
   "common.clear": "清除",
   "nav.dashboard": "仪表盘",
