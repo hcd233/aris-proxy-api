@@ -26,6 +26,7 @@
   "common.saving": "保存中...",
   "common.update": "更新",
   "common.copied_to_clipboard": "クリップボードにコピーしました",
+  "common.copy_failed": "コピーに失敗しました",
   "common.created": "作成日",
   "common.clear": "クリア",
   "nav.dashboard": "ダッシュボード",

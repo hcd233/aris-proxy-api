@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -137,10 +138,18 @@ function CodeBlock({
   const t = useT();
 
   const onCopy = () => {
-    void navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    });
+    // 非安全上下文（纯 HTTP 非 localhost）下 clipboard API 不存在
+    if (!navigator.clipboard) {
+      toast.error(t("common.copy_failed"));
+      return;
+    }
+    void navigator.clipboard.writeText(value).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+      },
+      () => toast.error(t("common.copy_failed")),
+    );
   };
 
   return (
