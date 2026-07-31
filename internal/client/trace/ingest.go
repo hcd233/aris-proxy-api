@@ -28,12 +28,30 @@ type ingestRecord struct {
 }
 
 type ingestBatch struct {
-	SessionID string         `json:"session_id"`
-	Agent     string         `json:"agent,omitempty"`
-	Model     string         `json:"model,omitempty"`
-	CWD       string         `json:"cwd,omitempty"`
-	Source    string         `json:"source,omitempty"`
-	Records   []ingestRecord `json:"records"`
+	SessionID       string         `json:"session_id"`
+	ParentSessionID string         `json:"parent_session_id,omitempty"`
+	Agent           string         `json:"agent,omitempty"`
+	AgentID         string         `json:"agent_id,omitempty"`
+	AgentType       string         `json:"agent_type,omitempty"`
+	Model           string         `json:"model,omitempty"`
+	CWD             string         `json:"cwd,omitempty"`
+	Source          string         `json:"source,omitempty"`
+	Records         []ingestRecord `json:"records"`
+}
+
+// IngestBatchJSON 导出视图，供外部测试断言上报请求体。
+type IngestBatchJSON struct {
+	SessionID       string `json:"session_id"`
+	ParentSessionID string `json:"parent_session_id,omitempty"`
+	Agent           string `json:"agent,omitempty"`
+	AgentID         string `json:"agent_id,omitempty"`
+	AgentType       string `json:"agent_type,omitempty"`
+	Records         []struct {
+		Source     string `json:"source"`
+		RecordType string `json:"record_type"`
+		Event      string `json:"event"`
+		SessionID  string `json:"session_id"`
+	} `json:"records"`
 }
 
 type ingestResultEnvelope struct {
@@ -84,9 +102,18 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 	if info.SessionID == "" || info.EventName == "" {
 		return ierr.New(ierr.ErrValidation, "hook input missing identity")
 	}
+	if info.EventName == constant.TraceEventSubagentStop && i.adapter.Name() == constant.TraceAgentCodex {
+		// codex 子代理是独立 session（独立 transcript），SubagentStop 只读子代理 transcript；
+		// claude 的 SubagentStop 无子代理 transcript 概念，保持原 hook 记录路径。
+		return i.ingestSubagentStop(ctx, info)
+	}
 	spoolID, sequence, err := nextSequence(ctx, i.paths)
 	if err != nil {
 		return err
+	}
+	payload := raw
+	if info.EventName == constant.TraceEventStop {
+		payload = TrimStopHookPayload(raw)
 	}
 	record := PendingRecord{
 		SessionID:      info.SessionID,
@@ -101,7 +128,7 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 		CallID:         info.CallID,
 		ClientSequence: sequence,
 		DedupKey:       fmt.Sprintf(constant.TraceClientHookDedupFormat, spoolID, sequence),
-		Payload:        append(sonic.NoCopyRawMessage{}, raw...),
+		Payload:        append(sonic.NoCopyRawMessage{}, payload...),
 	}
 	if err := i.spool.Append(ctx, record); err != nil {
 		return err
@@ -131,9 +158,12 @@ func (i *Ingestor) flush(ctx context.Context, config Config) error {
 		return err
 	}
 	request := ingestBatch{
-		SessionID: batch[0].SessionID,
-		Agent:     batch[0].Agent,
-		Records:   make([]ingestRecord, 0, len(batch)),
+		SessionID:       batch[0].SessionID,
+		ParentSessionID: batch[0].ParentSessionID,
+		Agent:           batch[0].Agent,
+		AgentID:         batch[0].AgentID,
+		AgentType:       batch[0].AgentType,
+		Records:         make([]ingestRecord, 0, len(batch)),
 	}
 	for _, record := range batch {
 		if request.Model == "" && record.Model != "" {
@@ -161,6 +191,86 @@ func (i *Ingestor) flush(ctx context.Context, config Config) error {
 	if err != nil {
 		return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode trace ingest request")
 	}
+	return i.postBatch(ctx, config, body)
+}
+
+// ingestSubagentStop 处理 SubagentStop hook：不生成 hook 记录，读取子代理
+// transcript 增量（SessionID=子代理 id），每条记录携带父 session_id。
+func (i *Ingestor) ingestSubagentStop(ctx context.Context, info HookInfo) error {
+	if info.AgentTranscriptPath == "" {
+		return nil // 无子代理 transcript，无数据可上报
+	}
+	childID := SubagentSessionIDFromPath(info.AgentTranscriptPath)
+	if childID == "" {
+		return nil
+	}
+	if _, err := i.rollout.ReadNewForSubagent(
+		ctx, childID, info.AgentTranscriptPath, info.SessionID, info.AgentID, info.AgentType,
+	); err != nil {
+		writeLocalError(i.paths, constant.TraceClientLogCategoryRollout)
+		return nil //nolint:nilerr // fail-open: never block agent CLI
+	}
+	config, err := i.config.Load(ctx)
+	if err != nil {
+		return err
+	}
+	if config.Host == "" || config.APIKey == "" {
+		return ierr.New(ierr.ErrValidation, "trace client is not initialized")
+	}
+	return i.flushSubagent(ctx, config, childID, info)
+}
+
+// flushSubagent 上报子代理批次：从 spool 精确取 childID 对应记录，batch 携带父 session 与 agent 元数据。
+// 若 spool 中最旧记录属于其他会话（父会话积压），本次不 POST，子代理记录留待后续批次。
+func (i *Ingestor) flushSubagent(ctx context.Context, config Config, childID string, info HookInfo) error {
+	batch, err := i.spool.BatchForSession(
+		ctx,
+		childID,
+		constant.TraceClientBatchMaxRecords,
+		constant.TraceClientBatchMaxBytes,
+	)
+	if err != nil || len(batch) == 0 {
+		return err
+	}
+	request := ingestBatch{
+		SessionID:       childID,
+		ParentSessionID: info.SessionID,
+		Agent:           i.adapter.Name(),
+		AgentID:         info.AgentID,
+		AgentType:       info.AgentType,
+		Records:         make([]ingestRecord, 0, len(batch)),
+	}
+	for _, record := range batch {
+		if request.Model == "" && record.Model != "" {
+			request.Model = record.Model
+		}
+		if request.CWD == "" && record.CWD != "" {
+			request.CWD = record.CWD
+		}
+		request.Records = append(request.Records, ingestRecord{
+			Source:         record.Source,
+			RecordType:     record.RecordType,
+			HookEventName:  record.Event,
+			TurnID:         record.TurnID,
+			CallID:         record.CallID,
+			TranscriptLine: record.TranscriptLine,
+			ClientSequence: record.ClientSequence,
+			DedupKey:       record.DedupKey,
+			Payload:        record.Payload,
+		})
+	}
+	if len(request.Records) == 0 {
+		return nil // 无子代理记录可发，避免空批次 400
+	}
+	body, err := sonic.Marshal(request)
+	if err != nil {
+		return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode trace ingest request")
+	}
+	return i.postBatch(ctx, config, body)
+}
+
+// postBatch 发送 ingest 请求并确认 spool（flush 与 flushSubagent 的公共尾部）。
+func (i *Ingestor) postBatch(ctx context.Context, config Config, body []byte) error {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,

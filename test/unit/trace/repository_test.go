@@ -153,3 +153,28 @@ func TestFakeRepo_MarkDone(t *testing.T) {
 		t.Fatalf("expected done, got %s", tr.Status)
 	}
 }
+
+func TestFakeRepo_PersistsParentTraceID(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	ctx := context.Background()
+
+	parent, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "parent-s1", APIKeyName: "key1", Status: "active"})
+	if err != nil {
+		t.Fatalf("upsert parent: %v", err)
+	}
+	child, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "child-s1", APIKeyName: "key1", ParentTraceID: parent.ID, Status: "active", Source: "subagent"})
+	if err != nil {
+		t.Fatalf("upsert child: %v", err)
+	}
+	if child.ParentTraceID != parent.ID {
+		t.Fatalf("expected child.ParentTraceID=%d, got %d", parent.ID, child.ParentTraceID)
+	}
+	got, err := repo.FindBySessionID(ctx, "child-s1")
+	if err != nil || got == nil {
+		t.Fatalf("find child: %v", err)
+	}
+	if got.ParentTraceID != parent.ID {
+		t.Fatalf("expected persisted ParentTraceID=%d, got %d", parent.ID, got.ParentTraceID)
+	}
+}

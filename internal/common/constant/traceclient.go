@@ -30,32 +30,35 @@ const (
 	TraceClientIngestCommandSuffix = " trace ingest"
 	TraceClientHookTimeout         = 30
 
-	TraceClientSchemeHTTP           = "http"
-	TraceClientSchemeHTTPS          = "https"
-	TraceClientCheckPath            = "/api/v1/trace/client/check"
-	TraceClientHTTPTimeout          = 5 * time.Second
-	TraceClientSpoolLimit           = 256 << 20
-	TraceClientBatchMaxRecords      = 500
-	TraceClientBatchMaxBytes        = 4 << 20
-	TraceClientRejectedRetention    = 7 * 24 * time.Hour
-	TraceClientIngestPath           = "/api/v1/trace/event"
-	TraceClientRecordFileSuffix     = ".json"
-	TraceClientSpoolLockFile        = "spool.lock"
-	TraceClientStateLockFile        = "client.lock"
-	TraceClientStateFileName        = "client.json"
-	TraceClientSpoolIDRandomBytes   = 16
-	TraceClientHookInputLimit       = 16 << 20
-	TraceClientHookDedupFormat      = "hook:%s:%d"
-	TraceClientLogPrefix            = "trace-"
-	TraceClientLogSuffix            = ".log"
-	TraceClientLogDateFormat        = "2006-01-02"
-	TraceClientLogCategoryIngest    = "ingest_failed"
-	TraceClientLogCategoryRollout   = "rollout_failed"
-	TraceClientLogLineFormat        = "%s %s\n"
-	TraceClientTranscriptStateDir   = "transcripts"
-	TraceClientTranscriptLockSuffix = ".lock"
-	TraceClientRolloutDedupFormat   = "rollout:%s:%d:%s"
-	TraceClientFileIdentityFormat   = "%d:%d"
+	TraceClientSchemeHTTP             = "http"
+	TraceClientSchemeHTTPS            = "https"
+	TraceClientCheckPath              = "/api/v1/trace/client/check"
+	TraceClientHTTPTimeout            = 5 * time.Second
+	TraceClientSpoolLimit             = 256 << 20
+	TraceClientBatchMaxRecords        = 500
+	TraceClientBatchMaxBytes          = 4 << 20
+	TraceClientRejectedRetention      = 7 * 24 * time.Hour
+	TraceClientIngestPath             = "/api/v1/trace/event"
+	TraceClientRecordFileSuffix       = ".json"
+	TraceClientSpoolLockFile          = "spool.lock"
+	TraceClientStateLockFile          = "client.lock"
+	TraceClientStateFileName          = "client.json"
+	TraceClientSpoolIDRandomBytes     = 16
+	TraceClientHookInputLimit         = 16 << 20
+	TraceClientStopTrimKey            = "last_assistant_message"
+	TraceClientHookDedupFormat        = "hook:%s:%d"
+	TraceClientLogPrefix              = "trace-"
+	TraceClientLogSuffix              = ".log"
+	TraceClientLogDateFormat          = "2006-01-02"
+	TraceClientLogCategoryIngest      = "ingest_failed"
+	TraceClientLogCategoryRollout     = "rollout_failed"
+	TraceClientLogLineFormat          = "%s %s\n"
+	TraceClientTranscriptStateDir     = "transcripts"
+	TraceClientTranscriptLockSuffix   = ".lock"
+	TraceClientRolloutFileSuffix      = ".jsonl"
+	TraceClientRolloutDedupFormat     = "rollout:%s:%d:%s"
+	TraceClientSessionMetaDedupFormat = "rollout:%s:session_meta:%s"
+	TraceClientFileIdentityFormat     = "%d:%d"
 
 	TraceClientAPIKeyEnv  = "ARIS_API_KEY"
 	TraceClientDevTTYPath = "/dev/tty"
@@ -101,15 +104,8 @@ const (
 // TraceClientCodexHookEvents aris hook 需要注册的 codex 事件
 var TraceClientCodexHookEvents = []string{
 	TraceEventSessionStart,
-	TraceEventUserPromptSubmit,
-	TraceEventPreToolUse,
-	TraceEventPermissionRequest,
-	TraceEventPostToolUse,
 	TraceEventStop,
-	TraceEventSubagentStart,
 	TraceEventSubagentStop,
-	TraceEventPreCompact,
-	TraceEventPostCompact,
 }
 
 // TraceClientClaudeHookEvents aris hook 需要注册的 claude 事件

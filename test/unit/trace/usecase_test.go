@@ -272,3 +272,145 @@ func TestListTraces_OwnerIsolation(t *testing.T) {
 		t.Fatalf("expected 2 traces for admin, got %d", len(adminViews))
 	}
 }
+
+func TestReportTraceEvent_SubagentCommandCarriesParentSession(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	handler := command.NewReportTraceEventHandler(repo)
+	ctx := context.Background()
+
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "parent-s1", APIKeyName: "key1", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:p1:1",
+			Payload: []byte(`{"hook_event_name":"SessionStart","session_id":"parent-s1"}`),
+		}},
+	}); err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	// 子代理批次：SessionID 为子代理 id，ParentSessionID 指向父
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "child-s1", ParentSessionID: "parent-s1", AgentType: "worker",
+		APIKeyName: "key1", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
+			Event: "task_complete", TurnID: "t1", DedupKey: "rollout:child-s1:1",
+			Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete"}}`),
+		}},
+	}); err != nil {
+		t.Fatalf("report subagent batch: %v", err)
+	}
+
+	child, _ := repo.FindBySessionID(ctx, "child-s1")
+	if child == nil || child.ParentTraceID == 0 {
+		t.Fatalf("expected child trace linked to parent, got %+v", child)
+	}
+	parent, _ := repo.FindBySessionID(ctx, "parent-s1")
+	if parent == nil || child.ParentTraceID != parent.ID {
+		t.Fatalf("expected child.ParentTraceID=%d (parent id), got %d", parent.ID, child.ParentTraceID)
+	}
+}
+
+func TestReportTraceEvent_SubagentChildMetadataAndDone(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	handler := command.NewReportTraceEventHandler(repo)
+	ctx := context.Background()
+
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "parent-s2", APIKeyName: "key1", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:p2:1",
+			Payload: []byte(`{"hook_event_name":"SessionStart","session_id":"parent-s2"}`),
+		}},
+	}); err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "child-s2", ParentSessionID: "parent-s2", AgentID: "agent-1", AgentType: "worker",
+		APIKeyName: "key1", UserID: 1, Model: "gpt-5", CWD: "/work",
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
+			Event: "task_complete", TurnID: "t1", DedupKey: "rollout:child-s2:1",
+			Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete"}}`),
+		}},
+	}); err != nil {
+		t.Fatalf("report subagent: %v", err)
+	}
+
+	child, _ := repo.FindBySessionID(ctx, "child-s2")
+	if child == nil {
+		t.Fatal("child trace missing")
+	}
+	if child.Source != "subagent" {
+		t.Fatalf("expected child Source=subagent, got %q", child.Source)
+	}
+	if child.Metadata["agent_type"] != "worker" || child.Metadata["agent_id"] != "agent-1" {
+		t.Fatalf("unexpected child metadata: %+v", child.Metadata)
+	}
+	if child.Model != "gpt-5" || child.CWD != "/work" {
+		t.Fatalf("unexpected child model/cwd: %+v", child)
+	}
+	if child.Status != constant.TraceStatusDone {
+		t.Fatalf("expected child done via task_complete, got %s", child.Status)
+	}
+}
+
+func TestReportTraceEvent_SubagentMissingParentIsTolerant(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	handler := command.NewReportTraceEventHandler(repo)
+	ctx := context.Background()
+
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "orphan-child", ParentSessionID: "no-such-parent", APIKeyName: "key1", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
+			Event: "task_complete", DedupKey: "rollout:orphan:1",
+			Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete"}}`),
+		}},
+	}); err != nil {
+		t.Fatalf("orphan subagent should not error: %v", err)
+	}
+	child, _ := repo.FindBySessionID(ctx, "orphan-child")
+	if child == nil || child.ParentTraceID != 0 {
+		t.Fatalf("expected orphan child with ParentTraceID=0, got %+v", child)
+	}
+}
+
+func TestReportTraceEvent_SubagentCrossTenantParentNotLinked(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	handler := command.NewReportTraceEventHandler(repo)
+	ctx := context.Background()
+
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "parent-tenant-a", APIKeyName: "key-a", UserID: 1,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:pa:1",
+			Payload: []byte(`{"hook_event_name":"SessionStart","session_id":"parent-tenant-a"}`),
+		}},
+	}); err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "child-tenant-b", ParentSessionID: "parent-tenant-a", APIKeyName: "key-b", UserID: 2,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
+			Event: "task_complete", DedupKey: "rollout:cb:1",
+			Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete"}}`),
+		}},
+	}); err != nil {
+		t.Fatalf("report subagent: %v", err)
+	}
+	child, _ := repo.FindBySessionID(ctx, "child-tenant-b")
+	if child == nil {
+		t.Fatal("child trace missing")
+	}
+	if child.ParentTraceID != 0 {
+		t.Fatalf("cross-tenant child must not link parent, got ParentTraceID=%d", child.ParentTraceID)
+	}
+}

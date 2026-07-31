@@ -1,6 +1,12 @@
 package trace
 
 import (
+	"bufio"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
@@ -12,17 +18,63 @@ func init() {
 type codexAdapter struct{}
 
 type codexHookEnvelope struct {
-	HookEventName  string `json:"hook_event_name"`
-	SessionID      string `json:"session_id"`
-	Model          string `json:"model,omitempty"`
-	CWD            string `json:"cwd,omitempty"`
-	Source         string `json:"source,omitempty"`
-	TurnID         string `json:"turn_id,omitempty"`
-	ToolUseID      string `json:"tool_use_id,omitempty"`
-	TranscriptPath string `json:"transcript_path,omitempty"`
+	HookEventName       string `json:"hook_event_name"`
+	SessionID           string `json:"session_id"`
+	Model               string `json:"model,omitempty"`
+	CWD                 string `json:"cwd,omitempty"`
+	Source              string `json:"source,omitempty"`
+	TurnID              string `json:"turn_id,omitempty"`
+	ToolUseID           string `json:"tool_use_id,omitempty"`
+	TranscriptPath      string `json:"transcript_path,omitempty"`
+	AgentTranscriptPath string `json:"agent_transcript_path,omitempty"`
+	AgentID             string `json:"agent_id,omitempty"`
+	AgentType           string `json:"agent_type,omitempty"`
 }
 
 func (codexAdapter) Name() string { return constant.TraceAgentCodex }
+
+var rolloutSessionIDPattern = regexp.MustCompile(`^rollout-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-([0-9a-fA-F-]+)$`)
+
+type codexSessionMetaID struct {
+	ID string `json:"id"`
+}
+
+// SubagentSessionIDFromPath 从子代理 transcript 文件路径解析子代理 session id。
+// 优先按文件名 rollout-<ts>-<id>.jsonl 提取；文件名无法解析时回退读取首行 session_meta.payload.id。
+func SubagentSessionIDFromPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	base := strings.TrimSuffix(filepath.Base(path), constant.TraceClientRolloutFileSuffix)
+	if m := rolloutSessionIDPattern.FindStringSubmatch(base); len(m) == 2 {
+		return m[1]
+	}
+	return subagentSessionIDFromFile(path)
+}
+
+func subagentSessionIDFromFile(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = f.Close() }() //nolint:errcheck // best-effort close
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		var env codexRolloutEnvelope
+		if err := sonic.Unmarshal(scanner.Bytes(), &env); err != nil {
+			continue
+		}
+		if env.Type != constant.TraceRolloutTypeSessionMeta || len(env.Payload) == 0 {
+			continue
+		}
+		var meta codexSessionMetaID
+		if err := sonic.Unmarshal(env.Payload, &meta); err != nil || meta.ID == "" {
+			continue
+		}
+		return meta.ID
+	}
+	return ""
+}
 
 func (codexAdapter) ParseHook(raw []byte) (HookInfo, error) {
 	var env codexHookEnvelope
@@ -30,14 +82,17 @@ func (codexAdapter) ParseHook(raw []byte) (HookInfo, error) {
 		return HookInfo{}, err
 	}
 	return HookInfo{
-		SessionID:      env.SessionID,
-		EventName:      env.HookEventName,
-		Model:          env.Model,
-		CWD:            env.CWD,
-		SessionSource:  env.Source,
-		TurnID:         env.TurnID,
-		CallID:         env.ToolUseID,
-		TranscriptPath: env.TranscriptPath,
+		SessionID:           env.SessionID,
+		EventName:           env.HookEventName,
+		Model:               env.Model,
+		CWD:                 env.CWD,
+		SessionSource:       env.Source,
+		TurnID:              env.TurnID,
+		CallID:              env.ToolUseID,
+		TranscriptPath:      env.TranscriptPath,
+		AgentTranscriptPath: env.AgentTranscriptPath,
+		AgentID:             env.AgentID,
+		AgentType:           env.AgentType,
 	}, nil
 }
 
@@ -55,6 +110,7 @@ type codexRolloutEnvelope struct {
 
 type codexRolloutPayload struct {
 	Type        string `json:"type"`
+	ID          string `json:"id,omitempty"`
 	TurnID      string `json:"turn_id,omitempty"`
 	CallID      string `json:"call_id,omitempty"`
 	Passthrough struct {
@@ -85,6 +141,7 @@ func (codexAdapter) ClassifyTranscriptLine(raw []byte) TranscriptMeta {
 		Event:      payload.Type,
 		TurnID:     payload.turnID(),
 		CallID:     payload.CallID,
+		SessionID:  payload.ID,
 	}
 }
 

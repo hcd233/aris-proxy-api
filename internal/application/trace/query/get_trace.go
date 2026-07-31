@@ -34,17 +34,18 @@ func (h *getTraceHandler) Handle(
 		return nil, err
 	}
 	return &port.TraceDetailView{
-		ID:         item.ID,
-		SessionID:  item.SessionID,
-		Agent:      item.Agent,
-		APIKeyName: item.APIKeyName,
-		Model:      item.Model,
-		CWD:        item.CWD,
-		Source:     item.Source,
-		Status:     item.Status,
-		Metadata:   item.Metadata,
-		EventCount: count,
-		CreatedAt:  item.CreatedAt,
-		UpdatedAt:  item.UpdatedAt,
+		ID:            item.ID,
+		SessionID:     item.SessionID,
+		ParentTraceID: item.ParentTraceID,
+		Agent:         item.Agent,
+		APIKeyName:    item.APIKeyName,
+		Model:         item.Model,
+		CWD:           item.CWD,
+		Source:        item.Source,
+		Status:        item.Status,
+		Metadata:      item.Metadata,
+		EventCount:    count,
+		CreatedAt:     item.CreatedAt,
+		UpdatedAt:     item.UpdatedAt,
 	}, nil
 }

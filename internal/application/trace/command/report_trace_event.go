@@ -105,15 +105,19 @@ func (h *reportTraceEventHandler) ensureTrace(
 	existing *trace.Trace,
 ) (*trace.Trace, error) {
 	if existing == nil {
+		parentTraceID := resolveParentTraceID(ctx, h.repo, cmd.ParentSessionID, cmd.SessionID, cmd.APIKeyName)
+		source, metadata := resolveSubagentAttrs(cmd)
 		return h.repo.UpsertBySessionID(ctx, &trace.Trace{
-			Agent:      agent,
-			SessionID:  cmd.SessionID,
-			APIKeyName: cmd.APIKeyName,
-			UserID:     cmd.UserID,
-			Model:      cmd.Model,
-			CWD:        cmd.CWD,
-			Source:     cmd.Source,
-			Status:     constant.TraceStatusActive,
+			Agent:         agent,
+			SessionID:     cmd.SessionID,
+			ParentTraceID: parentTraceID,
+			APIKeyName:    cmd.APIKeyName,
+			UserID:        cmd.UserID,
+			Model:         cmd.Model,
+			CWD:           cmd.CWD,
+			Source:        source,
+			Status:        constant.TraceStatusActive,
+			Metadata:      metadata,
 		})
 	}
 	if existing.Agent != "" && existing.Agent != agent {
@@ -133,17 +137,49 @@ func (h *reportTraceEventHandler) ensureTrace(
 		source = cmd.Source
 	}
 	return h.repo.UpsertBySessionID(ctx, &trace.Trace{
-		ID:         existing.ID,
-		Agent:      agent,
-		SessionID:  cmd.SessionID,
-		APIKeyName: existing.APIKeyName,
-		UserID:     existing.UserID,
-		Model:      modelName,
-		CWD:        cwd,
-		Source:     source,
-		Status:     existing.Status,
-		Metadata:   existing.Metadata,
+		ID:            existing.ID,
+		Agent:         agent,
+		SessionID:     cmd.SessionID,
+		ParentTraceID: existing.ParentTraceID,
+		APIKeyName:    existing.APIKeyName,
+		UserID:        existing.UserID,
+		Model:         modelName,
+		CWD:           cwd,
+		Source:        source,
+		Status:        existing.Status,
+		Metadata:      existing.Metadata,
 	})
+}
+
+// resolveParentTraceID 按父 session 解析父 trace id；无父、父不存在或租户不一致时返回 0。
+func resolveParentTraceID(ctx context.Context, repo trace.TraceRepository, parentSessionID, sessionID, apiKeyName string) uint {
+	if parentSessionID == "" || parentSessionID == sessionID {
+		return 0
+	}
+	parent, err := repo.FindBySessionID(ctx, parentSessionID)
+	if err != nil || parent == nil {
+		return 0
+	}
+	if apiKeyName != "" && parent.APIKeyName != apiKeyName {
+		return 0 // 跨租户 session 不应建立父/子关联
+	}
+	return parent.ID
+}
+
+// resolveSubagentAttrs 子代理批次返回 (source, metadata)；主批次保持 cmd 原值。
+func resolveSubagentAttrs(cmd port.ReportTraceEventCommand) (source string, metadata map[string]string) {
+	metadata = map[string]string{}
+	if cmd.ParentSessionID == "" {
+		return cmd.Source, metadata
+	}
+	source = constant.TraceSourceSubagent
+	if cmd.AgentID != "" {
+		metadata[constant.TraceMetadataAgentID] = cmd.AgentID
+	}
+	if cmd.AgentType != "" {
+		metadata[constant.TraceMetadataAgentType] = cmd.AgentType
+	}
+	return source, metadata
 }
 
 func insertRecords(

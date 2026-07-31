@@ -17,21 +17,24 @@ import (
 )
 
 type PendingRecord struct {
-	SessionID      string                 `json:"session_id"`
-	Agent          string                 `json:"agent,omitempty"`
-	Model          string                 `json:"model,omitempty"`
-	CWD            string                 `json:"cwd,omitempty"`
-	SessionSource  string                 `json:"session_source,omitempty"`
-	Source         string                 `json:"source"`
-	RecordType     string                 `json:"record_type"`
-	Event          string                 `json:"hook_event_name,omitempty"`
-	TurnID         string                 `json:"turn_id,omitempty"`
-	CallID         string                 `json:"call_id,omitempty"`
-	TranscriptLine *int64                 `json:"transcript_line,omitempty"`
-	ClientSequence int64                  `json:"client_sequence,omitempty"`
-	DedupKey       string                 `json:"dedup_key"`
-	Payload        sonic.NoCopyRawMessage `json:"payload"`
-	CreatedAt      time.Time              `json:"created_at"`
+	SessionID       string                 `json:"session_id"`
+	ParentSessionID string                 `json:"parent_session_id,omitempty"`
+	Agent           string                 `json:"agent,omitempty"`
+	AgentID         string                 `json:"agent_id,omitempty"`
+	AgentType       string                 `json:"agent_type,omitempty"`
+	Model           string                 `json:"model,omitempty"`
+	CWD             string                 `json:"cwd,omitempty"`
+	SessionSource   string                 `json:"session_source,omitempty"`
+	Source          string                 `json:"source"`
+	RecordType      string                 `json:"record_type"`
+	Event           string                 `json:"hook_event_name,omitempty"`
+	TurnID          string                 `json:"turn_id,omitempty"`
+	CallID          string                 `json:"call_id,omitempty"`
+	TranscriptLine  *int64                 `json:"transcript_line,omitempty"`
+	ClientSequence  int64                  `json:"client_sequence,omitempty"`
+	DedupKey        string                 `json:"dedup_key"`
+	Payload         sonic.NoCopyRawMessage `json:"payload"`
+	CreatedAt       time.Time              `json:"created_at"`
 }
 
 type RecordResult struct {
@@ -130,6 +133,55 @@ func (s *Spool) Batch(
 			}
 			if sessionID == "" {
 				sessionID = record.SessionID
+			}
+			if record.SessionID != sessionID {
+				continue
+			}
+			if totalBytes+file.size > maxBytes {
+				break
+			}
+			batch = append(batch, record)
+			totalBytes += file.size
+		}
+		return nil
+	})
+	return batch, err
+}
+
+// BatchForSession 返回指定 SessionID 的最旧记录批次；其他会话记录跳过（不影响其滞留）。
+func (s *Spool) BatchForSession(
+	ctx context.Context,
+	sessionID string,
+	maxRecords int,
+	maxBytes int64,
+) ([]PendingRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if maxRecords <= 0 {
+		maxRecords = constant.TraceClientBatchMaxRecords
+	}
+	if maxBytes <= 0 {
+		maxBytes = constant.TraceClientBatchMaxBytes
+	}
+	batch := []PendingRecord{}
+	err := withFileLock(s.lockFile(), func() error {
+		files, err := pendingFiles(s.paths.PendingDir())
+		if err != nil {
+			return err
+		}
+		var totalBytes int64
+		for _, file := range files {
+			if len(batch) >= maxRecords {
+				break
+			}
+			data, err := os.ReadFile(file.path)
+			if err != nil {
+				return ierr.Wrap(ierr.ErrInternal, err, "read pending trace record")
+			}
+			var record PendingRecord
+			if err := sonic.Unmarshal(data, &record); err != nil {
+				return ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode pending trace record")
 			}
 			if record.SessionID != sessionID {
 				continue
