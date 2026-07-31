@@ -103,7 +103,7 @@ func (r *traceRepository) FindBySessionIDIncludingDeleted(ctx context.Context, s
 func (r *traceRepository) Delete(ctx context.Context, id uint) error {
 	db := r.db.WithContext(ctx)
 	now := time.Now().UTC().Unix()
-	err := db.Transaction(func(tx *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&dbmodel.Trace{}).Where(constant.FieldID+" = ?", id).
 			Update(constant.FieldDeletedAt, now).Error; err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "soft delete trace")
@@ -114,10 +114,6 @@ func (r *traceRepository) Delete(ctx context.Context, id uint) error {
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (r *traceRepository) MarkDone(ctx context.Context, sessionID string) error {
