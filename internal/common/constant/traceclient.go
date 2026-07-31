@@ -45,6 +45,7 @@ const (
 	TraceClientStateFileName          = "client.json"
 	TraceClientSpoolIDRandomBytes     = 16
 	TraceClientHookInputLimit         = 16 << 20
+	TraceClientStopTrimKey            = "last_assistant_message"
 	TraceClientHookDedupFormat        = "hook:%s:%d"
 	TraceClientLogPrefix              = "trace-"
 	TraceClientLogSuffix              = ".log"

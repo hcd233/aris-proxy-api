@@ -1,6 +1,10 @@
 package trace
 
-import "github.com/hcd233/aris-proxy-api/internal/common/ierr"
+import (
+	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+)
 
 // HookInfo 是各 agent hook stdin JSON 的归一化身份视图。
 type HookInfo struct {
@@ -50,4 +54,23 @@ func LookupAdapter(name string) (AgentAdapter, error) {
 		return adapter, nil
 	}
 	return nil, ierr.New(ierr.ErrValidation, "unknown trace agent")
+}
+
+// TrimStopHookPayload 删除 Stop hook 输入中的 last_assistant_message 键
+// （与 rollout 的 agent_message 重复，裁剪避免双源冗余）；其余字段原样保留。
+// 输入非 JSON 或不含目标键时原样返回。
+func TrimStopHookPayload(raw []byte) []byte {
+	var root map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(raw, &root); err != nil {
+		return raw
+	}
+	if _, ok := root[constant.TraceClientStopTrimKey]; !ok {
+		return raw
+	}
+	delete(root, constant.TraceClientStopTrimKey)
+	trimmed, err := sonic.Marshal(root)
+	if err != nil {
+		return raw
+	}
+	return trimmed
 }
