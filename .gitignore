@@ -72,3 +72,6 @@ migrate_think_extract
 .codebuddy/settings.local.json
 .worktrees/
 .serena
+
+# PI
+.pi-subagents
