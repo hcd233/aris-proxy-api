@@ -41,6 +41,7 @@ type TraceHandler interface {
 	HandleGetTrace(ctx context.Context, req *dto.GetTraceReq) (*dto.HTTPResponse[*dto.GetTraceRsp], error)
 	HandleListTraceEvents(ctx context.Context, req *dto.ListTraceEventsReq) (*dto.HTTPResponse[*dto.ListTraceEventsRsp], error)
 	HandleGetTraceConversation(ctx context.Context, req *dto.GetTraceConversationReq) (*dto.HTTPResponse[*dto.GetTraceConversationRsp], error)
+	HandleDeleteTraces(ctx context.Context, req *dto.DeleteTraceReq) (*dto.HTTPResponse[*dto.DeleteTraceRsp], error)
 	HandleCheckTraceClient(ctx context.Context, req *dto.CheckTraceClientReq) (*huma.StreamResponse, error)
 	HandleInstallScript(ctx context.Context, req *dto.InstallScriptReq) (*huma.StreamResponse, error)
 }
@@ -52,6 +53,7 @@ type TraceDependencies struct {
 	Get          port.GetTraceHandler
 	Events       port.ListTraceEventsHandler
 	Conversation port.ListTraceConversationHandler
+	Delete       port.DeleteTraceHandler
 }
 
 type traceHandler struct {
@@ -60,6 +62,7 @@ type traceHandler struct {
 	get          port.GetTraceHandler
 	events       port.ListTraceEventsHandler
 	conversation port.ListTraceConversationHandler
+	delete       port.DeleteTraceHandler
 }
 
 // NewTraceHandler 构造 TraceHandler
@@ -70,6 +73,7 @@ func NewTraceHandler(deps TraceDependencies) TraceHandler {
 		get:          deps.Get,
 		events:       deps.Events,
 		conversation: deps.Conversation,
+		delete:       deps.Delete,
 	}
 }
 
@@ -292,5 +296,38 @@ func (h *traceHandler) HandleListTraceEvents(ctx context.Context, req *dto.ListT
 		}
 	})
 	rsp.PageInfo = pageInfo
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleDeleteTraces 删除 traces（JWT，支持逗号分隔批量）
+func (h *traceHandler) HandleDeleteTraces(ctx context.Context, req *dto.DeleteTraceReq) (*dto.HTTPResponse[*dto.DeleteTraceRsp], error) {
+	rsp := &dto.DeleteTraceRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	ids, parseErr := parseCommaSeparatedIDs(req.IDs)
+	if parseErr != nil {
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, parseErr, ierr.ErrValidation.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	result, err := h.delete.Handle(ctx, port.DeleteTraceCommand{UserID: userID, IsAdmin: isAdmin, IDs: ids})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[TraceHandler] Delete traces failed", zap.Error(err))
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
+	}
+
+	rsp.DeletedCount = result.DeletedCount
+	rsp.Failures = lo.Map(result.Failures, func(f port.DeleteTraceFailedItem, _ int) dto.DeleteFailed {
+		return dto.DeleteFailed{ID: f.ID, Error: f.Error}
+	})
+
+	logger.WithCtx(ctx).Info("[TraceHandler] Trace(s) deleted",
+		zap.Int("total", len(ids)),
+		zap.Int("deleted", result.DeletedCount),
+		zap.Int("failed", len(result.Failures)))
+
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

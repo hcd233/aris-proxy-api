@@ -78,6 +78,18 @@ type GetTraceReq struct {
 	TraceID uint `query:"id" required:"true" minimum:"1" doc:"Trace ID"`
 }
 
+// DeleteTraceReq 删除 Trace 请求（支持逗号分隔批量）
+type DeleteTraceReq struct {
+	IDs string `query:"ids" required:"true" minLength:"1" doc:"Trace ID 列表，逗号分隔，如 123 或 123,456,789"`
+}
+
+// DeleteTraceRsp 删除响应
+type DeleteTraceRsp struct {
+	CommonRsp
+	DeletedCount int            `json:"deletedCount,omitempty" doc:"成功删除数量"`
+	Failures     []DeleteFailed `json:"failures,omitempty" doc:"删除失败列表"`
+}
+
 // ListTraceEventsRsp 事件时间线响应
 type ListTraceEventsRsp struct {
 	CommonRsp
