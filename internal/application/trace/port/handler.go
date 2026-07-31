@@ -177,3 +177,27 @@ type ListTraceConversationQuery struct {
 type ListTraceConversationHandler interface {
 	Handle(ctx context.Context, q ListTraceConversationQuery) (*TraceConversationView, error)
 }
+
+// DeleteTraceCommand 删除 Trace 命令
+type DeleteTraceCommand struct {
+	UserID  uint
+	IsAdmin bool
+	IDs     []uint
+}
+
+// DeleteTraceFailedItem 删除失败项
+type DeleteTraceFailedItem struct {
+	ID    uint
+	Error string
+}
+
+// DeleteTraceResult 删除结果
+type DeleteTraceResult struct {
+	DeletedCount int
+	Failures     []DeleteTraceFailedItem
+}
+
+// DeleteTraceHandler 删除命令处理器接口（支持单个和批量）
+type DeleteTraceHandler interface {
+	Handle(ctx context.Context, cmd DeleteTraceCommand) (*DeleteTraceResult, error)
+}

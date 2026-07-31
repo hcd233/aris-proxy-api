@@ -5,6 +5,7 @@ import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, TraceSummary } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -16,13 +17,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Radar, Search, X } from "lucide-react";
+import { Check, Radar, Search, Trash2, X } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import TraceInstallPopover from "@/components/trace-install-popover";
+import { DeleteIconButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 
 function statusBadge(status: string, t: (k: string, f?: string) => string) {
   if (status === "active") {
@@ -57,6 +60,12 @@ export default function TracePage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = usePersistentState("dashboard.trace.keyword", "");
   const [searchInput, setSearchInput] = usePersistentState("dashboard.trace.searchInput", "");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<TraceSummary | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [batchDeleting, setBatchDeleting] = useState(false);
   const t = useT();
   const isMobile = useIsMobile();
 
@@ -93,6 +102,78 @@ export default function TracePage() {
     fetchTraces(1, pageInfo.pageSize, kw);
   }, [fetchTraces, pageInfo.pageSize, searchInput, setKeyword]);
 
+  const openDeleteConfirm = (tr: TraceSummary, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteTarget(tr);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
+    try {
+      await api.deleteTrace(deleteTarget.id);
+      toast.success(t("trace.delete_success"));
+      setSelected(new Set());
+      fetchTraces(pageInfo.page, pageInfo.pageSize, keyword, true);
+    } catch (err) {
+      showErrorToast(err, { title: t("trace.delete_error") });
+    } finally {
+      setDeleting(null);
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const toggleSelect = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === traces.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(traces.map((tr) => tr.id)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selected.size === 0) return;
+    setBatchDeleting(true);
+    try {
+      const ids = Array.from(selected);
+      const rsp = await api.batchDeleteTraces(ids);
+      const failed = rsp.failures?.length ?? 0;
+      if (failed > 0) {
+        toast.warning(
+          t("trace.batch_delete_warning")
+            .replace("{deleted}", String(rsp.deletedCount))
+            .replace("{failed}", String(failed))
+        );
+      } else {
+        toast.success(
+          t("trace.batch_delete_success").replace("{count}", String(rsp.deletedCount))
+        );
+      }
+      setSelected(new Set());
+      fetchTraces(1, pageInfo.pageSize, keyword, true);
+    } catch (err) {
+      showErrorToast(err, { title: t("trace.batch_delete_error") });
+    } finally {
+      setBatchDeleting(false);
+      setBatchDeleteConfirmOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -103,6 +184,17 @@ export default function TracePage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("trace.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
+          {selected.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBatchDeleteConfirmOpen(true)}
+              className="gap-1.5"
+            >
+              <Trash2 className="size-3.5" />
+              {t("common.delete")} {selected.size}
+            </Button>
+          )}
           <TraceInstallPopover />
         </div>
       </div>
@@ -164,7 +256,15 @@ export default function TracePage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-mono text-sm font-medium">{tr.sessionId}</p>
                         </div>
-                        <div className="shrink-0">{statusBadge(tr.status, t)}</div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {statusBadge(tr.status, t)}
+                          <DeleteIconButton
+                            aria-label={t("trace.delete_aria")}
+                            title={t("trace.delete_aria")}
+                            disabled={deleting === tr.id}
+                            onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
+                          />
+                        </div>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         <span>ID: {tr.id}</span>
@@ -180,6 +280,22 @@ export default function TracePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <div
+                          role="checkbox"
+                          tabIndex={0}
+                          aria-checked={selected.size === traces.length && traces.length > 0}
+                          onClick={toggleSelectAll}
+                          onKeyDown={(e) => {
+                            if (e.key === " " || e.key === "Enter") toggleSelectAll();
+                          }}
+                          className="flex size-4 cursor-pointer items-center justify-center rounded-sm border border-border transition-colors"
+                        >
+                          {selected.size === traces.length && traces.length > 0 && (
+                            <Check className="size-3" />
+                          )}
+                        </div>
+                      </TableHead>
                       <TableHead className="w-16">{t("common.id")}</TableHead>
                       <TableHead>{t("trace.session_id")}</TableHead>
                       <TableHead>{t("trace.agent")}</TableHead>
@@ -188,6 +304,7 @@ export default function TracePage() {
                       <TableHead>{t("trace.source")}</TableHead>
                       <TableHead className="w-24">{t("trace.status")}</TableHead>
                       <TableHead className="w-40">{t("trace.created_at")}</TableHead>
+                      <TableHead className="w-12" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -199,6 +316,22 @@ export default function TracePage() {
                           window.location.href = `/web/trace/detail/?id=${tr.id}`;
                         }}
                       >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div
+                            role="checkbox"
+                            tabIndex={0}
+                            aria-checked={selected.has(tr.id)}
+                            onClick={(e) => toggleSelect(tr.id, e as unknown as React.MouseEvent)}
+                            onKeyDown={(e) => {
+                              if (e.key === " " || e.key === "Enter") {
+                                toggleSelect(tr.id, e as unknown as React.MouseEvent);
+                              }
+                            }}
+                            className="flex size-4 cursor-pointer items-center justify-center rounded-sm border border-border transition-colors"
+                          >
+                            {selected.has(tr.id) && <Check className="size-3" />}
+                          </div>
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{tr.id}</TableCell>
                         <TableCell className="font-mono">{tr.sessionId}</TableCell>
                         <TableCell>{tr.agent}</TableCell>
@@ -207,6 +340,14 @@ export default function TracePage() {
                         <TableCell>{tr.source}</TableCell>
                         <TableCell>{statusBadge(tr.status, t)}</TableCell>
                         <TableCell className="text-muted-foreground">{formatDateTime(tr.createdAt)}</TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DeleteIconButton
+                            aria-label={t("trace.delete_aria")}
+                            title={t("trace.delete_aria")}
+                            disabled={deleting === tr.id}
+                            onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -221,6 +362,31 @@ export default function TracePage() {
           )}
         </CardContent>
       </Card>
+
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t("trace.delete_dialog_title")}
+        description={t("trace.delete_dialog_desc").replace(
+          "{name}",
+          deleteTarget?.sessionId ?? String(deleteTarget?.id ?? "")
+        )}
+        confirmLabel={t("common.delete")}
+        loadingLabel={t("common.deleting")}
+        loading={deleting !== null}
+        onConfirm={handleDelete}
+      />
+
+      <DeleteConfirmDialog
+        open={batchDeleteConfirmOpen}
+        onOpenChange={setBatchDeleteConfirmOpen}
+        title={t("trace.batch_delete_title")}
+        description={t("trace.batch_delete_desc").replace("{count}", String(selected.size))}
+        confirmLabel={`${t("common.delete")} ${selected.size}`}
+        loadingLabel={t("common.deleting")}
+        loading={batchDeleting}
+        onConfirm={handleBatchDelete}
+      />
 
     </div>
   );

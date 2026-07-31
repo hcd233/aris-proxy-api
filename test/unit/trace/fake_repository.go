@@ -4,6 +4,7 @@ package trace
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
@@ -45,7 +46,11 @@ func (f *FakeRepo) UpsertBySessionID(_ context.Context, t *trace.Trace) (*trace.
 func (f *FakeRepo) FindBySessionID(_ context.Context, sid string) (*trace.Trace, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return f.traces[sid], nil
+	t := f.traces[sid]
+	if t != nil && t.DeletedAt != 0 {
+		return nil, nil
+	}
+	return t, nil
 }
 
 func (f *FakeRepo) FindByID(_ context.Context, id uint) (*trace.Trace, error) {
@@ -94,6 +99,9 @@ func (f *FakeRepo) PaginateByOwners(_ context.Context, owners []string, p model.
 	}
 	var out []*trace.Trace
 	for _, t := range f.traces {
+		if t.DeletedAt != 0 {
+			continue
+		}
 		if len(ownerSet) == 0 {
 			out = append(out, t)
 			continue
@@ -143,6 +151,21 @@ func (f *FakeRepo) ListEvents(_ context.Context, tid uint, p model.CommonParam) 
 		pageSize = 50
 	}
 	return out, &model.PageInfo{Page: page, PageSize: pageSize, Total: int64(len(out))}, nil
+}
+
+func (f *FakeRepo) FindBySessionIDIncludingDeleted(_ context.Context, sid string) (*trace.Trace, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.traces[sid], nil
+}
+
+func (f *FakeRepo) Delete(_ context.Context, id uint) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if t, ok := f.byID[id]; ok {
+		t.DeletedAt = time.Now().UTC().Unix()
+	}
+	return nil
 }
 
 // fakeAPIKeyRepo 内存版 API Key 仓储，仅实现 owner 查询

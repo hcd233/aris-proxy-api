@@ -391,3 +391,7 @@ func NewListTraceEventsHandler(
 func NewListTraceConversationHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.ListTraceConversationHandler {
 	return tracequery.NewListTraceConversationHandler(repo, apiKeyRepo)
 }
+
+func NewDeleteTraceHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.DeleteTraceHandler {
+	return tracecommand.NewDeleteTraceHandler(repo, apiKeyRepo)
+}
