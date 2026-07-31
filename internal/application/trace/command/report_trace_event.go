@@ -48,7 +48,20 @@ func (h *reportTraceEventHandler) Handle(
 	}
 
 	records := normalizeRecords(cmd)
-	t, err := h.ensureTrace(ctx, cmd, agent)
+	existing, err := h.repo.FindBySessionIDIncludingDeleted(ctx, cmd.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil && existing.DeletedAt != 0 {
+		return lo.Map(records, func(r port.ReportTraceRecord, _ int) port.ReportTraceRecordResult {
+			return port.ReportTraceRecordResult{
+				DedupKey: r.DedupKey,
+				Status:   constant.TraceRecordStatusRejected,
+				Message:  constant.TraceRecordMessageTraceDeleted,
+			}
+		}), nil
+	}
+	t, err := h.ensureTrace(ctx, cmd, agent, existing)
 	if err != nil {
 		return nil, err
 	}
@@ -89,12 +102,9 @@ func (h *reportTraceEventHandler) ensureTrace(
 	ctx context.Context,
 	cmd port.ReportTraceEventCommand,
 	agent string,
+	existing *trace.Trace,
 ) (*trace.Trace, error) {
-	t, err := h.repo.FindBySessionID(ctx, cmd.SessionID)
-	if err != nil {
-		return nil, err
-	}
-	if t == nil {
+	if existing == nil {
 		return h.repo.UpsertBySessionID(ctx, &trace.Trace{
 			Agent:      agent,
 			SessionID:  cmd.SessionID,
@@ -106,33 +116,33 @@ func (h *reportTraceEventHandler) ensureTrace(
 			Status:     constant.TraceStatusActive,
 		})
 	}
-	if t.Agent != "" && t.Agent != agent {
+	if existing.Agent != "" && existing.Agent != agent {
 		return nil, ierr.New(ierr.ErrValidation, "trace agent mismatch for session")
 	}
 
-	modelName := t.Model
+	modelName := existing.Model
 	if cmd.Model != "" {
 		modelName = cmd.Model
 	}
-	cwd := t.CWD
+	cwd := existing.CWD
 	if cmd.CWD != "" {
 		cwd = cmd.CWD
 	}
-	source := t.Source
+	source := existing.Source
 	if cmd.Source != "" {
 		source = cmd.Source
 	}
 	return h.repo.UpsertBySessionID(ctx, &trace.Trace{
-		ID:         t.ID,
+		ID:         existing.ID,
 		Agent:      agent,
 		SessionID:  cmd.SessionID,
-		APIKeyName: t.APIKeyName,
-		UserID:     t.UserID,
+		APIKeyName: existing.APIKeyName,
+		UserID:     existing.UserID,
 		Model:      modelName,
 		CWD:        cwd,
 		Source:     source,
-		Status:     t.Status,
-		Metadata:   t.Metadata,
+		Status:     existing.Status,
+		Metadata:   existing.Metadata,
 	})
 }
 

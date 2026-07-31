@@ -54,6 +54,14 @@ func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getTraceConversation", enum.PermissionUser)},
 	}, deps.TraceHandler.HandleGetTraceConversation)
 
+	huma.Register(queryGroup, huma.Operation{
+		OperationID: "deleteTrace", Method: http.MethodDelete, Path: "",
+		Summary: "DeleteTrace", Description: "Delete traces by IDs (owner or admin, comma separated)",
+		Tags:        []string{constant.TagTrace},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteTrace", enum.PermissionUser)},
+	}, deps.TraceHandler.HandleDeleteTraces)
+
 	// 上报组（API Key 鉴权，codex hook 用 Bearer）
 	reportGroup := huma.NewGroup(traceGroup, "")
 	reportGroup.UseMiddleware(middleware.APIKeyMiddleware(db))

@@ -22,6 +22,7 @@ type Trace struct {
 	Metadata   map[string]string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	DeletedAt  int64
 }
 
 // TraceEvent 运行内单个事件（领域结构体）
@@ -59,4 +60,8 @@ type TraceRepository interface {
 	CountEvents(ctx context.Context, traceID uint) (int64, error)
 	// ListEvents 按 trace_id 分页列出事件（按 id 升序即时间线）
 	ListEvents(ctx context.Context, traceID uint, param model.CommonParam) ([]*TraceEvent, *model.PageInfo, error)
+	// FindBySessionIDIncludingDeleted 按 session_id 查询（含软删）；未找到返回 (nil, nil)
+	FindBySessionIDIncludingDeleted(ctx context.Context, sessionID string) (*Trace, error)
+	// Delete 软删除 trace 并级联软删其 events（事务）
+	Delete(ctx context.Context, id uint) error
 }

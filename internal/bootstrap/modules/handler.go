@@ -166,6 +166,7 @@ func NewTraceDependencies(
 	get traceport.GetTraceHandler,
 	events traceport.ListTraceEventsHandler,
 	conversation traceport.ListTraceConversationHandler,
+	deleteTrace traceport.DeleteTraceHandler,
 ) handler.TraceDependencies {
 	return handler.TraceDependencies{
 		Report:       report,
@@ -173,5 +174,6 @@ func NewTraceDependencies(
 		Get:          get,
 		Events:       events,
 		Conversation: conversation,
+		Delete:       deleteTrace,
 	}
 }

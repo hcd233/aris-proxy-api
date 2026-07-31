@@ -34,6 +34,7 @@ func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 		ID: m.ID, Agent: m.Agent, SessionID: m.SessionID, APIKeyName: m.APIKeyName,
 		UserID: m.UserID, Model: m.Model, CWD: m.CWD, Source: m.Source,
 		Status: m.Status, Metadata: m.Metadata, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
+		DeletedAt: m.DeletedAt,
 	}
 }
 
@@ -84,6 +85,35 @@ func (r *traceRepository) FindByID(ctx context.Context, id uint) (*trace.Trace, 
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find trace by id")
 	}
 	return toTraceDomain(rec), nil
+}
+
+func (r *traceRepository) FindBySessionIDIncludingDeleted(ctx context.Context, sessionID string) (*trace.Trace, error) {
+	db := r.db.WithContext(ctx)
+	var rec dbmodel.Trace
+	err := db.Unscoped().Where(&dbmodel.Trace{SessionID: sessionID}).First(&rec).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find trace by session including deleted")
+	}
+	return toTraceDomain(&rec), nil
+}
+
+func (r *traceRepository) Delete(ctx context.Context, id uint) error {
+	db := r.db.WithContext(ctx)
+	now := time.Now().UTC().Unix()
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&dbmodel.Trace{}).Where(constant.FieldID+" = ?", id).
+			Update(constant.FieldDeletedAt, now).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "soft delete trace")
+		}
+		if err := tx.Model(&dbmodel.TraceEvent{}).Where(constant.FieldTraceID+" = ?", id).
+			Update(constant.FieldDeletedAt, now).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "soft delete trace events")
+		}
+		return nil
+	})
 }
 
 func (r *traceRepository) MarkDone(ctx context.Context, sessionID string) error {

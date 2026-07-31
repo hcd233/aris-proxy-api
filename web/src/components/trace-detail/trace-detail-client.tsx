@@ -20,6 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
 import { ChatMessage, buildToolResultsByID } from "@/components/chat/chat-message";
+import { DeleteIconButton } from "@/components/delete-button";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
 
 const EVENT_PAGE_SIZE = 50;
@@ -174,6 +176,8 @@ export default function TraceDetailClient({
   const [conversation, setConversation] = useState<TraceConversation | null>(null);
   const [conversationLoading, setConversationLoading] = useState(false);
   const [detailTab, setDetailTab] = useState<"conversation" | "raw">("conversation");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const chatMessages = useMemo(
     () =>
@@ -240,6 +244,19 @@ export default function TraceDetailClient({
   }, [fetchDetail]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.deleteTrace(traceId);
+      toast.success(t("trace.delete_success"));
+      router.push("/trace/");
+    } catch (err) {
+      showErrorToast(err, { title: t("trace.delete_error") });
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
+    }
+  };
+
   if (!traceId || Number.isNaN(traceId)) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -300,6 +317,14 @@ export default function TraceDetailClient({
         >
           <ArrowLeft className="size-5" />
         </Button>
+        <div className="mt-1 shrink-0">
+          <DeleteIconButton
+            aria-label={t("trace.delete_aria")}
+            title={t("trace.delete_aria")}
+            disabled={deleting}
+            onClick={() => setDeleteConfirmOpen(true)}
+          />
+        </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
@@ -490,6 +515,17 @@ export default function TraceDetailClient({
           )}
         </CardContent>
       </Card>
+
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t("trace.delete_dialog_title")}
+        description={t("trace.delete_dialog_desc").replace("{name}", String(traceId))}
+        confirmLabel={t("common.delete")}
+        loadingLabel={t("common.deleting")}
+        loading={deleting}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
