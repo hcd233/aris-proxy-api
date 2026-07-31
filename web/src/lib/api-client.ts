@@ -33,6 +33,7 @@ import type {
   GetTraceRsp,
   ListTraceEventsRsp,
   GetTraceConversationRsp,
+  DeleteTraceRsp,
   CommonRsp,
   ScoreSessionReqBody,
   ScoreSessionRsp,
@@ -662,6 +663,20 @@ class ApiClient {
 
   async getTraceConversation(traceId: number): Promise<GetTraceConversationRsp> {
     return this.request<GetTraceConversationRsp>(`/api/v1/trace/conversation?id=${traceId}`);
+  }
+
+  async deleteTrace(traceId: number): Promise<DeleteTraceRsp> {
+    return this.request<DeleteTraceRsp>(
+      `/api/v1/trace?ids=${traceId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async batchDeleteTraces(ids: number[]): Promise<DeleteTraceRsp> {
+    return this.request<DeleteTraceRsp>(
+      `/api/v1/trace?ids=${ids.join(",")}`,
+      { method: "DELETE" }
+    );
   }
 
   // ─── Cron (admin) ──────────────────────────────────────────────────────────

@@ -214,6 +214,11 @@ export interface DeleteSessionRsp extends CommonRsp {
   failures?: DeleteSessionFailed[];
 }
 
+export interface DeleteTraceRsp extends CommonRsp {
+  deletedCount?: number;
+  failures?: DeleteSessionFailed[];
+}
+
 // ─── Session Batch Delete ─────────────────────────────────────────────────────
 
 // ─── Share 分页接口（公开，与 session detail 优化模式对齐） ───────────────────
