@@ -125,6 +125,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewGetTraceHandler,
 		NewListTraceEventsHandler,
 		NewListTraceConversationHandler,
+		NewDeleteTraceHandler,
 	),
 )
 
