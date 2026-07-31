@@ -672,11 +672,6 @@
   "trace.traces": "traces",
   "trace.invalid_id": "Invalid trace ID",
   "trace.not_found": "Trace not found",
-  "trace.conversation": "Conversation",
-  "trace.raw_records": "Raw records",
-  "trace.turns": "turns",
-  "trace.available_tools": "Available tools",
-  "trace.tool_count": "tools",
   "trace.install_copy": "Copy",
   "trace.install_copied": "Copied",
   "trace.install_close": "Close",
@@ -693,5 +688,10 @@
   "trace.batch_delete_error": "Failed to batch delete traces",
   "common.id": "ID",
   "theme.to_moonshot": "Switch to Moonshot theme",
-  "theme.to_anthropic": "Switch to Anthropic theme"
+  "theme.to_anthropic": "Switch to Anthropic theme",
+  "trace.timeline": "Event timeline",
+  "trace.expand_json": "Show raw JSON",
+  "trace.collapse_json": "Hide raw JSON",
+  "trace.system_prompt": "System prompt",
+  "trace.tools": "Tools"
 }

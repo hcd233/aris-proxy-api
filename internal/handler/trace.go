@@ -40,7 +40,6 @@ type TraceHandler interface {
 	HandleListTraces(ctx context.Context, req *dto.ListTracesReq) (*dto.HTTPResponse[*dto.ListTracesRsp], error)
 	HandleGetTrace(ctx context.Context, req *dto.GetTraceReq) (*dto.HTTPResponse[*dto.GetTraceRsp], error)
 	HandleListTraceEvents(ctx context.Context, req *dto.ListTraceEventsReq) (*dto.HTTPResponse[*dto.ListTraceEventsRsp], error)
-	HandleGetTraceConversation(ctx context.Context, req *dto.GetTraceConversationReq) (*dto.HTTPResponse[*dto.GetTraceConversationRsp], error)
 	HandleDeleteTraces(ctx context.Context, req *dto.DeleteTraceReq) (*dto.HTTPResponse[*dto.DeleteTraceRsp], error)
 	HandleCheckTraceClient(ctx context.Context, req *dto.CheckTraceClientReq) (*huma.StreamResponse, error)
 	HandleInstallScript(ctx context.Context, req *dto.InstallScriptReq) (*huma.StreamResponse, error)
@@ -48,32 +47,29 @@ type TraceHandler interface {
 
 // TraceDependencies TraceHandler 依赖项
 type TraceDependencies struct {
-	Report       port.ReportTraceEventHandler
-	List         port.ListTracesHandler
-	Get          port.GetTraceHandler
-	Events       port.ListTraceEventsHandler
-	Conversation port.ListTraceConversationHandler
-	Delete       port.DeleteTraceHandler
+	Report port.ReportTraceEventHandler
+	List   port.ListTracesHandler
+	Get    port.GetTraceHandler
+	Events port.ListTraceEventsHandler
+	Delete port.DeleteTraceHandler
 }
 
 type traceHandler struct {
-	report       port.ReportTraceEventHandler
-	list         port.ListTracesHandler
-	get          port.GetTraceHandler
-	events       port.ListTraceEventsHandler
-	conversation port.ListTraceConversationHandler
-	delete       port.DeleteTraceHandler
+	report port.ReportTraceEventHandler
+	list   port.ListTracesHandler
+	get    port.GetTraceHandler
+	events port.ListTraceEventsHandler
+	delete port.DeleteTraceHandler
 }
 
 // NewTraceHandler 构造 TraceHandler
 func NewTraceHandler(deps TraceDependencies) TraceHandler {
 	return &traceHandler{
-		report:       deps.Report,
-		list:         deps.List,
-		get:          deps.Get,
-		events:       deps.Events,
-		conversation: deps.Conversation,
-		delete:       deps.Delete,
+		report: deps.Report,
+		list:   deps.List,
+		get:    deps.Get,
+		events: deps.Events,
+		delete: deps.Delete,
 	}
 }
 
@@ -143,28 +139,6 @@ func (h *traceHandler) HandleInstallScript(
 			)
 		}
 	}}, nil
-}
-
-// HandleGetTraceConversation 获取 Trace 对话投影（JWT）。
-func (h *traceHandler) HandleGetTraceConversation(ctx context.Context, req *dto.GetTraceConversationReq) (*dto.HTTPResponse[*dto.GetTraceConversationRsp], error) {
-	rsp := &dto.GetTraceConversationRsp{}
-	permission := util.CtxValuePermission(ctx)
-	view, err := h.conversation.Handle(ctx, port.ListTraceConversationQuery{
-		UserID: util.CtxValueUint(ctx, constant.CtxKeyUserID), IsAdmin: permission.Level() >= enum.PermissionAdmin.Level(), TraceID: req.TraceID,
-	})
-	if err != nil {
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-	turns := lo.Map(view.Turns, func(turn *port.TraceConversationTurnView, _ int) *dto.TraceConversationTurn {
-		return &dto.TraceConversationTurn{TurnID: turn.TurnID, Items: lo.Map(turn.Items, func(item *port.TraceConversationItemView, _ int) *dto.TraceConversationItem {
-			return &dto.TraceConversationItem{Kind: item.Kind, Role: item.Role, Content: item.Content, ToolName: item.ToolName, CallID: item.CallID, Arguments: item.Arguments, Output: item.Output, Source: item.Source, RecordIDs: item.RecordIDs}
-		})}
-	})
-	rsp.Conversation = &dto.TraceConversation{TraceID: view.TraceID, SessionID: view.SessionID, Turns: turns, Tools: lo.Map(view.Tools, func(tool *port.TraceConversationToolView, _ int) *dto.TraceConversationTool {
-		return &dto.TraceConversationTool{Namespace: tool.Namespace, Name: tool.Name, Description: tool.Description, Parameters: tool.Parameters, RecordIDs: tool.RecordIDs}
-	})}
-	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 // HandleReportTraceEvent 上报 agent 批量记录（API Key 鉴权）

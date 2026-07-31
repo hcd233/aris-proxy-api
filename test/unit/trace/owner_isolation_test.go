@@ -39,11 +39,4 @@ func TestTraceQueries_EnforceOwnerIsolation(t *testing.T) {
 	}); err == nil {
 		t.Fatal("non-owner accessed trace events")
 	}
-
-	conversationHandler := query.NewListTraceConversationHandler(repo, apiKeys)
-	if _, err := conversationHandler.Handle(ctx, port.ListTraceConversationQuery{
-		UserID: 1, TraceID: traceRecord.ID,
-	}); err == nil {
-		t.Fatal("non-owner accessed trace conversation")
-	}
 }

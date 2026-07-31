@@ -3,136 +3,138 @@
 import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, ChevronDown, ChevronRight, Wrench } from "lucide-react";
+import { ArrowLeft, Bot, Braces, ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
-import type {
-  MessageItem,
-  PageInfo,
-  TraceConversation,
-  TraceConversationItem,
-  TraceDetail,
-  TraceEventItem,
-} from "@/lib/types";
+import type { PageInfo, TraceDetail, TraceEventItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
-import { ChatMessage, buildToolResultsByID } from "@/components/chat/chat-message";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
 
 const EVENT_PAGE_SIZE = 50;
 
-/**
- * 可用工具折叠区——与系统提示词一样复用项目现有代码块样式，不新建 UI 原语。
- */
-function ToolsSection({
-  tools,
-  t,
-}: {
-  tools: NonNullable<TraceConversation["tools"]>;
-  t: (k: string, f?: string) => string;
-}) {
-  const [open, setOpen] = useState(true);
-  return (
-    <div className="rounded-xl border border-border bg-card/60">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-4 py-3 text-left"
-      >
-        <Wrench className="size-4 text-muted-foreground" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-          {t("trace.available_tools")}
-        </span>
-        <Badge variant="outline" className="text-[10px]">
-          {tools.length} {t("trace.tool_count")}
-        </Badge>
-        <span className="ml-auto text-muted-foreground">
-          {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-        </span>
-      </button>
-      {open && (
-        <div className="space-y-2 border-t border-border px-4 py-3">
-          {tools.map((tool, i) => (
-            <div key={`${tool.namespace ?? ""}-${tool.name}-${i}`} className="rounded-lg border border-border bg-secondary/30 p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {tool.namespace && (
-                  <Badge variant="secondary" className="font-mono text-[10px]">
-                    {tool.namespace}
-                  </Badge>
-                )}
-                <span className="font-mono text-sm font-medium">{tool.name}</span>
-              </div>
-              {tool.description && (
-                <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-                  {tool.description}
-                </p>
-              )}
-              {tool.parameters && (
-                <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
-                  {tool.parameters}
-                </pre>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+// ─── payload 解析辅助 ────────────────────────────────────────────────────────
+
+function payloadRoot(payload: unknown): Record<string, unknown> {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    return payload as Record<string, unknown>;
+  }
+  return {};
 }
 
-
-/**
- * 将 trace 对话项映射为 session 聊天消息结构，复用 ChatMessage 气泡渲染。
- * tool_call 拆成 assistant(tool_calls) + tool(output) 两条消息，
- * 由 buildToolResultsByID 配对后内联进 ToolCallCard。
- */
-function itemToMessages(item: TraceConversationItem, model: string): MessageItem[] {
-  const id = item.recordIds[0] ?? 0;
-  if (item.kind === "tool_call") {
-    const messages: MessageItem[] = [
-      {
-        id,
-        model,
-        createdAt: "",
-        message: {
-          role: "assistant",
-          tool_calls: [
-            {
-              id: item.callId,
-              name: item.toolName || "tool",
-              arguments: item.arguments ?? "",
-            },
-          ],
-        },
-      },
-    ];
-    if (item.output) {
-      messages.push({
-        id: item.recordIds[1] ?? id,
-        model,
-        createdAt: "",
-        message: {
-          role: "tool",
-          tool_call_id: item.callId,
-          content: item.output,
-        },
-      });
-    }
-    return messages;
+/** 提取 rollout 记录的 payload.payload 内层；hook 等扁平记录回退整个 payload。 */
+function payloadInner(payload: unknown): Record<string, unknown> {
+  const root = payloadRoot(payload);
+  const inner = root.payload;
+  if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+    return inner as Record<string, unknown>;
   }
-  return [
-    {
-      id,
-      model,
-      createdAt: "",
-      message: { role: item.role || "assistant", content: item.content },
-    },
-  ];
+  return root;
+}
+
+/** 拼接消息 content 数组（input_text/output_text 等含 text 字段的分块）。 */
+function messageText(inner: Record<string, unknown>): string {
+  const content = inner.content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string") {
+          return (part as { text: string }).text;
+        }
+        return "";
+      })
+      .filter((text) => text.length > 0)
+      .join("\n");
+  }
+  if (typeof inner.message === "string") return inner.message;
+  if (typeof content === "string") return content;
+  return "";
+}
+
+/** 对象/JSON 字符串 → 格式化 JSON 文本；其余原样字符串化。 */
+function jsonText(value: unknown): string {
+  if (typeof value === "string") {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return value;
+    }
+  }
+  if (value === undefined) return "";
+  return JSON.stringify(value, null, 2);
+}
+
+// ─── 事件可读化分类 ──────────────────────────────────────────────────────────
+
+type SessionMetaTool = {
+  namespace: string;
+  name: string;
+  description?: string;
+  parameters?: string;
+};
+
+type EventView =
+  | { kind: "message"; role: string; text: string }
+  | { kind: "tool_call"; name: string; argumentsText: string }
+  | { kind: "tool_output"; outputText: string }
+  | { kind: "session_meta"; systemPrompt: string; tools: SessionMetaTool[] }
+  | { kind: "plain" };
+
+function classifyEvent(ev: TraceEventItem): EventView {
+  const inner = payloadInner(ev.payload);
+  if (ev.recordType === "session_meta") {
+    const baseInstructions = inner.base_instructions;
+    const systemPrompt =
+      baseInstructions && typeof baseInstructions === "object"
+        ? String((baseInstructions as { text?: unknown }).text ?? "")
+        : "";
+    const tools: SessionMetaTool[] = [];
+    const dynamicTools = inner.dynamic_tools;
+    if (Array.isArray(dynamicTools)) {
+      for (const ns of dynamicTools) {
+        if (!ns || typeof ns !== "object") continue;
+        const namespace = String((ns as { name?: unknown }).name ?? "");
+        const list = (ns as { tools?: unknown }).tools;
+        if (!Array.isArray(list)) continue;
+        for (const tool of list) {
+          if (!tool || typeof tool !== "object") continue;
+          const name = String((tool as { name?: unknown }).name ?? "");
+          if (!name) continue;
+          const description = String((tool as { description?: unknown }).description ?? "");
+          const parameters = (tool as { parameters?: unknown }).parameters;
+          tools.push({
+            namespace,
+            name,
+            description: description || undefined,
+            parameters: parameters != null ? jsonText(parameters) : undefined,
+          });
+        }
+      }
+    }
+    return { kind: "session_meta", systemPrompt, tools };
+  }
+  switch (ev.event) {
+    case "user_message":
+    case "agent_message":
+      return {
+        kind: "message",
+        role: ev.event === "user_message" ? "user" : "assistant",
+        text: messageText(inner),
+      };
+    case "message":
+      return { kind: "message", role: String(inner.role ?? "assistant"), text: messageText(inner) };
+    case "function_call":
+      return { kind: "tool_call", name: String(inner.name ?? ""), argumentsText: jsonText(inner.arguments) };
+    case "function_call_output":
+      return { kind: "tool_output", outputText: jsonText(inner.output) };
+    default:
+      return { kind: "plain" };
+  }
 }
 
 function statusBadge(status: string, t: (k: string, f?: string) => string) {
@@ -157,6 +159,132 @@ function formatDateTime(dateStr: string): string {
   return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
 }
 
+// ─── 单条事件卡片 ────────────────────────────────────────────────────────────
+
+function EventCard({
+  ev,
+  t,
+}: {
+  ev: TraceEventItem;
+  t: (k: string, f?: string) => string;
+}) {
+  const [showJson, setShowJson] = useState(false);
+  const view = useMemo(() => classifyEvent(ev), [ev]);
+  const rawJson = useMemo(
+    () => JSON.stringify(ev.payload ?? ev, null, 2),
+    [ev]
+  );
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs">
+          {ev.event || ev.recordType || "—"}
+        </span>
+        <Badge variant="outline" className="text-[10px]">{ev.source}</Badge>
+        {view.kind === "message" && (
+          <Badge variant="secondary" className="text-[10px]">{view.role}</Badge>
+        )}
+        {view.kind === "tool_call" && view.name && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 font-mono text-xs">
+            <Wrench className="size-3" />
+            {view.name}
+          </span>
+        )}
+        <span className="ml-auto text-xs text-muted-foreground">
+          {formatDateTime(ev.createdAt)}
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        record #{ev.id}
+        {ev.turnId ? ` · ${t("trace.turn_id")}: ${ev.turnId}` : ""}
+        {ev.callId ? ` · call: ${ev.callId}` : ""}
+      </p>
+
+      {view.kind === "message" && view.text && (
+        <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-(--code-bg) p-3 font-mono text-[12px] leading-relaxed text-(--code-text)">
+          {view.text}
+        </pre>
+      )}
+      {view.kind === "tool_call" && (
+        <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+          {view.argumentsText || t("trace.empty_payload")}
+        </pre>
+      )}
+      {view.kind === "tool_output" && (
+        <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+          {view.outputText || t("trace.empty_payload")}
+        </pre>
+      )}
+      {view.kind === "session_meta" && (
+        <div className="mt-2 space-y-3">
+          {view.systemPrompt && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                {t("trace.system_prompt")}
+              </p>
+              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+                {view.systemPrompt}
+              </pre>
+            </div>
+          )}
+          {view.tools.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
+                {t("trace.tools")} ({view.tools.length})
+              </p>
+              <div className="mt-1 space-y-2">
+                {view.tools.map((tool, i) => (
+                  <div
+                    key={`${tool.namespace}-${tool.name}-${i}`}
+                    className="rounded-lg border border-border bg-secondary/30 p-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      {tool.namespace && (
+                        <Badge variant="secondary" className="font-mono text-[10px]">
+                          {tool.namespace}
+                        </Badge>
+                      )}
+                      <span className="font-mono text-sm font-medium">{tool.name}</span>
+                    </div>
+                    {tool.description && (
+                      <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+                        {tool.description}
+                      </p>
+                    )}
+                    {tool.parameters && (
+                      <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+                        {tool.parameters}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setShowJson((v) => !v)}
+        className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Braces className="size-3.5" />
+        {showJson ? t("trace.collapse_json") : t("trace.expand_json")}
+        {showJson ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+      </button>
+      {showJson && (
+        <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+          {rawJson}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+// ─── 页面主体 ────────────────────────────────────────────────────────────────
+
 export default function TraceDetailClient({
   traceId,
 }: {
@@ -173,20 +301,8 @@ export default function TraceDetailClient({
     total: 0,
   });
   const [eventsLoading, setEventsLoading] = useState(false);
-  const [conversation, setConversation] = useState<TraceConversation | null>(null);
-  const [conversationLoading, setConversationLoading] = useState(false);
-  const [detailTab, setDetailTab] = useState<"conversation" | "raw">("conversation");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  const chatMessages = useMemo(
-    () =>
-      (conversation?.turns ?? []).flatMap((turn) =>
-        turn.items.flatMap((item) => itemToMessages(item, detail?.model ?? ""))
-      ),
-    [conversation, detail?.model]
-  );
-  const toolResultsByID = useMemo(() => buildToolResultsByID(chatMessages), [chatMessages]);
 
   const fetchEvents = useCallback(
     async (id: number, page: number, pageSize: number) => {
@@ -204,21 +320,6 @@ export default function TraceDetailClient({
     [t]
   );
 
-  const fetchConversation = useCallback(
-    async (id: number) => {
-      setConversationLoading(true);
-      try {
-        const rsp = await api.getTraceConversation(id);
-        setConversation(rsp.conversation ?? null);
-      } catch {
-        toast.error(t("trace.load_error"));
-      } finally {
-        setConversationLoading(false);
-      }
-    },
-    [t]
-  );
-
   const fetchDetail = useCallback(async () => {
     if (!traceId || Number.isNaN(traceId)) return;
     setLoading(true);
@@ -226,17 +327,14 @@ export default function TraceDetailClient({
       const rsp = await api.getTrace(traceId);
       setDetail(rsp.trace ?? null);
       if (rsp.trace) {
-        await Promise.all([
-          fetchEvents(traceId, 1, EVENT_PAGE_SIZE),
-          fetchConversation(traceId),
-        ]);
+        await fetchEvents(traceId, 1, EVENT_PAGE_SIZE);
       }
     } catch (err) {
       showErrorToast(err, { title: t("trace.load_error") });
     } finally {
       setLoading(false);
     }
-  }, [traceId, fetchEvents, fetchConversation, t]);
+  }, [traceId, fetchEvents, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -415,104 +513,36 @@ export default function TraceDetailClient({
         </CardContent>
       </Card>
 
-      {/* Records */}
+      {/* 事件时间线 */}
       <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 font-display">
+            <Bot className="size-4 text-muted-foreground" />
+            {t("trace.timeline")}
+          </CardTitle>
+          <span className="text-xs text-muted-foreground">
+            {eventPageInfo.total} {t("trace.event_count")}
+          </span>
+        </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex rounded-lg border border-border bg-secondary/40 p-1">
-              <Button
-                variant={detailTab === "conversation" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setDetailTab("conversation")}
-              >
-                <Bot /> {t("trace.conversation")}
-              </Button>
-              <Button
-                variant={detailTab === "raw" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setDetailTab("raw")}
-              >
-                {t("trace.raw_records")}
-              </Button>
+          {eventsLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
-            <span className="text-xs text-muted-foreground">
-              {detailTab === "raw"
-                ? `${eventPageInfo.total} ${t("trace.event_count")}`
-                : `${conversation?.turns.length ?? 0} ${t("trace.turns")}`}
-            </span>
-          </div>
-
-          {detailTab === "conversation" ? (
-            conversationLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-              </div>
-            ) : !conversation ||
-              (conversation.turns.length === 0 &&
-                !(conversation.tools?.length)) ? (
-              <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
-            ) : (
-              <div className="mx-auto w-full max-w-[768px] space-y-6">
-                {conversation.tools && conversation.tools.length > 0 && (
-                  <ToolsSection tools={conversation.tools} t={t} />
-                )}
-                {conversation.turns.map((turn) => (
-                  <div key={turn.turnId || "default"} className="space-y-4">
-                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-                      <span className="h-px flex-1 bg-border" />
-                      <span>{turn.turnId || "session"}</span>
-                      <span className="h-px flex-1 bg-border" />
-                    </div>
-                    <div className="space-y-5">
-                      {turn.items
-                        .flatMap((item) => itemToMessages(item, detail.model))
-                        .map((m, i) => (
-                          <ChatMessage
-                            key={`${turn.turnId || "default"}-${i}`}
-                            message={m}
-                            index={i}
-                            toolResultsByID={toolResultsByID}
-                          />
-                        ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
+          ) : events.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
           ) : (
-            <>
-              {eventsLoading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-                </div>
-              ) : events.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>
-              ) : (
-                <div className="space-y-2">
-                  {events.map((ev) => (
-                    <div key={ev.id} className="rounded-lg border border-border bg-card p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs">{ev.event}</span>
-                          <Badge variant="outline" className="text-[10px]">{ev.source}</Badge>
-                        </div>
-                        <span className="text-xs text-muted-foreground">{formatDateTime(ev.createdAt)}</span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {ev.turnId ? `${t("trace.turn_id")}: ${ev.turnId} · ` : ""}{ev.callId ? `call: ${ev.callId} · ` : ""}record #{ev.id}
-                      </p>
-                      <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">{ev.payload != null ? JSON.stringify(ev.payload, null, 2) : t("trace.empty_payload")}</pre>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <PaginationBar
-                pageInfo={eventPageInfo}
-                onChange={(page, pageSize) => fetchEvents(detail.id, page, pageSize)}
-                totalLabel={t("trace.event_count")}
-              />
-            </>
+            <div className="space-y-2">
+              {events.map((ev) => (
+                <EventCard key={ev.id} ev={ev} t={t} />
+              ))}
+            </div>
           )}
+          <PaginationBar
+            pageInfo={eventPageInfo}
+            onChange={(page, pageSize) => fetchEvents(detail.id, page, pageSize)}
+            totalLabel={t("trace.event_count")}
+          />
         </CardContent>
       </Card>
 
