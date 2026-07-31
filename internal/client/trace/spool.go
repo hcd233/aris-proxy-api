@@ -17,21 +17,24 @@ import (
 )
 
 type PendingRecord struct {
-	SessionID      string                 `json:"session_id"`
-	Agent          string                 `json:"agent,omitempty"`
-	Model          string                 `json:"model,omitempty"`
-	CWD            string                 `json:"cwd,omitempty"`
-	SessionSource  string                 `json:"session_source,omitempty"`
-	Source         string                 `json:"source"`
-	RecordType     string                 `json:"record_type"`
-	Event          string                 `json:"hook_event_name,omitempty"`
-	TurnID         string                 `json:"turn_id,omitempty"`
-	CallID         string                 `json:"call_id,omitempty"`
-	TranscriptLine *int64                 `json:"transcript_line,omitempty"`
-	ClientSequence int64                  `json:"client_sequence,omitempty"`
-	DedupKey       string                 `json:"dedup_key"`
-	Payload        sonic.NoCopyRawMessage `json:"payload"`
-	CreatedAt      time.Time              `json:"created_at"`
+	SessionID       string                 `json:"session_id"`
+	ParentSessionID string                 `json:"parent_session_id,omitempty"`
+	Agent           string                 `json:"agent,omitempty"`
+	AgentID         string                 `json:"agent_id,omitempty"`
+	AgentType       string                 `json:"agent_type,omitempty"`
+	Model           string                 `json:"model,omitempty"`
+	CWD             string                 `json:"cwd,omitempty"`
+	SessionSource   string                 `json:"session_source,omitempty"`
+	Source          string                 `json:"source"`
+	RecordType      string                 `json:"record_type"`
+	Event           string                 `json:"hook_event_name,omitempty"`
+	TurnID          string                 `json:"turn_id,omitempty"`
+	CallID          string                 `json:"call_id,omitempty"`
+	TranscriptLine  *int64                 `json:"transcript_line,omitempty"`
+	ClientSequence  int64                  `json:"client_sequence,omitempty"`
+	DedupKey        string                 `json:"dedup_key"`
+	Payload         sonic.NoCopyRawMessage `json:"payload"`
+	CreatedAt       time.Time              `json:"created_at"`
 }
 
 type RecordResult struct {
