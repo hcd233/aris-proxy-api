@@ -102,12 +102,14 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 	if info.SessionID == "" || info.EventName == "" {
 		return ierr.New(ierr.ErrValidation, "hook input missing identity")
 	}
+	if info.EventName == constant.TraceEventSubagentStop && i.adapter.Name() == constant.TraceAgentCodex {
+		// codex 子代理是独立 session（独立 transcript），SubagentStop 只读子代理 transcript；
+		// claude 的 SubagentStop 无子代理 transcript 概念，保持原 hook 记录路径。
+		return i.ingestSubagentStop(ctx, info)
+	}
 	spoolID, sequence, err := nextSequence(ctx, i.paths)
 	if err != nil {
 		return err
-	}
-	if info.EventName == constant.TraceEventSubagentStop {
-		return i.ingestSubagentStop(ctx, info)
 	}
 	payload := raw
 	if info.EventName == constant.TraceEventStop {
@@ -156,9 +158,12 @@ func (i *Ingestor) flush(ctx context.Context, config Config) error {
 		return err
 	}
 	request := ingestBatch{
-		SessionID: batch[0].SessionID,
-		Agent:     batch[0].Agent,
-		Records:   make([]ingestRecord, 0, len(batch)),
+		SessionID:       batch[0].SessionID,
+		ParentSessionID: batch[0].ParentSessionID,
+		Agent:           batch[0].Agent,
+		AgentID:         batch[0].AgentID,
+		AgentType:       batch[0].AgentType,
+		Records:         make([]ingestRecord, 0, len(batch)),
 	}
 	for _, record := range batch {
 		if request.Model == "" && record.Model != "" {
@@ -199,7 +204,9 @@ func (i *Ingestor) ingestSubagentStop(ctx context.Context, info HookInfo) error 
 	if childID == "" {
 		return nil
 	}
-	if _, err := i.rollout.ReadNew(ctx, childID, info.AgentTranscriptPath); err != nil {
+	if _, err := i.rollout.ReadNewForSubagent(
+		ctx, childID, info.AgentTranscriptPath, info.SessionID, info.AgentID, info.AgentType,
+	); err != nil {
 		writeLocalError(i.paths, constant.TraceClientLogCategoryRollout)
 		return nil //nolint:nilerr // fail-open: never block agent CLI
 	}
@@ -213,9 +220,15 @@ func (i *Ingestor) ingestSubagentStop(ctx context.Context, info HookInfo) error 
 	return i.flushSubagent(ctx, config, childID, info)
 }
 
-// flushSubagent 上报子代理批次：从 spool 取 childID 对应记录，batch 携带父 session 与 agent 元数据。
+// flushSubagent 上报子代理批次：从 spool 精确取 childID 对应记录，batch 携带父 session 与 agent 元数据。
+// 若 spool 中最旧记录属于其他会话（父会话积压），本次不 POST，子代理记录留待后续批次。
 func (i *Ingestor) flushSubagent(ctx context.Context, config Config, childID string, info HookInfo) error {
-	batch, err := i.spool.Batch(ctx, constant.TraceClientBatchMaxRecords, constant.TraceClientBatchMaxBytes)
+	batch, err := i.spool.BatchForSession(
+		ctx,
+		childID,
+		constant.TraceClientBatchMaxRecords,
+		constant.TraceClientBatchMaxBytes,
+	)
 	if err != nil || len(batch) == 0 {
 		return err
 	}
@@ -228,9 +241,6 @@ func (i *Ingestor) flushSubagent(ctx context.Context, config Config, childID str
 		Records:         make([]ingestRecord, 0, len(batch)),
 	}
 	for _, record := range batch {
-		if record.SessionID != childID {
-			continue // spool 可能残留其他会话记录，只发 childID 对应的子代理记录
-		}
 		if request.Model == "" && record.Model != "" {
 			request.Model = record.Model
 		}
@@ -248,6 +258,9 @@ func (i *Ingestor) flushSubagent(ctx context.Context, config Config, childID str
 			DedupKey:       record.DedupKey,
 			Payload:        record.Payload,
 		})
+	}
+	if len(request.Records) == 0 {
+		return nil // 无子代理记录可发，避免空批次 400
 	}
 	body, err := sonic.Marshal(request)
 	if err != nil {

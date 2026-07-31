@@ -219,3 +219,43 @@ func TestInspectCodexHooksPartial(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestInstallCodexHooksStripsRemovedEvents(t *testing.T) {
+	t.Parallel()
+	paths := trace.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
+	writeHooksFile(t, paths, `{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo hi", "timeout": 5}]},
+      {"matcher": "", "hooks": [{"type": "command", "command": "/old/bin/aris trace ingest --agent codex", "timeout": 30}]}
+    ],
+    "SubagentStart": [{"matcher": "", "hooks": [{"type": "command", "command": "/old/bin/aris trace ingest --agent codex", "timeout": 30}]}]
+  }
+}`)
+
+	if _, err := trace.InstallCodexHooks(paths, testBinPath); err != nil {
+		t.Fatalf("InstallCodexHooks error: %v", err)
+	}
+
+	data, err := os.ReadFile(paths.CodexHooksFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(data, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	var hooks map[string][]map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(parsed["hooks"], &hooks); err != nil {
+		t.Fatal(err)
+	}
+	if len(hooks["PreToolUse"]) != 1 {
+		t.Fatalf("PreToolUse should keep only non-aris group, got %d groups", len(hooks["PreToolUse"]))
+	}
+	if _, ok := hooks["SubagentStart"]; ok {
+		t.Fatal("SubagentStart should be removed entirely (only aris groups remained)")
+	}
+	if _, ok := hooks["Stop"]; !ok {
+		t.Fatal("Stop should be registered by install")
+	}
+}

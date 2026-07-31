@@ -105,7 +105,7 @@ func (h *reportTraceEventHandler) ensureTrace(
 	existing *trace.Trace,
 ) (*trace.Trace, error) {
 	if existing == nil {
-		parentTraceID := resolveParentTraceID(ctx, h.repo, cmd.ParentSessionID, cmd.SessionID)
+		parentTraceID := resolveParentTraceID(ctx, h.repo, cmd.ParentSessionID, cmd.SessionID, cmd.APIKeyName)
 		source, metadata := resolveSubagentAttrs(cmd)
 		return h.repo.UpsertBySessionID(ctx, &trace.Trace{
 			Agent:         agent,
@@ -151,14 +151,17 @@ func (h *reportTraceEventHandler) ensureTrace(
 	})
 }
 
-// resolveParentTraceID 按父 session 解析父 trace id；无父或父不存在返回 0。
-func resolveParentTraceID(ctx context.Context, repo trace.TraceRepository, parentSessionID, sessionID string) uint {
+// resolveParentTraceID 按父 session 解析父 trace id；无父、父不存在或租户不一致时返回 0。
+func resolveParentTraceID(ctx context.Context, repo trace.TraceRepository, parentSessionID, sessionID, apiKeyName string) uint {
 	if parentSessionID == "" || parentSessionID == sessionID {
 		return 0
 	}
 	parent, err := repo.FindBySessionID(ctx, parentSessionID)
 	if err != nil || parent == nil {
 		return 0
+	}
+	if apiKeyName != "" && parent.APIKeyName != apiKeyName {
+		return 0 // 跨租户 session 不应建立父/子关联
 	}
 	return parent.ID
 }

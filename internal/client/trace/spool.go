@@ -148,6 +148,55 @@ func (s *Spool) Batch(
 	return batch, err
 }
 
+// BatchForSession 返回指定 SessionID 的最旧记录批次；其他会话记录跳过（不影响其滞留）。
+func (s *Spool) BatchForSession(
+	ctx context.Context,
+	sessionID string,
+	maxRecords int,
+	maxBytes int64,
+) ([]PendingRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if maxRecords <= 0 {
+		maxRecords = constant.TraceClientBatchMaxRecords
+	}
+	if maxBytes <= 0 {
+		maxBytes = constant.TraceClientBatchMaxBytes
+	}
+	batch := []PendingRecord{}
+	err := withFileLock(s.lockFile(), func() error {
+		files, err := pendingFiles(s.paths.PendingDir())
+		if err != nil {
+			return err
+		}
+		var totalBytes int64
+		for _, file := range files {
+			if len(batch) >= maxRecords {
+				break
+			}
+			data, err := os.ReadFile(file.path)
+			if err != nil {
+				return ierr.Wrap(ierr.ErrInternal, err, "read pending trace record")
+			}
+			var record PendingRecord
+			if err := sonic.Unmarshal(data, &record); err != nil {
+				return ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode pending trace record")
+			}
+			if record.SessionID != sessionID {
+				continue
+			}
+			if totalBytes+file.size > maxBytes {
+				break
+			}
+			batch = append(batch, record)
+			totalBytes += file.size
+		}
+		return nil
+	})
+	return batch, err
+}
+
 func (s *Spool) Acknowledge(ctx context.Context, results []RecordResult) error {
 	if err := ctx.Err(); err != nil {
 		return err

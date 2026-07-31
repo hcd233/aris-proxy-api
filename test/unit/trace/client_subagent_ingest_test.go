@@ -75,3 +75,38 @@ func TestIngestSubagentStop_ReportsChildTranscriptWithParentSession(t *testing.T
 		}
 	}
 }
+
+// TestBatchForSession_IgnoresOtherSessions 验证混合会话 spool 下 BatchForSession 只取目标会话记录。
+func TestBatchForSession_IgnoresOtherSessions(t *testing.T) {
+	t.Parallel()
+	paths := traceclient.Paths{Root: t.TempDir()}
+	spool := traceclient.NewSpool(paths, 1<<20)
+	ctx := context.Background()
+
+	parent := traceclient.PendingRecord{
+		SessionID: "parent-s1", Agent: "codex", Source: "hook", RecordType: "hook_event",
+		Event: "Stop", DedupKey: "hook:parent:1", Payload: []byte(`{"x":1}`),
+	}
+	child := traceclient.PendingRecord{
+		SessionID: "child-s1", ParentSessionID: "parent-s1", AgentID: "agent-1", AgentType: "worker",
+		Agent: "codex", Source: "rollout", RecordType: "event_msg",
+		Event: "task_complete", DedupKey: "rollout:child-s1:1", Payload: []byte(`{"x":2}`),
+	}
+	if err := spool.Append(ctx, parent); err != nil {
+		t.Fatalf("append parent: %v", err)
+	}
+	if err := spool.Append(ctx, child); err != nil {
+		t.Fatalf("append child: %v", err)
+	}
+
+	batch, err := spool.BatchForSession(ctx, "child-s1", 100, 1<<20)
+	if err != nil {
+		t.Fatalf("BatchForSession: %v", err)
+	}
+	if len(batch) != 1 || batch[0].DedupKey != "rollout:child-s1:1" {
+		t.Fatalf("expected only child record, got %+v", batch)
+	}
+	if batch[0].ParentSessionID != "parent-s1" || batch[0].AgentID != "agent-1" {
+		t.Fatalf("child metadata lost: %+v", batch[0])
+	}
+}
