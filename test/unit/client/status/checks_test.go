@@ -37,8 +37,8 @@ func TestCollectWithoutConfigSkipsNetwork(t *testing.T) {
 	if report.ServerOK || report.AuthOK {
 		t.Fatal("network checks should be skipped without config")
 	}
-	if report.HooksTotal != 10 {
-		t.Fatalf("HooksTotal = %d, want 10", report.HooksTotal)
+	if report.HooksTotal != 3 {
+		t.Fatalf("HooksTotal = %d, want 3", report.HooksTotal)
 	}
 }
 
@@ -128,7 +128,7 @@ func TestCollectLocalFiles(t *testing.T) {
 	if report.RecentErrors != 3 {
 		t.Fatalf("RecentErrors = %d, want 3", report.RecentErrors)
 	}
-	if report.HooksFound != 10 || len(report.HooksMissing) != 0 {
-		t.Fatalf("Hooks = %d/%v, want 10/[]", report.HooksFound, report.HooksMissing)
+	if report.HooksFound != 3 || len(report.HooksMissing) != 0 {
+		t.Fatalf("Hooks = %d/%v, want 3/[]", report.HooksFound, report.HooksMissing)
 	}
 }

@@ -31,8 +31,8 @@ func TestInstallCodexHooksOnMissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InstallCodexHooks error: %v", err)
 	}
-	if registered != 10 {
-		t.Fatalf("registered = %d, want 10", registered)
+	if registered != 3 {
+		t.Fatalf("registered = %d, want 3", registered)
 	}
 
 	data, err := os.ReadFile(paths.CodexHooksFile())
@@ -47,8 +47,8 @@ func TestInstallCodexHooksOnMissingFile(t *testing.T) {
 	if err := sonic.Unmarshal(parsed["hooks"], &hooks); err != nil {
 		t.Fatalf("decode hooks field: %v", err)
 	}
-	if len(hooks) != 10 {
-		t.Fatalf("hooks has %d events, want 10", len(hooks))
+	if len(hooks) != 3 {
+		t.Fatalf("hooks has %d events, want 3", len(hooks))
 	}
 	for event, groups := range hooks {
 		if len(groups) != 1 {
@@ -76,7 +76,7 @@ func TestInstallCodexHooksPreservesExistingAndBacksUp(t *testing.T) {
 	paths := trace.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 	writeHooksFile(t, paths, `{
   "hooks": {
-    "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "echo hi", "timeout": 5}]}]
+    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "echo hi", "timeout": 5}]}]
   },
   "otherField": {"keep": true}
 }`)
@@ -104,8 +104,8 @@ func TestInstallCodexHooksPreservesExistingAndBacksUp(t *testing.T) {
 	if err := sonic.Unmarshal(parsed["hooks"], &hooks); err != nil {
 		t.Fatal(err)
 	}
-	if len(hooks["PreToolUse"]) != 2 {
-		t.Fatalf("PreToolUse has %d groups, want 2 (existing + aris)", len(hooks["PreToolUse"]))
+	if len(hooks["Stop"]) != 2 {
+		t.Fatalf("Stop has %d groups, want 2 (existing + aris)", len(hooks["Stop"]))
 	}
 
 	backup, err := os.ReadFile(paths.CodexHooksBackupFile())
@@ -180,21 +180,21 @@ func TestInspectCodexHooks(t *testing.T) {
 	paths := trace.Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 
 	found, missing := trace.InspectCodexHooks(paths, testBinPath)
-	if found != 0 || len(missing) != 10 {
-		t.Fatalf("missing file: found = %d, missing = %d, want 0/10", found, len(missing))
+	if found != 0 || len(missing) != 3 {
+		t.Fatalf("missing file: found = %d, missing = %d, want 0/3", found, len(missing))
 	}
 
 	if _, err := trace.InstallCodexHooks(paths, testBinPath); err != nil {
 		t.Fatal(err)
 	}
 	found, missing = trace.InspectCodexHooks(paths, testBinPath)
-	if found != 10 || len(missing) != 0 {
-		t.Fatalf("after install: found = %d, missing = %d, want 10/0", found, len(missing))
+	if found != 3 || len(missing) != 0 {
+		t.Fatalf("after install: found = %d, missing = %d, want 3/0", found, len(missing))
 	}
 
 	found, missing = trace.InspectCodexHooks(paths, "/other/bin/aris")
-	if found != 0 || len(missing) != 10 {
-		t.Fatalf("wrong bin path: found = %d, missing = %d, want 0/10", found, len(missing))
+	if found != 0 || len(missing) != 3 {
+		t.Fatalf("wrong bin path: found = %d, missing = %d, want 0/3", found, len(missing))
 	}
 }
 
@@ -208,8 +208,8 @@ func TestInspectCodexHooksPartial(t *testing.T) {
 }`)
 
 	found, missing := trace.InspectCodexHooks(paths, testBinPath)
-	if found != 1 || len(missing) != 9 {
-		t.Fatalf("found = %d, missing = %d, want 1/9", found, len(missing))
+	if found != 1 || len(missing) != 2 {
+		t.Fatalf("found = %d, missing = %d, want 1/2", found, len(missing))
 	}
 	if len(missing) > 0 && missing[0] == "Stop" {
 		t.Fatal("Stop should not be in missing list")

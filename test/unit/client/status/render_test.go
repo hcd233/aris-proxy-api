@@ -27,8 +27,8 @@ func TestRenderHealthyReport(t *testing.T) {
 		ServerLatency: 42 * time.Millisecond,
 		AuthOK:        true,
 		AuthMaskedKey: "••••5678",
-		HooksFound:    10,
-		HooksTotal:    10,
+		HooksFound:    3,
+		HooksTotal:    3,
 		LogDir:        "/home/u/.aris/trace/logs",
 	}
 	var out bytes.Buffer
@@ -42,7 +42,7 @@ func TestRenderHealthyReport(t *testing.T) {
 ◆ Auth
   ✓ API key valid · ••••5678
 ◆ Agent
-  ✓ codex · hooks 10/10 registered
+  ✓ codex · hooks 3/3 registered
 ◆ Local queue
   ✓ no pending records
 ◆ Diagnostics
@@ -56,8 +56,8 @@ func TestRenderHealthyReport(t *testing.T) {
 func TestRenderNotInitialized(t *testing.T) {
 	t.Parallel()
 	report := &status.Report{
-		HooksTotal:   10,
-		HooksMissing: []string{"SessionStart", "PostCompact"},
+		HooksTotal:   3,
+		HooksMissing: []string{"SessionStart", "Stop", "SubagentStop"},
 		LogDir:       "/home/u/.aris/trace/logs",
 	}
 	var out bytes.Buffer
@@ -71,7 +71,7 @@ func TestRenderNotInitialized(t *testing.T) {
 ◆ Auth
   ! not configured
 ◆ Agent
-  ! codex · hooks 0/10 registered, missing: SessionStart, PostCompact
+  ! codex · hooks 0/3 registered, missing: SessionStart, Stop, SubagentStop
 ◆ Local queue
   ✓ no pending records
 ◆ Diagnostics
@@ -92,8 +92,8 @@ func TestRenderQueueBacklog(t *testing.T) {
 		ServerLatency: 42 * time.Millisecond,
 		AuthOK:        true,
 		AuthMaskedKey: "••••5678",
-		HooksFound:    10,
-		HooksTotal:    10,
+		HooksFound:    3,
+		HooksTotal:    3,
 		PendingCount:  3,
 		PendingBytes:  12700,
 		RejectedCount: 1,
@@ -126,7 +126,7 @@ func TestRenderJSONSchema(t *testing.T) {
 		AuthOK:        true,
 		AuthMaskedKey: "••••5678",
 		HooksFound:    7,
-		HooksTotal:    10,
+		HooksTotal:    3,
 		HooksMissing:  []string{"Stop"},
 		PendingCount:  3,
 		PendingBytes:  12700,
