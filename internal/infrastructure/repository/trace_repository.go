@@ -32,7 +32,7 @@ func NewTraceRepository(db *gorm.DB) trace.TraceRepository {
 func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 	return &trace.Trace{
 		ID: m.ID, Agent: m.Agent, SessionID: m.SessionID, APIKeyName: m.APIKeyName,
-		UserID: m.UserID, Model: m.Model, CWD: m.CWD, Source: m.Source,
+		UserID: m.UserID, ParentTraceID: m.ParentTraceID, Model: m.Model, CWD: m.CWD, Source: m.Source,
 		Status: m.Status, Metadata: m.Metadata, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
 		DeletedAt: m.DeletedAt,
 	}
@@ -41,7 +41,7 @@ func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 func toTraceRecord(t *trace.Trace) *dbmodel.Trace {
 	return &dbmodel.Trace{
 		Agent: t.Agent, SessionID: t.SessionID, APIKeyName: t.APIKeyName,
-		UserID: t.UserID, Model: t.Model, CWD: t.CWD, Source: t.Source,
+		UserID: t.UserID, ParentTraceID: t.ParentTraceID, Model: t.Model, CWD: t.CWD, Source: t.Source,
 		Status: t.Status, Metadata: t.Metadata,
 	}
 }
@@ -54,6 +54,7 @@ func (r *traceRepository) UpsertBySessionID(ctx context.Context, t *trace.Trace)
 		DoUpdates: clause.AssignmentColumns([]string{
 			constant.FieldModel, constant.FieldCWD, constant.FieldSource, constant.FieldStatus,
 			constant.FieldUpdatedAt, constant.FieldMetadata, constant.FieldUserID, constant.FieldAPIKeyName,
+			constant.FieldParentTraceID,
 		}),
 	}).Create(rec).Error
 	if err != nil {

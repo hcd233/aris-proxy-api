@@ -37,7 +37,7 @@ func (h *listTracesHandler) Handle(ctx context.Context, q port.ListTracesQuery) 
 	}
 	return lo.Map(traces, func(item *trace.Trace, _ int) *port.TraceSummaryView {
 		return &port.TraceSummaryView{
-			ID: item.ID, SessionID: item.SessionID, Agent: item.Agent, APIKeyName: item.APIKeyName,
+			ID: item.ID, SessionID: item.SessionID, ParentTraceID: item.ParentTraceID, Agent: item.Agent, APIKeyName: item.APIKeyName,
 			Model: item.Model, Source: item.Source, Status: item.Status, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
 		}
 	}), pageInfo, nil

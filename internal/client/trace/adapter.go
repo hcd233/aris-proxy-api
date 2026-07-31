@@ -1,6 +1,10 @@
 package trace
 
-import "github.com/hcd233/aris-proxy-api/internal/common/ierr"
+import (
+	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+)
 
 // HookInfo 是各 agent hook stdin JSON 的归一化身份视图。
 type HookInfo struct {
@@ -12,6 +16,10 @@ type HookInfo struct {
 	TurnID         string // codex: turn_id；claude: prompt_id
 	CallID         string // 工具调用关联 ID（tool_use_id）
 	TranscriptPath string
+	// 以下仅 SubagentStop hook 输入携带
+	AgentTranscriptPath string // 子代理 transcript 文件路径
+	AgentID             string // 子代理 id
+	AgentType           string // 子代理类型
 }
 
 // TranscriptMeta 是单行 transcript/rollout 记录的归一化分类结果。
@@ -20,6 +28,7 @@ type TranscriptMeta struct {
 	Event      string
 	TurnID     string
 	CallID     string
+	SessionID  string // session_meta 的 payload.id（用于稳定 dedup key）
 }
 
 // AgentAdapter 抹平不同 agent CLI 的 hook 与 transcript 格式差异。
@@ -46,4 +55,23 @@ func LookupAdapter(name string) (AgentAdapter, error) {
 		return adapter, nil
 	}
 	return nil, ierr.New(ierr.ErrValidation, "unknown trace agent")
+}
+
+// TrimStopHookPayload 删除 Stop hook 输入中的 last_assistant_message 键
+// （与 rollout 的 agent_message 重复，裁剪避免双源冗余）；其余字段原样保留。
+// 输入非 JSON 或不含目标键时原样返回。
+func TrimStopHookPayload(raw []byte) []byte {
+	var root map[string]sonic.NoCopyRawMessage
+	if err := sonic.Unmarshal(raw, &root); err != nil {
+		return raw
+	}
+	if _, ok := root[constant.TraceClientStopTrimKey]; !ok {
+		return raw
+	}
+	delete(root, constant.TraceClientStopTrimKey)
+	trimmed, err := sonic.Marshal(root)
+	if err != nil {
+		return raw
+	}
+	return trimmed
 }

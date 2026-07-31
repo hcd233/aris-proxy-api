@@ -178,13 +178,16 @@ func (h *traceHandler) HandleReportTraceEvent(
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	cmd := port.ReportTraceEventCommand{
-		SessionID:  req.Body.SessionID,
-		Agent:      req.Body.Agent,
-		Model:      req.Body.Model,
-		CWD:        req.Body.CWD,
-		Source:     req.Body.Source,
-		APIKeyName: util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
-		UserID:     util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		SessionID:       req.Body.SessionID,
+		ParentSessionID: req.Body.ParentSessionID,
+		Agent:           req.Body.Agent,
+		AgentID:         req.Body.AgentID,
+		AgentType:       req.Body.AgentType,
+		Model:           req.Body.Model,
+		CWD:             req.Body.CWD,
+		Source:          req.Body.Source,
+		APIKeyName:      util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		UserID:          util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		Records: lo.Map(req.Body.Records, func(
 			record *dto.ReportTraceRecordReq,
 			_ int,
@@ -238,7 +241,7 @@ func (h *traceHandler) HandleListTraces(ctx context.Context, req *dto.ListTraces
 	}
 	rsp.Traces = lo.Map(views, func(item *port.TraceSummaryView, _ int) *dto.TraceSummary {
 		return &dto.TraceSummary{
-			ID: item.ID, SessionID: item.SessionID, Agent: item.Agent, APIKeyName: item.APIKeyName,
+			ID: item.ID, SessionID: item.SessionID, ParentTraceID: item.ParentTraceID, Agent: item.Agent, APIKeyName: item.APIKeyName,
 			Model: item.Model, Source: item.Source, Status: item.Status, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
 		}
 	})
@@ -260,7 +263,7 @@ func (h *traceHandler) HandleGetTrace(ctx context.Context, req *dto.GetTraceReq)
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 	rsp.Trace = &dto.TraceDetail{
-		ID: view.ID, SessionID: view.SessionID, Agent: view.Agent, APIKeyName: view.APIKeyName,
+		ID: view.ID, SessionID: view.SessionID, ParentTraceID: view.ParentTraceID, Agent: view.Agent, APIKeyName: view.APIKeyName,
 		Model: view.Model, CWD: view.CWD, Source: view.Source, Status: view.Status,
 		Metadata: view.Metadata, EventCount: view.EventCount, CreatedAt: view.CreatedAt, UpdatedAt: view.UpdatedAt,
 	}

@@ -12,31 +12,33 @@ import (
 
 // TraceSummary trace 列表项
 type TraceSummary struct {
-	ID         uint      `json:"id" doc:"Trace ID"`
-	SessionID  string    `json:"sessionId" doc:"codex session_id"`
-	Agent      string    `json:"agent" doc:"agent 来源"`
-	APIKeyName string    `json:"apiKeyName" doc:"归属 API Key"`
-	Model      string    `json:"model" doc:"模型"`
-	Source     string    `json:"source" doc:"startup/resume/clear/compact"`
-	Status     string    `json:"status" doc:"active/done"`
-	CreatedAt  time.Time `json:"createdAt" doc:"创建时间"`
-	UpdatedAt  time.Time `json:"updatedAt" doc:"更新时间"`
+	ID            uint      `json:"id" doc:"Trace ID"`
+	SessionID     string    `json:"sessionId" doc:"codex session_id"`
+	ParentTraceID uint      `json:"parentTraceId" doc:"父 trace ID，0 表示主 trace"`
+	Agent         string    `json:"agent" doc:"agent 来源"`
+	APIKeyName    string    `json:"apiKeyName" doc:"归属 API Key"`
+	Model         string    `json:"model" doc:"模型"`
+	Source        string    `json:"source" doc:"startup/resume/clear/compact"`
+	Status        string    `json:"status" doc:"active/done"`
+	CreatedAt     time.Time `json:"createdAt" doc:"创建时间"`
+	UpdatedAt     time.Time `json:"updatedAt" doc:"更新时间"`
 }
 
 // TraceDetail trace 详情
 type TraceDetail struct {
-	ID         uint              `json:"id" doc:"Trace ID"`
-	SessionID  string            `json:"sessionId" doc:"codex session_id"`
-	Agent      string            `json:"agent" doc:"agent 来源"`
-	APIKeyName string            `json:"apiKeyName" doc:"归属 API Key"`
-	Model      string            `json:"model" doc:"模型"`
-	CWD        string            `json:"cwd" doc:"工作目录"`
-	Source     string            `json:"source" doc:"startup/resume/clear/compact"`
-	Status     string            `json:"status" doc:"active/done"`
-	Metadata   map[string]string `json:"metadata,omitempty" doc:"扩展字段"`
-	EventCount int64             `json:"eventCount" doc:"事件数"`
-	CreatedAt  time.Time         `json:"createdAt" doc:"创建时间"`
-	UpdatedAt  time.Time         `json:"updatedAt" doc:"更新时间"`
+	ID            uint              `json:"id" doc:"Trace ID"`
+	SessionID     string            `json:"sessionId" doc:"codex session_id"`
+	ParentTraceID uint              `json:"parentTraceId" doc:"父 trace ID，0 表示主 trace"`
+	Agent         string            `json:"agent" doc:"agent 来源"`
+	APIKeyName    string            `json:"apiKeyName" doc:"归属 API Key"`
+	Model         string            `json:"model" doc:"模型"`
+	CWD           string            `json:"cwd" doc:"工作目录"`
+	Source        string            `json:"source" doc:"startup/resume/clear/compact"`
+	Status        string            `json:"status" doc:"active/done"`
+	Metadata      map[string]string `json:"metadata,omitempty" doc:"扩展字段"`
+	EventCount    int64             `json:"eventCount" doc:"事件数"`
+	CreatedAt     time.Time         `json:"createdAt" doc:"创建时间"`
+	UpdatedAt     time.Time         `json:"updatedAt" doc:"更新时间"`
 }
 
 // TraceEventItem trace 事件项
@@ -130,12 +132,15 @@ type ReportTraceEventReq struct {
 // ReportTraceEventReqBody 批量上报 envelope。原始内容一律放在 records[i].payload，
 // envelope 只承担索引与归属字段。
 type ReportTraceEventReqBody struct {
-	Records   []*ReportTraceRecordReq `json:"records" required:"true" minItems:"1" doc:"批量原始记录"`
-	SessionID string                  `json:"session_id" required:"true" minLength:"1" doc:"agent session id"`
-	Agent     string                  `json:"agent,omitempty" enum:"codex,claude" doc:"agent 类型（默认 codex）"`
-	Model     string                  `json:"model,omitempty" doc:"模型"`
-	CWD       string                  `json:"cwd,omitempty" doc:"工作目录"`
-	Source    string                  `json:"source,omitempty" doc:"startup/resume/clear/compact"`
+	Records         []*ReportTraceRecordReq `json:"records" required:"true" minItems:"1" doc:"批量原始记录"`
+	SessionID       string                  `json:"session_id" required:"true" minLength:"1" doc:"agent session id"`
+	ParentSessionID string                  `json:"parent_session_id,omitempty" doc:"父 session id（子代理上报）"`
+	Agent           string                  `json:"agent,omitempty" enum:"codex,claude" doc:"agent 类型（默认 codex）"`
+	AgentID         string                  `json:"agent_id,omitempty" doc:"子代理 id（SubagentStop hook 输入）"`
+	AgentType       string                  `json:"agent_type,omitempty" doc:"子代理类型（SubagentStop hook 输入）"`
+	Model           string                  `json:"model,omitempty" doc:"模型"`
+	CWD             string                  `json:"cwd,omitempty" doc:"工作目录"`
+	Source          string                  `json:"source,omitempty" doc:"startup/resume/clear/compact"`
 }
 
 // ReportTraceRecordReq 单条 Hook 或 rollout 原始记录。

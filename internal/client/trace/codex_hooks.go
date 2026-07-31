@@ -3,6 +3,7 @@ package trace
 import (
 	"errors"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -69,6 +70,8 @@ func installAgentHooks(settingsFile, backupFile, command string, events []string
 			}},
 		})
 	}
+	// 清理已从注册列表移除的事件：删除其下残留的 aris hook 组（保留非 aris 用户组）
+	stripRemovedEvents(hooks, events)
 	hooksData, err := sonic.Marshal(hooks)
 	if err != nil {
 		return 0, ierr.Wrap(ierr.ErrDTOMarshal, err, "encode hooks field")
@@ -137,6 +140,26 @@ func readHooksFile(settingsFile string) (root map[string]sonic.NoCopyRawMessage,
 		}
 	}
 	return root, hooks, true, nil
+}
+
+// stripRemovedEvents 删除不在 events 列表中的事件下残留的 aris hook 组（保留非 aris 用户组）。
+func stripRemovedEvents(hooks map[string][]hookGroup, events []string) {
+	for event, groups := range hooks {
+		if slices.Contains(events, event) {
+			continue
+		}
+		kept := make([]hookGroup, 0, len(groups))
+		for _, group := range groups {
+			if !groupHasIngestHook(group) {
+				kept = append(kept, group)
+			}
+		}
+		if len(kept) == 0 {
+			delete(hooks, event)
+		} else {
+			hooks[event] = kept
+		}
+	}
 }
 
 func groupHasCommand(group hookGroup, command string) bool {

@@ -10,31 +10,33 @@ import (
 
 // TraceSummaryView 列表项视图
 type TraceSummaryView struct {
-	ID         uint
-	SessionID  string
-	Agent      string
-	APIKeyName string
-	Model      string
-	Source     string
-	Status     string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            uint
+	SessionID     string
+	ParentTraceID uint
+	Agent         string
+	APIKeyName    string
+	Model         string
+	Source        string
+	Status        string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // TraceDetailView 详情视图
 type TraceDetailView struct {
-	ID         uint
-	SessionID  string
-	Agent      string
-	APIKeyName string
-	Model      string
-	CWD        string
-	Source     string
-	Status     string
-	Metadata   map[string]string
-	EventCount int64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            uint
+	SessionID     string
+	ParentTraceID uint
+	Agent         string
+	APIKeyName    string
+	Model         string
+	CWD           string
+	Source        string
+	Status        string
+	Metadata      map[string]string
+	EventCount    int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // TraceEventView 事件视图
@@ -68,14 +70,17 @@ type ReportTraceRecord struct {
 
 // ReportTraceEventCommand 上报事件命令
 type ReportTraceEventCommand struct {
-	SessionID  string
-	Agent      string
-	Model      string
-	CWD        string
-	Source     string
-	APIKeyName string
-	UserID     uint
-	Records    []ReportTraceRecord
+	SessionID       string
+	ParentSessionID string
+	Agent           string
+	Model           string
+	CWD             string
+	Source          string
+	AgentID         string
+	AgentType       string
+	APIKeyName      string
+	UserID          uint
+	Records         []ReportTraceRecord
 }
 
 // ReportTraceRecordResult 单条上报处理结果。
