@@ -110,6 +110,7 @@ type codexRolloutEnvelope struct {
 
 type codexRolloutPayload struct {
 	Type        string `json:"type"`
+	ID          string `json:"id,omitempty"`
 	TurnID      string `json:"turn_id,omitempty"`
 	CallID      string `json:"call_id,omitempty"`
 	Passthrough struct {
@@ -140,6 +141,7 @@ func (codexAdapter) ClassifyTranscriptLine(raw []byte) TranscriptMeta {
 		Event:      payload.Type,
 		TurnID:     payload.turnID(),
 		CallID:     payload.CallID,
+		SessionID:  payload.ID,
 	}
 }
 

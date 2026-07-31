@@ -28,6 +28,7 @@ type TranscriptMeta struct {
 	Event      string
 	TurnID     string
 	CallID     string
+	SessionID  string // session_meta 的 payload.id（用于稳定 dedup key）
 }
 
 // AgentAdapter 抹平不同 agent CLI 的 hook 与 transcript 格式差异。

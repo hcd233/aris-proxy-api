@@ -124,7 +124,6 @@ func (r *RolloutReader) parseRolloutLines(
 
 func (r *RolloutReader) rolloutRecord(sessionID string, line int64, raw []byte) PendingRecord {
 	meta := r.adapter.ClassifyTranscriptLine(raw)
-	digest := sha256.Sum256(raw)
 	lineCopy := line
 	return PendingRecord{
 		SessionID:      sessionID,
@@ -135,14 +134,19 @@ func (r *RolloutReader) rolloutRecord(sessionID string, line int64, raw []byte) 
 		TurnID:         meta.TurnID,
 		CallID:         meta.CallID,
 		TranscriptLine: &lineCopy,
-		DedupKey: fmt.Sprintf(
-			constant.TraceClientRolloutDedupFormat,
-			sessionID,
-			line,
-			hex.EncodeToString(digest[:]),
-		),
-		Payload: append(sonic.NoCopyRawMessage{}, raw...),
+		DedupKey:       RolloutDedupKey(sessionID, meta, line, raw),
+		Payload:        append(sonic.NoCopyRawMessage{}, raw...),
 	}
+}
+
+// RolloutDedupKey 生成 rollout 记录 dedup key：session_meta 用稳定语义键
+// （payload.id，压缩重写后行号变化不产生重复），其余记录保持 line:hash。
+func RolloutDedupKey(sessionID string, meta TranscriptMeta, line int64, raw []byte) string {
+	if meta.RecordType == constant.TraceRolloutTypeSessionMeta && meta.SessionID != "" {
+		return fmt.Sprintf(constant.TraceClientSessionMetaDedupFormat, sessionID, meta.SessionID)
+	}
+	digest := sha256.Sum256(raw)
+	return fmt.Sprintf(constant.TraceClientRolloutDedupFormat, sessionID, line, hex.EncodeToString(digest[:]))
 }
 
 func (r *RolloutReader) transcriptPaths(transcriptPath string) (statePath, lockPath string) {
