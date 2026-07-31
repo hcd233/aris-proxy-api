@@ -202,7 +202,7 @@ _Avoid_: log scraping, import, sync, ingestion
 ## Trace & Agent Client（Trace 与 Agent 客户端）
 
 **AgentAdapter（Agent 适配器）**:
-客户端按 agent 抹平 hook 与 transcript 格式差异的抽象（`ParseHook` / `ClassifyTranscriptLine` / `StdoutAck`），经轻量注册表按 `--agent` 名称分发；服务端另有完成事件注册表（codex: Stop/task_complete；claude: SessionEnd）与对话投影构造器注册表。新 agent 接入 = 客户端 1 个 adapter 文件 + 服务端 2 行 registry 注册。hook 命令统一为 `aris trace ingest --agent <name>`。
+客户端按 agent 抹平 hook 与 transcript 格式差异的抽象（`ParseHook` / `ClassifyTranscriptLine` / `StdoutAck`），经轻量注册表按 `--agent` 名称分发；服务端另有完成事件注册表（codex: Stop/task_complete；claude: SessionEnd）。新 agent 接入 = 客户端 1 个 adapter 文件 + 服务端 2 行 registry 注册。hook 命令统一为 `aris trace ingest --agent <name>`。
 _Avoid_: agent plugin, hook parser
 
 **TraceClient（Trace 客户端）**:
@@ -213,9 +213,8 @@ _Avoid_: trace cli, codex hook script, install script
 `aris trace ingest` 在 `~/.aris/trace/spool/` 维护的待上报记录队列。Hook 事件和 rollout 记录先原子落盘（0600），再以 5 秒超时批量 POST。服务端确认 `accepted` / `duplicate` 后删除 pending，`rejected` 移入隔离区。spool 全局上限 256 MiB，达到上限后停止接收新记录但保留既有未确认记录，始终 fail-open。
 _Avoid_: trace queue, pending records, ingest buffer
 
-**TraceConversation（Trace 对话投影）**:
-从 Trace 原始记录（Hook + transcript）非持久化投影出的结构化对话视图，按 trace 的 agent 经注册表分发构造器。rollout/transcript 优先、Hook fallback 去重补齐，按 turn 分组（claude 以 transcript 真实输入记录的 `promptId→uuid` alias 归组），工具调用和结果按 `call_id` 关联；claude 的 thinking 块与 sidechain（子代理）记录不进入投影。codex 的系统提示词（`session_meta.base_instructions.text`）投影为 `role=system` 的 message 项（经 `dedupeMessage` 去重），可用工具定义（`session_meta.dynamic_tools` 内层 `tools[]`）投影到顶层 `Tools` 字段（按 `namespace:name` 去重）。通过 `GET /api/v1/trace/conversation` 返回，供 Web 前端 Conversation 标签页展示（系统提示词复用 `SystemMessage` 组件，工具定义单独折叠区）。
-_Avoid_: trace view, conversation model, trace projection
+**TraceEvent（Trace 事件）**:
+Trace 的原始记录单元，由 `aris trace ingest` 上报，经 `GET /api/v1/trace/event/list` 分页查询，供 Web 前端按事件时间线渲染（消息/工具调用/session_meta 可读化展示，原始 payload 可展开）。
 
 ## Infrastructure（基础设施）
 

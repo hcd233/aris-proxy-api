@@ -135,54 +135,6 @@ type ListTraceEventsHandler interface {
 	Handle(ctx context.Context, q ListTraceEventsQuery) ([]*TraceEventView, *model.PageInfo, error)
 }
 
-// TraceConversationView Trace 对话投影视图。
-type TraceConversationView struct {
-	TraceID   uint
-	SessionID string
-	Turns     []*TraceConversationTurnView
-	Tools     []*TraceConversationToolView
-}
-
-// TraceConversationTurnView Trace turn 投影视图。
-type TraceConversationTurnView struct {
-	TurnID string
-	Items  []*TraceConversationItemView
-}
-
-// TraceConversationItemView Trace 对话项投影视图。
-type TraceConversationItemView struct {
-	Kind      string
-	Role      string
-	Content   string
-	ToolName  string
-	CallID    string
-	Arguments string
-	Output    string
-	Source    string
-	RecordIDs []uint
-}
-
-// TraceConversationToolView Trace 可用工具定义投影视图。
-type TraceConversationToolView struct {
-	Namespace   string
-	Name        string
-	Description string
-	Parameters  string
-	RecordIDs   []uint
-}
-
-// ListTraceConversationQuery Trace 对话查询。
-type ListTraceConversationQuery struct {
-	UserID  uint
-	IsAdmin bool
-	TraceID uint
-}
-
-// ListTraceConversationHandler Trace 对话查询 handler。
-type ListTraceConversationHandler interface {
-	Handle(ctx context.Context, q ListTraceConversationQuery) (*TraceConversationView, error)
-}
-
 // DeleteTraceCommand 删除 Trace 命令
 type DeleteTraceCommand struct {
 	UserID  uint

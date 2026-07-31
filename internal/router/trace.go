@@ -48,13 +48,6 @@ func initTraceRouter(traceGroup huma.API, deps TraceRouterDependencies, db *gorm
 	}, deps.TraceHandler.HandleListTraceEvents)
 
 	huma.Register(queryGroup, huma.Operation{
-		OperationID: "getTraceConversation", Method: http.MethodGet, Path: "/conversation",
-		Summary: "GetTraceConversation", Description: "Get reconstructed Codex conversation",
-		Tags: []string{constant.TagTrace}, Security: []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getTraceConversation", enum.PermissionUser)},
-	}, deps.TraceHandler.HandleGetTraceConversation)
-
-	huma.Register(queryGroup, huma.Operation{
 		OperationID: "deleteTrace", Method: http.MethodDelete, Path: "",
 		Summary: "DeleteTrace", Description: "Delete traces by IDs (owner or admin, comma separated)",
 		Tags:        []string{constant.TagTrace},

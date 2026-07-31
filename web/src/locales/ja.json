@@ -668,11 +668,6 @@
   "trace.traces": "件のトレース",
   "trace.invalid_id": "無効なトレース ID",
   "trace.not_found": "トレースが見つかりません",
-  "trace.conversation": "会話",
-  "trace.raw_records": "生レコード",
-  "trace.turns": "ターン",
-  "trace.available_tools": "利用可能なツール",
-  "trace.tool_count": "ツール",
   "trace.install_copy": "コピー",
   "trace.install_copied": "コピーしました",
   "trace.install_close": "閉じる",
@@ -689,5 +684,10 @@
   "trace.batch_delete_error": "軌跡の一括削除に失敗しました",
   "common.id": "ID",
   "theme.to_moonshot": "Moonshot テーマに切り替え",
-  "theme.to_anthropic": "Anthropic テーマに切り替え"
+  "theme.to_anthropic": "Anthropic テーマに切り替え",
+  "trace.timeline": "イベントタイムライン",
+  "trace.expand_json": "生JSONを表示",
+  "trace.collapse_json": "生JSONを隠す",
+  "trace.system_prompt": "システムプロンプト",
+  "trace.tools": "ツール"
 }

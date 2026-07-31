@@ -672,11 +672,6 @@
   "trace.traces": "条轨迹",
   "trace.invalid_id": "无效的轨迹 ID",
   "trace.not_found": "未找到轨迹",
-  "trace.conversation": "对话",
-  "trace.raw_records": "原始记录",
-  "trace.turns": "轮次",
-  "trace.available_tools": "可用工具",
-  "trace.tool_count": "个工具",
   "trace.install_copy": "复制",
   "trace.install_copied": "已复制",
   "trace.install_close": "关闭",
@@ -693,5 +688,10 @@
   "trace.batch_delete_error": "批量删除轨迹失败",
   "common.id": "ID",
   "theme.to_moonshot": "切换为 Moonshot 深空主题",
-  "theme.to_anthropic": "切换为 Anthropic 经典主题"
+  "theme.to_anthropic": "切换为 Anthropic 经典主题",
+  "trace.timeline": "事件时间线",
+  "trace.expand_json": "展开原始 JSON",
+  "trace.collapse_json": "收起原始 JSON",
+  "trace.system_prompt": "系统提示词",
+  "trace.tools": "工具"
 }

@@ -32,7 +32,6 @@ import type {
   ListTracesRsp,
   GetTraceRsp,
   ListTraceEventsRsp,
-  GetTraceConversationRsp,
   DeleteTraceRsp,
   CommonRsp,
   ScoreSessionReqBody,
@@ -659,10 +658,6 @@ class ApiClient {
       pageSize: String(pageSize),
     });
     return this.request<ListTraceEventsRsp>(`/api/v1/trace/event/list?${params}`);
-  }
-
-  async getTraceConversation(traceId: number): Promise<GetTraceConversationRsp> {
-    return this.request<GetTraceConversationRsp>(`/api/v1/trace/conversation?id=${traceId}`);
   }
 
   async deleteTrace(traceId: number): Promise<DeleteTraceRsp> {
