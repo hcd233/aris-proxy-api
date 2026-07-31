@@ -73,8 +73,8 @@ func TestInitCronJobs_AllDisabled(t *testing.T) { //nolint:paralleltest // cron 
 
 	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil, nil)
 
-	if cron.CronInstanceCount(crons) != 0 {
-		t.Fatalf("expected 0 cron instances when all disabled, got %d", cron.CronInstanceCount(crons))
+	if CronInstanceCount(crons) != 0 {
+		t.Fatalf("expected 0 cron instances when all disabled, got %d", CronInstanceCount(crons))
 	}
 }
 
@@ -121,8 +121,8 @@ func TestInitCronJobs_PartialEnabled(t *testing.T) { //nolint:paralleltest // cr
 
 	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil, nil)
 
-	if cron.CronInstanceCount(crons) != 1 {
-		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
+	if CronInstanceCount(crons) != 1 {
+		t.Fatalf("expected 1 cron instance, got %d", CronInstanceCount(crons))
 	}
 }
 
@@ -156,8 +156,8 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 
 	crons := cron.InitCronJobs(context.TODO(), nil, nil, nil, nil, nil, nil, nil)
 
-	if cron.CronInstanceCount(crons) != 1 {
-		t.Fatalf("expected 1 cron instance, got %d", cron.CronInstanceCount(crons))
+	if CronInstanceCount(crons) != 1 {
+		t.Fatalf("expected 1 cron instance, got %d", CronInstanceCount(crons))
 	}
 	if !mock.started {
 		t.Fatal("expected mock cron to be started")
@@ -174,5 +174,28 @@ func TestInitCronJobs_AllEnabled(t *testing.T) { //nolint:paralleltest // cron t
 
 // TestStopCronJobs_Empty 验证空实例列表下停止不会 panic
 func TestStopCronJobs_Empty(t *testing.T) { //nolint:paralleltest // cron tests share global state
-	cron.StopCronJobsWithContext(context.Background(), nil)
+	StopCronJobsWithContext(context.Background(), nil)
+}
+
+// StopCronJobsWithContext 停止全部定时任务（测试本地辅助，替代原生产包导出）。
+func StopCronJobsWithContext(ctx context.Context, crons []cron.Cron) error {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for _, c := range crons {
+			c.Stop()
+		}
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// CronInstanceCount 统计定时任务实例数（测试本地辅助，替代原生产包导出）。
+func CronInstanceCount(crons []cron.Cron) int {
+	return len(crons)
 }

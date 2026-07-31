@@ -24,10 +24,6 @@ func (p Paths) BinDir() string {
 	return filepath.Join(p.Root, constant.TraceClientBinDirName)
 }
 
-func (p Paths) BinFile() string {
-	return filepath.Join(p.BinDir(), constant.TraceClientBinaryFileName)
-}
-
 func (p Paths) TraceDir() string {
 	return filepath.Join(p.Root, constant.TraceClientTraceDirName)
 }

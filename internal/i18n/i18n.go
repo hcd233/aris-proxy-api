@@ -18,13 +18,11 @@ var localeFiles embed.FS
 var (
 	translations = make(map[enum.Locale]map[string]string)
 	loadOnce     sync.Once
-	loadErr      error
 )
 
 func loadLocales() {
 	entries, err := localeFiles.ReadDir(constant.LocaleEmbedDir)
 	if err != nil {
-		loadErr = err
 		return
 	}
 	for _, entry := range entries {
@@ -34,12 +32,10 @@ func loadLocales() {
 		locale := enum.Locale(strings.TrimSuffix(entry.Name(), constant.LocaleFileExt))
 		data, err := localeFiles.ReadFile(constant.LocaleEmbedDir + "/" + entry.Name())
 		if err != nil {
-			loadErr = err
 			return
 		}
 		var m map[string]string
 		if err := sonic.Unmarshal(data, &m); err != nil {
-			loadErr = err
 			return
 		}
 		translations[locale] = m
@@ -85,19 +81,11 @@ func Translate(locale enum.Locale, key, fallback string) string {
 	return fallback
 }
 
-func WithLocale(ctx context.Context, locale enum.Locale) context.Context {
-	return context.WithValue(ctx, constant.CtxKeyLocale, locale)
-}
-
 func FromCtx(ctx context.Context) enum.Locale {
 	if v, ok := ctx.Value(constant.CtxKeyLocale).(enum.Locale); ok {
 		return v
 	}
 	return enum.LocaleEN
-}
-
-func LoadErr() error {
-	return loadErr
 }
 
 var L = zap.L()

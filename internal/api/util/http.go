@@ -3,18 +3,15 @@ package apiutil
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
@@ -76,23 +73,6 @@ type JSONResponseWriter struct {
 	Ctx     context.Context
 }
 
-func (rw JSONResponseWriter) WriteJSON(v any) {
-	if headers := util.GetPassthroughResponseHeaders(rw.Ctx); headers != nil {
-		for k, hv := range headers {
-			rw.HumaCtx.SetHeader(k, hv)
-		}
-	}
-	rw.HumaCtx.SetStatus(fiber.StatusOK)
-	rw.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-	_, _ = rw.HumaCtx.BodyWriter().Write(lo.Must1(sonic.Marshal(v))) //nolint:errcheck // best-effort write in response handler
-}
-
-func (rw JSONResponseWriter) WriteError(statusCode int, body []byte) {
-	rw.HumaCtx.SetStatus(statusCode)
-	rw.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-	_, _ = rw.HumaCtx.BodyWriter().Write(body) //nolint:errcheck // best-effort write in error response
-}
-
 func WrapJSONResponse(ctx context.Context, handler func(writer JSONResponseWriter)) *huma.StreamResponse {
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
@@ -114,24 +94,7 @@ func WriteUpstreamError(writer JSONResponseWriter, err error, fallbackBody []byt
 		return
 	}
 	log.Error("[ProxyService] Proxy error", zap.Error(err))
-	writer.WriteError(fiber.StatusBadGateway, fallbackBody)
-}
-
-func ExtractUpstreamStatusAndError(err error) (statusCode int, errorMessage string) {
-	if err == nil {
-		return fiber.StatusOK, ""
-	}
-	var ue *model.UpstreamError
-	if errors.As(err, &ue) {
-		msg := ue.Error()
-		if ue.Body != "" {
-			msg += fmt.Sprintf(constant.ColonMessageTemplate, ue.Body)
-		}
-		return ue.StatusCode, msg
-	}
-	var connErr *model.UpstreamConnectionError
-	if errors.As(err, &connErr) {
-		return enum.CallStatusConnectionError, connErr.Error()
-	}
-	return enum.CallStatusUnknownError, err.Error()
+	writer.HumaCtx.SetStatus(fiber.StatusBadGateway)
+	writer.HumaCtx.SetHeader(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+	_, _ = writer.HumaCtx.BodyWriter().Write(fallbackBody) //nolint:errcheck // best-effort write in stream error handler
 }
