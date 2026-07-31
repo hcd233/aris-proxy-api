@@ -12,6 +12,10 @@ type HookInfo struct {
 	TurnID         string // codex: turn_id；claude: prompt_id
 	CallID         string // 工具调用关联 ID（tool_use_id）
 	TranscriptPath string
+	// 以下仅 SubagentStop hook 输入携带
+	AgentTranscriptPath string // 子代理 transcript 文件路径
+	AgentID             string // 子代理 id
+	AgentType           string // 子代理类型
 }
 
 // TranscriptMeta 是单行 transcript/rollout 记录的归一化分类结果。
