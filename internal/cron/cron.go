@@ -193,28 +193,6 @@ func buildRegistryEntries() []CronRegistryEntry {
 	}
 }
 
-func StopCronJobsWithContext(ctx context.Context, crons []Cron) error {
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for _, c := range crons {
-			c.Stop()
-		}
-	}()
-
-	select {
-	case <-done:
-		logger.Logger().Info("[Cron] All cron jobs stopped")
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-func CronInstanceCount(crons []Cron) int {
-	return len(crons)
-}
-
 type cronLoggerAdapter struct {
 	module string
 }
