@@ -168,6 +168,12 @@ const (
 	SessionDeleteErrorNoPermission = "no permission"
 	SessionDeleteErrorDeleteFailed = "failed to delete"
 
+	// ── Trace delete error messages ──
+	TraceDeleteErrorFindFailed   = "failed to find trace"
+	TraceDeleteErrorNotFound     = "trace not found"
+	TraceDeleteErrorNoPermission = "no permission"
+	TraceDeleteErrorDeleteFailed = "failed to delete"
+
 	// ── Session option values ──
 	SessionOptionScoreValueUnscored = "unscored"
 

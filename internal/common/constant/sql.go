@@ -333,6 +333,7 @@ var (
 	TraceRecordStatusRejected            = "rejected"
 	TraceRecordMessageInvalid            = "invalid record"
 	TraceRecordMessageStorageFailed      = "storage failed"
+	TraceRecordMessageTraceDeleted       = "trace deleted"
 	TraceEventTaskComplete               = "task_complete"
 	TraceRolloutTypeSessionMeta          = "session_meta"
 	TraceRolloutTypeTurnContext          = "turn_context"
