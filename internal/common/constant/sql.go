@@ -62,12 +62,13 @@ const (
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
 
-	FieldSessionID = "session_id"
-	FieldCWD       = "cwd"
-	FieldSource    = "source"
-	FieldEvent     = "event"
-	FieldTurnID    = "turn_id"
-	FieldAgent     = "agent"
+	FieldSessionID     = "session_id"
+	FieldCWD           = "cwd"
+	FieldSource        = "source"
+	FieldEvent         = "event"
+	FieldTurnID        = "turn_id"
+	FieldAgent         = "agent"
+	FieldParentTraceID = "parent_trace_id"
 
 	DBSelectAll = "*"
 )

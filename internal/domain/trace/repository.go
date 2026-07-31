@@ -10,19 +10,20 @@ import (
 
 // Trace 一次 agent 运行（领域结构体）
 type Trace struct {
-	ID         uint
-	Agent      string
-	SessionID  string
-	APIKeyName string
-	UserID     uint
-	Model      string
-	CWD        string
-	Source     string
-	Status     string
-	Metadata   map[string]string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	DeletedAt  int64
+	ID            uint
+	Agent         string
+	SessionID     string
+	APIKeyName    string
+	UserID        uint
+	ParentTraceID uint
+	Model         string
+	CWD           string
+	Source        string
+	Status        string
+	Metadata      map[string]string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     int64
 }
 
 // TraceEvent 运行内单个事件（领域结构体）
