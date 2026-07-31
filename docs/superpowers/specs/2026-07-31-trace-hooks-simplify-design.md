@@ -59,9 +59,10 @@ var TraceClientCodexHookEvents = []string{
 
 - `codexAdapter.ParseHook` 扩展 `codexHookEnvelope` 支持 `agent_transcript_path`、`agent_id`、`agent_type` 字段 → `HookInfo` 增加 `AgentTranscriptPath`、`AgentID`、`AgentType`。
 - **只读子代理 transcript 增量**（`agent_transcript_path`），不读主文件（避免与 Stop 重复）。复用 `RolloutReader`（state 按 transcript 路径 hash 分派，天然支持多文件）。
+- **不生成 SubagentStop hook 记录**：SubagentStop 仅作为触发器。原因：hook 输入的 `session_id` 是父 session（文档："Subagent hooks use the parent session id"），若生成记录会挂到父 trace 并命中 done 事件，导致父 trace 被提前 MarkDone。
 - 子代理记录的 `SessionID` 用**子代理自己的 id**（优先从 transcript 文件名 `rollout-<ts>-<id>.jsonl` 解析，fallback 读首行 `session_meta.payload.id`），用于 dedup key（`rollout:{子session}:{line}:{hash}`）与入库归属。
 - `ingestBatch` 增加 `parent_session_id`（= hook 输入的父 session_id）与子代理元数据（agent_id/agent_type），随 batch 上报。
-- 服务端命中 SubagentStop → 子 trace `MarkDone`。
+- **子 trace 的 done**：由子代理 transcript 自身的 `task_complete` 记录触发（`TraceEventTaskComplete` 已在 codex doneEvents 中），服务端 done 逻辑零改动。
 
 #### PendingRecord / ingest 传输
 
@@ -91,8 +92,8 @@ ParentTraceID uint `gorm:"column:parent_trace_id;not null;default:0;index:idx_tr
 
 - `port.ReportTraceEventCommand` 增加 `ParentSessionID`、`AgentID`、`AgentType`（batch 级）。
 - `domain/trace.Trace` 与 `dbmodel.Trace` 增加 `ParentTraceID`；`toTraceRecord`/`toTraceDomain` 同步。
-- `ensureTrace`：`ParentSessionID` 非空时查父 trace（`FindBySessionID`），命中则设置子 trace 的 `ParentTraceID`；未命中容错。子 trace 的 `model/cwd` 来自 SubagentStop hook 输入（Common input 自带），`source` 置 `"subagent"`。
-- `traceDoneEvents`：codex 注册事件集增加 `TraceEventSubagentStop`（现有 `{Stop, TaskComplete}` → `{Stop, TaskComplete, SubagentStop}`）。
+- `ensureTrace`：`ParentSessionID` 非空时查父 trace（`FindBySessionID`），命中则设置子 trace 的 `ParentTraceID`；未命中容错（子 trace 照常创建，parent_trace_id=0）。子 trace 的 `model/cwd` 来自 SubagentStop hook 输入（Common input 自带），`source` 置 `"subagent"`，`metadata` 写入 `agent_id`/`agent_type`。
+- **done 逻辑零改动**：子 trace 由子代理 transcript 的 `task_complete` 记录标记 done（已在 codex doneEvents 的 `{Stop, TaskComplete}` 中），主 trace 由 Stop/task_complete 标记（现状不变）。`traceDoneEvents` 不需要增加 SubagentStop。
 - `UpsertBySessionID` 的 OnConflict 更新列增加 `parent_trace_id`。
 - trace 列表/详情查询无需过滤（子 trace 正常展示，带 parentTraceId 字段）。
 
