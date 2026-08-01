@@ -51,7 +51,6 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 	record := &dbmodel.ModelCallAudit{
 		APIKeyID:                 audit.APIKeyID(),
 		ModelID:                  audit.ModelID(),
-		Model:                    audit.Model(),
 		UpstreamProtocol:         audit.UpstreamProtocol(),
 		APIProtocol:              audit.APIProtocol(),
 		Endpoint:                 audit.Endpoint(),
@@ -260,7 +259,6 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		a := aggregate.ReconstructAudit(aggregate.ReconstructAuditInput{
 			APIKeyID:         rec.APIKeyID,
 			ModelID:          rec.ModelID,
-			Model:            rec.Model,
 			UpstreamProtocol: rec.UpstreamProtocol,
 			APIProtocol:      rec.APIProtocol,
 			Endpoint:         rec.Endpoint,
@@ -360,9 +358,9 @@ func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint,
 
 	timeBucketExpr := dateTruncSQL(granularity)
 	var results []*modelcall.ModelTrendPoint
-	if err := db.Select(constant.FieldModel + ", " + timeBucketExpr + " AS time, COUNT(*) AS count").
-		Group(constant.FieldModel + ", time").
-		Order(constant.FieldModel + ", time").
+	if err := db.Select(constant.FieldModelID + ", " + timeBucketExpr + " AS time, COUNT(*) AS count").
+		Group(constant.FieldModelID + ", time").
+		Order(constant.FieldModelID + ", time").
 		Scan(&results).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query model trend")
 	}
@@ -380,9 +378,9 @@ func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint
 
 	timeBucketExpr := dateTruncSQL(granularity)
 	var results []*modelcall.RequestRatePoint
-	if err := db.Select(constant.FieldModel + ", " + timeBucketExpr + " AS time, COUNT(*) AS total, COUNT(*) FILTER (WHERE " + constant.SQLConditionUpstreamSuccess + ") AS success").
-		Group(constant.FieldModel + ", time").
-		Order(constant.FieldModel + ", time").
+	if err := db.Select(constant.FieldModelID + ", " + timeBucketExpr + " AS time, COUNT(*) AS total, COUNT(*) FILTER (WHERE " + constant.SQLConditionUpstreamSuccess + ") AS success").
+		Group(constant.FieldModelID + ", time").
+		Order(constant.FieldModelID + ", time").
 		Scan(&results).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query request rate")
 	}
@@ -399,7 +397,7 @@ func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []
 	}
 
 	timeBucketExpr := dateTruncSQL(granularity)
-	selectFields := constant.FieldModel + ", " + timeBucketExpr + " AS time, " +
+	selectFields := constant.FieldModelID + ", " + timeBucketExpr + " AS time, " +
 		"SUM(" + constant.FieldInputTokens + ") AS input_tokens, " +
 		"SUM(" + constant.FieldOutputTokens + ") AS output_tokens, " +
 		"SUM(" + constant.FieldCacheCreationInputTokens + ") AS cache_creation_tokens, " +
@@ -408,8 +406,8 @@ func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []
 
 	var results []*modelcall.TokenThroughputPoint
 	if err := db.Select(selectFields).
-		Group(constant.FieldModel + ", time").
-		Order(constant.FieldModel + ", time").
+		Group(constant.FieldModelID + ", time").
+		Order(constant.FieldModelID + ", time").
 		Scan(&results).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query token throughput")
 	}
@@ -426,13 +424,13 @@ func (r *auditRepository) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs 
 	}
 
 	timeBucketExpr := dateTruncSQL(granularity)
-	selectFields := constant.FieldModel + ", " + timeBucketExpr + " AS time, " +
+	selectFields := constant.FieldModelID + ", " + timeBucketExpr + " AS time, " +
 		"AVG(" + constant.FieldFirstTokenLatencyMs + ") AS average_latency_ms"
 
 	var results []*modelcall.FirstTokenLatencyPoint
 	if err := db.Select(selectFields).
-		Group(constant.FieldModel + ", time").
-		Order(constant.FieldModel + ", time").
+		Group(constant.FieldModelID + ", time").
+		Order(constant.FieldModelID + ", time").
 		Scan(&results).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query first token latency")
 	}

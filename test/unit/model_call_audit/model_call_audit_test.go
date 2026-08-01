@@ -14,8 +14,7 @@ type testCase struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Task        struct {
-		ModelID                  uint   `json:"model_id"`
-		Model                    string `json:"model"`
+		ModelID                  string `json:"model_id"`
 		UpstreamProtocol         string `json:"upstream_protocol"`
 		APIProtocol              string `json:"api_protocol"`
 		Endpoint                 string `json:"endpoint"`
@@ -54,7 +53,6 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 			task := &dto.ModelCallAuditTask{
 				Ctx:                      context.Background(),
 				ModelID:                  tc.Task.ModelID,
-				Model:                    tc.Task.Model,
 				UpstreamProtocol:         tc.Task.UpstreamProtocol,
 				APIProtocol:              tc.Task.APIProtocol,
 				Endpoint:                 tc.Task.Endpoint,
@@ -68,8 +66,8 @@ func TestModelCallAuditTask_Fields(t *testing.T) {
 				ErrorMessage:             tc.Task.ErrorMessage,
 			}
 
-			if task.Model != tc.Task.Model {
-				t.Errorf("Model = %q, want %q", task.Model, tc.Task.Model)
+			if task.ModelID != tc.Task.ModelID {
+				t.Errorf("ModelID = %q, want %q", task.ModelID, tc.Task.ModelID)
 			}
 			if task.UpstreamProtocol != tc.Task.UpstreamProtocol {
 				t.Errorf("UpstreamProtocol = %q, want %q", task.UpstreamProtocol, tc.Task.UpstreamProtocol)

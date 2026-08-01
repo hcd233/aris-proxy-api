@@ -85,8 +85,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		words := u.blockedChecker.MatchedWords(matched)
 		auditTask := &dto.ModelCallAuditTask{
 			Ctx:              util.CopyContextValues(ctx),
-			ModelID:          m.AggregateID(),
-			Model:            req.Body.Model,
+			ModelID:          m.ModelID(),
 			Endpoint:         ep.Name(),
 			UpstreamProtocol: upstreamProtocol,
 			APIProtocol:      enum.ProtocolOpenAIChatCompletion,

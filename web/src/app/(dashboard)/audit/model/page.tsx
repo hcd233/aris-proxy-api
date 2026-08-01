@@ -300,8 +300,8 @@ export default function AuditPage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">
                             <span className="inline-flex items-center gap-1.5">
-                              <ProviderIcon protocol={log.model} size={14} />
-                              {log.model || "—"}
+                              <ProviderIcon protocol={log.modelId} size={14} />
+                              {log.modelId || "—"}
                             </span>
                           </p>
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -468,8 +468,8 @@ export default function AuditPage() {
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">
                         <span className="inline-flex items-center gap-1.5">
-                          <ProviderIcon protocol={log.model} size={14} />
-                          {log.model || "—"}
+                          <ProviderIcon protocol={log.modelId} size={14} />
+                          {log.modelId || "—"}
                         </span>
                       </TableCell>
                       <TableCell>

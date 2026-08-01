@@ -83,10 +83,9 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 	completion.Model = req.Body.Model
 	bodyBytes := lo.Must1(sonic.Marshal(completion))
 
-	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
+	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
-		exposedModel:        req.Body.Model,
 		endpoint:            ep.Name(),
 		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
 		apiProtocol:         enum.ProtocolOpenAIChatCompletion,
@@ -117,17 +116,16 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 		Protocol: enum.ProtocolKindOpenAI,
 		Open: func(ctx context.Context) (port.Stream, error) {
 			return &openAIChatViaAnthropicStream{
-				u:            u,
-				ctx:          ctx,
-				req:          req,
-				m:            m,
-				stream:       stream,
-				exposedModel: exposedModel,
-				endpoint:     endpoint,
-				timer:        newStreamTimer(),
-				conv:         &converter.AnthropicProtocolConverter{},
-				chunkID:      fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
-				allChunks:    make([]*dto.OpenAIChatCompletionChunk, 0),
+				u:         u,
+				ctx:       ctx,
+				req:       req,
+				m:         m,
+				stream:    stream,
+				endpoint:  endpoint,
+				timer:     newStreamTimer(),
+				conv:      &converter.AnthropicProtocolConverter{},
+				chunkID:   fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
+				allChunks: make([]*dto.OpenAIChatCompletionChunk, 0),
 			}, nil
 		},
 	}, nil
@@ -156,10 +154,9 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 	completion.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(completion))
 
-	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
+	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
-		exposedModel:        exposedModel,
 		endpoint:            endpoint,
 		upstreamProtocol:    enum.ProtocolAnthropicMessage,
 		apiProtocol:         enum.ProtocolOpenAIChatCompletion,
@@ -213,7 +210,7 @@ func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) 
 		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
 	}
 
-	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.Alias().String())
+	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.ModelID())
 
 	var usage *dto.OpenAICompletionUsage
 	if completion != nil {
@@ -221,7 +218,6 @@ func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) 
 	}
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
-		exposedModel:        s.req.Body.Model,
 		endpoint:            s.ep.Name(),
 		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
 		apiProtocol:         enum.ProtocolOpenAIChatCompletion,
@@ -283,10 +279,9 @@ func (s *openAIChatViaAnthropicStream) Read(ctx context.Context, sink port.Event
 	if completion != nil {
 		completion.Model = s.exposedModel
 	}
-	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.Alias().String())
+	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
-		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
 		upstreamProtocol:    enum.ProtocolAnthropicMessage,
 		apiProtocol:         enum.ProtocolOpenAIChatCompletion,

@@ -18,8 +18,8 @@ type ModelTrendRsp struct {
 }
 
 type ModelTrendItem struct {
-	Model  string        `json:"model" doc:"模型名"`
-	Points []*TrendPoint `json:"points" doc:"时间序列点"`
+	ModelID string        `json:"modelId" doc:"业务模型ID"`
+	Points  []*TrendPoint `json:"points" doc:"时间序列点"`
 }
 
 type TrendPoint struct {
@@ -39,8 +39,8 @@ type RequestRateRsp struct {
 }
 
 type RequestRateItem struct {
-	Model  string       `json:"model" doc:"模型名"`
-	Points []*RatePoint `json:"points" doc:"时间序列点"`
+	ModelID string       `json:"modelId" doc:"业务模型ID"`
+	Points  []*RatePoint `json:"points" doc:"时间序列点"`
 }
 
 type RatePoint struct {
@@ -84,8 +84,8 @@ type TokenRateRsp struct {
 }
 
 type TokenRateItem struct {
-	Model  string            `json:"model" doc:"模型名"`
-	Points []*TokenRatePoint `json:"points" doc:"时间序列点"`
+	ModelID string            `json:"modelId" doc:"业务模型ID"`
+	Points  []*TokenRatePoint `json:"points" doc:"时间序列点"`
 }
 
 type TokenRatePoint struct {
@@ -107,8 +107,8 @@ type FirstTokenLatencyRsp struct {
 }
 
 type FirstTokenLatencyItem struct {
-	Model  string                    `json:"model" doc:"模型名"`
-	Points []*FirstTokenLatencyPoint `json:"points" doc:"时间序列点"`
+	ModelID string                    `json:"modelId" doc:"业务模型ID"`
+	Points  []*FirstTokenLatencyPoint `json:"points" doc:"时间序列点"`
 }
 
 type FirstTokenLatencyPoint struct {
@@ -130,7 +130,7 @@ type ModelUsageRsp struct {
 }
 
 type ModelUsageItem struct {
-	Model               string `json:"model" doc:"模型名"`
+	ModelID             string `json:"modelId" doc:"业务模型ID"`
 	InputTokens         int    `json:"inputTokens" doc:"输入 Token 总数"`
 	OutputTokens        int    `json:"outputTokens" doc:"输出 Token 总数"`
 	CacheReadTokens     int    `json:"cacheReadTokens" doc:"缓存读取 Token 总数"`

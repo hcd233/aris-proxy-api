@@ -21,7 +21,7 @@ type SessionSummary struct {
 	Score        *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
 	MessageCount int               `json:"messageCount" doc:"消息数量"`
 	ToolCount    int               `json:"toolCount" doc:"工具数量"`
-	Models       []string          `json:"models,omitempty" doc:"回答模型列表"`
+	ModelIDs     []string          `json:"modelIds,omitempty" doc:"回答模型ID列表"`
 	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
 }
 
@@ -48,7 +48,7 @@ type SessionDetail struct {
 //	@update 2026-04-25 15:00:00
 type MessageItem struct {
 	ID        uint               `json:"id" doc:"消息ID"`
-	Model     string             `json:"model" doc:"模型名称"`
+	ModelID   string             `json:"modelId" doc:"业务模型ID"`
 	Message   *vo.UnifiedMessage `json:"message" doc:"消息内容"`
 	CreatedAt time.Time          `json:"createdAt" doc:"创建时间"`
 }

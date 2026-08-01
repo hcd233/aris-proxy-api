@@ -47,7 +47,7 @@ var auditFieldConfigs = map[string]filter.FieldConfig{
 type AuditLogView struct {
 	ID                       uint
 	CreatedAt                time.Time
-	Model                    string
+	ModelID                  string
 	UpstreamProtocol         string
 	APIProtocol              string
 	Endpoint                 string
@@ -233,7 +233,7 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 		view := &AuditLogView{
 			ID:                       audit.AggregateID(),
 			CreatedAt:                audit.CreatedAt(),
-			Model:                    audit.Model(),
+			ModelID:                  audit.ModelID(),
 			UpstreamProtocol:         audit.UpstreamProtocol(),
 			APIProtocol:              audit.APIProtocol(),
 			Endpoint:                 audit.Endpoint(),

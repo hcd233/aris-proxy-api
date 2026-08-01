@@ -63,7 +63,7 @@ export function RequestRateChart() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const seriesColors = useChartSeriesColors();
-  const models = [...new Set(data.map((d) => d.model))];
+  const models = [...new Set(data.map((d) => d.modelId))];
   const chartConfig = Object.fromEntries(
     models.map((m, i) => [
       m,
@@ -77,7 +77,7 @@ export function RequestRateChart() {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.total === 0 ? null : p.successRate * 100;
+      pointMap.get(p.time)![item.modelId] = p.total === 0 ? null : p.successRate * 100;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({

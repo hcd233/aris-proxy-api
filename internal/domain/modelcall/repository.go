@@ -64,14 +64,14 @@ type AuditRepository interface {
 
 // ModelTrendPoint 模型调用趋势的数据点
 type ModelTrendPoint struct {
-	Model string    `gorm:"column:model"`
-	Time  time.Time `gorm:"column:time"`
-	Count int       `gorm:"column:count"`
+	ModelID string    `gorm:"column:model_id"`
+	Time    time.Time `gorm:"column:time"`
+	Count   int       `gorm:"column:count"`
 }
 
 // RequestRatePoint 请求成功率的数据点
 type RequestRatePoint struct {
-	Model   string    `gorm:"column:model"`
+	ModelID string    `gorm:"column:model_id"`
 	Time    time.Time `gorm:"column:time"`
 	Total   int       `gorm:"column:total"`
 	Success int       `gorm:"column:success"`
@@ -79,7 +79,7 @@ type RequestRatePoint struct {
 
 // TokenThroughputPoint Token 吞吐量的数据点
 type TokenThroughputPoint struct {
-	Model                 string    `gorm:"column:model"`
+	ModelID               string    `gorm:"column:model_id"`
 	Time                  time.Time `gorm:"column:time"`
 	InputTokens           int       `gorm:"column:input_tokens"`
 	OutputTokens          int       `gorm:"column:output_tokens"`
@@ -90,7 +90,7 @@ type TokenThroughputPoint struct {
 
 // FirstTokenLatencyPoint 首 Token 延迟的数据点
 type FirstTokenLatencyPoint struct {
-	Model            string    `gorm:"column:model"`
+	ModelID          string    `gorm:"column:model_id"`
 	Time             time.Time `gorm:"column:time"`
 	AverageLatencyMs float64   `gorm:"column:average_latency_ms"`
 }

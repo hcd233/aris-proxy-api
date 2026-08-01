@@ -99,7 +99,6 @@ func (u responseTokenUsage) reportable() int64 {
 // status=failed/incomplete 的 in-band 失败原因。
 type callOutcome struct {
 	model               *aggregate.Model
-	exposedModel        string
 	endpoint            string
 	upstreamProtocol    enum.ProtocolType
 	apiProtocol         enum.ProtocolType
@@ -119,8 +118,7 @@ type callOutcome struct {
 func recordModelCall(ctx context.Context, submitter TaskSubmitter, tokenMetrics *metrics.TokenUsageCounter, out callOutcome) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
-		ModelID:             out.model.AggregateID(),
-		Model:               out.exposedModel,
+		ModelID:             out.model.ModelID(),
 		Endpoint:            out.endpoint,
 		UpstreamProtocol:    out.upstreamProtocol,
 		APIProtocol:         out.apiProtocol,

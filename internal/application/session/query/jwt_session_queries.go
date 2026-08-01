@@ -123,7 +123,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 			Score:        p.Score,
 			MessageCount: p.MessageCount,
 			ToolCount:    p.ToolCount,
-			Models:       p.Models,
+			ModelIDs:     p.ModelIDs,
 		}
 	})
 	return views, pageInfo, nil
@@ -215,7 +215,7 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 	messages := lo.Map(detail.Messages, func(m *session.MessageDetailProjection, _ int) *sessionport.MessageView {
 		return &sessionport.MessageView{
 			ID:        m.ID,
-			Model:     m.Model,
+			ModelID:   m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}
