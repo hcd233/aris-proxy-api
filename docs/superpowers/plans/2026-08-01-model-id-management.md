@@ -131,7 +131,7 @@ if cmd.ModelID != nil {
 - [ ] **Step 8: 运行验证**
 
 Run: `go build ./...`
-Expected: 编译通过；`model_update_test.go` 若引用了 `Update` 全参数调用则同步补 `nil`（该文件使用 `m.Update(...)` 处追加最后一个参数 `nil`）。
+Expected: 编译通过；`model_update_test.go` 仅检查 Update map 常量与 gorm tag 匹配（可增强新增 `{goField: "ModelID", constant: constant.FieldModelID}` 检查项，非强制）。
 
 Run: `go test -count=1 ./test/unit/model_repository/ ./test/unit/endpoint_resolver/`
 Expected: PASS（endpoint_resolver 的 `CreateModel` 调用不受影响，签名未变）。
@@ -225,7 +225,7 @@ auditTask := &dto.ModelCallAuditTask{
 
 - `test/unit/model_call_audit/model_call_audit_test.go`：fixture 结构体 `ModelID uint` → `string`，删除 `Model string`；`task.Model` 断言改为 `task.ModelID`。
 - `test/unit/pool_manager/audit_write_test.go`：`ModelID: 7` → `ModelID: "gpt-test"`，删除 `Model: "gpt-test"`；`audit.ModelID() != 7` → `!= "gpt-test"`，`%d` → `%q`。
-- `test/unit/audit_architecture/audit_architecture_test.go`：若断言 `RecordCallInput` 字段/类型，同步调整。
+- `test/unit/audit_architecture/audit_architecture_test.go` 不涉及 Model 字段，无需修改（运行确认即可）。
 
 - [ ] **Step 7: 运行验证**
 
@@ -252,7 +252,7 @@ git commit -m "feat(audit): model_call_audit model 列改为 model_id 存储业�
 - Modify: `internal/application/audit/port/fill_series.go`
 - Modify: `internal/dto/audit.go`（AuditLogItem）
 - Modify: `internal/dto/audit_stats.go`（ModelTrendItem 等）
-- Modify: `internal/application/audit/port/audit_log_view.go`（若存在 AuditLogView）
+- Modify: `internal/application/audit/port/handler.go`（AuditLogView 结构）
 - Test: `test/unit/audit_dto/audit_dto_test.go`、`test/unit/audit_repo/audit_option_sql_test.go`、`test/unit/audit_query/audit_query_test.go`
 
 **Interfaces:**
@@ -299,7 +299,8 @@ AuditDistinctWhereModel   = "model_id LIKE ?"
 
 - `internal/dto/audit.go`：`AuditLogItem.Model string \`json:"model" doc:"模型名"\`` → `ModelID string \`json:"modelId" doc:"业务模型ID"\``。
 - `internal/dto/audit_stats.go`：`ModelTrendItem.Model`、`RequestRateItem`（若存在）等 → `ModelID`，json `modelId`。
-- 检查 `internal/application/audit/port/` 下是否有 `AuditLogView` 结构（`Model` 字段 → `ModelID`），以及 `internal/dto/audit.go` 中其他含 `Model` 的 DTO。
+- `internal/application/audit/port/handler.go`：`AuditLogView.Model string` → `ModelID string`（port 层投影）。
+- `internal/application/audit/query/service.go:115`：`Model: v.Model` → `ModelID: v.ModelID`（toPortAuditLogViews）。
 
 - [ ] **Step 6: 修复单测**
 
