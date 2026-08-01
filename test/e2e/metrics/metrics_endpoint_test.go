@@ -105,4 +105,14 @@ func TestRuntimeMetricsEndpoint_AdminReturnsSeries(t *testing.T) {
 	if result.Body.Series.SSEActive == nil {
 		t.Error("expected series.sseActive map to be present (may be empty)")
 	}
+	// 新指标字段必须存在（可为空数组），前端图表依赖其 key。
+	if result.Body.Series.TokenInput == nil {
+		t.Error("expected series.tokenInput to be present (may be empty)")
+	}
+	if result.Body.Series.TokenOutput == nil {
+		t.Error("expected series.tokenOutput to be present (may be empty)")
+	}
+	if result.Body.Series.SuccessRate == nil {
+		t.Error("expected series.successRate to be present (may be empty)")
+	}
 }
