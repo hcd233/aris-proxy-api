@@ -597,6 +597,9 @@ export interface RuntimeSeries {
   cpuPercent?: RuntimePoint[];
   p95Ms?: RuntimePoint[];
   sseActive?: Record<string, RuntimePoint[]>;
+  tokenInput?: RuntimePoint[]; // 输入 token 速率 /s
+  tokenOutput?: RuntimePoint[]; // 输出 token 速率 /s
+  successRate?: RuntimePoint[]; // HTTP 200 占比 %（0-100）
 }
 
 export interface RuntimeMetricsRsp extends CommonRsp {

@@ -50,7 +50,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
-		auditFailure(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	return &port.StreamResult{
@@ -75,14 +75,14 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 	anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
-		auditFailure(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	anthropicMsg.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(anthropicMsg))
 
 	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
-	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
 		endpoint:            endpoint,
@@ -108,7 +108,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 	stream, err := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
-		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	return &port.StreamResult{
@@ -136,7 +136,7 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 	completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
-		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	anthropicMsg, convErr := conv.ToAnthropicResponse(completion)
@@ -154,7 +154,7 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 	bodyBytes := lo.Must1(sonic.Marshal(anthropicMsg))
 
 	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
-	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
 		endpoint:            endpoint,
@@ -205,7 +205,7 @@ func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.Event
 	}
 
 	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.Alias().String())
-	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
@@ -265,7 +265,7 @@ func (s *anthropicMessageViaChatStream) Read(ctx context.Context, sink port.Even
 	if completion != nil {
 		usage = completion.Usage
 	}
-	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,

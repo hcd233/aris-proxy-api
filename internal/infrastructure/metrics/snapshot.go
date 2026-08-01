@@ -17,13 +17,17 @@ import (
 //	@author centonhuang
 //	@update 2026-06-25 10:00:00
 type Snapshot struct {
-	TS         int64              `json:"ts"`                   // unix 秒
-	Goroutines float64            `json:"goroutines"`           // gauge
-	HeapBytes  float64            `json:"heapBytes"`            // gauge
-	CPUSeconds float64            `json:"cpuSeconds"`           // counter 累计值 → 聚合层求 CPU%
-	SSEActive  map[string]float64 `json:"sseActive,omitempty"`  // provider -> gauge
-	LatBuckets map[string]float64 `json:"latBuckets,omitempty"` // le -> 累计计数 → 聚合层求 P95
-	LatCount   float64            `json:"latCount"`             // histogram 累计样本数 → 聚合层求 QPS
+	TS          int64              `json:"ts"`                   // unix 秒
+	Goroutines  float64            `json:"goroutines"`           // gauge
+	HeapBytes   float64            `json:"heapBytes"`            // gauge
+	CPUSeconds  float64            `json:"cpuSeconds"`           // counter 累计值 → 聚合层求 CPU%
+	SSEActive   map[string]float64 `json:"sseActive,omitempty"`  // provider -> gauge
+	LatBuckets  map[string]float64 `json:"latBuckets,omitempty"` // le -> 累计计数 → 聚合层求 P95
+	LatCount    float64            `json:"latCount"`             // histogram 累计样本数 → 聚合层求 QPS
+	TokenInput  float64            `json:"tokenInput"`           // counter 累计输入 token → 聚合层求输入速率
+	TokenOutput float64            `json:"tokenOutput"`          // counter 累计输出 token → 聚合层求输出速率
+	ReqTotal    float64            `json:"reqTotal"`             // counter 累计业务请求数 → 聚合层求成功率
+	ReqSuccess  float64            `json:"reqSuccess"`           // counter 累计 200 请求数 → 聚合层求成功率
 }
 
 // SnapshotStore flusher 写入快照所需的存储能力（由 cache.RuntimeMetricsCache 实现）。
@@ -53,12 +57,18 @@ func BuildSnapshot(gatherer prometheus.Gatherer, now time.Time) (*Snapshot, erro
 		byName[f.GetName()] = f
 	}
 
+	requests := byName[constant.MetricFullHTTPRequests]
+	reqSuccess := labeledCounterValue(requests, constant.MetricLabelResult, constant.HTTPResultSuccess)
 	snap := &Snapshot{
-		TS:         now.Unix(),
-		Goroutines: firstGaugeValue(byName[constant.MetricFullGoGoroutines]),
-		HeapBytes:  firstGaugeValue(byName[constant.MetricFullGoHeapAlloc]),
-		CPUSeconds: firstCounterValue(byName[constant.MetricFullProcessCPU]),
-		SSEActive:  labeledGaugeValues(byName[constant.MetricFullSSEActive], constant.MetricLabelProvider),
+		TS:          now.Unix(),
+		Goroutines:  firstGaugeValue(byName[constant.MetricFullGoGoroutines]),
+		HeapBytes:   firstGaugeValue(byName[constant.MetricFullGoHeapAlloc]),
+		CPUSeconds:  firstCounterValue(byName[constant.MetricFullProcessCPU]),
+		SSEActive:   labeledGaugeValues(byName[constant.MetricFullSSEActive], constant.MetricLabelProvider),
+		TokenInput:  labeledCounterValue(byName[constant.MetricFullTokenUsage], constant.MetricLabelDirection, constant.TokenUsageDirectionInput),
+		TokenOutput: labeledCounterValue(byName[constant.MetricFullTokenUsage], constant.MetricLabelDirection, constant.TokenUsageDirectionOutput),
+		ReqTotal:    reqSuccess + labeledCounterValue(requests, constant.MetricLabelResult, constant.HTTPResultFailure),
+		ReqSuccess:  reqSuccess,
 	}
 	snap.LatBuckets, snap.LatCount = histogramBuckets(byName[constant.MetricFullRequestDuration])
 	return snap, nil
@@ -94,6 +104,26 @@ func labeledGaugeValues(f *metricpb.MetricFamily, label string) map[string]float
 		out[key] = m.GetGauge().GetValue()
 	}
 	return out
+}
+
+// labeledCounterValue 取指定 label 值对应的 counter 累计值；缺失时返回 0。
+func labeledCounterValue(f *metricpb.MetricFamily, label, want string) float64 {
+	if f == nil || len(f.GetMetric()) == 0 {
+		return 0
+	}
+	for _, m := range f.GetMetric() {
+		key := ""
+		for _, l := range m.GetLabel() {
+			if l.GetName() == label {
+				key = l.GetValue()
+				break
+			}
+		}
+		if key == want {
+			return m.GetCounter().GetValue()
+		}
+	}
+	return 0
 }
 
 func histogramBuckets(f *metricpb.MetricFamily) (buckets map[string]float64, count float64) {

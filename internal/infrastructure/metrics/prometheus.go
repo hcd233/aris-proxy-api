@@ -66,3 +66,62 @@ func NewSSEGauge(registry *prometheus.Registry) *SSEGauge {
 	}
 	return &SSEGauge{gauge: gauge}
 }
+
+// TokenUsageCounter LLM token 吞吐 counter（输入/输出两个方向）。
+//
+// 数据来源：recordModelCall 收尾处把每次模型调用的 usage（input/output）累加进来；
+// 聚合层对相邻快照做正向 delta ÷ 桶宽得到 tokens/sec 速率。
+//
+//	@author centonhuang
+//	@update 2026-08-01 10:00:00
+type TokenUsageCounter struct {
+	counter *prometheus.CounterVec
+}
+
+// AddInput 累加输入 token。
+//
+//	@receiver c *TokenUsageCounter
+//	@param n int64
+//	@author centonhuang
+//	@update 2026-08-01 10:00:00
+func (c *TokenUsageCounter) AddInput(n int64) {
+	if n > 0 {
+		c.counter.WithLabelValues(constant.TokenUsageDirectionInput).Add(float64(n))
+	}
+}
+
+// AddOutput 累加输出 token。
+//
+//	@receiver c *TokenUsageCounter
+//	@param n int64
+//	@author centonhuang
+//	@update 2026-08-01 10:00:00
+func (c *TokenUsageCounter) AddOutput(n int64) {
+	if n > 0 {
+		c.counter.WithLabelValues(constant.TokenUsageDirectionOutput).Add(float64(n))
+	}
+}
+
+// NewTokenUsageCounter 在 Registry 上注册并返回 token 吞吐 counter。
+//
+// 预置 input/output 两个 label 序列（与 SSEGauge 同因：避免无流量时 Gather 不输出）。
+//
+//	@param registry *prometheus.Registry
+//	@return *TokenUsageCounter
+//	@author centonhuang
+//	@update 2026-08-01 10:00:00
+func NewTokenUsageCounter(registry *prometheus.Registry) *TokenUsageCounter {
+	counter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: constant.MetricNamespaceLLM,
+			Name:      constant.MetricNameTokenUsage,
+			Help:      constant.MetricTokenUsageHelp,
+		},
+		[]string{constant.MetricLabelDirection},
+	)
+	registry.MustRegister(counter)
+	for _, direction := range []string{constant.TokenUsageDirectionInput, constant.TokenUsageDirectionOutput} {
+		counter.WithLabelValues(direction).Add(0)
+	}
+	return &TokenUsageCounter{counter: counter}
+}
