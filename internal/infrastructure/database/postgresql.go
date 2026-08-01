@@ -50,6 +50,55 @@ func AutoMigrate(ctx context.Context) error {
 	return InitDatabase().WithContext(ctx).AutoMigrate(model.Models...)
 }
 
+// ManualMigrations 执行 GORM AutoMigrate 无法覆盖的删列/改列，幂等可重入。
+//
+// 必须在 AutoMigrate 之前执行：旧 model_call_audits.model_id 为 uint 类型，
+// 先删旧列再 rename model→model_id，AutoMigrate 才能正确新建 text 列。
+// 注意：dbmodel 结构已更新（无旧列字段），HasColumn 检查的是真实数据库表列。
+func ManualMigrations(ctx context.Context) error {
+	db := InitDatabase().WithContext(ctx)
+	migrator := db.Migrator()
+
+	// model_call_audits：旧库存在 model 列（存 alias）与 model_id 列（uint 主键）。
+	// 先删 uint model_id 列，再把 model 列改名为 model_id。
+	if migrator.HasColumn(&model.ModelCallAudit{}, "model") {
+		if err := migrator.DropColumn(&model.ModelCallAudit{}, "model_id"); err != nil {
+			return err
+		}
+		if err := migrator.RenameColumn(&model.ModelCallAudit{}, "model", "model_id"); err != nil {
+			return err
+		}
+	}
+
+	// sessions：models 列改名为 model_ids
+	if migrator.HasColumn(&model.Session{}, "models") {
+		if err := migrator.RenameColumn(&model.Session{}, "models", "model_ids"); err != nil {
+			return err
+		}
+	}
+
+	// messages：model 列改名为 model_id
+	if migrator.HasColumn(&model.Message{}, "model") {
+		if err := migrator.RenameColumn(&model.Message{}, "model", "model_id"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BackfillModelIDs 回填 models.model_id = alias，幂等（仅空值行）。
+//
+// 必须在 AutoMigrate 之后执行（依赖新列已存在）。
+func BackfillModelIDs(ctx context.Context) error {
+	db := InitDatabase().WithContext(ctx)
+	if !db.Migrator().HasColumn(&model.Model{}, "model_id") {
+		return nil
+	}
+	return db.Model(&model.Model{}).
+		Where("model_id IS NULL OR model_id = ''").
+		Update("model_id", gorm.Expr("alias")).Error
+}
+
 // InitDatabase 初始化数据库
 //
 //	@return *gorm.DB
