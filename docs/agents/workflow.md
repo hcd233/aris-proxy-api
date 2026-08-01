@@ -4,6 +4,7 @@
 
 ## Skill 路由
 
+- **生产 K8s 运维 / 服务状态 / pod 资源与负载 / pod 日志 / 滚动重启 / 部署跟踪**：使用 `operate-prod-service`；它负责 k3s 集群操作清单，并把数据库/缓存/配置/日志排障路由到对应专项 skill。所有需要 SSH 到生产服务器的操作，连接方式与安全基线统一见 `login-prod-server`（域名 `api.lvlvko.top`，禁止裸 IP）。
 - **生产 bug / 线上错误 / traceId / `X-Trace-Id` / CLS / E2E 失败**：使用 `cls-log-bugfix`，在 `ap-guangzhou` 查日志并按 trace 追链路。
 - **API 调用 / curl 示例 / 生产验证**：使用 `call-api`；它只负责交互式调用示例，不替代 E2E 回归。
 - **生产配置更新 / api.env / K8s ConfigMap**：使用 `update-prod-config`；SSH 到 `api.lvlvko.top` 修改配置，禁止使用裸 IP 地址。

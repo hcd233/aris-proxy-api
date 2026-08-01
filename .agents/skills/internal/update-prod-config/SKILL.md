@@ -1,13 +1,15 @@
 ---
 name: update-prod-config
-description: Update production configuration for aris-proxy-api. Use when the user asks to update api.env, K8s ConfigMap, or any production configuration on the remote server. Also triggers for related actions like "add config", "modify env", "update cron settings", "change production variables". The production host resolves via api.lvlvko.top, NOT a raw IP.
+description: Update production configuration for aris-proxy-api. Use when the user asks to update api.env, K8s ConfigMap, or any production configuration on the remote server. Also triggers for related actions like "add config", "modify env", "update cron settings", "change production variables". **连接生产服务器前必须先加载 `login-prod-server` skill** 获取 SSH 方式、环境布局与统一安全基线；本 skill 不再重复连接细节。
 ---
 
 # update-prod-config
 
-SSH to the production server and update configuration. Never use raw IPs — always resolve via `api.lvlvko.top`.
+SSH to the production server and update configuration. 连接方式见 `login-prod-server` skill（域名 `api.lvlvko.top`，禁止裸 IP）。
 
 ## SSH Connection
+
+加载 `login-prod-server` skill 获取连接方式与安全基线：
 
 ```bash
 ssh ubuntu@api.lvlvko.top
