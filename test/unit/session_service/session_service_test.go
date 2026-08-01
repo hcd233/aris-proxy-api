@@ -83,7 +83,7 @@ func toDBMessages(t *testing.T, fixtures []*messageFixture) []*dbmodel.Message {
 		}
 		messages[i] = &dbmodel.Message{
 			ID:        f.ID,
-			Model:     f.Model,
+			ModelID:   f.Model,
 			Message:   f.Message,
 			BaseModel: dbmodel.BaseModel{CreatedAt: createdAt},
 		}

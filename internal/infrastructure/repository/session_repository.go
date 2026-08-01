@@ -425,7 +425,7 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 	out := lo.Map(records, func(m *dbmodel.Message, _ int) *session.MessageDetailProjection {
 		return &session.MessageDetailProjection{
 			ID:        m.ID,
-			Model:     m.Model,
+			Model:     m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}
@@ -486,7 +486,7 @@ func BuildOrderedMessageProjections(ids []uint, records []*dbmodel.Message) []*s
 		}
 		return &session.MessageDetailProjection{
 			ID:        m.ID,
-			Model:     m.Model,
+			Model:     m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}, true

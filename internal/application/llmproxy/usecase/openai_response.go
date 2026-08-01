@@ -115,7 +115,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 	if parseErr := sonic.Unmarshal(replaced, &rsp); parseErr != nil {
 		log.Debug("[OpenAIUseCase] Failed to parse Response API non-stream body", zap.Error(parseErr))
 	} else {
-		u.storeResponseFromRsp(ctx, req, &rsp, nil, m.Alias().String())
+		u.storeResponseFromRsp(ctx, req, &rsp, nil, m.ModelID())
 		out.usage = responseTokenUsage{&rsp}
 		out.responseStatus = &rsp
 	}
@@ -184,7 +184,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 	}
 	bodyBytes := lo.Must1(sonic.Marshal(rsp))
 
-	u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
+	u.storeResponseFromRsp(ctx, req, rsp, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
@@ -260,7 +260,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	}
 	bodyBytes := lo.Must1(sonic.Marshal(rsp))
 
-	u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
+	u.storeResponseFromRsp(ctx, req, rsp, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
@@ -377,7 +377,7 @@ func (s *responseNativeStream) finalize(sink port.EventSink, proxyErr error) {
 	if s.finalResponse != nil && len(s.finalResponse.Output) == 0 && len(s.accumulatedOutput) > 0 {
 		s.finalResponse.Output = s.accumulatedOutput
 	}
-	s.u.storeResponseFromRsp(s.ctx, s.req, s.finalResponse, proxyErr, s.m.Alias().String())
+	s.u.storeResponseFromRsp(s.ctx, s.req, s.finalResponse, proxyErr, s.m.ModelID())
 
 	recordModelCall(s.ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
@@ -431,7 +431,7 @@ func (s *responseViaChatStream) Read(ctx context.Context, sink port.EventSink) e
 	} else {
 		rsp = converter.FinalizeResponseFromChatCompletion(sink, completion, s.exposedModel, s.responseID, s.conv)
 	}
-	s.u.storeResponseFromRsp(ctx, s.req, rsp, err, s.m.Alias().String())
+	s.u.storeResponseFromRsp(ctx, s.req, rsp, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,
@@ -532,7 +532,7 @@ func (s *responseViaAnthropicStream) onAnthropicEvent(sink port.EventSink, event
 func (s *responseViaAnthropicStream) finalize(sink port.EventSink, anthropicMsg *dto.AnthropicMessage, err error) {
 	s.timer.finish()
 	rsp := finalizeResponseFromAnthropicStream(s.ctx, sink, err, s.allChunks, anthropicMsg, s.exposedModel, s.responseID, s.anthropicConv, s.responseConv)
-	s.u.storeResponseFromRsp(s.ctx, s.req, rsp, err, s.m.Alias().String())
+	s.u.storeResponseFromRsp(s.ctx, s.req, rsp, err, s.m.ModelID())
 	recordModelCall(s.ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,

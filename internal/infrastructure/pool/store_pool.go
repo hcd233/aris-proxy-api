@@ -47,14 +47,14 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 	}
 
 	messages := lo.Map(task.Messages, func(m *vo.UnifiedMessage, _ int) *dbmodel.Message {
-		model := ""
+		modelID := ""
 		if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
-			model = task.Model
+			modelID = task.ModelID
 		}
 		return &dbmodel.Message{
-			Model:    model,
+			ModelID:  modelID,
 			Message:  m,
-			CheckSum: vo.ComputeMessageChecksum(m, model, toolSchemas),
+			CheckSum: vo.ComputeMessageChecksum(m, modelID, toolSchemas),
 		}
 	})
 
@@ -73,7 +73,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		}
 
 		questions := extractQuestionIDs(messages, messageIDs)
-		models := extractAssistantModels(messages)
+		modelIDs := extractAssistantModelIDs(messages)
 
 		if err := pm.upgradeReasoningContent(tx, messages, messageIDs); err != nil {
 			return err
@@ -89,7 +89,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 			APIKeyName: task.APIKeyName,
 			MessageIDs: messageIDs,
 			Questions:  questions,
-			Models:     models,
+			ModelIDs:   modelIDs,
 			ToolIDs:    toolIDs,
 			Metadata:   task.Metadata,
 		}
@@ -116,11 +116,11 @@ func extractQuestionIDs(messages []*dbmodel.Message, messageIDs []uint) []uint {
 	})
 }
 
-// extractAssistantModels 从 assistant 消息中抽取去重后的模型名列表
-func extractAssistantModels(messages []*dbmodel.Message) []string {
+// extractAssistantModelIDs 从 assistant 消息中抽取去重后的业务模型ID列表
+func extractAssistantModelIDs(messages []*dbmodel.Message) []string {
 	candidates := lo.FilterMap(messages, func(m *dbmodel.Message, _ int) (string, bool) {
-		if m.Message.Role == enum.RoleAssistant && m.Model != "" {
-			return m.Model, true
+		if m.Message.Role == enum.RoleAssistant && m.ModelID != "" {
+			return m.ModelID, true
 		}
 		return "", false
 	})

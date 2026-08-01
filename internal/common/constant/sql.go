@@ -82,8 +82,8 @@ const (
 
 var (
 	MessageRepoFieldsChecksum = []string{FieldID, FieldCheckSum}
-	MessageRepoFieldsFull     = []string{FieldID, FieldModel, FieldMessage, FieldCheckSum, FieldCreatedAt}
-	MessageRepoFieldsDetail   = []string{FieldID, FieldModel, FieldMessage, FieldCreatedAt}
+	MessageRepoFieldsFull     = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum, FieldCreatedAt}
+	MessageRepoFieldsDetail   = []string{FieldID, FieldModelID, FieldMessage, FieldCreatedAt}
 	MessageRepoFieldsContent  = []string{FieldID, FieldMessage}
 
 	ToolRepoFieldsChecksum = []string{FieldID, FieldCheckSum}

@@ -15,15 +15,15 @@ import (
 )
 
 // storeOpenAIChatFromCompletion 原生 OpenAI 响应 → 消息存储
-func (u *openAIUseCase) storeOpenAIChatFromCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, upstreamModel string) {
+func (u *openAIUseCase) storeOpenAIChatFromCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest, completion *dto.OpenAIChatCompletion, proxyErr error, modelID string) {
 	if proxyErr != nil || completion == nil || len(completion.Choices) == 0 || completion.Choices[0].Message == nil {
 		return
 	}
-	u.storeOpenAIChatMessages(ctx, req, completion.Choices[0].Message, upstreamModel, completion.Usage)
+	u.storeOpenAIChatMessages(ctx, req, completion.Choices[0].Message, modelID, completion.Usage)
 }
 
 // storeOpenAIChatMessages ChatCompletion 存储基元：req.Messages + assistantMsg → UnifiedMessage 列表
-func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, upstreamModel string, usage *dto.OpenAICompletionUsage) {
+func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, modelID string, usage *dto.OpenAICompletionUsage) {
 	log := logger.WithCtx(ctx)
 	unifiedMessages, unifiedTools, err := u.convertRequestMessages(ctx, req)
 	if err != nil {
@@ -46,7 +46,7 @@ func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, req *dto.Op
 	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
-		Model:        upstreamModel,
+		ModelID:      modelID,
 		Messages:     unifiedMessages,
 		Tools:        unifiedTools,
 		InputTokens:  inputTokens,
@@ -87,7 +87,7 @@ func (u *openAIUseCase) convertRequestMessages(ctx context.Context, req *dto.Ope
 // ==================== Store Helpers: Response API 路径 ====================
 
 // storeResponseFromRsp Response API 原生响应 → 消息存储
-func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenAICreateResponseRequest, rsp *dto.OpenAICreateResponseRsp, proxyErr error, upstreamModel string) {
+func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenAICreateResponseRequest, rsp *dto.OpenAICreateResponseRsp, proxyErr error, modelID string) {
 	log := logger.WithCtx(ctx)
 	if proxyErr != nil || rsp == nil {
 		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: proxyErr or rsp nil",
@@ -136,7 +136,7 @@ func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenA
 		outputTokens = rsp.Usage.OutputTokens
 	}
 
-	submitResponseMessageStoreTask(ctx, u.taskSubmitter, req, upstreamModel, unifiedMessages, inputTokens, outputTokens)
+	submitResponseMessageStoreTask(ctx, u.taskSubmitter, req, modelID, unifiedMessages, inputTokens, outputTokens)
 }
 
 // convertResponseOutput 将 Response API 响应输出项转换为统一消息格式
@@ -210,12 +210,12 @@ func buildResponseUnifiedTools(tools []*dto.ResponseTool) []*vo.UnifiedTool {
 }
 
 // submitResponseMessageStoreTask Response API 路径统一的消息存储投递
-func submitResponseMessageStoreTask(ctx context.Context, submitter TaskSubmitter, req *dto.OpenAICreateResponseRequest, upstreamModel string, messages []*vo.UnifiedMessage, inputTokens, outputTokens int) {
+func submitResponseMessageStoreTask(ctx context.Context, submitter TaskSubmitter, req *dto.OpenAICreateResponseRequest, modelID string, messages []*vo.UnifiedMessage, inputTokens, outputTokens int) {
 	log := logger.WithCtx(ctx)
 	if err := submitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
-		Model:        upstreamModel,
+		ModelID:      modelID,
 		Messages:     messages,
 		Tools:        buildResponseUnifiedTools(req.Body.Tools),
 		InputTokens:  inputTokens,
