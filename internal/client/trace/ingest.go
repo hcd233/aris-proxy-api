@@ -107,6 +107,11 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 		// claude 的 SubagentStop 无子代理 transcript 概念，保持原 hook 记录路径。
 		return i.ingestSubagentStop(ctx, info)
 	}
+	if i.adapter.Name() == constant.TraceAgentCodex {
+		// codex hook 纯触发：不生成 hook 记录，仅写会话元数据 + 触发 transcript 增量读取
+		return i.ingestCodexHookTrigger(ctx, info)
+	}
+	// ── claude（保持现状：生成 hook 记录）──
 	spoolID, sequence, err := nextSequence(ctx, i.paths)
 	if err != nil {
 		return err
@@ -148,6 +153,31 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 	return i.flush(ctx, config)
 }
 
+// ingestCodexHookTrigger codex hook 纯触发：写 per-session 元数据并读取 transcript 增量，
+// 不生成任何 hook 记录。
+func (i *Ingestor) ingestCodexHookTrigger(ctx context.Context, info HookInfo) error {
+	if err := writeSessionMeta(i.paths, info.SessionID, sessionMeta{
+		Model:  info.Model,
+		CWD:    info.CWD,
+		Source: info.SessionSource,
+	}); err != nil {
+		return err
+	}
+	if info.TranscriptPath != "" {
+		if _, err := i.rollout.ReadNew(ctx, info.SessionID, info.TranscriptPath); err != nil {
+			writeLocalError(i.paths, constant.TraceClientLogCategoryRollout)
+		}
+	}
+	config, err := i.config.Load(ctx)
+	if err != nil {
+		return err
+	}
+	if config.Host == "" || config.APIKey == "" {
+		return ierr.New(ierr.ErrValidation, "trace client is not initialized")
+	}
+	return i.flush(ctx, config)
+}
+
 func (i *Ingestor) flush(ctx context.Context, config Config) error {
 	batch, err := i.spool.Batch(
 		ctx,
@@ -157,24 +187,19 @@ func (i *Ingestor) flush(ctx context.Context, config Config) error {
 	if err != nil || len(batch) == 0 {
 		return err
 	}
+	meta := loadSessionMeta(i.paths, batch[0].SessionID)
 	request := ingestBatch{
 		SessionID:       batch[0].SessionID,
 		ParentSessionID: batch[0].ParentSessionID,
 		Agent:           batch[0].Agent,
 		AgentID:         batch[0].AgentID,
 		AgentType:       batch[0].AgentType,
+		Model:           meta.Model,
+		CWD:             meta.CWD,
+		Source:          meta.Source,
 		Records:         make([]ingestRecord, 0, len(batch)),
 	}
 	for _, record := range batch {
-		if request.Model == "" && record.Model != "" {
-			request.Model = record.Model
-		}
-		if request.CWD == "" && record.CWD != "" {
-			request.CWD = record.CWD
-		}
-		if request.Source == "" && record.SessionSource != "" {
-			request.Source = record.SessionSource
-		}
 		request.Records = append(request.Records, ingestRecord{
 			Source:         record.Source,
 			RecordType:     record.RecordType,
@@ -232,21 +257,18 @@ func (i *Ingestor) flushSubagent(ctx context.Context, config Config, childID str
 	if err != nil || len(batch) == 0 {
 		return err
 	}
+	meta := loadSessionMeta(i.paths, childID)
 	request := ingestBatch{
 		SessionID:       childID,
 		ParentSessionID: info.SessionID,
 		Agent:           i.adapter.Name(),
 		AgentID:         info.AgentID,
 		AgentType:       info.AgentType,
+		Model:           meta.Model,
+		CWD:             meta.CWD,
 		Records:         make([]ingestRecord, 0, len(batch)),
 	}
 	for _, record := range batch {
-		if request.Model == "" && record.Model != "" {
-			request.Model = record.Model
-		}
-		if request.CWD == "" && record.CWD != "" {
-			request.CWD = record.CWD
-		}
 		request.Records = append(request.Records, ingestRecord{
 			Source:         record.Source,
 			RecordType:     record.RecordType,

@@ -137,16 +137,6 @@ function classifyEvent(ev: TraceEventItem): EventView {
   }
 }
 
-function statusBadge(status: string, t: (k: string, f?: string) => string) {
-  if (status === "active") {
-    return <Badge variant="secondary">{t("trace.status_active")}</Badge>;
-  }
-  if (status === "done") {
-    return <Badge variant="outline">{t("trace.status_done")}</Badge>;
-  }
-  return <Badge variant="outline">{status}</Badge>;
-}
-
 function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return dateStr;
@@ -428,7 +418,6 @@ export default function TraceDetailClient({
             <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
               {t("trace.detail_title")}
             </h1>
-            {statusBadge(detail.status, t)}
           </div>
           <p className="mt-1.5 truncate font-mono text-sm text-muted-foreground">
             {detail.sessionId}

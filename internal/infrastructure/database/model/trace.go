@@ -11,7 +11,6 @@ type Trace struct {
 	Model         string            `json:"model" gorm:"column:model;not null;default:'';comment:活跃模型 slug"`
 	CWD           string            `json:"cwd" gorm:"column:cwd;not null;default:'';comment:工作目录"`
 	Source        string            `json:"source" gorm:"column:source;not null;default:'';comment:startup/resume/clear/compact"`
-	Status        string            `json:"status" gorm:"column:status;not null;default:'active';comment:active/done"`
 	Metadata      map[string]string `json:"metadata" gorm:"column:metadata;serializer:json;comment:扩展字段"`
 }
 

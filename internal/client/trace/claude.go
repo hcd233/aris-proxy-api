@@ -46,6 +46,9 @@ func (claudeAdapter) ParseHook(raw []byte) (HookInfo, error) {
 // StdoutAck claude hook 的 stdout 会被注入上下文（SessionStart/UserPromptSubmit），必须恒静默。
 func (claudeAdapter) StdoutAck(HookInfo) string { return "" }
 
+// IgnoreTranscriptLine claude 采集保持现状，不忽略任何记录。
+func (claudeAdapter) IgnoreTranscriptLine(TranscriptMeta) bool { return false }
+
 type claudeTranscriptMessage struct {
 	Content sonic.NoCopyRawMessage `json:"content"`
 }
