@@ -7,7 +7,7 @@ description: Use when the user asks how to call aris-proxy-api APIs, requests cu
 
 ## 适用边界
 
-本 skill 只负责生成准确的 HTTP/curl 调用、排查认证参数和做交互式补充验证。生产 bugfix、新需求和部署闭环必须沉淀并运行仓库 E2E；禁止只用 `curl` 证明完成。若响应头或错误信息包含 `X-Trace-Id` / traceId，转入 `cls-log-bugfix`。
+本 skill 只负责生成准确的 HTTP/curl 调用、排查认证参数和做交互式补充验证。生产 bugfix、新需求和部署闭环必须沉淀并运行仓库 E2E；禁止只用 `curl` 证明完成。若响应头或错误信息包含 `X-Trace-Id` / traceId，转入 `query-prod-log`。
 
 ## 项目简介
 

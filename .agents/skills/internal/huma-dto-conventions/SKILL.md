@@ -242,6 +242,6 @@ type rsp struct {
 
 ## 与其他 skill 的边界
 
-- 出现现有 DTO 字段总是零值、JSON body 看似被忽略、422 校验异常、line response 字段缺失时，**先来本 skill 对照规则 1/2**；如果是线上正在发生的请求异常，再转入 `cls-log-bugfix` 拿 traceId 关联 CLS 日志。
+- 出现现有 DTO 字段总是零值、JSON body 看似被忽略、422 校验异常、line response 字段缺失时，**先来本 skill 对照规则 1/2**；如果是线上正在发生的请求异常，再转入 `query-prod-log` 拿 traceId 关联 CLS 日志。
 - 写或改 E2E 测试涉及响应解码时，参考规则 3 的 unwrap 说明，避免再加一层错误的 `data` 包装。
-- 修复完 DTO bug 必须按 `cls-log-bugfix` skill 的要求补回归用例，并在 `test/unit/<topic>/` 加一个反射断言（参考 `test/unit/session_share/session_share_test.go` 的 `TestCreateShareReq_DTOFollowsHumaBodyConvention`），确保未来任何人改回平铺式都会被立刻打回。
+- 修复完 DTO bug 必须按项目测试规范补回归用例（见 `docs/agents/go-backend.md`），并在 `test/unit/<topic>/` 加一个反射断言（参考 `test/unit/session_share/session_share_test.go` 的 `TestCreateShareReq_DTOFollowsHumaBodyConvention`），确保未来任何人改回平铺式都会被立刻打回。
