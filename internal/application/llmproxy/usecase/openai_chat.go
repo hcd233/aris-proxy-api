@@ -83,7 +83,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 	completion.Model = req.Body.Model
 	bodyBytes := lo.Must1(sonic.Marshal(completion))
 
-	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
+	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        req.Body.Model,
@@ -156,7 +156,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 	completion.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(completion))
 
-	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
+	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
@@ -213,7 +213,7 @@ func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) 
 		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
 	}
 
-	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.Alias().String())
+	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.ModelID())
 
 	var usage *dto.OpenAICompletionUsage
 	if completion != nil {
@@ -283,7 +283,7 @@ func (s *openAIChatViaAnthropicStream) Read(ctx context.Context, sink port.Event
 	if completion != nil {
 		completion.Model = s.exposedModel
 	}
-	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.Alias().String())
+	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,

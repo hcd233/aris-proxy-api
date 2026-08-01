@@ -82,7 +82,7 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 			return nil, false
 		}
 		return &dbmodel.Message{
-			Model:    m.Model(),
+			ModelID:  m.ModelID(),
 			Message:  m.Content(),
 			CheckSum: m.Checksum(),
 		}, true
@@ -122,7 +122,7 @@ func (r *messageRepository) FindByIDs(ctx context.Context, ids []uint) ([]*aggre
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by id")
 	}
 	out := lo.Map(records, func(m *dbmodel.Message, _ int) *aggregate.Message {
-		return aggregate.RestoreMessage(m.ID, m.Message, m.Model, m.CheckSum)
+		return aggregate.RestoreMessage(m.ID, m.Message, m.ModelID, m.CheckSum)
 	})
 	return out, nil
 }

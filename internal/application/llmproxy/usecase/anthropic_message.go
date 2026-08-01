@@ -81,7 +81,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 	anthropicMsg.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(anthropicMsg))
 
-	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
+	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
@@ -153,7 +153,7 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 	anthropicMsg.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(anthropicMsg))
 
-	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
+	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
@@ -204,7 +204,7 @@ func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.Event
 		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
 	}
 
-	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.Alias().String())
+	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,
@@ -259,7 +259,7 @@ func (s *anthropicMessageViaChatStream) Read(ctx context.Context, sink port.Even
 	s.timer.finish()
 	anthropicMsg := s.finalizeAnthropicChatStream(ctx, sink, completion, err)
 
-	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.Alias().String())
+	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.ModelID())
 
 	var usage *dto.OpenAICompletionUsage
 	if completion != nil {

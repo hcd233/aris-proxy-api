@@ -50,21 +50,21 @@ func TestModelUpdate_Capabilities(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateModel failed: %v", err)
 	}
-	if uerr := m.Update(nil, nil, nil, nil, nil, nil, nil); uerr != nil {
+	if uerr := m.Update(nil, nil, nil, nil, nil, nil, nil, nil); uerr != nil {
 		t.Fatalf("nil capabilities update should be no-op: %v", uerr)
 	}
 	if got := m.Capabilities(); len(got) != 1 || got[0] != enum.InputModalityText {
 		t.Fatalf("capabilities should stay text-only, got %v", got)
 	}
 	next := []enum.InputModality{enum.InputModalityText, enum.InputModalityImage}
-	if uerr := m.Update(nil, nil, nil, nil, nil, nil, &next); uerr != nil {
+	if uerr := m.Update(nil, nil, nil, nil, nil, nil, &next, nil); uerr != nil {
 		t.Fatalf("valid capabilities update failed: %v", uerr)
 	}
 	if got := m.Capabilities(); len(got) != 2 {
 		t.Fatalf("capabilities should be replaced, got %v", got)
 	}
 	bad := []enum.InputModality{enum.InputModalityImage}
-	if uerr := m.Update(nil, nil, nil, nil, nil, nil, &bad); uerr == nil {
+	if uerr := m.Update(nil, nil, nil, nil, nil, nil, &bad, nil); uerr == nil {
 		t.Fatal("capabilities without text must be rejected")
 	}
 }

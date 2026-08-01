@@ -22,7 +22,7 @@ type ToolSchemaMap map[string]*JSONSchemaProperty
 //	@author centonhuang
 //	@update 2026-06-16 10:00:00
 type messageChecksumWire struct {
-	Model            string             `json:"model"`
+	ModelID          string             `json:"model_id"`
 	Role             enum.Role          `json:"role"`
 	Content          *UnifiedContent    `json:"content,omitempty"`
 	ReasoningContent string             `json:"reasoning_content,omitempty"`
@@ -36,7 +36,7 @@ type messageChecksumWire struct {
 //
 // 对 UnifiedMessage 做规范化处理，确保语义相同但表示不同的消息产生相同的 checksum：
 //
-//   - 纳入 model：相同内容由不同模型生成时产生不同 checksum
+//   - 纳入 modelID：相同内容由不同模型生成时产生不同 checksum
 //
 //   - 兼容 Content / ReasoningContent 空值：当 Content 为空且 ReasoningContent 非空时，
 //     将 ReasoningContent 视为 Content；两者均非空时保持区分
@@ -51,12 +51,12 @@ type messageChecksumWire struct {
 //   - 序列化规范化后的结构体，计算 SHA256
 //
 //     @param msg *UnifiedMessage
-//     @param model string 上游模型名（非 assistant 消息可为空字符串）
+//     @param modelID string 业务模型ID（非 assistant 消息可为空字符串）
 //     @param toolSchemas ToolSchemaMap 工具 Schema 映射表（可为 nil，nil 时退化为无 schema 模式）
 //     @return string
 //     @author centonhuang
 //     @update 2026-06-16 10:00:00
-func ComputeMessageChecksum(msg *UnifiedMessage, model string, toolSchemas ToolSchemaMap) string {
+func ComputeMessageChecksum(msg *UnifiedMessage, modelID string, toolSchemas ToolSchemaMap) string {
 	normalized := *msg
 
 	// 规范化 Content / ReasoningContent：
@@ -82,7 +82,7 @@ func ComputeMessageChecksum(msg *UnifiedMessage, model string, toolSchemas ToolS
 	}
 
 	wire := messageChecksumWire{
-		Model:            model,
+		ModelID:          modelID,
 		Role:             normalized.Role,
 		Content:          normalized.Content,
 		ReasoningContent: normalized.ReasoningContent,
