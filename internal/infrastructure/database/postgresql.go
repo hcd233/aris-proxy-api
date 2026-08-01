@@ -64,27 +64,27 @@ func ManualMigrations(ctx context.Context) error {
 	// DropColumn 前必须守卫 model_id 列存在性：PG DDL 按语句自动提交，
 	// 若 Drop 提交后 Rename 前进程崩溃，重跑时 model 列仍在但 model_id 已不存在，
 	// 无守卫的 DropColumn 会报 "column does not exist" 卡死（幂等缺口）。
-	if migrator.HasColumn(&model.ModelCallAudit{}, "model") {
-		if migrator.HasColumn(&model.ModelCallAudit{}, "model_id") {
-			if err := migrator.DropColumn(&model.ModelCallAudit{}, "model_id"); err != nil {
+	if migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModel) {
+		if migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModelID) {
+			if err := migrator.DropColumn(&model.ModelCallAudit{}, constant.FieldModelID); err != nil {
 				return err
 			}
 		}
-		if err := migrator.RenameColumn(&model.ModelCallAudit{}, "model", "model_id"); err != nil {
+		if err := migrator.RenameColumn(&model.ModelCallAudit{}, constant.FieldModel, constant.FieldModelID); err != nil {
 			return err
 		}
 	}
 
 	// sessions：models 列改名为 model_ids
-	if migrator.HasColumn(&model.Session{}, "models") {
-		if err := migrator.RenameColumn(&model.Session{}, "models", "model_ids"); err != nil {
+	if migrator.HasColumn(&model.Session{}, constant.FieldModels) {
+		if err := migrator.RenameColumn(&model.Session{}, constant.FieldModels, constant.FieldModelIDs); err != nil {
 			return err
 		}
 	}
 
 	// messages：model 列改名为 model_id
-	if migrator.HasColumn(&model.Message{}, "model") {
-		if err := migrator.RenameColumn(&model.Message{}, "model", "model_id"); err != nil {
+	if migrator.HasColumn(&model.Message{}, constant.FieldModel) {
+		if err := migrator.RenameColumn(&model.Message{}, constant.FieldModel, constant.FieldModelID); err != nil {
 			return err
 		}
 	}
@@ -96,12 +96,12 @@ func ManualMigrations(ctx context.Context) error {
 // 必须在 AutoMigrate 之后执行（依赖新列已存在）。
 func BackfillModelIDs(ctx context.Context) error {
 	db := InitDatabase().WithContext(ctx)
-	if !db.Migrator().HasColumn(&model.Model{}, "model_id") {
+	if !db.Migrator().HasColumn(&model.Model{}, constant.FieldModelID) {
 		return nil
 	}
 	return db.Model(&model.Model{}).
-		Where("model_id IS NULL OR model_id = ''").
-		Update("model_id", gorm.Expr("alias")).Error
+		Where(constant.MigrationModelIDEmptyWhere).
+		Update(constant.FieldModelID, gorm.Expr(constant.FieldAlias)).Error
 }
 
 // InitDatabase 初始化数据库

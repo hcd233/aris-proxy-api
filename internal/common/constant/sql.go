@@ -51,6 +51,7 @@ const (
 	FieldAPIKeyID                 = "api_key_id"
 	FieldModelID                  = "model_id"
 	FieldModelIDs                 = "model_ids"
+	FieldModels                   = "models"
 	FieldUpstreamProtocol         = "upstream_protocol"
 	FieldAPIProtocol              = "api_protocol"
 	FieldEndpoint                 = "endpoint"

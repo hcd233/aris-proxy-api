@@ -162,6 +162,9 @@ const (
 	// Router path/query/field constants
 	WhereIDEquals = "id = ?"
 
+	// ── Migration backfill (model id) ──
+	MigrationModelIDEmptyWhere = "model_id IS NULL OR model_id = ''"
+
 	// ── Session delete error messages ──
 	SessionDeleteErrorFindFailed   = "failed to find session"
 	SessionDeleteErrorNotFound     = "session not found"
