@@ -13,8 +13,7 @@ import (
 //	@update 2026-06-21 10:00:00
 type ReconstructAuditInput struct {
 	APIKeyID         uint
-	ModelID          uint
-	Model            string
+	ModelID          string
 	UpstreamProtocol enum.ProtocolType
 	APIProtocol      enum.ProtocolType
 	Endpoint         string
@@ -36,7 +35,6 @@ func ReconstructAudit(input ReconstructAuditInput) *ModelCallAudit {
 	return &ModelCallAudit{
 		apiKeyID:         input.APIKeyID,
 		modelID:          input.ModelID,
-		model:            input.Model,
 		upstreamProtocol: input.UpstreamProtocol,
 		apiProtocol:      input.APIProtocol,
 		endpoint:         input.Endpoint,

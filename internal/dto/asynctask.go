@@ -32,8 +32,7 @@ type MessageStoreTask struct {
 //	@update 2026-04-29 10:00:00
 type ModelCallAuditTask struct {
 	Ctx                      context.Context
-	ModelID                  uint
-	Model                    string
+	ModelID                  string
 	UpstreamProtocol         string
 	APIProtocol              string
 	Endpoint                 string

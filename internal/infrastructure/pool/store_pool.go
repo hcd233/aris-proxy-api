@@ -191,7 +191,6 @@ func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) er
 		audit := mcaggregate.RecordCall(mcaggregate.RecordCallInput{
 			APIKeyID:         util.CtxValueUint(task.Ctx, constant.CtxKeyAPIKeyID),
 			ModelID:          task.ModelID,
-			Model:            task.Model,
 			UpstreamProtocol: task.UpstreamProtocol,
 			APIProtocol:      task.APIProtocol,
 			Endpoint:         task.Endpoint,

@@ -233,7 +233,7 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 		view := &AuditLogView{
 			ID:                       audit.AggregateID(),
 			CreatedAt:                audit.CreatedAt(),
-			Model:                    audit.Model(),
+			Model:                    audit.ModelID(),
 			UpstreamProtocol:         audit.UpstreamProtocol(),
 			APIProtocol:              audit.APIProtocol(),
 			Endpoint:                 audit.Endpoint(),

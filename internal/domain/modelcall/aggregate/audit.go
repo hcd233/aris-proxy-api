@@ -20,8 +20,7 @@ type ModelCallAudit struct {
 	aggregate.Base
 
 	apiKeyID         uint
-	modelID          uint
-	model            string // exposed model（客户端请求别名）
+	modelID          string
 	upstreamProtocol enum.ProtocolType
 	apiProtocol      enum.ProtocolType
 	endpoint         string
@@ -53,8 +52,7 @@ func RecordCall(input RecordCallInput, now time.Time) *ModelCallAudit {
 //	@update 2026-04-22 17:00:00
 type RecordCallInput struct {
 	APIKeyID         uint
-	ModelID          uint
-	Model            string
+	ModelID          string
 	UpstreamProtocol enum.ProtocolType
 	APIProtocol      enum.ProtocolType
 	Endpoint         string
@@ -70,7 +68,6 @@ func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 	return &ModelCallAudit{
 		apiKeyID:         input.APIKeyID,
 		modelID:          input.ModelID,
-		model:            input.Model,
 		upstreamProtocol: input.UpstreamProtocol,
 		apiProtocol:      input.APIProtocol,
 		endpoint:         input.Endpoint,
@@ -86,11 +83,8 @@ func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 // APIKeyID 返回 API Key ID
 func (a *ModelCallAudit) APIKeyID() uint { return a.apiKeyID }
 
-// ModelID 返回模型端点 ID
-func (a *ModelCallAudit) ModelID() uint { return a.modelID }
-
-// Model 返回 exposed model 名
-func (a *ModelCallAudit) Model() string { return a.model }
+// ModelID 返回业务模型 ID
+func (a *ModelCallAudit) ModelID() string { return a.modelID }
 
 // UpstreamProtocol 返回上游协议
 func (a *ModelCallAudit) UpstreamProtocol() enum.ProtocolType { return a.upstreamProtocol }
