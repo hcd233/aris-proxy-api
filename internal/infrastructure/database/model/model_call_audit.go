@@ -7,8 +7,7 @@ package model
 type ModelCallAudit struct {
 	BaseModel
 	APIKeyID                 uint   `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_api_key_id_created_at,priority:1"`
-	ModelID                  uint   `json:"model_id" gorm:"column:model_id;not null;comment:模型端点ID;index:idx_model_id_created_at,priority:1"`
-	Model                    string `json:"model" gorm:"column:model;not null;default:'';comment:对外暴露的模型别名;index:idx_model_created_at,priority:1"`
+	ModelID                  string `json:"model_id" gorm:"column:model_id;not null;default:'';comment:业务模型ID(创建默认=alias);index:idx_model_id_created_at,priority:1"`
 	UpstreamProtocol         string `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message)"`
 	APIProtocol              string `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message)"`
 	Endpoint                 string `json:"endpoint" gorm:"column:endpoint;not null;default:'';comment:调用模型的 Endpoint 名"`

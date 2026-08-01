@@ -119,8 +119,7 @@ type callOutcome struct {
 func recordModelCall(ctx context.Context, submitter TaskSubmitter, tokenMetrics *metrics.TokenUsageCounter, out callOutcome) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
-		ModelID:             out.model.AggregateID(),
-		Model:               out.exposedModel,
+		ModelID:             out.model.ModelID(),
 		Endpoint:            out.endpoint,
 		UpstreamProtocol:    out.upstreamProtocol,
 		APIProtocol:         out.apiProtocol,

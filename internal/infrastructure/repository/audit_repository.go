@@ -51,7 +51,6 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 	record := &dbmodel.ModelCallAudit{
 		APIKeyID:                 audit.APIKeyID(),
 		ModelID:                  audit.ModelID(),
-		Model:                    audit.Model(),
 		UpstreamProtocol:         audit.UpstreamProtocol(),
 		APIProtocol:              audit.APIProtocol(),
 		Endpoint:                 audit.Endpoint(),
@@ -260,7 +259,6 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		a := aggregate.ReconstructAudit(aggregate.ReconstructAuditInput{
 			APIKeyID:         rec.APIKeyID,
 			ModelID:          rec.ModelID,
-			Model:            rec.Model,
 			UpstreamProtocol: rec.UpstreamProtocol,
 			APIProtocol:      rec.APIProtocol,
 			Endpoint:         rec.Endpoint,
