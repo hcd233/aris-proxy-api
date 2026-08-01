@@ -156,3 +156,25 @@ func codexRolloutRecordType(recordType string) string {
 		return constant.TraceRolloutTypeUnknown
 	}
 }
+
+// codexEventMsgWhitelist event_msg 记录不丢弃的白名单。task_complete/task_started 为任务
+// 生命周期标记；token_count 每条都带累计统计，上报后由服务端按固定 dedup key 覆盖写入
+// （RolloutDedupKey），库里只留最后一条。其余 event_msg（agent_message/agent_reasoning/
+// user_message/thread_settings_applied/world_state 等）与 response_item 双源重复或纯噪音，
+// 客户端直接丢弃。
+var codexEventMsgWhitelist = map[string]bool{
+	constant.TraceEventTaskStarted:  true,
+	constant.TraceEventTaskComplete: true,
+	constant.TraceEventTokenCount:   true,
+}
+
+func (codexAdapter) IgnoreTranscriptLine(meta TranscriptMeta) bool {
+	switch meta.RecordType {
+	case constant.TraceRolloutTypeTurnContext:
+		return true // 无消费者，model/cwd/turn_id 已被 traces 表与 response_item 覆盖
+	case constant.TraceRolloutTypeEventMsg:
+		return !codexEventMsgWhitelist[meta.Event]
+	default:
+		return false
+	}
+}
