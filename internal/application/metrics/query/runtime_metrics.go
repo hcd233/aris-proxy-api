@@ -122,6 +122,10 @@ type bucketAgg struct {
 	cpuPercent  float64
 	histBuckets map[string]float64
 	histTotal   float64
+	tokenInput  float64 // 桶内累计输入 token delta（跨实例求和）→ 除以桶宽得速率
+	tokenOutput float64 // 桶内累计输出 token delta（跨实例求和）
+	reqTotal    float64 // 桶内累计请求 delta（跨实例求和）
+	reqSuccess  float64 // 桶内累计 200 请求 delta（跨实例求和）
 	samples     float64 // 桶内跨实例累计的快照数；为 0 表示该桶无数据，不应输出
 }
 
@@ -146,12 +150,14 @@ func decodeSnapshots(payloads [][]byte) []metrics.Snapshot {
 
 func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart, bucket int64, n int) {
 	gSum, gHeap, gSSE, gCount := instanceGauges(snaps, alignedStart, bucket, n)
-	dCount, dCPU, dHist := instanceDeltas(snaps, alignedStart, bucket, n)
+	deltas := instanceDeltas(snaps, alignedStart, bucket, n)
 
 	bucketSeconds := float64(bucket)
 	for idx := range n {
 		mergeGaugeBucket(&agg[idx], gSum[idx], gHeap[idx], gSSE[idx], gCount[idx])
-		mergeRateBucket(&agg[idx], dCount[idx], dCPU[idx], dHist[idx], bucketSeconds)
+		mergeRateBucket(&agg[idx], deltas[idx].count, deltas[idx].cpu, deltas[idx].hist, bucketSeconds)
+		mergeTokenBucket(&agg[idx], deltas[idx].tokenIn, deltas[idx].tokenOut)
+		mergeReqBucket(&agg[idx], deltas[idx].reqTotal, deltas[idx].reqSuccess)
 	}
 }
 
@@ -179,27 +185,40 @@ func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int)
 	return gSum, gHeap, gSSE, gCount
 }
 
+// instanceDelta 单实例某桶的相邻快照正向 delta 汇总（速率与比例在跨实例合并后统一计算）。
+type instanceDelta struct {
+	count      float64
+	cpu        float64
+	hist       map[string]float64
+	tokenIn    float64
+	tokenOut   float64
+	reqTotal   float64
+	reqSuccess float64
+}
+
 // instanceDeltas 按桶累加单实例相邻快照的正向 delta（速率与 histogram），归属到后一个快照所在的桶。
-func instanceDeltas(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) (dCount, dCPU []float64, dHist []map[string]float64) {
-	dCount = make([]float64, n)
-	dCPU = make([]float64, n)
-	dHist = make([]map[string]float64, n)
+func instanceDeltas(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) []instanceDelta {
+	deltas := make([]instanceDelta, n)
 	for i := 1; i < len(snaps); i++ {
 		prev, cur := snaps[i-1], snaps[i]
 		idx := int((cur.TS - alignedStart) / bucket)
 		if idx < 0 || idx >= n {
 			continue
 		}
-		dCount[idx] += nonNeg(cur.LatCount - prev.LatCount)
-		dCPU[idx] += nonNeg(cur.CPUSeconds - prev.CPUSeconds)
-		if dHist[idx] == nil {
-			dHist[idx] = map[string]float64{}
+		deltas[idx].count += nonNeg(cur.LatCount - prev.LatCount)
+		deltas[idx].cpu += nonNeg(cur.CPUSeconds - prev.CPUSeconds)
+		deltas[idx].tokenIn += nonNeg(cur.TokenInput - prev.TokenInput)
+		deltas[idx].tokenOut += nonNeg(cur.TokenOutput - prev.TokenOutput)
+		deltas[idx].reqTotal += nonNeg(cur.ReqTotal - prev.ReqTotal)
+		deltas[idx].reqSuccess += nonNeg(cur.ReqSuccess - prev.ReqSuccess)
+		if deltas[idx].hist == nil {
+			deltas[idx].hist = map[string]float64{}
 		}
 		for le, cum := range cur.LatBuckets {
-			dHist[idx][le] += nonNeg(cum - prev.LatBuckets[le])
+			deltas[idx].hist[le] += nonNeg(cum - prev.LatBuckets[le])
 		}
 	}
-	return dCount, dCPU, dHist
+	return deltas
 }
 
 // mergeGaugeBucket 把单实例某桶的 gauge 桶内均值跨实例累加进全局桶。
@@ -227,9 +246,22 @@ func mergeRateBucket(b *bucketAgg, dCount, dCPU float64, dHist map[string]float6
 	}
 }
 
+// mergeTokenBucket 把单实例某桶的 token delta 跨实例累加进全局桶（速率在 buildSeries 统一除以桶宽）。
+func mergeTokenBucket(b *bucketAgg, dTokenIn, dTokenOut float64) {
+	b.tokenInput += dTokenIn
+	b.tokenOutput += dTokenOut
+}
+
+// mergeReqBucket 把单实例某桶的请求结果 delta 跨实例累加进全局桶（比例在 buildSeries 统一计算）。
+func mergeReqBucket(b *bucketAgg, dReqTotal, dReqSuccess float64) {
+	b.reqTotal += dReqTotal
+	b.reqSuccess += dReqSuccess
+}
+
 func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.RuntimeSeries {
 	series := emptySeries()
 	providers := collectProviders(agg)
+	bucketSeconds := float64(bucket)
 
 	for idx := range agg {
 		t := alignedStart + int64(idx)*bucket
@@ -244,6 +276,12 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 		series.QPS = append(series.QPS, dto.RuntimePoint{Time: t, Value: round2(agg[idx].qps)})
 		series.CPUPercent = append(series.CPUPercent, dto.RuntimePoint{Time: t, Value: round2(agg[idx].cpuPercent)})
 		series.P95Ms = append(series.P95Ms, dto.RuntimePoint{Time: t, Value: round2(percentileP95(agg[idx].histBuckets, agg[idx].histTotal))})
+		series.TokenInput = append(series.TokenInput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenInput / bucketSeconds)})
+		series.TokenOutput = append(series.TokenOutput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenOutput / bucketSeconds)})
+		// 无请求的桶不输出 successRate，避免 0% 误导。
+		if agg[idx].reqTotal > 0 {
+			series.SuccessRate = append(series.SuccessRate, dto.RuntimePoint{Time: t, Value: round2(agg[idx].reqSuccess / agg[idx].reqTotal * constant.RuntimeMetricsPercentToRatio)})
+		}
 		for _, prov := range providers {
 			series.SSEActive[prov] = append(series.SSEActive[prov], dto.RuntimePoint{Time: t, Value: round2(agg[idx].sse[prov])})
 		}
