@@ -105,14 +105,12 @@ func TestRuntimeMetricsEndpoint_AdminReturnsSeries(t *testing.T) {
 	if result.Body.Series.SSEActive == nil {
 		t.Error("expected series.sseActive map to be present (may be empty)")
 	}
-	// 新指标字段必须存在（可为空数组），前端图表依赖其 key。
-	if result.Body.Series.TokenInput == nil {
-		t.Error("expected series.tokenInput to be present (may be empty)")
-	}
-	if result.Body.Series.TokenOutput == nil {
-		t.Error("expected series.tokenOutput to be present (may be empty)")
-	}
-	if result.Body.Series.SuccessRate == nil {
-		t.Error("expected series.successRate to be present (may be empty)")
+	// 新指标字段 key 必须存在（可为空数组）。== nil 无法区分"字段缺失"与"空数组"（
+	// sonic 对缺失 key 与 nil slice 都解析为 nil），故用 sonic.Get 按 JSON 路径断言 key 存在。
+	for _, key := range []string{"tokenInput", "tokenOutput", "successRate"} {
+		node, getErr := sonic.Get(body, "body", "series", key)
+		if getErr != nil || !node.Exists() {
+			t.Errorf("expected series.%s key to be present", key)
+		}
 	}
 }
