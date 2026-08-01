@@ -35,7 +35,6 @@ type ingestBatch struct {
 	AgentType       string         `json:"agent_type,omitempty"`
 	Model           string         `json:"model,omitempty"`
 	CWD             string         `json:"cwd,omitempty"`
-	Source          string         `json:"source,omitempty"`
 	Records         []ingestRecord `json:"records"`
 }
 
@@ -125,7 +124,6 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 		Agent:          i.adapter.Name(),
 		Model:          info.Model,
 		CWD:            info.CWD,
-		SessionSource:  info.SessionSource,
 		Source:         constant.TraceRecordSourceHook,
 		RecordType:     constant.TraceRecordTypeHookEvent,
 		Event:          info.EventName,
@@ -157,9 +155,8 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 // 不生成任何 hook 记录。
 func (i *Ingestor) ingestCodexHookTrigger(ctx context.Context, info HookInfo) error {
 	if err := writeSessionMeta(i.paths, info.SessionID, sessionMeta{
-		Model:  info.Model,
-		CWD:    info.CWD,
-		Source: info.SessionSource,
+		Model: info.Model,
+		CWD:   info.CWD,
 	}); err != nil {
 		return err
 	}
@@ -196,7 +193,6 @@ func (i *Ingestor) flush(ctx context.Context, config Config) error {
 		AgentType:       batch[0].AgentType,
 		Model:           meta.Model,
 		CWD:             meta.CWD,
-		Source:          meta.Source,
 		Records:         make([]ingestRecord, 0, len(batch)),
 	}
 	for _, record := range batch {

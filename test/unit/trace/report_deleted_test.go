@@ -19,7 +19,7 @@ func TestReportRejectsTraceDeleted(t *testing.T) {
 
 	ctx := context.Background()
 	// 先建一条 trace，再软删
-	created, err := repo.UpsertBySessionID(ctx, &trace.Trace{Agent: constant.TraceAgentCodex, SessionID: "s-deleted", APIKeyName: "k", UserID: 1})
+	created, err := repo.UpsertBySessionID(ctx, &trace.Trace{Agent: constant.TraceAgentCodex, SessionID: "s-deleted", APIKeyName: "k"})
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
@@ -31,7 +31,6 @@ func TestReportRejectsTraceDeleted(t *testing.T) {
 		SessionID:  "s-deleted",
 		Agent:      constant.TraceAgentCodex,
 		APIKeyName: "k",
-		UserID:     1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			Event: "UserPromptSubmit", DedupKey: "hook:deleted:1", Payload: []byte(`{"x":1}`),

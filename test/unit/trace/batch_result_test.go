@@ -15,7 +15,6 @@ func TestReportTraceEvent_ReturnsPerRecordResults(t *testing.T) {
 	cmd := port.ReportTraceEventCommand{
 		SessionID:  "s1",
 		APIKeyName: "key1",
-		UserID:     1,
 		Records: []port.ReportTraceRecord{{
 			Source:        constant.TraceRecordSourceHook,
 			RecordType:    constant.TraceRecordTypeHookEvent,

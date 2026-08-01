@@ -258,7 +258,6 @@ export default function TracePage() {
                         <span>ID: {tr.id}</span>
                         <span>{tr.agent}</span>
                         <span>{tr.model}</span>
-                        <span>{tr.source}</span>
                         <span>{formatDateTime(tr.createdAt)}</span>
                       </div>
                     </div>
@@ -289,7 +288,6 @@ export default function TracePage() {
                       <TableHead>{t("trace.agent")}</TableHead>
                       <TableHead>{t("trace.api_key")}</TableHead>
                       <TableHead>{t("trace.model")}</TableHead>
-                      <TableHead>{t("trace.source")}</TableHead>
                       <TableHead className="w-40">{t("trace.created_at")}</TableHead>
                       <TableHead className="w-12" />
                     </TableRow>
@@ -324,7 +322,6 @@ export default function TracePage() {
                         <TableCell>{tr.agent}</TableCell>
                         <TableCell>{tr.apiKeyName}</TableCell>
                         <TableCell>{tr.model}</TableCell>
-                        <TableCell>{tr.source}</TableCell>
                         <TableCell className="text-muted-foreground">{formatDateTime(tr.createdAt)}</TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <DeleteIconButton

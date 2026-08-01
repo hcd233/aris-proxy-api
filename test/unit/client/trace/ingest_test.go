@@ -185,8 +185,8 @@ func TestRunIngestCommand_CodexHookTriggersWithoutHookRecord(t *testing.T) {
 	if gotRequest.SessionID != "sess-1" {
 		t.Fatalf("session_id = %q", gotRequest.SessionID)
 	}
-	if gotRequest.Model != "glm-5.2" || gotRequest.CWD != "/tmp/x" || gotRequest.Source != "startup" {
-		t.Fatalf("batch 元数据 = %+v，期望 model=glm-5.2 cwd=/tmp/x source=startup", gotRequest)
+	if gotRequest.Model != "glm-5.2" || gotRequest.CWD != "/tmp/x" {
+		t.Fatalf("batch 元数据 = %+v，期望 model=glm-5.2 cwd=/tmp/x", gotRequest)
 	}
 	for _, rec := range gotRequest.Records {
 		if rec.Source != "rollout" {
