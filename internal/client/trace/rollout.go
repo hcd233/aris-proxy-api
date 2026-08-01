@@ -140,7 +140,11 @@ func (r *RolloutReader) parseRolloutLines(
 		if !sonic.Valid(raw) {
 			continue
 		}
-		record := r.rolloutRecord(sessionID, state.Line, raw, meta)
+		classified := r.adapter.ClassifyTranscriptLine(raw)
+		if r.adapter.IgnoreTranscriptLine(classified) {
+			continue
+		}
+		record := r.rolloutRecord(sessionID, state.Line, raw, meta, classified)
 		record.CreatedAt = time.Now().UTC()
 		if err := r.spool.Append(ctx, record); err != nil {
 			return nil, state, err
@@ -150,8 +154,13 @@ func (r *RolloutReader) parseRolloutLines(
 	return records, state, nil
 }
 
-func (r *RolloutReader) rolloutRecord(sessionID string, line int64, raw []byte, meta PendingRecord) PendingRecord {
-	classified := r.adapter.ClassifyTranscriptLine(raw)
+func (r *RolloutReader) rolloutRecord(
+	sessionID string,
+	line int64,
+	raw []byte,
+	meta PendingRecord,
+	classified TranscriptMeta,
+) PendingRecord {
 	lineCopy := line
 	record := PendingRecord{
 		SessionID:       sessionID,
@@ -176,6 +185,11 @@ func (r *RolloutReader) rolloutRecord(sessionID string, line int64, raw []byte, 
 func RolloutDedupKey(sessionID string, meta TranscriptMeta, line int64, raw []byte) string {
 	if meta.RecordType == constant.TraceRolloutTypeSessionMeta && meta.SessionID != "" {
 		return fmt.Sprintf(constant.TraceClientSessionMetaDedupFormat, sessionID, meta.SessionID)
+	}
+	if meta.RecordType == constant.TraceRolloutTypeEventMsg && meta.Event == constant.TraceEventTokenCount {
+		// token_count 固定 key：同一会话多条 token_count 共用同一 key，服务端
+		// ON CONFLICT DO UPDATE 后库里只保留最后一条（会话累计 token 汇总）。
+		return fmt.Sprintf(constant.TraceClientTokenCountDedupFormat, sessionID)
 	}
 	digest := sha256.Sum256(raw)
 	return fmt.Sprintf(constant.TraceClientRolloutDedupFormat, sessionID, line, hex.EncodeToString(digest[:]))

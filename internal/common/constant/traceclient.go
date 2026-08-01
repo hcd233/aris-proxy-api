@@ -58,6 +58,7 @@ const (
 	TraceClientRolloutFileSuffix      = ".jsonl"
 	TraceClientRolloutDedupFormat     = "rollout:%s:%d:%s"
 	TraceClientSessionMetaDedupFormat = "rollout:%s:session_meta:%s"
+	TraceClientTokenCountDedupFormat  = "token_count:%s"
 	TraceClientFileIdentityFormat     = "%d:%d"
 
 	TraceClientAPIKeyEnv  = "ARIS_API_KEY"
