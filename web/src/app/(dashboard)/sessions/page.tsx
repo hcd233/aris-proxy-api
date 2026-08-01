@@ -458,9 +458,9 @@ export default function SessionsPage() {
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         <span>ID: {s.id}</span>
                         <span>{s.toolCount ?? 0} tools</span>
-                        {s.models && s.models.length > 0 && (
+                        {s.modelIds && s.modelIds.length > 0 && (
                           <div className="flex items-center gap-1">
-                            {s.models.map((m) => <ProviderIcon key={m} protocol={m} size={12} />)}
+                            {s.modelIds.map((m) => <ProviderIcon key={m} protocol={m} size={12} />)}
                           </div>
                         )}
                         <span>{formatDateTime(s.createdAt)}</span>
@@ -565,8 +565,8 @@ export default function SessionsPage() {
                         <TableCell>{s.toolCount ?? 0}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            {s.models && s.models.length > 0 ? (
-                              s.models.map((m) => (
+                            {s.modelIds && s.modelIds.length > 0 ? (
+                              s.modelIds.map((m) => (
                                 <span key={m} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                   <ProviderIcon protocol={m} size={14} />
                                   {m}

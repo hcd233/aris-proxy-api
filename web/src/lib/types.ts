@@ -86,7 +86,7 @@ export interface SessionSummary {
   messageCount: number;
   toolCount: number;
   metadata?: Record<string, string>;
-  models?: string[];
+  modelIds?: string[];
 }
 
 export interface SessionDetail {
@@ -121,7 +121,7 @@ export interface UnifiedMessage {
 
 export interface MessageItem {
   id: number;
-  model: string;
+  modelId: string;
   message: UnifiedMessage;
   createdAt: string;
 }
@@ -335,6 +335,7 @@ export type ModelCapability = "text" | "image";
 export interface ModelItem {
   id: number;
   alias: string;
+  modelId: string;
   modelName: string;
   enabled: boolean;
   contextLength: number;
@@ -356,6 +357,7 @@ export interface CreateModelReqBody {
 
 export interface UpdateModelReqBody {
   alias?: string;
+  modelId?: string;
   modelName?: string;
   endpointID?: number;
   enabled?: boolean;
@@ -374,7 +376,7 @@ export interface ListModelsRsp extends CommonRsp {
 export interface AuditLogItem {
   id: number;
   createdAt: string;
-  model: string;
+  modelId: string;
   upstreamProtocol: string;
   apiProtocol: string;
   endpoint: string;
@@ -408,7 +410,7 @@ export interface TrendPoint {
 }
 
 export interface ModelTrendItem {
-  model: string;
+  modelId: string;
   points: TrendPoint[];
 }
 
@@ -425,7 +427,7 @@ export interface RatePoint {
 }
 
 export interface RequestRateItem {
-  model: string;
+  modelId: string;
   points: RatePoint[];
 }
 
@@ -451,7 +453,7 @@ export interface TokenRatePoint {
 }
 
 export interface TokenRateItem {
-  model: string;
+  modelId: string;
   points: TokenRatePoint[];
 }
 
@@ -460,7 +462,7 @@ export interface TokenRateRsp extends CommonRsp {
 }
 
 export interface ModelUsageItem {
-  model: string;
+  modelId: string;
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
@@ -477,7 +479,7 @@ export interface FirstTokenLatencyPoint {
 }
 
 export interface FirstTokenLatencyItem {
-  model: string;
+  modelId: string;
   points: FirstTokenLatencyPoint[];
 }
 

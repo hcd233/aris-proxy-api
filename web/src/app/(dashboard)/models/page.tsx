@@ -60,6 +60,7 @@ import { useT } from "@/lib/i18n";
 
 interface ModelForm {
   alias: string;
+  modelId: string;
   modelName: string;
   endpointID: number;
   contextLength: number;
@@ -70,6 +71,7 @@ interface ModelForm {
 
 const emptyForm: ModelForm = {
   alias: "",
+  modelId: "",
   modelName: "",
   endpointID: 0,
   contextLength: 128000,
@@ -186,6 +188,7 @@ export default function ModelsPage() {
     setEditingId(model.id);
     setForm({
       alias: model.alias,
+      modelId: model.modelId ?? "",
       modelName: model.modelName,
       endpointID: model.endpoint.id,
       contextLength: model.contextLength || 128000,
@@ -219,6 +222,7 @@ export default function ModelsPage() {
       if (editingId) {
         await api.updateModel(editingId, {
           alias: form.alias,
+          ...(form.modelId.trim() ? { modelId: form.modelId.trim() } : {}),
           modelName: form.modelName,
           endpointID: form.endpointID,
           contextLength: form.contextLength,
@@ -476,6 +480,7 @@ export default function ModelsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t("models.alias")}</TableHead>
+                        <TableHead>{t("models.model_id")}</TableHead>
                         <TableHead>{t("models.model_name")}</TableHead>
                         <TableHead>{t("models.limits")}</TableHead>
                         <TableHead>{t("models.capabilities")}</TableHead>
@@ -494,6 +499,7 @@ export default function ModelsPage() {
                               {model.alias}
                             </span>
                           </TableCell>
+                          <TableCell className="font-mono text-xs">{model.modelId || "—"}</TableCell>
                           <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">
@@ -600,6 +606,18 @@ export default function ModelsPage() {
                   onChange={(e) => setForm((f) => ({ ...f, alias: e.target.value }))}
                 />
               </div>
+              {editingId && (
+                <div className="space-y-1">
+                  <Label htmlFor="model-id">{t("models.model_id")}</Label>
+                  <Input
+                    id="model-id"
+                    placeholder={t("models.model_id_placeholder")}
+                    value={form.modelId}
+                    onChange={(e) => setForm((f) => ({ ...f, modelId: e.target.value }))}
+                  />
+                  <p className="text-[11px] text-muted-foreground">{t("models.model_id_hint")}</p>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label htmlFor="model-name">{t("models.model_name")}</Label>
                 <Input
