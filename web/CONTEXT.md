@@ -56,6 +56,20 @@ _Avoid_: export bar, download footer
 Trace 页面的安装入口。用户点击复制时，前端通过 JWT 实时签发单次下载票据（`POST /api/v1/trace/client/ticket`），生成一段短安装脚本：自动探测 `uname` 映射到 `darwin/linux` × `amd64/arm64`，携带票据 `curl` 下载对应 `aris` 二进制，原子安装到 `~/.aris/bin/aris`，然后执行 `aris trace init --host <origin>`。脚本预览使用占位符，不缓存真实票据；API Key 不出现在脚本中，由终端四步向导以隐藏输入方式收集。
 _Avoid_: codex hook dialog, setup script generator, install wizard
 
+## Models Page（模型管理页）
+
+**Model Alias（模型别名）**:
+模型对外暴露的本地别名，客户端请求时作为 model 参数传入（如 `gpt-4o`）。同一 alias 可关联多个 endpoint 做负载均衡。
+_Avoid_: exposed name, local model name
+
+**Model ID（业务模型 ID）**:
+模型在网关内唯一的业务标识（默认等于 alias，可更新），用于审计/会话等模块引用模型，区别于数据库主键 `id`。
+_Avoid_: model key, business id
+
+**Upstream Model（上游模型名）**:
+转发到上游 Endpoint 时真正发送的模型名（如 `gpt-4o-2024-08-06`），区别于对外 Alias。前端字段 `upstreamModel` / 数据库列 `upstream_model`（旧名 `model`/`modelName`，2026-08 统一命名）。
+_Avoid_: model name, upstream alias
+
 ## Theme（主题皮肤）
 
 **Theme（主题皮肤）**:

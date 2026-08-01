@@ -45,7 +45,7 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 			ID:              m.AggregateID(),
 			Alias:           m.Alias().String(),
 			ModelID:         m.ModelID(),
-			ModelName:       m.ModelName(),
+			UpstreamModel:   m.UpstreamModel(),
 			Enabled:         m.Enabled(),
 			ContextLength:   m.ContextLength(),
 			MaxOutputTokens: m.MaxOutputTokens(),

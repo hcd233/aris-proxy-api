@@ -51,7 +51,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 
 	result, err := h.create.Handle(ctx, port.CreateModelCommand{
 		Alias:           req.Body.Alias,
-		ModelName:       req.Body.ModelName,
+		UpstreamModel:   req.Body.UpstreamModel,
 		EndpointID:      req.Body.EndpointID,
 		ContextLength:   req.Body.ContextLength,
 		MaxOutputTokens: req.Body.MaxOutputTokens,
@@ -85,7 +85,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 			ID:              v.ID,
 			Alias:           v.Alias,
 			ModelID:         v.ModelID,
-			ModelName:       v.ModelName,
+			UpstreamModel:   v.UpstreamModel,
 			Enabled:         v.Enabled,
 			ContextLength:   v.ContextLength,
 			MaxOutputTokens: v.MaxOutputTokens,
@@ -119,7 +119,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	err := h.update.Handle(ctx, port.UpdateModelCommand{
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
-		ModelName:       req.Body.ModelName,
+		UpstreamModel:   req.Body.UpstreamModel,
 		EndpointID:      req.Body.EndpointID,
 		Enabled:         req.Body.Enabled,
 		ContextLength:   req.Body.ContextLength,

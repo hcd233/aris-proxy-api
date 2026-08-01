@@ -25,7 +25,7 @@ func TestModelUpdateColumnConstantsMatchGORMTags(t *testing.T) {
 	checks := []fieldCheck{
 		{goField: "Alias", constant: constant.FieldModelAlias},
 		{goField: "ModelID", constant: constant.FieldModelID},
-		{goField: "ModelName", constant: constant.FieldModelModelName},
+		{goField: "UpstreamModel", constant: constant.FieldModelUpstreamModel},
 		{goField: "EndpointID", constant: constant.FieldModelEndpointID},
 		{goField: "ContextLength", constant: constant.FieldModelContextLength},
 		{goField: "MaxOutputTokens", constant: constant.FieldModelMaxOutputTokens},

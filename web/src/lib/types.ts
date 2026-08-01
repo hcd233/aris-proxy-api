@@ -336,7 +336,7 @@ export interface ModelItem {
   id: number;
   alias: string;
   modelId: string;
-  modelName: string;
+  upstreamModel: string;
   enabled: boolean;
   contextLength: number;
   maxOutputTokens: number;
@@ -348,7 +348,7 @@ export interface ModelItem {
 
 export interface CreateModelReqBody {
   alias: string;
-  modelName: string;
+  upstreamModel: string;
   endpointID: number;
   contextLength?: number;
   maxOutputTokens?: number;
@@ -358,7 +358,7 @@ export interface CreateModelReqBody {
 export interface UpdateModelReqBody {
   alias?: string;
   modelId?: string;
-  modelName?: string;
+  upstreamModel?: string;
   endpointID?: number;
   enabled?: boolean;
   contextLength?: number;

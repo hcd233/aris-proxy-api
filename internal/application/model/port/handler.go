@@ -12,7 +12,7 @@ import (
 // CreateModelCommand 创建 Model 命令
 type CreateModelCommand struct {
 	Alias           string
-	ModelName       string
+	UpstreamModel   string
 	EndpointID      uint
 	ContextLength   int
 	MaxOutputTokens int
@@ -35,7 +35,7 @@ type CreateModelHandler interface {
 type UpdateModelCommand struct {
 	ID              uint
 	Alias           *string
-	ModelName       *string
+	UpstreamModel   *string
 	EndpointID      *uint
 	Enabled         *bool
 	ContextLength   *int
@@ -78,7 +78,7 @@ type ModelView struct {
 	ID              uint
 	Alias           string
 	ModelID         string
-	ModelName       string
+	UpstreamModel   string
 	Enabled         bool
 	ContextLength   int
 	MaxOutputTokens int

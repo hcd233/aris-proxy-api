@@ -61,7 +61,7 @@ import { useT } from "@/lib/i18n";
 interface ModelForm {
   alias: string;
   modelId: string;
-  modelName: string;
+  upstreamModel: string;
   endpointID: number;
   contextLength: number;
   maxOutputTokens: number;
@@ -72,7 +72,7 @@ interface ModelForm {
 const emptyForm: ModelForm = {
   alias: "",
   modelId: "",
-  modelName: "",
+  upstreamModel: "",
   endpointID: 0,
   contextLength: 128000,
   maxOutputTokens: 64000,
@@ -189,7 +189,7 @@ export default function ModelsPage() {
     setForm({
       alias: model.alias,
       modelId: model.modelId ?? "",
-      modelName: model.modelName,
+      upstreamModel: model.upstreamModel,
       endpointID: model.endpoint.id,
       contextLength: model.contextLength || 128000,
       maxOutputTokens: model.maxOutputTokens || 64000,
@@ -205,7 +205,7 @@ export default function ModelsPage() {
   };
 
   const handleSave = async () => {
-    if (!form.alias.trim() || !form.modelName.trim() || !form.endpointID) {
+    if (!form.alias.trim() || !form.upstreamModel.trim() || !form.endpointID) {
       toast.error(t("models.fields_required"));
       return;
     }
@@ -223,7 +223,7 @@ export default function ModelsPage() {
         await api.updateModel(editingId, {
           alias: form.alias,
           ...(form.modelId.trim() ? { modelId: form.modelId.trim() } : {}),
-          modelName: form.modelName,
+          upstreamModel: form.upstreamModel,
           endpointID: form.endpointID,
           contextLength: form.contextLength,
           maxOutputTokens: form.maxOutputTokens,
@@ -233,7 +233,7 @@ export default function ModelsPage() {
       } else {
         await api.createModel({
           alias: form.alias,
-          modelName: form.modelName,
+          upstreamModel: form.upstreamModel,
           endpointID: form.endpointID,
           contextLength: form.contextLength,
           maxOutputTokens: form.maxOutputTokens,
@@ -430,8 +430,8 @@ export default function ModelsPage() {
                               <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
                               {model.alias}
                             </p>
-                            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                              {model.modelName}
+                            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground" title={model.upstreamModel}>
+                              {model.upstreamModel}
                             </p>
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
@@ -456,16 +456,14 @@ export default function ModelsPage() {
                             />
                           </div>
                         </div>
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="mt-2">
                           <Switch
                             size="sm"
                             checked={model.enabled}
                             onCheckedChange={() => handleToggleEnabled(model)}
+                            aria-label={model.enabled ? t("models.enabled") : t("models.disabled")}
                           />
-                              <span className="text-xs text-muted-foreground">
-                                {model.enabled ? t("models.enabled") : t("models.disabled")}
-                              </span>
-                            </div>
+                        </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {t("models.endpoint")}: {getEndpointName(model)}
                         </p>
@@ -481,7 +479,7 @@ export default function ModelsPage() {
                       <TableRow>
                         <TableHead>{t("models.alias")}</TableHead>
                         <TableHead>{t("models.model_id")}</TableHead>
-                        <TableHead>{t("models.model_name")}</TableHead>
+                        <TableHead>{t("models.upstream_model")}</TableHead>
                         <TableHead>{t("models.limits")}</TableHead>
                         <TableHead>{t("models.capabilities")}</TableHead>
                         <TableHead>{t("models.enabled")}</TableHead>
@@ -494,13 +492,21 @@ export default function ModelsPage() {
                       {models.map((model) => (
                         <TableRow key={model.id}>
                           <TableCell>
-                            <span className="flex items-center gap-1.5 font-medium">
+                            <span className="flex max-w-[16ch] items-center gap-1.5 font-medium" title={model.alias}>
                               <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
-                              {model.alias}
+                              <span className="truncate">{model.alias}</span>
                             </span>
                           </TableCell>
-                          <TableCell className="font-mono text-xs">{model.modelId || "—"}</TableCell>
-                          <TableCell className="font-mono text-xs">{model.modelName}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            <span className="block max-w-[12ch] truncate" title={model.modelId || undefined}>
+                              {model.modelId || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            <span className="block max-w-[20ch] truncate" title={model.upstreamModel}>
+                              {model.upstreamModel}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">
                               <span
@@ -523,21 +529,18 @@ export default function ModelsPage() {
                             <CapabilityBadges capabilities={model.capabilities} />
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                size="sm"
-                                checked={model.enabled}
-                                onCheckedChange={() => handleToggleEnabled(model)}
-                              />
-                              <span className="text-xs text-muted-foreground">
-                                {model.enabled ? t("models.enabled") : t("models.disabled")}
-                              </span>
-                            </div>
+                            <Switch
+                              size="sm"
+                              checked={model.enabled}
+                              onCheckedChange={() => handleToggleEnabled(model)}
+                              aria-label={model.enabled ? t("models.enabled") : t("models.disabled")}
+                            />
                           </TableCell>
                           <TableCell>
                             <button
                               onClick={() => router.push("/endpoints")}
-                              className="text-primary underline-offset-2 hover:underline"
+                              className="block max-w-[14ch] truncate text-primary underline-offset-2 hover:underline"
+                              title={getEndpointName(model)}
                             >
                               {getEndpointName(model)}
                             </button>
@@ -619,12 +622,12 @@ export default function ModelsPage() {
                 </div>
               )}
               <div className="space-y-1">
-                <Label htmlFor="model-name">{t("models.model_name")}</Label>
+                <Label htmlFor="model-name">{t("models.upstream_model")}</Label>
                 <Input
                   id="model-name"
-                  placeholder={t("models.model_name_placeholder")}
-                  value={form.modelName}
-                  onChange={(e) => setForm((f) => ({ ...f, modelName: e.target.value }))}
+                  placeholder={t("models.upstream_model_placeholder")}
+                  value={form.upstreamModel}
+                  onChange={(e) => setForm((f) => ({ ...f, upstreamModel: e.target.value }))}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -717,7 +720,7 @@ export default function ModelsPage() {
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!form.alias.trim() || !form.modelName.trim() || !form.endpointID || saving}
+                disabled={!form.alias.trim() || !form.upstreamModel.trim() || !form.endpointID || saving}
               >
                 {saving ? t("common.saving") : editingId ? t("common.update") : t("common.create")}
               </Button>

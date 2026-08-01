@@ -35,7 +35,7 @@ _Avoid_: upstream, provider, backend
 _Avoid_: model mapping, model route, alias record
 
 **EndpointAlias（端点别名）**:
-客户端请求中暴露的模型名。与上游实际模型名分离：`alias` 是客户端看到的（如 "gpt-4"），`model` 是向上游真正发送的名称（如 "gpt-4-turbo-2024-04-09"）。
+客户端请求中暴露的模型名。与上游实际模型名分离：`alias` 是客户端看到的（如 "gpt-4"），`upstream_model` 是向上游真正发送的名称（如 "gpt-4-turbo-2024-04-09"）。
 _Avoid_: model name, exposed name
 
 **UpstreamCreds（上游凭证）**:

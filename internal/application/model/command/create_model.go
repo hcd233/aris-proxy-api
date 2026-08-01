@@ -52,7 +52,7 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 		capabilities = constant.DefaultModelCapabilities
 	}
 
-	m, err := aggregate.CreateModel(0, vo.EndpointAlias(cmd.Alias), cmd.ModelName, cmd.EndpointID, true, contextLength, maxOutputTokens, capabilities)
+	m, err := aggregate.CreateModel(0, vo.EndpointAlias(cmd.Alias), cmd.UpstreamModel, cmd.EndpointID, true, contextLength, maxOutputTokens, capabilities)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate model")
 	}

@@ -159,7 +159,6 @@
   "endpoints.saving": "保存中...",
   "models.title": "モデル",
   "models.alias": "エイリアス",
-  "models.model_name": "モデル名",
   "models.endpoint": "エンドポイント",
   "models.enabled": "有効",
   "models.disabled": "無効",
@@ -341,7 +340,6 @@
   "models.edit_desc": "モデル設定を更新",
   "models.delete_desc": "{name} が完全に削除されます。この操作は元に戻せません。",
   "models.alias_placeholder": "例: gpt-4o",
-  "models.model_name_placeholder": "例: gpt-4o-2024-08-06",
   "models.select_endpoint": "エンドポイントを選択",
   "share_dialog.title": "セッションを共有",
   "share_dialog.desc_created": "以下の公開リンクをコピーして会話を共有できます。リンクは共有ページからいつでも取り消せます。",
@@ -692,5 +690,7 @@
   "monitor.success_rate": "成功率",
   "models.model_id": "モデルID",
   "models.model_id_placeholder": "例: gpt-4",
-  "models.model_id_hint": "空欄の場合は alias がモデルIDとして使用されます。"
+  "models.model_id_hint": "空欄の場合は alias がモデルIDとして使用されます。",
+  "models.upstream_model": "上游モデル名",
+  "models.upstream_model_placeholder": "例: gpt-4o-2024-08-06"
 }

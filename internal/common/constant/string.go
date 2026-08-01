@@ -133,7 +133,7 @@ const (
 	FieldEndpointSupportOpenAIResponse       = "support_openai_response"
 	FieldEndpointSupportAnthropicMessage     = "support_anthropic_message"
 	FieldModelAlias                          = "alias"
-	FieldModelModelName                      = "model"
+	FieldModelUpstreamModel                  = "upstream_model"
 	FieldModelEndpointID                     = "endpoint_id"
 	FieldModelEnabled                        = "enabled"
 	FieldModelContextLength                  = "context_length"
@@ -161,10 +161,6 @@ const (
 
 	// Router path/query/field constants
 	WhereIDEquals = "id = ?"
-
-	// ── Migration backfill (model id) ──
-	MigrationModelIDEmptyWhere         = "model_id IS NULL OR model_id = ''"
-	MigrationModelCallAuditLegacyIndex = "idx_model_created_at"
 
 	// ── Session delete error messages ──
 	SessionDeleteErrorFindFailed   = "failed to find session"
