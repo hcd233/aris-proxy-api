@@ -61,9 +61,14 @@ func ManualMigrations(ctx context.Context) error {
 
 	// model_call_audits：旧库存在 model 列（存 alias）与 model_id 列（uint 主键）。
 	// 先删 uint model_id 列，再把 model 列改名为 model_id。
+	// DropColumn 前必须守卫 model_id 列存在性：PG DDL 按语句自动提交，
+	// 若 Drop 提交后 Rename 前进程崩溃，重跑时 model 列仍在但 model_id 已不存在，
+	// 无守卫的 DropColumn 会报 "column does not exist" 卡死（幂等缺口）。
 	if migrator.HasColumn(&model.ModelCallAudit{}, "model") {
-		if err := migrator.DropColumn(&model.ModelCallAudit{}, "model_id"); err != nil {
-			return err
+		if migrator.HasColumn(&model.ModelCallAudit{}, "model_id") {
+			if err := migrator.DropColumn(&model.ModelCallAudit{}, "model_id"); err != nil {
+				return err
+			}
 		}
 		if err := migrator.RenameColumn(&model.ModelCallAudit{}, "model", "model_id"); err != nil {
 			return err
