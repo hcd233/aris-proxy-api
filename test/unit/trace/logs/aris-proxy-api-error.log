@@ -1,4 +1,0 @@
-{"level":"error","timestamp":"2026-07-14T20:37:02+08:00","caller":"v2@v2.38.0/huma.go:1088","message":"[TraceHandler] Report event failed","error":"validation: hook payload missing session_id"}
-{"level":"error","timestamp":"2026-07-14T20:38:18+08:00","caller":"v2@v2.38.0/huma.go:1088","message":"[TraceHandler] Report event failed","error":"validation: hook payload missing session_id"}
-{"level":"error","timestamp":"2026-07-14T20:39:49+08:00","caller":"v2@v2.38.0/huma.go:1088","message":"[TraceHandler] Report event failed","error":"validation: hook payload missing session_id"}
-{"level":"error","timestamp":"2026-07-14T20:41:05+08:00","caller":"v2@v2.38.0/huma.go:1088","message":"[TraceHandler] Report event failed","error":"validation: hook payload missing session_id"}
