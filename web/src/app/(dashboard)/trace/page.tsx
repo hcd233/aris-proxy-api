@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Check, Radar, Search, Trash2, X } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
@@ -26,16 +25,6 @@ import { useT } from "@/lib/i18n";
 import TraceInstallPopover from "@/components/trace-install-popover";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-
-function statusBadge(status: string, t: (k: string, f?: string) => string) {
-  if (status === "active") {
-    return <Badge variant="secondary">{t("trace.status_active")}</Badge>;
-  }
-  if (status === "done") {
-    return <Badge variant="outline">{t("trace.status_done")}</Badge>;
-  }
-  return <Badge variant="outline">{status}</Badge>;
-}
 
 function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr);
@@ -257,7 +246,6 @@ export default function TracePage() {
                           <p className="truncate font-mono text-sm font-medium">{tr.sessionId}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
-                          {statusBadge(tr.status, t)}
                           <DeleteIconButton
                             aria-label={t("trace.delete_aria")}
                             title={t("trace.delete_aria")}
@@ -302,7 +290,6 @@ export default function TracePage() {
                       <TableHead>{t("trace.api_key")}</TableHead>
                       <TableHead>{t("trace.model")}</TableHead>
                       <TableHead>{t("trace.source")}</TableHead>
-                      <TableHead className="w-24">{t("trace.status")}</TableHead>
                       <TableHead className="w-40">{t("trace.created_at")}</TableHead>
                       <TableHead className="w-12" />
                     </TableRow>
@@ -338,7 +325,6 @@ export default function TracePage() {
                         <TableCell>{tr.apiKeyName}</TableCell>
                         <TableCell>{tr.model}</TableCell>
                         <TableCell>{tr.source}</TableCell>
-                        <TableCell>{statusBadge(tr.status, t)}</TableCell>
                         <TableCell className="text-muted-foreground">{formatDateTime(tr.createdAt)}</TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <DeleteIconButton
