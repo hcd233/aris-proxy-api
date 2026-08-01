@@ -216,15 +216,15 @@ export default function MonitorPage() {
         <RuntimeGaugeCard label={t("monitor.sse_active")} value={sseTotal} icon={<Radio className="size-4" />} tone="violet" loading={loading} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]} unit=" req/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.request_tps")} data={tpsData} series={tpsSeries} unit=" tok/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.cpu_usage")} data={toChartData(state.cpuPercent)} series={[{ key: "value", label: t("monitor.cpu_usage"), color: seriesColors[0] }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.heap_memory")} data={toChartData(state.heapMB)} series={[{ key: "value", label: t("monitor.heap_memory"), color: seriesColors[1] }]} unit=" MB" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.goroutines_chart")} data={toChartData(state.goroutines)} series={[{ key: "value", label: t("monitor.goroutines_chart"), color: seriesColors[3] }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.request_tps")} data={tpsData} series={tpsSeries} unit=" tok/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.success_rate")} data={toChartData(state.successRate)} series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
       </div>
     </div>
   );

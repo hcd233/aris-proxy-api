@@ -61,8 +61,21 @@ func TestRuntimeMetricsEndpoint_RequiresAuth(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected status 401 without token, got %d", resp.StatusCode)
+	// 项目错误约定：业务错误以 HTTP 200 + {"error":{...}} 下发（apiutil.WriteErrorResponse），
+	// 而非 HTTP 401；无 token 时应返回 code=10001 Unauthorized 业务错误。
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read body: %v", err)
+	}
+	var result dto.CommonRsp
+	if err := sonic.Unmarshal(body, &result); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if result.Error == nil {
+		t.Fatalf("expected unauthorized business error in body, got %s", body)
+	}
+	if result.Error.Code != 10001 {
+		t.Fatalf("expected unauthorized code 10001, got %d", result.Error.Code)
 	}
 }
 
