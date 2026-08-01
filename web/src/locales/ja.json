@@ -689,5 +689,9 @@
   "trace.expand_json": "生JSONを表示",
   "trace.collapse_json": "生JSONを隠す",
   "trace.system_prompt": "システムプロンプト",
-  "trace.tools": "ツール"
+  "trace.tools": "ツール",
+  "monitor.request_tps": "リクエスト TPS",
+  "monitor.request_tps_input": "入力 tok/s",
+  "monitor.request_tps_output": "出力 tok/s",
+  "monitor.success_rate": "成功率"
 }

@@ -11,13 +11,14 @@ import (
 
 // HTTPCollector 自实现的 HTTP 运行时指标采集器（替代 fiberprometheus）。
 //
-// 维护一项进程内指标：请求时延 histogram。
-// 请求总量 QPS 由 histogram 的 sample count 派生，无需独立 counter。
+// 维护两项进程内指标：请求时延 histogram（请求总量 QPS 由 histogram 的 sample count 派生），
+// 以及请求结果 counter（success/failure，Success Rate 数据源）。
 //
 //	@author centonhuang
 //	@update 2026-06-25 10:00:00
 type HTTPCollector struct {
 	duration prometheus.Histogram
+	requests *prometheus.CounterVec
 	skipURIs map[string]struct{}
 }
 
@@ -36,18 +37,32 @@ func NewHTTPCollector(registry *prometheus.Registry) *HTTPCollector {
 	})
 	registry.MustRegister(duration)
 
+	requests := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: constant.MetricNamespaceHTTP,
+			Name:      constant.MetricNameRequests,
+			Help:      constant.MetricRequestsHelp,
+		},
+		[]string{constant.MetricLabelResult},
+	)
+	registry.MustRegister(requests)
+	// 与 SSEGauge 同因：预置 success/failure 子序列，避免无流量时 Gather 不输出。
+	for _, result := range []string{constant.HTTPResultSuccess, constant.HTTPResultFailure} {
+		requests.WithLabelValues(result).Add(0)
+	}
+
 	skip := lo.SliceToMap(
 		[]string{constant.RoutePathHealth, constant.RoutePathReady, constant.RoutePathSSEHealth, constant.RoutePathMetrics},
 		func(p string) (string, struct{}) { return p, struct{}{} },
 	)
-	return &HTTPCollector{duration: duration, skipURIs: skip}
+	return &HTTPCollector{duration: duration, requests: requests, skipURIs: skip}
 }
 
-// Middleware 返回记录请求时延的 Fiber 中间件。
+// Middleware 返回记录请求时延与成功/失败计数的 Fiber 中间件。
 //
 // 须全局挂载（app.Use(mw)）以覆盖所有业务路由；探活与指标路径被跳过。
 //
-//	@receiver c *HTTPCollector
+//	@receiver hc *HTTPCollector
 //	@return fiber.Handler
 //	@author centonhuang
 //	@update 2026-06-25 10:00:00
@@ -59,6 +74,11 @@ func (hc *HTTPCollector) Middleware() fiber.Handler {
 		start := time.Now()
 		err := c.Next()
 		hc.duration.Observe(time.Since(start).Seconds())
+		if c.Response().StatusCode() == fiber.StatusOK {
+			hc.requests.WithLabelValues(constant.HTTPResultSuccess).Inc()
+		} else {
+			hc.requests.WithLabelValues(constant.HTTPResultFailure).Inc()
+		}
 		return err
 	}
 }

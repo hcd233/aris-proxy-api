@@ -62,3 +62,48 @@ func TestAggregate_CounterResetClamped(t *testing.T) {
 		t.Errorf("expected qps 0 after reset, got %f", got.QPS[0].Value)
 	}
 }
+
+func TestAggregate_TokenRateAndSuccessRate(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	// 桶内两份快照：token 输入 0→120、输出 0→30；请求 0→2（成功 1）——每 pod 相同，跨 2 pod 聚合。
+	instanceSnaps := []metrics.Snapshot{
+		{TS: 0, TokenInput: 0, TokenOutput: 0, ReqTotal: 0, ReqSuccess: 0},
+		{TS: 30, TokenInput: 120, TokenOutput: 30, ReqTotal: 2, ReqSuccess: 1},
+	}
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-a": instanceSnaps,
+		"pod-b": instanceSnaps,
+	}
+
+	got := metricsquery.Aggregate(byInstance, 0, bucket, 60, 0)
+
+	// 输入速率：每 pod 120/60=2 tokens/s，跨 2 pod = 4
+	if len(got.TokenInput) == 0 || got.TokenInput[0].Value != 4 {
+		t.Errorf("expected tokenInput rate 4, got %+v", got.TokenInput)
+	}
+	// 输出速率：每 pod 30/60=0.5，跨 2 pod = 1
+	if len(got.TokenOutput) == 0 || got.TokenOutput[0].Value != 1 {
+		t.Errorf("expected tokenOutput rate 1, got %+v", got.TokenOutput)
+	}
+	// 成功率：跨 pod 合并 reqSuccess=2 / reqTotal=4 = 50%
+	if len(got.SuccessRate) == 0 || got.SuccessRate[0].Value != 50 {
+		t.Errorf("expected successRate 50, got %+v", got.SuccessRate)
+	}
+}
+
+func TestAggregate_SuccessRateSkipsEmptyBucket(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	// 桶内有快照但无任何请求（reqTotal=0），successRate 不应输出 0% 误导点。
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-a": {
+			{TS: 0, ReqTotal: 0, ReqSuccess: 0},
+			{TS: 30, ReqTotal: 0, ReqSuccess: 0},
+		},
+	}
+	got := metricsquery.Aggregate(byInstance, 0, bucket, 60, 0)
+	if len(got.SuccessRate) != 0 {
+		t.Errorf("expected empty successRate for empty bucket, got %+v", got.SuccessRate)
+	}
+}

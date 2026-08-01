@@ -33,6 +33,9 @@ interface SeriesState {
   cpuPercent: Pt[];
   p95Ms: Pt[];
   sseActive: Record<string, Pt[]>;
+  tokenInput: Pt[];
+  tokenOutput: Pt[];
+  successRate: Pt[];
 }
 
 const EMPTY_STATE: SeriesState = {
@@ -42,6 +45,9 @@ const EMPTY_STATE: SeriesState = {
   cpuPercent: [],
   p95Ms: [],
   sseActive: {},
+  tokenInput: [],
+  tokenOutput: [],
+  successRate: [],
 };
 
 function mergePoints(prev: Pt[], incoming: Pt[], cutoff: number): Pt[] {
@@ -87,6 +93,22 @@ function sseChartData(sse: Record<string, Pt[]>): Array<Record<string, number>> 
   return [...rows.values()].sort((a, b) => a.time - b.time);
 }
 
+// tpsChartData 把输入/输出两条 token 速率时序合并为同一时间轴上的两列（input/output）。
+function tpsChartData(input: Pt[], output: Pt[]): Array<Record<string, number>> {
+  const rows = new Map<number, Record<string, number>>();
+  for (const p of input) {
+    const row = rows.get(p.time) ?? { time: p.time };
+    row.input = p.value;
+    rows.set(p.time, row);
+  }
+  for (const p of output) {
+    const row = rows.get(p.time) ?? { time: p.time };
+    row.output = p.value;
+    rows.set(p.time, row);
+  }
+  return [...rows.values()].sort((a, b) => a.time - b.time);
+}
+
 export default function MonitorPage() {
   const t = useT();
   const [range, setRange] = usePersistentState<RangeKey>("monitor.range", "1h");
@@ -110,6 +132,9 @@ export default function MonitorPage() {
           cpuPercent: mergePoints(prev.cpuPercent, s.cpuPercent ?? [], cutoff),
           p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
           sseActive: mergeSSE(prev.sseActive, s.sseActive ?? {}, cutoff),
+          tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
+          tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
+          successRate: mergePoints(prev.successRate, s.successRate ?? [], cutoff),
         }));
 
         if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
@@ -142,6 +167,11 @@ export default function MonitorPage() {
     color: seriesColors[i % seriesColors.length],
   }));
   const sseTotal = sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0);
+  const tpsData = tpsChartData(state.tokenInput, state.tokenOutput);
+  const tpsSeries = [
+    { key: "input", label: t("monitor.request_tps_input"), color: seriesColors[0] },
+    { key: "output", label: t("monitor.request_tps_output"), color: seriesColors[1] },
+  ];
 
   return (
     <div className="space-y-8">
@@ -193,6 +223,8 @@ export default function MonitorPage() {
         <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.goroutines_chart")} data={toChartData(state.goroutines)} series={[{ key: "value", label: t("monitor.goroutines_chart"), color: seriesColors[3] }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.request_tps")} data={tpsData} series={tpsSeries} unit=" tok/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.success_rate")} data={toChartData(state.successRate)} series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
       </div>
     </div>
   );
