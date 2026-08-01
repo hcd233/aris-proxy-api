@@ -23,17 +23,30 @@ var migrateDatabaseCmd = &cobra.Command{
 	},
 }
 
-// runMigrate 执行数据库迁移：先删/改旧列（ManualMigrations），再 AutoMigrate 建新列，最后回填存量数据。
-//
-// 顺序关键：旧 model_call_audits.model_id 为 uint 类型，必须先删旧列并 rename model→model_id，
-// AutoMigrate 才能正确新建 text 列；回填依赖新列已存在，放最后。
+// runMigrate 执行数据库结构迁移：仅 AutoMigrate 建表/建列。
+// 存量数据迁移（旧列改名、model_id 回填）已拆分到 `database migrate-data` 命令，部署后手动执行。
 func runMigrate(ctx context.Context) {
-	lo.Must0(database.ManualMigrations(ctx))
 	lo.Must0(database.AutoMigrate(ctx))
+}
+
+var migrateDataDatabaseCmd = &cobra.Command{
+	Use:   "migrate-data",
+	Short: "Migrate Existing Data",
+	Long:  `Execute manual data migration: rename legacy columns (model→model_id etc.) and backfill models.model_id. Run once after deployment, idempotent and re-runnable.`,
+	Run: func(cmd *cobra.Command, _ []string) {
+		runMigrateData(cmd.Context())
+	},
+}
+
+// runMigrateData 执行存量数据迁移：旧列改名（ManualMigrations）+ models.model_id 回填。
+// 必须在服务部署（AutoMigrate 已建新列）后手动执行一次，幂等可重入。
+func runMigrateData(ctx context.Context) {
+	lo.Must0(database.ManualMigrations(ctx))
 	lo.Must0(database.BackfillModelIDs(ctx))
 }
 
 func init() {
 	databaseCmd.AddCommand(migrateDatabaseCmd)
+	databaseCmd.AddCommand(migrateDataDatabaseCmd)
 	rootCmd.AddCommand(databaseCmd)
 }
