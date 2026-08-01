@@ -14,14 +14,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, upstreamModel string) {
+func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, modelID string) {
 	if proxyErr != nil || msg == nil || len(msg.Content) == 0 {
 		return
 	}
-	u.storeAnthropicMessages(ctx, req, msg, upstreamModel)
+	u.storeAnthropicMessages(ctx, req, msg, modelID)
 }
 
-func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, upstreamModel string) {
+func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, modelID string) {
 	log := logger.WithCtx(ctx)
 	unifiedMessages, unifiedTools, inputTokens, outputTokens, err := u.convertAnthropicRequestMessages(ctx, req, assistantMsg)
 	if err != nil {
@@ -31,7 +31,7 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.
 	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
-		Model:        upstreamModel,
+		ModelID:      modelID,
 		Messages:     unifiedMessages,
 		Tools:        unifiedTools,
 		InputTokens:  inputTokens,

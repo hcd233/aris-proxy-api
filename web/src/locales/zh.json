@@ -693,5 +693,8 @@
   "monitor.request_tps": "请求Token吞吐",
   "monitor.request_tps_input": "输入 tok/s",
   "monitor.request_tps_output": "输出 tok/s",
-  "monitor.success_rate": "成功率"
+  "monitor.success_rate": "成功率",
+  "models.model_id": "模型 ID",
+  "models.model_id_placeholder": "例如 gpt-4",
+  "models.model_id_hint": "留空则保持 alias 作为模型 ID。"
 }

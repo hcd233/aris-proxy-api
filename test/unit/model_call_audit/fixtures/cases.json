@@ -3,8 +3,7 @@
     "name": "non_stream",
     "description": "Non-streaming call audit fields",
     "task": {
-      "model_id": 10,
-      "model": "gpt-4o",
+      "model_id": "model-10",
       "upstream_protocol": "openai-chat-completion",
       "api_protocol": "openai-chat-completion",
       "endpoint": "openai-ep-1",
@@ -22,8 +21,7 @@
     "name": "stream_success",
     "description": "Streaming call audit fields",
     "task": {
-      "model_id": 20,
-      "model": "claude-sonnet-4-20250514",
+      "model_id": "model-20",
       "upstream_protocol": "anthropic-message",
       "api_protocol": "anthropic-message",
       "endpoint": "anthropic-ep-1",
@@ -41,8 +39,7 @@
     "name": "upstream_error",
     "description": "Upstream error fields",
     "task": {
-      "model_id": 30,
-      "model": "gpt-4o-mini",
+      "model_id": "model-30",
       "upstream_protocol": "openai-chat-completion",
       "api_protocol": "anthropic-message",
       "endpoint": "cross-protocol-ep-1",

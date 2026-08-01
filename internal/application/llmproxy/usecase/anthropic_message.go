@@ -57,14 +57,13 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 		Protocol: enum.ProtocolKindAnthropic,
 		Open: func(ctx context.Context) (port.Stream, error) {
 			return &anthropicMessageNativeStream{
-				u:            u,
-				ctx:          ctx,
-				req:          req,
-				m:            m,
-				endpoint:     endpoint,
-				exposedModel: exposedModel,
-				stream:       stream,
-				timer:        newStreamTimer(),
+				u:        u,
+				ctx:      ctx,
+				req:      req,
+				m:        m,
+				endpoint: endpoint,
+				stream:   stream,
+				timer:    newStreamTimer(),
 			}, nil
 		},
 	}, nil
@@ -81,10 +80,9 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 	anthropicMsg.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(anthropicMsg))
 
-	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
+	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
-		exposedModel:        exposedModel,
 		endpoint:            endpoint,
 		upstreamProtocol:    enum.ProtocolAnthropicMessage,
 		apiProtocol:         enum.ProtocolAnthropicMessage,
@@ -115,16 +113,15 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 		Protocol: enum.ProtocolKindAnthropic,
 		Open: func(ctx context.Context) (port.Stream, error) {
 			return &anthropicMessageViaChatStream{
-				u:            u,
-				ctx:          ctx,
-				req:          req,
-				m:            m,
-				endpoint:     endpoint,
-				exposedModel: exposedModel,
-				stream:       stream,
-				timer:        newStreamTimer(),
-				conv:         &converter.OpenAIProtocolConverter{},
-				tracker:      converter.NewSSEContentBlockTracker(),
+				u:        u,
+				ctx:      ctx,
+				req:      req,
+				m:        m,
+				endpoint: endpoint,
+				stream:   stream,
+				timer:    newStreamTimer(),
+				conv:     &converter.OpenAIProtocolConverter{},
+				tracker:  converter.NewSSEContentBlockTracker(),
 			}, nil
 		},
 	}, nil
@@ -153,10 +150,9 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 	anthropicMsg.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(anthropicMsg))
 
-	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.Alias().String())
+	u.storeAnthropicFromMsg(ctx, req, anthropicMsg, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
-		exposedModel:        exposedModel,
 		endpoint:            endpoint,
 		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
 		apiProtocol:         enum.ProtocolAnthropicMessage,
@@ -204,10 +200,9 @@ func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.Event
 		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
 	}
 
-	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.Alias().String())
+	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
-		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
 		upstreamProtocol:    enum.ProtocolAnthropicMessage,
 		apiProtocol:         enum.ProtocolAnthropicMessage,
@@ -259,7 +254,7 @@ func (s *anthropicMessageViaChatStream) Read(ctx context.Context, sink port.Even
 	s.timer.finish()
 	anthropicMsg := s.finalizeAnthropicChatStream(ctx, sink, completion, err)
 
-	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.Alias().String())
+	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.ModelID())
 
 	var usage *dto.OpenAICompletionUsage
 	if completion != nil {
@@ -267,7 +262,6 @@ func (s *anthropicMessageViaChatStream) Read(ctx context.Context, sink port.Even
 	}
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
-		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
 		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
 		apiProtocol:         enum.ProtocolAnthropicMessage,

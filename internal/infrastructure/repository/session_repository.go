@@ -234,7 +234,7 @@ type sessionSummaryRow struct {
 	MessageCount int       `gorm:"column:message_count"`
 	ToolCount    int       `gorm:"column:tool_count"`
 	Questions    []uint    `gorm:"column:questions;serializer:json"`
-	Models       []string  `gorm:"column:models;serializer:json"`
+	ModelIDs     []string  `gorm:"column:model_ids;serializer:json"`
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
@@ -297,7 +297,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
 			Questions:    row.Questions,
-			Models:       row.Models,
+			ModelIDs:     row.ModelIDs,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
@@ -362,7 +362,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
 			Questions:    row.Questions,
-			Models:       row.Models,
+			ModelIDs:     row.ModelIDs,
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
@@ -425,7 +425,7 @@ func (r *sessionReadRepository) FindMessagesByIDs(ctx context.Context, ids []uin
 	out := lo.Map(records, func(m *dbmodel.Message, _ int) *session.MessageDetailProjection {
 		return &session.MessageDetailProjection{
 			ID:        m.ID,
-			Model:     m.Model,
+			ModelID:   m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}
@@ -486,7 +486,7 @@ func BuildOrderedMessageProjections(ids []uint, records []*dbmodel.Message) []*s
 		}
 		return &session.MessageDetailProjection{
 			ID:        m.ID,
-			Model:     m.Model,
+			ModelID:   m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}, true
@@ -585,7 +585,7 @@ type exportSessionRow struct {
 	Score      *int     `gorm:"column:score"`
 	MessageIDs []uint   `gorm:"column:message_ids;serializer:json"`
 	ToolIDs    []uint   `gorm:"column:tool_ids;serializer:json"`
-	Models     []string `gorm:"column:models;serializer:json"`
+	ModelIDs   []string `gorm:"column:model_ids;serializer:json"`
 }
 
 func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
@@ -593,8 +593,8 @@ func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
 	if f.MinScore > 0 {
 		sql = sql.Where(constant.FieldScore+" >= ?", f.MinScore)
 	}
-	if len(f.Models) > 0 {
-		sql = sql.Where(constant.SessionExportModelFilterSQL, string(lo.Must1(sonic.Marshal(f.Models))))
+	if len(f.ModelIDs) > 0 {
+		sql = sql.Where(constant.SessionExportModelFilterSQL, string(lo.Must1(sonic.Marshal(f.ModelIDs))))
 	}
 	if !f.StartTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" >= ?", f.StartTime)
@@ -625,15 +625,15 @@ func (r *sessionReadRepository) ListSessionsForExport(ctx context.Context, f ses
 			Score:      row.Score,
 			MessageIDs: row.MessageIDs,
 			ToolIDs:    row.ToolIDs,
-			Models:     row.Models,
+			ModelIDs:   row.ModelIDs,
 		}
 	}), nil
 }
 
 // exportPreviewRow 预览聚合查询的扁平行模型
 type exportPreviewRow struct {
-	Score *int   `gorm:"column:score"`
-	Model string `gorm:"column:model"`
+	Score   *int   `gorm:"column:score"`
+	ModelID string `gorm:"column:model"`
 }
 
 func (r *sessionReadRepository) PreviewExport(ctx context.Context, f session.ExportFilter) (*session.ExportPreview, error) {
@@ -659,8 +659,8 @@ func (r *sessionReadRepository) PreviewExport(ctx context.Context, f session.Exp
 		if row.Score != nil {
 			preview.ScoreDistribution[*row.Score]++
 		}
-		if row.Model != "" {
-			preview.ModelDistribution[row.Model]++
+		if row.ModelID != "" {
+			preview.ModelDistribution[row.ModelID]++
 		}
 	}
 

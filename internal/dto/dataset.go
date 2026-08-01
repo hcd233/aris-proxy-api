@@ -11,7 +11,7 @@ import (
 //	@update 2026-07-03 10:00:00
 type DatasetPreviewReq struct {
 	MinScore  int       `query:"minScore" minimum:"0" maximum:"5" doc:"最低评分阈值(0-5, 0=不筛选)"`
-	Models    []string  `query:"models" doc:"模型列表筛选(逗号分隔)"`
+	ModelIDs  []string  `query:"modelIds" doc:"模型列表筛选(逗号分隔)"`
 	StartTime time.Time `query:"startTime" doc:"起始时间"`
 	EndTime   time.Time `query:"endTime" doc:"结束时间"`
 }
@@ -33,7 +33,7 @@ type DatasetPreviewRsp struct {
 //	@update 2026-07-03 10:00:00
 type DatasetExportReq struct {
 	MinScore  int       `query:"minScore" minimum:"0" maximum:"5" doc:"最低评分阈值(0-5, 0=不筛选)"`
-	Models    []string  `query:"models" doc:"模型列表筛选(逗号分隔)"`
+	ModelIDs  []string  `query:"modelIds" doc:"模型列表筛选(逗号分隔)"`
 	StartTime time.Time `query:"startTime" doc:"起始时间"`
 	EndTime   time.Time `query:"endTime" doc:"结束时间"`
 }
@@ -44,7 +44,7 @@ type DatasetExportReq struct {
 //	@update 2026-07-06 10:00:00
 type DatasetFormatPreviewReq struct {
 	MinScore  int       `query:"minScore" minimum:"0" maximum:"5" doc:"最低评分阈值(0-5, 0=不筛选)"`
-	Models    []string  `query:"models" doc:"模型列表筛选(逗号分隔)"`
+	ModelIDs  []string  `query:"modelIds" doc:"模型列表筛选(逗号分隔)"`
 	StartTime time.Time `query:"startTime" doc:"起始时间"`
 	EndTime   time.Time `query:"endTime" doc:"结束时间"`
 	Offset    int       `query:"offset" minimum:"0" doc:"会话索引偏移量"`

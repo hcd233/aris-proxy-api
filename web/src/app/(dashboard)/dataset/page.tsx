@@ -205,7 +205,7 @@ export default function DatasetPage() {
     const { startTime, endTime } = computeRange(timeRange, customStart, customEnd);
     return {
       minScore,
-      models: selectedModels,
+      modelIds: selectedModels,
       startTime,
       endTime,
     };

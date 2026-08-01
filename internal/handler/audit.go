@@ -60,7 +60,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 		return &dto.AuditLogItem{
 			ID:                       log.ID,
 			CreatedAt:                log.CreatedAt,
-			Model:                    log.Model,
+			ModelID:                  log.ModelID,
 			UpstreamProtocol:         log.UpstreamProtocol,
 			APIProtocol:              log.APIProtocol,
 			Endpoint:                 log.Endpoint,

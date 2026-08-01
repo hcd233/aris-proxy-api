@@ -18,7 +18,7 @@ import (
 type MessageStoreTask struct {
 	Ctx          context.Context
 	APIKeyName   string
-	Model        string
+	ModelID      string
 	Messages     []*vo.UnifiedMessage // 统一消息格式列表
 	Tools        []*vo.UnifiedTool    // 统一工具格式列表
 	InputTokens  int                  // 上游返回的输入token数
@@ -32,8 +32,7 @@ type MessageStoreTask struct {
 //	@update 2026-04-29 10:00:00
 type ModelCallAuditTask struct {
 	Ctx                      context.Context
-	ModelID                  uint
-	Model                    string
+	ModelID                  string
 	UpstreamProtocol         string
 	APIProtocol              string
 	Endpoint                 string

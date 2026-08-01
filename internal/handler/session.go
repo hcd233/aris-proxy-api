@@ -144,7 +144,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 			MessageCount: v.MessageCount,
 			ToolCount:    v.ToolCount,
 			Score:        v.Score,
-			Models:       v.Models,
+			ModelIDs:     v.ModelIDs,
 		}
 	})
 	rsp.PageInfo = pageInfo
@@ -181,7 +181,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 	messageItems := lo.Map(view.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
-			Model:     m.Model,
+			ModelID:   m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}
@@ -433,7 +433,7 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
-			Model:     m.Model,
+			ModelID:   m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}
@@ -558,7 +558,7 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
 		return &dto.MessageItem{
 			ID:        m.ID,
-			Model:     m.Model,
+			ModelID:   m.ModelID,
 			Message:   m.Message,
 			CreatedAt: m.CreatedAt,
 		}

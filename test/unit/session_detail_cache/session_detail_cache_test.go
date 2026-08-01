@@ -85,8 +85,8 @@ func TestMessageCacheRecord_RoundTrip(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 29, 11, 0, 0, 0, time.UTC)
 	original := &sessionport.MessageCacheRecord{
-		ID:    100,
-		Model: "gpt-4",
+		ID:      100,
+		ModelID: "gpt-4",
 		Message: &vo.UnifiedMessage{
 			Role:    enum.RoleUser,
 			Content: &vo.UnifiedContent{Text: "hello"},
@@ -104,7 +104,7 @@ func TestMessageCacheRecord_RoundTrip(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	if decoded.ID != 100 || decoded.Model != "gpt-4" {
+	if decoded.ID != 100 || decoded.ModelID != "gpt-4" {
 		t.Errorf("scalar fields mismatch")
 	}
 	if decoded.Message == nil {

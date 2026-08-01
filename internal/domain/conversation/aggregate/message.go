@@ -19,7 +19,7 @@ import (
 // Message 消息聚合根
 //
 // 不可变：创建后内容不可修改。通过 Checksum 做去重主键。
-// Model 字段仅对 assistant 消息非空（记录上游 model，用于审计查询）。
+// ModelID 字段仅对 assistant 消息非空（记录业务模型ID，用于审计查询）。
 //
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
@@ -27,7 +27,7 @@ type Message struct {
 	aggregate.Base
 
 	content  *vo.UnifiedMessage
-	model    string // upstream model，仅 assistant 角色有
+	modelID  string // 业务模型ID，仅 assistant 角色有
 	checksum string
 }
 
@@ -37,13 +37,13 @@ type Message struct {
 // 这样可以保证跨调用一致的 schema-aware checksum 策略。
 //
 //	@param content *vo.UnifiedMessage
-//	@param upstreamModel string 仅 assistant 消息需要，其他传空字符串
+//	@param modelID string 仅 assistant 消息需要，其他传空字符串
 //	@param checksum string
 //	@return *Message
 //	@return error
 //	@author centonhuang
 //	@update 2026-04-23 10:45:00
-func RecordMessage(content *vo.UnifiedMessage, upstreamModel, checksum string) (*Message, error) {
+func RecordMessage(content *vo.UnifiedMessage, modelID, checksum string) (*Message, error) {
 	if content == nil {
 		return nil, ierr.New(ierr.ErrValidation, "message content is nil")
 	}
@@ -52,7 +52,7 @@ func RecordMessage(content *vo.UnifiedMessage, upstreamModel, checksum string) (
 	}
 	return &Message{
 		content:  content,
-		model:    upstreamModel,
+		modelID:  modelID,
 		checksum: checksum,
 	}, nil
 }
@@ -61,13 +61,13 @@ func RecordMessage(content *vo.UnifiedMessage, upstreamModel, checksum string) (
 //
 //	@param id uint
 //	@param content *vo.UnifiedMessage
-//	@param upstreamModel string
+//	@param modelID string
 //	@param checksum string
 //	@return *Message
 //	@author centonhuang
 //	@update 2026-04-22 19:30:00
-func RestoreMessage(id uint, content *vo.UnifiedMessage, upstreamModel, checksum string) *Message {
-	m := &Message{content: content, model: upstreamModel, checksum: checksum}
+func RestoreMessage(id uint, content *vo.UnifiedMessage, modelID, checksum string) *Message {
+	m := &Message{content: content, modelID: modelID, checksum: checksum}
 	m.SetID(id)
 	return m
 }
@@ -81,8 +81,8 @@ func (m *Message) Content() *vo.UnifiedMessage {
 	return &cp
 }
 
-// Model 返回上游 model 名
-func (m *Message) Model() string { return m.model }
+// ModelID 返回业务模型 ID
+func (m *Message) ModelID() string { return m.modelID }
 
 // Checksum 返回校验和
 func (m *Message) Checksum() string { return m.checksum }

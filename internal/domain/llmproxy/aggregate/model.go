@@ -19,6 +19,7 @@ type Model struct {
 	commonagg.Base
 
 	alias           vo.EndpointAlias
+	modelID         string
 	model           string
 	endpointID      uint
 	enabled         bool
@@ -51,6 +52,7 @@ func CreateModel(id uint, alias vo.EndpointAlias, model string, endpointID uint,
 	}
 	m := &Model{
 		alias:           alias,
+		modelID:         alias.String(),
 		model:           model,
 		endpointID:      endpointID,
 		enabled:         enabled,
@@ -77,6 +79,7 @@ func validateCapabilities(capabilities []enum.InputModality) error {
 }
 
 func (m *Model) Alias() vo.EndpointAlias { return m.alias }
+func (m *Model) ModelID() string         { return m.modelID }
 func (m *Model) ModelName() string       { return m.model }
 func (m *Model) EndpointID() uint        { return m.endpointID }
 func (m *Model) Enabled() bool           { return m.enabled }
@@ -88,13 +91,16 @@ func (m *Model) Capabilities() []enum.InputModality {
 func (m *Model) CreatedAt() time.Time { return m.createdAt }
 func (m *Model) UpdatedAt() time.Time { return m.updatedAt }
 
+// SetModelID 设置业务模型 ID（仓储恢复用）
+func (m *Model) SetModelID(modelID string) { m.modelID = modelID }
+
 func (m *Model) SetTimestamps(createdAt, updatedAt time.Time) {
 	m.createdAt = createdAt
 	m.updatedAt = updatedAt
 }
 
 // Update 更新 Model 字段（仅非 nil 字段更新）
-func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint, enabled *bool, contextLength, maxOutputTokens *int, capabilities *[]enum.InputModality) error {
+func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint, enabled *bool, contextLength, maxOutputTokens *int, capabilities *[]enum.InputModality, modelID *string) error {
 	if alias != nil {
 		m.alias = *alias
 	}
@@ -118,6 +124,12 @@ func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint,
 			return err
 		}
 		m.capabilities = *capabilities
+	}
+	if modelID != nil {
+		if *modelID == "" {
+			return ierr.New(ierr.ErrValidation, "model id cannot be empty")
+		}
+		m.modelID = *modelID
 	}
 	return nil
 }

@@ -19,15 +19,14 @@ import (
 )
 
 // auditFailure 记录非流式失败调用的审计（上下游协议一致的简化入口）。
-func auditFailure(ctx context.Context, m *aggregate.Model, submitter TaskSubmitter, tokenMetrics *metrics.TokenUsageCounter, exposedModel, endpoint string, apiProtocol enum.ProtocolType, totalMs int64, err error) {
-	auditFailureWithProviders(ctx, m, submitter, tokenMetrics, exposedModel, endpoint, apiProtocol, apiProtocol, totalMs, err)
+func auditFailure(ctx context.Context, m *aggregate.Model, submitter TaskSubmitter, tokenMetrics *metrics.TokenUsageCounter, _, endpoint string, apiProtocol enum.ProtocolType, totalMs int64, err error) {
+	auditFailureWithProviders(ctx, m, submitter, tokenMetrics, "", endpoint, apiProtocol, apiProtocol, totalMs, err)
 }
 
 // auditFailureWithProviders 记录非流式失败调用的审计（上下游协议可不同）。
-func auditFailureWithProviders(ctx context.Context, m *aggregate.Model, submitter TaskSubmitter, tokenMetrics *metrics.TokenUsageCounter, exposedModel, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, totalMs int64, err error) {
+func auditFailureWithProviders(ctx context.Context, m *aggregate.Model, submitter TaskSubmitter, tokenMetrics *metrics.TokenUsageCounter, _, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, totalMs int64, err error) {
 	recordModelCall(ctx, submitter, tokenMetrics, callOutcome{
 		model:               m,
-		exposedModel:        exposedModel,
 		endpoint:            endpoint,
 		upstreamProtocol:    upstreamProtocol,
 		apiProtocol:         apiProtocol,

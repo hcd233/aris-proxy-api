@@ -34,8 +34,7 @@ func TestPoolManager_SubmitModelCallAuditTask_WritesViaRepository(t *testing.T) 
 
 	if err := pm.SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
 		Ctx:                 context.Background(),
-		ModelID:             7,
-		Model:               "gpt-test",
+		ModelID:             "gpt-test",
 		UpstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
 		APIProtocol:         enum.ProtocolOpenAIChatCompletion,
 		Endpoint:            "ep-test",
@@ -50,11 +49,8 @@ func TestPoolManager_SubmitModelCallAuditTask_WritesViaRepository(t *testing.T) 
 
 	select {
 	case audit := <-repo.saved:
-		if audit.ModelID() != 7 {
-			t.Errorf("ModelID = %d, want 7", audit.ModelID())
-		}
-		if audit.Model() != "gpt-test" {
-			t.Errorf("Model = %q, want gpt-test", audit.Model())
+		if audit.ModelID() != "gpt-test" {
+			t.Errorf("ModelID = %q, want gpt-test", audit.ModelID())
 		}
 		if audit.Endpoint() != "ep-test" {
 			t.Errorf("Endpoint = %q, want ep-test", audit.Endpoint())

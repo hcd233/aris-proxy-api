@@ -30,8 +30,10 @@ type CreateModelHandler interface {
 }
 
 // UpdateModelCommand 更新 Model 命令
+//
+// ID 为 Model 数据库主键（路由 id），ModelID 为业务模型 ID（默认=alias，可更新）。
 type UpdateModelCommand struct {
-	ModelID         uint
+	ID              uint
 	Alias           *string
 	ModelName       *string
 	EndpointID      *uint
@@ -39,6 +41,7 @@ type UpdateModelCommand struct {
 	ContextLength   *int
 	MaxOutputTokens *int
 	Capabilities    *[]enum.InputModality
+	ModelID         *string
 }
 
 // UpdateModelHandler 更新命令处理器
@@ -74,6 +77,7 @@ type EndpointView struct {
 type ModelView struct {
 	ID              uint
 	Alias           string
+	ModelID         string
 	ModelName       string
 	Enabled         bool
 	ContextLength   int

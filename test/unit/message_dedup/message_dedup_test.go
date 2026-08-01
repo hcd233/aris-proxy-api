@@ -94,7 +94,7 @@ func TestMessageStoreTask_DeduplicatesEquivalentMessagesInsideBatch(t *testing.T
 	task := &dto.MessageStoreTask{
 		Ctx:        context.Background(),
 		APIKeyName: "test-key",
-		Model:      "deepseek-v4-pro",
+		ModelID:    "deepseek-v4-pro",
 		Messages:   equivalentToolCallMessages(),
 		Metadata:   map[string]string{},
 	}

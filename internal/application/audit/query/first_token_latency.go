@@ -73,7 +73,7 @@ func (h *firstTokenLatencyByUserHandler) Handle(ctx context.Context, q FirstToke
 func fillFirstTokenLatencySeries(points []*modelcall.FirstTokenLatencyPoint, start, end time.Time, granularity enum.Granularity) []*dto.FirstTokenLatencyItem {
 	type latencySlot struct{ avgLatencyMs float64 }
 	modelOrder, byModel, timeSet := port.IndexSeries(points,
-		func(p *modelcall.FirstTokenLatencyPoint) string { return p.Model },
+		func(p *modelcall.FirstTokenLatencyPoint) string { return p.ModelID },
 		func(p *modelcall.FirstTokenLatencyPoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.FirstTokenLatencyPoint) latencySlot {
 			return latencySlot{avgLatencyMs: p.AverageLatencyMs}
@@ -85,7 +85,7 @@ func fillFirstTokenLatencySeries(points []*modelcall.FirstTokenLatencyPoint, sta
 			s := byModel[m][t]
 			return &dto.FirstTokenLatencyPoint{Time: t, AverageLatencyMs: s.avgLatencyMs}
 		})
-		return &dto.FirstTokenLatencyItem{Model: m, Points: pts}
+		return &dto.FirstTokenLatencyItem{ModelID: m, Points: pts}
 	})
 	return items
 }

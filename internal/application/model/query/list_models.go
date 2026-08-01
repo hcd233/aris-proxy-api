@@ -44,6 +44,7 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 		return &modelport.ModelView{
 			ID:              m.AggregateID(),
 			Alias:           m.Alias().String(),
+			ModelID:         m.ModelID(),
 			ModelName:       m.ModelName(),
 			Enabled:         m.Enabled(),
 			ContextLength:   m.ContextLength(),

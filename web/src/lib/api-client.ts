@@ -745,13 +745,13 @@ class ApiClient {
 
   async previewDataset(params: {
     minScore?: number;
-    models?: string[];
+    modelIds?: string[];
     startTime?: string;
     endTime?: string;
   }): Promise<DatasetPreviewRsp> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));
-    if (params.models && params.models.length > 0) sp.set("models", params.models.join(","));
+    if (params.modelIds && params.modelIds.length > 0) sp.set("modelIds", params.modelIds.join(","));
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<DatasetPreviewRsp>(`/api/v1/dataset/preview?${sp}`);
@@ -759,14 +759,14 @@ class ApiClient {
 
   async previewDatasetFormat(params: {
     minScore?: number;
-    models?: string[];
+    modelIds?: string[];
     startTime?: string;
     endTime?: string;
     offset?: number;
   }): Promise<DatasetFormatPreviewRsp> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));
-    if (params.models && params.models.length > 0) sp.set("models", params.models.join(","));
+    if (params.modelIds && params.modelIds.length > 0) sp.set("modelIds", params.modelIds.join(","));
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.offset !== undefined) sp.set("offset", String(params.offset));
@@ -776,7 +776,7 @@ class ApiClient {
   async exportDatasetStream(
     params: {
       minScore?: number;
-      models?: string[];
+      modelIds?: string[];
       startTime?: string;
       endTime?: string;
     },
@@ -785,8 +785,8 @@ class ApiClient {
   ): Promise<void> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));
-    if (params.models && params.models.length > 0)
-      sp.set("models", params.models.join(","));
+    if (params.modelIds && params.modelIds.length > 0)
+      sp.set("modelIds", params.modelIds.join(","));
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
 

@@ -50,6 +50,8 @@ const (
 	FieldStreamDurationMs         = "stream_duration_ms"
 	FieldAPIKeyID                 = "api_key_id"
 	FieldModelID                  = "model_id"
+	FieldModelIDs                 = "model_ids"
+	FieldModels                   = "models"
 	FieldUpstreamProtocol         = "upstream_protocol"
 	FieldAPIProtocol              = "api_protocol"
 	FieldEndpoint                 = "endpoint"
@@ -82,8 +84,8 @@ const (
 
 var (
 	MessageRepoFieldsChecksum = []string{FieldID, FieldCheckSum}
-	MessageRepoFieldsFull     = []string{FieldID, FieldModel, FieldMessage, FieldCheckSum, FieldCreatedAt}
-	MessageRepoFieldsDetail   = []string{FieldID, FieldModel, FieldMessage, FieldCreatedAt}
+	MessageRepoFieldsFull     = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum, FieldCreatedAt}
+	MessageRepoFieldsDetail   = []string{FieldID, FieldModelID, FieldMessage, FieldCreatedAt}
 	MessageRepoFieldsContent  = []string{FieldID, FieldMessage}
 
 	ToolRepoFieldsChecksum = []string{FieldID, FieldCheckSum}
@@ -105,7 +107,7 @@ var (
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage,
 		FieldCreatedAt, FieldUpdatedAt}
 
-	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModel, FieldEndpointID, FieldEnabled, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldCreatedAt, FieldUpdatedAt}
+	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModelID, FieldModel, FieldEndpointID, FieldEnabled, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldCreatedAt, FieldUpdatedAt}
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
@@ -114,9 +116,9 @@ var (
 	AuditRepoFieldIDQualified        = "model_call_audits.id"
 	AuditRepoFieldCreatedAtQualified = "model_call_audits.created_at"
 
-	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, AuditRepoFieldCreatedAtQualified}
+	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, AuditRepoFieldCreatedAtQualified}
 
-	AuditQueryFields = []string{FieldTraceID, FieldModel}
+	AuditQueryFields = []string{FieldTraceID, FieldModelID}
 
 	AuditFilterFieldUser   = "user"
 	AuditFilterFieldModel  = "model"
@@ -145,7 +147,7 @@ var (
 	//   sessionSummaryRow.TotalCount 接收每行（窗口函数对所有行返回相同值）。
 	//
 	//   message_count 和 tool_count 从 message_ids / tool_ids 实时计算，不再物化冗余列。
-	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, models, COUNT(*) OVER () AS total_count"
+	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, model_ids, COUNT(*) OVER () AS total_count"
 
 	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段。
 	//
@@ -180,7 +182,7 @@ var (
 
 	// ── Audit filter field SQL column names ──
 	AuditFilterUserSQLColumn   = "u.name"
-	AuditFilterModelSQLColumn  = "model"
+	AuditFilterModelSQLColumn  = "model_id"
 	AuditFilterStatusSQLColumn = "upstream_status_code"
 
 	// ── Audit filter JOIN constants (for paginate queries without alias) ──
@@ -193,8 +195,8 @@ var (
 	AuditDistinctJoinAPIKey   = "JOIN proxy_api_keys pak ON mca.api_key_id = pak.id"
 	AuditDistinctJoinUser     = "JOIN users u ON pak.user_id = u.id"
 	AuditDistinctWhereUser    = "u.name LIKE ? OR u.email LIKE ?"
-	AuditDistinctWhereModel   = "model LIKE ?"
-	AuditDistinctSelectModel  = "DISTINCT model"
+	AuditDistinctWhereModel   = "model_id LIKE ?"
+	AuditDistinctSelectModel  = "DISTINCT model_id"
 	AuditDistinctSelectStatus = "DISTINCT upstream_status_code::text"
 	AuditDistinctLimit        = 50
 
@@ -217,28 +219,28 @@ var (
 
 	// ── Session filter field constants ──
 	SessionFilterFieldModel     = "model"
-	SessionFilterModelSQLColumn = "models"
+	SessionFilterModelSQLColumn = "model_ids"
 
 	// ── Session distinct model query ──
-	SessionDistinctModelSelect = "DISTINCT jsonb_array_elements_text(models::jsonb) AS model"
-	SessionDistinctModelWhere  = "models IS NOT NULL AND models::jsonb <> '[]'::jsonb"
-	SessionDistinctModelLike   = "jsonb_array_elements_text(models::jsonb) ILIKE ?"
+	SessionDistinctModelSelect = "DISTINCT jsonb_array_elements_text(model_ids::jsonb) AS model"
+	SessionDistinctModelWhere  = "model_ids IS NOT NULL AND model_ids::jsonb <> '[]'::jsonb"
+	SessionDistinctModelLike   = "jsonb_array_elements_text(model_ids::jsonb) ILIKE ?"
 	SessionDistinctModelOrder  = "model ASC"
 	SessionDistinctModelLimit  = 50
 
 	// ── Session export query constants ──
-	// 导出行：id, score, message_ids, tool_ids, models
-	SessionExportSelect = "id, score, message_ids, tool_ids, models"
+	// 导出行：id, score, message_ids, tool_ids, model_ids
+	SessionExportSelect = "id, score, message_ids, tool_ids, model_ids"
 
 	// 预览：score + 展开的 model（jsonb_array_elements_text）
-	SessionExportPreviewSelect = "score, jsonb_array_elements_text(models::jsonb) AS model"
+	SessionExportPreviewSelect = "score, jsonb_array_elements_text(model_ids::jsonb) AS model"
 
-	// models JSONB 数组包含任意一个目标模型（? 展开为 ANY 数组）
-	// 用 jsonb_path_exists 做数组包含判断：models @> ?::jsonb
-	SessionExportModelFilterSQL = "models::jsonb @> ?::jsonb"
+	// model_ids JSONB 数组包含任意一个目标模型（? 展开为 ANY 数组）
+	// 用 jsonb_path_exists 做数组包含判断：model_ids @> ?::jsonb
+	SessionExportModelFilterSQL = "model_ids::jsonb @> ?::jsonb"
 
-	// models 非空过滤（预览查询用）
-	SessionExportModelIsNotNull = "models IS NOT NULL AND models::jsonb <> '[]'::jsonb"
+	// model_ids 非空过滤（预览查询用）
+	SessionExportModelIsNotNull = "model_ids IS NOT NULL AND model_ids::jsonb <> '[]'::jsonb"
 
 	// MigrateMessageBatchSize checksum 迁移与 dedup 每批处理记录数
 	MigrateMessageBatchSize = 1000

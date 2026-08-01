@@ -75,7 +75,7 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q sessionport.L
 		fetched := lo.Map(records, func(m *session.MessageDetailProjection, _ int) *sessionport.MessageCacheRecord {
 			return &sessionport.MessageCacheRecord{
 				ID:        m.ID,
-				Model:     m.Model,
+				ModelID:   m.ModelID,
 				Message:   m.Message,
 				CreatedAt: m.CreatedAt,
 			}
@@ -95,7 +95,7 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q sessionport.L
 		}
 		return &sessionport.MessageView{
 			ID:        rec.ID,
-			Model:     rec.Model,
+			ModelID:   rec.ModelID,
 			Message:   rec.Message,
 			CreatedAt: rec.CreatedAt,
 		}, true
