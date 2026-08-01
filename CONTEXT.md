@@ -234,6 +234,14 @@ _Avoid_: detail cache, session cache, performance cache
 接收 SIGINT/SIGTERM 后按顺序执行 8 步关闭：停止 cron → 停止协程池 → draining 拒绝新请求 → 等待在途请求完成 → 关闭 HTTP Server → 同步日志 → 关闭 DB → 关闭 Redis。K8s 部署配合 `terminationGracePeriodSeconds: 660` + `preStop: sleep 10` 实现无损下线。
 _Avoid_: shutdown sequence, graceful stop, pod termination
 
+**RequestTPS（请求 Token 吞吐）**:
+monitor 面板的 token 速率指标，衡量单位时间内大模型调用的 token 吞吐，输入（input）与输出（output）两条曲线。数据源为每次模型调用收尾（`recordModelCall` seam）的 usage 统计，经 Prometheus counter（`llm_token_usage_total{direction}`）→ Flusher 快照 → 聚合层按桶求正向 delta ÷ 桶宽得 tokens/sec，跨 pod 求和。统计范围覆盖所有模型调用（流式与非流式），与审计 `ModelCallAuditTask`、Token Rate Limiter 口径一致。
+_Avoid_: token rate, tps
+
+**SuccessRate（请求成功率）**:
+monitor 面板的业务成功率指标，即网关返回 HTTP 200 的请求占所有业务请求的比例（%）。数据源为 `HTTPCollector` 中间件在 `c.Next()` 后按状态码计数的 counter（`http_requests_total{result=success|failure}`），与 QPS 图同口径（跳过 health/metrics 探活路径）；聚合层按桶跨 pod 合并 success/total 求百分比，无请求的桶不输出。
+_Avoid_: success ratio, error rate
+
 ## Agent Runtime（Agent 运行时）
 
 **AgentRuntime（Agent 运行时）**:

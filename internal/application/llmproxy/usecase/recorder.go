@@ -8,6 +8,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -115,7 +116,7 @@ type callOutcome struct {
 //
 // 这是模型调用收尾的唯一 seam——审计与 token 上报的 bug 只可能出现在这一处，
 // 也只需在这一处测试。
-func recordModelCall(ctx context.Context, submitter TaskSubmitter, out callOutcome) {
+func recordModelCall(ctx context.Context, submitter TaskSubmitter, tokenMetrics *metrics.TokenUsageCounter, out callOutcome) {
 	task := &dto.ModelCallAuditTask{
 		Ctx:                 util.CopyContextValues(ctx),
 		ModelID:             out.model.AggregateID(),
@@ -130,6 +131,10 @@ func recordModelCall(ctx context.Context, submitter TaskSubmitter, out callOutco
 	if out.usage != nil {
 		out.usage.apply(task)
 		reportTokenUsage(ctx, out.usage.reportable())
+		if tokenMetrics != nil {
+			tokenMetrics.AddInput(int64(task.InputTokens))
+			tokenMetrics.AddOutput(int64(task.OutputTokens))
+		}
 	}
 
 	if out.successStatus {
