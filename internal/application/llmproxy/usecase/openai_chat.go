@@ -53,7 +53,7 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 	stream, err := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
-		auditFailure(ctx, m, u.taskSubmitter, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	return &port.StreamResult{
@@ -77,14 +77,14 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 	completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
-		auditFailure(ctx, m, u.taskSubmitter, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	completion.Model = req.Body.Model
 	bodyBytes := lo.Must1(sonic.Marshal(completion))
 
 	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
-	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        req.Body.Model,
 		endpoint:            ep.Name(),
@@ -110,7 +110,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 	stream, err := u.anthropicProxy.OpenCreateMessageStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
-		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	return &port.StreamResult{
@@ -139,7 +139,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 	anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
-		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	completion, convErr := conv.ToOpenAIResponse(anthropicMsg)
@@ -157,7 +157,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 	bodyBytes := lo.Must1(sonic.Marshal(completion))
 
 	u.storeOpenAIChatFromCompletion(ctx, req, completion, nil, m.Alias().String())
-	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
 		endpoint:            endpoint,
@@ -219,7 +219,7 @@ func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) 
 	if completion != nil {
 		usage = completion.Usage
 	}
-	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.req.Body.Model,
 		endpoint:            s.ep.Name(),
@@ -284,7 +284,7 @@ func (s *openAIChatViaAnthropicStream) Read(ctx context.Context, sink port.Event
 		completion.Model = s.exposedModel
 	}
 	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.Alias().String())
-	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
