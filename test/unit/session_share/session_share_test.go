@@ -181,7 +181,7 @@ func testSessionView() *sessionport.SessionDetailView {
 		UpdatedAt:  time.Now(),
 		Metadata:   map[string]string{"k": "v"},
 		Messages: []*sessionport.MessageView{
-			{ID: 1, Model: "gpt-4", Message: &vo.UnifiedMessage{}, CreatedAt: time.Now()},
+			{ID: 1, ModelID: "gpt-4", Message: &vo.UnifiedMessage{}, CreatedAt: time.Now()},
 		},
 		Tools: []*sessionport.ToolView{
 			{ID: 2, Tool: &vo.UnifiedTool{}, CreatedAt: time.Now()},
