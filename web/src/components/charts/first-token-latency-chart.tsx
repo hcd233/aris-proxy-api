@@ -59,7 +59,7 @@ export function FirstTokenLatencyChart() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const seriesColors = useChartSeriesColors();
-  const models = [...new Set(data.map((d) => d.model))];
+  const models = [...new Set(data.map((d) => d.modelId))];
   const chartConfig = Object.fromEntries(
     models.map((m, i) => [m, { label: m, color: seriesColors[i % seriesColors.length] }])
   );
@@ -70,7 +70,7 @@ export function FirstTokenLatencyChart() {
     for (const p of item.points) {
       timeSet.add(p.time);
       if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.model] = p.averageLatencyMs === 0 ? null : p.averageLatencyMs;
+      pointMap.get(p.time)![item.modelId] = p.averageLatencyMs === 0 ? null : p.averageLatencyMs;
     }
   }
   const flatData = Array.from(timeSet).sort().map((time) => ({
@@ -81,7 +81,7 @@ export function FirstTokenLatencyChart() {
   // Calculate average latency per model
   const modelAverages = models.map((model) => {
     const values = data
-      .find((d) => d.model === model)
+      .find((d) => d.modelId === model)
       ?.points.filter((p) => p.averageLatencyMs > 0)
       .map((p) => p.averageLatencyMs) ?? [];
     if (values.length === 0) return { model, average: 0 };

@@ -246,11 +246,11 @@ export function ModelTokenBarChart() {
                   const total = tokenTotal(item);
                   return (
                     <tr
-                      key={item.model}
+                      key={item.modelId}
                       className="border-b border-border transition-colors hover:bg-muted/50"
                     >
                       <td className="py-3 pl-6 pr-2 text-muted-foreground">{i + 1}</td>
-                      <td className="py-3 pr-4 font-medium">{item.model}</td>
+                      <td className="py-3 pr-4 font-medium">{item.modelId}</td>
                       <td className="py-3 pr-4 text-right font-semibold">
                         {formatTokenCount(total)}
                       </td>

@@ -690,5 +690,8 @@
   "monitor.request_tps": "リクエスト TPS",
   "monitor.request_tps_input": "入力 tok/s",
   "monitor.request_tps_output": "出力 tok/s",
-  "monitor.success_rate": "成功率"
+  "monitor.success_rate": "成功率",
+  "models.model_id": "モデルID",
+  "models.model_id_placeholder": "例: gpt-4",
+  "models.model_id_hint": "空欄の場合は alias がモデルIDとして使用されます。"
 }
