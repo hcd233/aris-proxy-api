@@ -5,7 +5,7 @@
 ## Skill 路由
 
 - **生产 K8s 运维 / 服务状态 / pod 资源与负载 / pod 日志 / 滚动重启 / 部署跟踪**：使用 `operate-prod-service`；它负责 k3s 集群操作清单，并把数据库/缓存/配置/日志排障路由到对应专项 skill。所有需要 SSH 到生产服务器的操作，连接方式与安全基线统一见 `login-prod-server`（域名 `api.lvlvko.top`，禁止裸 IP）。
-- **生产 bug / 线上错误 / traceId / `X-Trace-Id` / CLS / E2E 失败**：使用 `cls-log-bugfix`，在 `ap-guangzhou` 查日志并按 trace 追链路。
+- **生产 bug / 线上错误 / traceId / `X-Trace-Id` / CLS / E2E 失败**：使用 `query-prod-log`，在 `ap-guangzhou` 查日志并按 trace 追链路。
 - **API 调用 / curl 示例 / 生产验证**：使用 `call-api`；它只负责交互式调用示例，不替代 E2E 回归。
 - **生产配置更新 / api.env / K8s ConfigMap**：使用 `update-prod-config`；SSH 到 `api.lvlvko.top` 修改配置，禁止使用裸 IP 地址。
 - **发布 / 部署**：推送到 `master` 或合并 PR 到 `master` 自动触发 `docker-publish.yml` 构建镜像并部署到 K8s；不需要额外手动部署步骤。
@@ -34,7 +34,7 @@
 - **实现阶段激活 `ponytail`（默认 `full`）**：编码时强制走最简可行阶梯，不建投机抽象、不造标准库已有的轮子、不做未被要求的"灵活性"。刻意简化处用 `// ponytail: <ceiling>, <upgrade path>` 注释标记，便于后续 `ponytail-debt` 追踪。`ponytail` 不适用于安全、输入校验、数据防损等不可简化的场景。
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
 - 设计方案不确定时，优先启动 `brainstorming` 做快速方案验证，在设计文档中记录决策。
-- 如果是 bugfix、线上错误、traceID、日志排查，先启动 `cls-log-bugfix`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
+- 如果是 bugfix、线上错误、traceID、日志排查，先启动 `query-prod-log`，在 `ap-guangzhou` 查 CLS 日志，再用 `X-Trace-Id` / traceID 追全链路。
 - **开发前先读历史经验**：开始开发、排障或重构前，先按 [docs/agents/code-tools.md](code-tools.md) 使用 Serena 读取相关 memory，再使用 CodeGraph 搜索代码上下文。
 - **代码搜索与重构工具分工**：代码符号搜索、调用链和影响分析必须使用 CodeGraph；跨文件代码或符号重构必须使用 Serena。详细规则见 [docs/agents/code-tools.md](code-tools.md)。
 - **提交前沉淀经验**：准备提交代码前，必须使用 Serena 写入本次稳定、可复用的工程经验，再执行提交。

@@ -1,6 +1,6 @@
 ---
 name: operate-prod-service
-description: 操作生产环境 aris-proxy-api 服务（api.lvlvko.top 上的 k3s/Kubernetes 集群）。当用户要求查看线上服务状态、pod 资源与负载、pod 日志、滚动重启、跟踪部署、查看服务/端点、检查集群健康，或笼统地说"看一下线上环境/生产服务怎么了"时使用本 skill。涉及生产数据库查询转 query-prod-database，Redis 缓存转 query-prod-cache，修改 api.env/ConfigMap 转 update-prod-config，日志排障与 traceId 追踪转 cls-log-bugfix。连接生产服务器前必须先加载 login-prod-server 获取登录方式与安全基线。
+description: 操作生产环境 aris-proxy-api 服务（api.lvlvko.top 上的 k3s/Kubernetes 集群）。当用户要求查看线上服务状态、pod 资源与负载、pod 日志、滚动重启、跟踪部署、查看服务/端点、检查集群健康，或笼统地说"看一下线上环境/生产服务怎么了"时使用本 skill。
 ---
 
 # operate-prod-service
@@ -88,7 +88,7 @@ kubectl -n aris-proxy-api logs deploy/aris-proxy-api -f --tail=50
 kubectl -n aris-proxy-api logs aris-proxy-api-xxxx --previous
 ```
 
-生产日志已接入腾讯云 CLS，深度排障（traceId 追踪、错误链路）转 `cls-log-bugfix`，不要只依赖 `kubectl logs`。
+生产日志已接入腾讯云 CLS，深度排障（traceId 追踪、错误链路）转 `query-prod-log`，不要只依赖 `kubectl logs`。
 
 ### 健康检查
 
@@ -141,7 +141,7 @@ kubectl -n aris-proxy-api get events --sort-by=.lastTimestamp | tail -30
 | 生产 PostgreSQL 数据查询/写操作 | `query-prod-database` |
 | 生产 Redis 缓存查询/写操作 | `query-prod-cache` |
 | 修改 api.env / K8s ConfigMap / 滚动重启生效 | `update-prod-config` |
-| CLS 日志排障、traceId/X-Trace-Id 追踪、错误链路 | `cls-log-bugfix` |
+| CLS 日志排障、traceId/X-Trace-Id 追踪、错误链路 | `query-prod-log` |
 | HTTP/API 调用示例、curl、交互式验证 | `call-api` |
 | 服务状态、pod 资源/负载/日志、重启、部署跟踪 | 本 skill |
 
