@@ -52,8 +52,8 @@ func AutoMigrate(ctx context.Context) error {
 
 // ManualMigrations 执行 GORM AutoMigrate 无法覆盖的删列/改列，幂等可重入。
 //
-// 必须在 AutoMigrate 之前执行：旧 model_call_audits.model_id 为 uint 类型，
-// 先删旧列再 rename model→model_id，AutoMigrate 才能正确新建 text 列。
+// 通过 `database migrate-data` 命令在部署后手动执行：此时 AutoMigrate 已先建好新列，
+// 因此 rename 前需先删除 AutoMigrate 预建的空列，避免 "column already exists"。
 // 注意：dbmodel 结构已更新（无旧列字段），HasColumn 检查的是真实数据库表列。
 func ManualMigrations(ctx context.Context) error {
 	db := InitDatabase().WithContext(ctx)
@@ -65,20 +65,28 @@ func ManualMigrations(ctx context.Context) error {
 		return err
 	}
 
-	// sessions：models 列改名为 model_ids
-	if migrator.HasColumn(&model.Session{}, constant.FieldModels) {
-		if err := migrator.RenameColumn(&model.Session{}, constant.FieldModels, constant.FieldModelIDs); err != nil {
-			return err
-		}
+	// sessions/messages：旧列改名为新列（AutoMigrate 预建的空列先删再 rename）。
+	if err := renameColumnDroppingDuplicate(migrator, &model.Session{}, constant.FieldModels, constant.FieldModelIDs); err != nil {
+		return err
 	}
-
-	// messages：model 列改名为 model_id
-	if migrator.HasColumn(&model.Message{}, constant.FieldModel) {
-		if err := migrator.RenameColumn(&model.Message{}, constant.FieldModel, constant.FieldModelID); err != nil {
-			return err
-		}
+	if err := renameColumnDroppingDuplicate(migrator, &model.Message{}, constant.FieldModel, constant.FieldModelID); err != nil {
+		return err
 	}
 	return nil
+}
+
+// renameColumnDroppingDuplicate 将 oldCol 改名为 newCol；若 newCol 已存在（AutoMigrate 预建的空列）先删除。
+// 幂等：oldCol 不存在（旧库未升级或已迁移）时直接跳过。
+func renameColumnDroppingDuplicate(migrator gorm.Migrator, dst any, oldCol, newCol string) error {
+	if !migrator.HasColumn(dst, oldCol) {
+		return nil
+	}
+	if migrator.HasColumn(dst, newCol) {
+		if err := migrator.DropColumn(dst, newCol); err != nil {
+			return err
+		}
+	}
+	return migrator.RenameColumn(dst, oldCol, newCol)
 }
 
 // migrateModelCallAuditColumns 迁移 model_call_audits 表列：删旧 uint model_id + rename model→model_id + 清理遗留索引。
@@ -89,15 +97,7 @@ func ManualMigrations(ctx context.Context) error {
 // 旧 model 列的 idx_model_created_at 索引随 rename 残留在 model_id 列上，
 // 需显式删除，否则与 AutoMigrate 新建的 idx_model_id_created_at 重复（写放大）。
 func migrateModelCallAuditColumns(migrator gorm.Migrator) error {
-	if !migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModel) {
-		return nil
-	}
-	if migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModelID) {
-		if err := migrator.DropColumn(&model.ModelCallAudit{}, constant.FieldModelID); err != nil {
-			return err
-		}
-	}
-	if err := migrator.RenameColumn(&model.ModelCallAudit{}, constant.FieldModel, constant.FieldModelID); err != nil {
+	if err := renameColumnDroppingDuplicate(migrator, &model.ModelCallAudit{}, constant.FieldModel, constant.FieldModelID); err != nil {
 		return err
 	}
 	if migrator.HasIndex(&model.ModelCallAudit{}, constant.MigrationModelCallAuditLegacyIndex) {
@@ -108,7 +108,9 @@ func migrateModelCallAuditColumns(migrator gorm.Migrator) error {
 	return nil
 }
 
-// 必须在 AutoMigrate 之后执行（依赖新列已存在）。
+// BackfillModelIDs 回填 models.model_id = alias，幂等（仅空值行）。
+//
+// 通过 `database migrate-data` 命令在部署（AutoMigrate 已建新列）后手动执行。
 func BackfillModelIDs(ctx context.Context) error {
 	db := InitDatabase().WithContext(ctx)
 	if !db.Migrator().HasColumn(&model.Model{}, constant.FieldModelID) {
