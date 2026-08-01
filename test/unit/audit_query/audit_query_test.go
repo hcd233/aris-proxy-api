@@ -329,9 +329,9 @@ func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
 	t3 := t1.Add(2 * time.Hour)
 	t4 := t1.Add(3 * time.Hour)
 	points := []*modelcall.ModelTrendPoint{
-		{Model: "gpt-4", Time: t1, Count: 3},
-		{Model: "gpt-4", Time: t3, Count: 5},
-		{Model: "claude", Time: t2, Count: 1},
+		{ModelID: "gpt-4", Time: t1, Count: 3},
+		{ModelID: "gpt-4", Time: t3, Count: 5},
+		{ModelID: "claude", Time: t2, Count: 1},
 	}
 	items := auditport.FillTrendSeries(points, t1, t4, enum.GranularityHour)
 	if len(items) != 2 {
@@ -339,14 +339,14 @@ func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
 	}
 	for _, it := range items {
 		if len(it.Points) != 4 {
-			t.Errorf("model %s: points len = %d, want 4 (complete requested range)", it.Model, len(it.Points))
+			t.Errorf("model %s: points len = %d, want 4 (complete requested range)", it.ModelID, len(it.Points))
 		}
 	}
 	byModel := map[string]map[time.Time]int{}
 	for _, it := range items {
-		byModel[it.Model] = map[time.Time]int{}
+		byModel[it.ModelID] = map[time.Time]int{}
 		for _, p := range it.Points {
-			byModel[it.Model][p.Time] = p.Count
+			byModel[it.ModelID][p.Time] = p.Count
 		}
 	}
 	if byModel["gpt-4"][t2] != 0 || byModel["gpt-4"][t4] != 0 {
@@ -370,8 +370,8 @@ func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	points := []*modelcall.RequestRatePoint{
-		{Model: "gpt-4", Time: t1, Total: 10, Success: 8},
-		{Model: "gpt-4", Time: t2, Total: 5, Success: 5},
+		{ModelID: "gpt-4", Time: t1, Total: 10, Success: 8},
+		{ModelID: "gpt-4", Time: t2, Total: 5, Success: 5},
 	}
 	items := auditport.FillRateSeries(points, t1, t2, enum.GranularityHour)
 	if len(items) != 1 {
@@ -395,7 +395,7 @@ func TestFillRateSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
 	end := time.Date(2026, 6, 1, 9, 59, 59, 0, time.UTC)
 	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
 	points := []*modelcall.RequestRatePoint{
-		{Model: "gpt-4", Time: time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai), Total: 10, Success: 8},
+		{ModelID: "gpt-4", Time: time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai), Total: 10, Success: 8},
 	}
 
 	items := auditport.FillRateSeries(points, start, end, enum.GranularityHour)
@@ -418,7 +418,7 @@ func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
 	t2 := t1.Add(time.Hour)
 	t3 := t1.Add(2 * time.Hour)
 	points := []*modelcall.TokenThroughputPoint{
-		{Model: "gpt-4", Time: t1, OutputTokens: 20},
+		{ModelID: "gpt-4", Time: t1, OutputTokens: 20},
 	}
 	items := auditport.FillTokenThroughputSeries(points, t1, t3, enum.GranularityHour)
 	if len(items) != 3 {
@@ -440,7 +440,7 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
 	points := []*modelcall.TokenThroughputPoint{
 		{
-			Model:               "gpt-4",
+			ModelID:             "gpt-4",
 			Time:                time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai),
 			InputTokens:         11,
 			OutputTokens:        22,
@@ -518,9 +518,9 @@ func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
 	repo := &fakeAuditRepo{
 		queryTokenThroughputFn: func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
 			return []*modelcall.TokenThroughputPoint{
-				{Model: "gpt-4", Time: t1, InputTokens: 100, OutputTokens: 50, CacheReadTokens: 30, CacheCreationTokens: 10},
-				{Model: "gpt-4", Time: t2, InputTokens: 200, OutputTokens: 150, CacheReadTokens: 20, CacheCreationTokens: 5},
-				{Model: "claude", Time: t1, InputTokens: 300, OutputTokens: 250, CacheReadTokens: 50, CacheCreationTokens: 15},
+				{ModelID: "gpt-4", Time: t1, InputTokens: 100, OutputTokens: 50, CacheReadTokens: 30, CacheCreationTokens: 10},
+				{ModelID: "gpt-4", Time: t2, InputTokens: 200, OutputTokens: 150, CacheReadTokens: 20, CacheCreationTokens: 5},
+				{ModelID: "claude", Time: t1, InputTokens: 300, OutputTokens: 250, CacheReadTokens: 50, CacheCreationTokens: 15},
 			}, nil
 		},
 	}
@@ -536,7 +536,7 @@ func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
 	}
 	byModel := make(map[string]*dto.ModelUsageItem, len(items))
 	for _, it := range items {
-		byModel[it.Model] = it
+		byModel[it.ModelID] = it
 	}
 	gpt, ok := byModel["gpt-4"]
 	if !ok {

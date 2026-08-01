@@ -112,7 +112,7 @@ func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
 		return &port.AuditLogView{
 			ID:                       v.ID,
 			CreatedAt:                v.CreatedAt,
-			Model:                    v.Model,
+			ModelID:                  v.ModelID,
 			UpstreamProtocol:         v.UpstreamProtocol,
 			APIProtocol:              v.APIProtocol,
 			Endpoint:                 v.Endpoint,

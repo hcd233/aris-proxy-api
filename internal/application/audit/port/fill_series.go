@@ -19,7 +19,7 @@ import (
 // 缺失槽位以 count=0 填充。start/end 非零时，按请求区间补齐完整时间轴。
 func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, granularity enum.Granularity) []*dto.ModelTrendItem {
 	modelOrder, byModel, timeSet := IndexSeries(points,
-		func(p *modelcall.ModelTrendPoint) string { return p.Model },
+		func(p *modelcall.ModelTrendPoint) string { return p.ModelID },
 		func(p *modelcall.ModelTrendPoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.ModelTrendPoint) int { return p.Count },
 	)
@@ -28,7 +28,7 @@ func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, 
 		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TrendPoint {
 			return &dto.TrendPoint{Time: t, Count: byModel[m][t]}
 		})
-		return &dto.ModelTrendItem{Model: m, Points: pts}
+		return &dto.ModelTrendItem{ModelID: m, Points: pts}
 	})
 	return items
 }
@@ -37,7 +37,7 @@ func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, 
 func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, granularity enum.Granularity) []*dto.RequestRateItem {
 	type slot struct{ total, success int }
 	modelOrder, byModel, timeSet := IndexSeries(points,
-		func(p *modelcall.RequestRatePoint) string { return p.Model },
+		func(p *modelcall.RequestRatePoint) string { return p.ModelID },
 		func(p *modelcall.RequestRatePoint) time.Time { return p.Time.UTC() },
 		func(p *modelcall.RequestRatePoint) slot { return slot{total: p.Total, success: p.Success} },
 	)
@@ -57,7 +57,7 @@ func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, 
 				SuccessRate: rate,
 			}
 		})
-		return &dto.RequestRateItem{Model: m, Points: pts}
+		return &dto.RequestRateItem{ModelID: m, Points: pts}
 	})
 	return items
 }
