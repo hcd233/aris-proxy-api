@@ -88,16 +88,14 @@ func (h *reportTraceEventHandler) ensureTrace(
 ) (*trace.Trace, error) {
 	if existing == nil {
 		parentTraceID := resolveParentTraceID(ctx, h.repo, cmd.ParentSessionID, cmd.SessionID, cmd.APIKeyName)
-		source, metadata := resolveSubagentAttrs(cmd)
+		metadata := resolveSubagentAttrs(cmd)
 		return h.repo.UpsertBySessionID(ctx, &trace.Trace{
 			Agent:         agent,
 			SessionID:     cmd.SessionID,
 			ParentTraceID: parentTraceID,
 			APIKeyName:    cmd.APIKeyName,
-			UserID:        cmd.UserID,
 			Model:         cmd.Model,
 			CWD:           cmd.CWD,
-			Source:        source,
 			Metadata:      metadata,
 		})
 	}
@@ -113,20 +111,14 @@ func (h *reportTraceEventHandler) ensureTrace(
 	if cmd.CWD != "" {
 		cwd = cmd.CWD
 	}
-	source := existing.Source
-	if cmd.Source != "" {
-		source = cmd.Source
-	}
 	return h.repo.UpsertBySessionID(ctx, &trace.Trace{
 		ID:            existing.ID,
 		Agent:         agent,
 		SessionID:     cmd.SessionID,
 		ParentTraceID: existing.ParentTraceID,
 		APIKeyName:    existing.APIKeyName,
-		UserID:        existing.UserID,
 		Model:         modelName,
 		CWD:           cwd,
-		Source:        source,
 		Metadata:      existing.Metadata,
 	})
 }
@@ -146,20 +138,19 @@ func resolveParentTraceID(ctx context.Context, repo trace.TraceRepository, paren
 	return parent.ID
 }
 
-// resolveSubagentAttrs 子代理批次返回 (source, metadata)；主批次保持 cmd 原值。
-func resolveSubagentAttrs(cmd port.ReportTraceEventCommand) (source string, metadata map[string]string) {
-	metadata = map[string]string{}
+// resolveSubagentAttrs 子代理批次返回 metadata；主批次返回空 map。
+func resolveSubagentAttrs(cmd port.ReportTraceEventCommand) map[string]string {
+	metadata := map[string]string{}
 	if cmd.ParentSessionID == "" {
-		return cmd.Source, metadata
+		return metadata
 	}
-	source = constant.TraceSourceSubagent
 	if cmd.AgentID != "" {
 		metadata[constant.TraceMetadataAgentID] = cmd.AgentID
 	}
 	if cmd.AgentType != "" {
 		metadata[constant.TraceMetadataAgentType] = cmd.AgentType
 	}
-	return source, metadata
+	return metadata
 }
 
 func insertRecords(

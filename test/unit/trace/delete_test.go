@@ -13,7 +13,7 @@ import (
 func mustUpsert(t *testing.T, repo *FakeRepo, sessionID, owner string) uint {
 	t.Helper()
 	tr, err := repo.UpsertBySessionID(context.Background(), &trace.Trace{
-		Agent: constant.TraceAgentCodex, SessionID: sessionID, APIKeyName: owner, UserID: 1,
+		Agent: constant.TraceAgentCodex, SessionID: sessionID, APIKeyName: owner,
 	})
 	if err != nil {
 		t.Fatalf("upsert %s: %v", sessionID, err)

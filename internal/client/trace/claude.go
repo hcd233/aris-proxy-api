@@ -18,7 +18,6 @@ type claudeHookEnvelope struct {
 	SessionID      string `json:"session_id"`
 	Model          string `json:"model,omitempty"`
 	CWD            string `json:"cwd,omitempty"`
-	Source         string `json:"source,omitempty"`
 	PromptID       string `json:"prompt_id,omitempty"`
 	ToolUseID      string `json:"tool_use_id,omitempty"`
 	TranscriptPath string `json:"transcript_path,omitempty"`
@@ -36,7 +35,6 @@ func (claudeAdapter) ParseHook(raw []byte) (HookInfo, error) {
 		EventName:      env.HookEventName,
 		Model:          env.Model,
 		CWD:            env.CWD,
-		SessionSource:  env.Source,
 		TurnID:         env.PromptID,
 		CallID:         env.ToolUseID,
 		TranscriptPath: env.TranscriptPath,

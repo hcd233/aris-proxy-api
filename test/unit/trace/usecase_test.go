@@ -28,7 +28,7 @@ func TestReportTraceEvent_BatchPersistsAllRecordsAndDeduplicates(t *testing.T) {
 		{Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeResponseItem, Event: "function_call_output", TurnID: "t1", CallID: "call-1", ClientSequence: 7, DedupKey: "rollout:s1:7", Payload: []byte(`{"type":"response_item","payload":{"type":"function_call_output","call_id":"call-1"}}`)},
 		{Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg, Event: "task_complete", TurnID: "t1", ClientSequence: 8, DedupKey: "rollout:s1:8", Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete","turn_id":"t1"}}`)},
 	}
-	cmd := port.ReportTraceEventCommand{SessionID: "s1", Model: "gpt-4o", CWD: "/work", APIKeyName: "key1", UserID: 1, Records: records}
+	cmd := port.ReportTraceEventCommand{SessionID: "s1", Model: "gpt-4o", CWD: "/work", APIKeyName: "key1", Records: records}
 	if _, err := handler.Handle(ctx, cmd); err != nil {
 		t.Fatalf("first batch failed: %v", err)
 	}
@@ -57,8 +57,8 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 
 	start := []byte(`{"hook_event_name":"SessionStart","session_id":"s1","model":"gpt-4o","source":"startup","cwd":"/work"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "s1", Model: "gpt-4o", Source: "startup", CWD: "/work",
-		APIKeyName: "key1", UserID: 1,
+		SessionID: "s1", Model: "gpt-4o", CWD: "/work",
+		APIKeyName: "key1",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:s1:start", Payload: start,
@@ -68,7 +68,7 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	}
 	stop := []byte(`{"hook_event_name":"Stop","session_id":"s1"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "s1", APIKeyName: "key1", UserID: 1,
+		SessionID: "s1", APIKeyName: "key1",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "Stop", DedupKey: "hook:s1:stop", Payload: stop,
@@ -98,7 +98,6 @@ func TestReportTraceEvent_MissingSessionID(t *testing.T) {
 	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	_, err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
 		APIKeyName: "key1",
-		UserID:     1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:x:1", Payload: []byte(`{"hook_event_name":"SessionStart"}`),
@@ -113,7 +112,7 @@ func TestReportTraceEvent_EmptyRecords(t *testing.T) {
 	t.Parallel()
 	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	_, err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
-		SessionID: "s1", APIKeyName: "key1", UserID: 1,
+		SessionID: "s1", APIKeyName: "key1",
 	})
 	if err == nil {
 		t.Fatal("expected error for empty records")
@@ -129,7 +128,7 @@ func TestReportTraceEvent_CreatesTraceOnFirstEvent(t *testing.T) {
 	// First event for an unknown session still creates an owned trace.
 	payload := []byte(`{"hook_event_name":"PreToolUse","session_id":"u1","turn_id":"t1"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "u1", APIKeyName: "key1", UserID: 1,
+		SessionID: "u1", APIKeyName: "key1",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "PreToolUse", TurnID: "t1", DedupKey: "hook:u1:1", Payload: payload,
@@ -247,7 +246,7 @@ func TestReportTraceEvent_SubagentCommandCarriesParentSession(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "parent-s1", APIKeyName: "key1", UserID: 1,
+		SessionID: "parent-s1", APIKeyName: "key1",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:p1:1",
@@ -259,7 +258,7 @@ func TestReportTraceEvent_SubagentCommandCarriesParentSession(t *testing.T) {
 	// 子代理批次：SessionID 为子代理 id，ParentSessionID 指向父
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
 		SessionID: "child-s1", ParentSessionID: "parent-s1", AgentType: "worker",
-		APIKeyName: "key1", UserID: 1,
+		APIKeyName: "key1",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", TurnID: "t1", DedupKey: "rollout:child-s1:1",
@@ -286,7 +285,7 @@ func TestReportTraceEvent_SubagentChildMetadataAndDone(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "parent-s2", APIKeyName: "key1", UserID: 1,
+		SessionID: "parent-s2", APIKeyName: "key1",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:p2:1",
@@ -297,7 +296,7 @@ func TestReportTraceEvent_SubagentChildMetadataAndDone(t *testing.T) {
 	}
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
 		SessionID: "child-s2", ParentSessionID: "parent-s2", AgentID: "agent-1", AgentType: "worker",
-		APIKeyName: "key1", UserID: 1, Model: "gpt-5", CWD: "/work",
+		APIKeyName: "key1", Model: "gpt-5", CWD: "/work",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", TurnID: "t1", DedupKey: "rollout:child-s2:1",
@@ -310,9 +309,6 @@ func TestReportTraceEvent_SubagentChildMetadataAndDone(t *testing.T) {
 	child, _ := repo.FindBySessionID(ctx, "child-s2")
 	if child == nil {
 		t.Fatal("child trace missing")
-	}
-	if child.Source != "subagent" {
-		t.Fatalf("expected child Source=subagent, got %q", child.Source)
 	}
 	if child.Metadata["agent_type"] != "worker" || child.Metadata["agent_id"] != "agent-1" {
 		t.Fatalf("unexpected child metadata: %+v", child.Metadata)
@@ -329,7 +325,7 @@ func TestReportTraceEvent_SubagentMissingParentIsTolerant(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "orphan-child", ParentSessionID: "no-such-parent", APIKeyName: "key1", UserID: 1,
+		SessionID: "orphan-child", ParentSessionID: "no-such-parent", APIKeyName: "key1",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", DedupKey: "rollout:orphan:1",
@@ -351,7 +347,7 @@ func TestReportTraceEvent_SubagentCrossTenantParentNotLinked(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "parent-tenant-a", APIKeyName: "key-a", UserID: 1,
+		SessionID: "parent-tenant-a", APIKeyName: "key-a",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:pa:1",
@@ -361,7 +357,7 @@ func TestReportTraceEvent_SubagentCrossTenantParentNotLinked(t *testing.T) {
 		t.Fatalf("create parent: %v", err)
 	}
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "child-tenant-b", ParentSessionID: "parent-tenant-a", APIKeyName: "key-b", UserID: 2,
+		SessionID: "child-tenant-b", ParentSessionID: "parent-tenant-a", APIKeyName: "key-b",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", DedupKey: "rollout:cb:1",

@@ -646,7 +646,6 @@
   "trace.agent": "智能体",
   "trace.api_key": "API Key",
   "trace.model": "模型",
-  "trace.source": "来源",
   "trace.created_at": "创建时间",
   "trace.updated_at": "更新时间",
   "trace.event_count": "事件数",

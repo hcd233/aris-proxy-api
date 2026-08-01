@@ -14,11 +14,9 @@ type Trace struct {
 	Agent         string
 	SessionID     string
 	APIKeyName    string
-	UserID        uint
 	ParentTraceID uint
 	Model         string
 	CWD           string
-	Source        string
 	Metadata      map[string]string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time

@@ -147,7 +147,7 @@ func TestFakeRepo_PersistsParentTraceID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upsert parent: %v", err)
 	}
-	child, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "child-s1", APIKeyName: "key1", ParentTraceID: parent.ID, Source: "subagent"})
+	child, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "child-s1", APIKeyName: "key1", ParentTraceID: parent.ID})
 	if err != nil {
 		t.Fatalf("upsert child: %v", err)
 	}

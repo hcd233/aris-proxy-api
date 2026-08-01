@@ -446,12 +446,6 @@ export default function TraceDetailClient({
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-                {t("trace.source")}
-              </p>
-              <p className="mt-1 text-sm">{detail.source}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
                 {t("trace.api_key")}
               </p>
               <p className="mt-1 text-sm">{detail.apiKeyName}</p>
