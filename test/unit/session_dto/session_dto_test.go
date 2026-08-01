@@ -110,8 +110,8 @@ func TestSessionDetail_JSONSerialization(t *testing.T) {
 	if len(got.Messages) != len(tc.SessionDetail.Messages) {
 		t.Fatalf("Messages length = %d, want %d", len(got.Messages), len(tc.SessionDetail.Messages))
 	}
-	if got.Messages[0].Model != tc.SessionDetail.Messages[0].Model {
-		t.Errorf("Messages[0].Model = %q, want %q", got.Messages[0].Model, tc.SessionDetail.Messages[0].Model)
+	if got.Messages[0].ModelID != tc.SessionDetail.Messages[0].ModelID {
+		t.Errorf("Messages[0].ModelID = %q, want %q", got.Messages[0].ModelID, tc.SessionDetail.Messages[0].ModelID)
 	}
 	if len(got.Tools) != len(tc.SessionDetail.Tools) {
 		t.Fatalf("Tools length = %d, want %d", len(got.Tools), len(tc.SessionDetail.Tools))
