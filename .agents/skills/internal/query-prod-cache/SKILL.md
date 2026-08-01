@@ -5,7 +5,7 @@ description: Use when the user asks to inspect, count, diagnose, or query the pr
 
 # query-prod-cache
 
-通过 SSH 进入生产服务器，在 Redis Docker 容器内查询生产缓存。默认只读；结构破坏、实例级维护和危险操作永久禁止，数据写操作（如按 key 删除、更新）必须先获得明确授权。
+通过 SSH 进入生产服务器，在 Redis Docker 容器内查询生产缓存。默认只读；结构破坏、实例级维护和危险操作永久禁止，数据写操作（如按 key 删除、更新）必须先获得明确授权。**连接生产服务器前必须先加载 `login-prod-server` skill** 获取 SSH 方式、环境布局、凭据读取规则与统一安全基线；本 skill 不再重复连接细节。
 
 ## 适用范围
 
@@ -21,47 +21,13 @@ description: Use when the user asks to inspect, count, diagnose, or query the pr
 
 - 任何实例级结构变更、配置变更或破坏性操作。
 
-## 连接入口
+## 前置
 
-始终使用域名，不得使用裸 IP：
-
-```bash
-ssh ubuntu@api.lvlvko.top
-```
-
-生产 Redis 当前已验证的容器名为 `redis`（镜像 redis:8.4.0，由 1Panel 管理，数据/配置在 `/opt/1panel/apps/redis/redis/`），但不要假设容器名永远不变；执行前先确认：
-
-```bash
-docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
-```
-
-选择镜像为 Redis 且状态健康/运行中的容器。找不到明确目标时停止并向用户报告，不要猜测。
-
-## 获取连接配置
-
-优先从生产服务器读取应用自身的配置（应用就是用这套凭据连 Redis 的，与 redis-cli 需要的一致）：
-
-```text
-/home/ubuntu/code/aris-proxy-api/env/api.env
-```
-
-常见键包括：
-
-```text
-REDIS_HOST
-REDIS_PORT
-REDIS_PASSWORD
-REDIS_DB
-```
-
-注意：生产上**没有**独立的 `redis.env`（只有 `redis.env.template`），容器由 1Panel 部署，密码在容器启动参数 `--requirepass` 和配置文件 `/opt/1panel/apps/redis/redis/conf/redis.conf` 中；不要假设 compose 文件里的 `env/redis.env` 存在。应用固定使用 `0` 号库（`internal/common/constant/database.go` 中 `RedisDB = 0`，与 redis-cli 默认库一致），`REDIS_DB` 仅作参考。如果部署链路明确由 Kubernetes 管理，可以检查对应 ConfigMap/Secret；读取 Secret 时不得输出解码后的值。不要把密码写入 skill、脚本、Git、聊天消息或命令行参数中。
-
-只允许输出配置键名或 `<redacted>`，例如：
-
-```bash
-awk -F= 'tolower($1) ~ /(redis|cache)/ {print $1"=<redacted>"}' \
-  /home/ubuntu/code/aris-proxy-api/env/api.env
-```
+1. 加载 `login-prod-server` skill，确认 SSH 方式、环境布局、凭据读取规则与安全基线；
+2. 连接：`ssh ubuntu@api.lvlvko.top`；
+3. 确认 Redis 容器（当前为 `redis`，镜像 redis:8.4.0，勿假设不变）：`docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'`，找不到明确目标时停止并报告；
+4. 从 `/home/ubuntu/code/aris-proxy-api/env/api.env` 读取 `REDIS_*` 连接键（读取与脱敏规则见 `login-prod-server`；生产上无独立 `redis.env`，容器由 1Panel 部署，密码在启动参数 `--requirepass` 与 `/opt/1panel/apps/redis/redis/conf/redis.conf`）。
+5. 应用固定使用 `0` 号库（`internal/common/constant/database.go` 中 `RedisDB = 0`，与 redis-cli 默认库一致），`REDIS_DB` 仅作参考。
 
 ## 只读命令：默认直接执行
 
