@@ -64,7 +64,7 @@ func (h *datasetHandler) HandlePreview(ctx context.Context, req *dto.DatasetPrev
 		Permission: permission,
 		UserID:     userID,
 		MinScore:   req.MinScore,
-		Models:     req.Models,
+		ModelIDs:   req.ModelIDs,
 		StartTime:  req.StartTime,
 		EndTime:    req.EndTime,
 	})
@@ -88,7 +88,7 @@ func (h *datasetHandler) HandleExport(ctx context.Context, req *dto.DatasetExpor
 		Permission: permission,
 		UserID:     userID,
 		MinScore:   req.MinScore,
-		Models:     req.Models,
+		ModelIDs:   req.ModelIDs,
 		StartTime:  req.StartTime,
 		EndTime:    req.EndTime,
 	}
@@ -122,7 +122,7 @@ func (h *datasetHandler) HandlePreviewFormat(ctx context.Context, req *dto.Datas
 		Permission: permission,
 		UserID:     userID,
 		MinScore:   req.MinScore,
-		Models:     req.Models,
+		ModelIDs:   req.ModelIDs,
 		StartTime:  req.StartTime,
 		EndTime:    req.EndTime,
 	}, req.Offset)

@@ -50,7 +50,7 @@ type SessionSummaryProjection struct {
 	MessageCount int
 	ToolCount    int
 	Questions    []uint
-	Models       []string
+	ModelIDs     []string
 }
 
 // MessageDetailProjection 消息详情只读投影
@@ -59,7 +59,7 @@ type SessionSummaryProjection struct {
 //	@update 2026-04-24 20:00:00
 type MessageDetailProjection struct {
 	ID        uint
-	Model     string
+	ModelID   string
 	Message   *conversationvo.UnifiedMessage
 	CreatedAt time.Time
 }
@@ -108,7 +108,7 @@ type SessionDetailProjection struct {
 //	@update 2026-07-03 10:00:00
 type ExportFilter struct {
 	MinScore   int
-	Models     []string
+	ModelIDs   []string
 	StartTime  time.Time
 	EndTime    time.Time
 	OwnerNames []string
@@ -123,7 +123,7 @@ type ExportSessionRow struct {
 	Score      *int
 	MessageIDs []uint
 	ToolIDs    []uint
-	Models     []string
+	ModelIDs   []string
 }
 
 // ExportPreview 统计预览结果

@@ -149,7 +149,7 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 func (h *exportDatasetHandler) buildFilter(ctx context.Context, p datasetport.ExportParams) (*session.ExportFilter, error) {
 	f := &session.ExportFilter{
 		MinScore:  p.MinScore,
-		Models:    p.Models,
+		ModelIDs:  p.ModelIDs,
 		StartTime: p.StartTime,
 		EndTime:   p.EndTime,
 	}
@@ -199,7 +199,7 @@ func (h *exportDatasetHandler) writeSSEEvent(w *bufio.Writer, event string, payl
 func (h *previewDatasetHandler) buildFilter(ctx context.Context, p datasetport.ExportParams) (*session.ExportFilter, error) {
 	f := &session.ExportFilter{
 		MinScore:  p.MinScore,
-		Models:    p.Models,
+		ModelIDs:  p.ModelIDs,
 		StartTime: p.StartTime,
 		EndTime:   p.EndTime,
 	}
@@ -316,7 +316,7 @@ func (h *previewFormatDatasetHandler) Handle(ctx context.Context, p datasetport.
 func (h *previewFormatDatasetHandler) buildFilter(ctx context.Context, p datasetport.ExportParams) (*session.ExportFilter, error) {
 	f := &session.ExportFilter{
 		MinScore:  p.MinScore,
-		Models:    p.Models,
+		ModelIDs:  p.ModelIDs,
 		StartTime: p.StartTime,
 		EndTime:   p.EndTime,
 	}

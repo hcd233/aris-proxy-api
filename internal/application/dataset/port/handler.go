@@ -17,7 +17,7 @@ type ExportParams struct {
 	Permission enum.Permission
 	UserID     uint
 	MinScore   int
-	Models     []string
+	ModelIDs   []string
 	StartTime  time.Time
 	EndTime    time.Time
 }
