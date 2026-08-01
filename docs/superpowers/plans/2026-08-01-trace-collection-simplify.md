@@ -153,7 +153,7 @@ git commit -m "feat(trace): AgentAdapter 新增 IgnoreTranscriptLine，codex eve
 - [ ] **Step 1: 写失败测试**（追加到 `test/unit/client/trace/rollout_test.go` 末尾；复用现有 fixture/构造方式）
 
 ```go
-func TestRolloutReaderSkipsIgnoredRecords(t *testing.T) {
+func TestRolloutReaderKeepsTokenCountAndSkipsIgnored(t *testing.T) {
 	t.Parallel()
 	paths := Paths{Root: filepath.Join(t.TempDir(), ".aris")}
 	spool := NewSpool(paths, 100)
@@ -162,36 +162,11 @@ func TestRolloutReaderSkipsIgnoredRecords(t *testing.T) {
 	transcript := strings.Join([]string{
 		`{"type":"session_meta","payload":{"id":"sid-1","type":"session_meta"}}`,
 		`{"type":"turn_context","payload":{"cwd":"/tmp","model":"m1","turn_id":"t1"}}`,
-		`{"type":"event_msg","payload":{"type":"token_count","total_tokens":10}}`,
+		`{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":10}}}}`,
+		`{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":20}}}}`,
 		`{"type":"event_msg","payload":{"type":"task_started"}}`,
 		`{"type":"event_msg","payload":{"type":"task_complete"}}`,
-		`{"type":"response_item","payload":{"id":"r1","type":"message"}}`,
-		`{"type":"weird","payload":{}}`,
-	}, "\n") + "\n"
-
-	records, err := reader.readIncremental(context.Background(), "sess-1", "", "", strings.NewReader(transcript), PendingRecord{})
-	// readIncremental 需文件路径与状态文件，见 Step 3 的实现调整
-	_ = records
-	_ = err
-	_ = spool
-}
-```
-
-> 说明：`readIncremental` 依赖文件系统（`os.Stat`/`file.Seek`/state 文件），单测构造应改走真实临时文件。Step 3 实现后按下方完整测试为准：
-
-```go
-func TestRolloutReaderSkipsIgnoredRecords(t *testing.T) {
-	t.Parallel()
-	paths := Paths{Root: filepath.Join(t.TempDir(), ".aris")}
-	spool := NewSpool(paths, 100)
-	reader := NewRolloutReader(paths, spool, codexAdapter{})
-
-	transcript := strings.Join([]string{
-		`{"type":"session_meta","payload":{"id":"sid-1","type":"session_meta"}}`,
-		`{"type":"turn_context","payload":{"cwd":"/tmp","model":"m1","turn_id":"t1"}}`,
-		`{"type":"event_msg","payload":{"type":"token_count","total_tokens":10}}`,
-		`{"type":"event_msg","payload":{"type":"task_started"}}`,
-		`{"type":"event_msg","payload":{"type":"task_complete"}}`,
+		`{"type":"event_msg","payload":{"type":"agent_message","message":"hi"}}`,
 		`{"type":"response_item","payload":{"id":"r1","type":"message"}}`,
 		`{"type":"weird","payload":{}}`,
 	}, "\n") + "\n"
@@ -205,28 +180,41 @@ func TestRolloutReaderSkipsIgnoredRecords(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadNew error: %v", err)
 	}
-	if len(records) != 4 {
-		t.Fatalf("records = %d, want 4 (session_meta/task_started/task_complete/response_item 保留)", len(records))
+	// 保留：session_meta / token_count×2（服务端按固定 dedup key 覆盖）/ task_started / task_complete / response_item
+	if len(records) != 6 {
+		t.Fatalf("records = %d, want 6", len(records))
 	}
-	events := lo.Map(records, func(r PendingRecord, _ int) string { return r.RecordType + ":" + r.Event })
-	joined := strings.Join(events, "|")
-	for _, want := range []string{"session_meta:", "event_msg:task_started", "event_msg:task_complete", "response_item:message"} {
+	joined := ""
+	for _, r := range records {
+		joined += r.RecordType + ":" + r.Event + "|"
+	}
+	for _, want := range []string{"session_meta:", "event_msg:token_count", "event_msg:task_started", "event_msg:task_complete", "response_item:message"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("records 缺少 %q，实际: %s", want, joined)
 		}
 	}
-	if strings.Contains(joined, "turn_context") || strings.Contains(joined, "token_count") {
-		t.Fatalf("被忽略记录不应出现在结果中: %s", joined)
+	if strings.Contains(joined, "turn_context") || strings.Contains(joined, "agent_message") {
+		t.Fatalf("被忽略记录不应出现: %s", joined)
+	}
+	// token_count 固定 dedup key：两条 token_count 的 DedupKey 相同
+	var tokenDedup []string
+	for _, r := range records {
+		if r.RecordType == "event_msg" && r.Event == "token_count" {
+			tokenDedup = append(tokenDedup, r.DedupKey)
+		}
+	}
+	if len(tokenDedup) != 2 || tokenDedup[0] == "" || tokenDedup[0] != tokenDedup[1] {
+		t.Fatalf("token_count dedup key 应固定且相同，实际: %v", tokenDedup)
 	}
 }
 ```
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `go test -count=1 ./test/unit/client/trace/ -run 'TestRolloutReaderSkipsIgnoredRecords' -v`
-Expected: FAIL——结果包含 turn_context / token_count（当前无过滤）。
+Run: `go test -count=1 ./test/unit/client/trace/ -run 'TestRolloutReaderKeepsTokenCountAndSkipsIgnored' -v`
+Expected: FAIL——结果包含 turn_context / agent_message（当前无过滤），或 token_count dedup key 不相同。
 
-- [ ] **Step 3: 实现过滤**
+- [ ] **Step 3: 实现过滤 + token_count 固定 dedup key**
 
 `internal/client/trace/rollout.go` 的 `parseRolloutLines` 循环体改为：
 
@@ -273,16 +261,37 @@ func (r *RolloutReader) rolloutRecord(
 }
 ```
 
+`RolloutDedupKey` 增加 token_count 固定 key 分支（`TraceClientTokenCountDedupFormat` 常量加到 `internal/common/constant/traceclient.go` 现有 dedup 格式常量旁）：
+
+```go
+// TraceClientTokenCountDedupFormat token_count 固定 dedup key：同一会话多条 token_count
+// 共用同一 key，服务端 ON CONFLICT DO UPDATE 后库里只保留最后一条（会话累计 token 汇总）。
+TraceClientTokenCountDedupFormat = "token_count:%s"
+```
+
+```go
+func RolloutDedupKey(sessionID string, meta TranscriptMeta, line int64, raw []byte) string {
+	if meta.RecordType == constant.TraceRolloutTypeSessionMeta && meta.SessionID != "" {
+		return fmt.Sprintf(constant.TraceClientSessionMetaDedupFormat, sessionID, meta.SessionID)
+	}
+	if meta.RecordType == constant.TraceRolloutTypeEventMsg && meta.Event == constant.TraceEventTokenCount {
+		return fmt.Sprintf(constant.TraceClientTokenCountDedupFormat, sessionID)
+	}
+	digest := sha256.Sum256(raw)
+	return fmt.Sprintf(constant.TraceClientRolloutDedupFormat, sessionID, line, hex.EncodeToString(digest[:]))
+}
+```
+
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `go test -count=1 ./test/unit/client/trace/ -run 'TestRolloutReaderSkipsIgnoredRecords' -v`
-Expected: PASS（4 条保留，turn_context/token_count 被忽略）。
+Run: `go test -count=1 ./test/unit/client/trace/ -run 'TestRolloutReaderKeepsTokenCountAndSkipsIgnored' -v`
+Expected: PASS（6 条保留：session_meta + token_count×2（同 key）+ task_started + task_complete + response_item；turn_context/agent_message 被忽略）。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add internal/client/trace/rollout.go test/unit/client/trace/rollout_test.go
-git commit -m "feat(trace): RolloutReader 跳过 IgnoreTranscriptLine 命中的记录"
+git add internal/client/trace/rollout.go internal/common/constant/traceclient.go test/unit/client/trace/rollout_test.go
+git commit -m "feat(trace): RolloutReader 跳过忽略记录，token_count 固定 dedup key"
 ```
 
 ---
@@ -697,6 +706,52 @@ func (r *traceRepository) MarkDone(ctx context.Context, sessionID string) error 
 }
 ```
 
+`InsertEvent` 增加 token_count 覆盖写入（其余记录保持 `DO NOTHING`）：
+
+```go
+func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) (bool, error) {
+	db := r.db.WithContext(ctx)
+	rec := &dbmodel.TraceEvent{
+		TraceID:        e.TraceID,
+		SessionID:      e.SessionID,
+		Source:         e.Source,
+		RecordType:     e.RecordType,
+		Event:          e.Event,
+		TurnID:         e.TurnID,
+		CallID:         e.CallID,
+		TranscriptLine: e.TranscriptLine,
+		ClientSequence: e.ClientSequence,
+		DedupKey:       e.DedupKey,
+		Payload:        e.Payload,
+	}
+	query := db
+	if e.DedupKey != "" {
+		if e.RecordType == constant.TraceRecordTypeEventMsg && e.Event == constant.TraceEventTokenCount {
+			// token_count 固定 dedup key（客户端 D1a）：同 key 冲突时覆盖 payload，最终保留最后一条
+			query = query.Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: constant.FieldDedupKey}},
+				DoUpdates: clause.AssignmentColumns([]string{
+					constant.FieldTraceID, constant.FieldPayload, constant.FieldUpdatedAt,
+				}),
+			})
+		} else {
+			query = query.Clauses(clause.OnConflict{DoNothing: true})
+		}
+	}
+	result := query.Create(rec)
+	if result.Error != nil {
+		return false, ierr.Wrap(ierr.ErrDBCreate, result.Error, "insert trace event")
+	}
+	if result.RowsAffected == 0 {
+		return false, nil
+	}
+	e.ID = rec.ID
+	return true, nil
+}
+```
+
+> 需要新增常量：`internal/common/constant/sql.go` 加 `FieldDedupKey = "dedup_key"`（Task 1 已加 `TraceEventTokenCount`）；`FieldTraceID`/`FieldPayload`/`FieldUpdatedAt` 若不存在需一并补齐（grep 确认，`FieldPayload` 当前无定义需新增）。
+
 - [ ] **Step 4: 改造 command**
 
 `internal/application/trace/command/report_trace_event.go`：
@@ -768,7 +823,7 @@ var traceDoneEvents = map[string][]string{
 ```
 （删除 `Status: existing.Status,`）
 
-`insertRecords` 签名与尾部：
+`insertRecords` 签名与尾部，并新增 unknown 告警丢弃（在 `validRecord` 通过后、`InsertEvent` 之前）：
 
 ```go
 func insertRecords(
@@ -787,13 +842,25 @@ func insertRecords(
 			results = append(results, result)
 			continue
 		}
-		// ...中间不变...
+		if record.RecordType == constant.TraceRolloutTypeUnknown {
+			// 未知记录类型：打 warning 便于发现 codex 新类型，不入库
+			logger.WithCtx(ctx).Warn("[Trace] unknown record dropped",
+				zap.String("sessionID", sessionID),
+				zap.String("event", record.Event),
+				zap.Int("payloadBytes", len(record.Payload)),
+			)
+			result.Status = constant.TraceRecordStatusRejected
+			result.Message = constant.TraceRecordMessageUnknown
+			results = append(results, result)
+			continue
+		}
+		// ...中间不变（InsertEvent 等）...
 		results = append(results, result)
 	}
 	return results
 }
 ```
-（删除 `doneEvents []string` 参数、`isComplete` 返回值及其判定 `if result.Status != ... && lo.Contains(doneEvents, record.Event) { isComplete = true }`）
+（删除 `doneEvents []string` 参数、`isComplete` 返回值及其判定 `if result.Status != ... && lo.Contains(doneEvents, record.Event) { isComplete = true }`；新增 import `"github.com/hcd233/aris-proxy-api/internal/logger"` 与 `"go.uber.org/zap"`）
 
 > `lo` import 若不再被本文件使用需删除（`normalizeRecords` 未用 lo，检查后处理）。
 
