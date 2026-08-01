@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -31,6 +32,7 @@ type openAIUseCase struct {
 	anthropicProxy AnthropicProxyPort
 	taskSubmitter  TaskSubmitter
 	blockedChecker BlockedChecker
+	tokenMetrics   *metrics.TokenUsageCounter
 }
 
 func NewOpenAIUseCase(
@@ -40,6 +42,7 @@ func NewOpenAIUseCase(
 	anthropicProxy AnthropicProxyPort,
 	taskSubmitter TaskSubmitter,
 	blockedChecker BlockedChecker,
+	tokenMetrics *metrics.TokenUsageCounter,
 ) port.OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
@@ -48,6 +51,7 @@ func NewOpenAIUseCase(
 		anthropicProxy: anthropicProxy,
 		taskSubmitter:  taskSubmitter,
 		blockedChecker: blockedChecker,
+		tokenMetrics:   tokenMetrics,
 	}
 }
 

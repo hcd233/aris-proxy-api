@@ -7,14 +7,26 @@ const (
 
 	// MetricNamespaceHTTP HTTP 指标命名空间（最终指标名形如 http_request_duration_seconds）
 	MetricNamespaceHTTP = "http"
+	// MetricNamespaceLLM LLM 指标命名空间（最终指标名形如 llm_token_usage_total）
+	MetricNamespaceLLM = "llm"
 
 	// MetricNameRequestDuration 请求时延直方图（不含 namespace）
 	MetricNameRequestDuration = "request_duration_seconds"
+	// MetricNameTokenUsage token 吞吐 counter（不含 namespace；完整名 llm_token_usage_total）
+	MetricNameTokenUsage = "token_usage_total"
+	// MetricNameRequests HTTP 请求结果 counter（不含 namespace；完整名 http_requests_total）
+	MetricNameRequests = "requests_total"
 
 	MetricSSEActiveConnectionsName = "sse_active_connections"
 	MetricSSEActiveConnectionsHelp = "Number of active SSE streaming connections"
 	MetricRequestDurationHelp      = "HTTP request latency in seconds"
+	MetricTokenUsageHelp           = "Cumulative LLM token usage by direction"
+	MetricRequestsHelp             = "HTTP business requests by result"
 	MetricLabelProvider            = "provider"
+	// MetricLabelDirection token 吞吐 counter 的方向 label
+	MetricLabelDirection = "direction"
+	// MetricLabelResult HTTP 请求结果 counter 的结果 label
+	MetricLabelResult = "result"
 
 	// —— flusher 从 registry.Gather() 抽取快照时用的完整指标名 ——
 	MetricFullRequestDuration = "http_request_duration_seconds"
@@ -22,6 +34,20 @@ const (
 	MetricFullGoHeapAlloc     = "go_memstats_alloc_bytes"
 	MetricFullProcessCPU      = "process_cpu_seconds_total"
 	MetricFullSSEActive       = "sse_active_connections"
+	MetricFullTokenUsage      = "llm_token_usage_total"
+	MetricFullHTTPRequests    = "http_requests_total"
+)
+
+// —— token 吞吐 counter 的 direction 枚举 ——
+const (
+	TokenUsageDirectionInput  = "input"
+	TokenUsageDirectionOutput = "output"
+)
+
+// —— HTTP 请求结果 counter 的 result 枚举 ——
+const (
+	HTTPResultSuccess = "success"
+	HTTPResultFailure = "failure"
 )
 
 var PrometheusRequestDurationBuckets = []float64{

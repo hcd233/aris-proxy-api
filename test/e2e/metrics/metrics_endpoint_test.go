@@ -61,8 +61,21 @@ func TestRuntimeMetricsEndpoint_RequiresAuth(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected status 401 without token, got %d", resp.StatusCode)
+	// 项目错误约定：业务错误以 HTTP 200 + {"error":{...}} 下发（apiutil.WriteErrorResponse），
+	// 而非 HTTP 401；无 token 时应返回 code=10001 Unauthorized 业务错误。
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read body: %v", err)
+	}
+	var result dto.CommonRsp
+	if err := sonic.Unmarshal(body, &result); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if result.Error == nil {
+		t.Fatalf("expected unauthorized business error in body, got %s", body)
+	}
+	if result.Error.Code != 10001 {
+		t.Fatalf("expected unauthorized code 10001, got %d", result.Error.Code)
 	}
 }
 
@@ -104,5 +117,13 @@ func TestRuntimeMetricsEndpoint_AdminReturnsSeries(t *testing.T) {
 	}
 	if result.Body.Series.SSEActive == nil {
 		t.Error("expected series.sseActive map to be present (may be empty)")
+	}
+	// 新指标字段 key 必须存在（可为空数组）。== nil 无法区分"字段缺失"与"空数组"（
+	// sonic 对缺失 key 与 nil slice 都解析为 nil），故用 sonic.Get 按 JSON 路径断言 key 存在。
+	for _, key := range []string{"tokenInput", "tokenOutput", "successRate"} {
+		node, getErr := sonic.Get(body, "body", "series", key)
+		if getErr != nil || !node.Exists() {
+			t.Errorf("expected series.%s key to be present", key)
+		}
 	}
 }

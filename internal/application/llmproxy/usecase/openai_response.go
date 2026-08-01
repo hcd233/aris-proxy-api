@@ -68,7 +68,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 	stream, err := u.openAIProxy.OpenCreateResponseStream(ctx, upstream, body)
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
-		auditFailure(ctx, m, u.taskSubmitter, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	return &port.StreamResult{
@@ -94,7 +94,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 	respBody, err := u.openAIProxy.ForwardCreateResponse(ctx, upstream, body)
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
-		auditFailure(ctx, m, u.taskSubmitter, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, lo.FromPtr(req.Body.Model), ep.Name(), enum.ProtocolOpenAIResponse, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 
@@ -119,7 +119,7 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 		out.usage = responseTokenUsage{&rsp}
 		out.responseStatus = &rsp
 	}
-	recordModelCall(ctx, u.taskSubmitter, out)
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, out)
 
 	return &port.JSONResult{
 		StatusCode: http.StatusOK,
@@ -136,7 +136,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	stream, openErr := u.openAIProxy.OpenChatCompletionStream(ctx, upstream, body)
 	if openErr != nil {
 		totalMs := time.Since(startTime).Milliseconds()
-		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIResponse, totalMs, openErr)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolOpenAIResponse, totalMs, openErr)
 		return nil, upstreamProxyError(openErr, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	return &port.StreamResult{
@@ -167,7 +167,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 	completion, err := u.openAIProxy.ForwardChatCompletion(ctx, upstream, body)
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
-		auditFailure(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolOpenAIResponse, totalMs, err)
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolOpenAIResponse, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	completion.Model = exposedModel
@@ -185,7 +185,7 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 	bodyBytes := lo.Must1(sonic.Marshal(rsp))
 
 	u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
-	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
 		endpoint:            endpoint,
@@ -212,7 +212,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		exposedModel := lo.FromPtr(req.Body.Model)
-		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	return &port.StreamResult{
@@ -232,7 +232,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	anthropicMsg, err := u.anthropicProxy.ForwardCreateMessage(ctx, upstream, body)
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
-		auditFailureWithProviders(ctx, m, u.taskSubmitter, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
+		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIResponse, totalMs, err)
 		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	chatCompletion, convErr := anthropicConv.ToOpenAIResponse(anthropicMsg)
@@ -261,7 +261,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	bodyBytes := lo.Must1(sonic.Marshal(rsp))
 
 	u.storeResponseFromRsp(ctx, req, rsp, nil, m.Alias().String())
-	recordModelCall(ctx, u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
 		exposedModel:        exposedModel,
 		endpoint:            endpoint,
@@ -379,7 +379,7 @@ func (s *responseNativeStream) finalize(sink port.EventSink, proxyErr error) {
 	}
 	s.u.storeResponseFromRsp(s.ctx, s.req, s.finalResponse, proxyErr, s.m.Alias().String())
 
-	recordModelCall(s.ctx, s.u.taskSubmitter, callOutcome{
+	recordModelCall(s.ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        lo.FromPtr(s.req.Body.Model),
 		endpoint:            s.ep.Name(),
@@ -432,7 +432,7 @@ func (s *responseViaChatStream) Read(ctx context.Context, sink port.EventSink) e
 		rsp = converter.FinalizeResponseFromChatCompletion(sink, completion, s.exposedModel, s.responseID, s.conv)
 	}
 	s.u.storeResponseFromRsp(ctx, s.req, rsp, err, s.m.Alias().String())
-	recordModelCall(ctx, s.u.taskSubmitter, callOutcome{
+	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
@@ -533,7 +533,7 @@ func (s *responseViaAnthropicStream) finalize(sink port.EventSink, anthropicMsg 
 	s.timer.finish()
 	rsp := finalizeResponseFromAnthropicStream(s.ctx, sink, err, s.allChunks, anthropicMsg, s.exposedModel, s.responseID, s.anthropicConv, s.responseConv)
 	s.u.storeResponseFromRsp(s.ctx, s.req, rsp, err, s.m.Alias().String())
-	recordModelCall(s.ctx, s.u.taskSubmitter, callOutcome{
+	recordModelCall(s.ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,

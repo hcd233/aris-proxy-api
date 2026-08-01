@@ -693,5 +693,9 @@
   "trace.expand_json": "Show raw JSON",
   "trace.collapse_json": "Hide raw JSON",
   "trace.system_prompt": "System prompt",
-  "trace.tools": "Tools"
+  "trace.tools": "Tools",
+  "monitor.request_tps": "Request TPS",
+  "monitor.request_tps_input": "Input tok/s",
+  "monitor.request_tps_output": "Output tok/s",
+  "monitor.success_rate": "Success Rate"
 }

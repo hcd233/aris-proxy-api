@@ -24,6 +24,7 @@ var InfraModule = fx.Module(constant.DigNameInfraModule,
 		NewInflightTracker,
 		metrics.NewRegistry,
 		NewSSEGauge,
+		NewTokenUsageCounter,
 		NewHTTPCollector,
 		NewMetricsMiddleware,
 		NewRuntimeMetricsCache,
@@ -54,6 +55,10 @@ func InitHTTPClient() {
 
 func NewSSEGauge(registry *prometheus.Registry) *metrics.SSEGauge {
 	return metrics.NewSSEGauge(registry)
+}
+
+func NewTokenUsageCounter(registry *prometheus.Registry) *metrics.TokenUsageCounter {
+	return metrics.NewTokenUsageCounter(registry)
 }
 
 func NewHTTPCollector(registry *prometheus.Registry) *metrics.HTTPCollector {
