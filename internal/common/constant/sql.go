@@ -50,8 +50,6 @@ const (
 	FieldStreamDurationMs         = "stream_duration_ms"
 	FieldAPIKeyID                 = "api_key_id"
 	FieldModelID                  = "model_id"
-	FieldModelIDs                 = "model_ids"
-	FieldModels                   = "models"
 	FieldUpstreamProtocol         = "upstream_protocol"
 	FieldAPIProtocol              = "api_protocol"
 	FieldEndpoint                 = "endpoint"
@@ -107,7 +105,7 @@ var (
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage,
 		FieldCreatedAt, FieldUpdatedAt}
 
-	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModelID, FieldModel, FieldEndpointID, FieldEnabled, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldCreatedAt, FieldUpdatedAt}
+	ModelRepoFieldsFull  = []string{FieldID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldCreatedAt, FieldUpdatedAt}
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}

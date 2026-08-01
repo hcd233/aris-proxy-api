@@ -159,7 +159,6 @@
   "endpoints.saving": "Saving...",
   "models.title": "Models",
   "models.alias": "Alias",
-  "models.model_name": "Model Name",
   "models.limits": "Limits",
   "models.context_length": "Context Length",
   "models.context_length_hint": "Max context window in tokens",
@@ -346,7 +345,6 @@
   "models.edit_desc": "Update model configuration.",
   "models.delete_desc": "This will permanently delete {name}. This action cannot be undone.",
   "models.alias_placeholder": "e.g. gpt-4o",
-  "models.model_name_placeholder": "e.g. gpt-4o-2024-08-06",
   "models.select_endpoint": "Select endpoint",
   "models.export": "Export Config",
   "models.export_target": "Export Target",
@@ -696,5 +694,7 @@
   "monitor.success_rate": "Success Rate",
   "models.model_id": "Model ID",
   "models.model_id_placeholder": "e.g. gpt-4",
-  "models.model_id_hint": "Leave empty to keep the alias as the model ID."
+  "models.model_id_hint": "Leave empty to keep the alias as the model ID.",
+  "models.upstream_model": "Upstream Model",
+  "models.upstream_model_placeholder": "e.g. gpt-4o-2024-08-06"
 }

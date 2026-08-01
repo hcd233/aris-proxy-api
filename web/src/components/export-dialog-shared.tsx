@@ -44,7 +44,7 @@ export function modelCapabilities(model: ModelItem): string[] {
   return model.capabilities && model.capabilities.length > 0 ? model.capabilities : ["text"];
 }
 
-// 按 alias / modelName 过滤模型列表
+// 按 alias / upstreamModel 过滤模型列表
 export function useFilteredModels(
   models: ModelItem[],
   search: string
@@ -55,7 +55,7 @@ export function useFilteredModels(
     return models.filter(
       (m) =>
         m.alias.toLowerCase().includes(q) ||
-        m.modelName.toLowerCase().includes(q)
+        m.upstreamModel.toLowerCase().includes(q)
     );
   }, [models, search]);
 }
@@ -431,7 +431,7 @@ export function ExportModelRow({
           {badge}
         </span>
         <span className="truncate font-mono text-[11px] text-muted-foreground/70">
-          {model.modelName}
+          {model.upstreamModel}
         </span>
       </span>
       <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">

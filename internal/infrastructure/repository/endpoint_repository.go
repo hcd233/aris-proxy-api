@@ -212,7 +212,7 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 }
 
 func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
-	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.ModelName, m.EndpointID, m.Enabled, m.ContextLength, m.MaxOutputTokens, m.Capabilities)
+	model, err := aggregate.CreateModel(m.ID, vo.EndpointAlias(m.Alias), m.UpstreamModel, m.EndpointID, m.Enabled, m.ContextLength, m.MaxOutputTokens, m.Capabilities)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 		ID:              m.AggregateID(),
 		Alias:           m.Alias().String(),
 		ModelID:         m.ModelID(),
-		ModelName:       m.ModelName(),
+		UpstreamModel:   m.UpstreamModel(),
 		EndpointID:      m.EndpointID(),
 		Enabled:         m.Enabled(),
 		ContextLength:   m.ContextLength(),
@@ -266,7 +266,7 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 	updates := map[string]any{
 		constant.FieldModelAlias:           m.Alias().String(),
 		constant.FieldModelID:              m.ModelID(),
-		constant.FieldModelModelName:       m.ModelName(),
+		constant.FieldModelUpstreamModel:   m.UpstreamModel(),
 		constant.FieldModelEndpointID:      m.EndpointID(),
 		constant.FieldModelEnabled:         m.Enabled(),
 		constant.FieldModelContextLength:   m.ContextLength(),
@@ -321,7 +321,7 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam)
 		constant.ModelRepoFieldsFull,
 		&dao.CommonParam{
 			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
-			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldAlias, constant.FieldModelModelName}},
+			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldAlias, constant.FieldModelUpstreamModel}},
 			SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
 		},
 	)
@@ -389,7 +389,7 @@ func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, alias 
 		}
 		proj := toEndpointProjection(ep)
 		if matcher == nil || matcher(proj) {
-			return proj, &llmproxy.ModelAliasProjection{Alias: m.ModelName}, nil
+			return proj, &llmproxy.ModelAliasProjection{Alias: m.UpstreamModel}, nil
 		}
 	}
 	return nil, nil, nil

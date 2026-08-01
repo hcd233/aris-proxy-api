@@ -40,7 +40,7 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 		aliasPtr = &a
 	}
 
-	if uerr := m.Update(aliasPtr, cmd.ModelName, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens, cmd.Capabilities, cmd.ModelID); uerr != nil {
+	if uerr := m.Update(aliasPtr, cmd.UpstreamModel, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens, cmd.Capabilities, cmd.ModelID); uerr != nil {
 		return uerr
 	}
 

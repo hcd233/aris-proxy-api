@@ -13,14 +13,14 @@ import (
 
 // Model 模型关联聚合根
 //
-// 记录对外暴露的模型别名（alias）与上游实际模型名（model）和 endpoint 的关联。
+// 记录对外暴露的模型别名（alias）与上游实际模型名（upstreamModel）和 endpoint 的关联。
 // 同一 alias 可关联多条记录，解析时随机选择。
 type Model struct {
 	commonagg.Base
 
 	alias           vo.EndpointAlias
 	modelID         string
-	model           string
+	upstreamModel   string
 	endpointID      uint
 	enabled         bool
 	contextLength   int
@@ -31,11 +31,11 @@ type Model struct {
 }
 
 // CreateModel 构造 Model 聚合根
-func CreateModel(id uint, alias vo.EndpointAlias, model string, endpointID uint, enabled bool, contextLength, maxOutputTokens int, capabilities []enum.InputModality) (*Model, error) {
+func CreateModel(id uint, alias vo.EndpointAlias, upstreamModel string, endpointID uint, enabled bool, contextLength, maxOutputTokens int, capabilities []enum.InputModality) (*Model, error) {
 	if alias.IsEmpty() {
 		return nil, ierr.New(ierr.ErrValidation, "model alias cannot be empty")
 	}
-	if model == "" {
+	if upstreamModel == "" {
 		return nil, ierr.New(ierr.ErrValidation, "model name cannot be empty")
 	}
 	if endpointID == 0 {
@@ -53,7 +53,7 @@ func CreateModel(id uint, alias vo.EndpointAlias, model string, endpointID uint,
 	m := &Model{
 		alias:           alias,
 		modelID:         alias.String(),
-		model:           model,
+		upstreamModel:   upstreamModel,
 		endpointID:      endpointID,
 		enabled:         enabled,
 		contextLength:   contextLength,
@@ -80,7 +80,7 @@ func validateCapabilities(capabilities []enum.InputModality) error {
 
 func (m *Model) Alias() vo.EndpointAlias { return m.alias }
 func (m *Model) ModelID() string         { return m.modelID }
-func (m *Model) ModelName() string       { return m.model }
+func (m *Model) UpstreamModel() string   { return m.upstreamModel }
 func (m *Model) EndpointID() uint        { return m.endpointID }
 func (m *Model) Enabled() bool           { return m.enabled }
 func (m *Model) ContextLength() int      { return m.contextLength }
@@ -100,12 +100,12 @@ func (m *Model) SetTimestamps(createdAt, updatedAt time.Time) {
 }
 
 // Update 更新 Model 字段（仅非 nil 字段更新）
-func (m *Model) Update(alias *vo.EndpointAlias, model *string, endpointID *uint, enabled *bool, contextLength, maxOutputTokens *int, capabilities *[]enum.InputModality, modelID *string) error {
+func (m *Model) Update(alias *vo.EndpointAlias, upstreamModel *string, endpointID *uint, enabled *bool, contextLength, maxOutputTokens *int, capabilities *[]enum.InputModality, modelID *string) error {
 	if alias != nil {
 		m.alias = *alias
 	}
-	if model != nil {
-		m.model = *model
+	if upstreamModel != nil {
+		m.upstreamModel = *upstreamModel
 	}
 	if endpointID != nil {
 		m.endpointID = *endpointID

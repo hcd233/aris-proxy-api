@@ -236,8 +236,8 @@ func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve() error: %v", err)
 	}
-	if m.ModelName() != "enabled-upstream" {
-		t.Fatalf("model name = %q, want %q", m.ModelName(), "enabled-upstream")
+	if m.UpstreamModel() != "enabled-upstream" {
+		t.Fatalf("upstream model = %q, want %q", m.UpstreamModel(), "enabled-upstream")
 	}
 	if m.Enabled() {
 		t.Log("resolved to enabled model as expected")
@@ -266,8 +266,8 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 	if ep.AggregateID() != 2 {
 		t.Fatalf("endpoint id = %d, want 2", ep.AggregateID())
 	}
-	if m.ModelName() != "gpt-upstream" {
-		t.Fatalf("model name = %q, want %q", m.ModelName(), "gpt-upstream")
+	if m.UpstreamModel() != "gpt-upstream" {
+		t.Fatalf("upstream model = %q, want %q", m.UpstreamModel(), "gpt-upstream")
 	}
 }
 

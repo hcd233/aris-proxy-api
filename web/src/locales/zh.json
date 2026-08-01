@@ -230,7 +230,6 @@
   "models.subtitle": "管理模型别名和路由",
   "models.all_models": "全部模型",
   "models.alias": "别名",
-  "models.model_name": "模型名称",
   "models.limits": "长度限制",
   "models.context_length": "上下文长度",
   "models.context_length_hint": "最大上下文窗口（tokens）",
@@ -260,7 +259,6 @@
   "models.edit_desc": "更新模型配置。",
   "models.delete_desc": "这将永久删除 {name}。此操作不可撤销。",
   "models.alias_placeholder": "例如：gpt-4o",
-  "models.model_name_placeholder": "例如：gpt-4o-2024-08-06",
   "models.select_endpoint": "选择端点",
   "models.export": "导出配置",
   "models.export_target": "导出目标",
@@ -696,5 +694,7 @@
   "monitor.success_rate": "成功率",
   "models.model_id": "模型 ID",
   "models.model_id_placeholder": "例如 gpt-4",
-  "models.model_id_hint": "留空则保持 alias 作为模型 ID。"
+  "models.model_id_hint": "留空则保持 alias 作为模型 ID。",
+  "models.upstream_model": "上游模型名",
+  "models.upstream_model_placeholder": "例如：gpt-4o-2024-08-06"
 }

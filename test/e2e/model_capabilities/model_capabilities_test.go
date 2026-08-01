@@ -126,7 +126,7 @@ func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, en
 	t.Helper()
 	body := map[string]any{
 		"alias":           alias,
-		"modelName":       "e2e-upstream-model",
+		"upstreamModel":   "e2e-upstream-model",
 		"endpointID":      endpointID,
 		"contextLength":   128000,
 		"maxOutputTokens": 64000,
