@@ -42,6 +42,8 @@ const (
 	FieldDescription = "description"
 
 	FieldTraceID                  = "trace_id"
+	FieldDedupKey                 = "dedup_key"
+	FieldPayload                  = "payload"
 	FieldInputTokens              = "input_tokens"
 	FieldOutputTokens             = "output_tokens"
 	FieldFirstTokenLatencyMs      = "first_token_latency_ms"
@@ -284,8 +286,6 @@ var (
 	// ── Trace 分页/状态常量 ──
 	TraceListPageSize  = 20
 	TraceEventPageSize = 50
-	TraceStatusActive  = "active"
-	TraceStatusDone    = "done"
 	TraceAgentCodex    = "codex"
 	TraceAgentClaude   = "claude"
 

@@ -35,9 +35,6 @@ func (f *FakeRepo) UpsertBySessionID(_ context.Context, t *trace.Trace) (*trace.
 		f.nextID++
 		t.ID = f.nextID
 	}
-	if t.Status == "" {
-		t.Status = "active"
-	}
 	f.traces[t.SessionID] = t
 	f.byID[t.ID] = t
 	return t, nil
@@ -57,15 +54,6 @@ func (f *FakeRepo) FindByID(_ context.Context, id uint) (*trace.Trace, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.byID[id], nil
-}
-
-func (f *FakeRepo) MarkDone(_ context.Context, sid string) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if t, ok := f.traces[sid]; ok {
-		t.Status = "done"
-	}
-	return nil
 }
 
 func (f *FakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) (bool, error) {

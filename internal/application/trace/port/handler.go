@@ -17,7 +17,6 @@ type TraceSummaryView struct {
 	APIKeyName    string
 	Model         string
 	Source        string
-	Status        string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -32,7 +31,6 @@ type TraceDetailView struct {
 	Model         string
 	CWD           string
 	Source        string
-	Status        string
 	Metadata      map[string]string
 	EventCount    int64
 	CreatedAt     time.Time
