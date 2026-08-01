@@ -41,6 +41,10 @@ type AgentAdapter interface {
 	ClassifyTranscriptLine(raw []byte) TranscriptMeta
 	// StdoutAck 返回该 hook 事件需要回显的 stdout 内容；空串 = 静默。
 	StdoutAck(info HookInfo) string
+	// IgnoreTranscriptLine 返回 true 表示该行 transcript 记录不采集（不进 spool、
+	// 不上报、不入库）。codex 用于 event_msg 白名单过滤与 turn_context 丢弃；
+	// claude 恒返回 false（保持现状）。
+	IgnoreTranscriptLine(meta TranscriptMeta) bool
 }
 
 var agentAdapters = map[string]AgentAdapter{}

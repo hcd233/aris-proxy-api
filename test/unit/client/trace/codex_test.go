@@ -259,3 +259,45 @@ func TestInstallCodexHooksStripsRemovedEvents(t *testing.T) {
 		t.Fatal("Stop should be registered by install")
 	}
 }
+
+func TestCodexAdapterIgnoreTranscriptLine(t *testing.T) {
+	t.Parallel()
+	adapter, err := trace.LookupAdapter("codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name string
+		meta trace.TranscriptMeta
+		want bool
+	}{
+		{name: "session_meta 保留", meta: trace.TranscriptMeta{RecordType: "session_meta"}, want: false},
+		{name: "response_item 保留", meta: trace.TranscriptMeta{RecordType: "response_item", Event: "message"}, want: false},
+		{name: "event_msg task_complete 保留", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "task_complete"}, want: false},
+		{name: "event_msg task_started 保留", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "task_started"}, want: false},
+		{name: "event_msg token_count 保留（固定 dedup key 覆盖）", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "token_count"}, want: false},
+		{name: "event_msg agent_message 丢弃", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "agent_message"}, want: true},
+		{name: "event_msg world_state 丢弃（未来类型）", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "world_state"}, want: true},
+		{name: "turn_context 丢弃", meta: trace.TranscriptMeta{RecordType: "turn_context"}, want: true},
+		{name: "unknown 保留（服务端告警丢弃）", meta: trace.TranscriptMeta{RecordType: "unknown", Event: "x"}, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := adapter.IgnoreTranscriptLine(tc.meta); got != tc.want {
+				t.Fatalf("IgnoreTranscriptLine(%+v) = %v, want %v", tc.meta, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestClaudeAdapterIgnoreTranscriptLineNoop(t *testing.T) {
+	t.Parallel()
+	adapter, err := trace.LookupAdapter("claude")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if adapter.IgnoreTranscriptLine(trace.TranscriptMeta{RecordType: "event_msg", Event: "x"}) {
+		t.Fatal("claude 不应忽略任何记录")
+	}
+}

@@ -31,31 +31,34 @@
 **Interfaces:**
 - Produces: `AgentAdapter.IgnoreTranscriptLine(meta TranscriptMeta) bool`；codex 白名单 map `codexEventMsgWhitelist`（包内私有）
 
-- [ ] **Step 1: 写失败测试**（追加到 `test/unit/client/trace/codex_test.go` 末尾；该文件为同包测试 `package trace`，可直接引用 `codexAdapter{}`/`claudeAdapter{}`/`TranscriptMeta`）
+- [ ] **Step 1: 写失败测试**（追加到 `test/unit/client/trace/codex_test.go` 末尾；该目录为独立测试包，经 import 别名 `trace` 访问被测包导出符号，通过 `trace.LookupAdapter` 拿接口实例）
 
 ```go
 func TestCodexAdapterIgnoreTranscriptLine(t *testing.T) {
 	t.Parallel()
-	a := codexAdapter{}
+	adapter, err := trace.LookupAdapter("codex")
+	if err != nil {
+		t.Fatal(err)
+	}
 	cases := []struct {
 		name string
-		meta TranscriptMeta
+		meta trace.TranscriptMeta
 		want bool
 	}{
-		{name: "session_meta 保留", meta: TranscriptMeta{RecordType: "session_meta"}, want: false},
-		{name: "response_item 保留", meta: TranscriptMeta{RecordType: "response_item", Event: "message"}, want: false},
-		{name: "event_msg task_complete 保留", meta: TranscriptMeta{RecordType: "event_msg", Event: "task_complete"}, want: false},
-		{name: "event_msg task_started 保留", meta: TranscriptMeta{RecordType: "event_msg", Event: "task_started"}, want: false},
-		{name: "event_msg token_count 丢弃", meta: TranscriptMeta{RecordType: "event_msg", Event: "token_count"}, want: true},
-		{name: "event_msg agent_message 丢弃", meta: TranscriptMeta{RecordType: "event_msg", Event: "agent_message"}, want: true},
-		{name: "event_msg world_state 丢弃（未来类型）", meta: TranscriptMeta{RecordType: "event_msg", Event: "world_state"}, want: true},
-		{name: "turn_context 丢弃", meta: TranscriptMeta{RecordType: "turn_context"}, want: true},
-		{name: "unknown 保留", meta: TranscriptMeta{RecordType: "unknown", Event: "x"}, want: false},
+		{name: "session_meta 保留", meta: trace.TranscriptMeta{RecordType: "session_meta"}, want: false},
+		{name: "response_item 保留", meta: trace.TranscriptMeta{RecordType: "response_item", Event: "message"}, want: false},
+		{name: "event_msg task_complete 保留", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "task_complete"}, want: false},
+		{name: "event_msg task_started 保留", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "task_started"}, want: false},
+		{name: "event_msg token_count 保留（固定 dedup key 覆盖）", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "token_count"}, want: false},
+		{name: "event_msg agent_message 丢弃", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "agent_message"}, want: true},
+		{name: "event_msg world_state 丢弃（未来类型）", meta: trace.TranscriptMeta{RecordType: "event_msg", Event: "world_state"}, want: true},
+		{name: "turn_context 丢弃", meta: trace.TranscriptMeta{RecordType: "turn_context"}, want: true},
+		{name: "unknown 保留（服务端告警丢弃）", meta: trace.TranscriptMeta{RecordType: "unknown", Event: "x"}, want: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := a.IgnoreTranscriptLine(tc.meta); got != tc.want {
+			if got := adapter.IgnoreTranscriptLine(tc.meta); got != tc.want {
 				t.Fatalf("IgnoreTranscriptLine(%+v) = %v, want %v", tc.meta, got, tc.want)
 			}
 		})
@@ -64,8 +67,11 @@ func TestCodexAdapterIgnoreTranscriptLine(t *testing.T) {
 
 func TestClaudeAdapterIgnoreTranscriptLineNoop(t *testing.T) {
 	t.Parallel()
-	a := claudeAdapter{}
-	if a.IgnoreTranscriptLine(TranscriptMeta{RecordType: "event_msg", Event: "x"}) {
+	adapter, err := trace.LookupAdapter("claude")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if adapter.IgnoreTranscriptLine(trace.TranscriptMeta{RecordType: "event_msg", Event: "x"}) {
 		t.Fatal("claude 不应忽略任何记录")
 	}
 }
@@ -83,6 +89,8 @@ Expected: 编译失败，报 `codexAdapter does not implement AgentAdapter (miss
 ```go
 	TraceEventTaskStarted             = "task_started"
 	TraceEventTaskComplete            = "task_complete"
+	TraceEventTokenCount              = "token_count"
+	TraceRecordMessageUnknown         = "unknown record type"
 ```
 
 `internal/client/trace/adapter.go` 接口追加方法（放在 `StdoutAck` 之后）：
@@ -99,12 +107,15 @@ Expected: 编译失败，报 `codexAdapter does not implement AgentAdapter (miss
 `internal/client/trace/codex.go` 新增（放在 `codexRolloutRecordType` 函数之后）：
 
 ```go
-// codexEventMsgWhitelist event_msg 记录仅采集白名单事件。其余 event_msg
-// （token_count/agent_message/agent_reasoning/user_message/thread_settings_applied/
-// world_state 等）与 response_item 双源重复或纯噪音，客户端直接丢弃。
+// codexEventMsgWhitelist event_msg 记录不丢弃的白名单。task_complete/task_started 为任务
+// 生命周期标记；token_count 每条都带累计统计，上报后由服务端按固定 dedup key 覆盖写入
+// （D1a），库里只留最后一条。其余 event_msg（agent_message/agent_reasoning/
+// user_message/thread_settings_applied/world_state 等）与 response_item 双源重复或纯噪音，
+// 客户端直接丢弃。
 var codexEventMsgWhitelist = map[string]bool{
 	constant.TraceEventTaskStarted:  true,
 	constant.TraceEventTaskComplete: true,
+	constant.TraceEventTokenCount:   true,
 }
 
 func (codexAdapter) IgnoreTranscriptLine(meta TranscriptMeta) bool {
