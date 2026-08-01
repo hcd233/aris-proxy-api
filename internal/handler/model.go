@@ -81,7 +81,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 	}
 
 	rsp.Models = lo.Map(views, func(v *port.ModelView, _ int) *dto.ModelItem {
-	item := &dto.ModelItem{
+		item := &dto.ModelItem{
 			ID:              v.ID,
 			Alias:           v.Alias,
 			ModelID:         v.ModelID,
