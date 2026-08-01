@@ -15,10 +15,10 @@ func TestFakeRepo_PaginateByOwners_Isolation(t *testing.T) {
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"}); err != nil {
+	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"}); err != nil {
 		t.Fatalf("upsert s1: %v", err)
 	}
-	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2", Status: "active"}); err != nil {
+	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2"}); err != nil {
 		t.Fatalf("upsert s2: %v", err)
 	}
 
@@ -46,7 +46,7 @@ func TestFakeRepo_Events(t *testing.T) {
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"})
+	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"})
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestFakeRepo_Events_PreserveRecordIdentity(t *testing.T) {
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"})
+	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"})
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
@@ -138,32 +138,16 @@ func TestFakeRepo_Events_PreserveRecordIdentity(t *testing.T) {
 	}
 }
 
-func TestFakeRepo_MarkDone(t *testing.T) {
-	t.Parallel()
-	repo := NewFakeRepo()
-	ctx := context.Background()
-	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"}); err != nil {
-		t.Fatalf("upsert: %v", err)
-	}
-	if err := repo.MarkDone(ctx, "s1"); err != nil {
-		t.Fatalf("mark done: %v", err)
-	}
-	tr, _ := repo.FindBySessionID(ctx, "s1")
-	if tr.Status != "done" {
-		t.Fatalf("expected done, got %s", tr.Status)
-	}
-}
-
 func TestFakeRepo_PersistsParentTraceID(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	parent, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "parent-s1", APIKeyName: "key1", Status: "active"})
+	parent, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "parent-s1", APIKeyName: "key1"})
 	if err != nil {
 		t.Fatalf("upsert parent: %v", err)
 	}
-	child, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "child-s1", APIKeyName: "key1", ParentTraceID: parent.ID, Status: "active", Source: "subagent"})
+	child, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "child-s1", APIKeyName: "key1", ParentTraceID: parent.ID, Source: "subagent"})
 	if err != nil {
 		t.Fatalf("upsert child: %v", err)
 	}

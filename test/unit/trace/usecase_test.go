@@ -37,8 +37,8 @@ func TestReportTraceEvent_BatchPersistsAllRecordsAndDeduplicates(t *testing.T) {
 	}
 
 	tr, _ := repo.FindBySessionID(ctx, "s1")
-	if tr == nil || tr.Status != constant.TraceStatusDone {
-		t.Fatalf("expected done trace, got %+v", tr)
+	if tr == nil {
+		t.Fatalf("expected trace, got nil")
 	}
 	if n, _ := repo.CountEvents(ctx, tr.ID); n != int64(len(records)) {
 		t.Fatalf("expected %d events, got %d", len(records), n)
@@ -80,9 +80,6 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	tr, _ := repo.FindBySessionID(ctx, "s1")
 	if tr == nil {
 		t.Fatal("trace not created")
-	}
-	if tr.Status != "done" {
-		t.Fatalf("expected done, got %s", tr.Status)
 	}
 	if tr.APIKeyName != "key1" || tr.Model != "gpt-4o" || tr.CWD != "/work" {
 		t.Fatalf("unexpected trace fields: %+v", tr)
@@ -215,42 +212,12 @@ func TestReportTraceEvent_RejectsAgentMismatch(t *testing.T) {
 	}
 }
 
-func TestReportTraceEvent_ClaudeDoneOnSessionEndNotStop(t *testing.T) {
-	t.Parallel()
-	repo := NewFakeRepo()
-	h := command.NewReportTraceEventHandler(repo)
-	report := func(event, dedup string) {
-		t.Helper()
-		_, err := h.Handle(context.Background(), port.ReportTraceEventCommand{
-			SessionID: "s-claude-done", Agent: constant.TraceAgentClaude,
-			Records: []port.ReportTraceRecord{{
-				Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
-				HookEventName: event, Event: event, DedupKey: dedup,
-				Payload: []byte(`{"session_id":"s-claude-done"}`),
-			}},
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	report("Stop", "hook:c:1")
-	tr, _ := repo.FindBySessionID(context.Background(), "s-claude-done")
-	if tr == nil || tr.Status != constant.TraceStatusActive {
-		t.Fatalf("claude Stop must not finish trace, got %+v", tr)
-	}
-	report(constant.TraceEventSessionEnd, "hook:c:2")
-	tr, _ = repo.FindBySessionID(context.Background(), "s-claude-done")
-	if tr.Status != constant.TraceStatusDone {
-		t.Fatalf("claude SessionEnd must finish trace, got %+v", tr)
-	}
-}
-
 func TestListTraces_OwnerIsolation(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
 	ctx := context.Background()
-	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", Status: "active"})
-	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2", Status: "active"})
+	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"})
+	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2"})
 
 	listHandler := query.NewListTracesHandler(repo, newFakeAPIKeyRepo(map[uint][]string{
 		1: {"key1"},
@@ -352,9 +319,6 @@ func TestReportTraceEvent_SubagentChildMetadataAndDone(t *testing.T) {
 	}
 	if child.Model != "gpt-5" || child.CWD != "/work" {
 		t.Fatalf("unexpected child model/cwd: %+v", child)
-	}
-	if child.Status != constant.TraceStatusDone {
-		t.Fatalf("expected child done via task_complete, got %s", child.Status)
 	}
 }
 

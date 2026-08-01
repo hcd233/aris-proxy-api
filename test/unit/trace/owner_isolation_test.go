@@ -14,7 +14,7 @@ func TestTraceQueries_EnforceOwnerIsolation(t *testing.T) {
 	ctx := context.Background()
 	repo := NewFakeRepo()
 	traceRecord, err := repo.UpsertBySessionID(ctx, &domaintrace.Trace{
-		SessionID: "s1", APIKeyName: "key2", Status: "active",
+		SessionID: "s1", APIKeyName: "key2",
 	})
 	if err != nil {
 		t.Fatal(err)

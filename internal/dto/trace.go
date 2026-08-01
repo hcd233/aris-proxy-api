@@ -19,7 +19,6 @@ type TraceSummary struct {
 	APIKeyName    string    `json:"apiKeyName" doc:"归属 API Key"`
 	Model         string    `json:"model" doc:"模型"`
 	Source        string    `json:"source" doc:"startup/resume/clear/compact"`
-	Status        string    `json:"status" doc:"active/done"`
 	CreatedAt     time.Time `json:"createdAt" doc:"创建时间"`
 	UpdatedAt     time.Time `json:"updatedAt" doc:"更新时间"`
 }
@@ -34,7 +33,6 @@ type TraceDetail struct {
 	Model         string            `json:"model" doc:"模型"`
 	CWD           string            `json:"cwd" doc:"工作目录"`
 	Source        string            `json:"source" doc:"startup/resume/clear/compact"`
-	Status        string            `json:"status" doc:"active/done"`
 	Metadata      map[string]string `json:"metadata,omitempty" doc:"扩展字段"`
 	EventCount    int64             `json:"eventCount" doc:"事件数"`
 	CreatedAt     time.Time         `json:"createdAt" doc:"创建时间"`

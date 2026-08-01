@@ -5,19 +5,14 @@ import (
 	"context"
 
 	"github.com/samber/lo"
+	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
-
-// traceDoneEvents 按 agent 注册的完成事件集：命中即把 trace 置为 done。
-// 新 agent 接入在此登记。
-var traceDoneEvents = map[string][]string{
-	constant.TraceAgentCodex:  {constant.TraceEventStop, constant.TraceEventTaskComplete},
-	constant.TraceAgentClaude: {constant.TraceEventSessionEnd},
-}
 
 type reportTraceEventHandler struct {
 	repo trace.TraceRepository
@@ -39,8 +34,7 @@ func (h *reportTraceEventHandler) Handle(
 	if agent == "" {
 		agent = constant.TraceAgentCodex
 	}
-	doneEvents, ok := traceDoneEvents[agent]
-	if !ok {
+	if agent != constant.TraceAgentCodex && agent != constant.TraceAgentClaude {
 		return nil, ierr.New(ierr.ErrValidation, "unknown trace agent")
 	}
 	if len(cmd.Records) == 0 {
@@ -65,19 +59,7 @@ func (h *reportTraceEventHandler) Handle(
 	if err != nil {
 		return nil, err
 	}
-	results, isComplete := insertRecords(
-		ctx,
-		h.repo,
-		t.ID,
-		cmd.SessionID,
-		records,
-		doneEvents,
-	)
-	if isComplete {
-		if err := h.repo.MarkDone(ctx, cmd.SessionID); err != nil {
-			return results, err
-		}
-	}
+	results := insertRecords(ctx, h.repo, t.ID, cmd.SessionID, records)
 	return results, nil
 }
 
@@ -116,7 +98,6 @@ func (h *reportTraceEventHandler) ensureTrace(
 			Model:         cmd.Model,
 			CWD:           cmd.CWD,
 			Source:        source,
-			Status:        constant.TraceStatusActive,
 			Metadata:      metadata,
 		})
 	}
@@ -146,7 +127,6 @@ func (h *reportTraceEventHandler) ensureTrace(
 		Model:         modelName,
 		CWD:           cwd,
 		Source:        source,
-		Status:        existing.Status,
 		Metadata:      existing.Metadata,
 	})
 }
@@ -188,15 +168,25 @@ func insertRecords(
 	traceID uint,
 	sessionID string,
 	records []port.ReportTraceRecord,
-	doneEvents []string,
-) ([]port.ReportTraceRecordResult, bool) {
+) []port.ReportTraceRecordResult {
 	results := make([]port.ReportTraceRecordResult, 0, len(records))
-	isComplete := false
 	for _, record := range records {
 		result := port.ReportTraceRecordResult{DedupKey: record.DedupKey}
 		if !validRecord(record) {
 			result.Status = constant.TraceRecordStatusRejected
 			result.Message = constant.TraceRecordMessageInvalid
+			results = append(results, result)
+			continue
+		}
+		if record.RecordType == constant.TraceRolloutTypeUnknown {
+			// 未知记录类型：打 warning 便于发现 codex 新类型，不入库
+			logger.WithCtx(ctx).Warn("[Trace] unknown record dropped",
+				zap.String("sessionID", sessionID),
+				zap.String("event", record.Event),
+				zap.Int("payloadBytes", len(record.Payload)),
+			)
+			result.Status = constant.TraceRecordStatusRejected
+			result.Message = constant.TraceRecordMessageUnknown
 			results = append(results, result)
 			continue
 		}
@@ -224,11 +214,8 @@ func insertRecords(
 			result.Status = constant.TraceRecordStatusAccepted
 		}
 		results = append(results, result)
-		if result.Status != constant.TraceRecordStatusRejected && lo.Contains(doneEvents, record.Event) {
-			isComplete = true
-		}
 	}
-	return results, isComplete
+	return results
 }
 
 func validRecord(record port.ReportTraceRecord) bool {

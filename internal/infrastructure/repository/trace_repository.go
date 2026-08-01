@@ -33,7 +33,7 @@ func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 	return &trace.Trace{
 		ID: m.ID, Agent: m.Agent, SessionID: m.SessionID, APIKeyName: m.APIKeyName,
 		UserID: m.UserID, ParentTraceID: m.ParentTraceID, Model: m.Model, CWD: m.CWD, Source: m.Source,
-		Status: m.Status, Metadata: m.Metadata, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
+		Metadata: m.Metadata, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
 		DeletedAt: m.DeletedAt,
 	}
 }
@@ -42,7 +42,7 @@ func toTraceRecord(t *trace.Trace) *dbmodel.Trace {
 	return &dbmodel.Trace{
 		Agent: t.Agent, SessionID: t.SessionID, APIKeyName: t.APIKeyName,
 		UserID: t.UserID, ParentTraceID: t.ParentTraceID, Model: t.Model, CWD: t.CWD, Source: t.Source,
-		Status: t.Status, Metadata: t.Metadata,
+		Metadata: t.Metadata,
 	}
 }
 
@@ -52,7 +52,7 @@ func (r *traceRepository) UpsertBySessionID(ctx context.Context, t *trace.Trace)
 	err := db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: constant.FieldSessionID}},
 		DoUpdates: clause.AssignmentColumns([]string{
-			constant.FieldModel, constant.FieldCWD, constant.FieldSource, constant.FieldStatus,
+			constant.FieldModel, constant.FieldCWD, constant.FieldSource,
 			constant.FieldUpdatedAt, constant.FieldMetadata, constant.FieldUserID, constant.FieldAPIKeyName,
 			constant.FieldParentTraceID,
 		}),
@@ -117,16 +117,6 @@ func (r *traceRepository) Delete(ctx context.Context, id uint) error {
 	})
 }
 
-func (r *traceRepository) MarkDone(ctx context.Context, sessionID string) error {
-	db := r.db.WithContext(ctx)
-	err := db.Model(&dbmodel.Trace{}).Where(constant.FieldSessionID+" = ?", sessionID).
-		Updates(map[string]any{constant.FieldStatus: constant.TraceStatusDone, constant.FieldUpdatedAt: time.Now().UTC()}).Error
-	if err != nil {
-		return ierr.Wrap(ierr.ErrDBUpdate, err, "mark trace done")
-	}
-	return nil
-}
-
 func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) (bool, error) {
 	db := r.db.WithContext(ctx)
 	rec := &dbmodel.TraceEvent{
@@ -144,7 +134,17 @@ func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) 
 	}
 	query := db
 	if e.DedupKey != "" {
-		query = query.Clauses(clause.OnConflict{DoNothing: true})
+		if e.RecordType == constant.TraceRecordTypeEventMsg && e.Event == constant.TraceEventTokenCount {
+			// token_count 固定 dedup key（客户端 D1a）：同 key 冲突时覆盖 payload，最终保留最后一条
+			query = query.Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: constant.FieldDedupKey}},
+				DoUpdates: clause.AssignmentColumns([]string{
+					constant.FieldTraceID, constant.FieldPayload, constant.FieldUpdatedAt,
+				}),
+			})
+		} else {
+			query = query.Clauses(clause.OnConflict{DoNothing: true})
+		}
 	}
 	result := query.Create(rec)
 	if result.Error != nil {
