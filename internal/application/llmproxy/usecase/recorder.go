@@ -99,7 +99,6 @@ func (u responseTokenUsage) reportable() int64 {
 // status=failed/incomplete 的 in-band 失败原因。
 type callOutcome struct {
 	model               *aggregate.Model
-	exposedModel        string
 	endpoint            string
 	upstreamProtocol    enum.ProtocolType
 	apiProtocol         enum.ProtocolType

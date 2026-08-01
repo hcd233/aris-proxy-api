@@ -163,7 +163,8 @@ const (
 	WhereIDEquals = "id = ?"
 
 	// ── Migration backfill (model id) ──
-	MigrationModelIDEmptyWhere = "model_id IS NULL OR model_id = ''"
+	MigrationModelIDEmptyWhere         = "model_id IS NULL OR model_id = ''"
+	MigrationModelCallAuditLegacyIndex = "idx_model_created_at"
 
 	// ── Session delete error messages ──
 	SessionDeleteErrorFindFailed   = "failed to find session"

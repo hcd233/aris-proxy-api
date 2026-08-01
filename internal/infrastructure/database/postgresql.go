@@ -61,18 +61,8 @@ func ManualMigrations(ctx context.Context) error {
 
 	// model_call_audits：旧库存在 model 列（存 alias）与 model_id 列（uint 主键）。
 	// 先删 uint model_id 列，再把 model 列改名为 model_id。
-	// DropColumn 前必须守卫 model_id 列存在性：PG DDL 按语句自动提交，
-	// 若 Drop 提交后 Rename 前进程崩溃，重跑时 model 列仍在但 model_id 已不存在，
-	// 无守卫的 DropColumn 会报 "column does not exist" 卡死（幂等缺口）。
-	if migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModel) {
-		if migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModelID) {
-			if err := migrator.DropColumn(&model.ModelCallAudit{}, constant.FieldModelID); err != nil {
-				return err
-			}
-		}
-		if err := migrator.RenameColumn(&model.ModelCallAudit{}, constant.FieldModel, constant.FieldModelID); err != nil {
-			return err
-		}
+	if err := migrateModelCallAuditColumns(migrator); err != nil {
+		return err
 	}
 
 	// sessions：models 列改名为 model_ids
@@ -91,8 +81,33 @@ func ManualMigrations(ctx context.Context) error {
 	return nil
 }
 
-// BackfillModelIDs 回填 models.model_id = alias，幂等（仅空值行）。
+// migrateModelCallAuditColumns 迁移 model_call_audits 表列：删旧 uint model_id + rename model→model_id + 清理遗留索引。
 //
+// DropColumn 前必须守卫 model_id 列存在性：PG DDL 按语句自动提交，
+// 若 Drop 提交后 Rename 前进程崩溃，重跑时 model 列仍在但 model_id 已不存在，
+// 无守卫的 DropColumn 会报 "column does not exist" 卡死（幂等缺口）。
+// 旧 model 列的 idx_model_created_at 索引随 rename 残留在 model_id 列上，
+// 需显式删除，否则与 AutoMigrate 新建的 idx_model_id_created_at 重复（写放大）。
+func migrateModelCallAuditColumns(migrator gorm.Migrator) error {
+	if !migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModel) {
+		return nil
+	}
+	if migrator.HasColumn(&model.ModelCallAudit{}, constant.FieldModelID) {
+		if err := migrator.DropColumn(&model.ModelCallAudit{}, constant.FieldModelID); err != nil {
+			return err
+		}
+	}
+	if err := migrator.RenameColumn(&model.ModelCallAudit{}, constant.FieldModel, constant.FieldModelID); err != nil {
+		return err
+	}
+	if migrator.HasIndex(&model.ModelCallAudit{}, constant.MigrationModelCallAuditLegacyIndex) {
+		if err := migrator.DropIndex(&model.ModelCallAudit{}, constant.MigrationModelCallAuditLegacyIndex); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // 必须在 AutoMigrate 之后执行（依赖新列已存在）。
 func BackfillModelIDs(ctx context.Context) error {
 	db := InitDatabase().WithContext(ctx)

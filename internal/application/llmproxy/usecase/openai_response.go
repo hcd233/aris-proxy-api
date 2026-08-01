@@ -105,7 +105,6 @@ func (u *openAIUseCase) forwardResponseNativeUnary(ctx context.Context, req *dto
 	var rsp dto.OpenAICreateResponseRsp
 	out := callOutcome{
 		model:               m,
-		exposedModel:        lo.FromPtr(req.Body.Model),
 		endpoint:            ep.Name(),
 		upstreamProtocol:    enum.ProtocolOpenAIResponse,
 		apiProtocol:         enum.ProtocolOpenAIResponse,
@@ -143,17 +142,16 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 		Protocol: enum.ProtocolKindOpenAI,
 		Open: func(ctx context.Context) (port.Stream, error) {
 			return &responseViaChatStream{
-				u:            u,
-				ctx:          ctx,
-				req:          req,
-				m:            m,
-				endpoint:     endpoint,
-				exposedModel: exposedModel,
-				responseID:   responseID,
-				stream:       stream,
-				timer:        newStreamTimer(),
-				conv:         &converter.ResponseProtocolConverter{},
-				itemState:    converter.NewStreamItemState(),
+				u:          u,
+				ctx:        ctx,
+				req:        req,
+				m:          m,
+				endpoint:   endpoint,
+				responseID: responseID,
+				stream:     stream,
+				timer:      newStreamTimer(),
+				conv:       &converter.ResponseProtocolConverter{},
+				itemState:  converter.NewStreamItemState(),
 			}, nil
 		},
 	}, nil
@@ -187,7 +185,6 @@ func (u *openAIUseCase) forwardResponseViaChatUnary(ctx context.Context, req *dt
 	u.storeResponseFromRsp(ctx, req, rsp, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
-		exposedModel:        exposedModel,
 		endpoint:            endpoint,
 		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
 		apiProtocol:         enum.ProtocolOpenAIResponse,
@@ -263,7 +260,6 @@ func (u *openAIUseCase) forwardResponseViaAnthropicUnary(ctx context.Context, re
 	u.storeResponseFromRsp(ctx, req, rsp, nil, m.ModelID())
 	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, callOutcome{
 		model:               m,
-		exposedModel:        exposedModel,
 		endpoint:            endpoint,
 		upstreamProtocol:    enum.ProtocolAnthropicMessage,
 		apiProtocol:         enum.ProtocolOpenAIResponse,
@@ -381,7 +377,6 @@ func (s *responseNativeStream) finalize(sink port.EventSink, proxyErr error) {
 
 	recordModelCall(s.ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
-		exposedModel:        lo.FromPtr(s.req.Body.Model),
 		endpoint:            s.ep.Name(),
 		upstreamProtocol:    enum.ProtocolOpenAIResponse,
 		apiProtocol:         enum.ProtocolOpenAIResponse,
@@ -434,7 +429,6 @@ func (s *responseViaChatStream) Read(ctx context.Context, sink port.EventSink) e
 	s.u.storeResponseFromRsp(ctx, s.req, rsp, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
-		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
 		upstreamProtocol:    enum.ProtocolOpenAIChatCompletion,
 		apiProtocol:         enum.ProtocolOpenAIResponse,
@@ -469,14 +463,12 @@ type responseViaAnthropicStream struct {
 }
 
 func newResponseViaAnthropicStream(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, stream io.ReadCloser, endpoint string) *responseViaAnthropicStream {
-	exposedModel := lo.FromPtr(req.Body.Model)
 	h := &responseViaAnthropicStream{
 		u:             u,
 		ctx:           ctx,
 		req:           req,
 		m:             m,
 		endpoint:      endpoint,
-		exposedModel:  exposedModel,
 		responseID:    fmt.Sprintf(constant.ResponseIDTemplate, uuid.New().String()),
 		chunkID:       fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
 		stream:        stream,
@@ -535,7 +527,6 @@ func (s *responseViaAnthropicStream) finalize(sink port.EventSink, anthropicMsg 
 	s.u.storeResponseFromRsp(s.ctx, s.req, rsp, err, s.m.ModelID())
 	recordModelCall(s.ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
-		exposedModel:        s.exposedModel,
 		endpoint:            s.endpoint,
 		upstreamProtocol:    enum.ProtocolAnthropicMessage,
 		apiProtocol:         enum.ProtocolOpenAIResponse,
