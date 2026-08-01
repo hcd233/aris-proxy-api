@@ -72,10 +72,10 @@ func (h *modelUsageByUserHandler) Handle(ctx context.Context, q ModelUsageByUser
 
 func aggregateModelUsage(points []*modelcall.TokenThroughputPoint) []*dto.ModelUsageItem {
 	groups := lo.GroupBy(points, func(p *modelcall.TokenThroughputPoint) string {
-		return p.Model
+		return p.ModelID
 	})
 	return lo.Map(lo.Keys(groups), func(model string, _ int) *dto.ModelUsageItem {
-		item := &dto.ModelUsageItem{Model: model}
+		item := &dto.ModelUsageItem{ModelID: model}
 		for _, p := range groups[model] {
 			item.InputTokens += p.InputTokens
 			item.OutputTokens += p.OutputTokens

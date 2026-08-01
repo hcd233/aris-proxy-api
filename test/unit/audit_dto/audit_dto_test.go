@@ -36,7 +36,7 @@ func TestAuditLogItem_JSONTags(t *testing.T) {
 	item := dto.AuditLogItem{
 		ID:                  1,
 		CreatedAt:           createdAt,
-		Model:               "gpt-4o",
+		ModelID:             "gpt-4o",
 		UpstreamProtocol:    "openai-chat-completion",
 		APIProtocol:         "openai-chat-completion",
 		Endpoint:            "openai-ep-1",
@@ -63,10 +63,10 @@ func TestAuditLogItem_JSONTags(t *testing.T) {
 	} else if v != "abc123" {
 		t.Errorf("traceId = %v, want abc123", v)
 	}
-	if v, ok := obj["model"]; !ok {
-		t.Errorf("model field missing")
+	if v, ok := obj["modelId"]; !ok {
+		t.Errorf("modelId field missing")
 	} else if v != "gpt-4o" {
-		t.Errorf("model = %v, want gpt-4o", v)
+		t.Errorf("modelId = %v, want gpt-4o", v)
 	}
 	if v, ok := obj["inputTokens"]; !ok {
 		t.Errorf("inputTokens field missing")

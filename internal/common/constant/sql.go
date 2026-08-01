@@ -114,9 +114,9 @@ var (
 	AuditRepoFieldIDQualified        = "model_call_audits.id"
 	AuditRepoFieldCreatedAtQualified = "model_call_audits.created_at"
 
-	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldModel, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, AuditRepoFieldCreatedAtQualified}
+	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, AuditRepoFieldCreatedAtQualified}
 
-	AuditQueryFields = []string{FieldTraceID, FieldModel}
+	AuditQueryFields = []string{FieldTraceID, FieldModelID}
 
 	AuditFilterFieldUser   = "user"
 	AuditFilterFieldModel  = "model"
@@ -180,7 +180,7 @@ var (
 
 	// ── Audit filter field SQL column names ──
 	AuditFilterUserSQLColumn   = "u.name"
-	AuditFilterModelSQLColumn  = "model"
+	AuditFilterModelSQLColumn  = "model_id"
 	AuditFilterStatusSQLColumn = "upstream_status_code"
 
 	// ── Audit filter JOIN constants (for paginate queries without alias) ──
@@ -193,8 +193,8 @@ var (
 	AuditDistinctJoinAPIKey   = "JOIN proxy_api_keys pak ON mca.api_key_id = pak.id"
 	AuditDistinctJoinUser     = "JOIN users u ON pak.user_id = u.id"
 	AuditDistinctWhereUser    = "u.name LIKE ? OR u.email LIKE ?"
-	AuditDistinctWhereModel   = "model LIKE ?"
-	AuditDistinctSelectModel  = "DISTINCT model"
+	AuditDistinctWhereModel   = "model_id LIKE ?"
+	AuditDistinctSelectModel  = "DISTINCT model_id"
 	AuditDistinctSelectStatus = "DISTINCT upstream_status_code::text"
 	AuditDistinctLimit        = 50
 

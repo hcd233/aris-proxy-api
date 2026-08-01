@@ -15,7 +15,7 @@ import (
 type AuditLogView struct {
 	ID                       uint
 	CreatedAt                time.Time
-	Model                    string
+	ModelID                  string
 	UpstreamProtocol         string
 	APIProtocol              string
 	Endpoint                 string
