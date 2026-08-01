@@ -693,5 +693,9 @@
   "trace.expand_json": "展开原始 JSON",
   "trace.collapse_json": "收起原始 JSON",
   "trace.system_prompt": "系统提示词",
-  "trace.tools": "工具"
+  "trace.tools": "工具",
+  "monitor.request_tps": "请求Token吞吐",
+  "monitor.request_tps_input": "输入 tok/s",
+  "monitor.request_tps_output": "输出 tok/s",
+  "monitor.success_rate": "成功率"
 }
