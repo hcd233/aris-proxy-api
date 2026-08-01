@@ -13,11 +13,12 @@
 
 ## 目标
 
-1. **event_msg 白名单采集**：客户端只采集 `task_complete` + `task_started`，其余 type（含未来可能出现的 `world_state`）不采集、不上报、不入库。
+1. **event_msg 白名单采集**：客户端采集 `task_complete` + `task_started` + `token_count`（token_count 仅保留最后一条——每条都带完整累计统计，最后一条即会话汇总），其余 type（含未来可能出现的 `world_state`）不采集。
 2. **turn_context 不采集**。
-3. **hook 纯触发**：SessionStart / Stop / SubagentStop 继续安装、继续触发 transcript 增量读取，但不再生成任何 hook 记录（trace_events 无 `hook_event` 类型行）。
-4. **status 彻底移除**：`traces.status` 字段、done 判定链路、前端状态列/徽标全部删除。
-5. **存量清洗**：生产库删除已确认冗余的旧数据（event_msg 非白名单 234 条、turn_context 12 条已清洗；hook_event 313 条待清洗）。
+3. **unknown 服务端告警丢弃**：unknown 记录照常上报，服务端打 warning 日志后丢弃（便于发现 codex 新记录类型，但不入库）。
+4. **hook 纯触发**：SessionStart / Stop / SubagentStop 继续安装、继续触发 transcript 增量读取，但不再生成任何 hook 记录（trace_events 无 `hook_event` 类型行）。
+5. **status 彻底移除**：`traces.status` 字段、done 判定链路、前端状态列/徽标全部删除。
+6. **存量清洗**：生产库删除已确认冗余的旧数据（event_msg 非白名单 234 条、turn_context 12 条已清洗；hook_event 313 条待清洗）。
 
 ## 非目标
 
@@ -34,12 +35,24 @@
 
 ```go
 // IgnoreTranscriptLine 返回 true 表示该行 transcript 记录不采集。
-// codex：event_msg 仅放行 task_complete/task_started；turn_context 全部忽略。
+// codex：event_msg 仅放行 task_complete/task_started/token_count；turn_context 全部忽略。
 // claude：返回 false（现状不变）。
 IgnoreTranscriptLine(meta TranscriptMeta) bool
 ```
 
-调用点：`RolloutReader.parseRolloutLines` 在 `r.rolloutRecord(...)` 之后判断，跳过则 `continue`（不 Append、不产生 PendingRecord）。
+调用点：`RolloutReader.parseRolloutLines` 在 `r.rolloutRecord(...)` 之前判断，跳过则 `continue`（不 Append、不产生 PendingRecord）。
+
+### D1a. token_count 保留最后一条（固定 dedup key + 服务端覆盖）
+
+token_count 每条都带 `total_token_usage` 累计统计（实测同会话内 total_tokens 递增），**最后一条即整个会话的 token 汇总**，中间增量全部冗余。实现：
+
+- 客户端：`RolloutDedupKey` 对 `event_msg`+`token_count` 返回**固定 key** `token_count:{session_id}`（不随行号/内容变化）。
+- 服务端：`InsertEvent` 对 `RecordType=event_msg && Event=token_count` 的记录改用 `ON CONFLICT (dedup_key) DO UPDATE`（覆盖 payload/updated_at），其余记录保持 `DO NOTHING`。
+- 效果：同一会话的 token_count 不断覆盖，最终库里只有最后一条。
+
+### D1b. unknown 服务端告警丢弃
+
+unknown 记录（codex 未来可能出现的新记录类型）客户端**照常上报**（不能过滤，否则服务端无法发现新类型），服务端在 `insertRecords` 中识别 `RecordType=unknown`：打 warning 日志（含 session、payload 摘要）+ 标记 rejected 不入库。
 
 ### D2. hook 元数据 per-session 持久化（仅 codex）
 
@@ -63,7 +76,7 @@ IgnoreTranscriptLine(meta TranscriptMeta) bool
 
 ### D4. task_complete / task_started 保留为纯事件
 
-移除 done 判定后，`task_complete` / `task_started` 不再承担状态机职责，仅作为时间线上任务生命周期标记（前端普通卡片）。event_msg 白名单仍保留两者，为未来展示"任务开始/完成时间点"留数据。
+移除 done 判定后，`task_complete` / `task_started` 不再承担状态机职责，仅作为时间线上任务生命周期标记（前端普通卡片）。event_msg 白名单仍保留两者，为未来展示"任务开始/完成时间点"留数据。`token_count` 按 D1a 保留会话最终累计统计（同属 event_msg，固定 dedup key 覆盖写入）。
 
 ## 改造后数据流
 
@@ -76,14 +89,17 @@ codex CLI
   │                        ├─ session_meta        → 采集（dedup 稳定键）
   │                        ├─ turn_context        → IgnoreTranscriptLine=true，丢弃
   │                        ├─ response_item       → 采集
-  │                        ├─ event_msg           → 白名单校验，仅 task_complete/task_started
-  │                        └─ unknown             → 采集（现状不变）
+  │                        ├─ event_msg           → 白名单校验：task_complete/task_started 采集；
+  │                        │                        token_count 采集但固定 dedup key（服务端覆盖，只留最后一条）；
+  │                        │                        其余 type 丢弃
+  │                        └─ unknown             → 采集上报，服务端 warning + 丢弃
   │
   │ claude CLI：Ingest(claude 分支) 保持现状 —— 生成 hook 记录 + 触发 ReadNew
   ▼
 spool → flush → ingestBatch{SessionID, Model, CWD, Source, Records[]}
   ▼
-服务端 report_trace_event：Upsert traces（元数据） + insert trace_events（rollout 记录）
+服务端 report_trace_event：Upsert traces（元数据） + insert trace_events（rollout 记录；
+  token_count 覆盖写入、unknown 拒绝）
   ▼
 前端：/api/v1/trace/list + /api/v1/trace/event/list（无 status、无 hook_event）
 ```
@@ -94,11 +110,11 @@ spool → flush → ingestBatch{SessionID, Model, CWD, Source, Records[]}
 
 | 文件 | 删除内容 |
 |------|---------|
-| `internal/common/constant/sql.go` | `TraceStatusActive`、`TraceStatusDone`（保留 `TraceRecordStatus*` 与 event 常量） |
+| `internal/common/constant/sql.go` | `TraceStatusActive`、`TraceStatusDone`（保留 `TraceRecordStatus*` 与 event 常量）；**新增** `TraceEventTokenCount`、`TraceRecordMessageUnknown` |
 | `internal/infrastructure/database/model/trace.go` | `Trace.Status` 字段 |
-| `internal/infrastructure/repository/trace_repository.go` | `m.Status`/`t.Status` 赋值 |
+| `internal/infrastructure/repository/trace_repository.go` | `m.Status`/`t.Status` 赋值；`MarkDone`；`UpsertBySessionID` 的 `AssignmentColumns` 删 `FieldStatus`；**新增** `InsertEvent` 对 token_count 记录 `DO UPDATE` 覆盖 |
 | `internal/domain/trace/repository.go` | `Trace.Status` 字段、`MarkDone` 方法声明 |
-| `internal/application/trace/command/report_trace_event.go` | `traceDoneEvents`、`doneEvents` 参数、`Status: Active`/`existing.Status`、`isComplete` 判定、`MarkDone` 调用 |
+| `internal/application/trace/command/report_trace_event.go` | `traceDoneEvents`、`doneEvents` 参数、`Status: Active`/`existing.Status`、`isComplete` 判定、`MarkDone` 调用；**新增** unknown 记录 warning + rejected |
 | `internal/application/trace/query/get_trace.go` / `list_traces.go` | `Status` 映射 |
 | `internal/application/trace/port/handler.go` | 视图类型 `Status` 字段 |
 | `internal/handler/trace.go` | `TraceSummary`/`TraceDetail` 构造中的 `Status`（保留 `ReportTraceRecordResult.Status`） |
@@ -109,9 +125,9 @@ spool → flush → ingestBatch{SessionID, Model, CWD, Source, Records[]}
 | 文件 | 改动 |
 |------|------|
 | `internal/client/trace/adapter.go` | `AgentAdapter` 接口新增 `IgnoreTranscriptLine(meta TranscriptMeta) bool` |
-| `internal/client/trace/codex.go` | 实现 `IgnoreTranscriptLine`：event_msg 白名单（task_complete/task_started）+ turn_context 忽略；导出 event_msg 白名单常量或函数 |
+| `internal/client/trace/codex.go` | 实现 `IgnoreTranscriptLine`：event_msg 白名单（task_complete/task_started/token_count）+ turn_context 忽略 |
 | `internal/client/trace/claude.go` | 实现 `IgnoreTranscriptLine` 返回 false |
-| `internal/client/trace/rollout.go` | `parseRolloutLines` 跳过被忽略行；`rolloutRecord` 不需要改（过滤在调用处） |
+| `internal/client/trace/rollout.go` | `parseRolloutLines` 跳过被忽略行；`RolloutDedupKey` 对 token_count 返回固定 key |
 | `internal/client/trace/ingest.go` | **codex 分支**：hook 不再 `spool.Append` hook 记录，SessionStart/Stop 仍触发 `ReadNew`，写 per-session 元数据；`flush`/`flushSubagent` 的 Model/CWD/Source 改从状态读取。**claude 分支**：原逻辑不变 |
 
 ### 前端
