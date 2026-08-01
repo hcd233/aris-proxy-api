@@ -216,7 +216,7 @@ func (h *traceHandler) HandleListTraces(ctx context.Context, req *dto.ListTraces
 	rsp.Traces = lo.Map(views, func(item *port.TraceSummaryView, _ int) *dto.TraceSummary {
 		return &dto.TraceSummary{
 			ID: item.ID, SessionID: item.SessionID, ParentTraceID: item.ParentTraceID, Agent: item.Agent, APIKeyName: item.APIKeyName,
-			Model: item.Model, Source: item.Source, Status: item.Status, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+			Model: item.Model, Source: item.Source, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
 		}
 	})
 	rsp.PageInfo = pageInfo
@@ -238,7 +238,7 @@ func (h *traceHandler) HandleGetTrace(ctx context.Context, req *dto.GetTraceReq)
 	}
 	rsp.Trace = &dto.TraceDetail{
 		ID: view.ID, SessionID: view.SessionID, ParentTraceID: view.ParentTraceID, Agent: view.Agent, APIKeyName: view.APIKeyName,
-		Model: view.Model, CWD: view.CWD, Source: view.Source, Status: view.Status,
+		Model: view.Model, CWD: view.CWD, Source: view.Source,
 		Metadata: view.Metadata, EventCount: view.EventCount, CreatedAt: view.CreatedAt, UpdatedAt: view.UpdatedAt,
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)

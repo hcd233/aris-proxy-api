@@ -42,7 +42,6 @@ func (h *getTraceHandler) Handle(
 		Model:         item.Model,
 		CWD:           item.CWD,
 		Source:        item.Source,
-		Status:        item.Status,
 		Metadata:      item.Metadata,
 		EventCount:    count,
 		CreatedAt:     item.CreatedAt,

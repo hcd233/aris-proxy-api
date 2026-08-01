@@ -14,15 +14,29 @@ import (
 	client "github.com/hcd233/aris-proxy-api/internal/client/trace"
 )
 
-func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
+func TestCodexHook_TriggersTranscriptReportWithoutHookRecords(t *testing.T) {
 	t.Parallel()
 	var mu sync.Mutex
-	seen := map[string]bool{}
-	var agents []string
+	var gotBatch struct {
+		Agent   string `json:"agent"`
+		Model   string `json:"model"`
+		CWD     string `json:"cwd"`
+		Source  string `json:"source"`
+		Records []struct {
+			Source   string `json:"source"`
+			Event    string `json:"hook_event_name"`
+			DedupKey string `json:"dedup_key"`
+		} `json:"records"`
+	}
+	var requestCount int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Agent   string `json:"agent"`
+			Model   string `json:"model"`
+			CWD     string `json:"cwd"`
+			Source  string `json:"source"`
 			Records []struct {
+				Source   string `json:"source"`
 				Event    string `json:"hook_event_name"`
 				DedupKey string `json:"dedup_key"`
 			} `json:"records"`
@@ -32,12 +46,12 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 			return
 		}
 		results := make([]client.RecordResult, 0, len(request.Records))
-		mu.Lock()
-		agents = append(agents, request.Agent)
-		for _, record := range request.Records {
-			seen[record.Event] = true
-			results = append(results, client.RecordResult{DedupKey: record.DedupKey, Status: "accepted"})
+		for _, rec := range request.Records {
+			results = append(results, client.RecordResult{DedupKey: rec.DedupKey, Status: "accepted"})
 		}
+		mu.Lock()
+		requestCount++
+		gotBatch = request
 		mu.Unlock()
 		data, err := sonic.Marshal(struct {
 			Results []client.RecordResult `json:"results"`
@@ -62,32 +76,60 @@ func TestCodexHook_PersistsAndReportsAllEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 	binary := buildTraceClient(t)
-	events := []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"}
-	for _, event := range events {
-		payload := `{"hook_event_name":"` + event + `","session_id":"hook-test-session","turn_id":"turn-1"}`
-		stdout := runTraceIngest(t, binary, home, "codex", payload)
-		if event == "Stop" && stdout != "{}" {
-			t.Fatalf("Stop stdout = %q, want {}", stdout)
-		}
-		if event != "Stop" && stdout != "" {
-			t.Fatalf("%s stdout = %q, want empty", event, stdout)
-		}
+
+	// 预置 transcript：codex hook 纯触发后只上报 rollout 记录
+	transcriptPath := filepath.Join(home, "rollout.jsonl")
+	transcript := strings.Join([]string{
+		`{"type":"session_meta","payload":{"id":"hook-test-session","type":"session_meta"}}`,
+		`{"type":"response_item","payload":{"id":"r1","type":"message","role":"assistant","content":[{"type":"output_text","text":"hi"}]}}`,
+		`{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":10}}}}`,
+		`{"type":"event_msg","payload":{"type":"task_complete"}}`,
+		`{"type":"event_msg","payload":{"type":"agent_message","message":"noise"}}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(transcriptPath, []byte(transcript), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// SessionStart 触发：写元数据 + 读 transcript → 上报 rollout 记录
+	sessionStart := `{"hook_event_name":"SessionStart","session_id":"hook-test-session","model":"glm-5.2","cwd":"/work","source":"startup","transcript_path":"` + transcriptPath + `"}`
+	if stdout := runTraceIngest(t, binary, home, "codex", sessionStart); stdout != "" {
+		t.Fatalf("SessionStart stdout = %q, want empty", stdout)
+	}
+	// Stop 触发（无 transcript_path）：不产生新批次（无记录可发）
+	stop := `{"hook_event_name":"Stop","session_id":"hook-test-session","turn_id":"turn-1"}`
+	if stdout := runTraceIngest(t, binary, home, "codex", stop); stdout != "{}" {
+		t.Fatalf("Stop stdout = %q, want {}", stdout)
 	}
 
 	mu.Lock()
 	defer mu.Unlock()
-	for _, event := range events {
-		if !seen[event] {
-			t.Errorf("event %s was not reported", event)
+	if requestCount != 1 {
+		t.Fatalf("requests = %d, want 1（仅 SessionStart 触发产生批次，Stop 无记录不发）", requestCount)
+	}
+	if gotBatch.Agent != "codex" {
+		t.Fatalf("batch agent = %q, want codex", gotBatch.Agent)
+	}
+	if gotBatch.Model != "glm-5.2" || gotBatch.CWD != "/work" || gotBatch.Source != "startup" {
+		t.Fatalf("batch 元数据 = %+v", gotBatch)
+	}
+	if len(gotBatch.Records) == 0 {
+		t.Fatal("无记录上报")
+	}
+	var events []string
+	for _, rec := range gotBatch.Records {
+		if rec.Source != "rollout" {
+			t.Fatalf("出现非 rollout 记录: %+v", rec)
+		}
+		events = append(events, rec.Event)
+	}
+	joined := strings.Join(events, "|")
+	for _, want := range []string{"session_meta", "message", "token_count", "task_complete"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("事件 %s 未上报，实际: %s", want, joined)
 		}
 	}
-	if len(agents) == 0 {
-		t.Fatal("no envelopes reported")
-	}
-	for _, agent := range agents {
-		if agent != "codex" {
-			t.Fatalf("batch agent = %q, want codex", agent)
-		}
+	if strings.Contains(joined, "agent_message") || strings.Contains(joined, "SessionStart") || strings.Contains(joined, "Stop") {
+		t.Fatalf("不应出现被过滤事件或 hook 事件: %s", joined)
 	}
 }
 
