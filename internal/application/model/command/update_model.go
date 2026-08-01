@@ -25,7 +25,7 @@ func NewUpdateModelHandler(repo llmproxy.ModelRepository) port.UpdateModelHandle
 func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCommand) error {
 	log := logger.WithCtx(ctx)
 
-	m, err := h.repo.FindByID(ctx, cmd.ModelID)
+	m, err := h.repo.FindByID(ctx, cmd.ID)
 	if err != nil {
 		log.Error("[ModelCommand] Find model for update failed", zap.Error(err))
 		return err
@@ -40,7 +40,7 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 		aliasPtr = &a
 	}
 
-	if uerr := m.Update(aliasPtr, cmd.ModelName, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens, cmd.Capabilities); uerr != nil {
+	if uerr := m.Update(aliasPtr, cmd.ModelName, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens, cmd.Capabilities, cmd.ModelID); uerr != nil {
 		return uerr
 	}
 
@@ -49,6 +49,6 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 		return err
 	}
 
-	log.Info("[ModelCommand] Update model success", zap.Uint("id", cmd.ModelID))
+	log.Info("[ModelCommand] Update model success", zap.Uint("id", cmd.ID))
 	return nil
 }

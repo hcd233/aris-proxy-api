@@ -216,6 +216,7 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	model.SetModelID(m.ModelID)
 	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return model, nil
 }
@@ -224,6 +225,7 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 	return &dbmodel.Model{
 		ID:              m.AggregateID(),
 		Alias:           m.Alias().String(),
+		ModelID:         m.ModelID(),
 		ModelName:       m.ModelName(),
 		EndpointID:      m.EndpointID(),
 		Enabled:         m.Enabled(),
@@ -263,6 +265,7 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 	capJSON, _ := sonic.Marshal(m.Capabilities()) //nolint:errcheck // []string 序列化不会失败，且值已经聚合校验
 	updates := map[string]any{
 		constant.FieldModelAlias:           m.Alias().String(),
+		constant.FieldModelID:              m.ModelID(),
 		constant.FieldModelModelName:       m.ModelName(),
 		constant.FieldModelEndpointID:      m.EndpointID(),
 		constant.FieldModelEnabled:         m.Enabled(),
