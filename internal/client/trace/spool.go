@@ -24,7 +24,6 @@ type PendingRecord struct {
 	AgentType       string                 `json:"agent_type,omitempty"`
 	Model           string                 `json:"model,omitempty"`
 	CWD             string                 `json:"cwd,omitempty"`
-	SessionSource   string                 `json:"session_source,omitempty"`
 	Source          string                 `json:"source"`
 	RecordType      string                 `json:"record_type"`
 	Event           string                 `json:"hook_event_name,omitempty"`

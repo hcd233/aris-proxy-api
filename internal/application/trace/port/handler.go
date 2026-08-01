@@ -16,7 +16,6 @@ type TraceSummaryView struct {
 	Agent         string
 	APIKeyName    string
 	Model         string
-	Source        string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -30,7 +29,6 @@ type TraceDetailView struct {
 	APIKeyName    string
 	Model         string
 	CWD           string
-	Source        string
 	Metadata      map[string]string
 	EventCount    int64
 	CreatedAt     time.Time
@@ -73,11 +71,9 @@ type ReportTraceEventCommand struct {
 	Agent           string
 	Model           string
 	CWD             string
-	Source          string
 	AgentID         string
 	AgentType       string
 	APIKeyName      string
-	UserID          uint
 	Records         []ReportTraceRecord
 }
 

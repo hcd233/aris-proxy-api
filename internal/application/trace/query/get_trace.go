@@ -41,7 +41,6 @@ func (h *getTraceHandler) Handle(
 		APIKeyName:    item.APIKeyName,
 		Model:         item.Model,
 		CWD:           item.CWD,
-		Source:        item.Source,
 		Metadata:      item.Metadata,
 		EventCount:    count,
 		CreatedAt:     item.CreatedAt,

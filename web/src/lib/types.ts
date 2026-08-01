@@ -651,7 +651,6 @@ export interface TraceSummary {
   agent: string;
   apiKeyName: string;
   model: string;
-  source: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -663,7 +662,6 @@ export interface TraceDetail {
   apiKeyName: string;
   model: string;
   cwd: string;
-  source: string;
   metadata?: Record<string, string>;
   eventCount: number;
   createdAt: string;

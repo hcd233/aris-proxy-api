@@ -54,7 +54,7 @@ func TestE2E_TraceReportFlow(t *testing.T) {
 	if tr.Agent != constant.TraceAgentClaude {
 		t.Fatalf("trace agent = %q, want claude", tr.Agent)
 	}
-	if tr.APIKeyName != "e2e-key" || tr.UserID != 7 {
+	if tr.APIKeyName != "e2e-key" {
 		t.Fatalf("unexpected trace ownership: %+v", tr)
 	}
 	if n, _ := repo.CountEvents(context.Background(), tr.ID); n != 1 {

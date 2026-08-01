@@ -333,7 +333,6 @@ var (
 	TraceRecordMessageInvalid          = "invalid record"
 	TraceRecordMessageStorageFailed    = "storage failed"
 	TraceRecordMessageTraceDeleted     = "trace deleted"
-	TraceSourceSubagent                = "subagent"
 	TraceMetadataAgentID               = "agent_id"
 	TraceMetadataAgentType             = "agent_type"
 	TraceEventTaskStarted              = "task_started"
