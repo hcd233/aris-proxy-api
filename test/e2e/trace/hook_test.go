@@ -109,7 +109,7 @@ func TestCodexHook_TriggersTranscriptReportWithoutHookRecords(t *testing.T) {
 	if gotBatch.Agent != "codex" {
 		t.Fatalf("batch agent = %q, want codex", gotBatch.Agent)
 	}
-	if gotBatch.Model != "glm-5.2" || gotBatch.CWD != "/work" || gotBatch.Source != "startup" {
+	if gotBatch.Model != "glm-5.2" || gotBatch.CWD != "/work" {
 		t.Fatalf("batch 元数据 = %+v", gotBatch)
 	}
 	if len(gotBatch.Records) == 0 {

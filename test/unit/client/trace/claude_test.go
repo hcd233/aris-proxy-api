@@ -35,7 +35,7 @@ func TestClaudeAdapter_ParseHook(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse session start: %v", err)
 	}
-	if info.Model != "claude-sonnet-5" || info.SessionSource != "startup" {
+	if info.Model != "claude-sonnet-5" {
 		t.Fatalf("unexpected session start info: %+v", info)
 	}
 }

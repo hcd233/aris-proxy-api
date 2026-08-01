@@ -22,7 +22,6 @@ type codexHookEnvelope struct {
 	SessionID           string `json:"session_id"`
 	Model               string `json:"model,omitempty"`
 	CWD                 string `json:"cwd,omitempty"`
-	Source              string `json:"source,omitempty"`
 	TurnID              string `json:"turn_id,omitempty"`
 	ToolUseID           string `json:"tool_use_id,omitempty"`
 	TranscriptPath      string `json:"transcript_path,omitempty"`
@@ -86,7 +85,6 @@ func (codexAdapter) ParseHook(raw []byte) (HookInfo, error) {
 		EventName:           env.HookEventName,
 		Model:               env.Model,
 		CWD:                 env.CWD,
-		SessionSource:       env.Source,
 		TurnID:              env.TurnID,
 		CallID:              env.ToolUseID,
 		TranscriptPath:      env.TranscriptPath,

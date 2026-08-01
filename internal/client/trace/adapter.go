@@ -12,7 +12,6 @@ type HookInfo struct {
 	EventName      string
 	Model          string
 	CWD            string
-	SessionSource  string
 	TurnID         string // codex: turn_id；claude: prompt_id
 	CallID         string // 工具调用关联 ID（tool_use_id）
 	TranscriptPath string

@@ -18,7 +18,6 @@ type TraceSummary struct {
 	Agent         string    `json:"agent" doc:"agent 来源"`
 	APIKeyName    string    `json:"apiKeyName" doc:"归属 API Key"`
 	Model         string    `json:"model" doc:"模型"`
-	Source        string    `json:"source" doc:"startup/resume/clear/compact"`
 	CreatedAt     time.Time `json:"createdAt" doc:"创建时间"`
 	UpdatedAt     time.Time `json:"updatedAt" doc:"更新时间"`
 }
@@ -32,7 +31,6 @@ type TraceDetail struct {
 	APIKeyName    string            `json:"apiKeyName" doc:"归属 API Key"`
 	Model         string            `json:"model" doc:"模型"`
 	CWD           string            `json:"cwd" doc:"工作目录"`
-	Source        string            `json:"source" doc:"startup/resume/clear/compact"`
 	Metadata      map[string]string `json:"metadata,omitempty" doc:"扩展字段"`
 	EventCount    int64             `json:"eventCount" doc:"事件数"`
 	CreatedAt     time.Time         `json:"createdAt" doc:"创建时间"`
@@ -138,7 +136,6 @@ type ReportTraceEventReqBody struct {
 	AgentType       string                  `json:"agent_type,omitempty" doc:"子代理类型（SubagentStop hook 输入）"`
 	Model           string                  `json:"model,omitempty" doc:"模型"`
 	CWD             string                  `json:"cwd,omitempty" doc:"工作目录"`
-	Source          string                  `json:"source,omitempty" doc:"startup/resume/clear/compact"`
 }
 
 // ReportTraceRecordReq 单条 Hook 或 rollout 原始记录。

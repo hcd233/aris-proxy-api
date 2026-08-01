@@ -32,7 +32,7 @@ func NewTraceRepository(db *gorm.DB) trace.TraceRepository {
 func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 	return &trace.Trace{
 		ID: m.ID, Agent: m.Agent, SessionID: m.SessionID, APIKeyName: m.APIKeyName,
-		UserID: m.UserID, ParentTraceID: m.ParentTraceID, Model: m.Model, CWD: m.CWD, Source: m.Source,
+		ParentTraceID: m.ParentTraceID, Model: m.Model, CWD: m.CWD,
 		Metadata: m.Metadata, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
 		DeletedAt: m.DeletedAt,
 	}
@@ -41,7 +41,7 @@ func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 func toTraceRecord(t *trace.Trace) *dbmodel.Trace {
 	return &dbmodel.Trace{
 		Agent: t.Agent, SessionID: t.SessionID, APIKeyName: t.APIKeyName,
-		UserID: t.UserID, ParentTraceID: t.ParentTraceID, Model: t.Model, CWD: t.CWD, Source: t.Source,
+		ParentTraceID: t.ParentTraceID, Model: t.Model, CWD: t.CWD,
 		Metadata: t.Metadata,
 	}
 }
@@ -52,8 +52,8 @@ func (r *traceRepository) UpsertBySessionID(ctx context.Context, t *trace.Trace)
 	err := db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: constant.FieldSessionID}},
 		DoUpdates: clause.AssignmentColumns([]string{
-			constant.FieldModel, constant.FieldCWD, constant.FieldSource,
-			constant.FieldUpdatedAt, constant.FieldMetadata, constant.FieldUserID, constant.FieldAPIKeyName,
+			constant.FieldModel, constant.FieldCWD,
+			constant.FieldUpdatedAt, constant.FieldMetadata, constant.FieldAPIKeyName,
 			constant.FieldParentTraceID,
 		}),
 	}).Create(rec).Error

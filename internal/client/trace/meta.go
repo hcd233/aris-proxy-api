@@ -11,9 +11,8 @@ import (
 
 // sessionMeta codex hook 触发时记录的会话级元数据，flush 时随批次上报。
 type sessionMeta struct {
-	Model  string `json:"model,omitempty"`
-	CWD    string `json:"cwd,omitempty"`
-	Source string `json:"source,omitempty"`
+	Model string `json:"model,omitempty"`
+	CWD   string `json:"cwd,omitempty"`
 }
 
 func sessionMetaPath(paths Paths, sessionID string) string {

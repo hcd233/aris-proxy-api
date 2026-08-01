@@ -646,7 +646,6 @@
   "trace.agent": "Agent",
   "trace.api_key": "API Key",
   "trace.model": "Model",
-  "trace.source": "Source",
   "trace.created_at": "Created",
   "trace.updated_at": "Updated",
   "trace.event_count": "Events",
