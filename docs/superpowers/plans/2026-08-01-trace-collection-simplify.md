@@ -1039,13 +1039,13 @@ git commit -m "fix(trace): 全量回归修复 status 移除残留"
 
 **Files:** 无（生产操作）
 
-- [ ] **Step 1: 构建并发布客户端 hook 二进制与服务端**
+- [x] **Step 1: 构建并发布客户端 hook 二进制与服务端**
 
 按 `docs/agents/repo-ci.md` 现有发布流程：构建含新采集逻辑的 `tracecli` 二进制与服务端镜像，部署到 k3s（namespace `aris-proxy-api`）；在已安装 aris hook 的机器上执行 `aris trace install` 刷新 hook（hook 注册列表未变，仅需替换二进制；无安装机器的会话由下次新会话自动使用新二进制）。
 
 > 生产操作需先展示命令并获用户授权（登录方式见 `login-prod-server` skill：`ssh ubuntu@api.lvlvko.top`，环境在 `/home/ubuntu/code/aris-proxy-api/`）。
 
-- [ ] **Step 2: 展示并等待授权——清洗存量 hook_event**
+- [x] **Step 2: 展示并等待授权——清洗存量 hook_event**
 
 待执行 SQL（生产库 `trace_events`，事务内先 SELECT 后 DELETE）：
 
@@ -1059,12 +1059,12 @@ COMMIT;
 
 影响：删除 313 行，仅 `trace_events` 表，不动 `traces`；不可逆。**必须等用户明确授权后执行**（执行形态：`docker exec -i -e PGPASSWORD="$POSTGRES_PASSWORD" postgresql psql ...`，不泄露凭据）。
 
-- [ ] **Step 3: 部署后手工验证**
+- [ ] **Step 3: 部署后手工验证（存量已验证；待新会话产生新 trace 后补验）**
 
 1. 新采集 trace：`SELECT record_type, event, count(*) FROM trace_events GROUP BY 1,2` 无 `hook_event`/`turn_context`，`event_msg` 仅 task_started/task_complete；
 2. `SELECT model, cwd, source FROM traces WHERE id=<新trace>` 元数据正确（来自 per-session 状态文件）；
 3. 前端 `/web/trace/detail/?id=<新trace>`：无状态徽标、消息无重复卡片、时间线无 hook/token_count 噪音卡片。
 
-- [ ] **Step 4: 沉淀工程经验**
+- [x] **Step 4: 沉淀工程经验**
 
 用 `serena_write_memory` 记录：本重构的决策（event_msg 白名单/turn_context 丢弃/hook 纯触发/status 移除）、per-session 元数据机制、生产清洗 SQL 与验证方式、踩坑（claude 分支分流、AutoMigrate 不删列、`TestRunIngestCommand_FlushesAcceptedRecord` 需改 claude 分支）。
