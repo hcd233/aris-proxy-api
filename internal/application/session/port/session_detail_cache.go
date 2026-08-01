@@ -27,7 +27,7 @@ type SessionMetaCacheRecord struct {
 // MessageCacheRecord is the cache payload for one immutable message.
 type MessageCacheRecord struct {
 	ID        uint               `json:"id"`
-	Model     string             `json:"model"`
+	ModelID   string             `json:"modelId"`
 	Message   *vo.UnifiedMessage `json:"message"`
 	CreatedAt time.Time          `json:"createdAt"`
 }

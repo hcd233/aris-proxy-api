@@ -139,8 +139,8 @@ func TestBuildOrderedMessageProjections(t *testing.T) {
 
 			// verify detailed fields for populates_fields case
 			if tc.ExpectedModel != "" && len(items) > 0 {
-				if items[0].Model != tc.ExpectedModel {
-					t.Errorf("Model = %q, want %q", items[0].Model, tc.ExpectedModel)
+				if items[0].ModelID != tc.ExpectedModel {
+					t.Errorf("ModelID = %q, want %q", items[0].ModelID, tc.ExpectedModel)
 				}
 			}
 			if tc.ExpectedRole != "" && len(items) > 0 {

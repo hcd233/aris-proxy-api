@@ -19,13 +19,13 @@ type SessionSummaryView struct {
 	Score        *int
 	MessageCount int
 	ToolCount    int
-	Models       []string
+	ModelIDs     []string
 }
 
 // MessageView 消息视图
 type MessageView struct {
 	ID        uint
-	Model     string
+	ModelID   string
 	Message   *vo.UnifiedMessage
 	CreatedAt time.Time
 }
