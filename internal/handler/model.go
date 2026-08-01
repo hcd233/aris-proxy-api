@@ -81,9 +81,10 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 	}
 
 	rsp.Models = lo.Map(views, func(v *port.ModelView, _ int) *dto.ModelItem {
-		item := &dto.ModelItem{
+	item := &dto.ModelItem{
 			ID:              v.ID,
 			Alias:           v.Alias,
+			ModelID:         v.ModelID,
 			ModelName:       v.ModelName,
 			Enabled:         v.Enabled,
 			ContextLength:   v.ContextLength,
@@ -116,7 +117,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	rsp := &dto.EmptyRsp{}
 
 	err := h.update.Handle(ctx, port.UpdateModelCommand{
-		ModelID:         req.ID,
+		ID:              req.ID,
 		Alias:           req.Body.Alias,
 		ModelName:       req.Body.ModelName,
 		EndpointID:      req.Body.EndpointID,
@@ -124,6 +125,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		ContextLength:   req.Body.ContextLength,
 		MaxOutputTokens: req.Body.MaxOutputTokens,
 		Capabilities:    req.Body.Capabilities,
+		ModelID:         req.Body.ModelID,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
