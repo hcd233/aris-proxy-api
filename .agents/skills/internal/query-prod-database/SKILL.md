@@ -1,11 +1,11 @@
 ---
 name: query-prod-database
-description: Use when the user asks to inspect, count, diagnose, or query the production PostgreSQL database running in Docker on aris-proxy-api. Also use when a production database read or explicitly authorized data write is requested.
+description: Use when the user asks to inspect, count, diagnose, or query the production PostgreSQL database running in Docker on aris-proxy-api. Also use when a production database read or explicitly authorized data write is requested, or when the user asks to create/drop an index on the production database.
 ---
 
 # query-prod-database
 
-通过 SSH 进入生产服务器，在 PostgreSQL Docker 容器内查询生产数据库。默认只读；DDL、权限变更和破坏性操作永久禁止。**连接生产服务器前必须先加载 `login-prod-server` skill** 获取 SSH 方式、环境布局、凭据读取规则与统一安全基线；本 skill 不再重复连接细节。
+通过 SSH 进入生产服务器，在 PostgreSQL Docker 容器内查询生产数据库。默认只读；除索引 DDL（需用户明确授权）外，其他 DDL、权限变更和破坏性操作永久禁止。**连接生产服务器前必须先加载 `login-prod-server` skill** 获取 SSH 方式、环境布局、凭据读取规则与统一安全基线；本 skill 不再重复连接细节。
 
 ## 适用范围
 
@@ -18,7 +18,7 @@ description: Use when the user asks to inspect, count, diagnose, or query the pr
 
 不适用于：
 
-- 任何数据库结构变更或权限管理。
+- 索引以外的数据库结构变更或权限管理。
 
 ## 前置
 
@@ -86,14 +86,37 @@ docker exec -i \
 
 对于可能影响大量行的写操作，授权前必须先查询并展示影响行数或候选记录；无法安全估计时拒绝执行。
 
+## 索引 DDL 操作：必须获得明确授权
+
+以下索引结构变更不能直接执行，但经用户明确授权后可以执行：
+
+- `CREATE INDEX`（含 `CREATE UNIQUE INDEX`、`CREATE INDEX CONCURRENTLY`）；
+- `DROP INDEX`（含 `DROP INDEX CONCURRENTLY`）。
+
+执行前必须：
+
+1. 原样向用户完整展示待执行 SQL；
+2. 说明目标数据库、schema/table、索引名称、索引列/表达式；
+3. 说明预期影响：是否在事务中执行、是否需要先 `SELECT` 预览（如查询 `pg_indexes`、`pg_stat_user_tables`）；
+4. 对生产大表说明锁风险与耗时预期：推荐使用 `CONCURRENTLY` 避免阻塞读写；`CONCURRENTLY` 不能在事务块内执行，且失败会遗留无效索引，需向用户说明；
+5. 等待用户对这段完整 SQL 的明确授权；
+6. 只执行用户授权的原始 SQL，不自行增加、删除或改写语句；
+7. 执行后报告成功/失败和数据库返回结果，不泄露敏感字段。
+
+注意：
+
+- `DROP INDEX` 前建议先展示 `pg_indexes` 中该索引的定义供用户确认；若索引被约束依赖（如 UNIQUE/PRIMARY KEY 依赖的索引），直接 `DROP` 会失败，需向用户说明原因；
+- 索引 DDL 执行期间可能持有锁，尽量选择低峰期执行；
+- 如果用户只说“执行一下”“可以”“继续”，但没有看到完整 SQL，先展示 SQL 并再次要求确认。
+
 ## 永久禁止
 
 无论用户是否授权，永久禁止执行：
 
-- `DROP`、`TRUNCATE`；
-- `CREATE`、`ALTER`、`RENAME`、`COMMENT`；
+- `DROP`、`TRUNCATE`（仅 `DROP INDEX` 例外，见“索引 DDL 操作”一节）；
+- `CREATE`、`ALTER`、`RENAME`、`COMMENT`（仅 `CREATE INDEX` 例外，见“索引 DDL 操作”一节）；
 - `GRANT`、`REVOKE`、`SECURITY LABEL`；
-- 创建/修改数据库、schema、table、index、view、function、trigger、role 或 extension；
+- 创建/修改数据库、schema、table、view、function、trigger、role 或 extension；
 - `VACUUM FULL`、`CLUSTER`、`REINDEX` 等可能产生显著锁或生产影响的维护操作；
 - `COPY`/`\\copy` 导出生产数据；
 - `psql` Shell 元命令或任何宿主机命令注入；
