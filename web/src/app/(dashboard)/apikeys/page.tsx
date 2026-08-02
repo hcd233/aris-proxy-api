@@ -307,7 +307,7 @@ export default function APIKeysPage() {
               <PaginationBar
                 pageInfo={pageInfo}
                 onChange={(page, pageSize) => fetchKeys(page, pageSize, searchQuery || undefined)}
-                totalLabel="keys"
+                totalLabel={t("pagination.keys")}
               />
             </>
           )}

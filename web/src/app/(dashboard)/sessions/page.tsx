@@ -596,7 +596,7 @@ export default function SessionsPage() {
               <PaginationBar
                 pageInfo={pageInfo}
                 onChange={(page, pageSize) => refresh(page, pageSize)}
-                totalLabel="sessions"
+                totalLabel={t("pagination.sessions")}
               />
             </>
           )}

@@ -504,7 +504,9 @@ export default function TraceDetailClient({
             {t("trace.timeline")}
           </CardTitle>
           <span className="text-xs text-muted-foreground">
-            {eventPageInfo.total} {t("trace.event_count")}
+            {t("pagination.total_format")
+              .replace("{count}", String(eventPageInfo.total))
+              .replace("{label}", t("trace.event_count"))}
           </span>
         </CardHeader>
         <CardContent className="space-y-4">

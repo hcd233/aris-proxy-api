@@ -75,7 +75,9 @@ export function PaginationBar({
           </DropdownMenuContent>
         </DropdownMenu>
         <p className="hidden whitespace-nowrap text-sm tabular-nums text-muted-foreground md:block">
-          {pageInfo.total} {totalLabel} {t("pagination.total")}
+          {t("pagination.total_format")
+            .replace("{count}", String(pageInfo.total))
+            .replace("{label}", totalLabel)}
         </p>
       </div>
 
