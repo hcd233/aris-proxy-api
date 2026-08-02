@@ -569,7 +569,7 @@ export default function ModelsPage() {
                 <PaginationBar
                   pageInfo={pageInfo}
                   onChange={(page, pageSize) => refresh(page, pageSize)}
-                  totalLabel="models"
+                  totalLabel={t("pagination.models")}
                 />
               </>
             )}
