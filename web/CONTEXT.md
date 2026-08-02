@@ -52,9 +52,11 @@ _Avoid_: export bar, download footer
 
 ## Trace Install（Trace 安装）
 
-**Trace Install Dialog（Trace 安装弹窗）**:
-Trace 页面的安装入口。用户点击复制时，前端通过 JWT 实时签发单次下载票据（`POST /api/v1/trace/client/ticket`），生成一段短安装脚本：自动探测 `uname` 映射到 `darwin/linux` × `amd64/arm64`，携带票据 `curl` 下载对应 `aris` 二进制，原子安装到 `~/.aris/bin/aris`，然后执行 `aris trace init --host <origin>`。脚本预览使用占位符，不缓存真实票据；API Key 不出现在脚本中，由终端四步向导以隐藏输入方式收集。
+**Trace Install Popover（Trace 安装入口）**:
+Trace 页面（`trace/page.tsx`）的安装入口。点击后展示一段简短的安装命令预览：`curl -fsSL <origin>/install.sh | sh`，复制后用户在终端执行。命令不含票据与 API Key；API Key 由用户通过 `aris` CLI 的交互式配置（`aris trace init`）输入，不进入安装脚本。安装脚本由后端 `GET /install.sh` 提供（自包含的 trace 客户端安装脚本，公开访问）。
 _Avoid_: codex hook dialog, setup script generator, install wizard
+
+> 已知债务：早期设计（`POST /api/v1/trace/client/ticket` 单次下载票据 + uname 探测 + 原子安装）未落地，当前为简化版；若未来需要约束下载者身份/审计，再按该方案演进。
 
 ## Models Page（模型管理页）
 

@@ -77,7 +77,7 @@ export default function DashboardPage() {
         api.listSessions({ page: 1, pageSize: 1 }),
       ]);
 
-      const endpointsRsp = isAdmin() ? await api.listEndpoints(1, 1).catch(() => null) : null;
+      const endpointsRsp = isAdmin() ? await api.listEndpoints(1, 1).catch(() => null) : null; // 仅探测是否存在 endpoint
       const modelsRsp = isAdmin() ? await api.listModels(1, 1).catch(() => null) : null;
 
       setStats({

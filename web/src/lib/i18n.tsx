@@ -38,9 +38,11 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
 
+  /* eslint-disable react-hooks/set-state-in-effect -- 首次挂载时从 localStorage/navigator 恢复用户语言偏好，与 auth/theme 初始化同模式；惰性初始化会在 SSR/hydration 两侧产生不一致 */
   useEffect(() => {
     setLocaleState(detectBrowserLocale());
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);

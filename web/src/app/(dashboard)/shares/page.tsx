@@ -80,7 +80,7 @@ export default function SharesPage() {
     } finally {
       setLoading(false);
     }
-  }, [setPersistedPage, setPersistedPageSize]);
+  }, [setPersistedPage, setPersistedPageSize, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -117,7 +117,7 @@ export default function SharesPage() {
       setDeleting(false);
       setDeleteTarget(null);
     }
-  }, [deleteTarget, fetchShares, pageInfo.page, pageInfo.pageSize]);
+  }, [deleteTarget, fetchShares, pageInfo.page, pageInfo.pageSize, t]);
 
   return (
     <div className="space-y-8">

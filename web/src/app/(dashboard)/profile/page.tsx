@@ -47,7 +47,7 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
-  }, [name]);
+  }, [name, t]);
 
   if (isLoading) {
     return (

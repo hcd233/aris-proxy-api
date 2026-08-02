@@ -48,12 +48,14 @@ export type ErrorSeverity = "critical" | "error" | "warning" | "info";
 export interface StructuredError {
   /** 业务错误码，0 表示非业务层错误（如网络断开、HTTP 5xx 等） */
   code: number;
-  /** 用户可读的错误描述 */
+  /** 用户可读的错误描述（兜底文本，可能未本地化） */
   message: string;
   /** 严重级别 */
   severity: ErrorSeverity;
   /** HTTP 状态码（仅网络层错误时有值） */
   httpStatus?: number;
+  /** 可本地化展示的 i18n key（若存在）；消费方应优先用 translate(key) */
+  messageKey?: string;
   /** 后端返回的原始 body 文本 */
   rawBody?: string;
   /** 原始 Error 对象 */
@@ -79,6 +81,32 @@ function httpStatusSeverity(status: number): ErrorSeverity {
   return "warning";
 }
 
+// ── 业务错误码 / HTTP 状态码 → i18n key 映射 ────────────────────────────────
+// 键名与 locales/{en,zh,ja}.json 中的扁平 key 对齐（error.* 段）。
+
+export const ERROR_I18N_KEY: Partial<Record<BusinessErrorCode, string>> = {
+  [BusinessErrorCode.Unauthorized]: "error.unauthorized",
+  [BusinessErrorCode.InvalidArgument]: "error.bad_request",
+  [BusinessErrorCode.NotFound]: "error.data_not_exists",
+  [BusinessErrorCode.AlreadyExists]: "error.data_exists",
+  [BusinessErrorCode.PermissionDenied]: "error.no_permission",
+  [BusinessErrorCode.RateLimitExceeded]: "error.too_many_requests",
+  [BusinessErrorCode.Internal]: "error.internal",
+};
+
+/** HTTP 状态码兜底消息：message 为未本地化兜底，key 供消费方本地化。 */
+const HTTP_FALLBACK: Record<number, { message: string; key: string }> = {
+  400: { message: "请求参数有误", key: "error.http_400" },
+  404: { message: "请求的资源不存在", key: "error.http_404" },
+  409: { message: "资源冲突", key: "error.http_409" },
+  413: { message: "请求内容过大", key: "error.http_413" },
+  429: { message: "请求过于频繁，请稍后再试", key: "error.http_429" },
+  500: { message: "服务器内部错误", key: "error.http_500" },
+  502: { message: "网关错误", key: "error.http_502" },
+  503: { message: "服务暂不可用", key: "error.http_503" },
+  504: { message: "网关超时", key: "error.http_504" },
+};
+
 // ── 解析函数 ──────────────────────────────────────────────────────────────────
 
 /**
@@ -93,6 +121,7 @@ export function parseError(err: unknown): StructuredError {
       code: biz.code,
       message: biz.message,
       severity: ERROR_CODE_SEVERITY[biz.code as BusinessErrorCode] ?? "error",
+      messageKey: ERROR_I18N_KEY[biz.code as BusinessErrorCode],
     };
   }
 
@@ -110,28 +139,21 @@ export function parseError(err: unknown): StructuredError {
       return {
         code: bodyObj.code,
         message: bodyObj.message,
-        severity: ERROR_CODE_SEVERITY[bodyObj.code as BusinessErrorCode] ?? httpStatusSeverity(apiErr.status),
+        severity:
+          ERROR_CODE_SEVERITY[bodyObj.code as BusinessErrorCode] ??
+          httpStatusSeverity(apiErr.status),
+        messageKey: ERROR_I18N_KEY[bodyObj.code as BusinessErrorCode],
         httpStatus: apiErr.status,
         rawBody: apiErr.body,
       };
     }
 
-    const fallbackMessages: Record<number, string> = {
-      400: "请求参数有误",
-      404: "请求的资源不存在",
-      409: "资源冲突",
-      413: "请求内容过大",
-      429: "请求过于频繁，请稍后再试",
-      500: "服务器内部错误",
-      502: "网关错误",
-      503: "服务暂不可用",
-      504: "网关超时",
-    };
-
+    const fallback = HTTP_FALLBACK[apiErr.status];
     return {
       code: 0,
-      message: fallbackMessages[apiErr.status] ?? apiErr.message,
+      message: fallback?.message ?? apiErr.message,
       severity: httpStatusSeverity(apiErr.status),
+      messageKey: fallback?.key,
       httpStatus: apiErr.status,
       rawBody: apiErr.body,
     };
@@ -142,6 +164,7 @@ export function parseError(err: unknown): StructuredError {
       code: 0,
       message: "网络连接失败，请检查网络后重试",
       severity: "critical",
+      messageKey: "error.network_failed",
       raw: err,
     };
   }
@@ -163,6 +186,7 @@ export function parseError(err: unknown): StructuredError {
     code: 0,
     message: "发生未知错误",
     severity: "error",
+    messageKey: "error.unknown",
     raw: err,
   };
 }

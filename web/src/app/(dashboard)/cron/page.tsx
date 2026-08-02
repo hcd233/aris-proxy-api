@@ -73,7 +73,7 @@ export default function CronPage() {
     } finally {
       setLoading(false);
     }
-  }, [setPersistedPage, setPersistedPageSize]);
+  }, [setPersistedPage, setPersistedPageSize, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function CronPage() {
       prev.map((j) => (j.name === editingJob.name ? { ...j, spec } : j))
     );
     toast.success(`${editingJob.name} ${t("cron.schedule_updated")}`);
-  }, [editingJob]);
+  }, [editingJob, t]);
 
   const refresh = (page: number, pageSize?: number) =>
     fetchJobs(page, pageSize ?? pageInfo.pageSize, searchQuery);

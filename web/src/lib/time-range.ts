@@ -3,14 +3,6 @@ import type { Granularity } from "@/lib/types";
 
 export type TimeRangeKey = "1h" | "24h" | "7d" | "30d" | "custom";
 
-export const TIME_RANGE_LABELS: Record<TimeRangeKey, string> = {
-  "1h": "Last 1 hour",
-  "24h": "Last 24 hours",
-  "7d": "Last 7 days",
-  "30d": "Last 30 days",
-  custom: "Custom",
-};
-
 export const TIME_RANGE_PRESETS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
 
 export function deriveGranularity(rangeMs: number): Granularity {
