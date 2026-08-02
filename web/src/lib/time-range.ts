@@ -41,14 +41,12 @@ export function generateEmptyTimeline(
 ): string[] {
   const start = new Date(startTime);
   const end = new Date(endTime);
-  const step =
-    granularity === "minute"
-      ? addMinutes
-      : granularity === "hour"
-        ? addHours
-        : granularity === "day"
-          ? addDays
-          : addWeeks;
+  const step = {
+    minute: addMinutes,
+    hour: addHours,
+    day: addDays,
+    week: addWeeks,
+  }[granularity];
   const points: string[] = [];
   const limit = 200;
   let cur = start;
