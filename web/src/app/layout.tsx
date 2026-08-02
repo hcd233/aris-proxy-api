@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Source_Serif_4, JetBrains_Mono } from "next/font/google";
+import { Source_Serif_4 } from "next/font/google";
+// Maple Mono CN (monospace, CJK + Latin, unicode-range subset, loaded on demand)
+import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Regular/result.css";
+import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Medium/result.css";
+import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-SemiBold/result.css";
+import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Bold/result.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
@@ -9,18 +14,8 @@ import { ParticleBackground } from "@/components/theme/particle-background";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist",
-  subsets: ["latin"],
-});
-
 const sourceSerif = Source_Serif_4({
   variable: "--font-source-serif",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -37,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`h-full antialiased ${geistSans.variable} ${sourceSerif.variable} ${jetbrainsMono.variable}`}
+      className={`h-full antialiased ${sourceSerif.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

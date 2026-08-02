@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), "SFMono-Regular", Consolas, monospace;
+  --font-sans: "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Maple Mono CN", "SFMono-Regular", Consolas, monospace;
   --font-heading: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
   --font-display: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -259,8 +259,8 @@
   --code-bg: #0b0d18;
   --code-border: #232a45;
   --code-text: #dde3f5;
-  --font-heading: var(--font-geist), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-geist), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
   --shadow-2xs: 0 1px 2px 0 rgb(90 100 200 / 0.1);
   --shadow-xs: 0 1px 3px 0 rgb(90 100 200 / 0.14);
   --shadow-sm: 0 1px 3px 0 rgb(90 100 200 / 0.16), 0 2px 8px -1px rgb(90 100 200 / 0.12);
