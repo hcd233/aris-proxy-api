@@ -293,9 +293,15 @@ export default function CronAuditPage() {
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                         onClick={() => handleCopyTrace(log.traceId)}
-                        title={t("cron_audit.copy_traceid_title")}
                       >
-                        {log.traceId.slice(-6) || "—"}
+                        <TooltipProvider>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={<span>{log.traceId.slice(-6) || "—"}</span>}
+                            />
+                            <TooltipContent side="top">{t("cron_audit.copy_traceid_title")}</TooltipContent>
+                          </TooltipRoot>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell>
                         {log.status !== "success" && log.message ? (
