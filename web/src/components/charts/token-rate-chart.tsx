@@ -92,7 +92,7 @@ export function TokenRateChart() {
           rangeState.startTime,
           rangeState.endTime,
           rangeState.granularity,
-        ).map((time) => ({ time }))
+        ).map((time) => ({ time, __empty: 0 }))
       : flatData;
 
   // Calculate average output token rate per model
@@ -141,7 +141,7 @@ export function TokenRateChart() {
                 tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
                 fontSize={12}
               />
-              <YAxis fontSize={12} domain={isEmpty ? [0, 1] : [0, "auto"]} allowDataOverflow={false} />
+              <YAxis fontSize={12} domain={isEmpty ? [0, 1] : [0, "auto"]} tickCount={isEmpty ? 3 : undefined} allowDataOverflow={false} />
               <ChartTooltip
                 content={
                   <ChartTooltipContent
@@ -178,6 +178,7 @@ export function TokenRateChart() {
                   dot={false}
                 />
               ))}
+              {isEmpty && <Line dataKey="__empty" stroke="transparent" dot={false} />}
               {modelAverages.map(({ model, average }) => (
                 activeLegend === model && average > 0 && (
                   <ReferenceLine

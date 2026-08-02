@@ -99,7 +99,7 @@ export function RequestRateChart() {
           rangeState.startTime,
           rangeState.endTime,
           rangeState.granularity,
-        ).map((time) => ({ time }))
+        ).map((time) => ({ time, __empty: 0 }))
       : flatData;
 
   return (
@@ -179,6 +179,7 @@ export function RequestRateChart() {
                   dot={false}
                 />
               ))}
+              {isEmpty && <Line dataKey="__empty" stroke="transparent" dot={false} />}
             </LineChart>
           </ChartContainer>
         )}

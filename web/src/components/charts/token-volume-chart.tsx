@@ -109,7 +109,14 @@ export function TokenVolumeChart() {
           rangeState.startTime,
           rangeState.endTime,
           rangeState.granularity,
-        ).map((time) => ({ time }))
+        ).map((time) => ({
+          time,
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheCreationTokens: 0,
+          __empty: 0,
+        }))
       : flatData;
 
   return (
@@ -147,7 +154,7 @@ export function TokenVolumeChart() {
                 tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
                 fontSize={12}
               />
-              <YAxis fontSize={12} tickFormatter={formatTokenCount} domain={isEmpty ? [0, 1] : [0, "auto"]} allowDataOverflow={false} />
+              <YAxis fontSize={12} tickFormatter={formatTokenCount} domain={isEmpty ? [0, 1] : [0, "auto"]} tickCount={isEmpty ? 3 : undefined} allowDataOverflow={false} />
               <ChartTooltip
                 content={
                   <ChartTooltipContent
@@ -194,6 +201,7 @@ export function TokenVolumeChart() {
                   fillOpacity={0.6}
                 />
               ))}
+              {isEmpty && <Area dataKey="__empty" stroke="transparent" fill="transparent" />}
             </AreaChart>
           </ChartContainer>
         )}

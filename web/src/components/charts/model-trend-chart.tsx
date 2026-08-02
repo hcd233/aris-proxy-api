@@ -99,7 +99,7 @@ export function ModelTrendChart() {
           rangeState.startTime,
           rangeState.endTime,
           rangeState.granularity,
-        ).map((time) => ({ time }))
+        ).map((time) => ({ time, __empty: 0 }))
       : flatData;
 
   return (
@@ -137,7 +137,7 @@ export function ModelTrendChart() {
                 tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
                 fontSize={12}
               />
-              <YAxis fontSize={12} domain={isEmpty ? [0, 1] : [0, "auto"]} allowDataOverflow={false} />
+              <YAxis fontSize={12} domain={isEmpty ? [0, 1] : [0, "auto"]} tickCount={isEmpty ? 3 : undefined} allowDataOverflow={false} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {models.map((m) => (
@@ -151,6 +151,7 @@ export function ModelTrendChart() {
                   dot={false}
                 />
               ))}
+              {isEmpty && <Line dataKey="__empty" stroke="transparent" dot={false} />}
             </LineChart>
           </ChartContainer>
         )}
