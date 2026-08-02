@@ -39,9 +39,10 @@
    - 所有序列值填 `null`（recharts 不画线/面积，仅渲染坐标轴、网格、图例）。
    - 用项目已有依赖 `date-fns` 实现（`addMinutes/addHours/addDays/addWeeks`），不新增依赖。
    - 点数上限安全：granularity 由 range 推导（1h→minute 约 60 点、24h→hour 24 点、7d→hour 168 点、30d→day 30 点），不会产生性能问题。
-3. **渲染逻辑**：删除 `flatData.length === 0` 时显示文字的分支，恒渲染 `ChartContainer + LineChart/AreaChart`；`models`（序列）为空时 `chartConfig` 为空、无 `Line/Area` 子元素，recharts 仍渲染 X/Y 轴与网格。Y 轴在无有效数据时若 `domain={[0, "auto"]}` 显示异常，回退为 `domain={[0, 1]}`（具体以实测为准，在实现时验证）。
-4. **`model-token-bar-chart.tsx`（表格型）**：无坐标系概念，空态改为渲染完整表头（Rank / Model / Total / Input / Output）+ 空表体，保持列结构可见；不再显示 "No data" 文字块。
-5. **图例空态**：`models` 为空时图例自然不渲染（没有序列可展示），不做特殊处理。
+3. **渲染逻辑**：删除 `flatData.length === 0` 时显示文字的分支，恒渲染 `ChartContainer + LineChart/AreaChart`；`models`（序列）为空时 `chartConfig` 为空、无 `Line/Area` 子元素，recharts 仍渲染 X/Y 轴与网格。
+4. **Y 轴刻度修复（实测结论）**：recharts 3.x 在**所有序列数据缺失**时 Y 轴无法生成刻度（`ticks`/`tickCount` 均无效）。实测方案：空时间轴数据点附加 `__empty: 0` 字段 + 渲染一条透明序列（`<Line dataKey="__empty" stroke="transparent" />` / `<Area ... fill="transparent" />`），使 Y 轴获得真实数据域，配合 `domain={[0, 1]}` + `tickCount={3}` 渲染 0/0.5/1 刻度。非空数据时 `__empty` 分支不渲染，行为与原来一致。
+5. **`model-token-bar-chart.tsx`（表格型）**：无坐标系概念，空态改为渲染完整表头（Rank / Model / Total / Input / Output）+ 空表体，保持列结构可见；不再显示 "No data" 文字块。
+6. **图例空态**：`models` 为空时图例自然不渲染（没有序列可展示），不做特殊处理。
 
 ### 数据流
 
