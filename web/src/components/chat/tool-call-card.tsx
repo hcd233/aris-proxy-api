@@ -86,7 +86,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
           <div className="px-3 py-2.5">
             <div className="mb-1.5 flex items-center justify-between">
               <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                Input
+                {t("tool_call.input")}
               </p>
               <CopyButton
                 value={args || "{}"}
@@ -101,7 +101,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
             <div className="border-t border-border px-3 py-2.5">
               <div className="mb-1.5 flex items-center justify-between">
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Output
+                  {t("tool_call.output")}
                 </p>
                 <CopyButton
                   value={out}

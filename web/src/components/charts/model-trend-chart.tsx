@@ -123,9 +123,9 @@ export function ModelTrendChart() {
           <Skeleton className="h-64 w-full" />
         ) : error ? (
           <div className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-            <p>Failed to load</p>
+            <p>{t("charts.failed_to_load")}</p>
             <Button variant="outline" size="sm" onClick={() => fetchData()}>
-              Retry
+              {t("charts.retry")}
             </Button>
           </div>
         ) : (
