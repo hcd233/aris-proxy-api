@@ -220,10 +220,6 @@ export function ModelTokenBarChart() {
               {t("charts.retry")}
             </Button>
           </div>
-        ) : sorted.length === 0 ? (
-          <div className="flex h-64 items-center justify-center px-6 pb-6 text-sm text-muted-foreground">
-            {t("charts.no_data")}
-          </div>
         ) : (
           <div className="h-64 overflow-y-auto">
             <table className="w-full text-sm tabular-nums">

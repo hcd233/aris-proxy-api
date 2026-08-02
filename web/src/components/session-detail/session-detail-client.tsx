@@ -15,6 +15,7 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import type { SessionMetadata, MessageItem, ToolItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   ChatMessage,
   buildToolResultsByID,
@@ -349,52 +350,78 @@ export default function SessionDetailClient({
         size={isMobile ? 20 : 16}
       />
 
-      <Button
-        variant={metadata.shareID ? "secondary" : "ghost"}
-        size="icon-sm"
-        onClick={() => setShareOpen(true)}
-        className={[
-          "size-10",
-          metadata.shareID
-            ? "text-primary"
-            : "text-foreground/70 hover:text-foreground",
-        ].join(" ")}
-        aria-label={metadata.shareID ? t("session_detail.manage_share_aria") : t("session_detail.share_aria")}
-        title={metadata.shareID ? t("session_detail.shared_title") : t("session_detail.share_title")}
-      >
-        <Share2 className="size-5" />
-      </Button>
+      <TooltipProvider>
+        <TooltipRoot>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={metadata.shareID ? "secondary" : "ghost"}
+                size="icon-sm"
+                onClick={() => setShareOpen(true)}
+                className={[
+                  "size-10",
+                  metadata.shareID
+                    ? "text-primary"
+                    : "text-foreground/70 hover:text-foreground",
+                ].join(" ")}
+                aria-label={metadata.shareID ? t("session_detail.manage_share_aria") : t("session_detail.share_aria")}
+              >
+                <Share2 className="size-5" />
+              </Button>
+            }
+          />
+          <TooltipContent side="top">
+            {metadata.shareID ? t("session_detail.shared_title") : t("session_detail.share_title")}
+          </TooltipContent>
+        </TooltipRoot>
+      </TooltipProvider>
 
-      <DeleteIconButton
-        className="size-10 text-foreground/70"
-        iconClassName="size-5"
-        onClick={() => setDeleteConfirmOpen(true)}
-        aria-label={t("session_detail.delete_aria")}
-        title={t("session_detail.delete_title")}
-      />
+      <TooltipProvider>
+        <TooltipRoot>
+          <TooltipTrigger
+            render={
+              <DeleteIconButton
+                className="size-10 text-foreground/70"
+                iconClassName="size-5"
+                onClick={() => setDeleteConfirmOpen(true)}
+                aria-label={t("session_detail.delete_aria")}
+              />
+            }
+          />
+          <TooltipContent side="top">{t("session_detail.delete_title")}</TooltipContent>
+        </TooltipRoot>
+      </TooltipProvider>
 
       {metadata.toolCount > 0 && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setToolsOpen((v) => !v)}
-          className={[
-            "relative size-10",
-            toolsOpen
-              ? "bg-secondary text-foreground"
-              : "text-foreground/70 hover:text-foreground",
-          ].join(" ")}
-          aria-label={t("session_detail.toggle_tools_aria")}
-          title={t("session_detail.tools_title")}
-        >
-          <Wrench className="size-5" />
-          <span
-            className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
-            aria-hidden
-          >
-            {metadata.toolCount}
-          </span>
-        </Button>
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setToolsOpen((v) => !v)}
+                  className={[
+                    "relative size-10",
+                    toolsOpen
+                      ? "bg-secondary text-foreground"
+                      : "text-foreground/70 hover:text-foreground",
+                  ].join(" ")}
+                  aria-label={t("session_detail.toggle_tools_aria")}
+                >
+                  <Wrench className="size-5" />
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
+                    aria-hidden
+                  >
+                    {metadata.toolCount}
+                  </span>
+                </Button>
+              }
+            />
+            <TooltipContent side="top">{t("session_detail.tools_title")}</TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
       )}
     </>
   );

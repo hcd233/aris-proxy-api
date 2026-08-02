@@ -15,6 +15,7 @@ import { api, ApiError } from "@/lib/api-client";
 import type { ShareSessionMetadata, MessageItem, ToolItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   ChatMessage,
   buildToolResultsByID,
@@ -286,27 +287,35 @@ function SharedSessionView() {
         </p>
       </div>
       {metadata.toolCount > 0 && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setToolsOpen((v) => !v)}
-          className={[
-            "relative size-10 shrink-0",
-            toolsOpen
-              ? "bg-secondary text-foreground"
-              : "text-foreground/70 hover:text-foreground",
-          ].join(" ")}
-          aria-label={t("share.toggle_tools")}
-          title={t("share.available_tools")}
-        >
-          <Wrench className="size-5" />
-          <span
-            className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
-            aria-hidden
-          >
-            {metadata.toolCount}
-          </span>
-        </Button>
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setToolsOpen((v) => !v)}
+                  className={[
+                    "relative size-10 shrink-0",
+                    toolsOpen
+                      ? "bg-secondary text-foreground"
+                      : "text-foreground/70 hover:text-foreground",
+                  ].join(" ")}
+                  aria-label={t("share.toggle_tools")}
+                >
+                  <Wrench className="size-5" />
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
+                    aria-hidden
+                  >
+                    {metadata.toolCount}
+                  </span>
+                </Button>
+              }
+            />
+            <TooltipContent side="top">{t("share.available_tools")}</TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
       )}
     </>
   );
