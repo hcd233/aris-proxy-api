@@ -87,17 +87,20 @@ function CapabilityBadges({ capabilities }: { capabilities?: string[] }) {
   return (
     <div className="flex items-center gap-1.5">
       {caps.map((cap) => (
-        <span
-          key={cap}
-          className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground"
-          title={cap}
-        >
-          {cap === "image" ? (
-            <ImageIcon className="size-3 text-muted-foreground" />
-          ) : (
-            <Type className="size-3 text-muted-foreground" />
-          )}
-        </span>
+        <TooltipRoot key={cap}>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
+                {cap === "image" ? (
+                  <ImageIcon className="size-3 text-muted-foreground" />
+                ) : (
+                  <Type className="size-3 text-muted-foreground" />
+                )}
+              </span>
+            }
+          />
+          <TooltipContent side="top">{cap}</TooltipContent>
+        </TooltipRoot>
       ))}
     </div>
   );
