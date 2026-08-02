@@ -109,14 +109,14 @@ func Aggregate(byInstance map[string][]metrics.Snapshot, alignedStart, bucket, e
 		}
 		accumulateInstance(agg, snaps, alignedStart, bucket, n)
 	}
-	return buildSeries(agg, alignedStart, bucket, outputStart)
+	series := buildSeries(agg, alignedStart, bucket, outputStart)
+	series.Instances = aggregateInstances(byInstance, alignedStart, bucket, end, outputStart)
+	return series
 }
 
 // — 聚合内部结构与算法 —
 
 type bucketAgg struct {
-	goroutines  float64
-	heap        float64
 	sse         map[string]float64
 	qps         float64
 	cpuPercent  float64
@@ -149,12 +149,12 @@ func decodeSnapshots(payloads [][]byte) []metrics.Snapshot {
 }
 
 func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart, bucket int64, n int) {
-	gSum, gHeap, gSSE, gCount := instanceGauges(snaps, alignedStart, bucket, n)
+	_, _, gSSE, gCount := instanceGauges(snaps, alignedStart, bucket, n)
 	deltas := instanceDeltas(snaps, alignedStart, bucket, n)
 
 	bucketSeconds := float64(bucket)
 	for idx := range n {
-		mergeGaugeBucket(&agg[idx], gSum[idx], gHeap[idx], gSSE[idx], gCount[idx])
+		mergeGaugeBucket(&agg[idx], gSSE[idx], gCount[idx])
 		mergeRateBucket(&agg[idx], deltas[idx].count, deltas[idx].cpu, deltas[idx].hist, bucketSeconds)
 		mergeTokenBucket(&agg[idx], deltas[idx].tokenIn, deltas[idx].tokenOut)
 		mergeReqBucket(&agg[idx], deltas[idx].reqTotal, deltas[idx].reqSuccess)
@@ -221,14 +221,12 @@ func instanceDeltas(snaps []metrics.Snapshot, alignedStart, bucket int64, n int)
 	return deltas
 }
 
-// mergeGaugeBucket 把单实例某桶的 gauge 桶内均值跨实例累加进全局桶。
-func mergeGaugeBucket(b *bucketAgg, sum, heap float64, sse map[string]float64, count float64) {
+// mergeGaugeBucket 把单实例某桶的 SSE gauge 桶内均值跨实例累加进全局桶。
+func mergeGaugeBucket(b *bucketAgg, sse map[string]float64, count float64) {
 	if count <= 0 {
 		return
 	}
 	b.samples += count
-	b.goroutines += sum / count
-	b.heap += heap / count
 	for prov, v := range sse {
 		b.sse[prov] += v / count
 	}
@@ -271,10 +269,7 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 		if t < outputStart || agg[idx].samples == 0 {
 			continue
 		}
-		series.Goroutines = append(series.Goroutines, dto.RuntimePoint{Time: t, Value: round2(agg[idx].goroutines)})
-		series.HeapMB = append(series.HeapMB, dto.RuntimePoint{Time: t, Value: round2(agg[idx].heap / constant.RuntimeMetricsBytesPerMB)})
 		series.QPS = append(series.QPS, dto.RuntimePoint{Time: t, Value: round2(agg[idx].qps)})
-		series.CPUPercent = append(series.CPUPercent, dto.RuntimePoint{Time: t, Value: round2(agg[idx].cpuPercent)})
 		series.P95Ms = append(series.P95Ms, dto.RuntimePoint{Time: t, Value: round2(percentileP95(agg[idx].histBuckets, agg[idx].histTotal))})
 		series.TokenInput = append(series.TokenInput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenInput / bucketSeconds)})
 		series.TokenOutput = append(series.TokenOutput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenOutput / bucketSeconds)})
@@ -287,6 +282,56 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 		}
 	}
 	return series
+}
+
+// aggregateInstances 把每个 instance 的快照各自按桶聚合成独立曲线（不跨实例求和）：
+// goroutines/heapMB 取桶内均值；cpuPercent 取桶内 cpu 正 delta ÷ 桶宽。实例按名称排序输出，
+// 保证响应稳定；无任何输出的实例（空桶）不出现。
+func aggregateInstances(byInstance map[string][]metrics.Snapshot, alignedStart, bucket, end, outputStart int64) map[string]dto.RuntimeInstanceSeries {
+	names := lo.Filter(lo.Keys(byInstance), func(n string, _ int) bool {
+		return len(byInstance[n]) > 0
+	})
+	if len(names) == 0 {
+		return nil
+	}
+	slices.Sort(names)
+	n := int((end-alignedStart)/bucket) + 1
+	if n <= 0 {
+		return nil
+	}
+	out := make(map[string]dto.RuntimeInstanceSeries, len(names))
+	for _, name := range names {
+		if s := aggregateOneInstance(byInstance[name], alignedStart, bucket, n, outputStart); instanceSeriesHasPoints(s) {
+			out[name] = s
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// aggregateOneInstance 单实例按桶输出 goroutines/heapMB/cpuPercent 曲线。
+func aggregateOneInstance(snaps []metrics.Snapshot, alignedStart, bucket int64, n int, outputStart int64) dto.RuntimeInstanceSeries {
+	gSum, gHeap, _, gCount := instanceGauges(snaps, alignedStart, bucket, n)
+	deltas := instanceDeltas(snaps, alignedStart, bucket, n)
+	bucketSeconds := float64(bucket)
+
+	var s dto.RuntimeInstanceSeries
+	for idx := range n {
+		t := alignedStart + int64(idx)*bucket
+		if t < outputStart || gCount[idx] == 0 {
+			continue
+		}
+		s.Goroutines = append(s.Goroutines, dto.RuntimePoint{Time: t, Value: round2(gSum[idx] / gCount[idx])})
+		s.HeapMB = append(s.HeapMB, dto.RuntimePoint{Time: t, Value: round2(gHeap[idx] / gCount[idx] / constant.RuntimeMetricsBytesPerMB)})
+		s.CPUPercent = append(s.CPUPercent, dto.RuntimePoint{Time: t, Value: round2(deltas[idx].cpu / bucketSeconds * constant.RuntimeMetricsPercentToRatio)})
+	}
+	return s
+}
+
+func instanceSeriesHasPoints(s dto.RuntimeInstanceSeries) bool {
+	return len(s.Goroutines) > 0 || len(s.HeapMB) > 0 || len(s.CPUPercent) > 0
 }
 
 func collectProviders(agg []bucketAgg) []string {

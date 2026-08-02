@@ -22,17 +22,25 @@ type RuntimeMetricsRsp struct {
 // RuntimeSeries 各运行时指标的时序
 //
 //	@author centonhuang
-//	@update 2026-06-25 10:00:00
+//	@update 2026-08-02 10:00:00
 type RuntimeSeries struct {
-	Goroutines  []RuntimePoint            `json:"goroutines" doc:"goroutine 数（集群求和）"`
-	HeapMB      []RuntimePoint            `json:"heapMB" doc:"堆内存 MB（集群求和）"`
-	QPS         []RuntimePoint            `json:"qps" doc:"每秒请求数（集群求和）"`
-	CPUPercent  []RuntimePoint            `json:"cpuPercent" doc:"CPU 使用率 %（集群求和）"`
-	P95Ms       []RuntimePoint            `json:"p95Ms" doc:"P95 请求时延 ms（跨 pod 合并 bucket）"`
-	SSEActive   map[string][]RuntimePoint `json:"sseActive" doc:"各 provider 的 SSE 活跃连接数"`
-	TokenInput  []RuntimePoint            `json:"tokenInput" doc:"输入 token 速率 /s（跨 pod 求和）"`
-	TokenOutput []RuntimePoint            `json:"tokenOutput" doc:"输出 token 速率 /s（跨 pod 求和）"`
-	SuccessRate []RuntimePoint            `json:"successRate" doc:"HTTP 200 请求占比 %（0-100）"`
+	QPS         []RuntimePoint                   `json:"qps" doc:"每秒请求数（跨 pod 求和）"`
+	P95Ms       []RuntimePoint                   `json:"p95Ms" doc:"P95 请求时延 ms（跨 pod 合并 bucket）"`
+	SSEActive   map[string][]RuntimePoint        `json:"sseActive" doc:"各 provider 的 SSE 活跃连接数"`
+	TokenInput  []RuntimePoint                   `json:"tokenInput" doc:"输入 token 速率 /s（跨 pod 求和）"`
+	TokenOutput []RuntimePoint                   `json:"tokenOutput" doc:"输出 token 速率 /s（跨 pod 求和）"`
+	SuccessRate []RuntimePoint                   `json:"successRate" doc:"HTTP 200 请求占比 %（0-100）"`
+	Instances   map[string]RuntimeInstanceSeries `json:"instances" doc:"各 pod 的运行时曲线（goroutines/heapMB/cpuPercent）"`
+}
+
+// RuntimeInstanceSeries 单个 pod 的运行时曲线
+//
+//	@author centonhuang
+//	@update 2026-08-02 10:00:00
+type RuntimeInstanceSeries struct {
+	Goroutines []RuntimePoint `json:"goroutines" doc:"goroutine 数（单 pod）"`
+	HeapMB     []RuntimePoint `json:"heapMB" doc:"堆内存 MB（单 pod）"`
+	CPUPercent []RuntimePoint `json:"cpuPercent" doc:"CPU 使用率 %（单 pod，0-100）"`
 }
 
 // RuntimePoint 时序点

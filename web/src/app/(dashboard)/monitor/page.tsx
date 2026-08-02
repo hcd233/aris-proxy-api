@@ -6,7 +6,7 @@ import { Activity, MemoryStick, Radio } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { usePersistentState } from "@/hooks/use-persistent-state";
-import type { RuntimePoint } from "@/lib/types";
+import type { RuntimeInstanceSeries, RuntimePoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeChart } from "@/components/charts/runtime-chart";
@@ -26,28 +26,32 @@ const RANGE_WINDOW_SEC: Record<RangeKey, number> = {
 
 type Pt = RuntimePoint;
 
-interface SeriesState {
+interface InstanceState {
   goroutines: Pt[];
   heapMB: Pt[];
-  qps: Pt[];
   cpuPercent: Pt[];
+}
+
+interface SeriesState {
+  qps: Pt[];
   p95Ms: Pt[];
   sseActive: Record<string, Pt[]>;
   tokenInput: Pt[];
   tokenOutput: Pt[];
   successRate: Pt[];
+  instances: Record<string, InstanceState>;
 }
 
+const EMPTY_INSTANCE: InstanceState = { goroutines: [], heapMB: [], cpuPercent: [] };
+
 const EMPTY_STATE: SeriesState = {
-  goroutines: [],
-  heapMB: [],
   qps: [],
-  cpuPercent: [],
   p95Ms: [],
   sseActive: {},
   tokenInput: [],
   tokenOutput: [],
   successRate: [],
+  instances: {},
 };
 
 function mergePoints(prev: Pt[], incoming: Pt[], cutoff: number): Pt[] {
@@ -71,6 +75,48 @@ function mergeSSE(
     out[prov] = mergePoints(prev[prov] ?? [], incoming[prov] ?? [], cutoff);
   }
   return out;
+}
+
+// mergeInstances 按 pod 名逐实例增量合并各指标曲线。
+function mergeInstances(
+  prev: Record<string, InstanceState>,
+  incoming: Record<string, RuntimeInstanceSeries>,
+  cutoff: number,
+): Record<string, InstanceState> {
+  const pods = new Set([...Object.keys(prev), ...Object.keys(incoming)]);
+  const out: Record<string, InstanceState> = {};
+  for (const pod of pods) {
+    const p = prev[pod] ?? EMPTY_INSTANCE;
+    const inc = incoming[pod] ?? EMPTY_INSTANCE;
+    out[pod] = {
+      goroutines: mergePoints(p.goroutines, inc.goroutines ?? [], cutoff),
+      heapMB: mergePoints(p.heapMB, inc.heapMB ?? [], cutoff),
+      cpuPercent: mergePoints(p.cpuPercent, inc.cpuPercent ?? [], cutoff),
+    };
+  }
+  return out;
+}
+
+// podChartData 把各 pod 的同一指标曲线合并为同一时间轴上的多列（列名 = pod 名）。
+function podChartData(instances: Record<string, InstanceState>, metric: keyof InstanceState): Array<Record<string, number>> {
+  const rows = new Map<number, Record<string, number>>();
+  for (const [pod, inst] of Object.entries(instances)) {
+    for (const p of inst[metric]) {
+      const row = rows.get(p.time) ?? { time: p.time };
+      row[pod] = p.value;
+      rows.set(p.time, row);
+    }
+  }
+  return [...rows.values()].sort((a, b) => a.time - b.time);
+}
+
+// podSumLatest 各 pod 最新值求和（用于头部卡片集群总和）。
+function podSumLatest(instances: Record<string, InstanceState>, metric: keyof InstanceState): number {
+  let sum = 0;
+  for (const inst of Object.values(instances)) {
+    sum += inst[metric].at(-1)?.value ?? 0;
+  }
+  return sum;
 }
 
 function lastValue(points: Pt[]): number {
@@ -126,15 +172,13 @@ export default function MonitorPage() {
         const cutoff = now - RANGE_WINDOW_SEC[rangeKey];
 
         setState((prev) => ({
-          goroutines: mergePoints(prev.goroutines, s.goroutines ?? [], cutoff),
-          heapMB: mergePoints(prev.heapMB, s.heapMB ?? [], cutoff),
           qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
-          cpuPercent: mergePoints(prev.cpuPercent, s.cpuPercent ?? [], cutoff),
           p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
           sseActive: mergeSSE(prev.sseActive, s.sseActive ?? {}, cutoff),
           tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
           tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
           successRate: mergePoints(prev.successRate, s.successRate ?? [], cutoff),
+          instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
         }));
 
         if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
@@ -166,7 +210,15 @@ export default function MonitorPage() {
     label: prov,
     color: seriesColors[i % seriesColors.length],
   }));
-  const sseTotal = sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0);
+  const sseTotal = Math.round(sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0));
+  const pods = Object.keys(state.instances).sort();
+  const podSeries = pods.map((pod, i) => ({
+    key: pod,
+    label: pod,
+    color: seriesColors[i % seriesColors.length],
+  }));
+  const goroutinesTotal = Math.round(podSumLatest(state.instances, "goroutines"));
+  const heapTotal = podSumLatest(state.instances, "heapMB");
   const tpsData = tpsChartData(state.tokenInput, state.tokenOutput);
   const tpsSeries = [
     { key: "input", label: t("monitor.request_tps_input"), color: seriesColors[0] },
@@ -211,8 +263,8 @@ export default function MonitorPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <RuntimeGaugeCard label={t("monitor.goroutines")} value={lastValue(state.goroutines)} icon={<Activity className="size-4" />} tone="primary" loading={loading} />
-        <RuntimeGaugeCard label={t("monitor.heap")} value={lastValue(state.heapMB)} unit="MB" icon={<MemoryStick className="size-4" />} tone="blue" loading={loading} />
+        <RuntimeGaugeCard label={t("monitor.goroutines")} value={goroutinesTotal} icon={<Activity className="size-4" />} tone="primary" loading={loading} />
+        <RuntimeGaugeCard label={t("monitor.heap")} value={heapTotal} unit="MB" icon={<MemoryStick className="size-4" />} tone="blue" loading={loading} />
         <RuntimeGaugeCard label={t("monitor.sse_active")} value={sseTotal} icon={<Radio className="size-4" />} tone="violet" loading={loading} />
       </div>
 
@@ -220,9 +272,9 @@ export default function MonitorPage() {
         <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]} unit=" req/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.request_tps")} data={tpsData} series={tpsSeries} unit=" tok/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.cpu_usage")} data={toChartData(state.cpuPercent)} series={[{ key: "value", label: t("monitor.cpu_usage"), color: seriesColors[0] }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.heap_memory")} data={toChartData(state.heapMB)} series={[{ key: "value", label: t("monitor.heap_memory"), color: seriesColors[1] }]} unit=" MB" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.goroutines_chart")} data={toChartData(state.goroutines)} series={[{ key: "value", label: t("monitor.goroutines_chart"), color: seriesColors[3] }]} rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.cpu_usage")} data={podChartData(state.instances, "cpuPercent")} series={podSeries} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.heap_memory")} data={podChartData(state.instances, "heapMB")} series={podSeries} unit=" MB" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart title={t("monitor.goroutines_chart")} data={podChartData(state.instances, "goroutines")} series={podSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.success_rate")} data={toChartData(state.successRate)} series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
         <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
       </div>
