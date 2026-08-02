@@ -156,20 +156,22 @@ var (
 	//   候选 session 在 messages 全表上重跑一次 ILIKE 顺序扫描；外层再叠 COUNT(*)，复杂度
 	//   接近 O(候选 sessions × messages)。
 	//
-	//   新实现把方向反过来：先把这条 session 自己的 message_ids 数组（通常 5～50 条）
-	//   通过 jsonb_array_elements_text 在内存里展开，再按 PK 回查 messages（messages.id 走
-	//   主键索引，O(log N)），最后只对这 K 行做 ILIKE。
+	//   2026-06-07 曾改为 "jsonb_array_elements_text(sessions.questions::jsonb) arr(mid)
+	//   JOIN messages ON messages.id = arr.mid::bigint"：语义上仍是 PK 回查，但 planner 会
+	//   被 messages 上的 trigram 索引（idx_messages_message_trgm）误导，估计 %keyword% 命中
+	//   很少行而选择 bitmap 路径；keyword 为高频词（如 "Task:"）时 bitmap 索引命中近万条
+	//   候选，回表 366MB messages 大表 recheck，单次 2s+，实测接口超时 27.4s。
 	//
-	//   复杂度从 "候选 sessions × M（messages 总量）"
-	//   降到 "候选 sessions × K（每 session 的 messages 数）"，K << M。
-	//   COUNT(*) 跑同一个 WHERE，同步受益。
+	//   本次（bugfix/session-list-keyword-perf-2026-08-02）改为 IN 子查询形态：planner 以
+	//   arr（每 session 少量 question id）为驱动侧对 messages_pkey 主键点查，彻底避开
+	//   trigram bitmap 回表。生产实测 keyword=Task: 22ms、error 17ms、罕见词 19ms。
 	//
 	// 占位符约束：
 	//   - 必须是 ILIKE ?（gorm 占位符），且整段 SQL 中只能有 1 个 '?'，
 	//     否则会与 gorm 占位符撞车（参考 fix #59 的 jsonb_exists 由来）。
 	//   - 不要写 messages.id = ANY(sessions.message_ids)：message_ids 在 PG 里是 jsonb 文本，
 	//     不是原生数组，会触发 SQLSTATE 42809（参考 fix #58）。
-	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.questions::jsonb) AS arr(mid) JOIN messages ON messages.id = arr.mid::bigint WHERE messages.message::text ILIKE ?)"
+	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.questions::jsonb) AS arr(mid) WHERE arr.mid::bigint IN (SELECT id FROM messages WHERE messages.message::text ILIKE ?))"
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
