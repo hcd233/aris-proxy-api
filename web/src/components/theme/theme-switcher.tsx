@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Feather, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 
@@ -22,16 +23,24 @@ export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" 
 
   if (variant === "inline") {
     return (
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => setTheme(next)}
-        title={label}
-        aria-label={label}
-        className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-      >
-        {icon}
-      </Button>
+      <TooltipProvider>
+        <TooltipRoot>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setTheme(next)}
+                aria-label={label}
+                className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                {icon}
+              </Button>
+            }
+          />
+          <TooltipContent side="top">{label}</TooltipContent>
+        </TooltipRoot>
+      </TooltipProvider>
     );
   }
 
@@ -39,14 +48,22 @@ export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" 
   if (!showFab) return null;
 
   return (
-    <button
-      type="button"
-      onClick={() => setTheme(next)}
-      title={label}
-      aria-label={label}
-      className="fixed bottom-6 left-6 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-popover/70 text-foreground/70 opacity-60 backdrop-blur-md transition-opacity hover:text-foreground hover:opacity-100"
-    >
-      {icon}
-    </button>
+    <TooltipProvider>
+      <TooltipRoot>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              onClick={() => setTheme(next)}
+              aria-label={label}
+              className="fixed bottom-6 left-6 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-popover/70 text-foreground/70 opacity-60 backdrop-blur-md transition-opacity hover:text-foreground hover:opacity-100"
+            >
+              {icon}
+            </button>
+          }
+        />
+        <TooltipContent side="right">{label}</TooltipContent>
+      </TooltipRoot>
+    </TooltipProvider>
   );
 }
