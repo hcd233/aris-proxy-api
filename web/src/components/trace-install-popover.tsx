@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
-import { Check, Copy, Radar, Terminal } from "lucide-react";
+import { Check, Copy, Radar } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {

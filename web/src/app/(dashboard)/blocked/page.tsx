@@ -67,7 +67,7 @@ export default function BlockPage() {
     } finally {
       setLoading(false);
     }
-  }, [setPersistedPage, setPersistedPageSize]);
+  }, [setPersistedPage, setPersistedPageSize, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch list when the persisted page or size changes */
   useEffect(() => { fetchItems(persistedPage, persistedPageSize); }, [fetchItems, persistedPage, persistedPageSize]);
@@ -92,7 +92,7 @@ export default function BlockPage() {
     } finally {
       setSaving(false);
     }
-  }, [form.word, fetchItems, persistedPage, persistedPageSize]);
+  }, [form.word, fetchItems, persistedPage, persistedPageSize, t]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -105,7 +105,7 @@ export default function BlockPage() {
     } catch (err) {
       showErrorToast(err, { title: t("blocked.delete_error") });
     }
-  }, [deleteTarget, fetchItems, persistedPage, persistedPageSize]);
+  }, [deleteTarget, fetchItems, persistedPage, persistedPageSize, t]);
 
   return (
     <PermissionGuard adminOnly>

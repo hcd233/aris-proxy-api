@@ -135,7 +135,7 @@ export default function AuditPage() {
         setLoading(false);
       }
     },
-    [],
+    [t],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
