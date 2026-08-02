@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Wrench } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/lib/i18n";
 
 const SHEET_DISMISS_DISTANCE = 96;
 const SHEET_DISMISS_VELOCITY = 0.55; // px per ms
@@ -47,6 +48,7 @@ export function SwipeDismissSheetBody({
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
   onScrollRootChange?: (node: HTMLDivElement | null) => void;
 }) {
+  const t = useT();
   const popupRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{
@@ -210,7 +212,7 @@ export function SwipeDismissSheetBody({
           onClick={onDismiss}
           className="ml-auto -mr-1 inline-flex h-9 items-center px-2 text-[14px] font-medium text-primary"
         >
-          Done
+          {t("common.done")}
         </button>
       </div>
 
