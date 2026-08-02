@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { PaginationBar } from "@/components/pagination-bar";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
@@ -395,23 +396,39 @@ export default function TraceDetailClient({
     <div className="space-y-6">
       {/* Header — mirrors session detail: back + title + meta */}
       <div className="flex items-start gap-3">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => router.push("/trace/")}
-          className="mt-1 size-9 shrink-0 text-foreground/70 hover:text-foreground"
-          aria-label={t("trace.back_to_traces")}
-          title={t("trace.back_to_traces")}
-        >
-          <ArrowLeft className="size-5" />
-        </Button>
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => router.push("/trace/")}
+                  className="mt-1 size-9 shrink-0 text-foreground/70 hover:text-foreground"
+                  aria-label={t("trace.back_to_traces")}
+                >
+                  <ArrowLeft className="size-5" />
+                </Button>
+              }
+            />
+            <TooltipContent side="top">{t("trace.back_to_traces")}</TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
         <div className="mt-1 shrink-0">
-          <DeleteIconButton
-            aria-label={t("trace.delete_aria")}
-            title={t("trace.delete_aria")}
-            disabled={deleting}
-            onClick={() => setDeleteConfirmOpen(true)}
-          />
+          <TooltipProvider>
+            <TooltipRoot>
+              <TooltipTrigger
+                render={
+                  <DeleteIconButton
+                    aria-label={t("trace.delete_aria")}
+                    disabled={deleting}
+                    onClick={() => setDeleteConfirmOpen(true)}
+                  />
+                }
+              />
+              <TooltipContent side="top">{t("trace.delete_aria")}</TooltipContent>
+            </TooltipRoot>
+          </TooltipProvider>
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
@@ -460,9 +477,24 @@ export default function TraceDetailClient({
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
                 {t("trace.cwd")}
               </p>
-              <p className="mt-1 truncate font-mono text-xs" title={detail.cwd}>
-                {detail.cwd || "—"}
-              </p>
+              {detail.cwd ? (
+                <TooltipProvider>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <p className="mt-1 truncate font-mono text-xs">
+                          {detail.cwd}
+                        </p>
+                      }
+                    />
+                    <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                      {detail.cwd}
+                    </TooltipContent>
+                  </TooltipRoot>
+                </TooltipProvider>
+              ) : (
+                <p className="mt-1 truncate font-mono text-xs">—</p>
+              )}
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
