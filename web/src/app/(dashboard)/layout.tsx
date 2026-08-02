@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   Suspense,
   useCallback,
   useEffect,
@@ -16,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -89,32 +91,42 @@ function SidebarNav({
   );
 
   return (
-    <nav className="flex flex-col gap-0.5 px-2">
-      {visibleItems.map((item) => {
-        const isActive =
-          item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href);
-        const label = t(item.labelKey);
+    <TooltipProvider>
+      <nav className="flex flex-col gap-0.5 px-2">
+        {visibleItems.map((item) => {
+          const isActive =
+            item.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.href);
+          const label = t(item.labelKey);
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
-              isActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-2xs"
-                : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-            } ${collapsed ? "justify-center" : ""}`}
-            title={collapsed ? label : undefined}
-          >
-            <span className={isActive ? "text-sidebar-primary" : ""}>{item.icon}</span>
-            {!collapsed && <span>{label}</span>}
-          </Link>
-        );
-      })}
-    </nav>
+          const link = (
+            <Link
+              href={item.href}
+              onClick={onNavigate}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-2xs"
+                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+              } ${collapsed ? "justify-center" : ""}`}
+              aria-label={collapsed ? label : undefined}
+            >
+              <span className={isActive ? "text-sidebar-primary" : ""}>{item.icon}</span>
+              {!collapsed && <span>{label}</span>}
+            </Link>
+          );
+
+          return collapsed ? (
+            <TooltipRoot key={item.href}>
+              <TooltipTrigger render={link} />
+              <TooltipContent side="right">{label}</TooltipContent>
+            </TooltipRoot>
+          ) : (
+            <Fragment key={item.href}>{link}</Fragment>
+          );
+        })}
+      </nav>
+    </TooltipProvider>
   );
 }
 
@@ -159,9 +171,18 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
           <LanguageSwitcher />
           <div className="flex items-center gap-1">
             <ThemeSwitcher variant="inline" />
-            <Button variant="ghost" size="icon-sm" onClick={logout} title={t("nav.logout")} className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
-              <LogOut className="size-4" />
-            </Button>
+            <TooltipProvider>
+              <TooltipRoot>
+                <TooltipTrigger
+                  render={
+                    <Button variant="ghost" size="icon-sm" onClick={logout} aria-label={t("nav.logout")} className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+                      <LogOut className="size-4" />
+                    </Button>
+                  }
+                />
+                <TooltipContent side="top">{t("nav.logout")}</TooltipContent>
+              </TooltipRoot>
+            </TooltipProvider>
           </div>
         </div>
       )}

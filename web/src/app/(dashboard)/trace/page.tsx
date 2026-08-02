@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -246,12 +247,20 @@ export default function TracePage() {
                           <p className="truncate font-mono text-sm font-medium">{tr.sessionId}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
-                          <DeleteIconButton
-                            aria-label={t("trace.delete_aria")}
-                            title={t("trace.delete_aria")}
-                            disabled={deleting === tr.id}
-                            onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
-                          />
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <DeleteIconButton
+                                    aria-label={t("trace.delete_aria")}
+                                    disabled={deleting === tr.id}
+                                    onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
+                                  />
+                                }
+                              />
+                              <TooltipContent side="top">{t("trace.delete_aria")}</TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
                         </div>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -324,12 +333,20 @@ export default function TracePage() {
                         <TableCell>{tr.model}</TableCell>
                         <TableCell className="text-muted-foreground">{formatDateTime(tr.createdAt)}</TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          <DeleteIconButton
-                            aria-label={t("trace.delete_aria")}
-                            title={t("trace.delete_aria")}
-                            disabled={deleting === tr.id}
-                            onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
-                          />
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <DeleteIconButton
+                                    aria-label={t("trace.delete_aria")}
+                                    disabled={deleting === tr.id}
+                                    onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
+                                  />
+                                }
+                              />
+                              <TooltipContent side="top">{t("trace.delete_aria")}</TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))}

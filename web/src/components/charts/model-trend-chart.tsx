@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
-import type { ModelTrendItem } from "@/lib/types";
+import type { ModelTrendItem, Granularity } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
-import { computeRange, formatChartTime } from "@/lib/time-range";
+import { computeRange, formatChartTime, generateEmptyTimeline } from "@/lib/time-range";
 import { useChartSeriesColors } from "@/lib/theme";
 
 export function ModelTrendChart() {
@@ -31,6 +31,11 @@ export function ModelTrendChart() {
   const [data, setData] = useState<ModelTrendItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [rangeState, setRangeState] = useState<{
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  } | null>(null);
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
   const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
@@ -39,6 +44,7 @@ export function ModelTrendChart() {
     setError(false);
     try {
       const { startTime, endTime, granularity } = computeRange(range ?? timeRange, cs ?? customStart, ce ?? customEnd);
+      setRangeState({ startTime, endTime, granularity });
       const rsp = await api.fetchModelTrend({
         startTime,
         endTime,
@@ -85,6 +91,17 @@ export function ModelTrendChart() {
     ...pointMap.get(time),
   }));
 
+  // 后端无数据时仍渲染空坐标轴（X 轴时间刻度 + Y 轴网格），而非显示空态文案
+  const isEmpty = flatData.length === 0;
+  const chartData =
+    isEmpty && rangeState
+      ? generateEmptyTimeline(
+          rangeState.startTime,
+          rangeState.endTime,
+          rangeState.granularity,
+        ).map((time) => ({ time, __empty: 0 }))
+      : flatData;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -111,20 +128,16 @@ export function ModelTrendChart() {
               Retry
             </Button>
           </div>
-        ) : flatData.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-            No data for this period
-          </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-64 w-full">
-            <LineChart data={flatData}>
+            <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="time"
                 tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
                 fontSize={12}
               />
-              <YAxis fontSize={12} domain={[0, "auto"]} allowDataOverflow={false} />
+              <YAxis fontSize={12} domain={isEmpty ? [0, 1] : [0, "auto"]} tickCount={isEmpty ? 3 : undefined} allowDataOverflow={false} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
               {models.map((m) => (
@@ -138,6 +151,7 @@ export function ModelTrendChart() {
                   dot={false}
                 />
               ))}
+              {isEmpty && <Line dataKey="__empty" stroke="transparent" dot={false} />}
             </LineChart>
           </ChartContainer>
         )}

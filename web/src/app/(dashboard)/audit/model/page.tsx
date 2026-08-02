@@ -329,16 +329,24 @@ export default function AuditPage() {
                           <span>O: {formatMs(log.streamDurationMs)}</span>
                         )}
                         {cacheInfo && <span>{cacheInfo}</span>}
-                        <span
-                          className="cursor-pointer font-mono underline-offset-2 hover:underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyTrace(log.traceId);
-                          }}
-                          title={t("audit.copy_traceid_title")}
-                        >
-                          {log.traceId.slice(-6) || "—"}
-                        </span>
+                        <TooltipProvider>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <span
+                                  className="cursor-pointer font-mono underline-offset-2 hover:underline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopyTrace(log.traceId);
+                                  }}
+                                >
+                                  {log.traceId.slice(-6) || "—"}
+                                </span>
+                              }
+                            />
+                            <TooltipContent side="top">{t("audit.copy_traceid_title")}</TooltipContent>
+                          </TooltipRoot>
+                        </TooltipProvider>
                       </div>
                       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground/70">
                         <span>{formatTime(log.createdAt)}</span>
@@ -570,9 +578,15 @@ export default function AuditPage() {
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                         onClick={() => handleCopyTrace(log.traceId)}
-                        title={t("audit.copy_traceid_title")}
                       >
-                        {log.traceId.slice(-6) || "—"}
+                        <TooltipProvider>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={<span>{log.traceId.slice(-6) || "—"}</span>}
+                            />
+                            <TooltipContent side="top">{t("audit.copy_traceid_title")}</TooltipContent>
+                          </TooltipRoot>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   );
