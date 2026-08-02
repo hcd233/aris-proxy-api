@@ -474,10 +474,12 @@ export default function AuditPage() {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {formatTime(log.createdAt)}
                       </TableCell>
-                      <TableCell className="max-w-[180px] truncate">
-                        <span className="inline-flex items-center gap-1.5">
+                      <TableCell>
+                        <span className="flex max-w-[180px] items-center gap-1.5">
                           <ProviderIcon protocol={log.modelId} size={14} />
-                          {log.modelId || "—"}
+                          <span className="min-w-0 truncate" title={log.modelId || undefined}>
+                            {log.modelId || "—"}
+                          </span>
                         </span>
                       </TableCell>
                       <TableCell>
