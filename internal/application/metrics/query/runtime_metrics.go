@@ -286,10 +286,16 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 
 // aggregateInstances 把每个 instance 的快照各自按桶聚合成独立曲线（不跨实例求和）：
 // goroutines/heapMB 取桶内均值；cpuPercent 取桶内 cpu 正 delta ÷ 桶宽。实例按名称排序输出，
-// 保证响应稳定；无任何输出的实例（空桶）不出现。
+// 保证响应稳定。只输出"最近仍在产出快照"的活跃实例：实例注册表保留 24h，滚动发布遗留的
+// 已下线实例在窗口内仍有历史快照，若照常输出，前端对头部集群总和求和时会把死实例计入，
+// 造成数值虚高；最后一条快照距 end 超过 2 个桶的实例视为已下线，直接不输出。
 func aggregateInstances(byInstance map[string][]metrics.Snapshot, alignedStart, bucket, end, outputStart int64) map[string]dto.RuntimeInstanceSeries {
 	names := lo.Filter(lo.Keys(byInstance), func(n string, _ int) bool {
-		return len(byInstance[n]) > 0
+		snaps := byInstance[n]
+		if len(snaps) == 0 {
+			return false
+		}
+		return snaps[len(snaps)-1].TS >= end-2*bucket
 	})
 	if len(names) == 0 {
 		return nil
