@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 构建产物（make web-build 输出），避免 lint 扫描压缩 JS 产生噪音
+    "dist/**",
   ]),
 ]);
 

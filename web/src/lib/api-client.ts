@@ -97,7 +97,6 @@ export class ApiError extends Error {
 
 class ApiClient {
   private refreshing: Promise<boolean> | null = null;
-  private authRetried = false;
 
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -147,25 +146,39 @@ class ApiClient {
     return this.refreshing;
   }
 
+  /**
+   * 401 处理：等待（或触发）一次 token 刷新后重试原请求。
+   * tryRefreshToken 内部以 Promise 做并发去重，因此并发 401 会共享同一次刷新，
+   * 不会出现“一个请求刷新成功、另一个请求误判已重试而强制登出”的竞态。
+   * 刷新后仍 401（refresh token 已失效）才清空凭据并提示重新登录。
+   */
   private async handleAuthFailure<T>(path: string, options?: RequestInit): Promise<T> {
-    if (this.authRetried) {
+    const refreshed = await this.tryRefreshToken();
+    if (!refreshed) {
       this.clearAuthAndPromptLogin();
       throw new ApiError(401, "Authentication required");
     }
-    this.authRetried = true;
-    const refreshed = await this.tryRefreshToken();
-    if (refreshed) {
-      const retryRes = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers: { ...this.getHeaders(), ...options?.headers },
-      });
-      if (!retryRes.ok) {
-        throw new ApiError(retryRes.status, await retryRes.text());
-      }
-      return retryRes.json();
+
+    const retryRes = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: { ...this.getHeaders(), ...options?.headers },
+    });
+
+    if (retryRes.status === 401) {
+      this.clearAuthAndPromptLogin();
+      throw new ApiError(401, "Authentication required");
     }
-    this.clearAuthAndPromptLogin();
-    throw new ApiError(401, "Authentication required");
+    if (!retryRes.ok) {
+      throw new ApiError(retryRes.status, await retryRes.text());
+    }
+
+    const retryBody = await retryRes.json();
+    // 业务层未授权（HTTP 200 包装）同样视为凭据失效
+    if (retryBody && typeof retryBody === "object" && retryBody.error?.code === BusinessErrorCode.Unauthorized) {
+      this.clearAuthAndPromptLogin();
+      throw new ApiError(401, "Authentication required");
+    }
+    return retryBody as T;
   }
 
   private clearAuthAndPromptLogin(): void {
@@ -187,7 +200,6 @@ class ApiClient {
     path: string,
     options?: RequestInit
   ): Promise<T> {
-    this.authRetried = false;
     const res = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers: { ...this.getHeaders(), ...options?.headers },
@@ -367,20 +379,26 @@ class ApiClient {
   }
 
   /**
-   * Get shared session metadata (public, no auth).
+   * 公开只读接口（无需鉴权），仅携带 Accept-Language。
    */
-  async getShareMetadata(shareId: string): Promise<GetShareMetadataRsp> {
+  private async publicGet<T>(path: string): Promise<T> {
     const headers: HeadersInit = { "Content-Type": "application/json" };
     const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
     if (locale === "zh" || locale === "en") headers["Accept-Language"] = locale;
-    const res = await fetch(
-      `${API_BASE}/api/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`,
-      { method: "GET", headers }
-    );
+    const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
     if (!res.ok) {
       throw new ApiError(res.status, await res.text());
     }
     return res.json();
+  }
+
+  /**
+   * Get shared session metadata (public, no auth).
+   */
+  async getShareMetadata(shareId: string): Promise<GetShareMetadataRsp> {
+    return this.publicGet<GetShareMetadataRsp>(
+      `/api/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`
+    );
   }
 
   /**
@@ -391,17 +409,9 @@ class ApiClient {
     page: number = 1,
     pageSize: number = 50
   ): Promise<ListShareMessagesRsp> {
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
-    if (locale === "zh" || locale === "en") headers["Accept-Language"] = locale;
-    const res = await fetch(
-      `${API_BASE}/api/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
-      { method: "GET", headers }
+    return this.publicGet<ListShareMessagesRsp>(
+      `/api/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`
     );
-    if (!res.ok) {
-      throw new ApiError(res.status, await res.text());
-    }
-    return res.json();
   }
 
   /**
@@ -412,17 +422,9 @@ class ApiClient {
     page: number = 1,
     pageSize: number = 20
   ): Promise<ListShareToolsRsp> {
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
-    if (locale === "zh" || locale === "en") headers["Accept-Language"] = locale;
-    const res = await fetch(
-      `${API_BASE}/api/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
-      { method: "GET", headers }
+    return this.publicGet<ListShareToolsRsp>(
+      `/api/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`
     );
-    if (!res.ok) {
-      throw new ApiError(res.status, await res.text());
-    }
-    return res.json();
   }
 
   // ─── API Keys ──────────────────────────────────────────────────────────────
@@ -796,7 +798,6 @@ class ApiClient {
         signal,
       });
 
-    this.authRetried = false;
     let res = await doFetch();
 
     if (res.status === 401) {
@@ -849,17 +850,20 @@ class ApiClient {
 function parseSSEFrame(frame: string): DatasetExportSSEEvent | null {
   const lines = frame.split("\n");
   let event = "";
-  let data = "";
+  const dataLines: string[] = [];
 
   for (const line of lines) {
-    if (line.startsWith("event: ")) {
-      event = line.slice(7).trim();
-    } else if (line.startsWith("data: ")) {
-      data = line.slice(6);
+    if (line.startsWith(":")) continue; // SSE 注释行，忽略
+    if (line.startsWith("event:")) {
+      event = line.slice("event:".length).trim();
+    } else if (line.startsWith("data:")) {
+      // 规范：冒号后至多一个前导空格；同事件的多个 data: 行以 \n 拼接
+      dataLines.push(line.slice("data:".length).replace(/^ /, ""));
     }
   }
 
-  if (!event || !data) return null;
+  if (!event || dataLines.length === 0) return null;
+  const data = dataLines.join("\n");
 
   try {
     const parsed = JSON.parse(data);

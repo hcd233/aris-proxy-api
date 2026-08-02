@@ -26,17 +26,7 @@ import { useT } from "@/lib/i18n";
 import TraceInstallPopover from "@/components/trace-install-popover";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-
-function formatDateTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const seconds = String(d.getSeconds()).padStart(2, "0");
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-}
+import { formatDateTime } from "@/lib/utils";
 
 export default function TracePage() {
   const [traces, setTraces] = useState<TraceSummary[]>([]);

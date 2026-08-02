@@ -127,7 +127,7 @@ export default function CronAuditPage() {
         setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize],
+    [setPersistedPage, setPersistedPageSize, t],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */

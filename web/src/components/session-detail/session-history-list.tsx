@@ -8,7 +8,7 @@ import type { SessionSummary } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatRelativeTime } from "@/lib/utils";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -21,7 +21,7 @@ export function SessionHistoryList({
   activeSessionId,
   onSelect,
 }: SessionHistoryListProps) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,7 +121,7 @@ export function SessionHistoryList({
                   </p>
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                     {t("session_history.message_count").replace("{count}", String(session.messageCount)).replace("{s}", session.messageCount === 1 ? "" : "s")} ·{" "}
-                    {formatRelativeTime(session.updatedAt)}
+                    {formatRelativeTime(session.updatedAt, locale)}
                   </p>
                 </button>
               </li>

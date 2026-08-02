@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
-import type { OAuth2Provider } from "@/lib/types";
+import { api } from "@/lib/api-client";
+import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
 
 export default function CallbackPage() {
   const { handleCallback } = useAuth();
@@ -11,23 +12,24 @@ export default function CallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   const processCallback = useCallback(async () => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const state = params.get("state");
-
-    if (!code || !state) {
+    const params = parseOAuthCallbackParams(window.location.search);
+    if (!params) {
       setError(t("callback.missing_params"));
       return;
     }
 
-    const platformMatch = state.match(/^provider:(github|google):/);
-    const platform: OAuth2Provider = platformMatch
-      ? (platformMatch[1] as OAuth2Provider)
-      : "github";
+    const platform = resolveOAuthPlatform(params.state);
+    if (!platform) {
+      setError(t("callback.invalid_state"));
+      return;
+    }
 
     try {
-      const { api } = await import("@/lib/api-client");
-      const data = await api.oauth2Callback({ platform, code, state });
+      const data = await api.oauth2Callback({
+        platform,
+        code: params.code,
+        state: params.state,
+      });
 
       if (data.error) {
         setError(data.error.message || t("callback.token_exchange_failed"));
@@ -43,7 +45,7 @@ export default function CallbackPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t("callback.token_exchange_failed"));
     }
-  }, [handleCallback]);
+  }, [handleCallback, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- OAuth2 callback requires setting state from URL params on mount */
   useEffect(() => {

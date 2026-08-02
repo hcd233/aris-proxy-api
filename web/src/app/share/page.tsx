@@ -26,7 +26,7 @@ import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { formatRelativeTime } from "@/lib/utils";
 import { ReadingLayout } from "@/components/shared/reading-layout";
 import { LocaleFade } from "@/components/locale-fade";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 
 type ShareError =
   | { kind: "missing-id" }
@@ -35,7 +35,7 @@ type ShareError =
   | { kind: "unknown"; message: string };
 
 function ShareErrorView({ error }: { error: ShareError }) {
-  const t = useT();
+  const { t } = useI18n();
   const { title, description } = (() => {
     switch (error.kind) {
       case "missing-id":
@@ -96,7 +96,7 @@ function SharedSessionView() {
   const searchParams = useSearchParams();
   const shareID = searchParams.get("id") ?? "";
   const isMobile = useIsMobile();
-  const t = useT();
+  const { t, locale } = useI18n();
 
   const [metadata, setMetadata] = useState<ShareSessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
@@ -283,7 +283,7 @@ function SharedSessionView() {
             isMobile && headerCompact ? "max-h-0 opacity-0" : "max-h-4 opacity-100",
           ].filter(Boolean).join(" ")}
         >
-          {formatRelativeTime(metadata.createdAt)} · {metadata.messageCount} {t("sessions.messages").toLowerCase()}
+          {formatRelativeTime(metadata.createdAt, locale)} · {metadata.messageCount} {t("sessions.messages").toLowerCase()}
         </p>
       </div>
       {metadata.toolCount > 0 && (
