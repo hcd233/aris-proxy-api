@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import { api } from "@/lib/api-client";
+import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
 import { Button } from "@/components/ui/button";
-import type { OAuth2Provider } from "@/lib/types";
 
 export default function LoginPage() {
   const { login, handleCallback, accessToken, user } = useAuth();
@@ -13,21 +14,23 @@ export default function LoginPage() {
   const t = useT();
 
   const processCallback = useCallback(async () => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const state = params.get("state");
-
-    if (!code || !state) return;
+    const params = parseOAuthCallbackParams(window.location.search);
+    if (!params) return;
 
     setProcessing(true);
-    const platformMatch = state.match(/^provider:(github|google):/);
-    const platform: OAuth2Provider = platformMatch
-      ? (platformMatch[1] as OAuth2Provider)
-      : "github";
+    const platform = resolveOAuthPlatform(params.state);
+    if (!platform) {
+      setError(t("login.invalid_state"));
+      setProcessing(false);
+      return;
+    }
 
     try {
-      const { api } = await import("@/lib/api-client");
-      const rsp = await api.oauth2Callback({ platform, code, state });
+      const rsp = await api.oauth2Callback({
+        platform,
+        code: params.code,
+        state: params.state,
+      });
       if (rsp.error) {
         setError(rsp.error.message);
         setProcessing(false);
@@ -44,7 +47,7 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : t("login.failed"));
       setProcessing(false);
     }
-    }, [handleCallback, t]);
+  }, [handleCallback, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- OAuth2 callback requires setting state from URL params on mount */
   useEffect(() => {

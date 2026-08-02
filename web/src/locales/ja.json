@@ -267,6 +267,17 @@
   "error.resource_locked": "リソースはロックされています",
   "error.content_blocked": "コンテンツがポリシーに違反しています",
   "error.validation": "バリデーションエラー",
+  "error.http_400": "リクエストが不正です",
+  "error.http_404": "リクエストされたリソースが存在しません",
+  "error.http_409": "リソースの競合が発生しました",
+  "error.http_413": "リクエスト内容が大きすぎます",
+  "error.http_429": "リクエストが多すぎます。しばらくお待ちください",
+  "error.http_500": "サーバー内部エラー",
+  "error.http_502": "ゲートウェイエラー",
+  "error.http_503": "サービスを一時的に利用できません",
+  "error.http_504": "ゲートウェイタイムアウト",
+  "error.network_failed": "ネットワーク接続に失敗しました。ネットワークを確認してください",
+  "error.unknown": "不明なエラーが発生しました",
   "monitor.title": "モニター",
   "monitor.subtitle": "リアルタイムのランタイムおよびビジネスメトリクス（5秒間隔）",
   "monitor.telemetry": "ランタイムテレメトリー",
@@ -499,6 +510,7 @@
   "login.secure_access": "OAuth2 によるセキュアアクセス",
   "login.welcome_back": "おかえりなさい",
   "login.sign_in": "サインインして管理コンソールにアクセス",
+  "login.invalid_state": "無効な認可ステートです",
   "login.failed": "ログインに失敗しました",
   "login.failed_no_tokens": "ログイン失敗：トークンを受信できませんでした",
   "layout.aris_proxy": "Aris Proxy",
@@ -709,5 +721,6 @@
   "models.model_id_placeholder": "例: gpt-4",
   "models.model_id_hint": "空欄の場合は alias がモデルIDとして使用されます。",
   "models.upstream_model": "上游モデル名",
-  "models.upstream_model_placeholder": "例: gpt-4o-2024-08-06"
+  "models.upstream_model_placeholder": "例: gpt-4o-2024-08-06",
+  "callback.invalid_state": "無効な認可ステートです"
 }

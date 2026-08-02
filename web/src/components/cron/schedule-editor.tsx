@@ -128,7 +128,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
       return isValidCronSpec(parsed.advancedSpec) ? specToHuman(parsed.advancedSpec, locale) : "";
     }
     return specToHuman(currentSpec, locale);
-  }, [parsed, currentSpec]);
+  }, [parsed, currentSpec, locale]);
 
   const canSave = useMemo(() => {
     if (parsed.mode === "advanced") return isValidCronSpec(parsed.advancedSpec);

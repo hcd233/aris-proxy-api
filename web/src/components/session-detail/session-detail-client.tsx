@@ -101,12 +101,12 @@ export default function SessionDetailClient({
       toast.success(t("common.done"));
       router.push("/sessions/");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("sessions.delete_error"));
+      showErrorToast(err, { title: t("sessions.delete_error") });
     } finally {
       setDeleting(false);
       setDeleteConfirmOpen(false);
     }
-  }, [sessionId, router]);
+  }, [sessionId, router, t]);
 
   const handleScore = useCallback(
     async (value: number) => {
@@ -122,7 +122,7 @@ export default function SessionDetailClient({
         setScoring(false);
       }
     },
-    [sessionId, scoring],
+    [sessionId, scoring, t],
   );
 
   const handleDeleteScore = useCallback(async () => {
@@ -137,7 +137,7 @@ export default function SessionDetailClient({
     } finally {
       setScoring(false);
     }
-  }, [sessionId, scoring]);
+  }, [sessionId, scoring, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {

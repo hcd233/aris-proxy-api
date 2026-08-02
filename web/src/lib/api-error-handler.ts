@@ -12,27 +12,19 @@
  * ```
  */
 import { toast } from "sonner";
-import { parseError, type StructuredError, BusinessErrorCode, type ErrorSeverity } from "./api-errors";
+import {
+  parseError,
+  type StructuredError,
+  BusinessErrorCode,
+  type ErrorSeverity,
+  ERROR_I18N_KEY,
+} from "./api-errors";
+import { translate } from "./i18n";
 
 // ── 暴露 parseError 作为主入口 ──────────────────────────────────────────────
 
-export { parseError, BusinessErrorCode };
+export { parseError, BusinessErrorCode, ERROR_I18N_KEY };
 export type { StructuredError, ErrorSeverity };
-
-// ── 错误消息本地化前缀映射 ──────────────────────────────────────────────────
-
-/**
- * 业务错误码 → i18n key 前缀。
- * 用于组件内通过 `t()` 显示本地化后的错误描述。
- */
-export const ERROR_I18N_KEY: Partial<Record<BusinessErrorCode, string>> = {
-  [BusinessErrorCode.InvalidArgument]: "error.invalid_argument",
-  [BusinessErrorCode.NotFound]: "error.not_found",
-  [BusinessErrorCode.AlreadyExists]: "error.already_exists",
-  [BusinessErrorCode.PermissionDenied]: "error.permission_denied",
-  [BusinessErrorCode.RateLimitExceeded]: "error.rate_limit",
-  [BusinessErrorCode.Internal]: "error.internal",
-};
 
 // ── Toast 快捷方式 ──────────────────────────────────────────────────────────
 
@@ -56,7 +48,10 @@ export interface ErrorToastOptions {
  */
 export function showErrorToast(err: unknown, opts?: ErrorToastOptions): StructuredError {
   const parsed = parseError(err);
-  const description = opts?.description ?? parsed.message;
+  // 优先用 i18n key 本地化描述；无 key（如自定义 Error/string）时退回 parsed.message
+  const description =
+    opts?.description ??
+    (parsed.messageKey ? translate(parsed.messageKey, parsed.message) : parsed.message);
   const duration = opts?.duration ?? toastDuration(parsed.severity);
 
   if (opts?.title) {
