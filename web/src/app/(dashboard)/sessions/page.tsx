@@ -196,7 +196,7 @@ export default function SessionsPage() {
 
   const openDeleteConfirm = (s: SessionSummary, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDeleteTarget({ id: s.id, summary: s.summary || `Session #${s.id}` });
+    setDeleteTarget({ id: s.id, summary: s.summary || t("sessions.untitled_session").replace("{id}", String(s.id)) });
     setDeleteConfirmOpen(true);
   };
 
@@ -433,7 +433,7 @@ export default function SessionsPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">
-                              {s.summary || `Session #${s.id}`}
+                              {s.summary || t("sessions.untitled_session").replace("{id}", String(s.id))}
                             </p>
                           </div>
                         </div>
@@ -446,18 +446,18 @@ export default function SessionsPage() {
                             size={isMobile ? 20 : 16}
                           />
                           <Badge variant="secondary" className="text-xs">
-                            {s.messageCount ?? 0} msgs
+                            {t("sessions.msg_count").replace("{count}", String(s.messageCount ?? 0))}
                           </Badge>
                           <DeleteIconButton
                             disabled={deleting === s.id}
                             onClick={(e) => openDeleteConfirm(s, e)}
-                            aria-label="Delete session"
+                            aria-label={t("sessions.delete_aria")}
                           />
                         </div>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span>ID: {s.id}</span>
-                        <span>{s.toolCount ?? 0} tools</span>
+                        <span>{t("common.id")}: {s.id}</span>
+                        <span>{t("sessions.tool_count").replace("{count}", String(s.toolCount ?? 0))}</span>
                         {s.modelIds && s.modelIds.length > 0 && (
                           <div className="flex items-center gap-1">
                             {s.modelIds.map((m) => <ProviderIcon key={m} protocol={m} size={12} />)}
@@ -489,29 +489,29 @@ export default function SessionsPage() {
                         {selected.size === sessions.length && <Check className="size-3" />}
                       </div>
                     </TableHead>
-                    <TableHead>ID</TableHead>
+                    <TableHead>{t("common.id")}</TableHead>
                     <TableHead
                       className="cursor-pointer select-none whitespace-nowrap"
                       onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
                     >
-                      <span className="inline-flex items-center gap-1">Time {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
+                      <span className="inline-flex items-center gap-1">{t("sessions.time")} {renderSortIcon(SORTABLE_COLUMNS.createdAt)}</span>
                     </TableHead>
-                    <TableHead>Summary</TableHead>
-                    <TableHead className="w-[160px] text-center">Score</TableHead>
+                    <TableHead>{t("sessions.summary")}</TableHead>
+                    <TableHead className="w-[160px] text-center">{t("sessions.score")}</TableHead>
                     <TableHead
                       className="cursor-pointer select-none whitespace-nowrap"
                       onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
                     >
-                      <span className="inline-flex items-center gap-1">Messages {renderSortIcon(SORTABLE_COLUMNS.messageCount)}</span>
+                      <span className="inline-flex items-center gap-1">{t("sessions.messages")} {renderSortIcon(SORTABLE_COLUMNS.messageCount)}</span>
                     </TableHead>
                     <TableHead
                       className="cursor-pointer select-none whitespace-nowrap"
                       onClick={() => handleSort(SORTABLE_COLUMNS.toolCount)}
                     >
-                      <span className="inline-flex items-center gap-1">Tools {renderSortIcon(SORTABLE_COLUMNS.toolCount)}</span>
+                      <span className="inline-flex items-center gap-1">{t("sessions.tools")} {renderSortIcon(SORTABLE_COLUMNS.toolCount)}</span>
                     </TableHead>
-                    <TableHead className="w-[140px]">Models</TableHead>
-                    <TableHead className="w-16 sr-only">Actions</TableHead>
+                    <TableHead className="w-[140px]">{t("sessions.models")}</TableHead>
+                    <TableHead className="w-16 sr-only">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -582,7 +582,7 @@ export default function SessionsPage() {
                             <DeleteIconButton
                               disabled={deleting === s.id}
                               onClick={(e) => openDeleteConfirm(s, e)}
-                              aria-label="Delete session"
+                              aria-label={t("sessions.delete_aria")}
                             />
                           </div>
                         </TableCell>

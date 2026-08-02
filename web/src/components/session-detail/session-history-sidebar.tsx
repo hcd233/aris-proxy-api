@@ -2,9 +2,11 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import { useT } from "@/lib/i18n";
 import { SessionHistoryList } from "./session-history-list";
 
 export function SessionHistorySidebar() {
+  const t = useT();
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeSessionId = Number(searchParams.get("id") ?? NaN);
@@ -16,7 +18,7 @@ export function SessionHistorySidebar() {
       <Separator className="my-3 bg-sidebar-border/50" />
       <div className="px-3 pb-2">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-          History
+          {t("session_detail.history")}
         </h3>
       </div>
       <div className="px-2">
