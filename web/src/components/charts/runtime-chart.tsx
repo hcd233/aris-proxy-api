@@ -11,6 +11,7 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 
 export interface RuntimeChartSeries {
   key: string;
@@ -44,6 +45,7 @@ export function RuntimeChart({ title, data, series, unit, rangeKey, emptyLabel }
   );
   const isEmpty = data.length === 0;
   const showLegend = series.length > 1;
+  const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
 
   return (
     <Card>
@@ -106,7 +108,13 @@ export function RuntimeChart({ title, data, series, unit, rangeKey, emptyLabel }
                   />
                 }
               />
-              {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+              {showLegend && (
+                <ChartLegend
+                  content={
+                    <ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />
+                  }
+                />
+              )}
               {series.map((s) => (
                 <Line
                   key={s.key}
@@ -114,6 +122,7 @@ export function RuntimeChart({ title, data, series, unit, rangeKey, emptyLabel }
                   dataKey={s.key}
                   stroke={s.color}
                   strokeWidth={2}
+                  strokeOpacity={getStrokeOpacity(s.key)}
                   dot={false}
                   isAnimationActive={false}
                 />
