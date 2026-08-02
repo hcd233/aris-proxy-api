@@ -24,6 +24,14 @@ const RANGE_WINDOW_SEC: Record<RangeKey, number> = {
   "24h": 86400,
 };
 
+// RANGE_BUCKET_SEC 各 range 档的聚合桶宽（与后端 metrics.ResolveRange 保持一致）。
+const RANGE_BUCKET_SEC: Record<RangeKey, number> = {
+  "15m": 5,
+  "1h": 60,
+  "6h": 300,
+  "24h": 900,
+};
+
 type Pt = RuntimePoint;
 
 interface InstanceState {
@@ -40,6 +48,7 @@ interface SeriesState {
   tokenOutput: Pt[];
   successRate: Pt[];
   instances: Record<string, InstanceState>;
+  latestTime: number; // 后端当前桶起点 unix 秒，用于头部卡片活跃实例判定
 }
 
 const EMPTY_INSTANCE: InstanceState = { goroutines: [], heapMB: [], cpuPercent: [] };
@@ -52,6 +61,7 @@ const EMPTY_STATE: SeriesState = {
   tokenOutput: [],
   successRate: [],
   instances: {},
+  latestTime: 0,
 };
 
 function mergePoints(prev: Pt[], incoming: Pt[], cutoff: number): Pt[] {
@@ -78,14 +88,15 @@ function mergeSSE(
 }
 
 // mergeInstances 按 pod 名逐实例增量合并各指标曲线。
+// 只保留后端返回的实例：后端只输出当前活跃实例（已下线实例不再返回），
+// prev 中不在 incoming 的实例视为已消失，直接移除，避免滚动发布遗留的死实例永久残留。
 function mergeInstances(
   prev: Record<string, InstanceState>,
   incoming: Record<string, RuntimeInstanceSeries>,
   cutoff: number,
 ): Record<string, InstanceState> {
-  const pods = new Set([...Object.keys(prev), ...Object.keys(incoming)]);
   const out: Record<string, InstanceState> = {};
-  for (const pod of pods) {
+  for (const pod of Object.keys(incoming)) {
     const p = prev[pod] ?? EMPTY_INSTANCE;
     const inc = incoming[pod] ?? EMPTY_INSTANCE;
     out[pod] = {
@@ -111,12 +122,27 @@ function podChartData(instances: Record<string, InstanceState>, metric: keyof In
 }
 
 // podSumLatest 各 pod 最新值求和（用于头部卡片集群总和）。
-function podSumLatest(instances: Record<string, InstanceState>, metric: keyof InstanceState): number {
+// 只统计"最近仍在产出数据"的活跃实例：后端实例注册表保留 24h，已下线 pod 的历史曲线
+// 若全部求和会把死实例计入集群总和（滚动发布后数值虚高）。
+// 最新点落在当前桶起点（latestTime）往前一个桶内的实例视为活跃。
+function podSumLatest(
+  instances: Record<string, InstanceState>,
+  metric: keyof InstanceState,
+  latestTime: number,
+  bucketSec: number,
+): number {
   let sum = 0;
   for (const inst of Object.values(instances)) {
-    sum += inst[metric].at(-1)?.value ?? 0;
+    const last = inst[metric].at(-1);
+    if (last && (latestTime <= 0 || last.time >= latestTime - bucketSec)) {
+      sum += last.value;
+    }
   }
   return sum;
+}
+
+function round2(v: number): number {
+  return Math.round(v * 100) / 100;
 }
 
 function lastValue(points: Pt[]): number {
@@ -179,6 +205,7 @@ export default function MonitorPage() {
           tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
           successRate: mergePoints(prev.successRate, s.successRate ?? [], cutoff),
           instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
+          latestTime: rsp.latestTime,
         }));
 
         if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
@@ -217,9 +244,13 @@ export default function MonitorPage() {
     label: pod,
     color: seriesColors[i % seriesColors.length],
   }));
-  const goroutinesTotal = Math.round(podSumLatest(state.instances, "goroutines"));
-  // heapMB 为各 pod 浮点均值求和，多 pod 累加会引入 0.30000000000000004 类尾差，卡片按整数显示
-  const heapTotal = Math.round(podSumLatest(state.instances, "heapMB"));
+  const goroutinesTotal = Math.round(
+    podSumLatest(state.instances, "goroutines", state.latestTime, RANGE_BUCKET_SEC[range]),
+  );
+  // heapMB 为各 pod 浮点均值求和，round2 消除 0.30000000000000004 类尾差
+  const heapTotal = round2(
+    podSumLatest(state.instances, "heapMB", state.latestTime, RANGE_BUCKET_SEC[range]),
+  );
   const tpsData = tpsChartData(state.tokenInput, state.tokenOutput);
   const tpsSeries = [
     { key: "input", label: t("monitor.request_tps_input"), color: seriesColors[0] },

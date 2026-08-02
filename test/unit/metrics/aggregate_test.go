@@ -82,8 +82,39 @@ func TestAggregate_InstancesPerPodSkipsEmptyBucket(t *testing.T) {
 	if a.Goroutines[1].Value != 30 || a.Goroutines[1].Time != 120 {
 		t.Errorf("expected second point 30@120, got %+v", a.Goroutines[1])
 	}
-	if _, ok := got.Instances["pod-z"]; !ok {
-		t.Error("expected instance pod-z to be present")
+	if _, ok := got.Instances["pod-z"]; ok {
+		t.Error("expected stale instance pod-z to be skipped")
+	}
+}
+
+func TestAggregate_StaleInstanceSkipped(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	const end int64 = 600
+	const outputStart int64 = 0
+
+	// pod-live：最后快照就在 end 附近，视为在线，应输出。
+	// pod-dead：最后快照停在 120s（距 end 超过 2 个桶），视为已下线，应跳过。
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-live": {
+			{TS: 0, Goroutines: 10},
+			{TS: 540, Goroutines: 20},
+			{TS: 570, Goroutines: 30},
+		},
+		"pod-dead": {
+			{TS: 0, Goroutines: 100},
+			{TS: 60, Goroutines: 110},
+			{TS: 120, Goroutines: 120},
+		},
+	}
+
+	got := metricsquery.Aggregate(byInstance, 0, bucket, end, outputStart)
+
+	if _, ok := got.Instances["pod-live"]; !ok {
+		t.Error("expected live instance pod-live to be present")
+	}
+	if _, ok := got.Instances["pod-dead"]; ok {
+		t.Error("expected stale instance pod-dead to be skipped")
 	}
 }
 
