@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   Suspense,
   useCallback,
   useEffect,
@@ -121,7 +122,7 @@ function SidebarNav({
               <TooltipContent side="right">{label}</TooltipContent>
             </TooltipRoot>
           ) : (
-            link
+            <Fragment key={item.href}>{link}</Fragment>
           );
         })}
       </nav>
