@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -287,6 +288,7 @@ export default function ModelsPage() {
 
   return (
     <PermissionGuard adminOnly>
+      <TooltipProvider>
       <div className="space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -430,9 +432,18 @@ export default function ModelsPage() {
                               <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
                               {model.alias}
                             </p>
-                            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground" title={model.upstreamModel}>
-                              {model.upstreamModel}
-                            </p>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                                    {model.upstreamModel}
+                                  </p>
+                                }
+                              />
+                              <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                {model.upstreamModel}
+                              </TooltipContent>
+                            </TooltipRoot>
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
                                 <ArrowLeftRight className="size-3 text-muted-foreground" />
@@ -492,37 +503,80 @@ export default function ModelsPage() {
                       {models.map((model) => (
                         <TableRow key={model.id}>
                           <TableCell>
-                            <span className="flex max-w-[16ch] items-center gap-1.5 font-medium" title={model.alias}>
-                              <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
-                              <span className="truncate">{model.alias}</span>
-                            </span>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <span className="flex max-w-[16ch] items-center gap-1.5 font-medium">
+                                    <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
+                                    <span className="truncate">{model.alias}</span>
+                                  </span>
+                                }
+                              />
+                              <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                {model.alias}
+                              </TooltipContent>
+                            </TooltipRoot>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            <span className="block max-w-[12ch] truncate" title={model.modelId || undefined}>
-                              {model.modelId || "—"}
-                            </span>
+                            {model.modelId ? (
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <span className="block max-w-[12ch] truncate">
+                                      {model.modelId}
+                                    </span>
+                                  }
+                                />
+                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                  {model.modelId}
+                                </TooltipContent>
+                              </TooltipRoot>
+                            ) : (
+                              <span className="block max-w-[12ch] truncate">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            <span className="block max-w-[20ch] truncate" title={model.upstreamModel}>
-                              {model.upstreamModel}
-                            </span>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <span className="block max-w-[20ch] truncate">
+                                    {model.upstreamModel}
+                                  </span>
+                                }
+                              />
+                              <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                {model.upstreamModel}
+                              </TooltipContent>
+                            </TooltipRoot>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">
-                              <span
-                                className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground"
-                                title={`${t("models.context_length")}: ${model.contextLength.toLocaleString()}`}
-                              >
-                                <ArrowLeftRight className="size-3 text-muted-foreground" />
-                                {formatTokens(model.contextLength)}
-                              </span>
-                              <span
-                                className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground"
-                                title={`${t("models.max_output")}: ${model.maxOutputTokens.toLocaleString()}`}
-                              >
-                                <ArrowUpFromLine className="size-3 text-muted-foreground" />
-                                {formatTokens(model.maxOutputTokens)}
-                              </span>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
+                                      <ArrowLeftRight className="size-3 text-muted-foreground" />
+                                      {formatTokens(model.contextLength)}
+                                    </span>
+                                  }
+                                />
+                                <TooltipContent side="top" align="start">
+                                  {`${t("models.context_length")}: ${model.contextLength.toLocaleString()}`}
+                                </TooltipContent>
+                              </TooltipRoot>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
+                                      <ArrowUpFromLine className="size-3 text-muted-foreground" />
+                                      {formatTokens(model.maxOutputTokens)}
+                                    </span>
+                                  }
+                                />
+                                <TooltipContent side="top" align="start">
+                                  {`${t("models.max_output")}: ${model.maxOutputTokens.toLocaleString()}`}
+                                </TooltipContent>
+                              </TooltipRoot>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -537,13 +591,21 @@ export default function ModelsPage() {
                             />
                           </TableCell>
                           <TableCell>
-                            <button
-                              onClick={() => router.push("/endpoints")}
-                              className="block max-w-[14ch] truncate text-primary underline-offset-2 hover:underline"
-                              title={getEndpointName(model)}
-                            >
-                              {getEndpointName(model)}
-                            </button>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <button
+                                    onClick={() => router.push("/endpoints")}
+                                    className="block max-w-[14ch] truncate text-primary underline-offset-2 hover:underline"
+                                  >
+                                    {getEndpointName(model)}
+                                  </button>
+                                }
+                              />
+                              <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                {getEndpointName(model)}
+                              </TooltipContent>
+                            </TooltipRoot>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {new Date(model.createdAt).toLocaleDateString()}
@@ -752,6 +814,7 @@ export default function ModelsPage() {
           models={models}
         />
       </div>
+      </TooltipProvider>
     </PermissionGuard>
   );
 }
