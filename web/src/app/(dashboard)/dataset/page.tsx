@@ -38,6 +38,7 @@ import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { Separator } from "@/components/ui/separator";
+import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 
 hljs.registerLanguage("json", json);
@@ -168,7 +169,20 @@ function DistributionList({
           items.map((item) => (
             <div key={item.label} className="space-y-1.5">
               <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="max-w-[24ch] truncate text-foreground" title={item.label}>{item.label}</span>
+                <TooltipProvider>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <span className="max-w-[24ch] truncate text-foreground">
+                          {item.label}
+                        </span>
+                      }
+                    />
+                    <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                      {item.label}
+                    </TooltipContent>
+                  </TooltipRoot>
+                </TooltipProvider>
                 <span className="font-mono tabular-nums text-muted-foreground">{formatNumber(item.value)}</span>
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-background">
