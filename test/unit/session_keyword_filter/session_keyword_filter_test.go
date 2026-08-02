@@ -29,8 +29,13 @@ import (
 // 必须以 jsonb_array_elements_text 展开 message_ids 并按 messages.id 主键回查，
 // 这样 planner 才能避开"为每条 session 在 messages 全表跑 ILIKE 顺序扫描"。
 //
+// 2026-08-02 起为 IN 子查询形态（arr.mid::bigint IN (SELECT id FROM messages ...)）：
+// 旧的 JOIN messages ON messages.id = arr.mid::bigint 形态会被 messages 上的 trigram 索引
+// 误导而选择 bitmap 回表路径（keyword=Task: 实测 27.4s 超时），IN 形态强制 planner 以
+// arr 为驱动侧对 messages_pkey 主键点查（实测 22ms）。
+//
 //	@author centonhuang
-//	@update 2026-06-07 21:20:00
+//	@update 2026-08-02 12:40:00
 func TestSessionKeywordFilterSQL_UsesPKJoinShape(t *testing.T) {
 	t.Parallel()
 	fragment := constant.SessionKeywordFilterSQL
@@ -44,8 +49,11 @@ func TestSessionKeywordFilterSQL_UsesPKJoinShape(t *testing.T) {
 	if !strings.Contains(fragment, "jsonb_array_elements_text(") {
 		t.Errorf("SessionKeywordFilterSQL must expand sessions.message_ids via jsonb_array_elements_text() so messages can be PK-joined instead of running a correlated ILIKE per session, got %q", fragment)
 	}
-	if !strings.Contains(fragment, "messages.id =") {
-		t.Errorf("SessionKeywordFilterSQL must PK-join messages on messages.id (so the planner uses the primary key), got %q", fragment)
+	if !strings.Contains(fragment, "IN (SELECT id FROM messages") {
+		t.Errorf("SessionKeywordFilterSQL must PK-lookup messages via IN (SELECT id FROM messages ...) so the planner drives from the small question-id set instead of the trigram bitmap on the large messages table, got %q", fragment)
+	}
+	if strings.Contains(fragment, "JOIN messages ON messages.id =") {
+		t.Errorf("SessionKeywordFilterSQL must not JOIN messages (the planner may pick the trigram bitmap path and time out on high-frequency keywords); use IN (SELECT id FROM messages ...) instead, got %q", fragment)
 	}
 	if !strings.Contains(fragment, "ILIKE ?") {
 		t.Errorf("SessionKeywordFilterSQL must keep ILIKE ? parameter placeholder, got %q", fragment)
