@@ -50,8 +50,7 @@ func (h *blockedHandler) HandleCreateBlocked(ctx context.Context, req *dto.Creat
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHandler] Create blocked word failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	_ = result.BlockedID
@@ -68,8 +67,7 @@ func (h *blockedHandler) HandleListBlocked(ctx context.Context, req *dto.ListBlo
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHandler] List blocked words failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Blocked = lo.Map(views, func(v *port.BlockedView, _ int) *dto.BlockedItem {
@@ -90,8 +88,7 @@ func (h *blockedHandler) HandleDeleteBlocked(ctx context.Context, req *dto.Delet
 	err := h.delete.Handle(ctx, port.DeleteBlockedCommand{BlockedID: req.ID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHandler] Delete blocked word failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	return apiutil.WrapHTTPResponse(rsp, nil)

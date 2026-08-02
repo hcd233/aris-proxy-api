@@ -7,6 +7,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/redis/go-redis/v9"
@@ -41,9 +43,15 @@ type APIRouterDependencies struct {
 
 // RegisterDocsRouter 注册文档路由
 //
+// 仅非生产环境开放：生产环境不注册 /docs，避免暴露 API 文档入口。
+// OpenAPI JSON 的暴露也由 internal/api/huma.go 的 OpenAPIPath 按环境控制。
+//
 //	@author centonhuang
 //	@update 2025-11-10 17:26:08
 func RegisterDocsRouter(app *fiber.App) {
+	if config.Env == enum.EnvProduction {
+		return
+	}
 	app.Get("/docs", func(c fiber.Ctx) error {
 		html := `<!doctype html>
 <html>

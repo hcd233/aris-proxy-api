@@ -70,8 +70,7 @@ func (h *datasetHandler) HandlePreview(ctx context.Context, req *dto.DatasetPrev
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[DatasetHandler] Preview failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.TotalSessions = result.TotalSessions
@@ -128,8 +127,7 @@ func (h *datasetHandler) HandlePreviewFormat(ctx context.Context, req *dto.Datas
 	}, req.Offset)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[DatasetHandler] PreviewFormat failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.SessionID = result.SessionID

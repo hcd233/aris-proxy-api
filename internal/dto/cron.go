@@ -49,7 +49,7 @@ type CronJobItem struct {
 //	@update 2026-06-17 10:00:00
 type UpdateCronJobReq struct {
 	Name string                `query:"name" required:"true" maxLength:"100" doc:"任务名"`
-	Body *UpdateCronJobReqBody `json:"body" doc:"请求体"`
+	Body *UpdateCronJobReqBody `json:"body" required:"true" doc:"请求体"`
 }
 
 // UpdateCronJobReqBody 更新 CronJob 请求体

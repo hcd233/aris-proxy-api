@@ -4,11 +4,23 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v3"
+
+	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/samber/lo"
 )
+
+// init 替换 huma 框架错误模型，统一错误响应结构为顶层 {"error": {code, message}}。
+//
+// 覆盖 huma 内置校验（422）、路由未匹配（404）等框架错误路径，使其与
+// handler 业务错误（apiutil.NewHumaBizError）及中间件错误（WriteErrorResponse）
+// 输出完全一致的结构。
+func init() {
+	// FrameworkError 签名与 huma.NewError 完全一致，直接赋值替换。
+	huma.NewError = apiutil.FrameworkError
+}
 
 // NewHumaAPI 创建 Huma API 实例
 //

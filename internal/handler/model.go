@@ -58,8 +58,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Create model failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	_ = result.ModelID
@@ -76,8 +75,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Models = lo.Map(views, func(v *port.ModelView, _ int) *dto.ModelItem {
@@ -129,8 +127,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
@@ -141,8 +138,7 @@ func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteMod
 	err := h.delete.Handle(ctx, port.DeleteModelCommand{ModelID: req.ID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Delete model failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
