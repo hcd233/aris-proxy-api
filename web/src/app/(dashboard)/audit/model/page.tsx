@@ -475,12 +475,24 @@ export default function AuditPage() {
                         {formatTime(log.createdAt)}
                       </TableCell>
                       <TableCell>
-                        <span className="flex max-w-[180px] items-center gap-1.5">
-                          <ProviderIcon protocol={log.modelId} size={14} />
-                          <span className="min-w-0 truncate" title={log.modelId || undefined}>
-                            {log.modelId || "—"}
-                          </span>
-                        </span>
+                        <TooltipProvider>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <button
+                                  type="button"
+                                  className="flex max-w-[180px] cursor-default items-center gap-1.5"
+                                >
+                                  <ProviderIcon protocol={log.modelId} size={14} />
+                                  <span className="min-w-0 truncate">{log.modelId || "—"}</span>
+                                </button>
+                              }
+                            />
+                            <TooltipContent side="top" className="max-w-xs">
+                              <span className="break-all">{log.modelId}</span>
+                            </TooltipContent>
+                          </TooltipRoot>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell>
                         {log.endpoint ? (
