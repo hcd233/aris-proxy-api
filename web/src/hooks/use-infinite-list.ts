@@ -37,11 +37,15 @@ export function useInfiniteList<T>(
   const [loading, setLoading] = useState(false);
   // inFlightRef 仅用于并发去重（写入和读取都在 loadMore 中，不参与 render）
   const inFlightRef = useRef(false);
+  // generationRef：reset 作废在途请求的凭据，避免旧响应污染新列表
+  const generationRef = useRef(0);
+  const [generation, setGeneration] = useState(0);
 
   const loadMore = useCallback(async () => {
     if (!enabled) return;
     if (inFlightRef.current) return;
 
+    const gen = generationRef.current;
     inFlightRef.current = true;
     setLoading(true);
     try {
@@ -50,6 +54,8 @@ export function useInfiniteList<T>(
         offset,
         pageSize,
       );
+      // reset 已发生 → 丢弃本次响应
+      if (gen !== generationRef.current) return;
       // 已 loaded 且没有新条目 → 不再触发 setItems 以避免新引用
       if (newItems.length > 0) {
         setItems((prev) => [...prev, ...newItems]);
@@ -58,18 +64,27 @@ export function useInfiniteList<T>(
       setTotal(newTotal);
       setLoaded(true);
     } catch (e) {
+      if (gen !== generationRef.current) return;
       console.warn("[useInfiniteList] load failed", e);
     } finally {
-      setLoading(false);
-      inFlightRef.current = false;
+      // 仅当没有发生 reset 时才复位 loading/inFlight，避免清掉新一轮请求的状态
+      if (gen === generationRef.current) {
+        setLoading(false);
+        inFlightRef.current = false;
+      }
     }
   }, [enabled, fetcher, offset, pageSize]);
 
   const reset = useCallback(() => {
+    generationRef.current += 1;
+    inFlightRef.current = false;
+    setLoading(false);
     setItems([]);
     setTotal(0);
     setOffset(0);
     setLoaded(false);
+    // 强制 effect 重跑：补偿“reset 时旧请求仍 in-flight 而被作废”的首屏拉取
+    setGeneration((g) => g + 1);
   }, []);
 
   // enabled 切换为 true 或刚 reset 后自动拉首页
@@ -78,7 +93,7 @@ export function useInfiniteList<T>(
     if (enabled && !loaded) {
       void loadMore();
     }
-  }, [enabled, loaded, loadMore]);
+  }, [enabled, loaded, loadMore, generation]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const hasMore = !loaded ? enabled : offset < total;

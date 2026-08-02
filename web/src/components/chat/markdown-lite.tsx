@@ -3,9 +3,13 @@
 /**
  * Markdown — full GFM rendering for chat content.
  *
- * Engine: react-markdown + remark-gfm + remark-breaks + rehype-highlight + rehype-raw.
+ * Engine: react-markdown + remark-gfm + remark-breaks + rehype-highlight + rehype-raw + rehype-sanitize.
  * Component overrides preserve the existing visual style (warm code blocks
  * with copy button, primary-coloured links, muted blockquotes, etc.).
+ *
+ * Security: rehype-raw 允许原始 HTML 进入，因此必须在其后追加 rehype-sanitize
+ * （GitHub 风格白名单）剥离脚本/事件处理器/javascript: 链接/style 属性，
+ * 组件层的 isSafeUrl 只是第二道防线。
  *
  * Special block: ` ```mermaid ` fences are rendered with mermaid.js (lazy-loaded).
  *
@@ -23,6 +27,8 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import type { Options as SanitizeOptions } from "rehype-sanitize";
 
 import type { ReactNode } from "react";
 
@@ -30,6 +36,22 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
 import "highlight.js/styles/atom-one-dark.css";
+
+/**
+ * rehype-sanitize 白名单：基于 GitHub 风格 defaultSchema 扩展：
+ * - 允许所有元素的 className：保留 GFM task-list-item 与 ```lang 语言标记
+ *   （它们在 remark 阶段生成，若被剥离会导致任务列表/代码语言标签回归）
+ * - 允许 input 的 checked：GFM 任务项勾选状态
+ * 注意：style 属性默认被剥离，正好堵住 th/td 透传的 CSS 注入面。
+ */
+const SANITIZE_SCHEMA: SanitizeOptions = {
+  ...defaultSchema,
+  attributes: {
+    ...(defaultSchema.attributes ?? {}),
+    "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
+    input: ["disabled", "type", "checked"],
+  },
+};
 
 function isSafeUrl(url: unknown): url is string {
   return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
@@ -388,7 +410,11 @@ export function MarkdownLite({ text, raw = false, className }: MarkdownProps) {
     <div className={cn("text-[15px] leading-[1.7]", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[rehypeRaw, [rehypeHighlight, { ignoreMissing: true, detect: true }]]}
+        rehypePlugins={[
+          rehypeRaw,
+          [rehypeSanitize, SANITIZE_SCHEMA],
+          [rehypeHighlight, { ignoreMissing: true, detect: true }],
+        ]}
         components={markdownComponents}
       >
         {text}
