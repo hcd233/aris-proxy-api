@@ -110,7 +110,8 @@ func (h *traceHandler) HandleInstallScript(
 		origin := scheme + "://" + humaCtx.Header(constant.HTTPHeaderHost)
 
 		parsed, err := url.Parse(origin)
-		if err != nil || (parsed.Scheme != constant.HTTPSchemeHTTP && parsed.Scheme != constant.HTTPSchemeHTTPS) || parsed.Host == "" {
+		// 必须同时满足：URL 可解析、scheme 白名单、host 字符白名单（防 shell 注入）。
+		if err != nil || (parsed.Scheme != constant.HTTPSchemeHTTP && parsed.Scheme != constant.HTTPSchemeHTTPS) || !util.IsSafeInstallHost(parsed.Host) {
 			logger.WithCtx(humaCtx.Context()).Warn(
 				"[TraceHandler] Invalid origin for install script",
 				zap.String("origin", origin),
@@ -148,8 +149,7 @@ func (h *traceHandler) HandleReportTraceEvent(
 ) (*dto.HTTPResponse[*dto.ReportTraceEventRsp], error) {
 	rsp := &dto.ReportTraceEventRsp{}
 	if req.Body == nil || len(req.Body.Records) == 0 {
-		rsp.Error = ierr.ErrValidation.BizError()
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizErrorFromModel(ctx, ierr.ErrValidation.BizError())
 	}
 	cmd := port.ReportTraceEventCommand{
 		SessionID:       req.Body.SessionID,
@@ -182,8 +182,7 @@ func (h *traceHandler) HandleReportTraceEvent(
 	results, err := h.report.Handle(ctx, cmd)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] Report event failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Results = lo.Map(results, func(
 		result port.ReportTraceRecordResult,
@@ -208,8 +207,7 @@ func (h *traceHandler) HandleListTraces(ctx context.Context, req *dto.ListTraces
 	views, pageInfo, err := h.list.Handle(ctx, port.ListTracesQuery{UserID: userID, IsAdmin: isAdmin, Page: req.Page, PageSize: req.PageSize, Query: req.Query})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] List traces failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Traces = lo.Map(views, func(item *port.TraceSummaryView, _ int) *dto.TraceSummary {
 		return &dto.TraceSummary{
@@ -231,8 +229,7 @@ func (h *traceHandler) HandleGetTrace(ctx context.Context, req *dto.GetTraceReq)
 	view, err := h.get.Handle(ctx, port.GetTraceQuery{UserID: userID, IsAdmin: isAdmin, TraceID: req.TraceID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] Get trace failed", zap.Uint("traceID", req.TraceID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Trace = &dto.TraceDetail{
 		ID: view.ID, SessionID: view.SessionID, ParentTraceID: view.ParentTraceID, Agent: view.Agent, APIKeyName: view.APIKeyName,
@@ -252,8 +249,7 @@ func (h *traceHandler) HandleListTraceEvents(ctx context.Context, req *dto.ListT
 	views, pageInfo, err := h.events.Handle(ctx, port.ListTraceEventsQuery{UserID: userID, IsAdmin: isAdmin, TraceID: req.TraceID, Page: req.Page, PageSize: req.PageSize})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] List trace events failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Events = lo.Map(views, func(item *port.TraceEventView, _ int) *dto.TraceEventItem {
 		return &dto.TraceEventItem{
@@ -283,15 +279,13 @@ func (h *traceHandler) HandleDeleteTraces(ctx context.Context, req *dto.DeleteTr
 
 	ids, parseErr := parseCommaSeparatedIDs(req.IDs)
 	if parseErr != nil {
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, parseErr, ierr.ErrValidation.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, parseErr, ierr.ErrValidation.BizError())
 	}
 
 	result, err := h.delete.Handle(ctx, port.DeleteTraceCommand{UserID: userID, IsAdmin: isAdmin, IDs: ids})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[TraceHandler] Delete traces failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.DeletedCount = result.DeletedCount

@@ -13,7 +13,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -74,8 +73,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 	// DTO 级别输入校验
 	if strings.TrimSpace(req.Body.Name) == "" {
 		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: empty api key name")
-		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizErrorFromModel(ctx, ierr.ErrValidation.BizError())
 	}
 
 	result, err := h.issue.Handle(ctx, port.IssueAPIKeyCommand{
@@ -84,8 +82,7 @@ func (h *apiKeyHandler) HandleCreateAPIKey(ctx context.Context, req *dto.CreateA
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] Create api key failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Key = &dto.APIKeyDetail{
@@ -118,8 +115,7 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIK
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] List api keys failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Keys = lo.Map(views, func(v *port.APIKeyView, _ int) *dto.APIKeyItem {
@@ -151,8 +147,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 	// DTO 级别输入校验
 	if req.ID == 0 {
 		logger.WithCtx(ctx).Warn("[APIKeyHandler] Validation failed: invalid api key id")
-		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizErrorFromModel(ctx, ierr.ErrValidation.BizError())
 	}
 
 	err := h.revoke.Handle(ctx, port.RevokeAPIKeyCommand{
@@ -162,8 +157,7 @@ func (h *apiKeyHandler) HandleDeleteAPIKey(ctx context.Context, req *dto.DeleteA
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[APIKeyHandler] Delete api key failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

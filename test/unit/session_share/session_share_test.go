@@ -2,6 +2,7 @@ package session_share
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -227,12 +228,16 @@ func TestCreateShare_SessionNotFound(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42)
 
-	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 999}})
-	if rsp.Body.Error == nil {
+	_, err := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 999}})
+	if err == nil {
 		t.Error("expected error in response for non-existent session")
 	}
-	if rsp.Body.Error.Code != ierr.ErrDataNotExists.BizError().Code {
-		t.Errorf("error code = %d, want %d (DataNotExists)", rsp.Body.Error.Code, ierr.ErrDataNotExists.BizError().Code)
+	var bizErr *model.Error
+	if !errors.As(err, &bizErr) {
+		t.Fatalf("expected biz error, got %v", err)
+	}
+	if bizErr.Code != ierr.ErrDataNotExists.BizError().Code {
+		t.Errorf("error code = %d, want %d (DataNotExists)", bizErr.Code, ierr.ErrDataNotExists.BizError().Code)
 	}
 }
 
@@ -244,34 +249,9 @@ func TestCreateShare_CacheError(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42)
 
-	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
-	if rsp.Body.Error == nil {
+	_, err := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
+	if err == nil {
 		t.Error("expected error in response for cache failure")
-	}
-}
-
-// TestCreateShare_NilBodyRejected 回归用例：huma 在 body 缺失时会传入空 Body 或 nil Body，
-// handler 必须显式校验，而不是当作 SessionID=0 处理。
-//
-//	@author centonhuang
-//	@update 2026-05-28 14:35:00
-func TestCreateShare_NilBodyRejected(t *testing.T) {
-	t.Parallel()
-	sc := newMockShareCache()
-	getByUser := &mockGetSessionByUserHandler{view: map[uint]*sessionport.SessionDetailView{1: testSessionView()}}
-	h := newTestHandler(sc, getByUser)
-	ctx := ctxWithUser(42)
-
-	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: nil})
-	if rsp.Body.Error == nil {
-		t.Fatal("expected validation error when body is nil")
-	}
-	if rsp.Body.Error.Code != ierr.ErrValidation.BizError().Code {
-		t.Errorf("error code = %d, want Validation (%d)", rsp.Body.Error.Code, ierr.ErrValidation.BizError().Code)
-	}
-	// 必须没有写入任何 share 记录
-	if len(sc.shares) != 0 {
-		t.Errorf("expected no shares to be created on nil body, got %d", len(sc.shares))
 	}
 }
 
@@ -337,12 +317,16 @@ func TestDeleteShare_NotOwner(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(99)
 
-	rsp, _ := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: shareID})
-	if rsp.Body.Error == nil {
+	_, err := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: shareID})
+	if err == nil {
 		t.Error("expected error when deleting another user's share")
 	}
-	if rsp.Body.Error.Code != ierr.ErrDataNotExists.BizError().Code {
-		t.Errorf("error code = %d, want DataNotExists (%d)", rsp.Body.Error.Code, ierr.ErrDataNotExists.BizError().Code)
+	var bizErr *model.Error
+	if !errors.As(err, &bizErr) {
+		t.Fatalf("expected biz error, got %v", err)
+	}
+	if bizErr.Code != ierr.ErrDataNotExists.BizError().Code {
+		t.Errorf("error code = %d, want DataNotExists (%d)", bizErr.Code, ierr.ErrDataNotExists.BizError().Code)
 	}
 	if _, ok := sc.shares[shareID]; !ok {
 		t.Error("share should still exist after failed delete by non-owner")
@@ -356,8 +340,8 @@ func TestDeleteShare_Nonexistent(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42)
 
-	rsp, _ := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: "nonexistent"})
-	if rsp.Body.Error == nil {
+	_, err := h.HandleDeleteShare(ctx, &dto.DeleteShareReq{ShareID: "nonexistent"})
+	if err == nil {
 		t.Error("expected error when deleting non-existent share")
 	}
 }
@@ -370,12 +354,16 @@ func TestCreateShare_AlreadyShared(t *testing.T) {
 	h := newTestHandler(sc, getByUser)
 	ctx := ctxWithUser(42)
 
-	rsp, _ := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
-	if rsp.Body.Error == nil {
+	_, err := h.HandleCreateShare(ctx, &dto.CreateShareReq{Body: &dto.CreateShareReqBody{SessionID: 1}})
+	if err == nil {
 		t.Error("expected DataExists error for already-shared session")
 	}
-	if rsp.Body.Error.Code != ierr.ErrDataExists.BizError().Code {
-		t.Errorf("error code = %d, want %d (DataExists)", rsp.Body.Error.Code, ierr.ErrDataExists.BizError().Code)
+	var bizErr *model.Error
+	if !errors.As(err, &bizErr) {
+		t.Fatalf("expected biz error, got %v", err)
+	}
+	if bizErr.Code != ierr.ErrDataExists.BizError().Code {
+		t.Errorf("error code = %d, want %d (DataExists)", bizErr.Code, ierr.ErrDataExists.BizError().Code)
 	}
 }
 
@@ -490,6 +478,10 @@ func TestCreateShareReq_DTOFollowsHumaBodyConvention(t *testing.T) {
 	}
 	if bodyField.Tag.Get("json") != "body" {
 		t.Errorf(`CreateShareReq.Body json tag = %q, want "body"`, bodyField.Tag.Get("json"))
+	}
+	// Body 必须 required：nil-body 校验由 huma 在 DTO 层完成，handler 不做防御
+	if bodyField.Tag.Get("required") != "true" {
+		t.Errorf(`CreateShareReq.Body required tag = %q, want "true" (huma rejects missing body)`, bodyField.Tag.Get("required"))
 	}
 	// SessionID 必须落在 Body 子结构里，不能直接挂在顶层
 	if _, exists := reqType.FieldByName("SessionID"); exists {

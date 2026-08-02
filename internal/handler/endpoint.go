@@ -60,8 +60,7 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Create endpoint failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	_ = result.EndpointID
@@ -78,8 +77,7 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] List endpoints failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Endpoints = lo.Map(views, func(v *port.EndpointView, _ int) *dto.EndpointItem {
@@ -115,8 +113,7 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Update endpoint failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
@@ -127,8 +124,7 @@ func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.Del
 	err := h.delete.Handle(ctx, port.DeleteEndpointCommand{EndpointID: req.ID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Delete endpoint failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

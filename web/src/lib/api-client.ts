@@ -81,13 +81,19 @@ export class ApiError extends Error {
     this.status = status;
     this.body = body;
 
-    // 自动尝试解析 body 中的结构化错误
+    // 自动尝试解析 body 中的结构化错误（兼容顶层 {code,message} 与统一 {error:{code,message}}）
     try {
       const parsed = JSON.parse(body);
-      if (parsed && typeof parsed === "object" && parsed.code !== undefined) {
-        this.structured = parseError(parsed);
-        this.structured.httpStatus = status;
-        this.structured.rawBody = body;
+      if (parsed && typeof parsed === "object") {
+        const biz =
+          parsed.code !== undefined
+            ? (parsed as { code: number; message: string })
+            : (parsed as { error?: { code?: number; message?: string } }).error;
+        if (biz && biz.code !== undefined && biz.message !== undefined) {
+          this.structured = parseError({ code: biz.code, message: biz.message });
+          this.structured.httpStatus = status;
+          this.structured.rawBody = body;
+        }
       }
     } catch {
       // body 不是 JSON，不处理

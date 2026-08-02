@@ -64,8 +64,7 @@ func (h *oauth2Handler) HandleLogin(ctx context.Context, req *dto.LoginReq) (*dt
 	if err != nil {
 		logger.WithCtx(ctx).Error("[OAuth2Handler] Initiate login failed",
 			zap.String("platform", req.Platform), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.RedirectURL = result.RedirectURL
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -90,8 +89,7 @@ func (h *oauth2Handler) HandleCallback(ctx context.Context, req *dto.CallbackReq
 	if err != nil {
 		logger.WithCtx(ctx).Error("[OAuth2Handler] Callback failed",
 			zap.String("platform", req.Body.Platform), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.AccessToken = result.TokenPair.AccessToken()
 	rsp.RefreshToken = result.TokenPair.RefreshToken()

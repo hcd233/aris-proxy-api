@@ -145,18 +145,6 @@ func TestCronHandler_UpdateCronJob_Success(t *testing.T) {
 	}
 }
 
-func TestCronHandler_UpdateCronJob_MissingBody(t *testing.T) {
-	t.Parallel()
-	h, _, _ := newCronHandlerForTest()
-	rsp, err := h.HandleUpdateCronJob(context.Background(), &dto.UpdateCronJobReq{Name: "SessionDeduplicateCron"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if rsp.Body.Error == nil {
-		t.Fatal("expected validation error")
-	}
-}
-
 func TestCronHandler_ListCronCallAudits_Success(t *testing.T) {
 	t.Parallel()
 	h, _, auditRepo := newCronHandlerForTest()

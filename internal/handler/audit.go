@@ -52,8 +52,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] List audit logs failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Logs = lo.Map(logs, func(log *auditport.AuditLogView, _ int) *dto.AuditLogItem {
@@ -98,8 +97,7 @@ func (h *auditHandler) HandleListAuditOption(ctx context.Context, req *dto.Audit
 	items, err := h.svc.ListAuditOption(ctx, req.Field, req.Keyword, req.StartTime, req.EndTime)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] List audit options failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Items = items
@@ -115,8 +113,7 @@ func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrend
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Model trend failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Data = auditport.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -131,8 +128,7 @@ func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRa
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Request rate failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Data = auditport.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -147,8 +143,7 @@ func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.Token
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Token throughput failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Data = auditport.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -163,8 +158,7 @@ func (h *auditHandler) HandleTokenRate(ctx context.Context, req *dto.TokenRateRe
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Token rate failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Data = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -179,8 +173,7 @@ func (h *auditHandler) HandleModelUsage(ctx context.Context, req *dto.ModelUsage
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Token usage failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Data = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -195,8 +188,7 @@ func (h *auditHandler) HandleFirstTokenLatency(ctx context.Context, req *dto.Fir
 	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] First token latency failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Data = items
 	return apiutil.WrapHTTPResponse(rsp, nil)

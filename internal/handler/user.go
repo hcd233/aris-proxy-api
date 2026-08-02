@@ -67,8 +67,7 @@ func (h *userHandler) HandleGetCurUser(ctx context.Context, _ *dto.EmptyReq) (*d
 	view, err := h.getCurrentUser.Handle(ctx, port.GetCurrentUserQuery{UserID: userID})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Get current user failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.User = &dto.DetailedUser{
@@ -114,8 +113,7 @@ func (h *userHandler) HandleUpdateUser(ctx context.Context, req *dto.UpdateUserR
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Update user failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
