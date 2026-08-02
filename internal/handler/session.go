@@ -16,7 +16,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -131,8 +130,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List sessions by user failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Sessions = lo.Map(views, func(v *port.SessionSummaryView, _ int) *dto.SessionSummary {
@@ -174,8 +172,7 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Get session by user failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	messageItems := lo.Map(view.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
@@ -235,12 +232,6 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateShareReq) (*dto.HTTPResponse[*dto.CreateShareRsp], error) {
 	rsp := &dto.CreateShareRsp{}
 
-	if req.Body == nil {
-		logger.WithCtx(ctx).Warn("[SessionHandler] Create share: empty request body")
-		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
 	result, err := h.createShare.Handle(ctx, port.CreateShareCommand{
 		RequesterID:         util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		RequesterPermission: util.CtxValuePermission(ctx),
@@ -249,8 +240,7 @@ func (h *sessionHandler) HandleCreateShare(ctx context.Context, req *dto.CreateS
 		ExpiresAt:           req.Body.ExpiresAt,
 	})
 	if err != nil {
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.ShareID = result.ShareID
@@ -274,8 +264,7 @@ func (h *sessionHandler) HandleListShares(ctx context.Context, req *dto.ListShar
 	shares, pageInfo, err := h.shareCache.ListUserShares(ctx, userID, req.Page, req.PageSize)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List shares failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Shares = shares
@@ -300,8 +289,7 @@ func (h *sessionHandler) HandleDeleteShare(ctx context.Context, req *dto.DeleteS
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Delete share failed",
 			zap.String("shareID", req.ShareID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Share deleted",
@@ -326,8 +314,7 @@ func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.Delet
 
 	ids, parseErr := parseCommaSeparatedIDs(req.IDs)
 	if parseErr != nil {
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, parseErr, ierr.ErrValidation.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, parseErr, ierr.ErrValidation.BizError())
 	}
 
 	result, err := h.deleteSession.Handle(ctx, port.DeleteSessionCommand{
@@ -337,8 +324,7 @@ func (h *sessionHandler) HandleDeleteSession(ctx context.Context, req *dto.Delet
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Delete session failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.DeletedCount = result.DeletedCount
@@ -372,8 +358,7 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Get session metadata failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	shareID, sharedErr := h.shareCache.GetSessionShareID(ctx, req.SessionID)
@@ -426,8 +411,7 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 		logger.WithCtx(ctx).Error("[SessionHandler] List session messages failed",
 			zap.Uint("sessionID", req.SessionID),
 			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
@@ -467,8 +451,7 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 		logger.WithCtx(ctx).Error("[SessionHandler] List session tools failed",
 			zap.Uint("sessionID", req.SessionID),
 			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Tools = lo.Map(result.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
@@ -497,8 +480,7 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 	if err != nil {
 		logger.WithCtx(ctx).Warn("[SessionHandler] Get share metadata: share not found",
 			zap.String("shareID", req.ShareID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrDataNotExists.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrDataNotExists.BizError())
 	}
 
 	view, viewErr := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
@@ -509,8 +491,7 @@ func (h *sessionHandler) HandleGetShareMetadata(ctx context.Context, req *dto.Ge
 	if viewErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Get share metadata: fetch meta failed",
 			zap.Uint("sessionID", sessionID), zap.Error(viewErr))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, viewErr, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, viewErr, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Session = &dto.ShareSessionMetadata{
@@ -536,8 +517,7 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 	if err != nil {
 		logger.WithCtx(ctx).Warn("[SessionHandler] List share messages: share not found",
 			zap.String("shareID", req.ShareID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrDataNotExists.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrDataNotExists.BizError())
 	}
 
 	result, resultErr := h.listMessages.Handle(ctx, port.ListSessionMessagesQuery{
@@ -551,8 +531,7 @@ func (h *sessionHandler) HandleListShareMessages(ctx context.Context, req *dto.L
 		logger.WithCtx(ctx).Error("[SessionHandler] List share messages failed",
 			zap.Uint("sessionID", sessionID),
 			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(resultErr))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, resultErr, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, resultErr, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Messages = lo.Map(result.Messages, func(m *port.MessageView, _ int) *dto.MessageItem {
@@ -582,8 +561,7 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 	if err != nil {
 		logger.WithCtx(ctx).Warn("[SessionHandler] List share tools: share not found",
 			zap.String("shareID", req.ShareID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrDataNotExists.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrDataNotExists.BizError())
 	}
 
 	result, resultErr := h.listTools.Handle(ctx, port.ListSessionToolsQuery{
@@ -597,8 +575,7 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		logger.WithCtx(ctx).Error("[SessionHandler] List share tools failed",
 			zap.Uint("sessionID", sessionID),
 			zap.Int("page", req.Page), zap.Int("pageSize", req.PageSize), zap.Error(resultErr))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, resultErr, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, resultErr, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Tools = lo.Map(result.Tools, func(t *port.ToolView, _ int) *dto.ToolItem {
@@ -620,12 +597,6 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreSessionReq) (*dto.HTTPResponse[*dto.ScoreSessionRsp], error) {
 	rsp := &dto.ScoreSessionRsp{}
 
-	if req.Body == nil {
-		logger.WithCtx(ctx).Warn("[SessionHandler] Score session: empty request body")
-		rsp.Error = ierr.ErrValidation.BizError().Localize(i18n.FromCtx(ctx))
-		return apiutil.WrapHTTPResponse(rsp, nil)
-	}
-
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
@@ -638,12 +609,10 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 	if viewErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Score session: fetch meta failed",
 			zap.Uint("sessionID", req.Body.SessionID), zap.Error(viewErr))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, viewErr, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, viewErr, ierr.ErrInternal.BizError())
 	}
 	if view == nil {
-		rsp.Error = ierr.ErrDataNotExists.BizError().Localize(i18n.FromCtx(ctx))
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizErrorFromModel(ctx, ierr.ErrDataNotExists.BizError())
 	}
 
 	scoredAt, err := h.scoreSession.Handle(ctx, port.ScoreSessionCommand{
@@ -655,8 +624,7 @@ func (h *sessionHandler) HandleScoreSession(ctx context.Context, req *dto.ScoreS
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Score session: update failed",
 			zap.Uint("sessionID", req.Body.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	if delErr := h.sessionCache.DeleteSessionMeta(ctx, req.Body.SessionID); delErr != nil {
@@ -690,12 +658,10 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 	if viewErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: fetch meta failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(viewErr))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, viewErr, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, viewErr, ierr.ErrInternal.BizError())
 	}
 	if view == nil {
-		rsp.Error = ierr.ErrDataNotExists.BizError().Localize(i18n.FromCtx(ctx))
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizErrorFromModel(ctx, ierr.ErrDataNotExists.BizError())
 	}
 
 	if err := h.deleteScoreSession.Handle(ctx, port.DeleteScoreSessionCommand{
@@ -705,8 +671,7 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 	}); err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Delete score: delete failed",
 			zap.Uint("sessionID", req.SessionID), zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	if delErr := h.sessionCache.DeleteSessionMeta(ctx, req.SessionID); delErr != nil {
@@ -740,8 +705,7 @@ func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.S
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session options failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
 	rsp.Items = items

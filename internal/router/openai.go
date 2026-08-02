@@ -43,7 +43,7 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
 		},
 		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
+			{constant.SecuritySchemeAPIKey: {}},
 		},
 	}, openaiHandler.HandleChatCompletion)
 
@@ -59,7 +59,7 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
 		},
 		Security: []map[string][]string{
-			{"apiKeyAuth": {}},
+			{constant.SecuritySchemeAPIKey: {}},
 		},
 	}, openaiHandler.HandleCreateResponse)
 }

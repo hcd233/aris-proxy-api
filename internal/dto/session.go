@@ -201,7 +201,7 @@ type DeleteFailed struct {
 
 // ScoreSessionReq 人工评分请求
 type ScoreSessionReq struct {
-	Body *ScoreSessionReqBody `json:"body" doc:"Request body"`
+	Body *ScoreSessionReqBody `json:"body" required:"true" doc:"Request body"`
 }
 
 // ScoreSessionReqBody 评分请求体

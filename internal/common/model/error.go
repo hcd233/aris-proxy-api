@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -54,6 +55,33 @@ func (e *Error) Localize(locale enum.Locale) *Error {
 		Code:       e.Code,
 		Message:    i18n.Translate(locale, e.MessageKey, e.Message),
 		MessageKey: e.MessageKey,
+	}
+}
+
+// StatusCode 将业务错误码映射为 HTTP 状态码。
+//
+// 业务错误统一走顶层 {"error": {code, message}} 响应后，HTTP 状态码由业务码推导。
+// 未显式映射的错误码兜底为 500。
+func (e *Error) StatusCode() int {
+	switch e.Code {
+	case constant.BizErrorCodeUnauthorized: // ErrUnauthorized / ErrJWTDecode
+		return http.StatusUnauthorized
+	case constant.BizErrorCodeNoPermission: // ErrNoPermission
+		return http.StatusForbidden
+	case constant.BizErrorCodeDataNotExists: // ErrDataNotExists
+		return http.StatusNotFound
+	case constant.BizErrorCodeDataExists: // ErrDataExists
+		return http.StatusConflict
+	case constant.BizErrorCodeTooManyRequests, constant.BizErrorCodeInsufficientQuota, constant.BizErrorCodeQuotaExceeded: // ErrTooManyRequests / ErrInsufficientQuota / ErrQuotaExceeded
+		return http.StatusTooManyRequests
+	case constant.BizErrorCodeBadRequest: // ErrBadRequest / ErrValidation
+		return http.StatusBadRequest
+	case constant.BizErrorCodeResourceLocked: // ErrResourceLocked
+		return http.StatusLocked
+	case constant.BizErrorCodeContentBlocked: // ErrContentBlocked
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
 	}
 }
 

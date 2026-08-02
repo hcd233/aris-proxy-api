@@ -114,6 +114,19 @@ const HTTP_FALLBACK: Record<number, { message: string; key: string }> = {
  * 此函数是纯函数，无副作用。
  */
 export function parseError(err: unknown): StructuredError {
+  if (err && typeof err === "object" && "error" in err) {
+    // 后端统一错误响应结构：顶层 { error: { code, message } }
+    const biz = (err as { error?: { code?: number; message?: string } }).error;
+    if (biz && typeof biz === "object" && biz.code !== undefined && biz.message !== undefined) {
+      return {
+        code: biz.code,
+        message: biz.message,
+        severity: ERROR_CODE_SEVERITY[biz.code as BusinessErrorCode] ?? "error",
+        raw: err,
+      };
+    }
+  }
+
   if (err && typeof err === "object" && "code" in err && "message" in err) {
     // 后端返回的业务错误 ({ code, message })
     const biz = err as { code: number; message: string };
