@@ -56,8 +56,7 @@ func (h *metricsHandler) HandleGetRuntimeMetrics(ctx context.Context, req *dto.R
 	series, latest, err := h.runtime.RuntimeMetrics(ctx, req.Range, req.Since)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[MetricsHandler] Query runtime metrics failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Series = series
 	rsp.LatestTime = latest

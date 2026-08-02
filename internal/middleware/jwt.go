@@ -5,6 +5,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -96,6 +97,10 @@ func resolveJWTUser(ctx context.Context, db *gorm.DB, cache *redis.Client, userI
 	reqDB := db.WithContext(ctx)
 	user, dbErr := userDAO.Get(reqDB, &model.User{ID: userID}, constant.UserRepoFieldsAuth)
 	if dbErr != nil {
+		// 用户已删除/不存在：会话仍持有有效 JWT，但资源已不存在，语义上等同未授权。
+		if errors.Is(dbErr, gorm.ErrRecordNotFound) {
+			return "", "", ierr.Wrap(ierr.ErrUnauthorized, dbErr, "user not found")
+		}
 		return "", "", dbErr
 	}
 	name = user.Name
