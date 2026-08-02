@@ -26,24 +26,64 @@ func TestAggregate_CrossPodSumRateAndP95(t *testing.T) {
 
 	got := metricsquery.Aggregate(byInstance, alignedStart, bucket, end, outputStart)
 
-	if len(got.Goroutines) == 0 {
-		t.Fatal("expected non-empty goroutines series")
-	}
-	// 第一个桶（t=0）：goroutine 桶内均值 15，跨 2 个 pod 求和 = 30
-	if got.Goroutines[0].Value != 30 {
-		t.Errorf("expected cross-pod goroutines 30, got %f", got.Goroutines[0].Value)
-	}
-	// QPS：每 pod 60/60s=1，跨 2 pod = 2
+	// QPS：每 pod 60/60s=1，跨 2 pod = 2（聚合指标仍保留）
 	if got.QPS[0].Value != 2 {
 		t.Errorf("expected cross-pod qps 2, got %f", got.QPS[0].Value)
-	}
-	// CPU%：每 pod 6/60*100=10，跨 2 pod = 20
-	if got.CPUPercent[0].Value != 20 {
-		t.Errorf("expected cross-pod cpu%% 20, got %f", got.CPUPercent[0].Value)
 	}
 	// P95：跨 pod 合并 bucket 后 total=120，le=0.1 → 100ms
 	if got.P95Ms[0].Value != 100 {
 		t.Errorf("expected p95 100ms, got %f", got.P95Ms[0].Value)
+	}
+	// per-instance：goroutines 桶内均值 (10+20)/2=15，不跨 pod 求和
+	if got.Instances["pod-a"].Goroutines[0].Value != 15 {
+		t.Errorf("expected per-pod goroutines 15, got %f", got.Instances["pod-a"].Goroutines[0].Value)
+	}
+	// per-instance：CPU% 6/60s*100=10（单 pod 独立 0-100）
+	if got.Instances["pod-a"].CPUPercent[0].Value != 10 {
+		t.Errorf("expected per-pod cpu%% 10, got %f", got.Instances["pod-a"].CPUPercent[0].Value)
+	}
+	// 两个 pod 都有独立曲线
+	if _, ok := got.Instances["pod-b"]; !ok {
+		t.Error("expected instance pod-b to be present")
+	}
+}
+
+func TestAggregate_InstancesPerPodSkipsEmptyBucket(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	const alignedStart int64 = 0
+	const end int64 = 180
+	const outputStart int64 = 0
+
+	// pod-a：桶0（t=0..60）两份快照；桶1（t=60..120）无快照（抖动丢点）；桶2（t=120..180）一份快照。
+	// pod-z：仅桶0 有快照。
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-a": {
+			{TS: 0, Goroutines: 10},
+			{TS: 30, Goroutines: 20},
+			{TS: 150, Goroutines: 30},
+		},
+		"pod-z": {
+			{TS: 0, Goroutines: 100},
+			{TS: 30, Goroutines: 100},
+		},
+	}
+
+	got := metricsquery.Aggregate(byInstance, alignedStart, bucket, end, outputStart)
+
+	a := got.Instances["pod-a"]
+	if len(a.Goroutines) != 2 {
+		t.Fatalf("expected 2 goroutines points for pod-a, got %+v", a.Goroutines)
+	}
+	// 桶0 均值 (10+20)/2=15；桶1 无快照被跳过；桶2 单快照原值 30
+	if a.Goroutines[0].Value != 15 || a.Goroutines[0].Time != 0 {
+		t.Errorf("expected first point 15@0, got %+v", a.Goroutines[0])
+	}
+	if a.Goroutines[1].Value != 30 || a.Goroutines[1].Time != 120 {
+		t.Errorf("expected second point 30@120, got %+v", a.Goroutines[1])
+	}
+	if _, ok := got.Instances["pod-z"]; !ok {
+		t.Error("expected instance pod-z to be present")
 	}
 }
 
