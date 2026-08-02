@@ -593,15 +593,19 @@ export interface RuntimePoint {
 }
 
 export interface RuntimeSeries {
-  goroutines?: RuntimePoint[];
-  heapMB?: RuntimePoint[];
   qps?: RuntimePoint[];
-  cpuPercent?: RuntimePoint[];
   p95Ms?: RuntimePoint[];
   sseActive?: Record<string, RuntimePoint[]>;
   tokenInput?: RuntimePoint[]; // 输入 token 速率 /s
   tokenOutput?: RuntimePoint[]; // 输出 token 速率 /s
   successRate?: RuntimePoint[]; // HTTP 200 占比 %（0-100）
+  instances?: Record<string, RuntimeInstanceSeries>; // pod 名 → 该 pod 曲线
+}
+
+export interface RuntimeInstanceSeries {
+  goroutines?: RuntimePoint[];
+  heapMB?: RuntimePoint[];
+  cpuPercent?: RuntimePoint[];
 }
 
 export interface RuntimeMetricsRsp extends CommonRsp {
