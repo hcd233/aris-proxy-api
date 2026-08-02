@@ -1,0 +1,23 @@
+{
+  "skill_name": "visit-prod-web",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我打开线上 Web 后台，看看 Dashboard 现在长什么样",
+      "expected_output": "打开 https://api.lvlvko.top/web/，判断登录状态，已登录则进入 Dashboard 并输出页面概览（资源计数、图表标题等），说明数据快照时间",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "浏览器打开生产控制台，去 Cron Audit 页面看下今天的执行记录",
+      "expected_output": "打开 Web 控制台，通过侧边栏导航进入 Cron Audit 页面，输出执行记录列表（任务名、traceId、状态、耗时），并说明使用了最新快照的 uid 完成点击",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "用浏览器访问 https://api.lvlvko.top/web/ 检查我是否已登录",
+      "expected_output": "访问后通过快照判断登录状态：已登录则确认当前用户身份（用户名/角色），未登录则引导用户完成 GitHub/Google 授权并等待确认",
+      "files": []
+    }
+  ]
+}
