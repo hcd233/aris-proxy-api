@@ -100,6 +100,8 @@ const (
 	RuntimeMetricsPercentToRatio = 100
 	// RuntimeMetricsRoundScale 保留两位小数的缩放因子
 	RuntimeMetricsRoundScale = 100
-	// RuntimeMetricsRoundHalf 四舍五入的半值
-	RuntimeMetricsRoundHalf = 0.5
+	// AuditMetricsRoundScale 审计图表浮点指标（tok/s、ms）保留两位小数的舍入缩放因子
+	AuditMetricsRoundScale = 100
+	// AuditMetricsRateRoundScale 审计成功率（0-1）保留四位小数的舍入缩放因子
+	AuditMetricsRateRoundScale = 10000
 )

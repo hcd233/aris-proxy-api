@@ -218,7 +218,8 @@ export default function MonitorPage() {
     color: seriesColors[i % seriesColors.length],
   }));
   const goroutinesTotal = Math.round(podSumLatest(state.instances, "goroutines"));
-  const heapTotal = podSumLatest(state.instances, "heapMB");
+  // heapMB 为各 pod 浮点均值求和，多 pod 累加会引入 0.30000000000000004 类尾差，卡片按整数显示
+  const heapTotal = Math.round(podSumLatest(state.instances, "heapMB"));
   const tpsData = tpsChartData(state.tokenInput, state.tokenOutput);
   const tpsSeries = [
     { key: "input", label: t("monitor.request_tps_input"), color: seriesColors[0] },

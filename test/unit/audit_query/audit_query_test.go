@@ -389,6 +389,23 @@ func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
 	}
 }
 
+func TestFillRateSeries_RoundsRepeatingDecimal(t *testing.T) {
+	t.Parallel()
+	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+	// 1/3 是无限循环小数，旧实现直接把 0.3333333333333333 透传给前端，
+	// 前端 *100 后会得到 33.33333333333333 的浮点尾差；必须 round 到万分位。
+	points := []*modelcall.RequestRatePoint{
+		{ModelID: "gpt-4", Time: t1, Total: 3, Success: 1},
+	}
+	items := auditport.FillRateSeries(points, t1, t1, enum.GranularityHour)
+	if len(items) != 1 || len(items[0].Points) != 1 {
+		t.Fatalf("unexpected series: %+v", items)
+	}
+	if rate := items[0].Points[0].SuccessRate; rate != 0.3333 {
+		t.Errorf("expected successRate 0.3333 (rounded), got %.16f", rate)
+	}
+}
+
 func TestFillRateSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
 	t.Parallel()
 	start := time.Date(2026, 6, 1, 9, 4, 59, 0, time.UTC)

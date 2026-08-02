@@ -2,11 +2,13 @@ package query
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -83,7 +85,7 @@ func fillFirstTokenLatencySeries(points []*modelcall.FirstTokenLatencyPoint, sta
 	items := lo.Map(modelOrder, func(m string, _ int) *dto.FirstTokenLatencyItem {
 		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.FirstTokenLatencyPoint {
 			s := byModel[m][t]
-			return &dto.FirstTokenLatencyPoint{Time: t, AverageLatencyMs: s.avgLatencyMs}
+			return &dto.FirstTokenLatencyPoint{Time: t, AverageLatencyMs: math.Round(s.avgLatencyMs*constant.AuditMetricsRoundScale) / constant.AuditMetricsRoundScale}
 		})
 		return &dto.FirstTokenLatencyItem{ModelID: m, Points: pts}
 	})
