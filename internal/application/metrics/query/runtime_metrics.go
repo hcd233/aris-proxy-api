@@ -8,6 +8,7 @@ import (
 	"cmp"
 	"context"
 	"maps"
+	"math"
 	"slices"
 	"strconv"
 	"time"
@@ -393,5 +394,7 @@ func mod(a, b int64) int64 {
 }
 
 func round2(v float64) float64 {
-	return float64(int64(v*constant.RuntimeMetricsRoundScale+constant.RuntimeMetricsRoundHalf)) / constant.RuntimeMetricsRoundScale
+	// math.Round 替代 int64 截断：int64 向零舍入会把 -0.005 错舍为 0，且 v*100 超出 int64 范围时溢出；
+	// math.Round 为远离零的四舍五入，负值、大值均正确，输出仍是干净的两位小数 float64。
+	return math.Round(v*constant.RuntimeMetricsRoundScale) / constant.RuntimeMetricsRoundScale
 }

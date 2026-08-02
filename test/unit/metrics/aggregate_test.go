@@ -147,3 +147,20 @@ func TestAggregate_SuccessRateSkipsEmptyBucket(t *testing.T) {
 		t.Errorf("expected empty successRate for empty bucket, got %+v", got.SuccessRate)
 	}
 }
+
+func TestAggregate_SuccessRateRoundsRepeatingDecimal(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	// 1/3 成功率：round2 必须把 33.333333333333336 收敛为 33.33，
+	// 否则前端拿到 33.33333333333333 这类尾差值直接渲染。
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-a": {
+			{TS: 0, ReqTotal: 0, ReqSuccess: 0},
+			{TS: 30, ReqTotal: 3, ReqSuccess: 1},
+		},
+	}
+	got := metricsquery.Aggregate(byInstance, 0, bucket, 60, 0)
+	if len(got.SuccessRate) == 0 || got.SuccessRate[0].Value != 33.33 {
+		t.Errorf("expected successRate 33.33 (rounded), got %+v", got.SuccessRate)
+	}
+}

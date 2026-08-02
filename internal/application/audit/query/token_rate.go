@@ -2,11 +2,13 @@ package query
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -83,7 +85,7 @@ func fillTokenRateSeries(points []*modelcall.TokenThroughputPoint, start, end ti
 	items := lo.Map(modelOrder, func(m string, _ int) *dto.TokenRateItem {
 		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TokenRatePoint {
 			s := byModel[m][t]
-			return &dto.TokenRatePoint{Time: t, OutputTokensPerSecond: s.outputTokensPerSec}
+			return &dto.TokenRatePoint{Time: t, OutputTokensPerSecond: math.Round(s.outputTokensPerSec*constant.AuditMetricsRoundScale) / constant.AuditMetricsRoundScale}
 		})
 		return &dto.TokenRateItem{ModelID: m, Points: pts}
 	})

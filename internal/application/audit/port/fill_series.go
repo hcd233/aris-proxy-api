@@ -2,6 +2,7 @@
 package port
 
 import (
+	"math"
 	"slices"
 	"time"
 
@@ -47,7 +48,8 @@ func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, 
 			s := byModel[m][t]
 			var rate float64
 			if s.total > 0 {
-				rate = float64(s.success) / float64(s.total)
+				// 除法易产生无限循环小数（如 1/3），round 到万分位消除 0.3333333333333333 这类尾差
+				rate = math.Round(float64(s.success)/float64(s.total)*constant.AuditMetricsRateRoundScale) / constant.AuditMetricsRateRoundScale
 			}
 			return &dto.RatePoint{
 				Time:        t,
