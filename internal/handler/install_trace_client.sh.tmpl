@@ -10,6 +10,7 @@ gh_base='https://github.com/hcd233/aris-proxy-api/releases/latest/download'
 
 # --- preflight ---
 command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 1; }
+command -v tar >/dev/null 2>&1 || { echo "tar is required" >&2; exit 1; }
 
 # --- platform detection ---
 case "$(uname -s)-$(uname -m)" in
@@ -20,15 +21,15 @@ case "$(uname -s)-$(uname -m)" in
   *) echo "Unsupported platform: $(uname -s)/$(uname -m)" >&2; exit 1 ;;
 esac
 
-# --- download binary ---
+# --- download archive ---
 aris_bin="$HOME/.aris/bin/aris"
 mkdir -p -m 0700 "$(dirname "$aris_bin")"
 tmp=$(mktemp "${TMPDIR:-/tmp}/aris.XXXXXX")
 checksum_tmp=$(mktemp "${TMPDIR:-/tmp}/aris-checksum.XXXXXX")
 trap 'rm -f "$tmp" "$checksum_tmp"' EXIT
-echo "Downloading aris-$os-$arch..."
-curl -fsSL -o "$tmp" "$gh_base/aris-$os-$arch"
-curl -fsSL -o "$checksum_tmp" "$gh_base/aris-$os-$arch.sha256"
+echo "Downloading aris-$os-$arch.tar.gz..."
+curl -fsSL -o "$tmp" "$gh_base/aris-$os-$arch.tar.gz"
+curl -fsSL -o "$checksum_tmp" "$gh_base/aris-$os-$arch.tar.gz.sha256"
 checksum=$(awk 'NF == 1 { print $1 } NF == 2 { print $1; next } { exit 1 }' "$checksum_tmp")
 [ "$(printf '%s\n' "$checksum" | awk 'NF == 1 { count++ } END { print count + 0 }')" -eq 1 ] || { echo "Invalid checksum file" >&2; exit 1; }
 case "$checksum" in
@@ -44,9 +45,9 @@ else
   exit 1
 fi
 [ "$checksum" = "$actual" ] || { echo "Checksum verification failed" >&2; exit 1; }
-chmod 0700 "$tmp"
-mv "$tmp" "$aris_bin"
-rm -f "$checksum_tmp"
+tar -xzf "$tmp" -C "$(dirname "$aris_bin")"
+chmod 0700 "$aris_bin"
+rm -f "$tmp" "$checksum_tmp"
 trap - EXIT
 echo "Installed to $aris_bin"
 
