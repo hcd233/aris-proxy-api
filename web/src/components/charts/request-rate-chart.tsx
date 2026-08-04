@@ -1,189 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useCallback } from "react";
 import { api } from "@/lib/api-client";
-import { useT } from "@/lib/i18n";
-import type { RequestRateItem, Granularity } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
-import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
-import { TimeRangePicker } from "@/components/ui/time-range-picker";
-import type { TimeRangeKey } from "@/lib/time-range";
-import { computeRange, formatChartTime, generateEmptyTimeline } from "@/lib/time-range";
-import { useChartSeriesColors } from "@/lib/theme";
+import type { RequestRateItem } from "@/lib/types";
+import { LineChartCard, formatTooltipRow } from "@/components/charts/line-chart-card";
 
 export function RequestRateChart() {
-  const t = useT();
-  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.requestRate.timeRange", "24h");
-  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.requestRate.customStart", "");
-  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.requestRate.customEnd", "");
-  const requestIdRef = useRef(0);
-  const [data, setData] = useState<RequestRateItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [rangeState, setRangeState] = useState<{
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  } | null>(null);
-  const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
-
-  const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(false);
-    try {
-      const { startTime, endTime, granularity } = computeRange(range ?? timeRange, cs ?? customStart, ce ?? customEnd);
-      setRangeState({ startTime, endTime, granularity });
-      const rsp = await api.fetchRequestRate({
-        startTime,
-        endTime,
-        granularity,
-      });
-      if (requestId !== requestIdRef.current) return;
-      setData(rsp.data ?? []);
-    } catch {
-      if (requestId !== requestIdRef.current) return;
-      setError(true);
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
+  const toChart = useCallback((data: RequestRateItem[], colors: readonly string[]) => {
+    const models = [...new Set(data.map((d) => d.modelId))];
+    const series = models.map((m, i) => ({
+      key: m,
+      label: m,
+      color: colors[i % colors.length],
+    }));
+    const timeSet = new Set<string>();
+    const pointMap = new Map<string, Record<string, number | null>>();
+    for (const item of data) {
+      for (const p of item.points) {
+        timeSet.add(p.time);
+        if (!pointMap.has(p.time)) pointMap.set(p.time, {});
+        pointMap.get(p.time)![item.modelId] = p.total === 0 ? null : p.successRate * 100;
       }
     }
-  }, [timeRange, customStart, customEnd]);
-
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects */
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const seriesColors = useChartSeriesColors();
-  const models = [...new Set(data.map((d) => d.modelId))];
-  const chartConfig = Object.fromEntries(
-    models.map((m, i) => [
-      m,
-      { label: m, color: seriesColors[i % seriesColors.length] },
-    ])
-  );
-
-  const timeSet = new Set<string>();
-  const pointMap = new Map<string, Record<string, number | null>>();
-  for (const item of data) {
-    for (const p of item.points) {
-      timeSet.add(p.time);
-      if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-      pointMap.get(p.time)![item.modelId] = p.total === 0 ? null : p.successRate * 100;
-    }
-  }
-  const flatData = Array.from(timeSet).sort().map((time) => ({
-    time,
-    ...pointMap.get(time),
-  }));
-
-  // 后端无数据时仍渲染空坐标轴（X 轴时间刻度 + Y 轴网格），而非显示空态文案
-  const isEmpty = flatData.length === 0;
-  const chartData =
-    isEmpty && rangeState
-      ? generateEmptyTimeline(
-          rangeState.startTime,
-          rangeState.endTime,
-          rangeState.granularity,
-        ).map((time) => ({ time, __empty: 0 }))
-      : flatData;
+    const rows = Array.from(timeSet)
+      .sort()
+      .map((time) => ({ time, ...pointMap.get(time) }));
+    return { rows, series };
+  }, []);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">{t("dashboard.request_rate")}</CardTitle>
-        <TimeRangePicker
-          value={timeRange}
-          customStart={customStart}
-          customEnd={customEnd}
-          onChange={(key, cs, ce) => {
-            setTimeRange(key);
-            setCustomStart(cs);
-            setCustomEnd(ce);
-            fetchData(key, cs, ce);
-          }}
-        />
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-64 w-full" />
-        ) : error ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-            <p>{t("charts.failed_to_load")}</p>
-            <Button variant="outline" size="sm" onClick={() => fetchData()}>
-              {t("charts.retry")}
-            </Button>
-          </div>
-        ) : (
-          <ChartContainer config={chartConfig} className="h-64 w-full">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="time"
-                tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
-                fontSize={12}
-              />
-              <YAxis
-                fontSize={12}
-                domain={[0, 100]}
-                allowDataOverflow={false}
-                tickFormatter={(v) => `${v}%`}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value, name, item) => {
-                      if (value == null) return null;
-                      const indicatorColor = item?.color ?? "#888";
-                      return (
-                        <>
-                          <div
-                            className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
-                            style={{ backgroundColor: indicatorColor }}
-                          />
-                          <div className="flex flex-1 items-center justify-between leading-none">
-                            <span className="text-muted-foreground">{name}</span>
-                            <span className="font-mono font-medium text-foreground tabular-nums">
-                              {`${Number(value).toFixed(1)}%`}
-                            </span>
-                          </div>
-                        </>
-                      );
-                    }}
-                  />
-                }
-              />
-              <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
-              {models.map((m) => (
-                <Line
-                  key={m}
-                  type="monotone"
-                  dataKey={m}
-                  stroke={chartConfig[m]?.color ?? "#888"}
-                  strokeWidth={2}
-                  strokeOpacity={getStrokeOpacity(m)}
-                  dot={false}
-                />
-              ))}
-              {isEmpty && <Line dataKey="__empty" stroke="transparent" dot={false} />}
-            </LineChart>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+    <LineChartCard<RequestRateItem>
+      titleKey="dashboard.request_rate"
+      storageKey="dashboard.chart.requestRate"
+      defaultRange="24h"
+      fetchData={(p) => api.fetchRequestRate(p)}
+      toChart={toChart}
+      yAxis={{
+        domain: [0, 100],
+        emptyDomain: [0, 100],
+        tickFormatter: (v) => `${v}%`,
+      }}
+      tooltipFormatter={(value, name, item) =>
+        formatTooltipRow(value, name, item, (v) => `${v.toFixed(1)}%`)
+      }
+    />
   );
 }

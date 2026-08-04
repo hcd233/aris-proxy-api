@@ -14,18 +14,20 @@ import {
   Share2,
 } from "lucide-react";
 import { toast } from "sonner";
-
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, ShareItem } from "@/lib/types";
 import { buildShareURL } from "@/components/share/share-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { PageHeader } from "@/components/page-header";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaginationBar } from "@/components/pagination-bar";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -35,11 +37,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useT } from "@/lib/i18n";
-
-interface DeleteTarget {
-  shareId: string;
-  sessionId: number;
-}
 
 export default function SharesPage() {
   const t = useT();
@@ -53,8 +50,6 @@ export default function SharesPage() {
   });
   const [loading, setLoading] = useState(true);
   const [copiedID, setCopiedID] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-  const [deleting, setDeleting] = useState(false);
   // Snapshot of "now" taken at fetch time so the expired-check during render
   // stays pure (react-hooks/purity forbids `Date.now()` inside render).
   const [refreshedAt, setRefreshedAt] = useState<number>(0);
@@ -100,35 +95,25 @@ export default function SharesPage() {
     }
   }, [t]);
 
-  const handleDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      const rsp = await api.deleteShare(deleteTarget.shareId);
+  const deleteConfirm = useDeleteConfirm<ShareItem>({
+    onConfirm: async (share) => {
+      const rsp = await api.deleteShare(share.shareId);
       if (rsp.error) {
         showErrorToast(rsp.error, { title: t("shares.revoke_error") });
         return;
       }
       toast.success(t("shares.revoke_success"));
       fetchShares(pageInfo.page, pageInfo.pageSize);
-    } catch (err) {
-      showErrorToast(err, { title: t("shares.revoke_error") });
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
-    }
-  }, [deleteTarget, fetchShares, pageInfo.page, pageInfo.pageSize, t]);
+    },
+    onError: (err) => showErrorToast(err, { title: t("shares.revoke_error") }),
+  });
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          {t("shares.title")}
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {t("shares.subtitle")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("shares.title")}
+        description={t("shares.subtitle")}
+      />
 
       <Card>
         <CardHeader>
@@ -136,21 +121,13 @@ export default function SharesPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+            <TableSkeleton rows={4} />
           ) : shares.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Share2 className="mb-3 size-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">
-                {t("shares.no_shares")}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground/70">
-                {t("shares.create_hint")}
-              </p>
-            </div>
+            <ListEmptyState
+              icon={<Share2 className="mb-3 size-10 text-muted-foreground/40" />}
+              message={t("shares.no_shares")}
+              hint={t("shares.create_hint")}
+            />
           ) : (
             <>
               <Table>
@@ -238,12 +215,7 @@ export default function SharesPage() {
                             </Button>
                             <DeleteButton
                               label={t("shares.revoke")}
-                              onClick={() =>
-                                setDeleteTarget({
-                                  shareId: share.shareId,
-                                  sessionId: share.sessionId,
-                                })
-                              }
+                              onClick={() => deleteConfirm.openDelete(share)}
                             />
                           </div>
                         </TableCell>
@@ -264,16 +236,11 @@ export default function SharesPage() {
       </Card>
 
       <DeleteConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
+        {...deleteConfirm.dialogProps}
         title={t("shares.delete_confirm")}
-        description={t("shares.delete_dialog_desc").replace("{id}", String(deleteTarget?.sessionId ?? ""))}
+        description={t("shares.delete_dialog_desc").replace("{id}", String(deleteConfirm.target?.sessionId ?? ""))}
         confirmLabel={t("shares.revoke")}
         loadingLabel={t("shares.revoking")}
-        loading={deleting}
-        onConfirm={handleDelete}
       />
     </div>
   );

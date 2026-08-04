@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
@@ -41,6 +40,11 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { PaginationBar } from "@/components/pagination-bar";
 import { ProviderIcon } from "@/components/provider-icon";
+import { PageHeader } from "@/components/page-header";
+import { SearchInput } from "@/components/search-input";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import ExportDialog from "@/components/export-dialog";
 import ExportClaudecodeDialog from "@/components/export-claudecode-dialog";
 import ExportCodexDialog from "@/components/export-codex-dialog";
@@ -54,7 +58,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Cpu, Search, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine, Type, Image as ImageIcon } from "lucide-react";
+import { Plus, Pencil, Cpu, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine, Type, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -138,9 +142,6 @@ export default function ModelsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ModelForm>(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportClaudecodeDialogOpen, setExportClaudecodeDialogOpen] = useState(false);
   const [exportCodexDialogOpen, setExportCodexDialogOpen] = useState(false);
@@ -257,26 +258,14 @@ export default function ModelsPage() {
     }
   };
 
-  const openDeleteConfirm = (model: ModelItem) => {
-    setDeleteTarget({ id: model.id, name: model.alias });
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(deleteTarget.id);
-    try {
-      await api.deleteModel(deleteTarget.id);
+  const deleteConfirm = useDeleteConfirm<ModelItem>({
+    onConfirm: async (model) => {
+      await api.deleteModel(model.id);
       toast.success(t("models.deleted_success"));
       fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
-    } catch (err) {
-      showErrorToast(err, { title: t("models.delete_error") });
-    } finally {
-      setDeleting(null);
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
-    }
-  };
+    },
+    onError: (err) => showErrorToast(err, { title: t("models.delete_error") }),
+  });
 
   const handleToggleEnabled = async (model: ModelItem) => {
     try {
@@ -296,15 +285,12 @@ export default function ModelsPage() {
     <PermissionGuard adminOnly>
       <TooltipProvider>
         <div className="space-y-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("models.title")}</h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                {t("models.subtitle")}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
+          <PageHeader
+            title={t("models.title")}
+            description={t("models.subtitle")}
+            actions={
+              <div className="flex gap-2">
+                <DropdownMenu>
                 <DropdownMenuTrigger
                   render={<Button variant="outline" className="gap-1.5" />}
                 >
@@ -389,7 +375,8 @@ export default function ModelsPage() {
                 {t("models.create")}
               </Button>
             </div>
-          </div>
+            }
+          />
   
           <Card>
             <CardHeader>
@@ -397,32 +384,17 @@ export default function ModelsPage() {
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                <div className="relative w-full md:max-w-sm">
-                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder={t("models.search_placeholder")}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") fetchData(1, pageInfo.pageSize, searchQuery || undefined);
-                    }}
-                    className="pl-9"
-                  />
-                </div>
+                <SearchInput
+                  placeholder={t("models.search_placeholder")}
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onSearch={() => fetchData(1, pageInfo.pageSize, searchQuery || undefined)}
+                />
               </div>
               {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
+                <TableSkeleton />
               ) : models.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Cpu className="mb-3 size-10 text-muted-foreground/40" />
-                  <p className="text-sm text-muted-foreground">
-                    {t("models.no_models")}
-                  </p>
-                </div>
+                <ListEmptyState icon={<Cpu className="mb-3 size-10 text-muted-foreground/40" />} message={t("models.no_models")} />
               ) : (
                 <>
                   {isMobile ? (
@@ -468,8 +440,8 @@ export default function ModelsPage() {
                               </Button>
                               <DeleteButton
                                 label={t("common.delete")}
-                                disabled={deleting === model.id}
-                                onClick={() => openDeleteConfirm(model)}
+                                disabled={deleteConfirm.loading && deleteConfirm.target?.id === model.id}
+                                onClick={() => deleteConfirm.openDelete(model)}
                               />
                             </div>
                           </div>
@@ -623,8 +595,8 @@ export default function ModelsPage() {
                                 </Button>
                                 <DeleteButton
                                   label={t("common.delete")}
-                                  disabled={deleting === model.id}
-                                  onClick={() => openDeleteConfirm(model)}
+                                  disabled={deleteConfirm.loading && deleteConfirm.target?.id === model.id}
+                                  onClick={() => deleteConfirm.openDelete(model)}
                                 />
                             </div>
                           </TableCell>
@@ -645,14 +617,11 @@ export default function ModelsPage() {
           </Card>
   
           <DeleteConfirmDialog
-            open={deleteConfirmOpen}
-            onOpenChange={setDeleteConfirmOpen}
+            {...deleteConfirm.dialogProps}
             title={t("common.are_you_sure")}
-            description={t("models.delete_desc").replace("{name}", deleteTarget?.name ?? "")}
+            description={t("models.delete_desc").replace("{name}", deleteConfirm.target?.alias ?? "")}
             confirmLabel={t("common.delete")}
             loadingLabel={t("common.deleting")}
-            loading={deleting !== null}
-            onConfirm={handleDelete}
           />
   
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

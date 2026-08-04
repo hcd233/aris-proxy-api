@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -27,11 +26,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Key, Plus, Copy, Check, Search } from "lucide-react";
+import { Key, Plus, Copy, Check } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { PageHeader } from "@/components/page-header";
+import { SearchInput } from "@/components/search-input";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 
@@ -49,9 +53,6 @@ export default function APIKeysPage() {
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<APIKeyDetail | null>(null);
   const [copied, setCopied] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const fetchKeys = useCallback(async (page: number, pageSize: number, query?: string) => {
     setLoading(true);
@@ -98,26 +99,14 @@ export default function APIKeysPage() {
     }
   };
 
-  const openDeleteConfirm = (key: APIKeyItem) => {
-    setDeleteTarget({ id: key.id, name: key.name });
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(deleteTarget.id);
-    try {
-      await api.deleteAPIKey(deleteTarget.id);
+  const deleteConfirm = useDeleteConfirm<APIKeyItem>({
+    onConfirm: async (key) => {
+      await api.deleteAPIKey(key.id);
       toast.success(t("apikeys.deleted_success"));
       fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
-    } catch (err) {
-      showErrorToast(err, { title: t("apikeys.delete_error") });
-    } finally {
-      setDeleting(null);
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
-    }
-  };
+    },
+    onError: (err) => showErrorToast(err, { title: t("apikeys.delete_error") }),
+  });
 
   const handleCopy = (key: string) => {
     navigator.clipboard.writeText(key);
@@ -134,27 +123,24 @@ export default function APIKeysPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("apikeys.title")}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("apikeys.subtitle")}
-          </p>
-        </div>
-        <Dialog
-          open={createOpen}
-          onOpenChange={(open) => {
-            if (!open) closeCreateDialog();
-            else setCreateOpen(true);
-          }}
-        >
-          <DialogTrigger
-            render={<Button />}
+      <PageHeader
+        title={t("apikeys.title")}
+        description={t("apikeys.subtitle")}
+        actions={
+          <Dialog
+            open={createOpen}
+            onOpenChange={(open) => {
+              if (!open) closeCreateDialog();
+              else setCreateOpen(true);
+            }}
           >
-            <Plus className="mr-1 size-4" />
-            {t("apikeys.create_key")}
-          </DialogTrigger>
-          <DialogContent>
+            <DialogTrigger
+              render={<Button />}
+            >
+              <Plus className="mr-1 size-4" />
+              {t("apikeys.create_key")}
+            </DialogTrigger>
+            <DialogContent>
             {createdKey ? (
               <>
                 <DialogHeader>
@@ -208,8 +194,9 @@ export default function APIKeysPage() {
               </>
             )}
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -217,32 +204,17 @@ export default function APIKeysPage() {
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <div className="relative w-full md:max-w-sm">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={t("apikeys.search_keys")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") fetchKeys(1, pageInfo.pageSize, searchQuery || undefined);
-                }}
-                className="pl-9"
-              />
-            </div>
+            <SearchInput
+              placeholder={t("apikeys.search_keys")}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onSearch={() => fetchKeys(1, pageInfo.pageSize, searchQuery || undefined)}
+            />
           </div>
           {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+            <TableSkeleton />
           ) : keys.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Key className="mb-3 size-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">
-                {t("apikeys.empty")}
-              </p>
-            </div>
+            <ListEmptyState icon={<Key className="mb-3 size-10 text-muted-foreground/40" />} message={t("apikeys.empty")} />
           ) : (
             <>
               {isMobile ? (
@@ -261,8 +233,8 @@ export default function APIKeysPage() {
                         </div>
                         <DeleteButton
                           label={t("common.delete")}
-                          disabled={deleting === key.id}
-                          onClick={() => openDeleteConfirm(key)}
+                          disabled={deleteConfirm.loading && deleteConfirm.target?.id === key.id}
+                          onClick={() => deleteConfirm.openDelete(key)}
                         />
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">
@@ -294,8 +266,8 @@ export default function APIKeysPage() {
                       <TableCell className="text-right">
                         <DeleteButton
                           label={t("common.delete")}
-                          disabled={deleting === key.id}
-                          onClick={() => openDeleteConfirm(key)}
+                          disabled={deleteConfirm.loading && deleteConfirm.target?.id === key.id}
+                          onClick={() => deleteConfirm.openDelete(key)}
                         />
                       </TableCell>
                     </TableRow>
@@ -315,14 +287,11 @@ export default function APIKeysPage() {
       </Card>
 
       <DeleteConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
+        {...deleteConfirm.dialogProps}
         title={t("common.are_you_sure")}
-        description={t("apikeys.delete_description").replace("{name}", deleteTarget?.name ?? "")}
+        description={t("apikeys.delete_description").replace("{name}", deleteConfirm.target?.name ?? "")}
         confirmLabel={t("common.delete")}
         loadingLabel={t("common.deleting")}
-        loading={deleting !== null}
-        onConfirm={handleDelete}
       />
     </div>
   );

@@ -17,13 +17,12 @@ import {
   type StructuredError,
   BusinessErrorCode,
   type ErrorSeverity,
-  ERROR_I18N_KEY,
 } from "./api-errors";
 import { translate } from "./i18n";
 
 // ── 暴露 parseError 作为主入口 ──────────────────────────────────────────────
 
-export { parseError, BusinessErrorCode, ERROR_I18N_KEY };
+export { parseError, BusinessErrorCode };
 export type { StructuredError, ErrorSeverity };
 
 // ── Toast 快捷方式 ──────────────────────────────────────────────────────────

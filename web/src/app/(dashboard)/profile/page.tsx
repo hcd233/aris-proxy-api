@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/page-header";
 import { toast } from "sonner";
 
 export default function ProfilePage() {
@@ -75,12 +76,10 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("profile.title")}</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {t("profile.subtitle")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("profile.title")}
+        description={t("profile.subtitle")}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
         <Card>
