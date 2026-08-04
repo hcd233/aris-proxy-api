@@ -70,7 +70,7 @@ func (p *openAIProxy) ReadChatCompletionStream(ctx context.Context, stream io.Re
 	log := logger.WithCtx(ctx)
 	defer func() { _ = stream.Close() }() //nolint:errcheck // ensure stream closed on return
 
-	var collectedChunks []*dto.OpenAIChatCompletionChunk
+	agg := proxyutil.NewChatCompletionStreamAggregator()
 
 	reader := bufio.NewReader(stream)
 	for {
@@ -89,18 +89,18 @@ func (p *openAIProxy) ReadChatCompletionStream(ctx context.Context, stream io.Re
 		if !ok {
 			continue
 		}
-		collectedChunks = append(collectedChunks, chunk)
+		agg.Add(chunk)
 		if err := onChunk(chunk); err != nil {
 			log.Warn("[OpenAIProxy] OnChunk callback error", zap.Error(err))
 			return nil, err
 		}
 	}
 
-	if len(collectedChunks) == 0 {
+	if agg.Count() == 0 {
 		return nil, nil
 	}
 
-	return proxyutil.ConcatChatCompletionChunks(collectedChunks)
+	return agg.Completion(), nil
 }
 
 func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {

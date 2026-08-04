@@ -69,7 +69,7 @@ func (p *anthropicProxy) ReadCreateMessageStream(ctx context.Context, stream io.
 	log := logger.WithCtx(ctx)
 	defer func() { _ = stream.Close() }() //nolint:errcheck // ensure stream closed on return
 
-	var collectedEvents []dto.AnthropicSSEEvent
+	agg := proxyutil.NewAnthropicSSEStreamAggregator()
 	var currentEvent string
 
 	reader := bufio.NewReader(stream)
@@ -77,20 +77,15 @@ func (p *anthropicProxy) ReadCreateMessageStream(ctx context.Context, stream io.
 		raw, readErr := reader.ReadString('\n')
 		line := strings.TrimRight(raw, constant.NewlineCRLF)
 
-		if line != "" {
-			if eventType, ok := strings.CutPrefix(line, constant.SSEEventPrefix); ok {
-				currentEvent = eventType
-			} else if payload, ok := strings.CutPrefix(line, constant.SSEDataPrefix); ok {
-				event := dto.AnthropicSSEEvent{
-					Event: currentEvent,
-					Data:  []byte(payload),
-				}
-				collectedEvents = append(collectedEvents, event)
-
-				if err := onEvent(event); err != nil {
-					log.Warn("[AnthropicProxy] OnEvent callback error", zap.Error(err))
-					return nil, err
-				}
+		if eventType, ok := strings.CutPrefix(line, constant.SSEEventPrefix); ok {
+			currentEvent = eventType
+		} else if payload, ok := strings.CutPrefix(line, constant.SSEDataPrefix); ok {
+			event := dto.AnthropicSSEEvent{
+				Event: currentEvent,
+				Data:  []byte(payload),
+			}
+			if err := forwardAndAggregateSSEEvent(ctx, event, onEvent, agg); err != nil {
+				return nil, err
 			}
 		}
 
@@ -103,11 +98,25 @@ func (p *anthropicProxy) ReadCreateMessageStream(ctx context.Context, stream io.
 		}
 	}
 
-	if len(collectedEvents) == 0 {
+	if agg.Count() == 0 {
 		return nil, nil
 	}
 
-	return proxyutil.ConcatAnthropicSSEEvents(collectedEvents)
+	return agg.Message()
+}
+
+// forwardAndAggregateSSEEvent 先把 SSE 事件转发给回调，再做增量聚合。
+func forwardAndAggregateSSEEvent(ctx context.Context, event dto.AnthropicSSEEvent, onEvent func(dto.AnthropicSSEEvent) error, agg *proxyutil.AnthropicSSEStreamAggregator) error {
+	log := logger.WithCtx(ctx)
+	if err := onEvent(event); err != nil {
+		log.Warn("[AnthropicProxy] OnEvent callback error", zap.Error(err))
+		return err
+	}
+	if err := agg.Add(event); err != nil {
+		log.Warn("[AnthropicProxy] Aggregate sse event error", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error) {
