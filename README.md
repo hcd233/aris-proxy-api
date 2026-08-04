@@ -83,7 +83,8 @@ Aris 为不同类型的客户端提供兼容协议入口，并使用 Proxy API K
 - 记录上游 HTTP 状态码、连接错误、错误信息、User-Agent 和 Trace ID。
 - 按模型和时间粒度查看模型调用趋势、请求成功率、Token 吞吐、Token 速率、模型用量和首 Token 平均延迟。
 - 提供 Cron 调用审计查询，管理员可以查看定时维护任务的执行情况。
-- 提供管理员专用的跨 Pod 运行时指标查询页面。
+- 提供管理员专用的跨 Pod 运行时指标查询页面，包含 QPS、P95 延迟、SSE 活跃连接、Token 速率和成功率等聚合曲线。
+- 运行时指标支持按 Pod 展开 goroutines、堆内存和 CPU 使用率曲线，用于多副本滚动发布时的单实例异常定位。
 - 管理后台提供 Dashboard、审计图表、模型用量图表和运行监控页面。
 
 ### 会话治理与私有模型迭代数据准备
@@ -103,7 +104,7 @@ Aris 为不同类型的客户端提供兼容协议入口，并使用 Proxy API K
 
 Aris 支持将 Agent Harness 的调用过程作为独立 Trace 数据进行采集和分析：
 
-- 提供 Trace 客户端安装脚本，当前客户端通过 GitHub Releases 分发多平台二进制文件。
+- 提供 Trace 客户端安装脚本，当前客户端通过 GitHub Releases 以 tar.gz 归档分发（附 sha256 校验），安装后自动进入 `aris init` 交互式配置。
 - `aris` 客户端支持 Codex Trace 事件采集和上报，避免依赖旧式的 `curl` Hook 脚本。
 - 客户端将 Hook 事件和 rollout 记录先写入本地 spool，再批量上报到服务端，降低网络抖动对采集过程的影响。
 - 服务端保存 Trace 原始记录、事件时间线和关联元数据，并按 API Key Owner 做数据隔离。
@@ -169,6 +170,7 @@ Aris 支持将 Agent Harness 的调用过程作为独立 Trace 数据进行采�
 - 非流式请求直接读取上游完整响应，并将其转换为客户端协议对应的响应结构。
 - 流式请求以 SSE 方式读取上游事件，逐个解析和转换为客户端可识别的增量事件。
 - OpenAI Chat、OpenAI Responses 和 Anthropic Messages 分别处理各自的事件类型、结束标记、工具调用增量和 Token usage。
+- 流式过程使用增量聚合器（`ChatCompletionStreamAggregator` / `AnthropicSSEStreamAggregator`）在回调内合并 chunk/event，不再把全部事件切片驻留在内存，长流式响应的内存占用与响应长度解耦。
 - 代理会记录首个有效响应事件的时间，用于计算首 Token 延迟；流结束后记录从首 Token 到结束的传输持续时间。
 - 流式过程中发生错误时，传输层负责终止事件流并保留可用于排障的状态和 Trace 信息。
 
@@ -176,7 +178,7 @@ Aris 支持将 Agent Harness 的调用过程作为独立 Trace 数据进行采�
 
 上游传输层具备受配置控制的失败重试能力，用于应对临时网络错误或可恢复的上游失败：
 
-- 首次请求失败后，最多额外重试 2 次，重试次数不包含首次请求。
+- 首次请求失败后，最多额外重试 5 次（含首次共 6 次尝试），重试次数不包含首次请求。
 - 重试等待时间从 500ms 开始，并逐步退避，最大退避时间为 2s。
 - 退避时间加入 0.3 的随机抖动因子，降低多实例同时重试导致的惊群效应。
 - 重试参数通过 Viper 环境配置读取，可以按部署环境调整最大次数、初始退避、最大退避和抖动因子。
@@ -227,10 +229,10 @@ Aris 支持将 Agent Harness 的调用过程作为独立 Trace 数据进行采�
 - 管理后台使用 Next.js App Router、React、TypeScript 和 Tailwind CSS 构建。
 - 使用 Recharts 展示模型趋势、请求率、Token 吞吐和延迟等统计数据。
 - 使用 Mermaid、Markdown 和代码高亮能力展示 Trace、会话和配置内容。
-- 前端通过 `make web-build` 构建到 `web/out`，再同步到 `internal/web/dist`，由 Go 服务通过 `embed.FS` 提供静态资源。
+- 前端通过 `make web-build` 构建到 `web/out`，再同步到 `internal/web/dist`，由 Go 服务通过 `embed.FS` 提供静态资源；构建时对 dist 逐文件 gzip -9 预压缩，服务端直发预压缩内容并设置 `Content-Encoding`，无 gzip 声明的客户端实时解压回退，响应统一带 `Vary: Accept-Encoding`。
 - Docker 使用多阶段构建，先构建前端，再编译 Go 服务，最终运行在 Distroless nonroot 镜像中。
 - `make build-client-all` 为 `darwin/amd64`、`darwin/arm64`、`linux/amd64` 和 `linux/arm64` 构建 `aris` Trace 客户端。
-- GitHub Actions 负责镜像发布和 Trace 客户端 Release 构建，Kubernetes 使用滚动更新部署服务。
+- GitHub Actions 负责镜像发布和 Trace 客户端 Release 构建（tar.gz 打包 + sha256 校验），Kubernetes 使用滚动更新部署服务。
 
 ## 技术栈
 
@@ -285,10 +287,12 @@ Aris 支持将 Agent Harness 的调用过程作为独立 Trace 数据进行采�
 - **React `19.2.4`**：前端 UI 组件和交互实现。
 - **TypeScript**：前端类型系统。
 - **Tailwind CSS**：样式和响应式布局。
-- **shadcn/ui 相关组件体系**：基础 UI 组件和交互模式。
+- **Base UI / shadcn 组件体系**：基础 UI 组件和交互模式。
+- **Maple Mono CN**：列表界面统一使用的等宽字体（含中英日三语字形）。
 - **Recharts**：模型调用、Token、请求率和延迟等统计图表。
 - **Mermaid**：流程和结构图展示。
-- **React Markdown、Remark、Rehype 和 Highlight.js**：会话、Trace 和配置内容展示及代码高亮。
+- **React Markdown、Remark、Rehype 和 Highlight.js**：会话、Trace 和配置内容展示及代码高亮；Markdown 渲染使用 rehype-sanitize 白名单过滤。
+- **sonner**：轻量级 toast 通知。
 - **ESLint**：前端代码质量检查。
 
 ### 构建、测试与部署
@@ -301,7 +305,7 @@ Aris 支持将 Agent Harness 的调用过程作为独立 Trace 数据进行采�
 - **Distroless nonroot**：生产运行时镜像。
 - **Docker Compose**：本地开发和单机部署。
 - **Kubernetes**：Deployment、Service、ConfigMap、滚动更新和健康探针。
-- **GitHub Actions**：Docker 镜像及 Trace 客户端 Release 构建。
+- **GitHub Actions**：Docker 镜像构建，以及 Trace 客户端 Release 构建（tar.gz + sha256 发布）。
 
 ## 系统架构
 
@@ -538,6 +542,7 @@ flowchart LR
     NPM[npm ci / npm run build]
     Out[web/out]
     Dist[internal/web/dist]
+    Gzip[gzip -9 预压缩]
     Embed[Go embed.FS]
     Fiber[Fiber Web Router]
     Browser[浏览器]
@@ -545,14 +550,16 @@ flowchart LR
     Source --> NPM
     NPM --> Out
     Out -->|make web-build 复制| Dist
-    Dist --> Embed
+    Dist -->|逐文件预压缩| Gzip
+    Gzip --> Embed
     Embed --> Fiber
     Browser --> Fiber
 ```
 
 - 本地执行 `make web-build` 时，先在 `web/` 执行 `npm ci` 和 `npm run build`。
 - Next.js 静态产物输出到 `web/out`，随后被复制到 `internal/web/dist`。
-- Go 代码通过 `embed.FS` 编译进服务端二进制，路由层通过 Web Router 提供管理后台资源。
+- 构建脚本对 `internal/web/dist` 下所有非 `.gitkeep` 文件执行 `gzip -9` 预压缩（约 10MB → 3.5MB），压缩产物与 `embed.FS` 一起编译进二进制，省去每次请求的实时压缩 CPU 开销。
+- Web 路由显式解析 `Accept-Encoding`（忽略 `q=0`），声明 gzip 的客户端直发预压缩内容并设置 `Content-Encoding: gzip`；未声明 gzip 的客户端（如裸 curl）实时解压回退；响应统一带 `Vary: Accept-Encoding`。
 - Docker 构建时前端和 Go 服务在多阶段构建中完成，最终镜像只需要运行一个非 root Go 进程。
 
 ### 生命周期与资源关闭
@@ -623,7 +630,7 @@ LLM 代理是平台的核心业务能力，负责把客户端请求从统一网�
 
 #### 上游退避与重试
 
-- 默认最多额外重试 2 次，不包含首次请求。
+- 默认最多额外重试 5 次（含首次共 6 次尝试），不包含首次请求。
 - 默认初始退避时间为 500ms，最大退避时间为 2s，抖动因子为 0.3。
 - 重试参数通过 `UPSTREAM_RETRY_*` 配置项调整。
 - Transport 统一封装重试逻辑，避免每个协议 UseCase 重复实现。
@@ -811,7 +818,7 @@ Trace 子系统为 Agent Harness 提供独立于普通 LLM Proxy Session 的观�
 
 #### 客户端采集
 
-- `aris` 是独立编译的 CLI，当前包含 Trace 相关命令。
+- `aris` 是独立编译的 CLI，包含 `init`（安装后初始化向导）、`trace ingest`（采集上报）和 `status`（状态查看）等命令。
 - 支持 Darwin amd64/arm64 和 Linux amd64/arm64。
 - 客户端读取 Codex Hook 事件和 rollout 记录。
 - 事件先以 `0600` 权限原子写入 `~/.aris/trace/spool/`，网络上报失败时保留待处理记录。
@@ -830,7 +837,9 @@ Trace 子系统为 Agent Harness 提供独立于普通 LLM Proxy Session 的观�
 #### 安装方式
 
 - 服务端提供 `GET /install.sh`，返回自包含的 Trace 客户端安装脚本。
-- 安装脚本根据本机平台下载 GitHub Releases 中对应的 `aris` 二进制。
+- 客户端通过 GitHub Releases 以 `tar.gz` 归档分发（下载体积约 3.2MB），并附带 `.sha256` 校验文件。
+- 安装脚本检测本机平台，下载对应 `aris-{os}-{arch}.tar.gz`，校验 sha256 后解压安装到 `~/.aris/bin/aris`（`0700` 权限）。
+- 安装完成后自动执行 `aris init --host <server>` 交互式初始化向导，写入服务端地址并完成 API Key 配置。
 - 当前方案不再使用旧版的客户端下载 ticket、服务端二进制下载接口或旧的 curl Hook 体系。
 
 ### OpenCode、Claude Code、Codex 与 Pi 配置导出
@@ -1051,7 +1060,7 @@ SSE 转换器不能简单地按 JSON 字段复制，因为三个协议的事件�
 重试参数在配置初始化阶段读取：
 
 ```go
-config.SetDefault("upstream.retry.max_attempts", 2)
+config.SetDefault("upstream.retry.max_attempts", 5)
 config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
 config.SetDefault("upstream.retry.max_backoff", 2*time.Second)
 config.SetDefault("upstream.retry.jitter_factor", 0.3)
@@ -1234,17 +1243,29 @@ huma.Register(openaiGroup, huma.Operation{
 
 - Huma 根据 DTO 定义绑定 Path、Query 和 Body 参数，并生成 OpenAPI Schema。
 - 路由声明的 Security Scheme 与实际 JWT/API Key Middleware 保持一致。
-- Handler 返回项目统一的 HTTPResponse 包装类型，由 Huma 负责序列化。
+- 成功响应使用项目统一的 `HTTPResponse` 包装类型（`{"data": ...}`），由 Huma 负责序列化；错误响应为独立的顶层 `{"error": {code, message}}` 结构（见下一节）。
 - LLM 代理的 JSON 和 SSE 响应由协议 Handler/Converter 控制，避免统一管理 API 的响应包装污染兼容协议。
 - DTO 命名、Body 包装和字段标签遵循项目自定义 lint 规则，避免请求字段绑定为零值或无法生成正确 OpenAPI Schema。
 
 ### 统一错误、日志与链路追踪
 
-错误处理贯穿 Domain、Application、Handler 和 Middleware：
+错误处理贯穿 Domain、Application、Handler 和 Middleware，所有错误响应统一为 **HTTP 状态码 + 顶层 `{"error": {code, message}}`** 结构：
+
+```json
+{
+  "error": {
+    "code": 10002,
+    "message": "没有权限"
+  }
+}
+```
 
 - Domain 使用统一错误类型表达校验失败、资源不存在、权限不足、配额超限和上游调用失败。
 - Application 层保留业务错误上下文，不在每个 UseCase 中重复拼装 HTTP 响应。
-- Handler 和 Huma 将错误映射为标准 HTTP 状态码和 JSON 错误结构。
+- 业务错误码常量收敛在 `internal/common/constant/error.go`，覆盖 10000-10010 区间：内部错误、未授权、无权限、数据不存在、数据已存在、请求频繁、参数错误、配额不足、配额超限、资源锁定和内容违规。
+- HTTP 状态码由业务错误码推导（`model.Error.StatusCode()`）：未授权 → 401，无权限 → 403，数据不存在 → 404，数据已存在 → 409，限流/配额 → 429，参数错误 → 400，资源锁定 → 423，内容违规 → 400，兜底 → 500。
+- handler 业务错误（`apiutil.NewHumaBizError`）、中间件错误（`WriteErrorResponse`）和 huma 框架错误（422 校验、404 路由未匹配，通过全局替换 `huma.NewError`）三层输出结构完全一致。
+- 管理 API 的错误码映射由 `model.Error.StatusCode()` 统一推导；LLM 代理接口的内容拦截、上游错误等场景使用协议兼容的错误响应（如敏感词拦截返回 403 的 OpenAI/Anthropic 错误体），不受管理 API 错误码映射影响。
 - API Key 缺失或无效通常返回 401，权限不足返回 403，限流返回 429，参数校验错误返回 422 或对应的校验状态。
 - 上游 HTTP 错误和连接错误保留上游状态码、错误信息和本地 Trace ID，避免只返回无法排查的通用错误。
 
@@ -1284,11 +1305,12 @@ ReadTimeout = config.GetDuration("read.timeout")
 - OAuth2：GitHub/Google Client ID、Secret 和 Redirect URL
 - JWT：Access/Refresh Token 有效期和 Secret
 - CLS：Endpoint、Secret ID、Secret Key、Topic ID 和日志级别
+- 对象存储：COS App ID/Bucket/Region/Secret，或 MinIO Endpoint/TLS/访问凭证
 - Pool：Store/Agent Worker 数量和 Queue Size
 - SQL：批量写入大小
 - Trusted Proxy/Guard：可信代理和路由扫描防护白名单
 - Cron：Session 去重、摘要、Think 提取、软删除清理等开关
-- Upstream Retry：最大尝试次数、初始退避、最大退避和抖动因子
+- Upstream Retry：最大尝试次数（默认 5）、初始退避（默认 500ms）、最大退避（默认 2s）和抖动因子（默认 0.3）
 
 生产配置通过 Kubernetes ConfigMap 和 Secret 注入；敏感凭证只应放入 Secret 或受保护的环境文件，不能提交到 Git 仓库。
 
@@ -1321,6 +1343,7 @@ sequenceDiagram
 - `/ready` 用于决定 Pod 是否继续接收流量，draining 后返回 503。
 - `preStop: sleep 10` 为 Kubernetes 就绪状态传播和 Service 摘流留出缓冲。
 - `terminationGracePeriodSeconds: 660` 为长时间 SSE 或上游模型响应保留足够时间。
+- Pod 设置 `GOMEMLIMIT=440MiB`（约为 `limits.memory` 512Mi 的 86%），提前触发 Go GC 避免贴边 OOMKill。
 - 应用内部关闭超时由 Fx StopTimeout 控制，超过时间后由运行时终止未完成的资源关闭流程。
 
 ## API 路由总览
@@ -1496,7 +1519,7 @@ Endpoint 配置包括上游 Base URL、共享 API Key 和 OpenAI/Anthropic 能�
 
 | 方法 | 路径 | 认证 | 权限 | 用途 |
 | --- | --- | --- | --- | --- |
-| `GET` | `/api/v1/metrics/runtime` | JWT | `admin` | 查询跨 Pod 聚合的运行时指标时间序列 |
+| `GET` | `/api/v1/metrics/runtime` | JWT | `admin` | 查询跨 Pod 聚合的运行时指标时间序列（含 per-pod 的 goroutines/heap/cpu 曲线） |
 
 ### 数据集预览与导出
 
@@ -1615,9 +1638,10 @@ cd ..
 
 | 文件 | 用途 |
 | --- | --- |
-| `env/api.env.template` | API 服务、数据库、Redis、JWT、OAuth2、CLS、Cron 和上游重试配置 |
+| `env/api.env.template` | API 服务、数据库、Redis、对象存储、JWT、OAuth2、CLS、Cron 和上游重试配置 |
 | `env/postgresql.env.template` | PostgreSQL 容器初始化配置 |
 | `env/redis.env.template` | Redis 容器持久化和运行参数 |
+| `env/minio.env.template` | MinIO 对象存储根用户和密码 |
 
 复制 API 配置模板：
 
@@ -1743,7 +1767,8 @@ make web-build
 2. 执行 `npm run build` 生成 `web/out`。
 3. 删除旧的 `internal/web/dist`。
 4. 将 `web/out` 复制到 `internal/web/dist`。
-5. Go 编译时通过 `embed.FS` 将静态资源编译进服务端程序。
+5. 对 `internal/web/dist` 下所有非 `.gitkeep` 文件执行 `gzip -9` 预压缩。
+6. Go 编译时通过 `embed.FS` 将静态资源编译进服务端程序，Web 路由按 `Accept-Encoding` 直发预压缩内容或实时解压回退。
 
 ### 构建并运行 Trace 客户端
 
@@ -1767,7 +1792,7 @@ make build-client-all
 - `aris-linux-amd64`
 - `aris-linux-arm64`
 
-服务端提供的安装脚本会根据客户端平台从 GitHub Releases 下载对应版本，普通使用场景不需要手动复制这些构建产物。
+GitHub Release 流程会把这些二进制打包为 `aris-{os}-{arch}.tar.gz` 并生成 `.sha256` 校验文件（下载体积约 3.2MB）。服务端提供的安装脚本会根据客户端平台下载对应 `tar.gz` 并校验后安装，普通使用场景不需要手动复制这些构建产物。
 
 ### 常用服务端命令
 
@@ -1808,6 +1833,13 @@ docker compose -f docker/docker-compose-single.yml up -d
 ```bash
 export IMAGE_TAG=latest
 docker compose -f docker/docker-compose-single.yml up -d
+```
+
+另有 `docker/docker-compose-dev-single.yml` 提供开发环境单机部署：使用 `env/api-dev.env` 作为配置来源，宿主机 `7060` 映射到容器 `8080`，日志目录挂载到 `logs/`，适合在独立环境验证开发分支。
+
+```bash
+export IMAGE_TAG=dev
+docker compose -f docker/docker-compose-dev-single.yml up -d
 ```
 
 ### 本地开发验证顺序
