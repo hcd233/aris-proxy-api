@@ -3,9 +3,7 @@ import type { Granularity } from "@/lib/types";
 
 export type TimeRangeKey = "1h" | "24h" | "7d" | "30d" | "custom";
 
-export const TIME_RANGE_PRESETS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
-
-export function deriveGranularity(rangeMs: number): Granularity {
+function deriveGranularity(rangeMs: number): Granularity {
   const oneHour = 60 * 60 * 1000;
   const oneDay = 24 * oneHour;
   const thirtyDays = 30 * oneDay;

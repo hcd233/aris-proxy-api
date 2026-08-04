@@ -46,7 +46,7 @@ export function imageURLOf(part: ContentPart): string | undefined {
   return undefined;
 }
 
-export function normalizeToolCallID(id: string): string {
+function normalizeToolCallID(id: string): string {
   return id.replace(/[_-]/g, "").toLowerCase();
 }
 
