@@ -1,25 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useCallback, useMemo } from "react";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
-import type { TokenThroughputPoint, Granularity } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from "recharts";
-import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
-import { TimeRangePicker } from "@/components/ui/time-range-picker";
-import type { TimeRangeKey } from "@/lib/time-range";
-import { computeRange, formatChartTime, generateEmptyTimeline } from "@/lib/time-range";
+import type { TokenThroughputPoint } from "@/lib/types";
+import { LineChartCard } from "@/components/charts/line-chart-card";
 import { useTokenLayerColors } from "@/lib/theme";
 
 function formatTokenCount(v: number): string {
@@ -31,181 +16,74 @@ function formatTokenCount(v: number): string {
 export function TokenVolumeChart() {
   const t = useT();
   const tokenColors = useTokenLayerColors();
-  const TOKEN_LAYERS = [
-    { key: "cacheReadTokens", label: t("charts.cache_read"), color: tokenColors.cacheRead },
-    { key: "inputTokens", label: t("charts.input"), color: tokenColors.input },
-    { key: "cacheCreationTokens", label: t("charts.cache_write"), color: tokenColors.cacheCreated },
-    { key: "outputTokens", label: t("charts.output"), color: tokenColors.output },
-  ] as const;
-  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.tokenVolume.timeRange", "7d");
-  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.tokenVolume.customStart", "");
-  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.tokenVolume.customEnd", "");
-  const requestIdRef = useRef(0);
-  const [data, setData] = useState<TokenThroughputPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [rangeState, setRangeState] = useState<{
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  } | null>(null);
-  const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
-
-  const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(false);
-    try {
-      const { startTime, endTime, granularity } = computeRange(range ?? timeRange, cs ?? customStart, ce ?? customEnd);
-      setRangeState({ startTime, endTime, granularity });
-      const rsp = await api.fetchTokenThroughput({ startTime, endTime, granularity });
-      if (requestId !== requestIdRef.current) return;
-      setData(rsp.data ?? []);
-    } catch {
-      if (requestId !== requestIdRef.current) return;
-      setError(true);
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [timeRange, customStart, customEnd]);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const chartConfig = Object.fromEntries(
-    TOKEN_LAYERS.map((l) => [l.key, { label: l.label, color: l.color }])
+  const layers = useMemo(
+    () =>
+      [
+        { key: "cacheReadTokens", label: t("charts.cache_read"), color: tokenColors.cacheRead },
+        { key: "inputTokens", label: t("charts.input"), color: tokenColors.input },
+        { key: "cacheCreationTokens", label: t("charts.cache_write"), color: tokenColors.cacheCreated },
+        { key: "outputTokens", label: t("charts.output"), color: tokenColors.output },
+      ] as const,
+    [t, tokenColors],
   );
 
-  const rawMap = useMemo(() => {
-    const m = new Map<string, { input: number; output: number }>();
-    for (const p of data) {
-      m.set(p.time, { input: p.inputTokens, output: p.outputTokens });
-    }
-    return m;
-  }, [data]);
-
-  const flatData = data.map((p) => {
-    const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
-    const freshOutput = Math.max(p.outputTokens - p.cacheCreationTokens, 0);
-    return {
-      time: p.time,
-      inputTokens: freshInput,
-      outputTokens: freshOutput,
-      cacheReadTokens: p.cacheReadTokens,
-      cacheCreationTokens: p.cacheCreationTokens,
-    };
-  });
-
-  // 后端无数据时仍渲染空坐标轴（X 轴时间刻度 + Y 轴网格），而非显示空态文案
-  const isEmpty = flatData.length === 0;
-  const chartData =
-    isEmpty && rangeState
-      ? generateEmptyTimeline(
-          rangeState.startTime,
-          rangeState.endTime,
-          rangeState.granularity,
-        ).map((time) => ({
-          time,
-          inputTokens: 0,
-          outputTokens: 0,
-          cacheReadTokens: 0,
-          cacheCreationTokens: 0,
-          __empty: 0,
-        }))
-      : flatData;
+  const toChart = useCallback(
+    (data: TokenThroughputPoint[]) => {
+      const rows = data.map((p) => {
+        const freshInput = Math.max(p.inputTokens - p.cacheReadTokens, 0);
+        const freshOutput = Math.max(p.outputTokens - p.cacheCreationTokens, 0);
+        return {
+          time: p.time,
+          inputTokens: freshInput,
+          outputTokens: freshOutput,
+          cacheReadTokens: p.cacheReadTokens,
+          cacheCreationTokens: p.cacheCreationTokens,
+          // tooltip 展示原始 token 值（与图上 fresh 值区分）
+          rawInputTokens: p.inputTokens,
+          rawOutputTokens: p.outputTokens,
+        };
+      });
+      const series = layers.map((l) => ({ key: l.key, label: l.label, color: l.color }));
+      return { rows, series };
+    },
+    [layers],
+  );
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-display">{t("dashboard.token_volume")}</CardTitle>
-        <TimeRangePicker
-          value={timeRange}
-          customStart={customStart}
-          customEnd={customEnd}
-          onChange={(key, cs, ce) => {
-            setTimeRange(key);
-            setCustomStart(cs);
-            setCustomEnd(ce);
-            fetchData(key, cs, ce);
-          }}
-        />
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-64 w-full" />
-        ) : error ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-            <p>{t("charts.failed_to_load")}</p>
-            <Button variant="outline" size="sm" onClick={() => fetchData()}>
-              {t("charts.retry")}
-            </Button>
-          </div>
-        ) : (
-          <ChartContainer config={chartConfig} className="h-64 w-full">
-            <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="time"
-                tickFormatter={(v) => formatChartTime(v, timeRange, customStart, customEnd)}
-                fontSize={12}
-              />
-              <YAxis fontSize={12} tickFormatter={formatTokenCount} domain={isEmpty ? [0, 1] : [0, "auto"]} tickCount={isEmpty ? 3 : undefined} allowDataOverflow={false} />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value, name, item) => {
-                      if (value == null) return null;
-                      const indicatorColor = item?.color ?? "#888";
-                      let displayValue = Number(value);
-                      if (item?.payload?.time) {
-                        const raw = rawMap.get(item.payload.time as string);
-                        if (raw) {
-                          if (name === "inputTokens") displayValue = raw.input;
-                          if (name === "outputTokens") displayValue = raw.output;
-                        }
-                      }
-                      const label = name ? (chartConfig[name]?.label ?? name) : "";
-                      return (
-                        <>
-                          <div
-                            className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
-                            style={{ backgroundColor: indicatorColor }}
-                          />
-                          <div className="flex flex-1 items-center justify-between leading-none">
-                            <span className="text-muted-foreground">{label}</span>
-                            <span className="font-mono font-medium text-foreground tabular-nums">
-                              {formatTokenCount(displayValue)}
-                            </span>
-                          </div>
-                        </>
-                      );
-                    }}
-                  />
-                }
-              />
-              <ChartLegend content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />} />
-              {TOKEN_LAYERS.map((layer) => (
-                <Area
-                  key={layer.key}
-                  type="monotone"
-                  dataKey={layer.key}
-                  stackId="1"
-                  stroke={layer.color}
-                  fill={layer.color}
-                  strokeOpacity={getStrokeOpacity(layer.key)}
-                  fillOpacity={0.6}
-                />
-              ))}
-              {isEmpty && <Area dataKey="__empty" stroke="transparent" fill="transparent" />}
-            </AreaChart>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+    <LineChartCard<TokenThroughputPoint>
+      titleKey="dashboard.token_volume"
+      storageKey="dashboard.chart.tokenVolume"
+      defaultRange="7d"
+      fetchData={(p) => api.fetchTokenThroughput(p)}
+      toChart={toChart}
+      chartType="area"
+      stackId="1"
+      yAxis={{ tickFormatter: formatTokenCount }}
+      tooltipFormatter={(value, name, item) => {
+        if (value == null) return null;
+        const indicatorColor = item?.color ?? "#888";
+        let displayValue = Number(value);
+        const payload = item?.payload;
+        if (payload) {
+          if (name === "inputTokens") displayValue = Number(payload.rawInputTokens ?? displayValue);
+          if (name === "outputTokens") displayValue = Number(payload.rawOutputTokens ?? displayValue);
+        }
+        const label = layers.find((l) => l.key === name)?.label ?? name;
+        return (
+          <>
+            <div
+              className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: indicatorColor }}
+            />
+            <div className="flex flex-1 items-center justify-between leading-none">
+              <span className="text-muted-foreground">{label}</span>
+              <span className="font-mono font-medium text-foreground tabular-nums">
+                {formatTokenCount(displayValue)}
+              </span>
+            </div>
+          </>
+        );
+      }}
+    />
   );
 }
