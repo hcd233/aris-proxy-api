@@ -100,6 +100,11 @@ jobs:
           name: frontend-out
           path: web/out
 
+      # 与 Makefile web-build 保持一致：embed 前对所有静态文件 gzip 预压缩
+      # （服务端按 Accept-Encoding 直发压缩内容；未压缩产物也能由 readStatic 回退兜底）
+      - name: Gzip frontend assets for embed
+        run: find web/out -type f -exec gzip -9 {} +
+
       - name: Prepare
         run: |
           echo "PLATFORM_PAIR=${{ matrix.platform-pair }}" >> $GITHUB_ENV 

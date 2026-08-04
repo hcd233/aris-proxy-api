@@ -80,6 +80,58 @@ func TestRegisterWebRouter_FallbackAndStaticNotFound(t *testing.T) {
 	}
 }
 
+// TestRegisterWebRouter_FallsBackToRawAssets 回归用例：构建产物未 gzip 预压缩（.gz 缺失）时，
+// 路由仍须正常服务——直接读原始文件发送，不得导致 /web/* 全部 404。
+//
+// 背景：CI 曾遗漏 gzip 步骤，线上 embed 只有 index.html 无 index.html.gz，
+// 旧实现读 index.html.gz 失败后不注册路由，整个 Web 控制台 404。
+//
+//	@author centonhuang
+//	@update 2026-08-05 01:30:00
+func TestRegisterWebRouter_FallsBackToRawAssets(t *testing.T) {
+	t.Parallel()
+	app := fiber.New()
+	router.RegisterWebRouter(app, fstest.MapFS{
+		"dist/index.html": {
+			Data: []byte("dashboard-raw"),
+		},
+		"dist/_next/static/chunks/app.js": {
+			Data: []byte("console.log('raw')"),
+		},
+	})
+
+	cases := []struct {
+		name     string
+		path     string
+		wantBody string
+	}{
+		{name: "index fallback", path: "/web/", wantBody: "dashboard-raw"},
+		{name: "client route fallback", path: "/web/sessions", wantBody: "dashboard-raw"},
+		{name: "raw static asset", path: "/web/_next/static/chunks/app.js", wantBody: "console.log('raw')"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rsp := doRequest(t, app, tc.path, "")
+			defer rsp.Body.Close()
+			if rsp.StatusCode != http.StatusOK {
+				t.Fatalf("GET %s status = %d, want %d", tc.path, rsp.StatusCode, http.StatusOK)
+			}
+			if enc := rsp.Header.Get("Content-Encoding"); enc != "" {
+				t.Fatalf("GET %s Content-Encoding = %q, want empty (raw asset)", tc.path, enc)
+			}
+			body, err := io.ReadAll(rsp.Body)
+			if err != nil {
+				t.Fatalf("ReadAll() error = %v", err)
+			}
+			if string(body) != tc.wantBody {
+				t.Fatalf("GET %s body = %q, want %q", tc.path, string(body), tc.wantBody)
+			}
+		})
+	}
+}
+
 func TestRegisterWebRouter_ServesPrecompressedByNegotiation(t *testing.T) {
 	t.Parallel()
 	app := fiber.New()
