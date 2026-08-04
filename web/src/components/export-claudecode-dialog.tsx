@@ -12,8 +12,8 @@ import { useT } from "@/lib/i18n";
 import { ChevronDown, Search, X } from "lucide-react";
 import { ClaudeCode } from "@lobehub/icons";
 import {
+  ExportConnectionFields,
   ExportDialogShell,
-  ExportField,
   ExportModelRow,
   ExportSectionTitle,
   formatTokens,
@@ -299,23 +299,24 @@ export default function ExportClaudecodeDialog({
       emptyHint={t("models.export_tier_empty_hint")}
     >
       {/* Connection */}
-      <section className="space-y-4">
-        <ExportSectionTitle>{t("models.export_connection")}</ExportSectionTitle>
-        <ExportField
-          id="cc-export-base-url"
-          label={t("models.export_base_url")}
-          placeholder={t("models.export_base_url_anthropic_placeholder")}
-          value={baseUrl}
-          onChange={setBaseUrl}
-        />
-        <ExportField
-          id="cc-export-auth-token"
-          label={t("models.export_auth_token")}
-          placeholder={t("models.export_auth_token_placeholder")}
-          value={authToken}
-          onChange={setAuthToken}
-        />
-      </section>
+      <ExportConnectionFields
+        fields={[
+          {
+            id: "cc-export-base-url",
+            label: t("models.export_base_url"),
+            placeholder: t("models.export_base_url_anthropic_placeholder"),
+            value: baseUrl,
+            onChange: setBaseUrl,
+          },
+          {
+            id: "cc-export-auth-token",
+            label: t("models.export_auth_token"),
+            placeholder: t("models.export_auth_token_placeholder"),
+            value: authToken,
+            onChange: setAuthToken,
+          },
+        ]}
+      />
 
       {/* Model tiers */}
       <section className="space-y-3">
