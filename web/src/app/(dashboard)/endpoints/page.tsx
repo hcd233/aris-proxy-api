@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -29,13 +28,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Server, Search } from "lucide-react";
+import { Plus, Pencil, Server } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { PageHeader } from "@/components/page-header";
+import { SearchInput } from "@/components/search-input";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useT } from "@/lib/i18n";
 
 interface EndpointForm {
@@ -71,9 +75,6 @@ export default function EndpointsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<EndpointForm>(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const fetchEndpoints = useCallback(async (page: number, pageSize: number, query?: string) => {
     const validSizes = [20, 50, 100];
@@ -164,42 +165,28 @@ export default function EndpointsPage() {
     }
   };
 
-  const openDeleteConfirm = (ep: EndpointItem) => {
-    setDeleteTarget({ id: ep.id, name: ep.name });
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(deleteTarget.id);
-    try {
-      await api.deleteEndpoint(deleteTarget.id);
+  const deleteConfirm = useDeleteConfirm<EndpointItem>({
+    onConfirm: async (ep) => {
+      await api.deleteEndpoint(ep.id);
       toast.success(t("endpoints.deleted_success"));
       fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
-    } catch (err) {
-      showErrorToast(err, { title: t("endpoints.delete_error") });
-    } finally {
-      setDeleting(null);
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
-    }
-  };
+    },
+    onError: (err) => showErrorToast(err, { title: t("endpoints.delete_error") }),
+  });
 
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("endpoints.title")}</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              {t("endpoints.subtitle")}
-            </p>
-          </div>
-          <Button onClick={openCreate}>
-            <Plus className="mr-1 size-4" />
-            {t("endpoints.create")}
-          </Button>
-        </div>
+        <PageHeader
+          title={t("endpoints.title")}
+          description={t("endpoints.subtitle")}
+          actions={
+            <Button onClick={openCreate}>
+              <Plus className="mr-1 size-4" />
+              {t("endpoints.create")}
+            </Button>
+          }
+        />
 
         <Card>
           <CardHeader>
@@ -207,32 +194,17 @@ export default function EndpointsPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <div className="relative w-full md:max-w-sm">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={t("endpoints.search_endpoints")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") fetchEndpoints(1, pageInfo.pageSize, searchQuery || undefined);
-                  }}
-                  className="pl-9"
-                />
-              </div>
+              <SearchInput
+                placeholder={t("endpoints.search_endpoints")}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={() => fetchEndpoints(1, pageInfo.pageSize, searchQuery || undefined)}
+              />
             </div>
             {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
+              <TableSkeleton />
             ) : endpoints.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Server className="mb-3 size-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  {t("endpoints.empty")}
-                </p>
-              </div>
+              <ListEmptyState icon={<Server className="mb-3 size-10 text-muted-foreground/40" />} message={t("endpoints.empty")} />
             ) : (
               <>
                 {isMobile ? (
@@ -265,8 +237,8 @@ export default function EndpointsPage() {
                             </Button>
                             <DeleteButton
                               label={t("common.delete")}
-                              disabled={deleting === ep.id}
-                              onClick={() => openDeleteConfirm(ep)}
+                              disabled={deleteConfirm.loading && deleteConfirm.target?.id === ep.id}
+                              onClick={() => deleteConfirm.openDelete(ep)}
                             />
                           </div>
                         </div>
@@ -381,8 +353,8 @@ export default function EndpointsPage() {
                             </Button>
                             <DeleteButton
                               label={t("common.delete")}
-                              disabled={deleting === ep.id}
-                              onClick={() => openDeleteConfirm(ep)}
+                              disabled={deleteConfirm.loading && deleteConfirm.target?.id === ep.id}
+                              onClick={() => deleteConfirm.openDelete(ep)}
                             />
                           </div>
                         </TableCell>
@@ -403,14 +375,11 @@ export default function EndpointsPage() {
         </Card>
 
         <DeleteConfirmDialog
-          open={deleteConfirmOpen}
-          onOpenChange={setDeleteConfirmOpen}
+          {...deleteConfirm.dialogProps}
           title={t("common.are_you_sure")}
-          description={t("endpoints.delete_description").replace("{name}", deleteTarget?.name ?? "")}
+          description={t("endpoints.delete_description").replace("{name}", deleteConfirm.target?.name ?? "")}
           confirmLabel={t("common.delete")}
           loadingLabel={t("common.deleting")}
-          loading={deleting !== null}
-          onConfirm={handleDelete}
         />
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
