@@ -48,6 +48,49 @@ type blockState struct {
 	inputParts    []string // input_json_delta
 }
 
+// AnthropicSSEStreamAggregator 流式增量聚合 Anthropic SSE 事件。
+//
+// 与 ConcatAnthropicSSEEvents 语义一致，但无需驻留全部事件：
+// 每收到一个事件调用 Add，流结束后调用 Message 取聚合结果。
+type AnthropicSSEStreamAggregator struct {
+	msg        *dto.AnthropicMessage
+	blocks     map[int]*blockState
+	blockOrder []int
+	count      int
+}
+
+// NewAnthropicSSEStreamAggregator 创建流式聚合器
+func NewAnthropicSSEStreamAggregator() *AnthropicSSEStreamAggregator {
+	return &AnthropicSSEStreamAggregator{
+		msg:    &dto.AnthropicMessage{},
+		blocks: make(map[int]*blockState),
+	}
+}
+
+// Add 增量合并一个事件；parse 失败时返回错误且不计数。
+func (a *AnthropicSSEStreamAggregator) Add(event dto.AnthropicSSEEvent) error {
+	if err := processAnthropicSSEEvent(event, a.msg, a.blocks, &a.blockOrder); err != nil {
+		return err
+	}
+	a.count++
+	return nil
+}
+
+// Count 返回已成功聚合的事件数。
+func (a *AnthropicSSEStreamAggregator) Count() int {
+	return a.count
+}
+
+// Message 输出聚合结果。
+func (a *AnthropicSSEStreamAggregator) Message() (*dto.AnthropicMessage, error) {
+	content, err := buildAnthropicContentBlocks(a.blocks, a.blockOrder)
+	if err != nil {
+		return nil, err
+	}
+	a.msg.Content = content
+	return a.msg, nil
+}
+
 // ConcatAnthropicSSEEvents 合并 Anthropic SSE 事件为完整的 AnthropicMessage 响应
 //
 // Anthropic SSE 事件类型：
@@ -72,22 +115,13 @@ type blockState struct {
 //     @author centonhuang
 //     @update 2026-03-18 10:00:00
 func ConcatAnthropicSSEEvents(events []dto.AnthropicSSEEvent) (*dto.AnthropicMessage, error) {
-	msg := &dto.AnthropicMessage{}
-	blocks := make(map[int]*blockState)
-	blockOrder := make([]int, 0)
-
+	agg := NewAnthropicSSEStreamAggregator()
 	for _, event := range events {
-		if err := processAnthropicSSEEvent(event, msg, blocks, &blockOrder); err != nil {
+		if err := agg.Add(event); err != nil {
 			return nil, err
 		}
 	}
-
-	content, err := buildAnthropicContentBlocks(blocks, blockOrder)
-	if err != nil {
-		return nil, err
-	}
-	msg.Content = content
-	return msg, nil
+	return agg.Message()
 }
 
 // processAnthropicSSEEvent processes a single SSE event and updates the message and blocks

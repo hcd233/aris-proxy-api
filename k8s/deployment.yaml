@@ -32,6 +32,10 @@ spec:
         ports:
         - name: http
           containerPort: 8080
+        env:
+        # Go runtime 软内存上限：limits.memory 512Mi 的 ~86%，提前触发 GC 避免贴边 OOMKill
+        - name: GOMEMLIMIT
+          value: "440MiB"
         envFrom:
         - configMapRef:
             name: aris-proxy-api-config

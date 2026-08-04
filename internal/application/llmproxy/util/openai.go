@@ -146,53 +146,81 @@ func buildChoice(cs *choiceState) *dto.OpenAIChatCompletionChoice {
 	}
 }
 
-func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.OpenAIChatCompletion, error) {
-	cmpl := &dto.OpenAIChatCompletion{}
+// ChatCompletionStreamAggregator 流式增量聚合 OpenAI Chat Completion chunk。
+//
+// 与 ConcatChatCompletionChunks 语义一致，但无需驻留全部 chunk：
+// 每收到一个 chunk 调用 Add，流结束后调用 Completion 取聚合结果。
+type ChatCompletionStreamAggregator struct {
+	cmpl        *dto.OpenAIChatCompletion
+	choiceMap   map[int]*choiceState
+	choiceOrder []int
+	count       int
+}
 
-	if len(chunks) == 0 {
-		return cmpl, nil
+// NewChatCompletionStreamAggregator 创建流式聚合器
+func NewChatCompletionStreamAggregator() *ChatCompletionStreamAggregator {
+	return &ChatCompletionStreamAggregator{
+		cmpl:      &dto.OpenAIChatCompletion{},
+		choiceMap: make(map[int]*choiceState),
+	}
+}
+
+// Add 增量合并一个 chunk（nil chunk 忽略）。
+func (a *ChatCompletionStreamAggregator) Add(chunk *dto.OpenAIChatCompletionChunk) {
+	if chunk == nil {
+		return
+	}
+	a.count++
+
+	if a.cmpl.ID == "" {
+		a.cmpl.ID = chunk.ID
+		a.cmpl.Created = chunk.Created
+		a.cmpl.Object = chunk.Object
+		a.cmpl.ServiceTier = chunk.ServiceTier
+		a.cmpl.SystemFingerprint = chunk.SystemFingerprint
+		a.cmpl.Model = chunk.Model
 	}
 
-	choiceMap := make(map[int]*choiceState)
-	choiceOrder := make([]int, 0)
+	if chunk.Usage != nil {
+		a.cmpl.Usage = chunk.Usage
+	}
 
-	for _, chunk := range chunks {
-		if chunk == nil {
-			continue
-		}
-
-		if cmpl.ID == "" {
-			cmpl.ID = chunk.ID
-			cmpl.Created = chunk.Created
-			cmpl.Object = chunk.Object
-			cmpl.ServiceTier = chunk.ServiceTier
-			cmpl.SystemFingerprint = chunk.SystemFingerprint
-			cmpl.Model = chunk.Model
-		}
-
-		if chunk.Usage != nil {
-			cmpl.Usage = chunk.Usage
-		}
-
-		for _, choice := range chunk.Choices {
-			cs, exists := choiceMap[choice.Index]
-			if !exists {
-				cs = &choiceState{
-					index:       choice.Index,
-					toolCallMap: make(map[int]*toolCallState),
-				}
-				choiceMap[choice.Index] = cs
-				choiceOrder = append(choiceOrder, choice.Index)
+	for _, choice := range chunk.Choices {
+		cs, exists := a.choiceMap[choice.Index]
+		if !exists {
+			cs = &choiceState{
+				index:       choice.Index,
+				toolCallMap: make(map[int]*toolCallState),
 			}
-			cs.mergeDelta(choice)
+			a.choiceMap[choice.Index] = cs
+			a.choiceOrder = append(a.choiceOrder, choice.Index)
 		}
+		cs.mergeDelta(choice)
 	}
+}
 
-	cmpl.Choices = lo.Map(choiceOrder, func(idx int, _ int) *dto.OpenAIChatCompletionChoice {
-		return buildChoice(choiceMap[idx])
+// Count 返回已聚合的非 nil chunk 数。
+func (a *ChatCompletionStreamAggregator) Count() int {
+	return a.count
+}
+
+// Completion 输出聚合结果。
+func (a *ChatCompletionStreamAggregator) Completion() *dto.OpenAIChatCompletion {
+	if a.count == 0 {
+		return a.cmpl
+	}
+	a.cmpl.Choices = lo.Map(a.choiceOrder, func(idx int, _ int) *dto.OpenAIChatCompletionChoice {
+		return buildChoice(a.choiceMap[idx])
 	})
+	return a.cmpl
+}
 
-	return cmpl, nil
+func ConcatChatCompletionChunks(chunks []*dto.OpenAIChatCompletionChunk) (*dto.OpenAIChatCompletion, error) {
+	agg := NewChatCompletionStreamAggregator()
+	for _, chunk := range chunks {
+		agg.Add(chunk)
+	}
+	return agg.Completion(), nil
 }
 
 // IsResponseAPITerminalEvent reports whether event is one of the three
