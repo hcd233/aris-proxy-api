@@ -46,14 +46,14 @@ func TestInstallScript_ReturnsScriptWithHost(t *testing.T) {
 	if !strings.Contains(script, "https://aris.example.com") {
 		t.Fatalf("script must contain embedded host, got:\n%s", script)
 	}
-	if !strings.Contains(script, "aris-$os-$arch.sha256") {
+	if !strings.Contains(script, "aris-$os-$arch.tar.gz.sha256") {
 		t.Fatalf("script must download an independent checksum file")
 	}
 	if !strings.Contains(script, "sha256sum") || !strings.Contains(script, "shasum -a 256") {
 		t.Fatalf("script must support sha256sum and shasum")
 	}
-	if strings.Index(script, "mv \"$tmp\" \"$aris_bin\"") < strings.Index(script, "Checksum verification failed") {
-		t.Fatalf("binary must be moved only after checksum verification")
+	if strings.Index(script, "tar -xzf \"$tmp\"") < strings.Index(script, "Checksum verification failed") {
+		t.Fatalf("archive must be extracted only after checksum verification")
 	}
 	if !strings.HasPrefix(script, "#!/bin/sh") {
 		t.Fatalf("script must start with #!/bin/sh")
