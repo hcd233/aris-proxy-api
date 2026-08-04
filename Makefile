@@ -88,12 +88,13 @@ clean:
 	rm -f $(OUTPUT) aris
 	rm -rf $(CLIENT_OUTPUT_DIR)
 
-## web-build: 构建前端静态文件
+## web-build: 构建前端静态文件（gzip 预压缩，服务端 embed 直发压缩内容）
 web-build:
 	@if [ ! -d web ]; then echo "WARNING: web/ directory not found, skipping frontend build"; exit 0; fi
 	cd web && npm ci && npm run build
 	rm -rf internal/web/dist
 	cp -r web/out internal/web/dist
+	find internal/web/dist -type f ! -name '.gitkeep' -exec gzip -9 {} +
 
 ## web-clean: 清理前端构建产物
 web-clean:
