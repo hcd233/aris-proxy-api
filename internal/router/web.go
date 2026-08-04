@@ -30,13 +30,15 @@ var commonMIME = map[string]string{
 
 // RegisterWebRouter 注册前端静态资源路由
 //
-// dist 目录内的文件在构建时（make web-build）已 gzip 预压缩为 <原名>.gz。
+// dist 目录内的文件在构建时（make web-build / CI）已 gzip 预压缩为 <原名>.gz。
 // 支持 gzip 的客户端直接返回预压缩内容，否则实时解压回退。
+// 兼容未压缩产物：.gz 缺失时回退读取原始文件直接发送（fail-open），
+// 避免因构建流程遗漏 gzip 导致整个 /web/* 路由失效。
 //
 //	@param app fiber.App
 //	@param webFS fs.FS 嵌入的前端静态文件系统
 //	@author centonhuang
-//	@update 2026-08-04 17:30:00
+//	@update 2026-08-05 01:20:00
 func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 	subFS, err := fs.Sub(webFS, "dist")
 	if err != nil {
@@ -44,9 +46,9 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 		return
 	}
 
-	indexContent, err := fs.ReadFile(subFS, "index.html.gz")
-	if err != nil {
-		logger.Logger().Error("failed to read index.html.gz from embedded dist/", zap.Error(err))
+	indexContent, indexIsGzip := readStatic(subFS, "index.html")
+	if indexContent == nil {
+		logger.Logger().Error("failed to read index.html (or index.html.gz) from embedded dist/")
 		return
 	}
 
@@ -64,10 +66,13 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 			filePath = pathpkg.Join(filePath, "index.html")
 		}
 
-		data, err := fs.ReadFile(subFS, filePath+".gz")
-		if err == nil {
+		data, isGzip := readStatic(subFS, filePath)
+		if data != nil {
 			setStaticContentType(c, filepath.Ext(filePath))
-			return sendPrecompressed(c, data)
+			if isGzip {
+				return sendPrecompressed(c, data)
+			}
+			return c.Send(data)
 		}
 
 		ext := filepath.Ext(filePath)
@@ -78,8 +83,23 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 		}
 
 		c.Set("Content-Type", "text/html; charset=utf-8")
-		return sendPrecompressed(c, indexContent)
+		if indexIsGzip {
+			return sendPrecompressed(c, indexContent)
+		}
+		return c.Send(indexContent)
 	})
+}
+
+// readStatic 读取静态文件：优先取 <name>.gz 预压缩产物，缺失时回退原始文件。
+// 返回 (内容, 是否为 gzip)。两者都缺失时返回 (nil, false)。
+func readStatic(subFS fs.FS, name string) ([]byte, bool) {
+	if data, err := fs.ReadFile(subFS, name+".gz"); err == nil {
+		return data, true
+	}
+	if data, err := fs.ReadFile(subFS, name); err == nil {
+		return data, false
+	}
+	return nil, false
 }
 
 func setStaticContentType(c fiber.Ctx, ext string) {
