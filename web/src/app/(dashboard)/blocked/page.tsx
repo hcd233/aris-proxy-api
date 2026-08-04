@@ -16,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -27,10 +26,15 @@ import {
 } from "@/components/ui/table";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import { Ban, Plus, Search } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SearchInput } from "@/components/search-input";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { Ban, Plus } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 
@@ -47,8 +51,6 @@ export default function BlockPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<BlockedItem | null>(null);
   const isMobile = useIsMobile();
 
   const fetchItems = useCallback(async (page: number, pageSize: number, query?: string) => {
@@ -94,31 +96,28 @@ export default function BlockPage() {
     }
   }, [form.word, fetchItems, persistedPage, persistedPageSize, t]);
 
-  const handleDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    try {
-      await api.deleteBlocked(deleteTarget.id);
+  const deleteConfirm = useDeleteConfirm<BlockedItem>({
+    onConfirm: async (item) => {
+      await api.deleteBlocked(item.id);
       toast.success(t("blocked.deleted_success"));
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
       fetchItems(persistedPage, persistedPageSize);
-    } catch (err) {
-      showErrorToast(err, { title: t("blocked.delete_error") });
-    }
-  }, [deleteTarget, fetchItems, persistedPage, persistedPageSize, t]);
+    },
+    onError: (err) => showErrorToast(err, { title: t("blocked.delete_error") }),
+    closeOnError: false,
+  });
 
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("blocked.title")}</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">{t("blocked.subtitle")}</p>
-          </div>
-          <Button onClick={() => { setForm(emptyForm); setDialogOpen(true); }}>
-            <Plus /> {t("blocked.create")}
-          </Button>
-        </div>
+        <PageHeader
+          title={t("blocked.title")}
+          description={t("blocked.subtitle")}
+          actions={
+            <Button onClick={() => { setForm(emptyForm); setDialogOpen(true); }}>
+              <Plus /> {t("blocked.create")}
+            </Button>
+          }
+        />
 
         <Card>
           <CardHeader>
@@ -126,28 +125,17 @@ export default function BlockPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <div className="relative w-full md:max-w-sm">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={t("blocked.search_placeholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-                  className="pl-9"
-                />
-              </div>
+              <SearchInput
+                placeholder={t("blocked.search_placeholder")}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={handleSearch}
+              />
             </div>
             {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
+              <TableSkeleton />
             ) : items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Ban className="mb-3 size-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">{t("blocked.no_words")}</p>
-              </div>
+              <ListEmptyState icon={<Ban className="mb-3 size-10 text-muted-foreground/40" />} message={t("blocked.no_words")} />
             ) : (
               <>
                 {isMobile ? (
@@ -161,7 +149,7 @@ export default function BlockPage() {
                           </div>
                           <DeleteButton
                             label={t("common.delete")}
-                            onClick={() => { setDeleteTarget(item); setDeleteConfirmOpen(true); }}
+                            onClick={() => deleteConfirm.openDelete(item)}
                           />
                         </div>
                       </div>
@@ -188,7 +176,7 @@ export default function BlockPage() {
                           <TableCell>
                             <DeleteButton
                               label={t("common.delete")}
-                              onClick={() => { setDeleteTarget(item); setDeleteConfirmOpen(true); }}
+                              onClick={() => deleteConfirm.openDelete(item)}
                             />
                           </TableCell>
                         </TableRow>
@@ -230,12 +218,10 @@ export default function BlockPage() {
         </Dialog>
 
         <DeleteConfirmDialog
-          open={deleteConfirmOpen}
-          onOpenChange={setDeleteConfirmOpen}
+          {...deleteConfirm.dialogProps}
           title={t("common.are_you_sure")}
           description={t("blocked.delete_confirm")}
           confirmLabel={t("common.delete")}
-          onConfirm={handleDelete}
         />
       </div>
     </PermissionGuard>

@@ -7,8 +7,6 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import type { SessionSummary, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -24,19 +22,23 @@ import {
   ArrowUp,
   ArrowDown,
   Trash2,
-  Search,
   X,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDateTime } from "@/lib/utils";
 import { ScoreDots } from "@/components/session-detail/score-dots";
+import { PageHeader } from "@/components/page-header";
+import { SearchInput } from "@/components/search-input";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { toast } from "sonner";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { ProviderIcon } from "@/components/provider-icon";
@@ -65,9 +67,6 @@ export default function SessionsPage() {
   const [customStart, setCustomStart] = usePersistentState("dashboard.sessions.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.sessions.customEnd", "");
   const [sort, setSort] = useState<{ field: string; dir: SortDir }>({ field: "created_at", dir: "desc" });
-  const [deleting, setDeleting] = useState<number | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; summary: string } | null>(null);
   const [scoring, setScoring] = useState<number | null>(null);
   const [keyword, setKeyword] = usePersistentState("dashboard.sessions.keyword", "");
   const [searchInput, setSearchInput] = usePersistentState("dashboard.sessions.searchInput", "");
@@ -184,27 +183,14 @@ export default function SessionsPage() {
     return sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />;
   };
 
-  const openDeleteConfirm = (s: SessionSummary, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDeleteTarget({ id: s.id, summary: s.summary || t("sessions.untitled_session").replace("{id}", String(s.id)) });
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(deleteTarget.id);
-    try {
-      await api.deleteSession(deleteTarget.id);
+  const deleteConfirm = useDeleteConfirm<SessionSummary>({
+    onConfirm: async (s) => {
+      await api.deleteSession(s.id);
       toast.success(t("sessions.delete_success"));
       fetchSessions(pageInfo.page, pageInfo.pageSize, timeRange, customStart, customEnd, sort, keyword, filterScore, filterModel, true);
-    } catch (err) {
-      showErrorToast(err, { title: t("sessions.delete_error") });
-    } finally {
-      setDeleting(null);
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
-    }
-  };
+    },
+    onError: (err) => showErrorToast(err, { title: t("sessions.delete_error") }),
+  });
 
   const toggleSelect = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -283,12 +269,10 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t("sessions.title")}</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {t("sessions.subtitle")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("sessions.title")}
+        description={t("sessions.subtitle")}
+      />
 
       <Card>
         <CardHeader>
@@ -344,27 +328,14 @@ export default function SessionsPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="relative w-full md:max-w-sm">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={t("sessions.search_placeholder")}
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSearch();
-                  }}
-                  className="pl-9 pr-8"
-                />
-                {searchInput && (
-                  <button
-                    type="button"
-                    onClick={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, "", filterScore, filterModel); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
+              <SearchInput
+                placeholder={t("sessions.search_placeholder")}
+                value={searchInput}
+                onChange={setSearchInput}
+                onSearch={handleSearch}
+                clearable
+                onClear={() => { setSearchInput(""); setKeyword(""); fetchSessions(1, pageInfo.pageSize, timeRange, customStart, customEnd, sort, "", filterScore, filterModel); }}
+              />
               {selected.size > 0 && (
                 <Button
                   variant="destructive"
@@ -380,16 +351,9 @@ export default function SessionsPage() {
           </div>
 
           {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
+            <TableSkeleton rows={5} rowClassName="h-10" />
           ) : sessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <MessageSquare className="mb-3 size-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">{t("sessions.no_sessions")}</p>
-            </div>
+            <ListEmptyState icon={<MessageSquare className="mb-3 size-10 text-muted-foreground/50" />} message={t("sessions.no_sessions")} />
           ) : (
             <>
 
@@ -439,8 +403,8 @@ export default function SessionsPage() {
                             {t("sessions.msg_count").replace("{count}", String(s.messageCount ?? 0))}
                           </Badge>
                           <DeleteIconButton
-                            disabled={deleting === s.id}
-                            onClick={(e) => openDeleteConfirm(s, e)}
+                            disabled={deleteConfirm.loading && deleteConfirm.target?.id === s.id}
+                            onClick={(e) => { e.stopPropagation(); deleteConfirm.openDelete(s); }}
                             aria-label={t("sessions.delete_aria")}
                           />
                         </div>
@@ -570,8 +534,8 @@ export default function SessionsPage() {
                         <TableCell className="w-16">
                           <div className="flex justify-center">
                             <DeleteIconButton
-                              disabled={deleting === s.id}
-                              onClick={(e) => openDeleteConfirm(s, e)}
+                              disabled={deleteConfirm.loading && deleteConfirm.target?.id === s.id}
+                              onClick={(e) => { e.stopPropagation(); deleteConfirm.openDelete(s); }}
                               aria-label={t("sessions.delete_aria")}
                             />
                           </div>
@@ -594,14 +558,11 @@ export default function SessionsPage() {
         </Card>
 
         <DeleteConfirmDialog
-          open={deleteConfirmOpen}
-          onOpenChange={setDeleteConfirmOpen}
+          {...deleteConfirm.dialogProps}
           title={t("sessions.delete_dialog_title")}
-          description={t("sessions.delete_dialog_desc").replace("{name}", deleteTarget?.summary ?? "")}
+          description={t("sessions.delete_dialog_desc").replace("{name}", deleteConfirm.target?.summary || t("sessions.untitled_session").replace("{id}", String(deleteConfirm.target?.id ?? "")))}
           confirmLabel={t("common.delete")}
           loadingLabel={t("common.deleting")}
-          loading={deleting !== null}
-          onConfirm={handleDelete}
         />
 
         <DeleteConfirmDialog

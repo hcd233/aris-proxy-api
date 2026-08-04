@@ -1,20 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ModelItem } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { OpenCode } from "@lobehub/icons";
 import {
+  ExportConnectionFields,
   ExportDialogShell,
-  ExportField,
-  ExportModelEmpty,
-  ExportModelRow,
-  ExportModelSearch,
-  ExportSectionTitle,
-  ExportSelectionBadge,
-  ExportTextButton,
+  ExportModelPicker,
   modelCapabilities,
-  useFilteredModels,
 } from "@/components/export-dialog-shared";
 
 interface ExportDialogProps {
@@ -126,7 +120,6 @@ export default function ExportDialog({
   models,
 }: ExportDialogProps) {
   const t = useT();
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [providerId, setProviderId] = useState("aris-proxy");
   // lazy initializer：对话框内容仅在打开时挂载，SSR 与客户端初始渲染无差异
@@ -135,9 +128,6 @@ export default function ExportDialog({
   );
   const [apiKey, setApiKey] = useState("YOUR_API_KEY");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [modelSearch, setModelSearch] = useState("");
-
-  const filteredModels = useFilteredModels(models, modelSearch);
 
   const selectedModels = useMemo(
     () => models.filter((m) => selectedIds.has(m.id)),
@@ -149,50 +139,14 @@ export default function ExportDialog({
     [providerId, baseUrl, apiKey, selectedModels]
   );
 
-  const handleToggle = useCallback((id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-
-  const allFilteredSelected =
-    filteredModels.length > 0 &&
-    filteredModels.every((m) => selectedIds.has(m.id));
-
-  const handleToggleAll = useCallback(() => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      const everySelected = filteredModels.every((m) => next.has(m.id));
-      filteredModels.forEach((m) =>
-        everySelected ? next.delete(m.id) : next.add(m.id)
-      );
-      return next;
-    });
-  }, [filteredModels]);
-
-  // 统一拦截所有关闭路径，关闭时重置选择态
+  // 统一拦截所有关闭路径，关闭时重置选择态（搜索框状态由 ExportModelPicker 内部管理）
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) {
-        setSelectedIds(new Set());
-        setModelSearch("");
-      }
+      if (!nextOpen) setSelectedIds(new Set());
       onOpenChange(nextOpen);
     },
     [onOpenChange]
   );
-
-  useEffect(() => {
-    if (open && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 120);
-    }
-  }, [open]);
 
   return (
     <ExportDialogShell
@@ -207,71 +161,42 @@ export default function ExportDialog({
       emptyTitle={t("models.export_no_models_selected")}
       emptyHint={t("models.export_empty_hint")}
     >
-      {/* Connection */}
-      <section className="space-y-4">
-        <ExportSectionTitle>{t("models.export_connection")}</ExportSectionTitle>
-        <ExportField
-          id="export-provider-id"
-          label={t("models.export_provider_id")}
-          placeholder={t("models.export_provider_id_placeholder")}
-          value={providerId}
-          onChange={setProviderId}
-        />
-        <ExportField
-          id="export-base-url"
-          label={t("models.export_base_url")}
-          placeholder={t("models.export_base_url_placeholder")}
-          value={baseUrl}
-          onChange={setBaseUrl}
-        />
-        <ExportField
-          id="export-api-key"
-          label={t("models.export_api_key")}
-          placeholder={t("models.export_api_key_placeholder")}
-          value={apiKey}
-          onChange={setApiKey}
-        />
-      </section>
+      <ExportConnectionFields
+        fields={[
+          {
+            id: "export-provider-id",
+            label: t("models.export_provider_id"),
+            placeholder: t("models.export_provider_id_placeholder"),
+            value: providerId,
+            onChange: setProviderId,
+          },
+          {
+            id: "export-base-url",
+            label: t("models.export_base_url"),
+            placeholder: t("models.export_base_url_placeholder"),
+            value: baseUrl,
+            onChange: setBaseUrl,
+          },
+          {
+            id: "export-api-key",
+            label: t("models.export_api_key"),
+            placeholder: t("models.export_api_key_placeholder"),
+            value: apiKey,
+            onChange: setApiKey,
+          },
+        ]}
+      />
 
-      {/* Models */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <ExportSectionTitle>
-            {t("models.export_select_models")}
-            {selectedIds.size > 0 && (
-              <ExportSelectionBadge count={selectedIds.size} />
-            )}
-          </ExportSectionTitle>
-          {filteredModels.length > 0 && (
-            <ExportTextButton onClick={handleToggleAll}>
-              {allFilteredSelected
-                ? t("models.export_clear_all")
-                : t("models.export_select_all")}
-            </ExportTextButton>
-          )}
-        </div>
-
-        <ExportModelSearch
-          value={modelSearch}
-          onChange={setModelSearch}
-          inputRef={searchInputRef}
-        />
-
-        <div className="space-y-1">
-          {filteredModels.length === 0 ? (
-            <ExportModelEmpty searching={modelSearch.trim().length > 0} />
-          ) : (
-            filteredModels.map((model) => (
-              <ExportModelRow
-                key={model.id}
-                model={model}
-                selected={selectedIds.has(model.id)}
-                onSelect={() => handleToggle(model.id)}
-              />
-            ))
-          )}
-        </div>
-      </section>
+      <ExportModelPicker
+        mode="multi"
+        models={models}
+        open={open}
+        title={t("models.export_select_models")}
+        selectedIds={selectedIds}
+        onSelectedIdsChange={setSelectedIds}
+        selectAllLabel={t("models.export_select_all")}
+        clearAllLabel={t("models.export_clear_all")}
+      />
     </ExportDialogShell>
   );
 }
