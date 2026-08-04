@@ -116,16 +116,16 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 		Protocol: enum.ProtocolKindOpenAI,
 		Open: func(ctx context.Context) (port.Stream, error) {
 			return &openAIChatViaAnthropicStream{
-				u:         u,
-				ctx:       ctx,
-				req:       req,
-				m:         m,
-				stream:    stream,
-				endpoint:  endpoint,
-				timer:     newStreamTimer(),
-				conv:      &converter.AnthropicProtocolConverter{},
-				chunkID:   fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
-				allChunks: make([]*dto.OpenAIChatCompletionChunk, 0),
+				u:        u,
+				ctx:      ctx,
+				req:      req,
+				m:        m,
+				stream:   stream,
+				endpoint: endpoint,
+				timer:    newStreamTimer(),
+				conv:     &converter.AnthropicProtocolConverter{},
+				chunkID:  fmt.Sprintf(constant.OpenAIChunkIDTemplate, constant.ConvertedChunkIDSuffix),
+				agg:      proxyutil.NewChatCompletionStreamAggregator(),
 			}, nil
 		},
 	}, nil
@@ -245,7 +245,7 @@ type openAIChatViaAnthropicStream struct {
 	timer        *streamTimer
 	conv         *converter.AnthropicProtocolConverter
 	chunkID      string
-	allChunks    []*dto.OpenAIChatCompletionChunk
+	agg          *proxyutil.ChatCompletionStreamAggregator
 }
 
 func (s *openAIChatViaAnthropicStream) Read(ctx context.Context, sink port.EventSink) error {
@@ -261,7 +261,7 @@ func (s *openAIChatViaAnthropicStream) Read(ctx context.Context, sink port.Event
 			if chunk == nil {
 				continue
 			}
-			s.allChunks = append(s.allChunks, chunk)
+			s.agg.Add(chunk)
 			chunkData, marshalErr := sonic.Marshal(chunk)
 			if marshalErr != nil {
 				return marshalErr
@@ -275,7 +275,7 @@ func (s *openAIChatViaAnthropicStream) Read(ctx context.Context, sink port.Event
 	s.timer.finish()
 	s.finalizeOpenAIChatStream(ctx, sink, err)
 
-	completion, _ := proxyutil.ConcatChatCompletionChunks(s.allChunks) //nolint:errcheck // store even if concat fails
+	completion := s.agg.Completion()
 	if completion != nil {
 		completion.Model = s.exposedModel
 	}
