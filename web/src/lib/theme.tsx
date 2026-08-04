@@ -18,10 +18,9 @@ import {
 
 export type ThemeName = "anthropic" | "moonshot";
 
-export const THEME_NAMES = ["anthropic", "moonshot"] as const;
-export const DEFAULT_THEME: ThemeName = "anthropic";
+const DEFAULT_THEME: ThemeName = "anthropic";
 
-export function isThemeName(x: string | null | undefined): x is ThemeName {
+function isThemeName(x: string | null | undefined): x is ThemeName {
   return x === "anthropic" || x === "moonshot";
 }
 
@@ -59,11 +58,11 @@ const TOKEN_LAYER_COLORS: Record<ThemeName, TokenLayerColors> = {
   moonshot: { cacheRead: "#A9B8FF", input: "#7C8CFF", cacheCreated: "#9CF0EC", output: "#5E6EE0" },
 };
 
-export function chartSeriesColors(theme: ThemeName): readonly string[] {
+function chartSeriesColors(theme: ThemeName): readonly string[] {
   return CHART_SERIES_COLORS[theme];
 }
 
-export function tokenLayerColors(theme: ThemeName): TokenLayerColors {
+function tokenLayerColors(theme: ThemeName): TokenLayerColors {
   return TOKEN_LAYER_COLORS[theme];
 }
 
