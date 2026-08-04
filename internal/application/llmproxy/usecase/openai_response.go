@@ -459,7 +459,7 @@ type responseViaAnthropicStream struct {
 	responseConv  *converter.ResponseProtocolConverter
 	anthropicConv *converter.AnthropicProtocolConverter
 	itemState     *converter.StreamItemState
-	allChunks     []*dto.OpenAIChatCompletionChunk
+	agg           *proxyutil.ChatCompletionStreamAggregator
 }
 
 func newResponseViaAnthropicStream(ctx context.Context, u *openAIUseCase, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, stream io.ReadCloser, endpoint string) *responseViaAnthropicStream {
@@ -476,7 +476,7 @@ func newResponseViaAnthropicStream(ctx context.Context, u *openAIUseCase, req *d
 		responseConv:  &converter.ResponseProtocolConverter{},
 		anthropicConv: &converter.AnthropicProtocolConverter{},
 		itemState:     converter.NewStreamItemState(),
-		allChunks:     make([]*dto.OpenAIChatCompletionChunk, 0),
+		agg:           proxyutil.NewChatCompletionStreamAggregator(),
 	}
 	assertRespConvInit(h.responseConv, req)
 	return h
@@ -513,7 +513,7 @@ func (s *responseViaAnthropicStream) onAnthropicEvent(sink port.EventSink, event
 		if chunk == nil {
 			continue
 		}
-		s.allChunks = append(s.allChunks, chunk)
+		s.agg.Add(chunk)
 		if _, writeErr := converter.WriteResponseDeltaFromChatChunk(sink, chunk, s.itemState, s.responseID, s.responseConv); writeErr != nil {
 			return writeErr
 		}
@@ -523,7 +523,7 @@ func (s *responseViaAnthropicStream) onAnthropicEvent(sink port.EventSink, event
 
 func (s *responseViaAnthropicStream) finalize(sink port.EventSink, anthropicMsg *dto.AnthropicMessage, err error) {
 	s.timer.finish()
-	rsp := finalizeResponseFromAnthropicStream(s.ctx, sink, err, s.allChunks, anthropicMsg, s.exposedModel, s.responseID, s.anthropicConv, s.responseConv)
+	rsp := finalizeResponseFromAnthropicStream(s.ctx, sink, err, s.agg.Completion(), anthropicMsg, s.exposedModel, s.responseID, s.anthropicConv, s.responseConv)
 	s.u.storeResponseFromRsp(s.ctx, s.req, rsp, err, s.m.ModelID())
 	recordModelCall(s.ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
@@ -537,12 +537,11 @@ func (s *responseViaAnthropicStream) finalize(sink port.EventSink, anthropicMsg 
 	})
 }
 
-func finalizeResponseFromAnthropicStream(ctx context.Context, sink port.EventSink, upstreamErr error, allChunks []*dto.OpenAIChatCompletionChunk, anthropicMsg *dto.AnthropicMessage, exposedModel, responseID string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
+func finalizeResponseFromAnthropicStream(ctx context.Context, sink port.EventSink, upstreamErr error, chatCompletion *dto.OpenAIChatCompletion, anthropicMsg *dto.AnthropicMessage, exposedModel, responseID string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if upstreamErr != nil {
 		proxyutil.WriteUpstreamSSEError(ctx, sink, upstreamErr)
 		return nil
 	}
-	chatCompletion, _ := proxyutil.ConcatChatCompletionChunks(allChunks) //nolint:errcheck // store even if concat fails
 	if chatCompletion == nil && anthropicMsg != nil {
 		chatCompletion, _ = anthropicConv.ToOpenAIResponse(anthropicMsg) //nolint:errcheck // best-effort fallback conversion
 	}
