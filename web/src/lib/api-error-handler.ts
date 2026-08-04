@@ -4,7 +4,7 @@
  * 用法概述:
  * ```ts
  * // 纯函数式（无 UI 依赖）
- * const parsed = parseApiError(err);
+ * const parsed = parseError(err);
  *
  * // toast 快捷方式
  * showErrorToast(err);
@@ -84,20 +84,4 @@ function toastDuration(severity: ErrorSeverity): number {
   }
 }
 
-// ── 工具函数 ──────────────────────────────────────────────────────────────────
 
-/** 是否为可重试的间歇性错误（网络断开、5xx 等） */
-export function isRetryable(err: StructuredError): boolean {
-  if (err.httpStatus === undefined) return false;
-  return err.httpStatus >= 500 || err.httpStatus === 429 || err.httpStatus === 0;
-}
-
-/** 业务错误码是否表示 "资源不存在" */
-export function isNotFound(err: StructuredError): boolean {
-  return err.code === BusinessErrorCode.NotFound || err.httpStatus === 404;
-}
-
-/** 业务错误码是否表示 "权限不足" */
-export function isPermissionDenied(err: StructuredError): boolean {
-  return err.code === BusinessErrorCode.PermissionDenied || err.httpStatus === 403;
-}

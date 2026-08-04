@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 
-export interface RuntimeChartSeries {
+interface RuntimeChartSeries {
   key: string;
   label: string;
   color: string;
