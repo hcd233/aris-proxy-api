@@ -7,9 +7,7 @@ import { api } from "@/lib/api-client";
 import type { CronJobItem, PageInfo } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -19,10 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Timer, Pencil, Lock } from "lucide-react";
+import { Timer, Pencil, Lock } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n";
 import { PaginationBar } from "@/components/pagination-bar";
+import { PageHeader } from "@/components/page-header";
+import { SearchInput } from "@/components/search-input";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
 import { showErrorToast } from "@/lib/api-error-handler";
@@ -123,14 +125,10 @@ export default function CronPage() {
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {t("cron.title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("cron.subtitle")}
-          </p>
-        </div>
+        <PageHeader
+          title={t("cron.title")}
+          description={t("cron.subtitle")}
+        />
 
         <Card>
           <CardHeader>
@@ -141,31 +139,18 @@ export default function CronPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="relative w-full md:max-w-sm">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={t("cron.search_placeholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") refresh(1);
-                  }}
-                  className="pl-9"
-                />
-              </div>
+              <SearchInput
+                placeholder={t("cron.search_placeholder")}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={() => refresh(1)}
+              />
             </div>
 
             {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
+              <TableSkeleton rows={5} rowClassName="h-10" />
             ) : jobs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Timer className="mb-3 size-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">{t("cron.no_jobs")}</p>
-              </div>
+              <ListEmptyState icon={<Timer className="mb-3 size-10 text-muted-foreground/50" />} message={t("cron.no_jobs")} />
             ) : (
               <Table>
                 <TableHeader>

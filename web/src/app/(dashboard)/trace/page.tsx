@@ -6,8 +6,6 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, TraceSummary } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
@@ -17,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Check, Radar, Search, Trash2, X } from "lucide-react";
+import { Check, Radar, Trash2 } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -26,6 +24,11 @@ import { useT } from "@/lib/i18n";
 import TraceInstallPopover from "@/components/trace-install-popover";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { PageHeader } from "@/components/page-header";
+import { SearchInput } from "@/components/search-input";
+import { ListEmptyState } from "@/components/list-empty-state";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { formatDateTime } from "@/lib/utils";
 
 export default function TracePage() {
@@ -41,10 +44,7 @@ export default function TracePage() {
   const [keyword, setKeyword] = usePersistentState("dashboard.trace.keyword", "");
   const [searchInput, setSearchInput] = usePersistentState("dashboard.trace.searchInput", "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [deleteTarget, setDeleteTarget] = useState<TraceSummary | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
   const [batchDeleting, setBatchDeleting] = useState(false);
   const t = useT();
   const isMobile = useIsMobile();
@@ -82,28 +82,15 @@ export default function TracePage() {
     fetchTraces(1, pageInfo.pageSize, kw);
   }, [fetchTraces, pageInfo.pageSize, searchInput, setKeyword]);
 
-  const openDeleteConfirm = (tr: TraceSummary, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDeleteTarget(tr);
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(deleteTarget.id);
-    try {
-      await api.deleteTrace(deleteTarget.id);
+  const deleteConfirm = useDeleteConfirm<TraceSummary>({
+    onConfirm: async (tr) => {
+      await api.deleteTrace(tr.id);
       toast.success(t("trace.delete_success"));
       setSelected(new Set());
       fetchTraces(pageInfo.page, pageInfo.pageSize, keyword, true);
-    } catch (err) {
-      showErrorToast(err, { title: t("trace.delete_error") });
-    } finally {
-      setDeleting(null);
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
-    }
-  };
+    },
+    onError: (err) => showErrorToast(err, { title: t("trace.delete_error") }),
+  });
 
   const toggleSelect = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -156,28 +143,26 @@ export default function TracePage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {t("trace.title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("trace.subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBatchDeleteConfirmOpen(true)}
-              className="gap-1.5"
-            >
-              <Trash2 className="size-3.5" />
-              {t("common.delete")} {selected.size}
-            </Button>
-          )}
-          <TraceInstallPopover />
-        </div>
-      </div>
+      <PageHeader
+        title={t("trace.title")}
+        description={t("trace.subtitle")}
+        actions={
+          <div className="flex items-center gap-2">
+            {selected.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBatchDeleteConfirmOpen(true)}
+                className="gap-1.5"
+              >
+                <Trash2 className="size-3.5" />
+                {t("common.delete")} {selected.size}
+              </Button>
+            )}
+            <TraceInstallPopover />
+          </div>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -186,40 +171,20 @@ export default function TracePage() {
         <CardContent>
           {/* Search — always visible */}
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
-            <div className="relative w-full md:max-w-sm">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={t("trace.search_placeholder")}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSearch();
-                }}
-                className="pl-9 pr-8"
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={() => { setSearchInput(""); setKeyword(""); fetchTraces(1, pageInfo.pageSize, ""); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
+            <SearchInput
+              placeholder={t("trace.search_placeholder")}
+              value={searchInput}
+              onChange={setSearchInput}
+              onSearch={handleSearch}
+              clearable
+              onClear={() => { setSearchInput(""); setKeyword(""); fetchTraces(1, pageInfo.pageSize, ""); }}
+            />
           </div>
 
           {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
+            <TableSkeleton rows={5} rowClassName="h-10" />
           ) : traces.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Radar className="mb-3 size-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">{t("trace.no_traces")}</p>
-            </div>
+            <ListEmptyState icon={<Radar className="mb-3 size-10 text-muted-foreground/50" />} message={t("trace.no_traces")} />
           ) : (
             <>
               {isMobile ? (
@@ -243,8 +208,8 @@ export default function TracePage() {
                                 render={
                                   <DeleteIconButton
                                     aria-label={t("trace.delete_aria")}
-                                    disabled={deleting === tr.id}
-                                    onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
+                                    disabled={deleteConfirm.loading && deleteConfirm.target?.id === tr.id}
+                                    onClick={(e) => { (e as unknown as React.MouseEvent).stopPropagation(); deleteConfirm.openDelete(tr); }}
                                   />
                                 }
                               />
@@ -329,8 +294,8 @@ export default function TracePage() {
                                 render={
                                   <DeleteIconButton
                                     aria-label={t("trace.delete_aria")}
-                                    disabled={deleting === tr.id}
-                                    onClick={(e) => openDeleteConfirm(tr, e as unknown as React.MouseEvent)}
+                                    disabled={deleteConfirm.loading && deleteConfirm.target?.id === tr.id}
+                                    onClick={(e) => { (e as unknown as React.MouseEvent).stopPropagation(); deleteConfirm.openDelete(tr); }}
                                   />
                                 }
                               />
@@ -354,17 +319,14 @@ export default function TracePage() {
       </Card>
 
       <DeleteConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
+        {...deleteConfirm.dialogProps}
         title={t("trace.delete_dialog_title")}
         description={t("trace.delete_dialog_desc").replace(
           "{name}",
-          deleteTarget?.sessionId ?? String(deleteTarget?.id ?? "")
+          deleteConfirm.target?.sessionId ?? String(deleteConfirm.target?.id ?? "")
         )}
         confirmLabel={t("common.delete")}
         loadingLabel={t("common.deleting")}
-        loading={deleting !== null}
-        onConfirm={handleDelete}
       />
 
       <DeleteConfirmDialog
