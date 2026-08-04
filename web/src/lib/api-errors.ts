@@ -5,36 +5,44 @@
  * 新增/修改业务错误码时必须同步更新两侧。
  *
  * ── 错误码分段规则 ──
- * 10001–10099  认证／授权错误
- * 10100–10199  通用业务错误
- * 20000–29999  后端保留（暂未定）
+ * 10000–10099  通用业务错误（与 internal/common/ierr/sentinels.go 一一对应）
  */
 
 export const BusinessErrorCode = {
-  /** ─── 10001–10099: 认证／授权 ─── */
+  /** ─── 10000–10099: 通用业务错误（镜像后端 sentinels.go） ─── */
+
+  /** 内部服务错误（兜底） */
+  Internal: 10000,
 
   /** 未授权（token 无效、缺失或过期） */
   Unauthorized: 10001,
 
-  /** ─── 10100–10199: 通用业务 ─── */
+  /** 没有权限 */
+  PermissionDenied: 10002,
 
-  /** 请求参数校验失败 */
-  InvalidArgument: 10100,
+  /** 数据不存在 */
+  NotFound: 10003,
 
-  /** 资源不存在 */
-  NotFound: 10101,
+  /** 数据已存在 */
+  AlreadyExists: 10004,
 
-  /** 资源已存在（创建重复条目） */
-  AlreadyExists: 10102,
+  /** 请求过于频繁 */
+  RateLimitExceeded: 10005,
 
-  /** 操作被拒绝（权限不足或违反业务规则） */
-  PermissionDenied: 10103,
+  /** 请求参数错误 */
+  InvalidArgument: 10006,
 
-  /** 速率限制 */
-  RateLimitExceeded: 10104,
+  /** 配额不足 */
+  InsufficientQuota: 10007,
 
-  /** 内部服务错误 */
-  Internal: 10199,
+  /** 配额超限 */
+  QuotaExceeded: 10008,
+
+  /** 资源锁定 */
+  ResourceLocked: 10009,
+
+  /** 内容违反策略 */
+  ContentBlocked: 10010,
 } as const;
 
 export type BusinessErrorCode = (typeof BusinessErrorCode)[keyof typeof BusinessErrorCode];
@@ -65,13 +73,17 @@ export interface StructuredError {
 // ── 错误码 → 严重级别映射 ────────────────────────────────────────────────────
 
 const ERROR_CODE_SEVERITY: Partial<Record<BusinessErrorCode, ErrorSeverity>> = {
+  [BusinessErrorCode.Internal]: "error",
   [BusinessErrorCode.Unauthorized]: "critical",
-  [BusinessErrorCode.InvalidArgument]: "warning",
+  [BusinessErrorCode.PermissionDenied]: "error",
   [BusinessErrorCode.NotFound]: "warning",
   [BusinessErrorCode.AlreadyExists]: "warning",
-  [BusinessErrorCode.PermissionDenied]: "error",
   [BusinessErrorCode.RateLimitExceeded]: "warning",
-  [BusinessErrorCode.Internal]: "error",
+  [BusinessErrorCode.InvalidArgument]: "warning",
+  [BusinessErrorCode.InsufficientQuota]: "warning",
+  [BusinessErrorCode.QuotaExceeded]: "error",
+  [BusinessErrorCode.ResourceLocked]: "warning",
+  [BusinessErrorCode.ContentBlocked]: "warning",
 };
 
 /** HTTP 状态码 → 严重级别 */
@@ -85,13 +97,17 @@ function httpStatusSeverity(status: number): ErrorSeverity {
 // 键名与 locales/{en,zh,ja}.json 中的扁平 key 对齐（error.* 段）。
 
 export const ERROR_I18N_KEY: Partial<Record<BusinessErrorCode, string>> = {
+  [BusinessErrorCode.Internal]: "error.internal",
   [BusinessErrorCode.Unauthorized]: "error.unauthorized",
-  [BusinessErrorCode.InvalidArgument]: "error.bad_request",
+  [BusinessErrorCode.PermissionDenied]: "error.no_permission",
   [BusinessErrorCode.NotFound]: "error.data_not_exists",
   [BusinessErrorCode.AlreadyExists]: "error.data_exists",
-  [BusinessErrorCode.PermissionDenied]: "error.no_permission",
   [BusinessErrorCode.RateLimitExceeded]: "error.too_many_requests",
-  [BusinessErrorCode.Internal]: "error.internal",
+  [BusinessErrorCode.InvalidArgument]: "error.bad_request",
+  [BusinessErrorCode.InsufficientQuota]: "error.insufficient_quota",
+  [BusinessErrorCode.QuotaExceeded]: "error.quota_exceeded",
+  [BusinessErrorCode.ResourceLocked]: "error.resource_locked",
+  [BusinessErrorCode.ContentBlocked]: "error.content_blocked",
 };
 
 /** HTTP 状态码兜底消息：message 为未本地化兜底，key 供消费方本地化。 */
