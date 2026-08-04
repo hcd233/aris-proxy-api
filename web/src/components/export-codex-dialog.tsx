@@ -1,18 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ModelItem } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { Codex } from "@lobehub/icons";
 import {
+  ExportConnectionFields,
   ExportDialogShell,
-  ExportField,
-  ExportModelEmpty,
-  ExportModelRow,
-  ExportModelSearch,
-  ExportSectionTitle,
-  ExportTextButton,
-  useFilteredModels,
+  ExportModelPicker,
 } from "@/components/export-dialog-shared";
 
 interface ExportCodexDialogProps {
@@ -174,7 +169,6 @@ export default function ExportCodexDialog({
   models,
 }: ExportCodexDialogProps) {
   const t = useT();
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [providerId, setProviderId] = useState("aris-proxy");
   // lazy initializer：对话框内容仅在打开时挂载，SSR 与客户端初始渲染无差异
@@ -183,9 +177,6 @@ export default function ExportCodexDialog({
   );
   const [apiKey, setApiKey] = useState("YOUR_API_KEY");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [modelSearch, setModelSearch] = useState("");
-
-  const filteredModels = useFilteredModels(models, modelSearch);
 
   const selectedModel = useMemo(
     () => models.find((m) => m.id === selectedId) ?? null,
@@ -197,23 +188,14 @@ export default function ExportCodexDialog({
     [providerId, baseUrl, apiKey, selectedModel]
   );
 
-  // 统一拦截所有关闭路径，关闭时重置选择态
+  // 统一拦截所有关闭路径，关闭时重置选择态（搜索框状态由 ExportModelPicker 内部管理）
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) {
-        setSelectedId(null);
-        setModelSearch("");
-      }
+      if (!nextOpen) setSelectedId(null);
       onOpenChange(nextOpen);
     },
     [onOpenChange]
   );
-
-  useEffect(() => {
-    if (open && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 120);
-    }
-  }, [open]);
 
   return (
     <ExportDialogShell
@@ -228,66 +210,41 @@ export default function ExportCodexDialog({
       emptyTitle={t("models.export_no_default_model_selected")}
       emptyHint={t("models.export_codex_empty_hint")}
     >
-      {/* Connection */}
-      <section className="space-y-4">
-        <ExportSectionTitle>{t("models.export_connection")}</ExportSectionTitle>
-        <ExportField
-          id="export-codex-provider-id"
-          label={t("models.export_provider_id")}
-          placeholder={t("models.export_provider_id_placeholder")}
-          value={providerId}
-          onChange={setProviderId}
-        />
-        <ExportField
-          id="export-codex-base-url"
-          label={t("models.export_base_url")}
-          placeholder={t("models.export_base_url_placeholder")}
-          value={baseUrl}
-          onChange={setBaseUrl}
-        />
-        <ExportField
-          id="export-codex-api-key"
-          label={t("models.export_api_key")}
-          placeholder={t("models.export_api_key_placeholder")}
-          value={apiKey}
-          onChange={setApiKey}
-        />
-      </section>
+      <ExportConnectionFields
+        fields={[
+          {
+            id: "export-codex-provider-id",
+            label: t("models.export_provider_id"),
+            placeholder: t("models.export_provider_id_placeholder"),
+            value: providerId,
+            onChange: setProviderId,
+          },
+          {
+            id: "export-codex-base-url",
+            label: t("models.export_base_url"),
+            placeholder: t("models.export_base_url_placeholder"),
+            value: baseUrl,
+            onChange: setBaseUrl,
+          },
+          {
+            id: "export-codex-api-key",
+            label: t("models.export_api_key"),
+            placeholder: t("models.export_api_key_placeholder"),
+            value: apiKey,
+            onChange: setApiKey,
+          },
+        ]}
+      />
 
-      {/* Default model (single select) */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <ExportSectionTitle>
-            {t("models.export_default_model")}
-          </ExportSectionTitle>
-          {selectedModel && (
-            <ExportTextButton onClick={() => setSelectedId(null)}>
-              {t("models.export_tier_clear")}
-            </ExportTextButton>
-          )}
-        </div>
-
-        <ExportModelSearch
-          value={modelSearch}
-          onChange={setModelSearch}
-          inputRef={searchInputRef}
-        />
-
-        <div className="space-y-1">
-          {filteredModels.length === 0 ? (
-            <ExportModelEmpty searching={modelSearch.trim().length > 0} />
-          ) : (
-            filteredModels.map((model) => (
-              <ExportModelRow
-                key={model.id}
-                model={model}
-                selected={selectedId === model.id}
-                onSelect={() => setSelectedId(model.id)}
-              />
-            ))
-          )}
-        </div>
-      </section>
+      <ExportModelPicker
+        mode="single"
+        models={models}
+        open={open}
+        title={t("models.export_default_model")}
+        selectedId={selectedId}
+        onSelectedIdChange={setSelectedId}
+        clearLabel={t("models.export_tier_clear")}
+      />
     </ExportDialogShell>
   );
 }

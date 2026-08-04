@@ -2,7 +2,9 @@
 
 import {
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type Ref,
@@ -380,6 +382,204 @@ export function ExportModelEmpty({ searching }: { searching: boolean }) {
     <p className="rounded-lg border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
       {searching ? t("models.export_no_matches") : t("models.no_models")}
     </p>
+  );
+}
+
+/* ─── Connection section：Label + 等宽 Input 字段组 ─── */
+
+interface ExportConnectionField {
+  id: string;
+  label: string;
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+// 连接信息字段组（providerId/baseUrl/apiKey 或 baseUrl/authToken 等，各对话框字段数量与 id 前缀不同）
+export function ExportConnectionFields({ fields }: { fields: ExportConnectionField[] }) {
+  const t = useT();
+  return (
+    <section className="space-y-4">
+      <ExportSectionTitle>{t("models.export_connection")}</ExportSectionTitle>
+      {fields.map((field) => (
+        <ExportField
+          key={field.id}
+          id={field.id}
+          label={field.label}
+          placeholder={field.placeholder}
+          value={field.value}
+          onChange={field.onChange}
+        />
+      ))}
+    </section>
+  );
+}
+
+/* ─── 模型选择区（single / multi 通用） ─── */
+
+interface ExportModelPickerBaseProps {
+  models: ModelItem[];
+  /** 对话框当前打开状态：关闭时重置搜索，打开时自动聚焦搜索框 */
+  open: boolean;
+  /** 模型区标题（已翻译文本） */
+  title: string;
+  /** ExportModelRow 的 maxOutputTokens 兜底值（Pi 为 16384） */
+  outputFallback?: number;
+  /** 列表下方附加内容（如 Pi 的重复 alias 错误提示） */
+  children?: ReactNode;
+}
+
+interface ExportModelPickerSingleProps extends ExportModelPickerBaseProps {
+  mode: "single";
+  selectedId: number | null;
+  onSelectedIdChange: (id: number | null) => void;
+  /** 清除按钮文案（有选中时显示） */
+  clearLabel: string;
+}
+
+interface ExportModelPickerMultiProps extends ExportModelPickerBaseProps {
+  mode: "multi";
+  selectedIds: Set<number>;
+  onSelectedIdsChange: (ids: Set<number>) => void;
+  selectAllLabel: string;
+  clearAllLabel: string;
+}
+
+type ExportModelPickerProps =
+  | ExportModelPickerSingleProps
+  | ExportModelPickerMultiProps;
+
+export function ExportModelPicker(props: ExportModelPickerProps) {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState("");
+
+  /* eslint-disable react-hooks/set-state-in-effect -- 关闭时重置搜索、打开时聚焦，与既有对话框行为一致 */
+  useEffect(() => {
+    if (!props.open) {
+      setSearch("");
+      return;
+    }
+    const timer = setTimeout(() => searchInputRef.current?.focus(), 120);
+    return () => clearTimeout(timer);
+  }, [props.open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const filteredModels = useFilteredModels(props.models, search);
+
+  if (props.mode === "single") {
+    const {
+      title,
+      selectedId,
+      onSelectedIdChange,
+      clearLabel,
+      outputFallback,
+      children,
+    } = props;
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <ExportSectionTitle>{title}</ExportSectionTitle>
+          {selectedId !== null && (
+            <ExportTextButton onClick={() => onSelectedIdChange(null)}>
+              {clearLabel}
+            </ExportTextButton>
+          )}
+        </div>
+        <ExportModelSearch
+          value={search}
+          onChange={setSearch}
+          inputRef={searchInputRef}
+        />
+        <div className="space-y-1">
+          {filteredModels.length === 0 ? (
+            <ExportModelEmpty searching={search.trim().length > 0} />
+          ) : (
+            filteredModels.map((model) => (
+              <ExportModelRow
+                key={model.id}
+                model={model}
+                selected={selectedId === model.id}
+                onSelect={() => onSelectedIdChange(model.id)}
+                outputFallback={outputFallback}
+              />
+            ))
+          )}
+        </div>
+        {children}
+      </section>
+    );
+  }
+
+  const {
+    title,
+    selectedIds,
+    onSelectedIdsChange,
+    selectAllLabel,
+    clearAllLabel,
+    outputFallback,
+    children,
+  } = props;
+
+  const allFilteredSelected =
+    filteredModels.length > 0 &&
+    filteredModels.every((model) => selectedIds.has(model.id));
+
+  const handleToggle = (id: number) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    onSelectedIdsChange(next);
+  };
+
+  const handleToggleAll = () => {
+    const next = new Set(selectedIds);
+    const everySelected = filteredModels.every((model) => next.has(model.id));
+    filteredModels.forEach((model) =>
+      everySelected ? next.delete(model.id) : next.add(model.id)
+    );
+    onSelectedIdsChange(next);
+  };
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <ExportSectionTitle>
+          {title}
+          {selectedIds.size > 0 && (
+            <ExportSelectionBadge count={selectedIds.size} />
+          )}
+        </ExportSectionTitle>
+        {filteredModels.length > 0 && (
+          <ExportTextButton onClick={handleToggleAll}>
+            {allFilteredSelected ? clearAllLabel : selectAllLabel}
+          </ExportTextButton>
+        )}
+      </div>
+      <ExportModelSearch
+        value={search}
+        onChange={setSearch}
+        inputRef={searchInputRef}
+      />
+      <div className="space-y-1">
+        {filteredModels.length === 0 ? (
+          <ExportModelEmpty searching={search.trim().length > 0} />
+        ) : (
+          filteredModels.map((model) => (
+            <ExportModelRow
+              key={model.id}
+              model={model}
+              selected={selectedIds.has(model.id)}
+              onSelect={() => handleToggle(model.id)}
+              outputFallback={outputFallback}
+            />
+          ))
+        )}
+      </div>
+      {children}
+    </section>
   );
 }
 
