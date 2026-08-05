@@ -120,16 +120,17 @@ func (h *cronHandler) HandleListCronCallAudits(ctx context.Context, req *dto.Lis
 
 	rsp.Logs = lo.Map(logs, func(log *cronauditport.CronCallAuditView, _ int) *dto.CronCallAuditItem {
 		return &dto.CronCallAuditItem{
-			ID:         log.ID,
-			CronName:   log.CronName,
-			TraceID:    log.TraceID,
-			StartedAt:  log.StartedAt,
-			EndedAt:    log.EndedAt,
-			DurationMs: log.DurationMs,
-			Status:     log.Status,
-			Message:    log.Message,
-			Metadata:   log.Metadata,
-			CreatedAt:  log.CreatedAt,
+			ID:            log.ID,
+			CronName:      log.CronName,
+			TraceID:       log.TraceID,
+			StartedAt:     log.StartedAt,
+			EndedAt:       log.EndedAt,
+			DurationMs:    log.DurationMs,
+			Status:        log.Status,
+			TriggerSource: log.TriggerSource,
+			Message:       log.Message,
+			Metadata:      log.Metadata,
+			CreatedAt:     log.CreatedAt,
 		}
 	})
 	rsp.PageInfo = pageInfo
