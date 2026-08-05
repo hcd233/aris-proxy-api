@@ -547,6 +547,7 @@ export interface CronCallAuditItem {
   endedAt: string;
   durationMs: number;
   status: string;
+  triggerSource?: "scheduled" | "manual";
   message: string;
   metadata: Record<string, number>;
   createdAt: string;

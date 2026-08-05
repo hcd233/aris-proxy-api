@@ -722,5 +722,15 @@
   "models.model_id_hint": "空欄の場合は alias がモデルIDとして使用されます。",
   "models.upstream_model": "上游モデル名",
   "models.upstream_model_placeholder": "例: gpt-4o-2024-08-06",
-  "callback.invalid_state": "無効な認可ステートです"
+  "callback.invalid_state": "無効な認可ステートです",
+  "cron.trigger": "今すぐ実行",
+  "cron.triggering": "実行中",
+  "cron.triggered": "実行を開始しました。実行ログで結果を確認してください。",
+  "cron.trigger_error": "実行に失敗しました",
+  "cron.running": "タスクが実行中のため、しばらくしてからお試しください",
+  "cron.trigger_confirm_title": "今すぐ実行しますか？",
+  "cron.trigger_confirm_desc": "このタスクが直ちに1回実行されます。実行ログで結果を確認できます。",
+  "cron_audit.trigger_source": "トリガー元",
+  "cron_audit.trigger_scheduled": "定期",
+  "cron_audit.trigger_manual": "手動"
 }

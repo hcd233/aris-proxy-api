@@ -711,6 +711,12 @@ class ApiClient {
     });
   }
 
+  async triggerCronJob(name: string): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/cron/trigger?name=${encodeURIComponent(name)}`, {
+      method: "POST",
+    });
+  }
+
   async listCronCallAudits(params: {
     page: number;
     pageSize: number;
