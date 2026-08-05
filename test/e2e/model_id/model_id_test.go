@@ -140,6 +140,27 @@ func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, en
 	return &out, traceID
 }
 
+// createModelWithModelID 创建模型（显式传 modelId，验证服务端按传入值落库）。
+func createModelWithModelID(t *testing.T, baseURL, jwtToken string, client *http.Client, endpointID uint, alias, modelID string) (rsp *commandRsp, traceID string) {
+	t.Helper()
+	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/model", jwtToken, map[string]any{
+		"alias":           alias,
+		"modelId":         modelID,
+		"upstreamModel":   "e2e-upstream-model",
+		"endpointID":      endpointID,
+		"contextLength":   128000,
+		"maxOutputTokens": 64000,
+	})
+	if status != http.StatusOK {
+		t.Fatalf("create model alias=%s status=%d traceID=%s body=%s", alias, status, traceID, string(raw))
+	}
+	var out commandRsp
+	if err := sonic.Unmarshal(raw, &out); err != nil {
+		t.Fatalf("unmarshal create rsp failed: %v body=%s", err, string(raw))
+	}
+	return &out, traceID
+}
+
 // getModelByAlias 按别名查模型；未命中返回 nil。
 func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client, alias string) *modelItem {
 	t.Helper()
@@ -215,6 +236,33 @@ func TestModelID_CreateDefaultsToAlias(t *testing.T) {
 	modelID = item.ID
 	if item.ModelID != alias {
 		t.Fatalf("modelId after create=%q, want default alias=%q", item.ModelID, alias)
+	}
+}
+
+// TestModelID_CreateExplicitModelID 验证创建 model 时显式传入 modelId 生效（不落默认 alias）。
+func TestModelID_CreateExplicitModelID(t *testing.T) {
+	t.Parallel()
+	baseURL, jwtToken := mustE2EEnv(t)
+	client := newE2EClient()
+	endpointID := pickEndpointID(t, baseURL, jwtToken, client)
+
+	alias := fmt.Sprintf("e2e-mid-explicit-%d", time.Now().UnixNano())
+	customID := "custom-model-id-created"
+	var modelID uint
+	defer func() { cleanupModel(t, baseURL, jwtToken, client, &modelID) }()
+
+	rsp, traceID := createModelWithModelID(t, baseURL, jwtToken, client, endpointID, alias, customID)
+	if rsp.Error != nil {
+		t.Fatalf("create model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+	}
+
+	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
+	if item == nil {
+		t.Fatalf("created model alias=%s not found in list", alias)
+	}
+	modelID = item.ID
+	if item.ModelID != customID {
+		t.Fatalf("modelId after explicit create=%q, want %q", item.ModelID, customID)
 	}
 }
 
