@@ -76,3 +76,5 @@ migrate_think_extract
 
 # PI
 .pi-subagents
+
+.pi/
