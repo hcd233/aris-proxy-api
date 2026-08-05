@@ -28,6 +28,7 @@ type SoftDeletePurgeCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
 	locker     *lock.RedisLocker
+	lockKey    string
 	messageDAO *dao.MessageDAO
 	sessionDAO *dao.SessionDAO
 	toolDAO    *dao.ToolDAO
@@ -82,8 +83,8 @@ func (c *SoftDeletePurgeCron) StopGracefully() {
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 func (c *SoftDeletePurgeCron) Start(spec string) error {
-	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSoftDeletePurge)
-	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleSoftDeletePurge, c.locker, key, LockOptions{}, c.purge))
+	c.lockKey = fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSoftDeletePurge)
+	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleSoftDeletePurge, c.locker, c.lockKey, LockOptions{}, c.purge, constant.CronTriggerSourceScheduled))
 	if err != nil {
 		logger.Logger().Error("[SoftDeletePurgeCron] Add func error", zap.Error(err))
 		return err
@@ -94,6 +95,16 @@ func (c *SoftDeletePurgeCron) Start(spec string) error {
 	c.cron.Start()
 
 	return nil
+}
+
+// Trigger 手动触发一次软删除清理
+//
+//	@receiver c *SoftDeletePurgeCron
+//	@return bool
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+func (c *SoftDeletePurgeCron) Trigger() bool {
+	return TriggerWithLock(constant.CronModuleSoftDeletePurge, c.locker, c.lockKey, LockOptions{}, c.purge)
 }
 
 // purge 执行硬删除逻辑，只删除未被任何活跃 Session 引用的 Message 和 Tool

@@ -129,10 +129,11 @@ func renewLoop(ctx context.Context, locker lock.Locker, key, value string, ttl, 
 // wrapCronFunc 把 cron fn 包成"注入 traceID + 启用检查 + panic 恢复 + RunWithLock + 审计"的整体，供 AddFunc 使用。
 //
 // parentCtx 取自 SetBootstrapContext；未设置时退化为 context.Background()。
+// source 为触发来源（scheduled/manual）。
 //
 //	@author centonhuang
-//	@update 2026-06-24 10:00:00
-func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error)) func() {
+//	@update 2026-08-05 10:00:00
+func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions, fn func(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error), source string) func() {
 	return func() {
 		ctx := context.WithValue(getBootstrapContext(), constant.CtxKeyTraceID, uuid.New().String())
 		start := time.Now()
@@ -142,15 +143,15 @@ func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions,
 		)
 		defer func() {
 			if r := recover(); r != nil {
-				cronPanicHandler(ctx, name, r)
+				cronPanicHandler(ctx, name, r, source)
 			}
 		}()
 
-		if cronJobStore != nil {
+		if source == constant.CronTriggerSourceScheduled && cronJobStore != nil {
 			job, err := cronJobStore.Get(ctx, name)
 			if err == nil && job != nil && !job.Enabled {
 				logger.WithCtx(ctx).Info("[Cron] Cron job is disabled in DB, skip", zap.String("name", name))
-				saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSkipped, 0, "", nil)
+				saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSkipped, 0, "", nil, source)
 				return
 			}
 		}
@@ -163,27 +164,96 @@ func wrapCronFunc(name string, locker lock.Locker, key string, opts LockOptions,
 		}
 		durationMs := time.Since(start).Milliseconds()
 		if fnErr != nil {
-			saveCronCallAudit(ctx, name, constant.CronCallAuditStatusFailed, durationMs, fnErr.Error(), nil)
+			saveCronCallAudit(ctx, name, constant.CronCallAuditStatusFailed, durationMs, fnErr.Error(), nil, source)
 			return
 		}
-		saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSuccess, durationMs, "", metadata)
+		saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSuccess, durationMs, "", metadata, source)
 	}
 }
 
-func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string, metadata *commonmodel.CronCallAuditMetadata) {
+// TriggerWithLock 手动触发：同步获取分布式锁，拿到锁后在后台 goroutine 执行 fn（含锁续期、
+// panic 恢复与审计，source=manual），立即返回 true；拿不到锁或加锁失败返回 false，不产生任何记录。
+//
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+func TriggerWithLock(
+	name string,
+	locker lock.Locker,
+	key string,
+	opts LockOptions,
+	fn func(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error),
+) bool {
+	ctx := context.WithValue(getBootstrapContext(), constant.CtxKeyTraceID, uuid.New().String())
+	log := logger.WithCtx(ctx)
+
+	ttl := opts.TTL
+	if ttl <= 0 {
+		ttl = constant.CronLockDefaultTTL
+	}
+	renew := opts.RenewInterval
+	if renew <= 0 {
+		renew = ttl / constant.CronLockDefaultRenewDivisor
+	}
+
+	childCtx, cancel := context.WithCancel(ctx)
+	// cancel 不在此处 defer：childCtx 的生命周期必须等于后台 fn 的执行周期。
+	// 若外层返回即取消，goroutine 可能尚未启动，fn 会拿到已取消的 context，
+	// 且 renewLoop 首轮就退出导致锁从不续期。cancel 由 goroutine 内 defer 保证。
+
+	value := uuid.New().String()
+	locked, err := locker.Lock(childCtx, key, value, ttl)
+	if err != nil {
+		log.Error("[CronTrigger] Lock acquire error", zap.String("key", key), zap.Error(err))
+		cancel()
+		return false
+	}
+	if !locked {
+		log.Info("[CronTrigger] Lock held by another instance, skip manual trigger", zap.String("key", key))
+		cancel()
+		return false
+	}
+
+	go func() {
+		defer cancel()
+		start := time.Now()
+		var (
+			metadata *commonmodel.CronCallAuditMetadata
+			fnErr    error
+		)
+		defer func() {
+			if r := recover(); r != nil {
+				cronPanicHandler(ctx, name, r, constant.CronTriggerSourceManual)
+				return
+			}
+			durationMs := time.Since(start).Milliseconds()
+			if fnErr != nil {
+				saveCronCallAudit(ctx, name, constant.CronCallAuditStatusFailed, durationMs, fnErr.Error(), nil, constant.CronTriggerSourceManual)
+				return
+			}
+			saveCronCallAudit(ctx, name, constant.CronCallAuditStatusSuccess, durationMs, "", metadata, constant.CronTriggerSourceManual)
+		}()
+		go renewLoop(childCtx, locker, key, value, ttl, renew)
+		metadata, fnErr = fn(childCtx)
+	}()
+
+	return true
+}
+
+func saveCronCallAudit(ctx context.Context, name, status string, durationMs int64, message string, metadata *commonmodel.CronCallAuditMetadata, source string) {
 	if cronCallAuditStore == nil {
 		return
 	}
 	now := time.Now().UTC()
 	audit := &cronauditport.CronCallAuditView{
-		CronName:   name,
-		TraceID:    util.CtxValueString(ctx, constant.CtxKeyTraceID),
-		StartedAt:  now.Add(-time.Duration(durationMs) * time.Millisecond),
-		EndedAt:    now,
-		DurationMs: durationMs,
-		Status:     status,
-		Message:    message,
-		Metadata:   metadata,
+		CronName:      name,
+		TraceID:       util.CtxValueString(ctx, constant.CtxKeyTraceID),
+		StartedAt:     now.Add(-time.Duration(durationMs) * time.Millisecond),
+		EndedAt:       now,
+		DurationMs:    durationMs,
+		Status:        status,
+		TriggerSource: source,
+		Message:       message,
+		Metadata:      metadata,
 	}
 	if err := cronCallAuditStore.Save(ctx, audit); err != nil {
 		logger.WithCtx(ctx).Error("[Cron] Save cron call audit failed",
@@ -193,11 +263,11 @@ func saveCronCallAudit(ctx context.Context, name, status string, durationMs int6
 	}
 }
 
-func cronPanicHandler(ctx context.Context, name string, r any) {
+func cronPanicHandler(ctx context.Context, name string, r any, source string) {
 	logger.WithCtx(ctx).Error("[Cron] Panic recovered",
 		zap.String("name", name),
 		zap.Any("panic", r),
 		zap.Stack("stack"),
 	)
-	saveCronCallAudit(ctx, name, constant.CronCallAuditStatusPanic, 0, fmt.Sprintf(constant.CronPanicMessageTemplate, r), nil)
+	saveCronCallAudit(ctx, name, constant.CronCallAuditStatusPanic, 0, fmt.Sprintf(constant.CronPanicMessageTemplate, r), nil, source)
 }

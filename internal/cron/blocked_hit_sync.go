@@ -23,6 +23,7 @@ type blockedHitSyncCron struct {
 	blockedRepo blocked.BlockedRepository
 	hitCache    *cache.BlockedHitCache
 	locker      *lock.RedisLocker
+	lockKey     string
 }
 
 func NewBlockedHitSyncCron(db *gorm.DB, blockedRepo blocked.BlockedRepository, hitCache *cache.BlockedHitCache, redisClient *redis.Client) Cron {
@@ -38,13 +39,23 @@ func NewBlockedHitSyncCron(db *gorm.DB, blockedRepo blocked.BlockedRepository, h
 }
 
 func (c *blockedHitSyncCron) Start(spec string) error {
-	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleBlockedHitSync)
-	_, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleBlockedHitSync, c.locker, key, LockOptions{}, c.sync))
+	c.lockKey = fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleBlockedHitSync)
+	_, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleBlockedHitSync, c.locker, c.lockKey, LockOptions{}, c.sync, constant.CronTriggerSourceScheduled))
 	if err != nil {
 		return err
 	}
 	c.cron.Start()
 	return nil
+}
+
+// Trigger 手动触发一次敏感词命中同步
+//
+//	@receiver c *blockedHitSyncCron
+//	@return bool
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+func (c *blockedHitSyncCron) Trigger() bool {
+	return TriggerWithLock(constant.CronModuleBlockedHitSync, c.locker, c.lockKey, LockOptions{}, c.sync)
 }
 
 func (c *blockedHitSyncCron) Stop() {

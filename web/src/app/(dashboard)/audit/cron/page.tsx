@@ -277,6 +277,7 @@ export default function CronAuditPage() {
                   <TableRow>
                     <TableHead>{t("cron_audit.time")}</TableHead>
                     <TableHead>{t("cron_audit.cron_name")}</TableHead>
+                    <TableHead>{t("cron_audit.trigger_source")}</TableHead>
                     <TableHead>{t("cron_audit.trace_id")}</TableHead>
                     <TableHead>{t("cron_audit.filter_status")}</TableHead>
                     <TableHead>{t("cron_audit.duration")}</TableHead>
@@ -290,6 +291,11 @@ export default function CronAuditPage() {
                         {formatTime(log.createdAt)}
                       </TableCell>
                       <TableCell className="font-medium">{log.cronName}</TableCell>
+                      <TableCell>
+                        <Badge variant={log.triggerSource === "manual" ? "default" : "secondary"} className="text-xs">
+                          {log.triggerSource === "manual" ? t("cron_audit.trigger_manual") : t("cron_audit.trigger_scheduled")}
+                        </Badge>
+                      </TableCell>
                       <TableCell
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                         onClick={() => handleCopyTrace(log.traceId)}

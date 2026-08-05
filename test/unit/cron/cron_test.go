@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
@@ -13,8 +14,13 @@ import (
 )
 
 type mockCron struct {
-	started bool
-	stopped bool
+	started       bool
+	stopped       bool
+	triggerResult bool
+}
+
+func (m *mockCron) Trigger() bool {
+	return m.triggerResult
 }
 
 func (m *mockCron) Start(_ string) error {
@@ -198,4 +204,45 @@ func StopCronJobsWithContext(ctx context.Context, crons []cron.Cron) error {
 // CronInstanceCount 统计定时任务实例数（测试本地辅助，替代原生产包导出）。
 func CronInstanceCount(crons []cron.Cron) int {
 	return len(crons)
+}
+
+// TestCronManager_Trigger_NotFound 验证触发未注册任务返回 ErrDataNotExists
+func TestCronManager_Trigger_NotFound(t *testing.T) {
+	t.Parallel()
+	m := cron.NewCronManager(cron.CronDeps{})
+	err := m.Trigger("nonexistent")
+	if err == nil {
+		t.Fatal("expected error for unknown cron job")
+	}
+	bizErr := ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if bizErr.Code != ierr.ErrDataNotExists.BizError().Code {
+		t.Fatalf("expected ErrDataNotExists code, got %d", bizErr.Code)
+	}
+}
+
+// TestCronManager_Trigger_Success 验证触发已注册任务成功
+func TestCronManager_Trigger_Success(t *testing.T) {
+	t.Parallel()
+	m := cron.NewCronManager(cron.CronDeps{})
+	mock := &mockCron{triggerResult: true}
+	m.Register("TestCron", mock, "0 * * * *", nil)
+	if err := m.Trigger("TestCron"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// TestCronManager_Trigger_Locked 验证任务正在执行（拿不到锁）返回 ErrResourceLocked
+func TestCronManager_Trigger_Locked(t *testing.T) {
+	t.Parallel()
+	m := cron.NewCronManager(cron.CronDeps{})
+	mock := &mockCron{triggerResult: false}
+	m.Register("TestCron", mock, "0 * * * *", nil)
+	err := m.Trigger("TestCron")
+	if err == nil {
+		t.Fatal("expected error when lock cannot be acquired")
+	}
+	bizErr := ierr.ToBizError(err, ierr.ErrInternal.BizError())
+	if bizErr.Code != ierr.ErrResourceLocked.BizError().Code {
+		t.Fatalf("expected ErrResourceLocked code, got %d", bizErr.Code)
+	}
 }

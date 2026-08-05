@@ -60,9 +60,18 @@ type CronJobRepository interface {
 // CronManager cron 实例热重载管理器接口
 //
 //	@author centonhuang
-//	@update 2026-06-17 10:00:00
+//	@update 2026-08-05 10:00:00
 type CronManager interface {
 	Restart(name string, newSpec string) error
 	Disable(name string) error
 	Enable(name string, spec string) error
+	Trigger(name string) error
+}
+
+// TriggerCronJobHandler 手动触发 CronJob 处理器接口
+//
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+type TriggerCronJobHandler interface {
+	Handle(ctx context.Context, name string) error
 }

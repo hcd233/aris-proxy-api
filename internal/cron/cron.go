@@ -35,6 +35,8 @@ type Cron interface {
 	Start(spec string) error
 	Stop()
 	StopGracefully()
+	// Trigger 手动触发一次；返回是否成功获取锁并启动执行
+	Trigger() bool
 }
 
 // CronRegistryEntry 单个定时任务注册项

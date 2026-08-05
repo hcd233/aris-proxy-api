@@ -92,6 +92,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewAuditService,
 		NewListCronJobsHandler,
 		NewUpdateCronJobHandler,
+		NewTriggerCronJobHandler,
 		NewListCronCallAuditsHandler,
 		NewListCronCallAuditOptionsHandler,
 		NewListSessionsByUserHandler,
@@ -352,6 +353,10 @@ func NewListCronJobsHandler(repo cronmgmtport.CronJobRepository) cronmgmtport.Li
 
 func NewUpdateCronJobHandler(repo cronmgmtport.CronJobRepository, manager *cronpkg.CronManager) cronmgmtport.UpdateCronJobHandler {
 	return cronmgmtcommand.NewUpdateCronJobHandler(repo, manager)
+}
+
+func NewTriggerCronJobHandler(manager *cronpkg.CronManager) cronmgmtport.TriggerCronJobHandler {
+	return cronmgmtcommand.NewTriggerCronJobHandler(manager)
 }
 
 func NewListCronCallAuditsHandler(repo cronauditport.CronCallAuditRepository) cronauditport.ListCronCallAuditsHandler {

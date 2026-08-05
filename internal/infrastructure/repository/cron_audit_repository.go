@@ -44,14 +44,15 @@ func NewCronCallAuditRepository(db *gorm.DB) port.CronCallAuditRepository {
 //	@return error
 func (r *cronCallAuditRepository) Save(ctx context.Context, audit *port.CronCallAuditView) error {
 	record := &dbmodel.CronCallAudit{
-		CronName:   audit.CronName,
-		TraceID:    audit.TraceID,
-		StartedAt:  audit.StartedAt,
-		EndedAt:    audit.EndedAt,
-		DurationMs: audit.DurationMs,
-		Status:     audit.Status,
-		Message:    audit.Message,
-		Metadata:   audit.Metadata,
+		CronName:      audit.CronName,
+		TraceID:       audit.TraceID,
+		StartedAt:     audit.StartedAt,
+		EndedAt:       audit.EndedAt,
+		DurationMs:    audit.DurationMs,
+		Status:        audit.Status,
+		TriggerSource: audit.TriggerSource,
+		Message:       audit.Message,
+		Metadata:      audit.Metadata,
 	}
 	if err := r.dao.Create(r.db.WithContext(ctx), record); err != nil {
 		return ierr.Wrap(ierr.ErrDBCreate, err, "create cron call audit")
@@ -110,16 +111,17 @@ func (r *cronCallAuditRepository) List(ctx context.Context, param model.CommonPa
 
 	views := lo.Map(records, func(rec *dbmodel.CronCallAudit, _ int) *port.CronCallAuditView {
 		return &port.CronCallAuditView{
-			ID:         rec.ID,
-			CronName:   rec.CronName,
-			TraceID:    rec.TraceID,
-			StartedAt:  rec.StartedAt,
-			EndedAt:    rec.EndedAt,
-			DurationMs: rec.DurationMs,
-			Status:     rec.Status,
-			Message:    rec.Message,
-			Metadata:   rec.Metadata,
-			CreatedAt:  rec.CreatedAt,
+			ID:            rec.ID,
+			CronName:      rec.CronName,
+			TraceID:       rec.TraceID,
+			StartedAt:     rec.StartedAt,
+			EndedAt:       rec.EndedAt,
+			DurationMs:    rec.DurationMs,
+			Status:        rec.Status,
+			TriggerSource: rec.TriggerSource,
+			Message:       rec.Message,
+			Metadata:      rec.Metadata,
+			CreatedAt:     rec.CreatedAt,
 		}
 	})
 	return views, pageInfo, nil
