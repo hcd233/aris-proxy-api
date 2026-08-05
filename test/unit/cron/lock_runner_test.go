@@ -8,6 +8,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/redis/go-redis/v9"
@@ -252,5 +253,44 @@ func TestRunWithLock_ContextCancelStopsRenewal(t *testing.T) {
 
 	if got := m.unlockCnt.Load(); got != 0 {
 		t.Fatalf("expected 0 unlock after context cancel, got %d", got)
+	}
+}
+
+func TestTriggerWithLock_LockHeld_ReturnsFalse(t *testing.T) {
+	t.Parallel()
+	locker, mr := newRealLocker(t)
+	key := "test:trigger-held"
+	mr.Set(key, "other-instance")
+
+	got := cron.TriggerWithLock("TestCron", locker, key, cron.LockOptions{}, func(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
+		t.Fatal("fn must not run when lock held")
+		return nil, nil
+	})
+	if got {
+		t.Fatal("TriggerWithLock must return false when lock held")
+	}
+}
+
+func TestTriggerWithLock_Acquired_RunsAsync(t *testing.T) {
+	t.Parallel()
+	locker, _ := newRealLocker(t)
+	key := "test:trigger-async"
+
+	ran := make(chan struct{})
+	got := cron.TriggerWithLock("TestCron", locker, key, cron.LockOptions{
+		TTL:           500 * time.Millisecond,
+		RenewInterval: 100 * time.Millisecond,
+	}, func(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
+		close(ran)
+		return &commonmodel.CronCallAuditMetadata{}, nil
+	})
+	if !got {
+		t.Fatal("TriggerWithLock must return true when lock acquired")
+	}
+
+	select {
+	case <-ran:
+	case <-time.After(2 * time.Second):
+		t.Fatal("fn must run asynchronously after lock acquired")
 	}
 }
