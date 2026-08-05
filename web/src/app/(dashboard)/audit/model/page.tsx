@@ -471,7 +471,7 @@ export default function AuditPage() {
                       key={log.id}
                       className={ok ? "" : "bg-destructive/5"}
                     >
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                      <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                         {formatTime(log.createdAt)}
                       </TableCell>
                       <TableCell>
@@ -481,7 +481,7 @@ export default function AuditPage() {
                               render={
                                 <button
                                   type="button"
-                                  className="flex max-w-[180px] cursor-default items-center gap-1.5"
+                                  className="flex max-w-[130px] cursor-default items-center gap-1.5"
                                 >
                                   <ProviderIcon protocol={log.modelId} size={14} />
                                   <span className="min-w-0 truncate">{log.modelId || "—"}</span>
@@ -500,7 +500,7 @@ export default function AuditPage() {
                             <TooltipRoot>
                               <TooltipTrigger
                                 render={
-                                  <button type="button" className="max-w-[120px] cursor-default truncate text-xs text-muted-foreground">
+                                  <button type="button" className="max-w-[100px] cursor-default truncate text-xs text-muted-foreground">
                                     {log.endpoint}
                                   </button>
                                 }
@@ -525,9 +525,41 @@ export default function AuditPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">{log.userName || "—"}</div>
+                        <div className="text-sm">
+                          {log.userName ? (
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <span className="block max-w-[14ch] truncate">{log.userName}</span>
+                                  }
+                                />
+                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                  {log.userName}
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
+                          ) : (
+                            "—"
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {log.apiKeyName || "—"}
+                          {log.apiKeyName ? (
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <span className="block max-w-[14ch] truncate">{log.apiKeyName}</span>
+                                  }
+                                />
+                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                  {log.apiKeyName}
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
+                          ) : (
+                            "—"
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -558,7 +590,7 @@ export default function AuditPage() {
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        <div>{formatTokens(log.inputTokens, log.outputTokens)}</div>
+                        <div className="text-xs">{formatTokens(log.inputTokens, log.outputTokens)}</div>
                         {cacheInfo && (
                           <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
                         )}

@@ -18,6 +18,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Timer, Pencil, Lock, Play } from "lucide-react";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 import { useI18n } from "@/lib/i18n";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -149,6 +155,7 @@ export default function CronPage() {
 
   return (
     <PermissionGuard adminOnly>
+      <TooltipProvider>
       <div className="space-y-8">
         <PageHeader
           title={t("cron.title")}
@@ -191,7 +198,18 @@ export default function CronPage() {
                 <TableBody>
                   {jobs.map((job) => (
                     <TableRow key={job.name}>
-                      <TableCell className="font-medium">{job.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <TooltipRoot>
+                          <TooltipTrigger
+                            render={
+                              <span className="block max-w-[16ch] truncate">{job.name}</span>
+                            }
+                          />
+                          <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                            {job.name}
+                          </TooltipContent>
+                        </TooltipRoot>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={job.type === "core" ? "default" : "secondary"}>
                           {job.type === "core" ? t("cron.core") : t("cron.functional")}
@@ -200,8 +218,26 @@ export default function CronPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="min-w-0">
-                            <p className="text-sm">{specToHuman(job.spec, locale)}</p>
-                            <p className="font-mono text-xs text-muted-foreground">{job.spec}</p>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <p className="max-w-[20ch] truncate text-sm">{specToHuman(job.spec, locale)}</p>
+                                }
+                              />
+                              <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                {specToHuman(job.spec, locale)}
+                              </TooltipContent>
+                            </TooltipRoot>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <p className="max-w-[20ch] truncate font-mono text-xs text-muted-foreground">{job.spec}</p>
+                                }
+                              />
+                              <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                {job.spec}
+                              </TooltipContent>
+                            </TooltipRoot>
                           </div>
                           <Button
                             variant="ghost"
@@ -222,7 +258,18 @@ export default function CronPage() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{job.description || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <TooltipRoot>
+                          <TooltipTrigger
+                            render={
+                              <span className="block max-w-[30ch] truncate">{job.description || "—"}</span>
+                            }
+                          />
+                          <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                            {job.description || "—"}
+                          </TooltipContent>
+                        </TooltipRoot>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Switch
@@ -270,6 +317,7 @@ export default function CronPage() {
           onConfirm={handleTrigger}
         />
       </div>
+      </TooltipProvider>
     </PermissionGuard>
   );
 }
