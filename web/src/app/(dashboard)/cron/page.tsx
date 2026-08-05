@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Timer, Pencil, Lock } from "lucide-react";
+import { Timer, Pencil, Lock, Play } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -28,7 +28,9 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { BusinessErrorCode, parseError } from "@/lib/api-errors";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -55,6 +57,8 @@ export default function CronPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [editingJob, setEditingJob] = useState<CronJobItem | null>(null);
+  const [triggeringJob, setTriggeringJob] = useState<CronJobItem | null>(null);
+  const [triggering, setTriggering] = useState(false);
 
   const fetchJobs = useCallback(async (page: number, pageSize: number, query: string) => {
     setLoading(true);
@@ -118,6 +122,29 @@ export default function CronPage() {
     );
     toast.success(`${editingJob.name} ${t("cron.schedule_updated")}`);
   }, [editingJob, t]);
+
+  const handleTrigger = async () => {
+    if (!triggeringJob) return;
+    setTriggering(true);
+    try {
+      const rsp = await api.triggerCronJob(triggeringJob.name);
+      if (rsp.error) {
+        showErrorToast(rsp.error, { title: t("cron.trigger_error") });
+        return;
+      }
+      toast.success(t("cron.triggered"));
+    } catch (err) {
+      const parsed = parseError(err);
+      if (parsed.code === BusinessErrorCode.ResourceLocked) {
+        toast.error(t("cron.running"));
+      } else {
+        showErrorToast(err, { title: t("cron.trigger_error") });
+      }
+    } finally {
+      setTriggering(false);
+      setTriggeringJob(null);
+    }
+  };
 
   const refresh = (page: number, pageSize?: number) =>
     fetchJobs(page, pageSize ?? pageInfo.pageSize, searchQuery);
@@ -186,6 +213,15 @@ export default function CronPage() {
                           >
                             <Pencil className="size-3.5" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 shrink-0"
+                            onClick={() => setTriggeringJob(job)}
+                            aria-label={t("cron.trigger")}
+                          >
+                            <Play className="size-3.5" />
+                          </Button>
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{job.description || "—"}</TableCell>
@@ -223,6 +259,17 @@ export default function CronPage() {
           onOpenChange={(open) => { if (!open) setEditingJob(null); }}
           job={editingJob}
           onSave={handleSaveSpec}
+        />
+
+        <DeleteConfirmDialog
+          open={triggeringJob !== null}
+          onOpenChange={(open) => { if (!open) setTriggeringJob(null); }}
+          title={t("cron.trigger_confirm_title")}
+          description={t("cron.trigger_confirm_desc")}
+          confirmLabel={t("cron.trigger")}
+          loadingLabel={t("cron.triggering")}
+          loading={triggering}
+          onConfirm={handleTrigger}
         />
       </div>
     </PermissionGuard>
