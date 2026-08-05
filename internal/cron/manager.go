@@ -283,6 +283,27 @@ func (m *CronManager) enableLocked(name, spec string) error {
 	return nil
 }
 
+// Trigger 手动触发指定 cron 任务。
+// 任务未注册返回 ErrDataNotExists；目标正在执行（拿不到锁）返回 ErrResourceLocked。
+// 触发不是配置变更，不做 pub/sub 广播；锁保证单实例执行。
+//
+//	@receiver m *CronManager
+//	@param name string
+//	@return error
+func (m *CronManager) Trigger(name string) error {
+	m.mu.RLock()
+	entry, ok := m.entries[name]
+	m.mu.RUnlock()
+	if !ok {
+		return ierr.New(ierr.ErrDataNotExists, "cron job "+name+" not found in manager")
+	}
+	if !entry.cron.Trigger() {
+		return ierr.New(ierr.ErrResourceLocked, "cron job "+name+" is already running")
+	}
+	logger.Logger().Info("[CronManager] Manually triggered cron job", zap.String("name", name))
+	return nil
+}
+
 // StopAll 优雅关闭所有 cron 实例
 //
 //	@receiver m *CronManager
