@@ -293,11 +293,13 @@ func (m *CronManager) enableLocked(name, spec string) error {
 func (m *CronManager) Trigger(name string) error {
 	m.mu.RLock()
 	entry, ok := m.entries[name]
+	// 持读锁期间调用 Trigger，避免读到 stale 实例后锁被 Restart/Disable 替换
+	executed := ok && entry.cron.Trigger()
 	m.mu.RUnlock()
 	if !ok {
 		return ierr.New(ierr.ErrDataNotExists, "cron job "+name+" not found in manager")
 	}
-	if !entry.cron.Trigger() {
+	if !executed {
 		return ierr.New(ierr.ErrResourceLocked, "cron job "+name+" is already running")
 	}
 	logger.Logger().Info("[CronManager] Manually triggered cron job", zap.String("name", name))

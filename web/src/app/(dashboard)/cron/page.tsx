@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { PermissionGuard } from "@/components/permission-guard";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { BusinessErrorCode, parseError } from "@/lib/api-errors";
+import type { ApiError } from "@/lib/api-client";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 
@@ -127,14 +128,11 @@ export default function CronPage() {
     if (!triggeringJob) return;
     setTriggering(true);
     try {
-      const rsp = await api.triggerCronJob(triggeringJob.name);
-      if (rsp.error) {
-        showErrorToast(rsp.error, { title: t("cron.trigger_error") });
-        return;
-      }
+      await api.triggerCronJob(triggeringJob.name);
       toast.success(t("cron.triggered"));
     } catch (err) {
-      const parsed = parseError(err);
+      // ApiError 构造时已将 {error:{code,message}} 解析进 structured，优先使用
+      const parsed = (err as ApiError).structured ?? parseError(err);
       if (parsed.code === BusinessErrorCode.ResourceLocked) {
         toast.error(t("cron.running"));
       } else {
@@ -263,7 +261,7 @@ export default function CronPage() {
 
         <DeleteConfirmDialog
           open={triggeringJob !== null}
-          onOpenChange={(open) => { if (!open) setTriggeringJob(null); }}
+          onOpenChange={(open) => { if (!open && !triggering) setTriggeringJob(null); }}
           title={t("cron.trigger_confirm_title")}
           description={t("cron.trigger_confirm_desc")}
           confirmLabel={t("cron.trigger")}

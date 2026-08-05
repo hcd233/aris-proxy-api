@@ -65,6 +65,7 @@ type listCronJobsRsp struct {
 type cronAuditItem struct {
 	CronName      string `json:"cronName"`
 	TriggerSource string `json:"triggerSource"`
+	Status        string `json:"status"`
 	CreatedAt     string `json:"createdAt"`
 }
 type listCronAuditsRsp struct {
@@ -114,13 +115,13 @@ func TestE2E_CronManualTrigger_ProducesManualAudit(t *testing.T) {
 			t.Fatalf("unmarshal audit rsp: %v", err)
 		}
 		for _, log := range auditRsp.Logs {
-			if log.CronName == name && log.TriggerSource == "manual" {
-				t.Logf("found manual audit record: %s", log.CreatedAt)
+			if log.CronName == name && log.TriggerSource == "manual" && log.Status == "success" {
+				t.Logf("found successful manual audit record: %s", log.CreatedAt)
 				return
 			}
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("manual trigger audit record not found within timeout")
+			t.Fatal("successful manual trigger audit record not found within timeout")
 		}
 	}
 }
@@ -130,7 +131,7 @@ func TestE2E_CronTrigger_NotFound(t *testing.T) {
 	baseURL, jwtToken := mustE2EEnv(t)
 	client := newE2EClient()
 	status, traceID, body := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/cron/trigger?name=non-existent-job", jwtToken)
-	if status == http.StatusOK {
-		t.Fatalf("expected non-200 for unknown cron job, got status=%d traceID=%s body=%s", status, traceID, string(body))
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown cron job, got status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
 }

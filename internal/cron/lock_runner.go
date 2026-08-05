@@ -196,20 +196,25 @@ func TriggerWithLock(
 	}
 
 	childCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	// cancel 不在此处 defer：childCtx 的生命周期必须等于后台 fn 的执行周期。
+	// 若外层返回即取消，goroutine 可能尚未启动，fn 会拿到已取消的 context，
+	// 且 renewLoop 首轮就退出导致锁从不续期。cancel 由 goroutine 内 defer 保证。
 
 	value := uuid.New().String()
 	locked, err := locker.Lock(childCtx, key, value, ttl)
 	if err != nil {
 		log.Error("[CronTrigger] Lock acquire error", zap.String("key", key), zap.Error(err))
+		cancel()
 		return false
 	}
 	if !locked {
 		log.Info("[CronTrigger] Lock held by another instance, skip manual trigger", zap.String("key", key))
+		cancel()
 		return false
 	}
 
 	go func() {
+		defer cancel()
 		start := time.Now()
 		var (
 			metadata *commonmodel.CronCallAuditMetadata

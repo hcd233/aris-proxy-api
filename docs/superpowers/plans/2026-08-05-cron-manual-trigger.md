@@ -166,8 +166,8 @@ func TriggerWithLock(name string, locker lock.Locker, key string, opts LockOptio
 	}
 
 	childCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
+	// cancel 不在此处 defer：childCtx 生命周期必须等于后台 fn 的执行周期，
+	// 由 goroutine 内 defer cancel() 保证（fn 返回/panic 后执行）。
 	value := uuid.New().String()
 	locked, err := locker.Lock(childCtx, key, value, ttl)
 	if err != nil {
@@ -180,6 +180,7 @@ func TriggerWithLock(name string, locker lock.Locker, key string, opts LockOptio
 	}
 
 	go func() {
+		defer cancel()
 		start := time.Now()
 		var (
 			metadata *commonmodel.CronCallAuditMetadata
