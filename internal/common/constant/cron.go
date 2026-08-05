@@ -12,6 +12,11 @@ const (
 	CronModuleBlockedHitSync  = "BlockedHitSyncCron"
 	CronSpecBlockedHitSync    = "*/5 * * * *"
 
+	// CronTriggerSourceScheduled 定时触发
+	CronTriggerSourceScheduled = "scheduled"
+	// CronTriggerSourceManual 手动触发
+	CronTriggerSourceManual = "manual"
+
 	CronTypeFunctional = "functional"
 	CronTypeCore       = "core"
 

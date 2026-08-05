@@ -33,13 +33,14 @@ const (
 	FieldGithubBindID                = "github_bind_id"
 	FieldGoogleBindID                = "google_bind_id"
 
-	FieldSpec        = "spec"
-	FieldCronName    = "cron_name"
-	FieldStartedAt   = "started_at"
-	FieldEndedAt     = "ended_at"
-	FieldDurationMs  = "duration_ms"
-	FieldStatus      = "status"
-	FieldDescription = "description"
+	FieldSpec          = "spec"
+	FieldCronName      = "cron_name"
+	FieldStartedAt     = "started_at"
+	FieldEndedAt       = "ended_at"
+	FieldDurationMs    = "duration_ms"
+	FieldStatus        = "status"
+	FieldTriggerSource = "trigger_source"
+	FieldDescription   = "description"
 
 	FieldTraceID                  = "trace_id"
 	FieldDedupKey                 = "dedup_key"
@@ -275,6 +276,7 @@ var (
 		FieldEndedAt,
 		FieldDurationMs,
 		FieldStatus,
+		FieldTriggerSource,
 		FieldMessage,
 		FieldMetadata,
 		CronCallAuditRepoFieldCreatedAtQualified,
