@@ -33,6 +33,7 @@ type SessionDeduplicateCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
 	locker     *lock.RedisLocker
+	lockKey    string
 	sessionDAO *dao.SessionDAO
 	messageDAO *dao.MessageDAO
 }
@@ -85,8 +86,8 @@ func (c *SessionDeduplicateCron) StopGracefully() {
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 func (c *SessionDeduplicateCron) Start(spec string) error {
-	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSessionDeduplicate)
-	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleSessionDeduplicate, c.locker, key, LockOptions{}, c.deduplicate))
+	c.lockKey = fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleSessionDeduplicate)
+	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleSessionDeduplicate, c.locker, c.lockKey, LockOptions{}, c.deduplicate, constant.CronTriggerSourceScheduled))
 	if err != nil {
 		logger.Logger().Error("[SessionDeduplicateCron] Add func error", zap.Error(err))
 		return err
@@ -97,6 +98,16 @@ func (c *SessionDeduplicateCron) Start(spec string) error {
 	c.cron.Start()
 
 	return nil
+}
+
+// Trigger 手动触发一次 Session 去重
+//
+//	@receiver c *SessionDeduplicateCron
+//	@return bool
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+func (c *SessionDeduplicateCron) Trigger() bool {
+	return TriggerWithLock(constant.CronModuleSessionDeduplicate, c.locker, c.lockKey, LockOptions{}, c.deduplicate)
 }
 
 // deduplicate 执行Session去重逻辑

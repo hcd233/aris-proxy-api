@@ -12,16 +12,17 @@ import (
 //	@author centonhuang
 //	@update 2026-06-24 10:00:00
 type CronCallAuditView struct {
-	ID         uint
-	CronName   string
-	TraceID    string
-	StartedAt  time.Time
-	EndedAt    time.Time
-	DurationMs int64
-	Status     string
-	Message    string
-	Metadata   *commonmodel.CronCallAuditMetadata
-	CreatedAt  time.Time
+	ID            uint
+	CronName      string
+	TraceID       string
+	StartedAt     time.Time
+	EndedAt       time.Time
+	DurationMs    int64
+	Status        string
+	TriggerSource string
+	Message       string
+	Metadata      *commonmodel.CronCallAuditMetadata
+	CreatedAt     time.Time
 }
 
 // ListCronCallAuditsHandler 列出 CronCallAudit 处理器接口

@@ -69,6 +69,22 @@ type UpdateCronJobRsp struct {
 	CommonRsp
 }
 
+// TriggerCronJobReq 手动触发 CronJob 请求
+//
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+type TriggerCronJobReq struct {
+	Name string `query:"name" required:"true" maxLength:"100" doc:"任务名"`
+}
+
+// TriggerCronJobRsp 手动触发 CronJob 响应
+//
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+type TriggerCronJobRsp struct {
+	CommonRsp
+}
+
 // ListCronCallAuditsReq 列出 CronCallAudit 请求
 //
 //	@author centonhuang
@@ -99,16 +115,17 @@ type ListCronCallAuditsRsp struct {
 //	@author centonhuang
 //	@update 2026-06-24 10:00:00
 type CronCallAuditItem struct {
-	ID         uint                         `json:"id" doc:"记录ID"`
-	CronName   string                       `json:"cronName" doc:"任务名"`
-	TraceID    string                       `json:"traceId" doc:"Trace ID"`
-	StartedAt  time.Time                    `json:"startedAt" doc:"开始时间"`
-	EndedAt    time.Time                    `json:"endedAt" doc:"结束时间"`
-	DurationMs int64                        `json:"durationMs" doc:"执行耗时(ms)"`
-	Status     string                       `json:"status" doc:"执行状态"`
-	Message    string                       `json:"message" doc:"附加信息"`
-	Metadata   *model.CronCallAuditMetadata `json:"metadata" doc:"执行元数据"`
-	CreatedAt  time.Time                    `json:"createdAt" doc:"创建时间"`
+	ID            uint                         `json:"id" doc:"记录ID"`
+	CronName      string                       `json:"cronName" doc:"任务名"`
+	TraceID       string                       `json:"traceId" doc:"Trace ID"`
+	StartedAt     time.Time                    `json:"startedAt" doc:"开始时间"`
+	EndedAt       time.Time                    `json:"endedAt" doc:"结束时间"`
+	DurationMs    int64                        `json:"durationMs" doc:"执行耗时(ms)"`
+	Status        string                       `json:"status" doc:"执行状态"`
+	TriggerSource string                       `json:"triggerSource" doc:"触发来源:scheduled/manual"`
+	Message       string                       `json:"message" doc:"附加信息"`
+	Metadata      *model.CronCallAuditMetadata `json:"metadata" doc:"执行元数据"`
+	CreatedAt     time.Time                    `json:"createdAt" doc:"创建时间"`
 }
 
 // CronCallAuditOptionListReq CronCallAudit 筛选项请求

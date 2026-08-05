@@ -129,12 +129,14 @@ func NewAuditDependencies(svc auditport.AuditService) handler.AuditDependencies 
 func NewCronDependencies(
 	listJobs cronmgmtport.ListCronJobsHandler,
 	updateJob cronmgmtport.UpdateCronJobHandler,
+	triggerJob cronmgmtport.TriggerCronJobHandler,
 	listAudits cronauditport.ListCronCallAuditsHandler,
 	listAuditOpts cronauditport.ListCronCallAuditOptionsHandler,
 ) handler.CronDependencies {
 	return handler.CronDependencies{
 		ListCronJobs:             listJobs,
 		UpdateCronJob:            updateJob,
+		TriggerCronJob:           triggerJob,
 		ListCronCallAudits:       listAudits,
 		ListCronCallAuditOptions: listAuditOpts,
 	}

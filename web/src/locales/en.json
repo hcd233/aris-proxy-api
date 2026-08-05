@@ -722,5 +722,15 @@
   "models.upstream_model": "Upstream Model",
   "models.upstream_model_placeholder": "e.g. gpt-4o-2024-08-06",
   "callback.invalid_state": "Invalid OAuth state parameter",
-  "lang.ja": "日本語"
+  "lang.ja": "日本語",
+  "cron.trigger": "Run now",
+  "cron.triggering": "Running",
+  "cron.triggered": "Triggered. Check the execution logs for the result.",
+  "cron.trigger_error": "Failed to trigger",
+  "cron.running": "The job is already running, please try again later",
+  "cron.trigger_confirm_title": "Run now?",
+  "cron.trigger_confirm_desc": "This job will run once immediately. Check the execution logs for the result.",
+  "cron_audit.trigger_source": "Trigger Source",
+  "cron_audit.trigger_scheduled": "Scheduled",
+  "cron_audit.trigger_manual": "Manual"
 }

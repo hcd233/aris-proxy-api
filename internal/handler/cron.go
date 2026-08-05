@@ -22,6 +22,7 @@ import (
 type CronHandler interface {
 	HandleListCronJobs(ctx context.Context, req *dto.ListCronJobsReq) (*dto.HTTPResponse[*dto.ListCronJobsRsp], error)
 	HandleUpdateCronJob(ctx context.Context, req *dto.UpdateCronJobReq) (*dto.HTTPResponse[*dto.UpdateCronJobRsp], error)
+	HandleTriggerCronJob(ctx context.Context, req *dto.TriggerCronJobReq) (*dto.HTTPResponse[*dto.TriggerCronJobRsp], error)
 	HandleListCronCallAudits(ctx context.Context, req *dto.ListCronCallAuditsReq) (*dto.HTTPResponse[*dto.ListCronCallAuditsRsp], error)
 	HandleListCronCallAuditOptions(ctx context.Context, req *dto.CronCallAuditOptionListReq) (*dto.HTTPResponse[*dto.CronCallAuditOptionListRsp], error)
 }
@@ -29,10 +30,11 @@ type CronHandler interface {
 // CronDependencies CronHandler 依赖
 //
 //	@author centonhuang
-//	@update 2026-06-17 10:00:00
+//	@update 2026-08-05 10:00:00
 type CronDependencies struct {
 	ListCronJobs             cronmgmtport.ListCronJobsHandler
 	UpdateCronJob            cronmgmtport.UpdateCronJobHandler
+	TriggerCronJob           cronmgmtport.TriggerCronJobHandler
 	ListCronCallAudits       cronauditport.ListCronCallAuditsHandler
 	ListCronCallAuditOptions cronauditport.ListCronCallAuditOptionsHandler
 }
@@ -40,6 +42,7 @@ type CronDependencies struct {
 type cronHandler struct {
 	listCronJobs          cronmgmtport.ListCronJobsHandler
 	updateCronJob         cronmgmtport.UpdateCronJobHandler
+	triggerCronJob        cronmgmtport.TriggerCronJobHandler
 	listCronCallAudits    cronauditport.ListCronCallAuditsHandler
 	listCronCallAuditOpts cronauditport.ListCronCallAuditOptionsHandler
 }
@@ -52,6 +55,7 @@ func NewCronHandler(deps CronDependencies) CronHandler {
 	return &cronHandler{
 		listCronJobs:          deps.ListCronJobs,
 		updateCronJob:         deps.UpdateCronJob,
+		triggerCronJob:        deps.TriggerCronJob,
 		listCronCallAudits:    deps.ListCronCallAudits,
 		listCronCallAuditOpts: deps.ListCronCallAuditOptions,
 	}
@@ -103,6 +107,16 @@ func (h *cronHandler) HandleUpdateCronJob(ctx context.Context, req *dto.UpdateCr
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
+func (h *cronHandler) HandleTriggerCronJob(ctx context.Context, req *dto.TriggerCronJobReq) (*dto.HTTPResponse[*dto.TriggerCronJobRsp], error) {
+	rsp := &dto.TriggerCronJobRsp{}
+	if err := h.triggerCronJob.Handle(ctx, req.Name); err != nil {
+		logger.WithCtx(ctx).Error("[CronHandler] Trigger cron job failed",
+			zap.String("name", req.Name), zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
 func (h *cronHandler) HandleListCronCallAudits(ctx context.Context, req *dto.ListCronCallAuditsReq) (*dto.HTTPResponse[*dto.ListCronCallAuditsRsp], error) {
 	rsp := &dto.ListCronCallAuditsRsp{}
 	logs, pageInfo, err := h.listCronCallAudits.Handle(ctx,
@@ -120,16 +134,17 @@ func (h *cronHandler) HandleListCronCallAudits(ctx context.Context, req *dto.Lis
 
 	rsp.Logs = lo.Map(logs, func(log *cronauditport.CronCallAuditView, _ int) *dto.CronCallAuditItem {
 		return &dto.CronCallAuditItem{
-			ID:         log.ID,
-			CronName:   log.CronName,
-			TraceID:    log.TraceID,
-			StartedAt:  log.StartedAt,
-			EndedAt:    log.EndedAt,
-			DurationMs: log.DurationMs,
-			Status:     log.Status,
-			Message:    log.Message,
-			Metadata:   log.Metadata,
-			CreatedAt:  log.CreatedAt,
+			ID:            log.ID,
+			CronName:      log.CronName,
+			TraceID:       log.TraceID,
+			StartedAt:     log.StartedAt,
+			EndedAt:       log.EndedAt,
+			DurationMs:    log.DurationMs,
+			Status:        log.Status,
+			TriggerSource: log.TriggerSource,
+			Message:       log.Message,
+			Metadata:      log.Metadata,
+			CreatedAt:     log.CreatedAt,
 		}
 	})
 	rsp.PageInfo = pageInfo

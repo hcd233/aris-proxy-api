@@ -2,8 +2,11 @@ package cron_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
+
+	"github.com/danielgtaylor/huma/v2"
 
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronauditquery "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/query"
@@ -196,5 +199,47 @@ func TestCronHandler_ListCronCallAuditOptions_StatusField(t *testing.T) {
 	}
 	if len(rsp.Body.Items) != 4 {
 		t.Fatalf("expected 4 status options, got %d", len(rsp.Body.Items))
+	}
+}
+
+type fakeTriggerCronJobHandler struct {
+	handleErr error
+}
+
+func (f *fakeTriggerCronJobHandler) Handle(ctx context.Context, name string) error {
+	return f.handleErr
+}
+
+func TestCronHandler_TriggerCronJob_Success(t *testing.T) {
+	t.Parallel()
+	h := handler.NewCronHandler(handler.CronDependencies{
+		TriggerCronJob: &fakeTriggerCronJobHandler{},
+	})
+	rsp, err := h.HandleTriggerCronJob(context.Background(), &dto.TriggerCronJobReq{Name: "TestCron"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("response must not be nil")
+	}
+}
+
+func TestCronHandler_TriggerCronJob_Error(t *testing.T) {
+	t.Parallel()
+	h := handler.NewCronHandler(handler.CronDependencies{
+		TriggerCronJob: &fakeTriggerCronJobHandler{
+			handleErr: ierr.New(ierr.ErrResourceLocked, "already running"),
+		},
+	})
+	_, err := h.HandleTriggerCronJob(context.Background(), &dto.TriggerCronJobReq{Name: "TestCron"})
+	if err == nil {
+		t.Fatal("expected error when trigger handler fails")
+	}
+	humaErr, ok := err.(huma.StatusError)
+	if !ok {
+		t.Fatalf("expected huma.StatusError, got %T", err)
+	}
+	if humaErr.GetStatus() != http.StatusLocked {
+		t.Fatalf("expected HTTP 423 for locked cron job, got %d", humaErr.GetStatus())
 	}
 }

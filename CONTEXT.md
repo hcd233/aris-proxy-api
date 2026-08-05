@@ -195,6 +195,10 @@ _Avoid_: cron mutex, scheduled lock, scheduler lock
 **CronModule（定时任务模块）**:
 平台所有定时任务遵循 `CronRegistryEntry` 模式注册：`SessionScore`（已废弃，原 LLM 自动评分）、`SessionSummarize`（自动摘要）、`SessionDedup`（去重合并）、`ThinkExtract`（推理内容提取）、`SoftDeletePurge`（清理孤儿数据）。
 
+**CronTriggerSource（触发来源）**:
+cron 任务执行的触发来源枚举：`scheduled`（定时调度触发）与 `manual`（管理后台手动触发，可对 disabled 任务执行，拿不到分布式锁时忽略执行且不产生审计）。写入 `cron_call_audits.trigger_source` 列。
+_Avoid_: trigger type, execution source, run source
+
 **Transcript Ingestion（会话摄取）**:
 对订阅制 Agentic 工具（Claude Code、Codex）流量的离线捕获方式。读取工具写在本地的会话文件后摄取进平台。沉淀为 Trace（沉淀会话）。与 Proxy Capture 是两条互斥的数据入口。
 _Avoid_: log scraping, import, sync, ingestion

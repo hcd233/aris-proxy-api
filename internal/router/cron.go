@@ -37,4 +37,15 @@ func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gor
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("updateCronJob", enum.PermissionAdmin)},
 	}, cronHandler.HandleUpdateCronJob)
+
+	huma.Register(cronGroup, huma.Operation{
+		OperationID: "triggerCronJob",
+		Method:      http.MethodPost,
+		Path:        "/trigger",
+		Summary:     "TriggerCronJob",
+		Description: "Manually trigger a cron job to run once immediately",
+		Tags:        []string{constant.TagCron},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("triggerCronJob", enum.PermissionAdmin)},
+	}, cronHandler.HandleTriggerCronJob)
 }

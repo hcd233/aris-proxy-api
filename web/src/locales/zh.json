@@ -722,5 +722,15 @@
   "models.upstream_model": "上游模型名",
   "models.upstream_model_placeholder": "例如：gpt-4o-2024-08-06",
   "callback.invalid_state": "无效的授权状态参数",
-  "lang.ja": "日本語"
+  "lang.ja": "日本語",
+  "cron.trigger": "立即执行",
+  "cron.triggering": "执行中",
+  "cron.triggered": "已触发，可在执行日志中查看结果",
+  "cron.trigger_error": "触发失败",
+  "cron.running": "任务正在执行中，请稍后再试",
+  "cron.trigger_confirm_title": "确认立即执行",
+  "cron.trigger_confirm_desc": "该任务将立即执行一次，结果可在执行日志中查看",
+  "cron_audit.trigger_source": "触发来源",
+  "cron_audit.trigger_scheduled": "定时",
+  "cron_audit.trigger_manual": "手动"
 }
