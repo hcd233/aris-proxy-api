@@ -294,3 +294,46 @@ func TestTriggerWithLock_Acquired_RunsAsync(t *testing.T) {
 		t.Fatal("fn must run asynchronously after lock acquired")
 	}
 }
+
+func TestTriggerWithLock_CtxAlive_RenewsLock(t *testing.T) {
+	t.Parallel()
+	m := &mockLocker{
+		refreshOK:    true,
+		refreshAtCnt: make(chan struct{}, 16),
+	}
+	key := "test:trigger-renew"
+
+	ran := make(chan struct{})
+	got := cron.TriggerWithLock("TestCron", m, key, cron.LockOptions{
+		TTL:           500 * time.Millisecond,
+		RenewInterval: 50 * time.Millisecond,
+	}, func(ctx context.Context) (*commonmodel.CronCallAuditMetadata, error) {
+		defer close(ran)
+		if ctx.Err() != nil {
+			t.Errorf("fn ctx must not be canceled, got %v", ctx.Err())
+		}
+		// 等待至少两次续期，验证 renewLoop 在手动执行期间生效
+		for i := 0; i < 2; i++ {
+			select {
+			case <-m.refreshAtCnt:
+			case <-time.After(2 * time.Second):
+				t.Errorf("refresh attempt %d not signaled within 2s", i+1)
+				return nil, nil
+			}
+		}
+		return &commonmodel.CronCallAuditMetadata{}, nil
+	})
+	if !got {
+		t.Fatal("TriggerWithLock must return true when lock acquired")
+	}
+
+	select {
+	case <-ran:
+	case <-time.After(3 * time.Second):
+		t.Fatal("fn must run asynchronously after lock acquired")
+	}
+
+	if m.refreshCnt.Load() < 2 {
+		t.Fatalf("expected lock renewal during manual run, got %d refreshes", m.refreshCnt.Load())
+	}
+}
