@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, truncateText } from "@/lib/utils";
 import { ScoreDots } from "@/components/session-detail/score-dots";
 import { PageHeader } from "@/components/page-header";
 import { SearchInput } from "@/components/search-input";
@@ -560,7 +560,18 @@ export default function SessionsPage() {
         <DeleteConfirmDialog
           {...deleteConfirm.dialogProps}
           title={t("sessions.delete_dialog_title")}
-          description={t("sessions.delete_dialog_desc").replace("{name}", deleteConfirm.target?.summary || t("sessions.untitled_session").replace("{id}", String(deleteConfirm.target?.id ?? "")))}
+          description={t("sessions.delete_dialog_desc").replace(
+            "{name}",
+            deleteConfirm.target
+              ? truncateText(
+                  (deleteConfirm.target.summary ||
+                    t("sessions.untitled_session").replace("{id}", String(deleteConfirm.target.id)))
+                    .replace(/\s+/g, " ")
+                    .trim(),
+                  60,
+                )
+              : "",
+          )}
           confirmLabel={t("common.delete")}
           loadingLabel={t("common.deleting")}
         />

@@ -41,6 +41,16 @@ export function formatRelativeTime(
 }
 
 /**
+ * 码点安全截断：超长文本截到 maxLen 个码点并追加省略号。
+ * 用 Array.from 按 Unicode 码点切割，避免截断 emoji 等代理对字符。
+ */
+export function truncateText(text: string, maxLen: number): string {
+  const chars = Array.from(text);
+  if (chars.length <= maxLen) return text;
+  return chars.slice(0, maxLen).join("") + "…";
+}
+
+/**
  * 本地时间 `YYYY/MM/DD HH:mm:ss`。非法日期原样返回，避免渲染 "NaN/NaN/NaN"。
  */
 export function formatDateTime(dateStr: string): string {
