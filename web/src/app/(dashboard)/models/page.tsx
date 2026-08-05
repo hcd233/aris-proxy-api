@@ -141,6 +141,8 @@ export default function ModelsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ModelForm>(emptyForm);
+  // 标记用户是否手动改过 modelId；未手动改时新建表单跟随 alias 同步输入
+  const [modelIdTouched, setModelIdTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportClaudecodeDialogOpen, setExportClaudecodeDialogOpen] = useState(false);
@@ -188,12 +190,14 @@ export default function ModelsPage() {
 
   const openCreate = () => {
     setEditingId(null);
+    setModelIdTouched(false);
     setForm({ ...emptyForm, endpointID: endpoints[0]?.id ?? 0 });
     setDialogOpen(true);
   };
 
   const openEdit = (model: ModelItem) => {
     setEditingId(model.id);
+    setModelIdTouched(true);
     setForm({
       alias: model.alias,
       modelId: model.modelId ?? "",
@@ -241,6 +245,7 @@ export default function ModelsPage() {
       } else {
         await api.createModel({
           alias: form.alias,
+          ...(form.modelId.trim() ? { modelId: form.modelId.trim() } : {}),
           upstreamModel: form.upstreamModel,
           endpointID: form.endpointID,
           contextLength: form.contextLength,
@@ -643,21 +648,30 @@ export default function ModelsPage() {
                     id="model-alias"
                     placeholder={t("models.alias_placeholder")}
                     value={form.alias}
-                    onChange={(e) => setForm((f) => ({ ...f, alias: e.target.value }))}
+                    onChange={(e) => {
+                      const alias = e.target.value;
+                      setForm((f) => ({
+                        ...f,
+                        alias,
+                        // 未手动改过 modelId 时新建表单跟随 alias 同步输入
+                        ...(modelIdTouched ? {} : { modelId: alias }),
+                      }));
+                    }}
                   />
                 </div>
-                {editingId && (
-                  <div className="space-y-1">
-                    <Label htmlFor="model-id">{t("models.model_id")}</Label>
-                    <Input
-                      id="model-id"
-                      placeholder={t("models.model_id_placeholder")}
-                      value={form.modelId}
-                      onChange={(e) => setForm((f) => ({ ...f, modelId: e.target.value }))}
-                    />
-                    <p className="text-[11px] text-muted-foreground">{t("models.model_id_hint")}</p>
-                  </div>
-                )}
+                <div className="space-y-1">
+                  <Label htmlFor="model-id">{t("models.model_id")}</Label>
+                  <Input
+                    id="model-id"
+                    placeholder={t("models.model_id_placeholder")}
+                    value={form.modelId}
+                    onChange={(e) => {
+                      setModelIdTouched(true);
+                      setForm((f) => ({ ...f, modelId: e.target.value }));
+                    }}
+                  />
+                  <p className="text-[11px] text-muted-foreground">{t("models.model_id_hint")}</p>
+                </div>
                 <div className="space-y-1">
                   <Label htmlFor="model-name">{t("models.upstream_model")}</Label>
                   <Input

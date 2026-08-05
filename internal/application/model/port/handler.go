@@ -10,8 +10,11 @@ import (
 )
 
 // CreateModelCommand 创建 Model 命令
+//
+// ModelID 为业务模型 ID（缺省 nil 时默认 = alias，与领域层 CreateModel 行为一致）。
 type CreateModelCommand struct {
 	Alias           string
+	ModelID         *string
 	UpstreamModel   string
 	EndpointID      uint
 	ContextLength   int

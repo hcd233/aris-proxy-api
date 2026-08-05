@@ -57,6 +57,11 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate model")
 	}
 
+	// 显式传入的业务模型 ID 覆盖默认值（默认=alias）；空串视为未指定，保持默认
+	if cmd.ModelID != nil && *cmd.ModelID != "" {
+		m.SetModelID(*cmd.ModelID)
+	}
+
 	id, err := h.modelRepo.Create(ctx, m)
 	if err != nil {
 		log.Error("[ModelCommand] Create model failed", zap.Error(err))
