@@ -348,6 +348,7 @@ export interface ModelItem {
 
 export interface CreateModelReqBody {
   alias: string;
+  modelId?: string;
   upstreamModel: string;
   endpointID: number;
   contextLength?: number;

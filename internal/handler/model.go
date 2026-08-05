@@ -51,6 +51,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 
 	result, err := h.create.Handle(ctx, port.CreateModelCommand{
 		Alias:           req.Body.Alias,
+		ModelID:         req.Body.ModelID,
 		UpstreamModel:   req.Body.UpstreamModel,
 		EndpointID:      req.Body.EndpointID,
 		ContextLength:   req.Body.ContextLength,

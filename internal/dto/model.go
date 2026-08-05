@@ -16,6 +16,7 @@ type CreateModelReq struct {
 // CreateModelReqBody 创建 Model 请求体
 type CreateModelReqBody struct {
 	Alias           string               `json:"alias" required:"true" minLength:"1" doc:"模型别名（对外暴露）"`
+	ModelID         *string              `json:"modelId,omitempty" doc:"业务模型ID；缺省时默认等于 alias"`
 	UpstreamModel   string               `json:"upstreamModel" required:"true" minLength:"1" doc:"上游实际模型名"`
 	EndpointID      uint                 `json:"endpointID" required:"true" minimum:"1" doc:"关联 Endpoint ID"`
 	ContextLength   int                  `json:"contextLength,omitempty" minimum:"0" default:"128000" doc:"上下文窗口长度（tokens）"`
