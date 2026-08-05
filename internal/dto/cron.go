@@ -69,6 +69,22 @@ type UpdateCronJobRsp struct {
 	CommonRsp
 }
 
+// TriggerCronJobReq 手动触发 CronJob 请求
+//
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+type TriggerCronJobReq struct {
+	Name string `query:"name" required:"true" maxLength:"100" doc:"任务名"`
+}
+
+// TriggerCronJobRsp 手动触发 CronJob 响应
+//
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+type TriggerCronJobRsp struct {
+	CommonRsp
+}
+
 // ListCronCallAuditsReq 列出 CronCallAudit 请求
 //
 //	@author centonhuang

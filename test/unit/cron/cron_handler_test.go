@@ -198,3 +198,38 @@ func TestCronHandler_ListCronCallAuditOptions_StatusField(t *testing.T) {
 		t.Fatalf("expected 4 status options, got %d", len(rsp.Body.Items))
 	}
 }
+
+type fakeTriggerCronJobHandler struct {
+	handleErr error
+}
+
+func (f *fakeTriggerCronJobHandler) Handle(ctx context.Context, name string) error {
+	return f.handleErr
+}
+
+func TestCronHandler_TriggerCronJob_Success(t *testing.T) {
+	t.Parallel()
+	h := handler.NewCronHandler(handler.CronDependencies{
+		TriggerCronJob: &fakeTriggerCronJobHandler{},
+	})
+	rsp, err := h.HandleTriggerCronJob(context.Background(), &dto.TriggerCronJobReq{Name: "TestCron"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rsp == nil {
+		t.Fatal("response must not be nil")
+	}
+}
+
+func TestCronHandler_TriggerCronJob_Error(t *testing.T) {
+	t.Parallel()
+	h := handler.NewCronHandler(handler.CronDependencies{
+		TriggerCronJob: &fakeTriggerCronJobHandler{
+			handleErr: ierr.New(ierr.ErrResourceLocked, "already running"),
+		},
+	})
+	_, err := h.HandleTriggerCronJob(context.Background(), &dto.TriggerCronJobReq{Name: "TestCron"})
+	if err == nil {
+		t.Fatal("expected error when trigger handler fails")
+	}
+}
