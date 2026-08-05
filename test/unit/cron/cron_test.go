@@ -13,8 +13,13 @@ import (
 )
 
 type mockCron struct {
-	started bool
-	stopped bool
+	started       bool
+	stopped       bool
+	triggerResult bool
+}
+
+func (m *mockCron) Trigger() bool {
+	return m.triggerResult
 }
 
 func (m *mockCron) Start(_ string) error {

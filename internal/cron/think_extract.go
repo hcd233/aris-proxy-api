@@ -32,9 +32,10 @@ var thinkRegexp = regexp.MustCompile(constant.ThinkTagRegexpPattern)
 //	@author centonhuang
 //	@update 2026-06-02 10:00:00
 type ThinkExtractCron struct {
-	cron   *cron.Cron
-	repo   conversation.ThinkExtractRepository
-	locker *lock.RedisLocker
+	cron    *cron.Cron
+	repo    conversation.ThinkExtractRepository
+	locker  *lock.RedisLocker
+	lockKey string
 }
 
 // NewThinkExtractCron 创建消息推理内容提取定时任务
@@ -83,8 +84,8 @@ func (c *ThinkExtractCron) StopGracefully() {
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 func (c *ThinkExtractCron) Start(spec string) error {
-	key := fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleThinkExtract)
-	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleThinkExtract, c.locker, key, LockOptions{}, c.extract))
+	c.lockKey = fmt.Sprintf(constant.CronLockKeyTemplate, constant.CronModuleThinkExtract)
+	entryID, err := c.cron.AddFunc(spec, wrapCronFunc(constant.CronModuleThinkExtract, c.locker, c.lockKey, LockOptions{}, c.extract, constant.CronTriggerSourceScheduled))
 	if err != nil {
 		logger.Logger().Error("[ThinkExtractCron] Add func error", zap.Error(err))
 		return err
@@ -95,6 +96,16 @@ func (c *ThinkExtractCron) Start(spec string) error {
 	c.cron.Start()
 
 	return nil
+}
+
+// Trigger 手动触发一次推理内容提取
+//
+//	@receiver c *ThinkExtractCron
+//	@return bool
+//	@author centonhuang
+//	@update 2026-08-05 10:00:00
+func (c *ThinkExtractCron) Trigger() bool {
+	return TriggerWithLock(constant.CronModuleThinkExtract, c.locker, c.lockKey, LockOptions{}, c.extract)
 }
 
 // extract 执行推理内容提取逻辑
