@@ -15,10 +15,12 @@ interface RuntimeGaugeCardProps {
 
 const toneClasses = {
   primary: "text-primary",
-  blue: "text-[#4F7FA8] moonshot:text-[#8AB4D6]",
-  green: "text-[#3D8769] moonshot:text-[#78C3A3]",
-  violet: "text-[#6E5C98] moonshot:text-[#A99AD1]",
-  rose: "text-[#B85B7A] moonshot:text-[#E79AB4]",
+  /* Moonshot tones: desaturated, grey-shifted — semantic hues stay
+   * legible without breaking the near-achromatic moonlit palette. */
+  blue: "text-[#4F7FA8] moonshot:text-[#A3B8CC]",
+  green: "text-[#3D8769] moonshot:text-[#9DB8A8]",
+  violet: "text-[#6E5C98] moonshot:text-[#B0A8BD]",
+  rose: "text-[#B85B7A] moonshot:text-[#C9A3AC]",
 };
 
 export function RuntimeGaugeCard({
