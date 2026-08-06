@@ -3,9 +3,10 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "@/lib/theme";
 
-const STAR_COUNT = 70;
+const STAR_COUNT = 40;
 const POINTER_RADIUS = 120;
-const STAR_COLORS = ["#BFCBFF", "#8FA3FF", "#E6E8F0"];
+/* Moonlit neutrals: white / warm moonlight / mid gray — no blue-violet. */
+const STAR_COLORS = ["#FFFFFF", "#FFEED9", "#CFCFCF"];
 const PARALLAX_RANGE = 40;
 
 interface Star {
@@ -19,10 +20,13 @@ interface Star {
 }
 
 /**
- * Starfield canvas. Visibility + animation are driven by the active theme
- * (only moonshot renders the starfield) via useTheme(), so this component
- * re-renders on toggle. The effect below depends on `theme` and tears down
- * / rebuilds listeners + rAF when it changes.
+ * Moon scene background. Visibility + animation are driven by the active
+ * theme (only moonshot renders the scene) via useTheme(), so this
+ * component re-renders on toggle. The effect below depends on `theme`
+ * and tears down / rebuilds listeners + rAF when it changes.
+ *
+ * Composition follows moonshot.ai: a moon disc + god rays (pure CSS)
+ * over a sparse twinkling-star canvas, all on a pure black field.
  */
 export function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -100,7 +104,9 @@ export function ParticleBackground() {
           boost = f;
         }
         const twinkle = Math.sin(t / 900 + s.phase);
-        drawStar(x, y, s, 0.35 + 0.4 * twinkle * twinkle + boost * 0.25, 1 + boost * 0.8);
+        /* Dimmer than a classic starfield: stars accompany the moon,
+         * they don't compete with it. */
+        drawStar(x, y, s, 0.22 + 0.3 * twinkle * twinkle + boost * 0.25, 1 + boost * 0.8);
       }
       ctx.globalAlpha = 1;
       raf = requestAnimationFrame(frame);
@@ -172,9 +178,12 @@ export function ParticleBackground() {
 
   return (
     <div aria-hidden="true" className="particle-bg">
-      <div className="aura aura-blue" />
-      <div className="aura aura-violet" />
       <canvas ref={canvasRef} />
+      <div className="moon-ray moon-ray-b" />
+      <div className="moon-ray moon-ray-a" />
+      <div className="moon-ray moon-ray-c" />
+      <div className="moon" />
+      <div className="scene-fade" />
     </div>
   );
 }
