@@ -140,7 +140,7 @@ export function ReadingLayout({
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <div className="flex items-center gap-2">
                 <Wrench className="size-4 text-muted-foreground" />
-                <span className="font-display text-[14px] font-semibold text-foreground">
+                <span className="font-display text-[14px] text-foreground">
                   {t("reading_layout.available_tools")}
                 </span>
                 <Badge variant="secondary" className="text-[10px]">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Source_Serif_4 } from "next/font/google";
+import { Hanken_Grotesk, Source_Serif_4 } from "next/font/google";
 // Maple Mono CN (monospace, CJK + Latin, unicode-range subset, loaded on demand)
 import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Regular/result.css";
 import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Medium/result.css";
@@ -19,6 +19,11 @@ const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
 });
 
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Aris Proxy API",
   description: "Management interface for Aris Proxy API",
@@ -32,7 +37,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`h-full antialiased ${sourceSerif.variable}`}
+      className={`h-full antialiased ${sourceSerif.variable} ${hanken.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

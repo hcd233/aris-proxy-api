@@ -185,7 +185,7 @@ export default function CronAuditPage() {
     <PermissionGuard adminOnly>
       <div className="space-y-8">
         <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="font-display text-2xl md:text-3xl tracking-tight text-foreground">
             {t("cron_audit.page_title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">

@@ -42,7 +42,7 @@ export function RuntimeGaugeCard({
           <Skeleton className="h-9 w-20" />
         ) : (
           <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-3xl font-semibold text-foreground tabular-nums">
+            <span className="font-display text-3xl text-foreground tabular-nums">
               {value}
             </span>
             {unit && (

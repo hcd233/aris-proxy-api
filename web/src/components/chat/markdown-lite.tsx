@@ -213,22 +213,22 @@ function CodeBlock({
 const markdownComponents: Components = {
   // Headings — use display serif font for h1/h2/h3
   h1: ({ children }) => (
-    <h1 className="mt-5 mb-2 font-display text-2xl font-semibold tracking-tight text-foreground">
+    <h1 className="mt-5 mb-2 font-display text-2xl tracking-tight text-foreground">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="mt-5 mb-2 font-display text-xl font-semibold tracking-tight text-foreground">
+    <h2 className="mt-5 mb-2 font-display text-xl tracking-tight text-foreground">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="mt-4 mb-1.5 font-display text-lg font-semibold tracking-tight text-foreground">
+    <h3 className="mt-4 mb-1.5 font-display text-lg tracking-tight text-foreground">
       {children}
     </h3>
   ),
   h4: ({ children }) => (
-    <h4 className="mt-3 mb-1 font-display text-base font-semibold text-foreground">
+    <h4 className="mt-3 mb-1 font-display text-base text-foreground">
       {children}
     </h4>
   ),
