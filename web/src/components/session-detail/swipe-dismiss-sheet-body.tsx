@@ -201,7 +201,7 @@ export function SwipeDismissSheetBody({
         className="flex items-center gap-2 border-b border-border/60 px-4 pb-3"
       >
         <Wrench className="size-4 text-muted-foreground" />
-        <h2 className="font-display text-[15px] font-semibold text-foreground">
+        <h2 className="font-display text-[15px] text-foreground">
           {title}
         </h2>
         <Badge variant="secondary" className="ml-1 text-[10px]">

@@ -51,7 +51,7 @@ function StatCard({
         {loading ? (
           <Skeleton className="h-10 w-20" />
         ) : (
-          <div className="font-display text-3xl font-semibold text-foreground">{value}</div>
+          <div className="font-display text-3xl text-foreground">{value}</div>
         )}
       </CardContent>
     </Card>
@@ -100,15 +100,15 @@ export default function DashboardPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
-      <div className="space-y-8">
+      <div className="space-y-10">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{t("dashboard.title")}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
+          <h1 className="font-display text-2xl tracking-tight text-foreground md:text-3xl">{t("dashboard.title")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             {t("dashboard.overview")}
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title={t("apikeys.title")}
             value={stats.apiKeys}

@@ -67,7 +67,7 @@ function ShareErrorView({ error }: { error: ShareError }) {
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
           <Share2 className="size-5 text-muted-foreground" />
         </div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="font-display text-2xl tracking-tight text-foreground">
           {title}
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -269,7 +269,7 @@ function SharedSessionView() {
       <div className="flex min-w-0 flex-1 flex-col items-center leading-tight">
         <h1
           className={[
-            "truncate font-display font-semibold tracking-tight text-foreground",
+"truncate font-display tracking-tight text-foreground",
             "transition-[font-size] duration-200 ease-out",
             isMobile && headerCompact ? "text-[14px]" : "text-[15px]",
           ].filter(Boolean).join(" ")}
