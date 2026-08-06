@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
+import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -67,8 +68,8 @@ export default function LoginPage() {
   if (processing) {
     return (
       <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
-          <p className="font-display text-3xl font-semibold text-foreground">
+        <div className="w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-sm">
+          <p className="font-display text-3xl text-foreground">
             Aris Proxy
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -81,13 +82,13 @@ export default function LoginPage() {
 
   return (
     <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border bg-card shadow-md md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--sidebar-primary)_14%,transparent),transparent_55%)]">
           <div>
-            <div className="mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm">
-              A
+            <div className="mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-foreground text-sidebar-primary shadow-sm">
+              <BrandMark className="size-8" />
             </div>
-            <h1 className="font-display text-5xl font-semibold leading-none tracking-tight">
+            <h1 className="font-display text-5xl leading-none tracking-tight">
               Aris Proxy
             </h1>
             <p className="mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
@@ -101,7 +102,7 @@ export default function LoginPage() {
 
         <div className="flex flex-col justify-center p-8 md:p-10">
           <div className="mb-8 md:hidden">
-            <h1 className="font-display text-5xl font-semibold tracking-tight text-foreground">
+            <h1 className="font-display text-5xl tracking-tight text-foreground">
               Aris Proxy
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -109,7 +110,7 @@ export default function LoginPage() {
             </p>
           </div>
           <div className="hidden md:block">
-            <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
+            <h2 className="font-display text-4xl tracking-tight text-foreground">
               {t("login.welcome_back")}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
