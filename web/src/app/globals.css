@@ -222,51 +222,67 @@
   }
 }
 
-/* === Moonshot deep-space theme (fixed dark; independent of .dark) === */
+/* === Moonshot "dark side of the moon" theme (fixed dark; independent of
+ * .dark) ===
+ * Aligned with moonshot.ai: pure black canvas, near-achromatic surfaces,
+ * white as the brand "color", warm-white moonlight accents. Depth comes
+ * from inset hairline highlights instead of tinted drop shadows. */
 [data-theme="moonshot"] {
-  --background: #06070d;
-  --foreground: #e6e8f0;
-  --card: rgb(13 15 26 / 0.72);
-  --card-foreground: #e6e8f0;
-  --popover: rgb(15 17 28 / 0.85);
-  --popover-foreground: #e6e8f0;
-  --primary: #7c8cff;
-  --primary-foreground: #ffffff;
-  --primary-hover: #93a2ff;
-  --secondary: rgb(22 26 42 / 0.8);
-  --secondary-foreground: #e6e8f0;
-  --muted: rgb(22 26 42 / 0.8);
-  --muted-foreground: #8a90a8;
-  --accent: rgb(30 35 64 / 0.8);
-  --accent-foreground: #e6e8f0;
-  --destructive: #e06c75;
-  --border: rgb(35 40 65 / 0.8);
-  --input: rgb(35 40 65 / 0.8);
-  --ring: #7c8cff;
-  --chart-1: #7c8cff;
-  --chart-2: #5e6ee0;
-  --chart-3: #9db4ff;
-  --chart-4: #6fe3e0;
-  --chart-5: #2a3050;
-  --sidebar: rgb(10 12 22 / 0.8);
-  --sidebar-foreground: #e6e8f0;
-  --sidebar-primary: #7c8cff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgb(30 35 64 / 0.65);
-  --sidebar-accent-foreground: #e6e8f0;
-  --sidebar-border: rgb(35 40 65 / 0.8);
-  --sidebar-ring: #7c8cff;
-  --code-bg: #0b0d18;
-  --code-border: #232a45;
-  --code-text: #dde3f5;
-  --font-heading: "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
-  --shadow-2xs: 0 1px 2px 0 rgb(90 100 200 / 0.1);
-  --shadow-xs: 0 1px 3px 0 rgb(90 100 200 / 0.14);
-  --shadow-sm: 0 1px 3px 0 rgb(90 100 200 / 0.16), 0 2px 8px -1px rgb(90 100 200 / 0.12);
-  --shadow-md: 0 2px 6px -1px rgb(90 100 200 / 0.18), 0 6px 16px -4px rgb(90 100 200 / 0.14);
-  --shadow-lg: 0 4px 10px -2px rgb(90 100 200 / 0.2), 0 12px 28px -8px rgb(90 100 200 / 0.16);
-  --shadow-xl: 0 8px 18px -4px rgb(90 100 200 / 0.22), 0 20px 44px -12px rgb(90 100 200 / 0.2);
+  --background: #000000;
+  --foreground: #f5f5f5;
+  --card: rgb(18 18 18 / 0.72);
+  --card-foreground: #f5f5f5;
+  --popover: rgb(18 18 18 / 0.85);
+  --popover-foreground: #f5f5f5;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --primary-hover: #e0e0e0;
+  --secondary: rgb(26 26 26 / 0.8);
+  --secondary-foreground: #f5f5f5;
+  --muted: rgb(26 26 26 / 0.8);
+  --muted-foreground: #737373;
+  --accent: rgb(38 38 38 / 0.8);
+  --accent-foreground: #f5f5f5;
+  --destructive: #d4606a;
+  --border: rgb(255 255 255 / 0.09);
+  --input: rgb(255 255 255 / 0.09);
+  --ring: rgb(255 255 255 / 0.35);
+  --chart-1: #ffffff;
+  --chart-2: #bfbfbf;
+  --chart-3: #ffeed9;
+  --chart-4: #a8bdd8;
+  --chart-5: #595959;
+  --sidebar: rgb(10 10 10 / 0.8);
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: rgb(38 38 38 / 0.65);
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: rgb(255 255 255 / 0.09);
+  --sidebar-ring: rgb(255 255 255 / 0.35);
+  --code-bg: #0a0a0a;
+  --code-border: #262626;
+  --code-text: #e5e5e5;
+  /* moonshot.ai uses a neo-grotesque sans (M PLUS 1 / MiSans) for both
+   * body and headings — no monospace UI. Hanken Grotesk is the closest
+   * face already bundled; Maple Mono CN stays for --font-mono only. */
+  --font-sans: var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  /* Inset top hairline mimics moonlight grazing the surface edge;
+   * the drop component is plain black, no color cast. */
+  --shadow-2xs: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.5);
+  --shadow-xs: inset 0 1px 0 0 rgb(255 255 255 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.5);
+  --shadow-sm: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 2px 8px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 2px 6px -1px rgb(0 0 0 / 0.5), 0 6px 16px -4px rgb(0 0 0 / 0.4);
+  --shadow-lg: inset 0 1px 0 0 rgb(255 255 255 / 0.08), 0 4px 10px -2px rgb(0 0 0 / 0.5), 0 12px 28px -8px rgb(0 0 0 / 0.45);
+  --shadow-xl: inset 0 1px 0 0 rgb(255 255 255 / 0.09), 0 8px 18px -4px rgb(0 0 0 / 0.55), 0 20px 44px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Moonshot: poster-like heading rhythm — light tracking, like the
+ * moonshot.ai tagline (thin weight + wide letter-spacing). */
+[data-theme="moonshot"] :where(.font-heading, .font-display) {
+  letter-spacing: 0.02em;
 }
 
 /* Moonshot: page roots become transparent so the starfield shows through.
@@ -276,35 +292,38 @@
   background-color: transparent;
 }
 
-/* Moonshot: glassmorphism on cards / sidebar / popovers */
+/* Moonshot: glassmorphism on cards / sidebar / popovers.
+ * moonshot.ai recipe: heavy blur + darkened backdrop (not saturation). */
 [data-theme="moonshot"] :where(.bg-card, .bg-sidebar, .bg-popover) {
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(23px) brightness(0.6);
+  -webkit-backdrop-filter: blur(23px) brightness(0.6);
 }
 
-/* Moonshot: glow on primary surfaces and active nav items */
+/* Moonshot: white halo on primary surfaces and active nav items */
 [data-theme="moonshot"] :where(.bg-primary) {
-  box-shadow: 0 0 16px rgb(124 140 255 / 0.35);
+  box-shadow: 0 0 20px rgb(255 255 255 / 0.18);
 }
 [data-theme="moonshot"] :where(.bg-primary):hover {
-  box-shadow: 0 0 24px rgb(124 140 255 / 0.5);
+  box-shadow: 0 0 28px rgb(255 255 255 / 0.3);
 }
 [data-theme="moonshot"] :where(.bg-sidebar-accent) {
-  box-shadow: inset 0 0 0 1px rgb(124 140 255 / 0.25);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
 }
 
-/* Moonshot: cool-tinted selection & scrollbar */
+/* Moonshot: neutral selection & scrollbar */
 [data-theme="moonshot"] ::selection {
-  background: rgb(124 140 255 / 0.3);
+  background: rgb(255 255 255 / 0.24);
 }
 [data-theme="moonshot"] ::-webkit-scrollbar-thumb {
-  background: rgb(124 140 255 / 0.2);
+  background: rgb(255 255 255 / 0.14);
   border: 2px solid transparent;
   border-radius: 999px;
   background-clip: content-box;
 }
 
-/* Starfield container + gradient auras (used by ParticleBackground) */
+/* Moon scene container (used by ParticleBackground): a moon disc with
+ * halo near the top-center, god-ray beams fanning downward, and a sparse
+ * star canvas behind — the moonshot.ai hero motif, not a dense starfield. */
 .particle-bg {
   position: fixed;
   inset: 0;
@@ -321,37 +340,74 @@
   position: absolute;
   inset: 0;
 }
-.particle-bg .aura {
+
+/* Moon disc: soft white sphere with a warm-white atmospheric halo. */
+.particle-bg .moon {
   position: absolute;
+  left: 50%;
+  top: 7vh;
+  width: 72px;
+  height: 72px;
   border-radius: 9999px;
-  filter: blur(80px);
+  transform: translateX(-50%);
+  background: radial-gradient(circle at 36% 32%, #ffffff 0%, #e8e8e8 52%, #b5b5b5 100%);
+  box-shadow:
+    0 0 40px 12px rgb(255 255 255 / 0.14),
+    0 0 120px 48px rgb(255 238 217 / 0.09),
+    0 0 280px 120px rgb(255 255 255 / 0.05);
 }
-.particle-bg .aura-blue {
-  width: 42vw;
-  height: 42vw;
-  left: -12vw;
-  top: -14vh;
-  background: radial-gradient(circle, rgb(59 79 216 / 0.38), transparent 70%);
-  animation: aura-drift-a 26s ease-in-out infinite alternate;
+
+/* God rays: tall tapered beams hanging from the moon, swaying slowly.
+ * transform-origin sits at the moon center so the beam pivots overhead. */
+.particle-bg .moon-ray {
+  position: absolute;
+  left: 50%;
+  top: calc(7vh + 36px);
+  height: 72vh;
+  transform-origin: 50% 0;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  filter: blur(10px);
 }
-.particle-bg .aura-violet {
-  width: 38vw;
-  height: 38vw;
-  right: -10vw;
-  bottom: -16vh;
-  background: radial-gradient(circle, rgb(122 79 216 / 0.32), transparent 70%);
-  animation: aura-drift-b 32s ease-in-out infinite alternate;
+.particle-bg .moon-ray-a {
+  width: 200px;
+  margin-left: -100px;
+  background: linear-gradient(to bottom, rgb(255 246 230 / 0.09), transparent 78%);
+  animation: ray-sway-a 24s ease-in-out infinite alternate;
 }
-@keyframes aura-drift-a {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(7vw, 5vh) scale(1.12); }
+.particle-bg .moon-ray-b {
+  width: 320px;
+  margin-left: -160px;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0.05), transparent 70%);
+  animation: ray-sway-b 34s ease-in-out infinite alternate;
 }
-@keyframes aura-drift-b {
-  from { transform: translate(0, 0) scale(1.08); }
-  to { transform: translate(-6vw, -7vh) scale(1); }
+.particle-bg .moon-ray-c {
+  width: 130px;
+  margin-left: -65px;
+  background: linear-gradient(to bottom, rgb(255 238 217 / 0.07), transparent 82%);
+  animation: ray-sway-a 29s ease-in-out infinite alternate-reverse;
 }
+@keyframes ray-sway-a {
+  from { transform: rotate(-4deg); }
+  to { transform: rotate(4deg); }
+}
+@keyframes ray-sway-b {
+  from { transform: rotate(3deg); }
+  to { transform: rotate(-3.5deg); }
+}
+
+/* Scene fade: content column sinks back into pure black, like the
+ * gradient overlay under the moonshot.ai hero scene. */
+.particle-bg .scene-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34vh;
+  background: linear-gradient(to top, #000 25%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .particle-bg .aura {
+  .particle-bg .moon-ray {
     animation: none;
   }
 }
