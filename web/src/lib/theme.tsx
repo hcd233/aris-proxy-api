@@ -43,7 +43,9 @@ export const THEMES: Record<ThemeName, ThemeMeta> = {
 
 const CHART_SERIES_COLORS: Record<ThemeName, readonly string[]> = {
   anthropic: ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355", "#6B8BA4", "#A0522D"],
-  moonshot: ["#7C8CFF", "#6FE3E0", "#9DB4FF", "#B98BC9", "#5E6EE0", "#8AB4D6", "#78C3A3", "#E79AB4"],
+  /* Moonlit neutrals: achromatic greys lead; desaturated cool tints
+   * (moonlight cream, ice blue) only where series must diverge. */
+  moonshot: ["#FFFFFF", "#BFBFBF", "#FFEED9", "#8C8C8C", "#A8BDD8", "#595959", "#D9CBB8", "#6E7B8C"],
 };
 
 export interface TokenLayerColors {
@@ -55,7 +57,7 @@ export interface TokenLayerColors {
 
 const TOKEN_LAYER_COLORS: Record<ThemeName, TokenLayerColors> = {
   anthropic: { cacheRead: "#F2D0B8", input: "#E6733F", cacheCreated: "#F2D5BE", output: "#D46A3E" },
-  moonshot: { cacheRead: "#A9B8FF", input: "#7C8CFF", cacheCreated: "#9CF0EC", output: "#5E6EE0" },
+  moonshot: { cacheRead: "#C9C9C9", input: "#FFFFFF", cacheCreated: "#FFEED9", output: "#737373" },
 };
 
 function chartSeriesColors(theme: ThemeName): readonly string[] {
