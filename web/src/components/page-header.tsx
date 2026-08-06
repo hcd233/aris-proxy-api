@@ -17,11 +17,11 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
-        <h1 className="font-display text-2xl tracking-tight text-foreground md:text-3xl">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {title}
         </h1>
         {description && (
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}
