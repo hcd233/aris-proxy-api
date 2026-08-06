@@ -321,9 +321,8 @@
   background-clip: content-box;
 }
 
-/* Moon scene container (used by ParticleBackground): a moon disc with
- * halo near the top-center, god-ray beams fanning downward, and a sparse
- * star canvas behind — the moonshot.ai hero motif, not a dense starfield. */
+/* Starfield container (used by ParticleBackground): pure white stars
+ * on the pure black moonshot field. */
 .particle-bg {
   position: fixed;
   inset: 0;
@@ -339,77 +338,6 @@
 .particle-bg canvas {
   position: absolute;
   inset: 0;
-}
-
-/* Moon disc: soft white sphere with a warm-white atmospheric halo. */
-.particle-bg .moon {
-  position: absolute;
-  left: 50%;
-  top: 7vh;
-  width: 72px;
-  height: 72px;
-  border-radius: 9999px;
-  transform: translateX(-50%);
-  background: radial-gradient(circle at 36% 32%, #ffffff 0%, #e8e8e8 52%, #b5b5b5 100%);
-  box-shadow:
-    0 0 40px 12px rgb(255 255 255 / 0.14),
-    0 0 120px 48px rgb(255 238 217 / 0.09),
-    0 0 280px 120px rgb(255 255 255 / 0.05);
-}
-
-/* God rays: tall tapered beams hanging from the moon, swaying slowly.
- * transform-origin sits at the moon center so the beam pivots overhead. */
-.particle-bg .moon-ray {
-  position: absolute;
-  left: 50%;
-  top: calc(7vh + 36px);
-  height: 72vh;
-  transform-origin: 50% 0;
-  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
-  filter: blur(10px);
-}
-.particle-bg .moon-ray-a {
-  width: 200px;
-  margin-left: -100px;
-  background: linear-gradient(to bottom, rgb(255 246 230 / 0.09), transparent 78%);
-  animation: ray-sway-a 24s ease-in-out infinite alternate;
-}
-.particle-bg .moon-ray-b {
-  width: 320px;
-  margin-left: -160px;
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0.05), transparent 70%);
-  animation: ray-sway-b 34s ease-in-out infinite alternate;
-}
-.particle-bg .moon-ray-c {
-  width: 130px;
-  margin-left: -65px;
-  background: linear-gradient(to bottom, rgb(255 238 217 / 0.07), transparent 82%);
-  animation: ray-sway-a 29s ease-in-out infinite alternate-reverse;
-}
-@keyframes ray-sway-a {
-  from { transform: rotate(-4deg); }
-  to { transform: rotate(4deg); }
-}
-@keyframes ray-sway-b {
-  from { transform: rotate(3deg); }
-  to { transform: rotate(-3.5deg); }
-}
-
-/* Scene fade: content column sinks back into pure black, like the
- * gradient overlay under the moonshot.ai hero scene. */
-.particle-bg .scene-fade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 34vh;
-  background: linear-gradient(to top, #000 25%, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .particle-bg .moon-ray {
-    animation: none;
-  }
 }
 
 /* Theme switch transition: color properties only, never width/height */
