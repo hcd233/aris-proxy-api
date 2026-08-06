@@ -323,7 +323,7 @@ export default function SessionDetailClient({
       <div className="flex min-w-0 flex-1 flex-col items-center px-1 leading-tight">
         <h1
           className={[
-"truncate font-display tracking-tight text-foreground",
+            "truncate font-display font-semibold tracking-tight text-foreground",
             "transition-[font-size] duration-200 ease-out",
             isMobile && headerCompact ? "text-[14px]" : "text-[15px]",
           ].filter(Boolean).join(" ")}

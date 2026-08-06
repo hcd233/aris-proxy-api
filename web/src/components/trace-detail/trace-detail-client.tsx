@@ -421,7 +421,7 @@ export default function TraceDetailClient({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-2xl md:text-3xl tracking-tight text-foreground">
+            <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
               {t("trace.detail_title")}
             </h1>
           </div>

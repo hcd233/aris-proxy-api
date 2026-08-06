@@ -261,7 +261,7 @@ export default function MonitorPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl tracking-tight text-foreground md:text-3xl">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("monitor.title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>

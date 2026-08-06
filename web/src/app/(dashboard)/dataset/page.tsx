@@ -119,7 +119,7 @@ function MetricCard({
       {loading ? (
         <Skeleton className="mt-3 h-8 w-24" />
       ) : (
-        <div className="mt-2 font-display text-3xl text-foreground">
+        <div className="mt-2 font-display text-3xl font-semibold text-foreground">
           {value}
         </div>
       )}
@@ -355,7 +355,7 @@ export default function DatasetPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="max-w-2xl">
           
-          <h1 className="font-display text-2xl tracking-tight text-foreground md:text-3xl">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("dataset.title")}
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">

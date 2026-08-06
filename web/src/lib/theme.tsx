@@ -42,7 +42,7 @@ export const THEMES: Record<ThemeName, ThemeMeta> = {
  * ========================================================== */
 
 const CHART_SERIES_COLORS: Record<ThemeName, readonly string[]> = {
-  anthropic: ["#D97757", "#5F8A8B", "#B8654A", "#7A8450", "#8C7E72", "#C98A5F", "#4F6F52", "#5B7B8C"],
+  anthropic: ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355", "#6B8BA4", "#A0522D"],
   moonshot: ["#7C8CFF", "#6FE3E0", "#9DB4FF", "#B98BC9", "#5E6EE0", "#8AB4D6", "#78C3A3", "#E79AB4"],
 };
 
