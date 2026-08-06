@@ -25,6 +25,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
@@ -104,7 +105,7 @@ function SidebarNav({
             <Link
               href={item.href}
               onClick={onNavigate}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ${
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-2xs"
                   : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
@@ -145,7 +146,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
       .slice(0, 2);
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 p-2 text-sidebar-foreground transition-all duration-150">
+    <div className="flex flex-col gap-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 p-2 text-sidebar-foreground transition-colors duration-200">
       <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
         <Avatar size="sm">
           {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
@@ -240,10 +241,10 @@ export default function DashboardLayout({
           <div className="flex h-14 items-center justify-between border-b border-sidebar-border/50 px-3">
             {!collapsed && (
               <span className="flex items-center gap-2.5">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
-                  A
+                <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-foreground text-sidebar-primary shadow-2xs">
+                  <BrandMark className="size-4" />
                 </span>
-                <span className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground">
+                <span className="font-display text-lg tracking-tight text-sidebar-foreground">
                   {t("layout.aris_proxy")}
                 </span>
               </span>
@@ -290,14 +291,14 @@ export default function DashboardLayout({
                 <Menu className="size-5" />
               </SheetTrigger>
               <span className="flex items-center gap-2.5">
-                <span className="flex size-6 items-center justify-center rounded-md bg-primary font-display text-xs font-semibold text-primary-foreground shadow-2xs">
-                  A
+                <span className="flex size-6 items-center justify-center rounded-md bg-foreground text-primary shadow-2xs">
+                  <BrandMark className="size-3.5" />
                 </span>
-                <span className="font-display text-lg font-semibold tracking-tight">{t("layout.aris_proxy")}</span>
+                <span className="font-display text-lg tracking-tight">{t("layout.aris_proxy")}</span>
               </span>
             </header>
 
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
+            <main className="flex-1 overflow-y-auto p-5 md:p-10 lg:p-14">
               <LocaleFade>
                 <div className="mx-auto max-w-6xl">{children}</div>
               </LocaleFade>
@@ -306,10 +307,10 @@ export default function DashboardLayout({
 
           <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
             <SheetHeader className="border-b border-sidebar-border/50 px-4 py-3">
-              <SheetTitle className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
-                  A
-                </span>
+            <SheetTitle className="flex items-center gap-2.5 font-display text-xl tracking-tight">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-foreground text-sidebar-primary shadow-2xs">
+                <BrandMark className="size-4" />
+              </span>
                 {t("layout.aris_proxy")}
               </SheetTitle>
             </SheetHeader>

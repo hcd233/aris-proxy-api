@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Maple Mono CN", "SFMono-Regular", Consolas, monospace;
   --font-heading: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
   --font-display: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
@@ -51,49 +51,50 @@
 }
 
 @theme {
-  /* Warm, paper-like elevation. Subtle single-layer shadows that lift
-   * surfaces without the cold gray cast of default Tailwind shadows. */
-  --shadow-2xs: 0 1px 2px 0 rgb(31 26 20 / 0.03);
-  --shadow-xs: 0 1px 2px 0 rgb(31 26 20 / 0.05);
-  --shadow-sm: 0 1px 2px 0 rgb(31 26 20 / 0.05), 0 2px 6px -1px rgb(31 26 20 / 0.04);
-  --shadow-md: 0 2px 4px -1px rgb(31 26 20 / 0.06), 0 6px 14px -4px rgb(31 26 20 / 0.06);
-  --shadow-lg: 0 4px 8px -2px rgb(31 26 20 / 0.07), 0 12px 24px -8px rgb(31 26 20 / 0.08);
-  --shadow-xl: 0 8px 16px -4px rgb(31 26 20 / 0.08), 0 20px 40px -12px rgb(31 26 20 / 0.10);
+  /* Warm, paper-like elevation. Anthropic-style restraint: hairline borders
+   * do the layering work; shadows stay barely-there and only soften edges. */
+  --shadow-2xs: 0 1px 1px 0 rgb(31 26 20 / 0.02);
+  --shadow-xs: 0 1px 2px 0 rgb(31 26 20 / 0.03);
+  --shadow-sm: 0 1px 2px 0 rgb(31 26 20 / 0.03), 0 1px 4px -1px rgb(31 26 20 / 0.02);
+  --shadow-md: 0 1px 3px -1px rgb(31 26 20 / 0.04), 0 3px 8px -3px rgb(31 26 20 / 0.03);
+  --shadow-lg: 0 2px 5px -2px rgb(31 26 20 / 0.04), 0 6px 16px -6px rgb(31 26 20 / 0.04);
+  --shadow-xl: 0 4px 10px -3px rgb(31 26 20 / 0.05), 0 12px 28px -10px rgb(31 26 20 / 0.05);
 }
 
 :root {
-  --background: #FAF8F5;
+  /* Anthropic parchment palette: warm yellow-cream paper, not pinkish white */
+  --background: #F0EEE6;
   --foreground: #1F1A14;
-  --card: #FFFFFF;
+  --card: #FAF9F4;
   --card-foreground: #1F1A14;
-  --popover: #FFFFFF;
+  --popover: #FAF9F4;
   --popover-foreground: #1F1A14;
   --primary: #D97757;
   --primary-foreground: #FFFFFF;
   --primary-hover: #C66A4A;
-  --secondary: #F5F0EB;
+  --secondary: #E7E3D7;
   --secondary-foreground: #1F1A14;
-  --muted: #F5F0EB;
+  --muted: #E9E5D9;
   --muted-foreground: #6B5E52;
-  --accent: #F5E6E0;
+  --accent: #EEE8DB;
   --accent-foreground: #1F1A14;
   --destructive: #C4706A;
-  --border: #E8E0D8;
-  --input: #E8E0D8;
+  --border: #D9D3C4;
+  --input: #D9D3C4;
   --ring: #D97757;
   --chart-1: #D97757;
-  --chart-2: #B8654A;
-  --chart-3: #E8A87C;
-  --chart-4: #8C7E72;
-  --chart-5: #F5E6E0;
-  --radius: 0.75rem;
-  --sidebar: #F5F0EB;
+  --chart-2: #5F8A8B;
+  --chart-3: #B8654A;
+  --chart-4: #7A8450;
+  --chart-5: #8C7E72;
+  --radius: 0.5rem;
+  --sidebar: #EAE6DA;
   --sidebar-foreground: #1F1A14;
   --sidebar-primary: #D97757;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #EDE6DE;
+  --sidebar-accent: #DFDACB;
   --sidebar-accent-foreground: #1F1A14;
-  --sidebar-border: #E8E0D8;
+  --sidebar-border: #D9D3C4;
   --sidebar-ring: #D97757;
   --code-bg: #26211C;
   --code-border: #3A322B;
@@ -101,37 +102,37 @@
 }
 
 .dark {
-  --background: #1A1612;
-  --foreground: #F5F0EB;
-  --card: #262119;
-  --card-foreground: #F5F0EB;
-  --popover: #262119;
-  --popover-foreground: #F5F0EB;
+  --background: #1B1814;
+  --foreground: #EDE8DD;
+  --card: #26221B;
+  --card-foreground: #EDE8DD;
+  --popover: #26221B;
+  --popover-foreground: #EDE8DD;
   --primary: #D97757;
   --primary-foreground: #FFFFFF;
   --primary-hover: #E08A6C;
   --secondary: #322C25;
-  --secondary-foreground: #F5F0EB;
+  --secondary-foreground: #EDE8DD;
   --muted: #322C25;
   --muted-foreground: #A89E94;
   --accent: #3D362E;
-  --accent-foreground: #F5F0EB;
+  --accent-foreground: #EDE8DD;
   --destructive: #D4756A;
-  --border: #40382F;
-  --input: #40382F;
+  --border: #3E382D;
+  --input: #3E382D;
   --ring: #D97757;
   --chart-1: #D97757;
-  --chart-2: #B8654A;
-  --chart-3: #E8A87C;
-  --chart-4: #A89E94;
+  --chart-2: #7BA3A4;
+  --chart-3: #E08A6C;
+  --chart-4: #93A06B;
   --chart-5: #4A423C;
   --sidebar: #1F1A14;
-  --sidebar-foreground: #F5F0EB;
+  --sidebar-foreground: #EDE8DD;
   --sidebar-primary: #D97757;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #322C25;
-  --sidebar-accent-foreground: #F5F0EB;
-  --sidebar-border: #40382F;
+  --sidebar-accent-foreground: #EDE8DD;
+  --sidebar-border: #3E382D;
   --sidebar-ring: #D97757;
   --shadow-2xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.25);
@@ -203,6 +204,12 @@
     /* Disable rubber-band scroll chaining on mobile so bottom sheets feel
      * native and the conversation column doesn't bounce the whole page. */
     overscroll-behavior-y: contain;
+  }
+  /* Anthropic paper grain: a whisper of fractal noise over the parchment.
+   * Skipped for moonshot — the starfield is its own texture. */
+  html:not([data-theme="moonshot"]) body {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    background-size: 240px 240px;
   }
   ::selection {
     background: rgba(217, 119, 87, 0.2);

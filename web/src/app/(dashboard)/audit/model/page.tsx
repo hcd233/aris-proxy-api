@@ -182,7 +182,7 @@ export default function AuditPage() {
   return (
     <div className="space-y-8">
       <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="font-display text-2xl md:text-3xl tracking-tight text-foreground">
             {t("audit.model_page_title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
