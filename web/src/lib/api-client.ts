@@ -8,6 +8,7 @@ import type {
   RefreshTokenReqBody,
   GetCurUserRsp,
   UpdateUserReqBody,
+  ListUsersRsp,
   ListSessionsRsp,
   GetSessionRsp,
   GetSessionMetadataRsp,
@@ -260,6 +261,21 @@ class ApiClient {
       method: "PATCH",
       body: JSON.stringify(body),
     });
+  }
+
+  async listUsers(
+    page: number,
+    pageSize: number,
+    opts?: { query?: string; permission?: string },
+  ): Promise<ListUsersRsp> {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (opts?.query) params.set("query", opts.query);
+    if (opts?.permission) params.set("permission", opts.permission);
+    return this.request<ListUsersRsp>(`/api/v1/user/list?${params}`);
+  }
+
+  async approveUser(id: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/user/approve?id=${id}`, { method: "POST" });
   }
 
   // ─── Session (JWT auth) ────────────────────────────────────────────────────

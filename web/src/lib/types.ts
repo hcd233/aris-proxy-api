@@ -71,6 +71,23 @@ export interface GetCurUserRsp extends CommonRsp {
   user?: DetailedUser;
 }
 
+// ─── User Management ────────────────────────────────────────────────────────────
+
+export interface UserItem {
+  id: number;
+  name: string;
+  email: string;
+  avatar?: string;
+  permission: Permission;
+  createdAt?: string;
+  lastLogin?: string;
+}
+
+export interface ListUsersRsp extends CommonRsp {
+  items?: UserItem[];
+  pageInfo?: PageInfo;
+}
+
 export interface UpdateUserReqBody {
   user: User;
 }

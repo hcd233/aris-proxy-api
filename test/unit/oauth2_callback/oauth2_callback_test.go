@@ -18,6 +18,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 	identityvo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
@@ -175,6 +176,10 @@ func (r *stubUserRepo) TouchLastLogin(ctx context.Context, userID uint) error {
 		return r.touchLastLogin(ctx, userID)
 	}
 	return nil
+}
+
+func (r *stubUserRepo) ListUsers(ctx context.Context, param model.CommonParam, permission enum.Permission) ([]*aggregate.User, *model.PageInfo, error) {
+	return nil, nil, nil
 }
 
 // Ensure stubUserRepo implements identity.UserRepository
