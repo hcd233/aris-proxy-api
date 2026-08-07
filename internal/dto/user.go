@@ -1,7 +1,11 @@
 // Package dto 用户DTO
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
+)
 
 // User 用户实体
 //
@@ -48,4 +52,33 @@ type UpdateUserReq struct {
 //	update 2025-10-31 02:33:48
 type UpdateUserReqBody struct {
 	User *User `json:"user" required:"true" doc:"User information to update"`
+}
+
+// ListUsersReq 用户列表请求（管理员视图）
+type ListUsersReq struct {
+	model.CommonParam
+	Permission string `query:"permission" enum:"pending,user,admin" doc:"按权限过滤，空=全部"`
+}
+
+// ListUsersRsp 用户列表响应
+type ListUsersRsp struct {
+	CommonRsp
+	Items    []*UserItem     `json:"items,omitempty" doc:"用户列表"`
+	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
+}
+
+// UserItem 用户列表项
+type UserItem struct {
+	ID         uint      `json:"id" doc:"用户ID"`
+	Name       string    `json:"name" doc:"用户名"`
+	Email      string    `json:"email" doc:"邮箱"`
+	Avatar     string    `json:"avatar" doc:"头像"`
+	Permission string    `json:"permission" doc:"权限"`
+	CreatedAt  time.Time `json:"createdAt,omitzero" doc:"注册时间"`
+	LastLogin  time.Time `json:"lastLogin,omitzero" doc:"最近登录时间"`
+}
+
+// ApproveUserReq 审核用户请求
+type ApproveUserReq struct {
+	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
 }

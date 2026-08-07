@@ -69,10 +69,13 @@ func NewOauth2Dependencies(initiate oauthport.InitiateLoginHandler, callback oau
 	}
 }
 
-func NewUserDependencies(getCurrentUser identityport.GetCurrentUserHandler, updateProfile identityport.UpdateProfileHandler) handler.UserDependencies {
+func NewUserDependencies(getCurrentUser identityport.GetCurrentUserHandler, updateProfile identityport.UpdateProfileHandler,
+	listUsers identityport.ListUsersHandler, approveUser identityport.ApproveUserHandler) handler.UserDependencies {
 	return handler.UserDependencies{
 		GetCurrentUser: getCurrentUser,
 		UpdateProfile:  updateProfile,
+		ListUsers:      listUsers,
+		ApproveUser:    approveUser,
 	}
 }
 
