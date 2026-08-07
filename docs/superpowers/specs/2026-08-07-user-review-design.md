@@ -16,7 +16,7 @@
 2. **接口形态**：列表用 `GET /user/list`（沿用现有 user group base path `/user` 与列表约定 `RoutePathList="/list"`），审核操作用 `POST /user/approve`（**无路径参数**，目标用户 ID 走 `query:"id"`，与项目所有按 ID 定位资源的接口惯例一致，如 `DeleteAPIKeyReq`），而非通用 `PATCH /permission`——业务规则只有一种变更，专用接口在路由层即可表达语义，无需在 DTO 里做枚举校验。
 3. **目标非 `pending` 一律拒绝**：重复批准（已是 `user`）或试图操作 `admin`/`user` 返回业务错误，前端提示。
 4. **不建操作审计表**：权限变更走结构化 logger 记录（操作者 + 目标 + 结果）。现有审计体系（ModelCallAudit / CronCallAudit）均为业务运行维度，为单次权限变更建表属于过度工程。
-5. **列表能力**：`GET /user/list` 支持分页 + 关键词（name/email 模糊）+ 权限筛选（不传则全部），管理员可以筛出 `pending` 待审用户，也能总览系统用户。
+5. **列表能力**：`GET /user/list` 支持分页 + 关键词（name/email 模糊，参数名 `query`，内嵌 `model.CommonParam` 与 apikey/blocked 列表惯例一致）+ 权限筛选（`permission`，不传则全部），管理员可以筛出 `pending` 待审用户，也能总览系统用户。
 
 ## 核心思路
 
@@ -69,10 +69,8 @@ huma.Register(userGroup, huma.Operation{
 
 ```go
 type ListUsersReq struct {
-    Page       int    `query:"page" required:"true" minimum:"1"`                                     // 页码（沿用 session 分页模式）
-    PageSize   int    `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"20"`       // 每页条数
-    Keyword    string `query:"keyword" maxLength:"200"`                                               // name/email 模糊
-    Permission string `query:"permission" enum:"pending,user,admin"`                                   // 空=全部
+    model.CommonParam // 内嵌 page/pageSize/query（name/email 模糊）
+    Permission string  `query:"permission" enum:"pending,user,admin"` // 空=全部
 }
 type ListUsersRsp struct {
     Items []*UserItem `json:"items"`
@@ -165,8 +163,10 @@ approveUser(id: number)
 
 #### 3.2 E2E（`test/e2e/users/`，沿用现有骨架）
 
+环境变量：`BASE_URL` + `ADMIN_TOKEN` + `USER_TOKEN`（`ADMIN_TOKEN` 先例见 `test/e2e/metrics`）。
+
 - 管理员：list users → approve pending 用户 → 再次 approve 返回业务错误
-- 普通用户（user）：访问 users 接口返回 403
+- 普通用户（user）：访问 users 接口返回 403/401
 
 ## 验收标准
 
