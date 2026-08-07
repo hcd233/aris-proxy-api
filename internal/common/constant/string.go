@@ -155,6 +155,7 @@ const (
 	TagTrace     = "Trace"
 	TagBlocked   = "Blocked"
 	TagDataset   = "Dataset"
+	TagUser      = "User"
 
 	// Router sub-paths
 	RoutePathList = "/list"
