@@ -13,7 +13,7 @@
 ## 需求决策（已与用户确认）
 
 1. **本期只做 `pending → user`**：审核升权是唯一权限变更操作。不做降级（`user → pending`、`admin → user`）、不做 `user → admin` 的界面入口（后端校验也仅允许 `pending → user`）。
-2. **接口形态**：列表用 `GET /user/list`（沿用现有 user group base path `/user` 与列表约定 `RoutePathList="/list"`），审核操作用语义化 `POST /user/{id}/approve`，而非通用 `PATCH /permission`——业务规则只有一种变更，专用接口在路由层即可表达语义，无需在 DTO 里做枚举校验。
+2. **接口形态**：列表用 `GET /user/list`（沿用现有 user group base path `/user` 与列表约定 `RoutePathList="/list"`），审核操作用 `POST /user/approve`（**无路径参数**，目标用户 ID 走 `query:"id"`，与项目所有按 ID 定位资源的接口惯例一致，如 `DeleteAPIKeyReq`），而非通用 `PATCH /permission`——业务规则只有一种变更，专用接口在路由层即可表达语义，无需在 DTO 里做枚举校验。
 3. **目标非 `pending` 一律拒绝**：重复批准（已是 `user`）或试图操作 `admin`/`user` 返回业务错误，前端提示。
 4. **不建操作审计表**：权限变更走结构化 logger 记录（操作者 + 目标 + 结果）。现有审计体系（ModelCallAudit / CronCallAudit）均为业务运行维度，为单次权限变更建表属于过度工程。
 5. **列表能力**：`GET /user/list` 支持分页 + 关键词（name/email 模糊）+ 权限筛选（不传则全部），管理员可以筛出 `pending` 待审用户，也能总览系统用户。
@@ -26,7 +26,7 @@
 
 | 层 | 现状 | 新增 |
 |---|---|---|
-| 路由 | `internal/router/user.go` 仅 2 个操作 | 注册 `listUsers`（GET `/user/list`）、`approveUser`（POST `/user/{id}/approve`），均挂 `LimitUserPermissionMiddleware(admin)` + 管理类限流中间件（复用 apikey 路由模式） |
+| 路由 | `internal/router/user.go` 仅 2 个操作 | 注册 `listUsers`（GET `/user/list`）、`approveUser`（POST `/user/approve`），均挂 `LimitUserPermissionMiddleware(admin)` + 管理类限流中间件（复用 apikey 路由模式） |
 | handler | `UserHandler` 2 方法 | `HandleListUsers` / `HandleApproveUser` |
 | port | `GetCurrentUserHandler` / `UpdateProfileHandler` | `ListUsersHandler` / `ApproveUserHandler`（+ `UserView` 已有，可直接复用做列表项投影） |
 | usecase | — | 新增 list / approve 两个用例（identity 应用层） |
@@ -51,11 +51,11 @@ huma.Register(userGroup, huma.Operation{
     },
 }, userHandler.HandleListUsers)
 
-// POST /api/v1/user/{id}/approve  admin 专属
+// POST /api/v1/user/approve  admin 专属，无路径参数，目标用户 ID 走 query
 huma.Register(userGroup, huma.Operation{
     OperationID: "approveUser",
     Method:      http.MethodPost,
-    Path:        "/{id}/approve",
+    Path:        "/approve",
     ...
     Middlewares: huma.Middlewares{
         middleware.LimitUserPermissionMiddleware("approveUser", enum.PermissionAdmin),
@@ -88,7 +88,7 @@ type UserItem struct { // 列表投影，字段与 DetailedUser 对齐
     LastLogin  time.Time `json:"lastLogin"`
 }
 type ApproveUserReq struct {
-    ID uint `path:"id"`
+	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
 }
 ```
 
@@ -171,7 +171,7 @@ approveUser(id: number)
 ## 验收标准
 
 1. pending 用户可在管理后台可见，批准为 `user` 后无需任何 SQL 操作即可正常使用网关（新建 API Key / 调用模型）。
-2. 普通用户访问 `GET /api/v1/user/list` 或 `POST /api/v1/user/{id}/approve` 返回 403；未登录返回 401。
+2. 普通用户访问 `GET /api/v1/user/list` 或 `POST /api/v1/user/approve` 返回 403；未登录返回 401。
 3. 重复批准 / 操作非 pending 用户返回明确业务错误。
 4. 权限变更日志可追溯（操作者 + 目标 + 结果）。
 5. `go test -count=1 ./...` 全绿；前端 `tsc --noEmit` + ESLint 通过；E2E `test/e2e/users/` 通过。
