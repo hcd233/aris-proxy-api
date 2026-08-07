@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
 )
 
@@ -51,4 +52,26 @@ type GetCurrentUserQuery struct {
 // GetCurrentUserHandler 查询处理器
 type GetCurrentUserHandler interface {
 	Handle(ctx context.Context, q GetCurrentUserQuery) (*UserView, error)
+}
+
+// ListUsersQuery 用户列表查询（管理员视图）
+type ListUsersQuery struct {
+	model.CommonParam
+	Permission enum.Permission
+}
+
+// ListUsersHandler 用户列表查询处理器
+type ListUsersHandler interface {
+	Handle(ctx context.Context, q ListUsersQuery) ([]*UserView, *model.PageInfo, error)
+}
+
+// ApproveUserCommand 审核用户命令
+type ApproveUserCommand struct {
+	OperatorID uint // 操作者
+	UserID     uint // 目标用户
+}
+
+// ApproveUserHandler 审核用户命令处理器
+type ApproveUserHandler interface {
+	Handle(ctx context.Context, cmd ApproveUserCommand) error
 }
