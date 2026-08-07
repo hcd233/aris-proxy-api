@@ -5,10 +5,13 @@ import (
 	"errors"
 	"time"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
@@ -166,4 +169,35 @@ func toUserAggregate(m *dbmodel.User) *aggregate.User {
 		m.GithubBindID,
 		m.GoogleBindID,
 	)
+}
+
+// ListUsers 分页查询用户（管理员视图）
+//
+//	@receiver r *userRepository
+//	@param ctx context.Context
+//	@param param model.CommonParam 分页/搜索参数
+//	@param permission enum.Permission 权限过滤，空串=全部
+//	@return []*aggregate.User
+//	@return *model.PageInfo
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-07 10:00:00
+func (r *userRepository) ListUsers(ctx context.Context, param model.CommonParam, permission enum.Permission) ([]*aggregate.User, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	records, pageInfo, err := r.dao.Paginate(
+		db,
+		&dbmodel.User{Permission: permission},
+		constant.UserRepoFieldsFull,
+		&dao.CommonParam{
+			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
+			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldName, constant.FieldEmail}},
+			SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate users")
+	}
+	return lo.Map(records, func(m *dbmodel.User, _ int) *aggregate.User {
+		return toUserAggregate(m)
+	}), pageInfo, nil
 }
