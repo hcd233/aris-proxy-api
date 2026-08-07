@@ -4,6 +4,8 @@ package identity
 import (
 	"context"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 )
 
@@ -24,4 +26,7 @@ type UserRepository interface {
 	// 提供此方法的原因：OAuth2 回调登录只需更新登录时间，避免全字段 Save
 	// 导致 name/email/avatar/permission 的意外覆盖。
 	TouchLastLogin(ctx context.Context, userID uint) error
+	// ListUsers 分页查询用户（管理员视图）。permission 非空时按权限精确过滤；
+	// param.Query 非空时对 name/email 做模糊匹配。
+	ListUsers(ctx context.Context, param model.CommonParam, permission enum.Permission) ([]*aggregate.User, *model.PageInfo, error)
 }
