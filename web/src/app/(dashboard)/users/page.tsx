@@ -67,16 +67,16 @@ function UserRowActions({ user, currentUserId, onAction }: UserRowActionsProps) 
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-36 p-1">
         {user.permission === "pending" && (
-          <DropdownMenuItem onSelect={() => onAction("promote", user)}>
+          <DropdownMenuItem onClick={() => onAction("promote", user)}>
             {t("users.promote")}
           </DropdownMenuItem>
         )}
         {user.permission === "user" && (
-          <DropdownMenuItem onSelect={() => onAction("demote", user)}>
+          <DropdownMenuItem onClick={() => onAction("demote", user)}>
             {t("users.demote")}
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem variant="destructive" onSelect={() => onAction("delete", user)}>
+        <DropdownMenuItem variant="destructive" onClick={() => onAction("delete", user)}>
           {t("users.delete_menu")}
         </DropdownMenuItem>
       </DropdownMenuContent>
