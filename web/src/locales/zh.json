@@ -752,5 +752,17 @@
   "users.approve": "批准为 User",
   "users.approved_success": "已批准该用户",
   "users.approve_error": "批准失败",
-  "users.load_error": "无法加载用户列表"
+  "users.load_error": "无法加载用户列表",
+  "users.actions_aria": "更多操作",
+  "users.promote": "升为 User",
+  "users.demote": "降级为 Pending",
+  "users.delete_menu": "删除用户",
+  "users.demote_confirm_title": "降级用户",
+  "users.demote_confirm_desc": "确定要将该用户降级为待审用户吗？降级后用户将无法使用平台功能，需重新审核才能恢复。",
+  "users.delete_confirm_title": "删除用户",
+  "users.delete_confirm_desc": "确定要删除该用户吗？该用户的全部 API 密钥将被一并撤销，用户重新登录后将进入待审状态。",
+  "users.demote_success": "用户已降级为待审",
+  "users.demote_error": "降级失败",
+  "users.delete_success": "用户已删除",
+  "users.delete_error": "删除失败"
 }
