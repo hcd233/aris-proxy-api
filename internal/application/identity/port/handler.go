@@ -75,3 +75,25 @@ type ApproveUserCommand struct {
 type ApproveUserHandler interface {
 	Handle(ctx context.Context, cmd ApproveUserCommand) error
 }
+
+// DemoteUserCommand 降级用户命令
+type DemoteUserCommand struct {
+	OperatorID uint // 操作者
+	UserID     uint // 目标用户
+}
+
+// DemoteUserHandler 降级用户命令处理器
+type DemoteUserHandler interface {
+	Handle(ctx context.Context, cmd DemoteUserCommand) error
+}
+
+// DeleteUserCommand 删除用户命令
+type DeleteUserCommand struct {
+	OperatorID uint // 操作者
+	UserID     uint // 目标用户
+}
+
+// DeleteUserHandler 删除用户命令处理器
+type DeleteUserHandler interface {
+	Handle(ctx context.Context, cmd DeleteUserCommand) error
+}
