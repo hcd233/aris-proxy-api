@@ -752,5 +752,17 @@
   "users.approve": "Approve as User",
   "users.approved_success": "User approved",
   "users.approve_error": "Failed to approve",
-  "users.load_error": "Failed to load users"
+  "users.load_error": "Failed to load users",
+  "users.actions_aria": "More actions",
+  "users.promote": "Promote to User",
+  "users.demote": "Demote to Pending",
+  "users.delete_menu": "Delete user",
+  "users.demote_confirm_title": "Demote user",
+  "users.demote_confirm_desc": "Demote this user to pending? They will lose access to platform features and need approval to regain them.",
+  "users.delete_confirm_title": "Delete user",
+  "users.delete_confirm_desc": "Delete this user? All of their API keys will be revoked, and they will enter pending status again after re-login.",
+  "users.demote_success": "User demoted to pending",
+  "users.demote_error": "Failed to demote user",
+  "users.delete_success": "User deleted",
+  "users.delete_error": "Failed to delete user"
 }

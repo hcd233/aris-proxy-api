@@ -92,6 +92,14 @@ export interface UpdateUserReqBody {
   user: User;
 }
 
+export interface DemoteUserReq {
+  id: number;
+}
+
+export interface DeleteUserReq {
+  id: number;
+}
+
 // ─── Session ───────────────────────────────────────────────────────────────────
 
 export interface SessionSummary {
