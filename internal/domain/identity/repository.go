@@ -29,4 +29,6 @@ type UserRepository interface {
 	// ListUsers 分页查询用户（管理员视图）。permission 非空时按权限精确过滤；
 	// param.Query 非空时对 name/email 做模糊匹配。
 	ListUsers(ctx context.Context, param model.CommonParam, permission enum.Permission) ([]*aggregate.User, *model.PageInfo, error)
+	// DeleteCascade 软删除用户及其全部 API Keys（事务保护）
+	DeleteCascade(ctx context.Context, id uint) error
 }

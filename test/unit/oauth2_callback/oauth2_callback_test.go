@@ -182,6 +182,10 @@ func (r *stubUserRepo) ListUsers(ctx context.Context, param model.CommonParam, p
 	return nil, nil, nil
 }
 
+func (r *stubUserRepo) DeleteCascade(ctx context.Context, id uint) error {
+	return nil
+}
+
 // Ensure stubUserRepo implements identity.UserRepository
 var _ identity.UserRepository = (*stubUserRepo)(nil)
 
