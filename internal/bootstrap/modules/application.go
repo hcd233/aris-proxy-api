@@ -74,6 +74,8 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewGetCurrentUserHandler,
 		NewListUsersHandler,
 		NewApproveUserHandler,
+		NewDemoteUserHandler,
+		NewDeleteUserHandler,
 		NewInitiateLoginHandler,
 		NewHandleCallbackHandler,
 		auditquery.NewListAllAuditLogsHandler,
@@ -227,6 +229,14 @@ func NewListUsersHandler(repo identity.UserRepository) identityport.ListUsersHan
 
 func NewApproveUserHandler(repo identity.UserRepository) identityport.ApproveUserHandler {
 	return identitycommand.NewApproveUserHandler(repo)
+}
+
+func NewDemoteUserHandler(repo identity.UserRepository) identityport.DemoteUserHandler {
+	return identitycommand.NewDemoteUserHandler(repo)
+}
+
+func NewDeleteUserHandler(repo identity.UserRepository) identityport.DeleteUserHandler {
+	return identitycommand.NewDeleteUserHandler(repo)
 }
 
 func NewListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {
