@@ -99,3 +99,14 @@ func (r *fakeUserRepo) ListUsers(ctx context.Context, param model.CommonParam, p
 	}
 	return matches[start:end], &model.PageInfo{Page: page, PageSize: pageSize, Total: total}, nil
 }
+
+// DeleteCascade 模拟软删除用户及其 API Keys（内存实现从列表移除用户）
+func (r *fakeUserRepo) DeleteCascade(ctx context.Context, id uint) error {
+	for i, u := range r.users {
+		if u.AggregateID() == id {
+			r.users = append(r.users[:i], r.users[i+1:]...)
+			return nil
+		}
+	}
+	return nil
+}

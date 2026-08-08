@@ -201,3 +201,24 @@ func (r *userRepository) ListUsers(ctx context.Context, param model.CommonParam,
 		return toUserAggregate(m)
 	}), pageInfo, nil
 }
+
+// DeleteCascade 软删除用户及其全部 API Keys（事务保护）
+//
+//	@receiver r *userRepository
+//	@param ctx context.Context
+//	@param id uint
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-08 10:00:00
+func (r *userRepository) DeleteCascade(ctx context.Context, id uint) error {
+	db := r.db.WithContext(ctx)
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := dao.GetProxyAPIKeyDAO().BatchDeleteByField(tx, constant.FieldUserID, []uint{id}); err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete api keys by user id")
+		}
+		if err := r.dao.Delete(tx, &dbmodel.User{ID: id}); err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "delete user")
+		}
+		return nil
+	})
+}
