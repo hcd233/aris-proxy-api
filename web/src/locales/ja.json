@@ -737,7 +737,7 @@
   "permission.pending": "審査待ち",
   "permission.user": "一般ユーザー",
   "permission.admin": "管理者",
-  "users.title": "ユーザー管理",
+  "users.title": "ユーザー",
   "users.subtitle": "登録ユーザーの審査とプラットフォーム権限の管理",
   "users.list_title": "ユーザー一覧",
   "users.permission_filter": "権限で絞り込み",
