@@ -737,7 +737,7 @@
   "permission.pending": "Pending",
   "permission.user": "User",
   "permission.admin": "Admin",
-  "users.title": "User Management",
+  "users.title": "Users",
   "users.subtitle": "Review registered users and manage platform permissions",
   "users.list_title": "Users",
   "users.permission_filter": "Filter by permission",

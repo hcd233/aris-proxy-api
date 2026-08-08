@@ -737,7 +737,7 @@
   "permission.pending": "待审核",
   "permission.user": "普通用户",
   "permission.admin": "管理员",
-  "users.title": "用户管理",
+  "users.title": "用户",
   "users.subtitle": "审核注册用户并管理平台权限",
   "users.list_title": "用户列表",
   "users.permission_filter": "按权限筛选",
