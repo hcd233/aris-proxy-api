@@ -32,12 +32,13 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 	}, anthropicHandler.HandleListModels)
 
 	huma.Register(anthropicGroup, huma.Operation{
-		OperationID: "anthropicCreateMessage",
-		Method:      http.MethodPost,
-		Path:        "/messages",
-		Summary:     "Create a Message",
-		Description: "Send a structured list of input messages and the model will return the next message in the conversation.",
-		Tags:        []string{constant.TagAnthropic},
+		OperationID:  "anthropicCreateMessage",
+		Method:       http.MethodPost,
+		Path:         "/messages",
+		Summary:      "Create a Message",
+		Description:  "Send a structured list of input messages and the model will return the next message in the conversation.",
+		Tags:         []string{constant.TagAnthropic},
+		MaxBodyBytes: constant.MaxLLMProxyBodyBytes,
 		Middlewares: huma.Middlewares{
 			middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM),
 			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
@@ -48,12 +49,13 @@ func initAnthropicRouter(anthropicGroup huma.API, anthropicHandler handler.Anthr
 	}, anthropicHandler.HandleCreateMessage)
 
 	huma.Register(anthropicGroup, huma.Operation{
-		OperationID: "anthropicCountTokens",
-		Method:      http.MethodPost,
-		Path:        "/messages/count_tokens",
-		Summary:     "Count Tokens",
-		Description: "Count the number of tokens in a Message, including tools, images, and documents, without creating it.",
-		Tags:        []string{constant.TagAnthropic},
+		OperationID:  "anthropicCountTokens",
+		Method:       http.MethodPost,
+		Path:         "/messages/count_tokens",
+		Summary:      "Count Tokens",
+		Description:  "Count the number of tokens in a Message, including tools, images, and documents, without creating it.",
+		Tags:         []string{constant.TagAnthropic},
+		MaxBodyBytes: constant.MaxLLMProxyBodyBytes,
 		Security: []map[string][]string{
 			{constant.SecuritySchemeAPIKey: {}},
 		},

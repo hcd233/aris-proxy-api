@@ -32,12 +32,13 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 	}, openaiHandler.HandleListModels)
 
 	huma.Register(openaiGroup, huma.Operation{
-		OperationID: "createChatCompletion",
-		Method:      http.MethodPost,
-		Path:        "/chat/completions",
-		Summary:     "Create chat completion",
-		Description: "Creates a model response for the given chat conversation.",
-		Tags:        []string{"OpenAI"},
+		OperationID:  "createChatCompletion",
+		Method:       http.MethodPost,
+		Path:         "/chat/completions",
+		Summary:      "Create chat completion",
+		Description:  "Creates a model response for the given chat conversation.",
+		Tags:         []string{"OpenAI"},
+		MaxBodyBytes: constant.MaxLLMProxyBodyBytes,
 		Middlewares: huma.Middlewares{
 			middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM),
 			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
@@ -48,12 +49,13 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 	}, openaiHandler.HandleChatCompletion)
 
 	huma.Register(openaiGroup, huma.Operation{
-		OperationID: "createResponse",
-		Method:      http.MethodPost,
-		Path:        "/responses",
-		Summary:     "Create response",
-		Description: "Creates a model response for the given input.",
-		Tags:        []string{"OpenAI"},
+		OperationID:  "createResponse",
+		Method:       http.MethodPost,
+		Path:         "/responses",
+		Summary:      "Create response",
+		Description:  "Creates a model response for the given input.",
+		Tags:         []string{"OpenAI"},
+		MaxBodyBytes: constant.MaxLLMProxyBodyBytes,
 		Middlewares: huma.Middlewares{
 			middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM),
 			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),

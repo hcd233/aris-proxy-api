@@ -61,6 +61,12 @@ const (
 	HTTPSchemeHTTP  = "http"
 	HTTPSchemeHTTPS = "https"
 
+	// MaxLLMProxyBodyBytes LLM 代理路由请求体大小上限（huma Operation.MaxBodyBytes）。
+	// huma 语义：0 为默认 1MB，-1 为不限制。LLM 请求体可能包含长上下文、多模态
+	// base64 内容（单图即可达数 MB），远超默认 1MB 限制，故代理路由显式放开；
+	// 最终限制由上游供应商（OpenAI/Anthropic）按自身策略执行。
+	MaxLLMProxyBodyBytes int64 = -1
+
 	MIMETypeOctetStream = "application/octet-stream"
 
 	CORSAllowOrigins    = "http://localhost:3000"
