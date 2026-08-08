@@ -752,5 +752,17 @@
   "users.approve": "ユーザーとして承認",
   "users.approved_success": "ユーザーを承認しました",
   "users.approve_error": "承認に失敗しました",
-  "users.load_error": "ユーザー一覧を読み込めません"
+  "users.load_error": "ユーザー一覧を読み込めません",
+  "users.actions_aria": "その他の操作",
+  "users.promote": "User に昇格",
+  "users.demote": "Pending に降格",
+  "users.delete_menu": "ユーザーを削除",
+  "users.demote_confirm_title": "ユーザーを降格",
+  "users.demote_confirm_desc": "このユーザーを保留（Pending）に降格しますか？降格後はプラットフォーム機能を利用できず、再審査が必要になります。",
+  "users.delete_confirm_title": "ユーザーを削除",
+  "users.delete_confirm_desc": "このユーザーを削除しますか？すべての API キーが無効化され、再ログイン後は保留状態になります。",
+  "users.demote_success": "ユーザーを保留に降格しました",
+  "users.demote_error": "降格に失敗しました",
+  "users.delete_success": "ユーザーを削除しました",
+  "users.delete_error": "削除に失敗しました"
 }
