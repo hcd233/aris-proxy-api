@@ -78,4 +78,34 @@ func initUserRouter(userGroup huma.API, userHandler handler.UserHandler, db *gor
 			middleware.LimitUserPermissionMiddleware("approveUser", enum.PermissionAdmin),
 		},
 	}, userHandler.HandleApproveUser)
+
+	huma.Register(userGroup, huma.Operation{
+		OperationID: "demoteUser",
+		Method:      http.MethodPost,
+		Path:        "/demote",
+		Summary:     "DemoteUser",
+		Description: "Demote a regular user back to pending (admin only)",
+		Tags:        []string{constant.TagUser},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("demoteUser", enum.PermissionAdmin),
+		},
+	}, userHandler.HandleDemoteUser)
+
+	huma.Register(userGroup, huma.Operation{
+		OperationID: "deleteUser",
+		Method:      http.MethodDelete,
+		Path:        "/delete",
+		Summary:     "DeleteUser",
+		Description: "Soft-delete a user and cascade revoke their API keys (admin only)",
+		Tags:        []string{constant.TagUser},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("deleteUser", enum.PermissionAdmin),
+		},
+	}, userHandler.HandleDeleteUser)
 }
