@@ -1,12 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MoreHorizontal, Users } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { PageInfo, UserItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -27,7 +35,7 @@ import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
-import { Users } from "lucide-react";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -35,7 +43,49 @@ import { useT } from "@/lib/i18n";
 
 const PERMISSIONS = ["pending", "user", "admin"] as const;
 
+type UserAction = "promote" | "demote" | "delete";
+
+interface UserRowActionsProps {
+  user: UserItem;
+  currentUserId: number | null;
+  onAction: (action: UserAction, user: UserItem) => void;
+}
+
+/** 行操作菜单：pending→升为 User；user→降级为 Pending；均可删除；admin 与自己只读 */
+function UserRowActions({ user, currentUserId, onAction }: UserRowActionsProps) {
+  const t = useT();
+  const canOperate = user.permission !== "admin" && user.id !== currentUserId;
+  if (!canOperate) {
+    return null;
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon" aria-label={t("users.actions_aria")} />}
+      >
+        <MoreHorizontal className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-36 p-1">
+        {user.permission === "pending" && (
+          <DropdownMenuItem onSelect={() => onAction("promote", user)}>
+            {t("users.promote")}
+          </DropdownMenuItem>
+        )}
+        {user.permission === "user" && (
+          <DropdownMenuItem onSelect={() => onAction("demote", user)}>
+            {t("users.demote")}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem variant="destructive" onSelect={() => onAction("delete", user)}>
+          {t("users.delete_menu")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export default function UsersPage() {
+  const { user: currentUser } = useAuth();
   const [items, setItems] = useState<UserItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.users.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.users.pageSize", 20);
@@ -43,7 +93,9 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [permission, setPermission] = useState("");
-  const [approving, setApproving] = useState<number | null>(null);
+  const [acting, setActing] = useState<UserAction | null>(null);
+  const [confirmAction, setConfirmAction] = useState<UserAction | null>(null);
+  const [confirmUser, setConfirmUser] = useState<UserItem | null>(null);
   const t = useT();
   const isMobile = useIsMobile();
 
@@ -78,18 +130,54 @@ export default function UsersPage() {
     fetchUsers(1, persistedPageSize, searchQuery || undefined, permission || undefined);
   }, [fetchUsers, persistedPageSize, permission, searchQuery, setPersistedPage]);
 
-  const handleApprove = useCallback(async (user: UserItem) => {
-    setApproving(user.id);
+  const runAction = useCallback(async (action: UserAction, user: UserItem) => {
+    setActing(action);
     try {
-      await api.approveUser(user.id);
-      toast.success(t("users.approved_success"));
+      switch (action) {
+        case "promote":
+          await api.approveUser(user.id);
+          toast.success(t("users.approved_success"));
+          break;
+        case "demote":
+          await api.demoteUser(user.id);
+          toast.success(t("users.demote_success"));
+          break;
+        case "delete":
+          await api.deleteUser(user.id);
+          toast.success(t("users.delete_success"));
+          break;
+      }
       fetchUsers(pageInfo.page, pageInfo.pageSize, searchQuery || undefined, permission || undefined);
     } catch (err) {
-      showErrorToast(err, { title: t("users.approve_error") });
+      showErrorToast(err, {
+        title:
+          action === "promote"
+            ? t("users.approve_error")
+            : action === "demote"
+              ? t("users.demote_error")
+              : t("users.delete_error"),
+      });
     } finally {
-      setApproving(null);
+      setActing(null);
     }
   }, [fetchUsers, pageInfo.page, pageInfo.pageSize, permission, searchQuery, t]);
+
+  const handleAction = useCallback((action: UserAction, user: UserItem) => {
+    if (action === "promote") {
+      runAction("promote", user);
+      return;
+    }
+    setConfirmAction(action);
+    setConfirmUser(user);
+  }, [runAction]);
+
+  const handleConfirm = useCallback(() => {
+    if (confirmAction && confirmUser) {
+      runAction(confirmAction, confirmUser);
+    }
+    setConfirmAction(null);
+    setConfirmUser(null);
+  }, [confirmAction, confirmUser, runAction]);
 
   return (
     <PermissionGuard adminOnly>
@@ -144,15 +232,11 @@ export default function UsersPage() {
                               {t(`permission.${user.permission}`)}
                             </p>
                           </div>
-                          {user.permission === "pending" && (
-                            <Button
-                              size="sm"
-                              disabled={approving === user.id}
-                              onClick={() => handleApprove(user)}
-                            >
-                              {approving === user.id ? t("common.processing") : t("users.approve")}
-                            </Button>
-                          )}
+                          <UserRowActions
+                            user={user}
+                            currentUserId={currentUser?.id ?? null}
+                            onAction={handleAction}
+                          />
                         </div>
                       </div>
                     ))}
@@ -166,7 +250,7 @@ export default function UsersPage() {
                         <TableHead>{t("users.permission")}</TableHead>
                         <TableHead>{t("users.created_at")}</TableHead>
                         <TableHead>{t("users.last_login")}</TableHead>
-                        <TableHead className="w-32 text-right">{t("common.actions")}</TableHead>
+                        <TableHead className="w-14 text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -182,17 +266,11 @@ export default function UsersPage() {
                             {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "—"}
                           </TableCell>
                           <TableCell className="text-right">
-                            {user.permission === "pending" ? (
-                              <Button
-                                size="sm"
-                                disabled={approving === user.id}
-                                onClick={() => handleApprove(user)}
-                              >
-                                {approving === user.id ? t("common.processing") : t("users.approve")}
-                              </Button>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
+                            <UserRowActions
+                              user={user}
+                              currentUserId={currentUser?.id ?? null}
+                              onAction={handleAction}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -208,6 +286,22 @@ export default function UsersPage() {
             )}
           </CardContent>
         </Card>
+
+        <DeleteConfirmDialog
+          open={confirmAction !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmAction(null);
+              setConfirmUser(null);
+            }
+          }}
+          title={confirmAction === "demote" ? t("users.demote_confirm_title") : t("users.delete_confirm_title")}
+          description={confirmAction === "demote" ? t("users.demote_confirm_desc") : t("users.delete_confirm_desc")}
+          confirmLabel={confirmAction === "demote" ? t("users.demote") : t("common.delete")}
+          loadingLabel={t("common.processing")}
+          loading={acting !== null}
+          onConfirm={handleConfirm}
+        />
       </div>
     </PermissionGuard>
   );

@@ -278,6 +278,14 @@ class ApiClient {
     return this.request<CommonRsp>(`/api/v1/user/approve?id=${id}`, { method: "POST" });
   }
 
+  async demoteUser(id: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/user/demote?id=${id}`, { method: "POST" });
+  }
+
+  async deleteUser(id: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/user/delete?id=${id}`, { method: "DELETE" });
+  }
+
   // ─── Session (JWT auth) ────────────────────────────────────────────────────
 
   async listSessions(params: {

@@ -26,6 +26,8 @@ type UserHandler interface {
 	HandleUpdateUser(ctx context.Context, req *dto.UpdateUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleListUsers(ctx context.Context, req *dto.ListUsersReq) (*dto.HTTPResponse[*dto.ListUsersRsp], error)
 	HandleApproveUser(ctx context.Context, req *dto.ApproveUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleDemoteUser(ctx context.Context, req *dto.DemoteUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleDeleteUser(ctx context.Context, req *dto.DeleteUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
 // UserDependencies UserHandler 依赖项（用于依赖注入）
@@ -37,6 +39,8 @@ type UserDependencies struct {
 	UpdateProfile  port.UpdateProfileHandler
 	ListUsers      port.ListUsersHandler
 	ApproveUser    port.ApproveUserHandler
+	DemoteUser     port.DemoteUserHandler
+	DeleteUser     port.DeleteUserHandler
 }
 
 type userHandler struct {
@@ -44,6 +48,8 @@ type userHandler struct {
 	updateProfile  port.UpdateProfileHandler
 	listUsers      port.ListUsersHandler
 	approveUser    port.ApproveUserHandler
+	demoteUser     port.DemoteUserHandler
+	deleteUser     port.DeleteUserHandler
 }
 
 // NewUserHandler 创建用户处理器
@@ -58,6 +64,8 @@ func NewUserHandler(deps UserDependencies) UserHandler {
 		updateProfile:  deps.UpdateProfile,
 		listUsers:      deps.ListUsers,
 		approveUser:    deps.ApproveUser,
+		demoteUser:     deps.DemoteUser,
+		deleteUser:     deps.DeleteUser,
 	}
 }
 
@@ -178,6 +186,48 @@ func (h *userHandler) HandleApproveUser(ctx context.Context, req *dto.ApproveUse
 		UserID:     req.ID,
 	}); err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Approve user failed", zap.Error(err), zap.Uint("targetID", req.ID))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	return apiutil.WrapHTTPResponse(&dto.EmptyRsp{}, nil)
+}
+
+// HandleDemoteUser 降级用户：user → pending（admin）
+//
+//	@receiver h *userHandler
+//	@param ctx context.Context
+//	@param req *dto.DemoteUserReq
+//	@return *dto.HTTPResponse[*dto.EmptyRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-08 10:00:00
+func (h *userHandler) HandleDemoteUser(ctx context.Context, req *dto.DemoteUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	operatorID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	if err := h.demoteUser.Handle(ctx, port.DemoteUserCommand{
+		OperatorID: operatorID,
+		UserID:     req.ID,
+	}); err != nil {
+		logger.WithCtx(ctx).Error("[UserHandler] Demote user failed", zap.Error(err), zap.Uint("targetID", req.ID))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	return apiutil.WrapHTTPResponse(&dto.EmptyRsp{}, nil)
+}
+
+// HandleDeleteUser 删除用户（admin）
+//
+//	@receiver h *userHandler
+//	@param ctx context.Context
+//	@param req *dto.DeleteUserReq
+//	@return *dto.HTTPResponse[*dto.EmptyRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-08 10:00:00
+func (h *userHandler) HandleDeleteUser(ctx context.Context, req *dto.DeleteUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	operatorID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	if err := h.deleteUser.Handle(ctx, port.DeleteUserCommand{
+		OperatorID: operatorID,
+		UserID:     req.ID,
+	}); err != nil {
+		logger.WithCtx(ctx).Error("[UserHandler] Delete user failed", zap.Error(err), zap.Uint("targetID", req.ID))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(&dto.EmptyRsp{}, nil)

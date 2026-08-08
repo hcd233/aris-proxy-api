@@ -82,3 +82,13 @@ type UserItem struct {
 type ApproveUserReq struct {
 	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
 }
+
+// DemoteUserReq 降级用户请求（user → pending，admin）
+type DemoteUserReq struct {
+	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
+}
+
+// DeleteUserReq 删除用户请求（admin）
+type DeleteUserReq struct {
+	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
+}
