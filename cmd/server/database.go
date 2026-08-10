@@ -23,9 +23,12 @@ var migrateDatabaseCmd = &cobra.Command{
 	},
 }
 
-// runMigrate 执行数据库结构迁移：仅 AutoMigrate 建表/建列。
+// runMigrate 执行数据库结构迁移：AutoMigrate 建表/建列/建索引，随后回填存量数据。
+//
+//	回填必须在 AutoMigrate 之后，因为它依赖新建的唯一索引来识别冲突。
 func runMigrate(ctx context.Context) {
 	lo.Must0(database.AutoMigrate(ctx))
+	lo.Must0(database.BackfillToolChecksums(ctx))
 }
 
 func init() {
