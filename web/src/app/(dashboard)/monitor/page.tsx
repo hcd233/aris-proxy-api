@@ -109,7 +109,10 @@ function mergeInstances(
 }
 
 // podChartData 把各 pod 的同一指标曲线合并为同一时间轴上的多列（列名 = pod 名）。
-function podChartData(instances: Record<string, InstanceState>, metric: keyof InstanceState): Array<Record<string, number>> {
+function podChartData(
+  instances: Record<string, InstanceState>,
+  metric: keyof InstanceState,
+): Array<Record<string, number>> {
   const rows = new Map<number, Record<string, number>>();
   for (const [pod, inst] of Object.entries(instances)) {
     for (const p of inst[metric]) {
@@ -189,35 +192,32 @@ export default function MonitorPage() {
   const [lastUpdated, setLastUpdated] = useState<string>("--:--:--");
   const sinceRef = useRef(0);
 
-  const poll = useCallback(
-    async (rangeKey: RangeKey) => {
-      try {
-        const rsp = await api.getRuntimeMetrics({ range: rangeKey, since: sinceRef.current });
-        const s = rsp.series ?? {};
-        const now = Math.floor(Date.now() / 1000);
-        const cutoff = now - RANGE_WINDOW_SEC[rangeKey];
+  const poll = useCallback(async (rangeKey: RangeKey) => {
+    try {
+      const rsp = await api.getRuntimeMetrics({ range: rangeKey, since: sinceRef.current });
+      const s = rsp.series ?? {};
+      const now = Math.floor(Date.now() / 1000);
+      const cutoff = now - RANGE_WINDOW_SEC[rangeKey];
 
-        setState((prev) => ({
-          qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
-          p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
-          sseActive: mergeSSE(prev.sseActive, s.sseActive ?? {}, cutoff),
-          tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
-          tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
-          successRate: mergePoints(prev.successRate, s.successRate ?? [], cutoff),
-          instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
-          latestTime: rsp.latestTime,
-        }));
+      setState((prev) => ({
+        qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
+        p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
+        sseActive: mergeSSE(prev.sseActive, s.sseActive ?? {}, cutoff),
+        tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
+        tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
+        successRate: mergePoints(prev.successRate, s.successRate ?? [], cutoff),
+        instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
+        latestTime: rsp.latestTime,
+      }));
 
-        if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
-        setLastUpdated(new Date().toLocaleTimeString([], { hour12: false }));
-      } catch {
-        // silently ignore polling errors
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
+      if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
+      setLastUpdated(new Date().toLocaleTimeString([], { hour12: false }));
+    } catch {
+      // silently ignore polling errors
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect -- range 切换需重置时序状态并立即触发首次拉取 */
   useEffect(() => {
@@ -237,7 +237,9 @@ export default function MonitorPage() {
     label: prov,
     color: seriesColors[i % seriesColors.length],
   }));
-  const sseTotal = Math.round(sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0));
+  const sseTotal = Math.round(
+    sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0),
+  );
   const pods = Object.keys(state.instances).sort();
   const podSeries = pods.map((pod, i) => ({
     key: pod,
@@ -295,20 +297,93 @@ export default function MonitorPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <RuntimeGaugeCard label={t("monitor.goroutines")} value={goroutinesTotal} icon={<Activity className="size-4" />} tone="primary" loading={loading} />
-        <RuntimeGaugeCard label={t("monitor.heap")} value={heapTotal} unit="MB" icon={<MemoryStick className="size-4" />} tone="blue" loading={loading} />
-        <RuntimeGaugeCard label={t("monitor.sse_active")} value={sseTotal} icon={<Radio className="size-4" />} tone="violet" loading={loading} />
+        <RuntimeGaugeCard
+          label={t("monitor.goroutines")}
+          value={goroutinesTotal}
+          icon={<Activity className="size-4" />}
+          tone="primary"
+          loading={loading}
+        />
+        <RuntimeGaugeCard
+          label={t("monitor.heap")}
+          value={heapTotal}
+          unit="MB"
+          icon={<MemoryStick className="size-4" />}
+          tone="blue"
+          loading={loading}
+        />
+        <RuntimeGaugeCard
+          label={t("monitor.sse_active")}
+          value={sseTotal}
+          icon={<Radio className="size-4" />}
+          tone="violet"
+          loading={loading}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <RuntimeChart title={t("monitor.request_qps")} data={toChartData(state.qps)} series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]} unit=" req/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.request_tps")} data={tpsData} series={tpsSeries} unit=" tok/s" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.sse_active")} data={sseChartData(state.sseActive)} series={sseSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.cpu_usage")} data={podChartData(state.instances, "cpuPercent")} series={podSeries} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.heap_memory")} data={podChartData(state.instances, "heapMB")} series={podSeries} unit=" MB" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.goroutines_chart")} data={podChartData(state.instances, "goroutines")} series={podSeries} rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.success_rate")} data={toChartData(state.successRate)} series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]} unit="%" rangeKey={range} emptyLabel={t("monitor.collecting")} />
-        <RuntimeChart title={t("monitor.latency_p95")} data={toChartData(state.p95Ms)} series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]} unit=" ms" rangeKey={range} emptyLabel={t("monitor.collecting")} />
+        <RuntimeChart
+          title={t("monitor.request_qps")}
+          data={toChartData(state.qps)}
+          series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]}
+          unit=" req/s"
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
+        <RuntimeChart
+          title={t("monitor.request_tps")}
+          data={tpsData}
+          series={tpsSeries}
+          unit=" tok/s"
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
+        <RuntimeChart
+          title={t("monitor.sse_active")}
+          data={sseChartData(state.sseActive)}
+          series={sseSeries}
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
+        <RuntimeChart
+          title={t("monitor.cpu_usage")}
+          data={podChartData(state.instances, "cpuPercent")}
+          series={podSeries}
+          unit="%"
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
+        <RuntimeChart
+          title={t("monitor.heap_memory")}
+          data={podChartData(state.instances, "heapMB")}
+          series={podSeries}
+          unit=" MB"
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
+        <RuntimeChart
+          title={t("monitor.goroutines_chart")}
+          data={podChartData(state.instances, "goroutines")}
+          series={podSeries}
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
+        <RuntimeChart
+          title={t("monitor.success_rate")}
+          data={toChartData(state.successRate)}
+          series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]}
+          unit="%"
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
+        <RuntimeChart
+          title={t("monitor.latency_p95")}
+          data={toChartData(state.p95Ms)}
+          series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]}
+          unit=" ms"
+          rangeKey={range}
+          emptyLabel={t("monitor.collecting")}
+        />
       </div>
     </div>
   );

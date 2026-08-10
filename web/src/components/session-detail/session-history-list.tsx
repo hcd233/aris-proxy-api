@@ -17,10 +17,7 @@ export interface SessionHistoryListProps {
   onSelect: (sessionId: number) => void;
 }
 
-export function SessionHistoryList({
-  activeSessionId,
-  onSelect,
-}: SessionHistoryListProps) {
+export function SessionHistoryList({ activeSessionId, onSelect }: SessionHistoryListProps) {
   const { t, locale } = useI18n();
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
@@ -112,26 +109,25 @@ export function SessionHistoryList({
                   className={cn(
                     "w-full rounded-md px-3 py-2 text-left transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
-                    session.id === activeSessionId &&
-                      "bg-accent text-accent-foreground",
+                    session.id === activeSessionId && "bg-accent text-accent-foreground",
                   )}
                 >
                   <p className="line-clamp-1 text-sm font-medium">
-                    {session.summary || t("session_history.session_label").replace("{id}", String(session.id))}
+                    {session.summary ||
+                      t("session_history.session_label").replace("{id}", String(session.id))}
                   </p>
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                    {t("session_history.message_count").replace("{count}", String(session.messageCount)).replace("{s}", session.messageCount === 1 ? "" : "s")} ·{" "}
-                    {formatRelativeTime(session.updatedAt, locale)}
+                    {t("session_history.message_count")
+                      .replace("{count}", String(session.messageCount))
+                      .replace("{s}", session.messageCount === 1 ? "" : "s")}{" "}
+                    · {formatRelativeTime(session.updatedAt, locale)}
                   </p>
                 </button>
               </li>
             ))}
           </ul>
           {hasMore && (
-            <div
-              ref={sentinelRef}
-              className="flex justify-center py-3"
-            >
+            <div ref={sentinelRef} className="flex justify-center py-3">
               <Skeleton className="h-4 w-24" />
             </div>
           )}

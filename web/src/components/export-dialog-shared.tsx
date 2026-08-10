@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type Ref,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 import type { ModelItem } from "@/lib/types";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
@@ -47,17 +39,12 @@ export function modelCapabilities(model: ModelItem): string[] {
 }
 
 // 按 alias / upstreamModel 过滤模型列表
-export function useFilteredModels(
-  models: ModelItem[],
-  search: string
-): ModelItem[] {
+export function useFilteredModels(models: ModelItem[], search: string): ModelItem[] {
   return useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return models;
     return models.filter(
-      (m) =>
-        m.alias.toLowerCase().includes(q) ||
-        m.upstreamModel.toLowerCase().includes(q)
+      (m) => m.alias.toLowerCase().includes(q) || m.upstreamModel.toLowerCase().includes(q),
     );
   }, [models, search]);
 }
@@ -123,14 +110,8 @@ export function ExportDialogShell({
   const t = useT();
   const [copied, setCopied] = useState(false);
 
-  const highlighted = useMemo(
-    () => (script ? highlightBash(script) : ""),
-    [script]
-  );
-  const lineCount = useMemo(
-    () => (script ? script.split("\n").length : 0),
-    [script]
-  );
+  const highlighted = useMemo(() => (script ? highlightBash(script) : ""), [script]);
+  const lineCount = useMemo(() => (script ? script.split("\n").length : 0), [script]);
 
   // 统一拦截所有关闭路径（Esc / 外部点击 / 关闭按钮），关闭时重置复制态
   const handleOpenChange = useCallback(
@@ -138,7 +119,7 @@ export function ExportDialogShell({
       if (!nextOpen) setCopied(false);
       onOpenChange(nextOpen);
     },
-    [onOpenChange]
+    [onOpenChange],
   );
 
   const handleCopy = useCallback(async () => {
@@ -167,9 +148,7 @@ export function ExportDialogShell({
             {icon}
           </span>
           <div className="flex flex-col gap-0.5 min-w-0">
-            <DialogTitle className="font-display text-base leading-tight">
-              {title}
-            </DialogTitle>
+            <DialogTitle className="font-display text-base leading-tight">{title}</DialogTitle>
             <DialogDescription className="min-h-[2.5rem] text-xs leading-snug">
               {description}
             </DialogDescription>
@@ -198,9 +177,7 @@ export function ExportDialogShell({
             <div className="shrink-0 flex items-center justify-between gap-3 border-b border-white/[0.07] bg-[#30302E] px-4 py-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <Terminal className="size-3.5 shrink-0 text-white/35" />
-                <span className="truncate font-mono text-xs text-white/50">
-                  {fileName}
-                </span>
+                <span className="truncate font-mono text-xs text-white/50">{fileName}</span>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 {showPreview && (
@@ -243,9 +220,7 @@ export function ExportDialogShell({
                   <span className="flex size-14 items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/[0.06]">
                     <X className="size-7 text-destructive/60" />
                   </span>
-                  <p className="max-w-sm text-sm font-medium text-white/55">
-                    {errorMessage}
-                  </p>
+                  <p className="max-w-sm text-sm font-medium text-white/55">{errorMessage}</p>
                 </div>
               ) : (
                 <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
@@ -253,9 +228,7 @@ export function ExportDialogShell({
                     {emptyIcon}
                   </span>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-white/45">
-                      {emptyTitle}
-                    </p>
+                    <p className="text-sm font-medium text-white/45">{emptyTitle}</p>
                     <p className="text-xs text-white/25">{emptyHint}</p>
                   </div>
                 </div>
@@ -288,13 +261,7 @@ interface ExportFieldProps {
   placeholder?: string;
 }
 
-export function ExportField({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-}: ExportFieldProps) {
+export function ExportField({ id, label, value, onChange, placeholder }: ExportFieldProps) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-xs font-medium text-foreground/80">
@@ -354,11 +321,7 @@ interface ExportModelSearchProps {
   inputRef?: Ref<HTMLInputElement>;
 }
 
-export function ExportModelSearch({
-  value,
-  onChange,
-  inputRef,
-}: ExportModelSearchProps) {
+export function ExportModelSearch({ value, onChange, inputRef }: ExportModelSearchProps) {
   const t = useT();
   return (
     <div className="relative">
@@ -445,9 +408,7 @@ interface ExportModelPickerMultiProps extends ExportModelPickerBaseProps {
   clearAllLabel: string;
 }
 
-type ExportModelPickerProps =
-  | ExportModelPickerSingleProps
-  | ExportModelPickerMultiProps;
+type ExportModelPickerProps = ExportModelPickerSingleProps | ExportModelPickerMultiProps;
 
 export function ExportModelPicker(props: ExportModelPickerProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -467,14 +428,7 @@ export function ExportModelPicker(props: ExportModelPickerProps) {
   const filteredModels = useFilteredModels(props.models, search);
 
   if (props.mode === "single") {
-    const {
-      title,
-      selectedId,
-      onSelectedIdChange,
-      clearLabel,
-      outputFallback,
-      children,
-    } = props;
+    const { title, selectedId, onSelectedIdChange, clearLabel, outputFallback, children } = props;
     return (
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -485,11 +439,7 @@ export function ExportModelPicker(props: ExportModelPickerProps) {
             </ExportTextButton>
           )}
         </div>
-        <ExportModelSearch
-          value={search}
-          onChange={setSearch}
-          inputRef={searchInputRef}
-        />
+        <ExportModelSearch value={search} onChange={setSearch} inputRef={searchInputRef} />
         <div className="space-y-1">
           {filteredModels.length === 0 ? (
             <ExportModelEmpty searching={search.trim().length > 0} />
@@ -521,8 +471,7 @@ export function ExportModelPicker(props: ExportModelPickerProps) {
   } = props;
 
   const allFilteredSelected =
-    filteredModels.length > 0 &&
-    filteredModels.every((model) => selectedIds.has(model.id));
+    filteredModels.length > 0 && filteredModels.every((model) => selectedIds.has(model.id));
 
   const handleToggle = (id: number) => {
     const next = new Set(selectedIds);
@@ -537,9 +486,7 @@ export function ExportModelPicker(props: ExportModelPickerProps) {
   const handleToggleAll = () => {
     const next = new Set(selectedIds);
     const everySelected = filteredModels.every((model) => next.has(model.id));
-    filteredModels.forEach((model) =>
-      everySelected ? next.delete(model.id) : next.add(model.id)
-    );
+    filteredModels.forEach((model) => (everySelected ? next.delete(model.id) : next.add(model.id)));
     onSelectedIdsChange(next);
   };
 
@@ -548,9 +495,7 @@ export function ExportModelPicker(props: ExportModelPickerProps) {
       <div className="flex items-center justify-between">
         <ExportSectionTitle>
           {title}
-          {selectedIds.size > 0 && (
-            <ExportSelectionBadge count={selectedIds.size} />
-          )}
+          {selectedIds.size > 0 && <ExportSelectionBadge count={selectedIds.size} />}
         </ExportSectionTitle>
         {filteredModels.length > 0 && (
           <ExportTextButton onClick={handleToggleAll}>
@@ -558,11 +503,7 @@ export function ExportModelPicker(props: ExportModelPickerProps) {
           </ExportTextButton>
         )}
       </div>
-      <ExportModelSearch
-        value={search}
-        onChange={setSearch}
-        inputRef={searchInputRef}
-      />
+      <ExportModelSearch value={search} onChange={setSearch} inputRef={searchInputRef} />
       <div className="space-y-1">
         {filteredModels.length === 0 ? (
           <ExportModelEmpty searching={search.trim().length > 0} />
@@ -625,9 +566,7 @@ export function ExportModelRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-medium text-foreground">
-            {model.alias}
-          </span>
+          <span className="truncate text-sm font-medium text-foreground">{model.alias}</span>
           {badge}
         </span>
         <span className="truncate font-mono text-[11px] text-muted-foreground/70">

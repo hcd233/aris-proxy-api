@@ -148,29 +148,32 @@ export function LineChartCard<T>({
     fetchDataRef.current = fetchDataProp;
   }, [fetchDataProp]);
 
-  const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(false);
-    try {
-      const { startTime, endTime, granularity } = computeRange(
-        range ?? timeRange,
-        cs ?? customStart,
-        ce ?? customEnd,
-      );
-      setRangeState({ startTime, endTime, granularity });
-      const rsp = await fetchDataRef.current({ startTime, endTime, granularity });
-      if (requestId !== requestIdRef.current) return;
-      setData(rsp.data ?? []);
-    } catch {
-      if (requestId !== requestIdRef.current) return;
-      setError(true);
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
+  const fetchData = useCallback(
+    async (range?: TimeRangeKey, cs?: string, ce?: string) => {
+      const requestId = ++requestIdRef.current;
+      setLoading(true);
+      setError(false);
+      try {
+        const { startTime, endTime, granularity } = computeRange(
+          range ?? timeRange,
+          cs ?? customStart,
+          ce ?? customEnd,
+        );
+        setRangeState({ startTime, endTime, granularity });
+        const rsp = await fetchDataRef.current({ startTime, endTime, granularity });
+        if (requestId !== requestIdRef.current) return;
+        setData(rsp.data ?? []);
+      } catch {
+        if (requestId !== requestIdRef.current) return;
+        setError(true);
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
-    }
-  }, [timeRange, customStart, customEnd]);
+    },
+    [timeRange, customStart, customEnd],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects */
   useEffect(() => {
@@ -178,7 +181,10 @@ export function LineChartCard<T>({
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const { rows, series } = useMemo(() => toChart(data, seriesColors), [data, seriesColors, toChart]);
+  const { rows, series } = useMemo(
+    () => toChart(data, seriesColors),
+    [data, seriesColors, toChart],
+  );
 
   const chartConfig = useMemo(
     () => Object.fromEntries(series.map((s) => [s.key, { label: s.label, color: s.color }])),
@@ -189,15 +195,13 @@ export function LineChartCard<T>({
   const isEmpty = rows.length === 0;
   const chartData =
     isEmpty && rangeState
-      ? generateEmptyTimeline(
-          rangeState.startTime,
-          rangeState.endTime,
-          rangeState.granularity,
-        ).map((time) => {
-          const row: Record<string, unknown> = { time, __empty: 0 };
-          for (const s of series) row[s.key] = 0;
-          return row;
-        })
+      ? generateEmptyTimeline(rangeState.startTime, rangeState.endTime, rangeState.granularity).map(
+          (time) => {
+            const row: Record<string, unknown> = { time, __empty: 0 };
+            for (const s of series) row[s.key] = 0;
+            return row;
+          },
+        )
       : rows;
 
   const yDomain = isEmpty ? (yAxis?.emptyDomain ?? [0, 1]) : (yAxis?.domain ?? [0, "auto"]);
@@ -250,10 +254,7 @@ export function LineChartCard<T>({
       tickFormatter={yAxis?.tickFormatter}
       allowDataOverflow={false}
     />,
-    <ChartTooltip
-      key="tooltip"
-      content={<ChartTooltipContent formatter={tooltipFormatter} />}
-    />,
+    <ChartTooltip key="tooltip" content={<ChartTooltipContent formatter={tooltipFormatter} />} />,
     <ChartLegend
       key="legend"
       content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />}

@@ -20,7 +20,7 @@ function generateScript(
   providerId: string,
   baseUrl: string,
   apiKey: string,
-  selectedModel: ModelItem | null
+  selectedModel: ModelItem | null,
 ): string {
   if (!selectedModel) return "";
 
@@ -163,29 +163,25 @@ print(f"Codex configured: provider '{provider_id}' with model '{model}'")
 PYEOF`;
 }
 
-export default function ExportCodexDialog({
-  open,
-  onOpenChange,
-  models,
-}: ExportCodexDialogProps) {
+export default function ExportCodexDialog({ open, onOpenChange, models }: ExportCodexDialogProps) {
   const t = useT();
 
   const [providerId, setProviderId] = useState("aris-proxy");
   // lazy initializer：对话框内容仅在打开时挂载，SSR 与客户端初始渲染无差异
   const [baseUrl, setBaseUrl] = useState(() =>
-    typeof window === "undefined" ? "" : `${window.location.origin}/api/openai/v1`
+    typeof window === "undefined" ? "" : `${window.location.origin}/api/openai/v1`,
   );
   const [apiKey, setApiKey] = useState("YOUR_API_KEY");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const selectedModel = useMemo(
     () => models.find((m) => m.id === selectedId) ?? null,
-    [models, selectedId]
+    [models, selectedId],
   );
 
   const script = useMemo(
     () => generateScript(providerId, baseUrl, apiKey, selectedModel),
-    [providerId, baseUrl, apiKey, selectedModel]
+    [providerId, baseUrl, apiKey, selectedModel],
   );
 
   // 统一拦截所有关闭路径，关闭时重置选择态（搜索框状态由 ExportModelPicker 内部管理）
@@ -194,7 +190,7 @@ export default function ExportCodexDialog({
       if (!nextOpen) setSelectedId(null);
       onOpenChange(nextOpen);
     },
-    [onOpenChange]
+    [onOpenChange],
   );
 
   return (

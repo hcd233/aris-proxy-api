@@ -29,14 +29,9 @@ interface AssistantMessageProps {
   toolResultsByID: Record<string, ToolResultInfo>;
 }
 
-export function AssistantMessage({
-  message,
-  index,
-  toolResultsByID,
-}: AssistantMessageProps) {
+export function AssistantMessage({ message, index, toolResultsByID }: AssistantMessageProps) {
   const t = useT();
-  const { role, content, tool_calls, reasoning_content, refusal } =
-    message.message;
+  const { role, content, tool_calls, reasoning_content, refusal } = message.message;
   const { modelId } = message;
   const { text, parts } = extractContent(content);
   const isAssistant = role === "assistant";
@@ -60,14 +55,12 @@ export function AssistantMessage({
         <div
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-full",
-            isAssistant
-              ? "bg-primary/15 text-primary"
-              : "bg-muted text-muted-foreground",
+            isAssistant ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
           )}
         >
           {isAssistant ? (
             modelId ? (
-              modelIcon(modelId) ?? <Sparkles className="size-3.5" />
+              (modelIcon(modelId) ?? <Sparkles className="size-3.5" />)
             ) : (
               <Sparkles className="size-3.5" />
             )
@@ -75,11 +68,7 @@ export function AssistantMessage({
             <ShieldAlert className="size-3.5" />
           )}
         </div>
-        {time && (
-          <span className="text-[9px] leading-none text-muted-foreground/60">
-            {time}
-          </span>
-        )}
+        {time && <span className="text-[9px] leading-none text-muted-foreground/60">{time}</span>}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -88,21 +77,14 @@ export function AssistantMessage({
         <div className="text-[15px] leading-[1.6] text-foreground">
           {parts.length > 0 && <MultimodalParts parts={parts} />}
           {text && <MarkdownLite text={text} />}
-          {!text &&
-            parts.length === 0 &&
-            !tool_calls?.length &&
-            !refusal && (
-              <span className="text-muted-foreground/60">—</span>
-            )}
+          {!text && parts.length === 0 && !tool_calls?.length && !refusal && (
+            <span className="text-muted-foreground/60">—</span>
+          )}
         </div>
 
         {text && (
           <div className="-ml-1.5 mt-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
-            <CopyButton
-              value={text}
-              variant="icon"
-              ariaLabel={t("chat_message.copy_aria")}
-            />
+            <CopyButton value={text} variant="icon" ariaLabel={t("chat_message.copy_aria")} />
           </div>
         )}
 
@@ -114,11 +96,7 @@ export function AssistantMessage({
               <ToolCallCard
                 key={call.id ?? i}
                 call={call}
-                result={
-                  call.id
-                    ? lookupToolResult(toolResultsByID, call.id)
-                    : undefined
-                }
+                result={call.id ? lookupToolResult(toolResultsByID, call.id) : undefined}
               />
             ))}
           </div>

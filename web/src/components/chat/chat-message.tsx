@@ -26,16 +26,10 @@ interface ChatMessageProps {
   toolResultsByID: Record<string, ToolResultInfo>;
 }
 
-export function ChatMessage({
-  message,
-  index,
-  toolResultsByID,
-}: ChatMessageProps) {
+export function ChatMessage({ message, index, toolResultsByID }: ChatMessageProps) {
   const { role } = message.message;
 
-  const isToolResult =
-    role === "tool" ||
-    (role === "user" && !!message.message.tool_call_id);
+  const isToolResult = role === "tool" || (role === "user" && !!message.message.tool_call_id);
   if (isToolResult) return null;
 
   if (role === "user") {
@@ -54,11 +48,5 @@ export function ChatMessage({
     return <SystemMessage text={text} time={time} index={index} />;
   }
 
-  return (
-    <AssistantMessage
-      message={message}
-      index={index}
-      toolResultsByID={toolResultsByID}
-    />
-  );
+  return <AssistantMessage message={message} index={index} toolResultsByID={toolResultsByID} />;
 }
