@@ -43,8 +43,15 @@ const emptyForm = { word: "" };
 export default function BlockPage() {
   const [items, setItems] = useState<BlockedItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.blocked.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.blocked.pageSize", 20);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
+    "dashboard.blocked.pageSize",
+    20,
+  );
+  const [pageInfo, setPageInfo] = useState<PageInfo>({
+    page: persistedPage,
+    pageSize: persistedPageSize,
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const t = useT();
@@ -53,26 +60,31 @@ export default function BlockPage() {
   const [saving, setSaving] = useState(false);
   const isMobile = useIsMobile();
 
-  const fetchItems = useCallback(async (page: number, pageSize: number, query?: string) => {
-    setLoading(true);
-    try {
-      const safeSize = pageSize > 0 ? pageSize : 20;
-      const rsp = await api.listBlocked(page, safeSize, query);
-      setItems(rsp.blocked ?? []);
-      if (rsp.pageInfo) {
-        setPageInfo(rsp.pageInfo);
-        setPersistedPage(rsp.pageInfo.page);
-        setPersistedPageSize(rsp.pageInfo.pageSize);
+  const fetchItems = useCallback(
+    async (page: number, pageSize: number, query?: string) => {
+      setLoading(true);
+      try {
+        const safeSize = pageSize > 0 ? pageSize : 20;
+        const rsp = await api.listBlocked(page, safeSize, query);
+        setItems(rsp.blocked ?? []);
+        if (rsp.pageInfo) {
+          setPageInfo(rsp.pageInfo);
+          setPersistedPage(rsp.pageInfo.page);
+          setPersistedPageSize(rsp.pageInfo.pageSize);
+        }
+      } catch (err) {
+        showErrorToast(err, { title: t("blocked.load_error") });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      showErrorToast(err, { title: t("blocked.load_error") });
-    } finally {
-      setLoading(false);
-    }
-  }, [setPersistedPage, setPersistedPageSize, t]);
+    },
+    [setPersistedPage, setPersistedPageSize, t],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch list when the persisted page or size changes */
-  useEffect(() => { fetchItems(persistedPage, persistedPageSize); }, [fetchItems, persistedPage, persistedPageSize]);
+  useEffect(() => {
+    fetchItems(persistedPage, persistedPageSize);
+  }, [fetchItems, persistedPage, persistedPageSize]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSearch = useCallback(() => {
@@ -113,7 +125,12 @@ export default function BlockPage() {
           title={t("blocked.title")}
           description={t("blocked.subtitle")}
           actions={
-            <Button onClick={() => { setForm(emptyForm); setDialogOpen(true); }}>
+            <Button
+              onClick={() => {
+                setForm(emptyForm);
+                setDialogOpen(true);
+              }}
+            >
               <Plus /> {t("blocked.create")}
             </Button>
           }
@@ -135,7 +152,10 @@ export default function BlockPage() {
             {loading ? (
               <TableSkeleton />
             ) : items.length === 0 ? (
-              <ListEmptyState icon={<Ban className="mb-3 size-10 text-muted-foreground/40" />} message={t("blocked.no_words")} />
+              <ListEmptyState
+                icon={<Ban className="mb-3 size-10 text-muted-foreground/40" />}
+                message={t("blocked.no_words")}
+              />
             ) : (
               <>
                 {isMobile ? (
@@ -145,7 +165,9 @@ export default function BlockPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">{item.word}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">{t("blocked.hit_count")}: {item.hitCount}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {t("blocked.hit_count")}: {item.hitCount}
+                            </p>
                           </div>
                           <DeleteButton
                             label={t("common.delete")}
@@ -172,7 +194,9 @@ export default function BlockPage() {
                           <TableCell className="text-muted-foreground">{item.id}</TableCell>
                           <TableCell className="font-medium">{item.word}</TableCell>
                           <TableCell>{item.hitCount}</TableCell>
-                          <TableCell className="text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </TableCell>
                           <TableCell>
                             <DeleteButton
                               label={t("common.delete")}
@@ -186,7 +210,9 @@ export default function BlockPage() {
                 )}
                 <PaginationBar
                   pageInfo={pageInfo}
-                  onChange={(page, pageSize) => fetchItems(page, pageSize, searchQuery || undefined)}
+                  onChange={(page, pageSize) =>
+                    fetchItems(page, pageSize, searchQuery || undefined)
+                  }
                   totalLabel={t("pagination.items")}
                 />
               </>
@@ -205,11 +231,15 @@ export default function BlockPage() {
                 placeholder={t("blocked.create_placeholder")}
                 value={form.word}
                 onChange={(e) => setForm({ word: e.target.value })}
-                onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreate();
+                }}
               />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                {t("common.cancel")}
+              </Button>
               <Button onClick={handleCreate} disabled={!form.word.trim() || saving}>
                 {saving ? t("common.saving") : t("common.create")}
               </Button>

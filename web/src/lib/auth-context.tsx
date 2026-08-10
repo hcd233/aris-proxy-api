@@ -32,9 +32,7 @@ function readStorage(key: string): string | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<DetailedUser | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(() =>
-    readStorage("access_token")
-  );
+  const [accessToken, setAccessToken] = useState<string | null>(() => readStorage("access_token"));
   const [isLoading, setIsLoading] = useState(true);
   const initRan = useRef(false);
 
@@ -111,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(newAccessToken);
       await fetchUser();
     },
-    [fetchUser]
+    [fetchUser],
   );
 
   const logout = useCallback(() => {
@@ -124,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = useCallback(() => user?.permission === "admin", [user]);
   const isUser = useCallback(
     () => user?.permission === "user" || user?.permission === "admin",
-    [user]
+    [user],
   );
 
   return (

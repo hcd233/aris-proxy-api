@@ -53,7 +53,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     (key: string, fallback?: string): string => {
       return translations[locale]?.[key] ?? fallback ?? key;
     },
-    [locale]
+    [locale],
   );
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);

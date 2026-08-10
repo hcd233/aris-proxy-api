@@ -23,11 +23,7 @@ export function LocaleFade({ children }: { children: ReactNode }) {
   }, [locale]);
 
   return (
-    <div
-      ref={ref}
-      className="transition-opacity duration-100 ease-out"
-      style={{ opacity: 1 }}
-    >
+    <div ref={ref} className="transition-opacity duration-100 ease-out" style={{ opacity: 1 }}>
       {children}
     </div>
   );

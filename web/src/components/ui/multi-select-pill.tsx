@@ -2,11 +2,7 @@
 
 import * as React from "react";
 import { ChevronDown, Check } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
@@ -77,10 +73,7 @@ export function MultiSelectPill({
           </button>
         }
       />
-      <PopoverContent
-        align="start"
-        className="w-auto min-w-[200px] max-w-[280px] p-1"
-      >
+      <PopoverContent align="start" className="w-auto min-w-[200px] max-w-[280px] p-1">
         {showSearch && (
           <div className="px-1 pb-1">
             <input
@@ -119,9 +112,7 @@ export function MultiSelectPill({
                   >
                     {checked && <Check className="size-3" />}
                   </span>
-                  <span className="truncate">
-                    {formatOption ? formatOption(opt) : opt}
-                  </span>
+                  <span className="truncate">{formatOption ? formatOption(opt) : opt}</span>
                 </button>
               );
             })

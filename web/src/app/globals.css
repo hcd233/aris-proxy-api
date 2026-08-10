@@ -8,7 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
+    sans-serif;
   --font-mono: "Maple Mono CN", "SFMono-Regular", Consolas, monospace;
   --font-heading: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
   --font-display: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
@@ -58,81 +60,81 @@
   --shadow-sm: 0 1px 2px 0 rgb(31 26 20 / 0.05), 0 2px 6px -1px rgb(31 26 20 / 0.04);
   --shadow-md: 0 2px 4px -1px rgb(31 26 20 / 0.06), 0 6px 14px -4px rgb(31 26 20 / 0.06);
   --shadow-lg: 0 4px 8px -2px rgb(31 26 20 / 0.07), 0 12px 24px -8px rgb(31 26 20 / 0.08);
-  --shadow-xl: 0 8px 16px -4px rgb(31 26 20 / 0.08), 0 20px 40px -12px rgb(31 26 20 / 0.10);
+  --shadow-xl: 0 8px 16px -4px rgb(31 26 20 / 0.08), 0 20px 40px -12px rgb(31 26 20 / 0.1);
 }
 
 :root {
-  --background: #FAF8F5;
-  --foreground: #1F1A14;
-  --card: #FFFFFF;
-  --card-foreground: #1F1A14;
-  --popover: #FFFFFF;
-  --popover-foreground: #1F1A14;
-  --primary: #D97757;
-  --primary-foreground: #FFFFFF;
-  --primary-hover: #C66A4A;
-  --secondary: #F5F0EB;
-  --secondary-foreground: #1F1A14;
-  --muted: #F5F0EB;
-  --muted-foreground: #6B5E52;
-  --accent: #F5E6E0;
-  --accent-foreground: #1F1A14;
-  --destructive: #C4706A;
-  --border: #E8E0D8;
-  --input: #E8E0D8;
-  --ring: #D97757;
-  --chart-1: #D97757;
-  --chart-2: #B8654A;
-  --chart-3: #E8A87C;
-  --chart-4: #8C7E72;
-  --chart-5: #F5E6E0;
+  --background: #faf8f5;
+  --foreground: #1f1a14;
+  --card: #ffffff;
+  --card-foreground: #1f1a14;
+  --popover: #ffffff;
+  --popover-foreground: #1f1a14;
+  --primary: #d97757;
+  --primary-foreground: #ffffff;
+  --primary-hover: #c66a4a;
+  --secondary: #f5f0eb;
+  --secondary-foreground: #1f1a14;
+  --muted: #f5f0eb;
+  --muted-foreground: #6b5e52;
+  --accent: #f5e6e0;
+  --accent-foreground: #1f1a14;
+  --destructive: #c4706a;
+  --border: #e8e0d8;
+  --input: #e8e0d8;
+  --ring: #d97757;
+  --chart-1: #d97757;
+  --chart-2: #b8654a;
+  --chart-3: #e8a87c;
+  --chart-4: #8c7e72;
+  --chart-5: #f5e6e0;
   --radius: 0.75rem;
-  --sidebar: #F5F0EB;
-  --sidebar-foreground: #1F1A14;
-  --sidebar-primary: #D97757;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #EDE6DE;
-  --sidebar-accent-foreground: #1F1A14;
-  --sidebar-border: #E8E0D8;
-  --sidebar-ring: #D97757;
-  --code-bg: #26211C;
-  --code-border: #3A322B;
-  --code-text: #E8DDD3;
+  --sidebar: #f5f0eb;
+  --sidebar-foreground: #1f1a14;
+  --sidebar-primary: #d97757;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ede6de;
+  --sidebar-accent-foreground: #1f1a14;
+  --sidebar-border: #e8e0d8;
+  --sidebar-ring: #d97757;
+  --code-bg: #26211c;
+  --code-border: #3a322b;
+  --code-text: #e8ddd3;
 }
 
 .dark {
-  --background: #1A1612;
-  --foreground: #F5F0EB;
+  --background: #1a1612;
+  --foreground: #f5f0eb;
   --card: #262119;
-  --card-foreground: #F5F0EB;
+  --card-foreground: #f5f0eb;
   --popover: #262119;
-  --popover-foreground: #F5F0EB;
-  --primary: #D97757;
-  --primary-foreground: #FFFFFF;
-  --primary-hover: #E08A6C;
-  --secondary: #322C25;
-  --secondary-foreground: #F5F0EB;
-  --muted: #322C25;
-  --muted-foreground: #A89E94;
-  --accent: #3D362E;
-  --accent-foreground: #F5F0EB;
-  --destructive: #D4756A;
-  --border: #40382F;
-  --input: #40382F;
-  --ring: #D97757;
-  --chart-1: #D97757;
-  --chart-2: #B8654A;
-  --chart-3: #E8A87C;
-  --chart-4: #A89E94;
-  --chart-5: #4A423C;
-  --sidebar: #1F1A14;
-  --sidebar-foreground: #F5F0EB;
-  --sidebar-primary: #D97757;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #322C25;
-  --sidebar-accent-foreground: #F5F0EB;
-  --sidebar-border: #40382F;
-  --sidebar-ring: #D97757;
+  --popover-foreground: #f5f0eb;
+  --primary: #d97757;
+  --primary-foreground: #ffffff;
+  --primary-hover: #e08a6c;
+  --secondary: #322c25;
+  --secondary-foreground: #f5f0eb;
+  --muted: #322c25;
+  --muted-foreground: #a89e94;
+  --accent: #3d362e;
+  --accent-foreground: #f5f0eb;
+  --destructive: #d4756a;
+  --border: #40382f;
+  --input: #40382f;
+  --ring: #d97757;
+  --chart-1: #d97757;
+  --chart-2: #b8654a;
+  --chart-3: #e8a87c;
+  --chart-4: #a89e94;
+  --chart-5: #4a423c;
+  --sidebar: #1f1a14;
+  --sidebar-foreground: #f5f0eb;
+  --sidebar-primary: #d97757;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #322c25;
+  --sidebar-accent-foreground: #f5f0eb;
+  --sidebar-border: #40382f;
+  --sidebar-ring: #d97757;
   --shadow-2xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.25);
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 2px 6px -1px rgb(0 0 0 / 0.2);
@@ -266,17 +268,31 @@
   /* moonshot.ai uses a neo-grotesque sans (M PLUS 1 / MiSans) for both
    * body and headings — no monospace UI. Hanken Grotesk is the closest
    * face already bundled; Maple Mono CN stays for --font-mono only. */
-  --font-sans: var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-heading:
+    var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-display:
+    var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
+    sans-serif;
   /* Inset top hairline mimics moonlight grazing the surface edge;
    * the drop component is plain black, no color cast. */
   --shadow-2xs: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.5);
   --shadow-xs: inset 0 1px 0 0 rgb(255 255 255 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.5);
-  --shadow-sm: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 2px 8px -1px rgb(0 0 0 / 0.4);
-  --shadow-md: inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 2px 6px -1px rgb(0 0 0 / 0.5), 0 6px 16px -4px rgb(0 0 0 / 0.4);
-  --shadow-lg: inset 0 1px 0 0 rgb(255 255 255 / 0.08), 0 4px 10px -2px rgb(0 0 0 / 0.5), 0 12px 28px -8px rgb(0 0 0 / 0.45);
-  --shadow-xl: inset 0 1px 0 0 rgb(255 255 255 / 0.09), 0 8px 18px -4px rgb(0 0 0 / 0.55), 0 20px 44px -12px rgb(0 0 0 / 0.5);
+  --shadow-sm:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.5),
+    0 2px 8px -1px rgb(0 0 0 / 0.4);
+  --shadow-md:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 2px 6px -1px rgb(0 0 0 / 0.5),
+    0 6px 16px -4px rgb(0 0 0 / 0.4);
+  --shadow-lg:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.08), 0 4px 10px -2px rgb(0 0 0 / 0.5),
+    0 12px 28px -8px rgb(0 0 0 / 0.45);
+  --shadow-xl:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.09), 0 8px 18px -4px rgb(0 0 0 / 0.55),
+    0 20px 44px -12px rgb(0 0 0 / 0.5);
 }
 
 /* Moonshot: poster-like heading rhythm — light tracking, like the

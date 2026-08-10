@@ -38,7 +38,7 @@ function generateScript(
   providerId: string,
   baseUrl: string,
   apiKey: string,
-  selectedModels: ModelItem[]
+  selectedModels: ModelItem[],
 ): string {
   if (selectedModels.length === 0) return "";
 
@@ -117,24 +117,20 @@ print(f"Pi configured: provider '{provider_id}' with {len(models)} selected mode
 PYEOF`;
 }
 
-export default function ExportPiDialog({
-  open,
-  onOpenChange,
-  models,
-}: ExportPiDialogProps) {
+export default function ExportPiDialog({ open, onOpenChange, models }: ExportPiDialogProps) {
   const t = useT();
 
   const [providerId, setProviderId] = useState("aris-proxy");
   // lazy initializer：对话框内容仅在打开时挂载，SSR 与客户端初始渲染无差异
   const [baseUrl, setBaseUrl] = useState(() =>
-    typeof window === "undefined" ? "" : `${window.location.origin}/api/openai/v1`
+    typeof window === "undefined" ? "" : `${window.location.origin}/api/openai/v1`,
   );
   const [apiKey, setApiKey] = useState("YOUR_API_KEY");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const selectedModels = useMemo(
     () => models.filter((model) => selectedIds.has(model.id)),
-    [models, selectedIds]
+    [models, selectedIds],
   );
 
   const duplicateAliases = useMemo(() => {
@@ -142,9 +138,7 @@ export default function ExportPiDialog({
     selectedModels.forEach((model) => {
       counts.set(model.alias, (counts.get(model.alias) ?? 0) + 1);
     });
-    return [...counts.entries()]
-      .filter(([, count]) => count > 1)
-      .map(([alias]) => alias);
+    return [...counts.entries()].filter(([, count]) => count > 1).map(([alias]) => alias);
   }, [selectedModels]);
 
   const script = useMemo(
@@ -152,7 +146,7 @@ export default function ExportPiDialog({
       duplicateAliases.length > 0
         ? ""
         : generateScript(providerId, baseUrl, apiKey, selectedModels),
-    [providerId, baseUrl, apiKey, selectedModels, duplicateAliases]
+    [providerId, baseUrl, apiKey, selectedModels, duplicateAliases],
   );
 
   // 统一拦截所有关闭路径，关闭时重置选择态（搜索框状态由 ExportModelPicker 内部管理）
@@ -161,7 +155,7 @@ export default function ExportPiDialog({
       if (!nextOpen) setSelectedIds(new Set());
       onOpenChange(nextOpen);
     },
-    [onOpenChange]
+    [onOpenChange],
   );
 
   return (
@@ -176,11 +170,7 @@ export default function ExportPiDialog({
       emptyIcon={<Pi size={28} className="opacity-30" />}
       emptyTitle={t("models.export_no_models_selected")}
       emptyHint={t("models.export_pi_empty_hint")}
-      errorMessage={
-        duplicateAliases.length > 0
-          ? t("models.export_duplicate_aliases")
-          : null
-      }
+      errorMessage={duplicateAliases.length > 0 ? t("models.export_duplicate_aliases") : null}
     >
       <ExportConnectionFields
         fields={[

@@ -9,31 +9,18 @@ interface PermissionGuardProps {
   adminOnly?: boolean;
 }
 
-function GuardState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function GuardState({ title, description }: { title: string; description: string }) {
   return (
     <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-3xl border bg-card p-8 text-center shadow-xl">
-        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">
-          {title}
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          {description}
-        </p>
+        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">{title}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
       </div>
     </div>
   );
 }
 
-export function PermissionGuard({
-  children,
-  adminOnly = false,
-}: PermissionGuardProps) {
+export function PermissionGuard({ children, adminOnly = false }: PermissionGuardProps) {
   const { user, isLoading, isUser, isAdmin } = useAuth();
   const t = useT();
 
@@ -44,7 +31,12 @@ export function PermissionGuard({
   }, [isLoading, user]);
 
   if (isLoading) {
-    return <GuardState title={t("permission_guard.loading")} description={t("permission_guard.preparing")} />;
+    return (
+      <GuardState
+        title={t("permission_guard.loading")}
+        description={t("permission_guard.preparing")}
+      />
+    );
   }
 
   if (!user) {
@@ -57,9 +49,7 @@ export function PermissionGuard({
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{t("permission_guard.access_pending")}</h1>
-          <p className="mt-2 text-muted-foreground">
-            {t("permission_guard.access_pending_desc")}
-          </p>
+          <p className="mt-2 text-muted-foreground">{t("permission_guard.access_pending_desc")}</p>
         </div>
       </div>
     );

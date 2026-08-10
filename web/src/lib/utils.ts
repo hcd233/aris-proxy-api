@@ -34,10 +34,7 @@ export function formatRelativeTime(
     unit = u;
     value = Math.round(diffSec / secs);
   }
-  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
-    value,
-    unit,
-  );
+  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(value, unit);
 }
 
 /**

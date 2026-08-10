@@ -6,9 +6,7 @@ export interface OAuthCallbackParams {
 }
 
 /** 从 OAuth2 回调 URL 解析 code/state；任一缺失返回 null。 */
-export function parseOAuthCallbackParams(
-  search: string,
-): OAuthCallbackParams | null {
+export function parseOAuthCallbackParams(search: string): OAuthCallbackParams | null {
   const params = new URLSearchParams(search);
   const code = params.get("code");
   const state = params.get("state");
