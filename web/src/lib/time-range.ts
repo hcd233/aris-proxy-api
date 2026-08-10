@@ -13,7 +13,12 @@ function deriveGranularity(rangeMs: number): Granularity {
   return "week";
 }
 
-export function formatChartTime(time: string, key: TimeRangeKey, customStart?: string, customEnd?: string): string {
+export function formatChartTime(
+  time: string,
+  key: TimeRangeKey,
+  customStart?: string,
+  customEnd?: string,
+): string {
   const { granularity } = computeRange(key, customStart, customEnd);
   const d = new Date(time);
   if (granularity === "minute" || granularity === "hour") {

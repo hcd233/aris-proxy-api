@@ -67,9 +67,7 @@ export interface ToolResultInfo {
   rawContent?: string;
 }
 
-export function buildToolResultsByID(
-  messages: MessageItem[],
-): Record<string, ToolResultInfo> {
+export function buildToolResultsByID(messages: MessageItem[]): Record<string, ToolResultInfo> {
   const map: Record<string, ToolResultInfo> = {};
   for (const m of messages) {
     const id = m.message.tool_call_id;

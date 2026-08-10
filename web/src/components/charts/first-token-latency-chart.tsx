@@ -7,31 +7,27 @@ import { LineChartCard, formatTooltipRow } from "@/components/charts/line-chart-
 import { ReferenceLine } from "recharts";
 
 export function FirstTokenLatencyChart() {
-  const toChart = useCallback(
-    (data: FirstTokenLatencyItem[], colors: readonly string[]) => {
-      const models = [...new Set(data.map((d) => d.modelId))];
-      const series = models.map((m, i) => ({
-        key: m,
-        label: m,
-        color: colors[i % colors.length],
-      }));
-      const timeSet = new Set<string>();
-      const pointMap = new Map<string, Record<string, number | null>>();
-      for (const item of data) {
-        for (const p of item.points) {
-          timeSet.add(p.time);
-          if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-          pointMap.get(p.time)![item.modelId] =
-            p.averageLatencyMs === 0 ? null : p.averageLatencyMs;
-        }
+  const toChart = useCallback((data: FirstTokenLatencyItem[], colors: readonly string[]) => {
+    const models = [...new Set(data.map((d) => d.modelId))];
+    const series = models.map((m, i) => ({
+      key: m,
+      label: m,
+      color: colors[i % colors.length],
+    }));
+    const timeSet = new Set<string>();
+    const pointMap = new Map<string, Record<string, number | null>>();
+    for (const item of data) {
+      for (const p of item.points) {
+        timeSet.add(p.time);
+        if (!pointMap.has(p.time)) pointMap.set(p.time, {});
+        pointMap.get(p.time)![item.modelId] = p.averageLatencyMs === 0 ? null : p.averageLatencyMs;
       }
-      const rows = Array.from(timeSet)
-        .sort()
-        .map((time) => ({ time, ...pointMap.get(time) }));
-      return { rows, series };
-    },
-    [],
-  );
+    }
+    const rows = Array.from(timeSet)
+      .sort()
+      .map((time) => ({ time, ...pointMap.get(time) }));
+    return { rows, series };
+  }, []);
 
   return (
     <LineChartCard<FirstTokenLatencyItem>

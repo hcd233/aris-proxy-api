@@ -7,12 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  Share2,
-} from "lucide-react";
+import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
@@ -42,7 +37,10 @@ export default function SharesPage() {
   const t = useT();
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.shares.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.shares.pageSize", 20);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
+    "dashboard.shares.pageSize",
+    20,
+  );
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: persistedPage,
     pageSize: persistedPageSize,
@@ -54,28 +52,31 @@ export default function SharesPage() {
   // stays pure (react-hooks/purity forbids `Date.now()` inside render).
   const [refreshedAt, setRefreshedAt] = useState<number>(0);
 
-  const fetchShares = useCallback(async (page: number, pageSize: number) => {
-    setLoading(true);
-    try {
-      const rsp = await api.listShares(page, pageSize);
-      if (rsp.error) {
-        showErrorToast(rsp.error, { title: t("common.error") });
-        setShares([]);
-        return;
+  const fetchShares = useCallback(
+    async (page: number, pageSize: number) => {
+      setLoading(true);
+      try {
+        const rsp = await api.listShares(page, pageSize);
+        if (rsp.error) {
+          showErrorToast(rsp.error, { title: t("common.error") });
+          setShares([]);
+          return;
+        }
+        setShares(rsp.shares ?? []);
+        if (rsp.pageInfo) {
+          setPageInfo(rsp.pageInfo);
+          setPersistedPage(rsp.pageInfo.page);
+          setPersistedPageSize(rsp.pageInfo.pageSize);
+        }
+        setRefreshedAt(Date.now());
+      } catch (err) {
+        showErrorToast(err, { title: t("common.error") });
+      } finally {
+        setLoading(false);
       }
-      setShares(rsp.shares ?? []);
-      if (rsp.pageInfo) {
-        setPageInfo(rsp.pageInfo);
-        setPersistedPage(rsp.pageInfo.page);
-        setPersistedPageSize(rsp.pageInfo.pageSize);
-      }
-      setRefreshedAt(Date.now());
-    } catch (err) {
-      showErrorToast(err, { title: t("common.error") });
-    } finally {
-      setLoading(false);
-    }
-  }, [setPersistedPage, setPersistedPageSize, t]);
+    },
+    [setPersistedPage, setPersistedPageSize, t],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -83,17 +84,20 @@ export default function SharesPage() {
   }, [fetchShares]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
-  const handleCopy = useCallback(async (share: ShareItem) => {
-    const url = buildShareURL(share.shareId);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedID(share.shareId);
-      toast.success(t("common.copied_to_clipboard"));
-      window.setTimeout(() => setCopiedID(null), 2000);
-    } catch {
-      toast.error(t("shares.copy_error"));
-    }
-  }, [t]);
+  const handleCopy = useCallback(
+    async (share: ShareItem) => {
+      const url = buildShareURL(share.shareId);
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopiedID(share.shareId);
+        toast.success(t("common.copied_to_clipboard"));
+        window.setTimeout(() => setCopiedID(null), 2000);
+      } catch {
+        toast.error(t("shares.copy_error"));
+      }
+    },
+    [t],
+  );
 
   const deleteConfirm = useDeleteConfirm<ShareItem>({
     onConfirm: async (share) => {
@@ -110,10 +114,7 @@ export default function SharesPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title={t("shares.title")}
-        description={t("shares.subtitle")}
-      />
+      <PageHeader title={t("shares.title")} description={t("shares.subtitle")} />
 
       <Card>
         <CardHeader>
@@ -144,8 +145,7 @@ export default function SharesPage() {
                 <TableBody>
                   {shares.map((share) => {
                     const expired =
-                      refreshedAt > 0 &&
-                      new Date(share.expiresAt).getTime() < refreshedAt;
+                      refreshedAt > 0 && new Date(share.expiresAt).getTime() < refreshedAt;
                     return (
                       <TableRow
                         key={share.shareId}
@@ -238,7 +238,10 @@ export default function SharesPage() {
       <DeleteConfirmDialog
         {...deleteConfirm.dialogProps}
         title={t("shares.delete_confirm")}
-        description={t("shares.delete_dialog_desc").replace("{id}", String(deleteConfirm.target?.sessionId ?? ""))}
+        description={t("shares.delete_dialog_desc").replace(
+          "{id}",
+          String(deleteConfirm.target?.sessionId ?? ""),
+        )}
         confirmLabel={t("shares.revoke")}
         loadingLabel={t("shares.revoking")}
       />
