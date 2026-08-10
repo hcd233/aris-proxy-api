@@ -5,13 +5,11 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -50,119 +48,6 @@ func CloseDatabase(db *gorm.DB) error {
 //	@update 2026-06-15 21:52:16
 func AutoMigrate(ctx context.Context) error {
 	return InitDatabase().WithContext(ctx).AutoMigrate(model.Models...)
-}
-
-// toolChecksumBackfillStats 工具 checksum 回填统计
-//
-//	@author centonhuang
-//	@update 2026-08-10 10:00:00
-type toolChecksumBackfillStats struct {
-	total     int
-	unchanged int
-	updated   int
-	conflict  int
-}
-
-// BackfillToolChecksums 将存量 tool 的 check_sum 回填为当前算法结果
-//
-//	背景（bugfix/tool-checksum-dedup-2026-08-10）：ComputeToolChecksum 纳入了工具级
-//	description，存量记录的 check_sum 由旧算法生成。不回填会导致同一工具被当成新工具
-//	重复插入，存量记录退化为永不再命中的孤儿。
-//
-//	正确性：新算法输入 (name, description, parameters) 是旧算法输入 (name, parameters)
-//	的超集，因此原本互不相同的 checksum 重算后仍互不相同——回填是一对一 UPDATE，
-//	不产生记录合并，无需 remap sessions.tool_ids。
-//
-//	幂等：重算值等于现值时跳过，可安全重复执行。
-//
-//	容错：逐行独立 UPDATE 而非包在单一事务内，使单行唯一冲突不会中断整批。唯一冲突意味着
-//	已存在同 checksum 的记录（新版本在回填前就已按新算法写入），此时保留旧行并计数跳过；
-//	非冲突错误直接返回中断，避免把真实故障当成冲突静默忽略。
-//
-//	@param ctx context.Context
-//	@return error
-//	@author centonhuang
-//	@update 2026-08-10 10:00:00
-func BackfillToolChecksums(ctx context.Context) error {
-	return BackfillToolChecksumsWithDB(InitDatabase().WithContext(ctx))
-}
-
-// BackfillToolChecksumsWithDB 在指定 db 上执行工具 checksum 回填
-//
-//	与 BackfillToolChecksums 的唯一区别是 db 由外部注入，便于测试使用内存库。
-//	语义与容错策略见 BackfillToolChecksums 的说明。
-//
-//	注意：调用方的 db 必须开启 gorm.Config.TranslateError，否则唯一冲突无法被识别为
-//	gorm.ErrDuplicatedKey，会被当作未知错误中断回填。
-//
-//	@param db *gorm.DB
-//	@return error
-//	@author centonhuang
-//	@update 2026-08-10 10:00:00
-func BackfillToolChecksumsWithDB(db *gorm.DB) error {
-	log := logger.Logger()
-
-	var stats toolChecksumBackfillStats
-	var batch []*model.Tool
-	err := db.Model(&model.Tool{}).FindInBatches(&batch, config.SQLBatchSize, func(_ *gorm.DB, _ int) error {
-		for _, record := range batch {
-			if err := backfillToolChecksum(db, record, &stats); err != nil {
-				return err
-			}
-		}
-		return nil
-	}).Error
-	if err != nil {
-		return ierr.Wrap(ierr.ErrDBQuery, err, "backfill tool checksums")
-	}
-
-	log.Info("[Database] Tool checksum backfill completed",
-		zap.Int("total", stats.total),
-		zap.Int("unchanged", stats.unchanged),
-		zap.Int("updated", stats.updated),
-		zap.Int("conflict", stats.conflict))
-	return nil
-}
-
-// backfillToolChecksum 回填单条 tool 记录的 check_sum
-//
-//	@param db *gorm.DB
-//	@param record *model.Tool
-//	@param stats *toolChecksumBackfillStats
-//	@return error
-//	@author centonhuang
-//	@update 2026-08-10 10:00:00
-func backfillToolChecksum(db *gorm.DB, record *model.Tool, stats *toolChecksumBackfillStats) error {
-	stats.total++
-	if record.Tool == nil {
-		stats.unchanged++
-		return nil
-	}
-
-	want := vo.ComputeToolChecksum(record.Tool)
-	if want == record.CheckSum {
-		stats.unchanged++
-		return nil
-	}
-
-	err := db.Model(&model.Tool{ID: record.ID}).
-		Select(constant.FieldCheckSum, constant.FieldUpdatedAt).
-		Updates(map[string]any{
-			constant.FieldCheckSum:  want,
-			constant.FieldUpdatedAt: time.Now().UTC(),
-		}).Error
-	switch {
-	case err == nil:
-		stats.updated++
-	case errors.Is(err, gorm.ErrDuplicatedKey):
-		stats.conflict++
-		logger.Logger().Warn("[Database] Tool checksum backfill conflict, keeping legacy row",
-			zap.Uint("toolID", record.ID),
-			zap.String("wantChecksum", want))
-	default:
-		return err
-	}
-	return nil
 }
 
 // InitDatabase 初始化数据库
