@@ -206,6 +206,7 @@
   "audit.filter_user": "User",
   "audit.filter_model": "Model",
   "audit.filter_status": "Status",
+  "audit.filter_ua": "UA",
   "cron.title": "Cron Jobs",
   "cron.subtitle": "View and manage scheduled cron jobs.",
   "cron.all_jobs": "Cron Jobs",
