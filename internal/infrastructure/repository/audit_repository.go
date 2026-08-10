@@ -182,6 +182,34 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime
 	return codes, nil
 }
 
+// ListDistinctUserAgents 查询去重的 User-Agent 列表（排除空值）
+func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	db := r.db.WithContext(ctx)
+
+	var agents []string
+	query := db.Model(&dbmodel.ModelCallAudit{}).
+		Select(constant.AuditDistinctSelectUA).
+		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.AuditDistinctWhereUANotEmpty)
+
+	if !startTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtLTE, endTime)
+	}
+
+	if keyword != "" {
+		query = query.Where(constant.AuditDistinctWhereUA, "%"+keyword+"%")
+	}
+
+	if err := query.Limit(constant.AuditDistinctLimit).Scan(&agents).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct user agents")
+	}
+
+	return agents, nil
+}
+
 // BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error) {
 	if len(apiKeyIDs) == 0 {

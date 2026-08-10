@@ -206,6 +206,7 @@
   "audit.filter_user": "ユーザー",
   "audit.filter_model": "モデル",
   "audit.filter_status": "ステータス",
+  "audit.filter_ua": "UA",
   "cron.title": "Cron ジョブ",
   "cron.subtitle": "スケジュールされた Cron ジョブの表示と管理",
   "cron.all_jobs": "Cron ジョブ",

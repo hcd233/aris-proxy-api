@@ -3,6 +3,7 @@ package audit_query
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ type fakeAuditRepo struct {
 	listDistinctUserNamesFn   func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 	listDistinctStatusCodesFn func(ctx context.Context, startTime, endTime time.Time) ([]string, error)
+	listDistinctUserAgentsFn  func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
@@ -93,6 +95,13 @@ func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, 
 func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
 	if f.listDistinctStatusCodesFn != nil {
 		return f.listDistinctStatusCodesFn(ctx, startTime, endTime)
+	}
+	return []string{}, nil
+}
+
+func (f *fakeAuditRepo) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	if f.listDistinctUserAgentsFn != nil {
+		return f.listDistinctUserAgentsFn(ctx, keyword, startTime, endTime)
 	}
 	return []string{}, nil
 }
@@ -182,6 +191,44 @@ func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
 
 // ─── ListAuditLogsByUserHandler 测试 ────────────────────────
 
+func TestListAllAuditLogs_UAFilterParsing(t *testing.T) {
+	t.Parallel()
+	repo := &fakeAuditRepo{
+		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+			if criteria == nil || len(criteria.Filters) != 1 {
+				t.Fatalf("criteria.Filters = %v, want exactly 1 filter", criteria)
+			}
+			f := criteria.Filters[0]
+			if f.Field != constant.AuditFilterFieldUA {
+				t.Errorf("filter field = %q, want %q", f.Field, constant.AuditFilterFieldUA)
+			}
+			// 引号包裹的含空格 UA 值应按单值保留，| 连接的多值正确拆分
+			if len(f.Values) != 2 || f.Values[0] != "Mozilla/5.0 (Macintosh)" || f.Values[1] != "curl/8.0" {
+				t.Errorf("filter values = %v, want [Mozilla/5.0 (Macintosh) curl/8.0]", f.Values)
+			}
+			// 验证 ua 字段配置映射到 user_agent 列并生成 fuzzy LIKE SQL
+			sql, args, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+			if err != nil {
+				t.Fatalf("ToSQL err: %v", err)
+			}
+			if !strings.Contains(sql, "user_agent LIKE ?") || !strings.Contains(sql, " OR ") {
+				t.Errorf("sql = %q, want user_agent LIKE ? joined by OR", sql)
+			}
+			if len(args) != 2 || args[0] != "%Mozilla/5.0 (Macintosh)%" || args[1] != "%curl/8.0%" {
+				t.Errorf("args = %v, want %%...%% wrapped LIKE values", args)
+			}
+			return nil, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
+		},
+	}
+	h := auditquery.NewListAllAuditLogsHandler(repo)
+	if _, _, err := h.Handle(context.Background(), auditquery.ListAllAuditLogsQuery{
+		Page: 1, PageSize: 20,
+		Filter: `ua:"Mozilla/5.0 (Macintosh)"|curl/8.0`,
+	}); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+}
+
 func TestListAuditLogsByUser_LoadsUserAPIKeyIDs(t *testing.T) {
 	t.Parallel()
 	repo := &fakeAuditRepo{
@@ -238,7 +285,7 @@ func TestListAuditLogsByUser_InvalidSortField(t *testing.T) {
 func TestListAuditOption_DispatchesByField(t *testing.T) {
 	t.Parallel()
 
-	userNamesCalled, modelsCalled, statusCodesCalled := false, false, false
+	userNamesCalled, modelsCalled, statusCodesCalled, userAgentsCalled := false, false, false, false
 	repo := &fakeAuditRepo{
 		listAllFunc:            nil,
 		listByAPIKeyIDsFn:      nil,
@@ -254,6 +301,10 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 		listDistinctStatusCodesFn: func(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
 			statusCodesCalled = true
 			return []string{"200", "400", "500"}, nil
+		},
+		listDistinctUserAgentsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+			userAgentsCalled = true
+			return []string{"Mozilla/5.0", "curl/8.0"}, nil
 		},
 	}
 	h := auditquery.NewListAuditOptionHandler(repo)
@@ -303,6 +354,22 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 		}
 		if len(items) != 3 || items[0] != "200" {
 			t.Errorf("items = %v, want [200 400 500]", items)
+		}
+	})
+
+	t.Run("field=ua", func(t *testing.T) {
+		t.Parallel()
+		items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+			Field: constant.AuditFilterFieldUA,
+		})
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if !userAgentsCalled {
+			t.Error("expected ListDistinctUserAgents to be called")
+		}
+		if len(items) != 2 || items[0] != "Mozilla/5.0" {
+			t.Errorf("items = %v, want [Mozilla/5.0 curl/8.0]", items)
 		}
 	})
 

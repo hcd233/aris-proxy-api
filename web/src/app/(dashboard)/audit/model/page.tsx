@@ -71,11 +71,13 @@ function formatMs(ms: number): string {
   return `${ms}ms`;
 }
 
-function buildAuditFilter(user: string[], model: string[], status: string[]): string | undefined {
+function buildAuditFilter(user: string[], model: string[], status: string[], ua: string[]): string | undefined {
   const parts: string[] = [];
   if (user.length) parts.push(`user:${user.join("|")}`);
   if (model.length) parts.push(`model:${model.join("|")}`);
   if (status.length) parts.push(`status:${status.join("|")}`);
+  // ua 值可能含空格，统一加引号包裹；多值用 | 连接（filter 解析器保留引号内空格）
+  if (ua.length) parts.push(`ua:${ua.map((v) => `"${v}"`).join("|")}`);
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
@@ -93,9 +95,11 @@ export default function AuditPage() {
   const [filterUser, setFilterUser] = useState<string[]>([]);
   const [filterModel, setFilterModel] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterUA, setFilterUA] = useState<string[]>([]);
   const [userOptions, setUserOptions] = useState<string[]>([]);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [uaOptions, setUAOptions] = useState<string[]>([]);
 
   const fetchLogs = useCallback(
     async (
@@ -108,11 +112,12 @@ export default function AuditPage() {
       user: string[],
       model: string[],
       status: string[],
+      ua: string[],
     ) => {
       setLoading(true);
       try {
         const { startTime, endTime } = computeRange(range, cs, ce);
-        const filter = buildAuditFilter(user, model, status);
+        const filter = buildAuditFilter(user, model, status, ua);
         const rsp = await api.listAuditLogs({
           page,
           pageSize,
@@ -140,7 +145,7 @@ export default function AuditPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
   useEffect(() => {
-    fetchLogs(1, 20, "", "24h", "", "", [], [], []);
+    fetchLogs(1, 20, "", "24h", "", "", [], [], [], []);
   }, [fetchLogs]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -148,14 +153,16 @@ export default function AuditPage() {
     const { startTime, endTime } = computeRange(range, cs, ce);
     const params = { startTime, endTime };
     try {
-      const [userRsp, modelRsp, statusRsp] = await Promise.all([
+      const [userRsp, modelRsp, statusRsp, uaRsp] = await Promise.all([
         api.listAuditOptions({ field: "user", ...params }),
         api.listAuditOptions({ field: "model", ...params }),
         api.listAuditOptions({ field: "status", ...params }),
+        api.listAuditOptions({ field: "ua", ...params }),
       ]);
       if (!userRsp.error && userRsp.items) setUserOptions(userRsp.items);
       if (!modelRsp.error && modelRsp.items) setModelOptions(modelRsp.items);
       if (!statusRsp.error && statusRsp.items) setStatusOptions(statusRsp.items);
+      if (!uaRsp.error && uaRsp.items) setUAOptions(uaRsp.items);
     } catch (err) {
       console.error("Failed to load audit options:", err);
     }
@@ -169,7 +176,7 @@ export default function AuditPage() {
 
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, filterStatus);
+    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, filterStatus, filterUA);
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
@@ -206,7 +213,7 @@ export default function AuditPage() {
                   setTimeRange(key);
                   setCustomStart(cs);
                   setCustomEnd(ce);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce, filterUser, filterModel, filterStatus);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce, filterUser, filterModel, filterStatus, filterUA);
                 }}
               />
               <MultiSelectPill
@@ -215,7 +222,7 @@ export default function AuditPage() {
                 value={filterUser}
                 onChange={(v) => {
                   setFilterUser(v);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, v, filterModel, filterStatus);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, v, filterModel, filterStatus, filterUA);
                 }}
               />
               <MultiSelectPill
@@ -224,7 +231,7 @@ export default function AuditPage() {
                 value={filterModel}
                 onChange={(v) => {
                   setFilterModel(v);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, v, filterStatus);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, v, filterStatus, filterUA);
                 }}
               />
               <MultiSelectPill
@@ -233,10 +240,19 @@ export default function AuditPage() {
                 value={filterStatus}
                 onChange={(v) => {
                   setFilterStatus(v);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, v);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, v, filterUA);
                 }}
               />
-              {(filterUser.length > 0 || filterModel.length > 0 || filterStatus.length > 0) && (
+              <MultiSelectPill
+                label={t("audit.filter_ua")}
+                options={uaOptions}
+                value={filterUA}
+                onChange={(v) => {
+                  setFilterUA(v);
+                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, filterStatus, v);
+                }}
+              />
+              {(filterUser.length > 0 || filterModel.length > 0 || filterStatus.length > 0 || filterUA.length > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -245,7 +261,8 @@ export default function AuditPage() {
                     setFilterUser([]);
                     setFilterModel([]);
                     setFilterStatus([]);
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, [], [], []);
+                    setFilterUA([]);
+                    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, [], [], [], []);
                   }}
                 >
                   <X size={14} />

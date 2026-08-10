@@ -352,6 +352,7 @@
   "audit.filter_user": "用户",
   "audit.filter_model": "模型",
   "audit.filter_status": "状态",
+  "audit.filter_ua": "UA",
   "cron.title": "定时任务",
   "cron.subtitle": "查看和管理定时任务。",
   "cron.all_jobs": "定时任务",
