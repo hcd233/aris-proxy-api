@@ -46,7 +46,7 @@
     },
     {
         "name": "same_name_different_description",
-        "description": "相同工具名和参数Schema但不同工具级描述应产生相同checksum（checksum不包含工具级description）",
+        "description": "相同工具名和参数Schema但不同工具级描述应产生不同checksum（checksum包含工具级description）",
         "tools": [
             {
                 "provider": "openai",
@@ -87,11 +87,11 @@
                 }
             }
         ],
-        "expect_equal": true
+        "expect_equal": false
     },
     {
         "name": "different_provider_same_schema",
-        "description": "不同provider但相同工具名和参数应产生相同checksum（checksum不包含provider）",
+        "description": "不同provider但工具名、描述和参数均相同应产生相同checksum（checksum不包含provider）",
         "tools": [
             {
                 "provider": "openai",
@@ -110,7 +110,7 @@
             {
                 "provider": "anthropic",
                 "name": "WebSearch",
-                "description": "Search the web via Anthropic",
+                "description": "Search the web",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -290,7 +290,7 @@
     },
     {
         "name": "many_params_same_tool",
-        "description": "多参数工具跨Provider但参数Schema完全相同应产生相同checksum",
+        "description": "多参数工具跨Provider但工具名、描述和参数Schema完全相同应产生相同checksum",
         "tools": [
             {
                 "provider": "openai",
@@ -330,7 +330,7 @@
             {
                 "provider": "anthropic",
                 "name": "CodeSearch",
-                "description": "A different description for code search",
+                "description": "Search code in repository",
                 "parameters": {
                     "type": "object",
                     "properties": {
