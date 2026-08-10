@@ -184,23 +184,28 @@ func jsonEqual(a, b any) bool {
 
 // toolChecksumWire is the JSON-shaped payload for stable tool checksum hashing.
 type toolChecksumWire struct {
-	Name       string              `json:"name"`
-	Parameters *JSONSchemaProperty `json:"parameters"`
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	Parameters  *JSONSchemaProperty `json:"parameters"`
 }
 
-// ComputeToolChecksum 计算工具校验和，基于工具名和完整参数 Schema
+// ComputeToolChecksum 计算工具校验和，基于工具名、工具级描述和完整参数 Schema
 //
-// 使用 encoder.Encode + SortMapKeys 对 Name 和 Parameters 进行规范化序列化，
+// 使用 encoder.Encode + SortMapKeys 对 Name、Description 和 Parameters 进行规范化序列化，
 // 确保 map key 顺序稳定，完整捕获所有层级参数结构的差异。
+//
+// Description 参与计算：同名同参数 Schema 但描述不同的工具（不同客户端或不同版本对同一
+// 工具的 prompt 调优）视为不同工具，不再被去重合并。
 //
 //	@param tool *UnifiedTool
 //	@return string
 //	@author centonhuang
-//	@update 2026-04-22 14:15:00
+//	@update 2026-08-10 10:00:00
 func ComputeToolChecksum(tool *UnifiedTool) string {
 	data := toolChecksumWire{
-		Name:       tool.Name,
-		Parameters: tool.Parameters,
+		Name:        tool.Name,
+		Description: tool.Description,
+		Parameters:  tool.Parameters,
 	}
 
 	hash := sha256.Sum256(lo.Must1(encoder.Encode(data, encoder.SortMapKeys)))
