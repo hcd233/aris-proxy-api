@@ -228,22 +228,16 @@ const markdownComponents: Components = {
     </h3>
   ),
   h4: ({ children }) => (
-    <h4 className="mt-3 mb-1 font-display text-base font-semibold text-foreground">
-      {children}
-    </h4>
+    <h4 className="mt-3 mb-1 font-display text-base font-semibold text-foreground">{children}</h4>
   ),
 
   // Paragraphs
   p: ({ children }) => (
-    <p className="my-2 whitespace-pre-wrap break-words leading-[1.7]">
-      {children}
-    </p>
+    <p className="my-2 whitespace-pre-wrap break-words leading-[1.7]">{children}</p>
   ),
 
   // Inline elements
-  strong: ({ children }) => (
-    <strong className="font-semibold text-foreground">{children}</strong>
-  ),
+  strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   del: ({ children }) => (
     <del className="text-muted-foreground line-through decoration-muted-foreground/60">
@@ -268,25 +262,17 @@ const markdownComponents: Components = {
 
   // Lists
   ul: ({ children }) => (
-    <ul className="my-2 ml-5 list-disc space-y-1 marker:text-muted-foreground/60">
-      {children}
-    </ul>
+    <ul className="my-2 ml-5 list-disc space-y-1 marker:text-muted-foreground/60">{children}</ul>
   ),
   ol: ({ children }) => (
-    <ol className="my-2 ml-5 list-decimal space-y-1 marker:text-muted-foreground/60">
-      {children}
-    </ol>
+    <ol className="my-2 ml-5 list-decimal space-y-1 marker:text-muted-foreground/60">{children}</ol>
   ),
   li: ({ children, ...props }) => {
     // GFM task list: react-markdown injects a checkbox <input type="checkbox" disabled>
     // as the first child. Detect it via className.
     const className = (props as { className?: string }).className ?? "";
     if (className.includes("task-list-item")) {
-      return (
-        <li className="-ml-5 flex list-none items-start gap-2 break-words">
-          {children}
-        </li>
-      );
+      return <li className="-ml-5 flex list-none items-start gap-2 break-words">{children}</li>;
     }
     return <li className="break-words">{children}</li>;
   },
@@ -321,13 +307,9 @@ const markdownComponents: Components = {
       <table className="w-full border-collapse text-[13px]">{children}</table>
     </div>
   ),
-  thead: ({ children }) => (
-    <thead className="bg-muted/50 text-foreground">{children}</thead>
-  ),
+  thead: ({ children }) => <thead className="bg-muted/50 text-foreground">{children}</thead>,
   tbody: ({ children }) => <tbody>{children}</tbody>,
-  tr: ({ children }) => (
-    <tr className="border-b border-border/60 last:border-0">{children}</tr>
-  ),
+  tr: ({ children }) => <tr className="border-b border-border/60 last:border-0">{children}</tr>,
   th: ({ children, style }) => (
     <th
       style={style}
@@ -337,10 +319,7 @@ const markdownComponents: Components = {
     </th>
   ),
   td: ({ children, style }) => (
-    <td
-      style={style}
-      className="px-3 py-2 align-top text-foreground/90 [&>p]:my-0"
-    >
+    <td style={style} className="px-3 py-2 align-top text-foreground/90 [&>p]:my-0">
       {children}
     </td>
   ),
@@ -379,7 +358,11 @@ const markdownComponents: Components = {
       return <MermaidBlock code={value} />;
     }
 
-    return <CodeBlock lang={lang} value={value} highlightedClassName={className}>{children}</CodeBlock>;
+    return (
+      <CodeBlock lang={lang} value={value} highlightedClassName={className}>
+        {children}
+      </CodeBlock>
+    );
   },
 
   // `pre` is rendered by our CodeBlock; suppress react-markdown's wrapper for
@@ -401,9 +384,7 @@ export function MarkdownLite({ text, raw = false, className }: MarkdownProps) {
     return <span className="text-muted-foreground/60">—</span>;
   }
   if (raw) {
-    return (
-      <p className={cn("whitespace-pre-wrap break-words", className)}>{text}</p>
-    );
+    return <p className={cn("whitespace-pre-wrap break-words", className)}>{text}</p>;
   }
 
   return (

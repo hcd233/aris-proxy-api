@@ -7,7 +7,8 @@
 - 规范扫描：`make lint`（执行 `lint-conv` + `lint-static` 两阶段，底层使用 `go run ./cmd/server lint ...`）
 - 全量测试：`make test`（等价于 `go test -count=1 ./cmd/... ./internal/... ./test/...`，显式排除 `web/node_modules` 中的嵌套 Go 目录）
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
-- 前端 lint：`cd web && npm run lint`
+- 前端 lint：`cd web && npm run lint`（或 `make web-lint`）；自动修复：`npm run lint:fix`
+- 前端格式化：`cd web && npm run format`（Prettier 写入，或 `make web-format`）；格式检查：`npm run format:check`（CI 用，或 `make web-format-check`）
 - 前端构建（同时同步到 `internal/web/dist/`）：`make web-build`；清理产物：`make web-clean`
 - 生产构建会自动包含前端：`make build` 在编译 Go 之前先跑 `web-build`
 - UPX 极致压缩：`make build-upx`（需安装 upx）

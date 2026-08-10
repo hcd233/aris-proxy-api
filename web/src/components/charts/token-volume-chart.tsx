@@ -21,7 +21,11 @@ export function TokenVolumeChart() {
       [
         { key: "cacheReadTokens", label: t("charts.cache_read"), color: tokenColors.cacheRead },
         { key: "inputTokens", label: t("charts.input"), color: tokenColors.input },
-        { key: "cacheCreationTokens", label: t("charts.cache_write"), color: tokenColors.cacheCreated },
+        {
+          key: "cacheCreationTokens",
+          label: t("charts.cache_write"),
+          color: tokenColors.cacheCreated,
+        },
         { key: "outputTokens", label: t("charts.output"), color: tokenColors.output },
       ] as const,
     [t, tokenColors],
@@ -66,7 +70,8 @@ export function TokenVolumeChart() {
         const payload = item?.payload;
         if (payload) {
           if (name === "inputTokens") displayValue = Number(payload.rawInputTokens ?? displayValue);
-          if (name === "outputTokens") displayValue = Number(payload.rawOutputTokens ?? displayValue);
+          if (name === "outputTokens")
+            displayValue = Number(payload.rawOutputTokens ?? displayValue);
         }
         const label = layers.find((l) => l.key === name)?.label ?? name;
         return (

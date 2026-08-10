@@ -12,13 +12,7 @@ interface ScoreDotsProps {
   size?: number;
 }
 
-export function ScoreDots({
-  score,
-  scoring,
-  onScore,
-  onClear,
-  size = 16,
-}: ScoreDotsProps) {
+export function ScoreDots({ score, scoring, onScore, onClear, size = 16 }: ScoreDotsProps) {
   const t = useT();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -34,7 +28,9 @@ export function ScoreDots({
   return (
     <span
       role="group"
-      aria-label={isRated ? t("score_dots.rated").replace("{score}", String(score)) : t("score_dots.rating")}
+      aria-label={
+        isRated ? t("score_dots.rated").replace("{score}", String(score)) : t("score_dots.rating")
+      }
       className="relative inline-flex items-center"
       style={{ width: `${containerWidth}px` }}
       onMouseLeave={() => setHover(null)}

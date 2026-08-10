@@ -3,33 +3,23 @@
 import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  History,
-  MessagesSquare,
-  Share2,
-  Wrench,
-} from "lucide-react";
+import { ArrowLeft, History, MessagesSquare, Share2, Wrench } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { SessionMetadata, MessageItem, ToolItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
-  ChatMessage,
-  buildToolResultsByID,
-} from "@/components/chat/chat-message";
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import { ChatMessage, buildToolResultsByID } from "@/components/chat/chat-message";
 import { ShareDialog } from "@/components/share/share-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SessionHistoryList } from "./session-history-list";
@@ -38,11 +28,7 @@ import { ToolsRail } from "./tools-rail";
 import { ReadingLayout } from "@/components/shared/reading-layout";
 import { toast } from "sonner";
 
-export default function SessionDetailClient({
-  sessionId,
-}: {
-  sessionId: number;
-}) {
+export default function SessionDetailClient({ sessionId }: { sessionId: number }) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const t = useT();
@@ -69,10 +55,10 @@ export default function SessionDetailClient({
     }
     const sentinel = headerSentinelRef.current;
     if (!sentinel) return;
-    const io = new IntersectionObserver(
-      ([entry]) => setHeaderCompact(!entry.isIntersecting),
-      { threshold: 0, rootMargin: "0px" },
-    );
+    const io = new IntersectionObserver(([entry]) => setHeaderCompact(!entry.isIntersecting), {
+      threshold: 0,
+      rootMargin: "0px",
+    });
     io.observe(sentinel);
     return () => io.disconnect();
   }, [isMobile, loading, metadata]);
@@ -145,12 +131,8 @@ export default function SessionDetailClient({
   }, [fetchMetadata]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const listEnabled =
-    !!sessionId && !Number.isNaN(sessionId) && metadata !== null;
-  const toolsListEnabled =
-    listEnabled &&
-    (metadata?.toolCount ?? 0) > 0 &&
-    toolsOpen;
+  const listEnabled = !!sessionId && !Number.isNaN(sessionId) && metadata !== null;
+  const toolsListEnabled = listEnabled && (metadata?.toolCount ?? 0) > 0 && toolsOpen;
 
   const messagesList = useInfiniteList<MessageItem>({
     fetcher: useCallback(
@@ -219,10 +201,7 @@ export default function SessionDetailClient({
 
   const messages = messagesList.items;
   const tools = toolsList.items;
-  const toolResultsByID = useMemo(
-    () => buildToolResultsByID(messages),
-    [messages],
-  );
+  const toolResultsByID = useMemo(() => buildToolResultsByID(messages), [messages]);
 
   const setToolsScrollRoot = useCallback((node: HTMLDivElement | null) => {
     toolsScrollRootRef.current = node;
@@ -232,11 +211,7 @@ export default function SessionDetailClient({
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-muted-foreground">{t("session_detail.invalid_id")}</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => router.push("/sessions/")}
-        >
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/sessions/")}>
           {t("session_detail.back_to_sessions")}
         </Button>
       </div>
@@ -261,11 +236,7 @@ export default function SessionDetailClient({
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-muted-foreground">{t("session_detail.session_not_found")}</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => router.push("/sessions/")}
-        >
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/sessions/")}>
           {t("session_detail.back_to_sessions")}
         </Button>
       </div>
@@ -326,7 +297,9 @@ export default function SessionDetailClient({
             "truncate font-display font-semibold tracking-tight text-foreground",
             "transition-[font-size] duration-200 ease-out",
             isMobile && headerCompact ? "text-[14px]" : "text-[15px]",
-          ].filter(Boolean).join(" ")}
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
           {t("session_history.session_label").replace("{id}", String(metadata.id))}
         </h1>
@@ -335,9 +308,13 @@ export default function SessionDetailClient({
             "truncate text-[11px] text-muted-foreground",
             "transition-[max-height,opacity] duration-200 ease-out overflow-hidden",
             isMobile && headerCompact ? "max-h-0 opacity-0" : "max-h-4 opacity-100",
-          ].filter(Boolean).join(" ")}
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
-          {t("session_history.message_count").replace("{count}", String(messageCount)).replace("{s}", messageCount === 1 ? "" : "s")}
+          {t("session_history.message_count")
+            .replace("{count}", String(messageCount))
+            .replace("{s}", messageCount === 1 ? "" : "s")}
           {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
         </p>
       </div>
@@ -360,11 +337,13 @@ export default function SessionDetailClient({
                 onClick={() => setShareOpen(true)}
                 className={[
                   "size-10",
-                  metadata.shareID
-                    ? "text-primary"
-                    : "text-foreground/70 hover:text-foreground",
+                  metadata.shareID ? "text-primary" : "text-foreground/70 hover:text-foreground",
                 ].join(" ")}
-                aria-label={metadata.shareID ? t("session_detail.manage_share_aria") : t("session_detail.share_aria")}
+                aria-label={
+                  metadata.shareID
+                    ? t("session_detail.manage_share_aria")
+                    : t("session_detail.share_aria")
+                }
               >
                 <Share2 className="size-5" />
               </Button>
@@ -431,25 +410,15 @@ export default function SessionDetailClient({
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <MessagesSquare className="mb-3 size-10 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">
-            {t("session_detail.no_messages")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("session_detail.no_messages")}</p>
         </div>
       ) : (
         <div className="space-y-5">
           {messages.map((msg, idx) => (
-            <ChatMessage
-              key={msg.id}
-              message={msg}
-              index={idx}
-              toolResultsByID={toolResultsByID}
-            />
+            <ChatMessage key={msg.id} message={msg} index={idx} toolResultsByID={toolResultsByID} />
           ))}
           {messagesList.hasMore && (
-            <div
-              ref={messagesSentinelRef}
-              className="flex justify-center py-3"
-            >
+            <div ref={messagesSentinelRef} className="flex justify-center py-3">
               <Skeleton className="h-4 w-32" />
             </div>
           )}
@@ -466,11 +435,7 @@ export default function SessionDetailClient({
   );
 
   const toolsPanelContent = (
-    <ToolsRail
-      tools={tools}
-      hasMore={toolsList.hasMore}
-      sentinelRef={toolsSentinelRef}
-    />
+    <ToolsRail tools={tools} hasMore={toolsList.hasMore} sentinelRef={toolsSentinelRef} />
   );
 
   return (
@@ -506,7 +471,6 @@ export default function SessionDetailClient({
         loading={deleting}
         onConfirm={handleDelete}
       />
-
     </>
   );
 }

@@ -6,11 +6,7 @@ import bash from "highlight.js/lib/languages/bash";
 import { Check, Copy, Radar } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/lib/i18n";
 
 hljs.registerLanguage("bash", bash);
@@ -31,9 +27,7 @@ function generateInstallCommand(hostValue: string): string {
 
 export default function TraceInstallPopover() {
   const t = useT();
-  const [host] = useState(() =>
-    typeof window === "undefined" ? "" : window.location.origin,
-  );
+  const [host] = useState(() => (typeof window === "undefined" ? "" : window.location.origin));
   const [copied, setCopied] = useState(false);
 
   const previewCommand = useMemo(

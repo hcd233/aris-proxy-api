@@ -1,0 +1,15 @@
+# 依赖与构建产物
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# 生成文件
+next-env.d.ts
+tsconfig.tsbuildinfo
+package-lock.json
+
+# 其他
+coverage/
+*.md

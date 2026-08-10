@@ -19,7 +19,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -67,8 +72,15 @@ export default function EndpointsPage() {
   const isMobile = useIsMobile();
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.endpoints.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.endpoints.pageSize", 20);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
+    "dashboard.endpoints.pageSize",
+    20,
+  );
+  const [pageInfo, setPageInfo] = useState<PageInfo>({
+    page: persistedPage,
+    pageSize: persistedPageSize,
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,26 +88,29 @@ export default function EndpointsPage() {
   const [form, setForm] = useState<EndpointForm>(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  const fetchEndpoints = useCallback(async (page: number, pageSize: number, query?: string) => {
-    const validSizes = [20, 50, 100];
-    const safeSize = validSizes.includes(pageSize) ? pageSize : 20;
-    setLoading(true);
-    try {
-      const rsp = await api.listEndpoints(page, safeSize, query);
-      setEndpoints(rsp.endpoints ?? []);
-      if (rsp.pageInfo) {
-        setPageInfo(rsp.pageInfo);
+  const fetchEndpoints = useCallback(
+    async (page: number, pageSize: number, query?: string) => {
+      const validSizes = [20, 50, 100];
+      const safeSize = validSizes.includes(pageSize) ? pageSize : 20;
+      setLoading(true);
+      try {
+        const rsp = await api.listEndpoints(page, safeSize, query);
+        setEndpoints(rsp.endpoints ?? []);
+        if (rsp.pageInfo) {
+          setPageInfo(rsp.pageInfo);
           setPersistedPage(rsp.pageInfo.page);
-        if (validSizes.includes(rsp.pageInfo.pageSize)) {
-          setPersistedPageSize(rsp.pageInfo.pageSize);
+          if (validSizes.includes(rsp.pageInfo.pageSize)) {
+            setPersistedPageSize(rsp.pageInfo.pageSize);
+          }
         }
+      } catch (err) {
+        showErrorToast(err, { title: t("endpoints.load_error") });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      showErrorToast(err, { title: t("endpoints.load_error") });
-    } finally {
-      setLoading(false);
-    }
-  }, [t, setPersistedPage, setPersistedPageSize]);
+    },
+    [t, setPersistedPage, setPersistedPageSize],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -190,7 +205,7 @@ export default function EndpointsPage() {
 
         <Card>
           <CardHeader>
-              <CardTitle className="font-display">{t("endpoints.all_endpoints")}</CardTitle>
+            <CardTitle className="font-display">{t("endpoints.all_endpoints")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
@@ -204,21 +219,24 @@ export default function EndpointsPage() {
             {loading ? (
               <TableSkeleton />
             ) : endpoints.length === 0 ? (
-              <ListEmptyState icon={<Server className="mb-3 size-10 text-muted-foreground/40" />} message={t("endpoints.empty")} />
+              <ListEmptyState
+                icon={<Server className="mb-3 size-10 text-muted-foreground/40" />}
+                message={t("endpoints.empty")}
+              />
             ) : (
               <>
                 {isMobile ? (
                   <div className="space-y-3">
                     {endpoints.map((ep) => (
-                      <div
-                        key={ep.id}
-                        className="rounded-lg border border-border bg-card p-4"
-                      >
+                      <div key={ep.id} className="rounded-lg border border-border bg-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">{ep.name}</p>
                             <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                              Key: <code className="rounded bg-muted px-1 py-0.5">{ep.maskedAPIKey}</code>
+                              Key:{" "}
+                              <code className="rounded bg-muted px-1 py-0.5">
+                                {ep.maskedAPIKey}
+                              </code>
                             </p>
                             {ep.openaiBaseURL && (
                               <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
@@ -232,7 +250,12 @@ export default function EndpointsPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => openEdit(ep)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
                               <Pencil size={14} />
                             </Button>
                             <DeleteButton
@@ -269,105 +292,129 @@ export default function EndpointsPage() {
                     ))}
                   </div>
                 ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("endpoints.name")}</TableHead>
-                      <TableHead>{t("endpoints.key")}</TableHead>
-                      <TableHead>{t("endpoints.base_url")}</TableHead>
-                      <TableHead>{t("endpoints.supported_apis")}</TableHead>
-                      <TableHead>{t("endpoints.created")}</TableHead>
-                      <TableHead className="text-right">{t("common.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {endpoints.map((ep) => (
-                      <TableRow key={ep.id}>
-                        <TableCell className="font-medium">{ep.name}</TableCell>
-                        <TableCell>
-                          <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-mono">{ep.maskedAPIKey}</code>
-                        </TableCell>
-                        <TableCell className="max-w-[400px]">
-                          <TooltipProvider>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <button type="button" className="w-full cursor-default text-left">
-                                    <div className="space-y-0.5">
-                                      <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
-                                        <ProviderIcon protocol="openai-chat-completion" size={14} />
-                                        {ep.openaiBaseURL || "—"}
-                                      </div>
-                                      <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
-                                        <ProviderIcon protocol="anthropic-message" size={14} />
-                                        {ep.anthropicBaseURL || "—"}
-                                      </div>
-                                    </div>
-                                  </button>
-                                }
-                              />
-                              <TooltipContent side="top" align="start" className="max-w-md">
-                                <div className="space-y-1 font-mono text-xs">
-                                  <p className="flex items-center gap-1.5">
-                                    <ProviderIcon protocol="openai-chat-completion" size={14} />
-                                    {ep.openaiBaseURL || "—"}
-                                  </p>
-                                  <p className="flex items-center gap-1.5">
-                                    <ProviderIcon protocol="anthropic-message" size={14} />
-                                    {ep.anthropicBaseURL || "—"}
-                                  </p>
-                                </div>
-                              </TooltipContent>
-                            </TooltipRoot>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1.5">
-                            {ep.supportOpenAIChatCompletion && (
-                              <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                                <ProviderIcon protocol="openai-chat-completion" size={14} />
-                                {t("endpoints.openai_chat_badge")}
-                              </Badge>
-                            )}
-                            {ep.supportOpenAIResponse && (
-                              <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                                <ProviderIcon protocol="openai-response" size={14} />
-                                {t("endpoints.response_badge")}
-                              </Badge>
-                            )}
-                            {ep.supportAnthropicMessage && (
-                              <Badge variant="secondary" className="gap-1.5 text-[11px] font-normal">
-                                <ProviderIcon protocol="anthropic-message" size={14} />
-                                {t("endpoints.messages_badge")}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(ep.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon-sm" onClick={() => openEdit(ep)} className="text-muted-foreground hover:text-foreground">
-                              <Pencil size={14} />
-                            </Button>
-                            <DeleteButton
-                              label={t("common.delete")}
-                              disabled={deleteConfirm.loading && deleteConfirm.target?.id === ep.id}
-                              onClick={() => deleteConfirm.openDelete(ep)}
-                            />
-                          </div>
-                        </TableCell>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("endpoints.name")}</TableHead>
+                        <TableHead>{t("endpoints.key")}</TableHead>
+                        <TableHead>{t("endpoints.base_url")}</TableHead>
+                        <TableHead>{t("endpoints.supported_apis")}</TableHead>
+                        <TableHead>{t("endpoints.created")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {endpoints.map((ep) => (
+                        <TableRow key={ep.id}>
+                          <TableCell className="font-medium">{ep.name}</TableCell>
+                          <TableCell>
+                            <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-mono">
+                              {ep.maskedAPIKey}
+                            </code>
+                          </TableCell>
+                          <TableCell className="max-w-[400px]">
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <button
+                                      type="button"
+                                      className="w-full cursor-default text-left"
+                                    >
+                                      <div className="space-y-0.5">
+                                        <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
+                                          <ProviderIcon
+                                            protocol="openai-chat-completion"
+                                            size={14}
+                                          />
+                                          {ep.openaiBaseURL || "—"}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
+                                          <ProviderIcon protocol="anthropic-message" size={14} />
+                                          {ep.anthropicBaseURL || "—"}
+                                        </div>
+                                      </div>
+                                    </button>
+                                  }
+                                />
+                                <TooltipContent side="top" align="start" className="max-w-md">
+                                  <div className="space-y-1 font-mono text-xs">
+                                    <p className="flex items-center gap-1.5">
+                                      <ProviderIcon protocol="openai-chat-completion" size={14} />
+                                      {ep.openaiBaseURL || "—"}
+                                    </p>
+                                    <p className="flex items-center gap-1.5">
+                                      <ProviderIcon protocol="anthropic-message" size={14} />
+                                      {ep.anthropicBaseURL || "—"}
+                                    </p>
+                                  </div>
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1.5">
+                              {ep.supportOpenAIChatCompletion && (
+                                <Badge
+                                  variant="secondary"
+                                  className="gap-1.5 text-[11px] font-normal"
+                                >
+                                  <ProviderIcon protocol="openai-chat-completion" size={14} />
+                                  {t("endpoints.openai_chat_badge")}
+                                </Badge>
+                              )}
+                              {ep.supportOpenAIResponse && (
+                                <Badge
+                                  variant="secondary"
+                                  className="gap-1.5 text-[11px] font-normal"
+                                >
+                                  <ProviderIcon protocol="openai-response" size={14} />
+                                  {t("endpoints.response_badge")}
+                                </Badge>
+                              )}
+                              {ep.supportAnthropicMessage && (
+                                <Badge
+                                  variant="secondary"
+                                  className="gap-1.5 text-[11px] font-normal"
+                                >
+                                  <ProviderIcon protocol="anthropic-message" size={14} />
+                                  {t("endpoints.messages_badge")}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(ep.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => openEdit(ep)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Pencil size={14} />
+                              </Button>
+                              <DeleteButton
+                                label={t("common.delete")}
+                                disabled={
+                                  deleteConfirm.loading && deleteConfirm.target?.id === ep.id
+                                }
+                                onClick={() => deleteConfirm.openDelete(ep)}
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
 
                 <PaginationBar
                   pageInfo={pageInfo}
                   onChange={(page, pageSize) => refresh(page, pageSize)}
-                   totalLabel={t("pagination.endpoints")}
+                  totalLabel={t("pagination.endpoints")}
                 />
               </>
             )}
@@ -377,7 +424,10 @@ export default function EndpointsPage() {
         <DeleteConfirmDialog
           {...deleteConfirm.dialogProps}
           title={t("common.are_you_sure")}
-          description={t("endpoints.delete_description").replace("{name}", deleteConfirm.target?.name ?? "")}
+          description={t("endpoints.delete_description").replace(
+            "{name}",
+            deleteConfirm.target?.name ?? "",
+          )}
           confirmLabel={t("common.delete")}
           loadingLabel={t("common.deleting")}
         />
@@ -385,13 +435,9 @@ export default function EndpointsPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>
-                {editingId ? t("endpoints.edit") : t("endpoints.create")}
-              </DialogTitle>
+              <DialogTitle>{editingId ? t("endpoints.edit") : t("endpoints.create")}</DialogTitle>
               <DialogDescription>
-                {editingId
-                  ? t("endpoints.edit_description")
-                  : t("endpoints.create_description")}
+                {editingId ? t("endpoints.edit_description") : t("endpoints.create_description")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
@@ -427,7 +473,9 @@ export default function EndpointsPage() {
                 <Input
                   id="ep-apikey"
                   type="password"
-                  placeholder={editingId ? t("endpoints.keep_current") : t("endpoints.enter_api_key")}
+                  placeholder={
+                    editingId ? t("endpoints.keep_current") : t("endpoints.enter_api_key")
+                  }
                   value={form.apiKey}
                   onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
                 />
@@ -476,7 +524,11 @@ export default function EndpointsPage() {
                 {t("common.cancel")}
               </Button>
               <Button onClick={handleSave} disabled={!form.name.trim() || saving}>
-                {saving ? t("common.saving") : editingId ? t("endpoints.update") : t("common.create")}
+                {saving
+                  ? t("common.saving")
+                  : editingId
+                    ? t("endpoints.update")
+                    : t("common.create")}
               </Button>
             </DialogFooter>
           </DialogContent>
