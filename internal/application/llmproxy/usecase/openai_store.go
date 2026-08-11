@@ -24,6 +24,9 @@ func (u *openAIUseCase) storeOpenAIChatFromCompletion(ctx context.Context, req *
 
 // storeOpenAIChatMessages ChatCompletion 存储基元：req.Messages + assistantMsg → UnifiedMessage 列表
 func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, req *dto.OpenAIChatCompletionRequest, assistantMsg *dto.OpenAIChatCompletionMessageParam, modelID string, usage *dto.OpenAICompletionUsage) {
+	if util.CtxValueBool(ctx, constant.CtxKeySkipStore) {
+		return
+	}
 	log := logger.WithCtx(ctx)
 	unifiedMessages, unifiedTools, err := u.convertRequestMessages(ctx, req)
 	if err != nil {
@@ -88,6 +91,9 @@ func (u *openAIUseCase) convertRequestMessages(ctx context.Context, req *dto.Ope
 
 // storeResponseFromRsp Response API 原生响应 → 消息存储
 func (u *openAIUseCase) storeResponseFromRsp(ctx context.Context, req *dto.OpenAICreateResponseRequest, rsp *dto.OpenAICreateResponseRsp, proxyErr error, modelID string) {
+	if util.CtxValueBool(ctx, constant.CtxKeySkipStore) {
+		return
+	}
 	log := logger.WithCtx(ctx)
 	if proxyErr != nil || rsp == nil {
 		log.Warn("[OpenAIUseCase] storeResponseFromRsp skipped: proxyErr or rsp nil",

@@ -118,6 +118,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewBlockedChecker,
 		NewBlockedHitRecorder,
 		NewCreateBlockedHandler,
+		NewUpdateBlockedHandler,
 		NewDeleteBlockedHandler,
 		NewListBlockedHandler,
 		NewRuntimeMetricsHandler,
@@ -341,6 +342,10 @@ func NewBlockedHitRecorder(blockedCache *cache.BlockedHitCache) blockedport.HitR
 
 func NewCreateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.CreateBlockedHandler {
 	return blockedcommand.NewCreateBlockedHandler(repo, svc.Rebuild)
+}
+
+func NewUpdateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.UpdateBlockedHandler {
+	return blockedcommand.NewUpdateBlockedHandler(repo, svc.Rebuild)
 }
 
 func NewDeleteBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.DeleteBlockedHandler {

@@ -79,6 +79,18 @@ func CtxValueUint(ctx context.Context, key enum.CtxKey) uint {
 	return 0
 }
 
+// CtxValueBool 安全获取上下文中的 bool 值
+//
+//	param ctx context.Context
+//	param key constant.CtxKey
+//	return bool
+//	@author centonhuang
+//	@update 2026-08-11 10:00:00
+func CtxValueBool(ctx context.Context, key enum.CtxKey) bool {
+	v, ok := ctx.Value(key).(bool)
+	return mo.TupleToOption(v, ok).OrElse(false)
+}
+
 // CtxValuePermission 安全获取上下文中的 Permission 值
 //
 // JWT 中间件存入的是 enum.Permission（named string），无法用 v.(string) 断言，需单独处理。
