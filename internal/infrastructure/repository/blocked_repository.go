@@ -44,6 +44,12 @@ func (r *blockedRepository) Delete(ctx context.Context, id uint) error {
 	return r.dao.Delete(db, &dbmodel.Blocked{BaseModel: dbmodel.BaseModel{ID: id}})
 }
 
+// DeleteBatch 批量软删敏感词（单条 UPDATE deleted_at，原子）
+func (r *blockedRepository) DeleteBatch(ctx context.Context, ids []uint) error {
+	db := r.db.WithContext(ctx)
+	return r.dao.BatchDeleteByField(db, constant.FieldID, ids)
+}
+
 func (r *blockedRepository) UpdateAction(ctx context.Context, id uint, action string) error {
 	db := r.db.WithContext(ctx)
 	return db.Model(&dbmodel.Blocked{}).
