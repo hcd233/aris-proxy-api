@@ -51,6 +51,7 @@ import type {
   SessionOptionListReq,
   SessionOptionListRsp,
   CreateBlockedReqBody,
+  UpdateBlockedReqBody,
   ListBlockedRsp,
   ListCronJobsRsp,
   UpdateCronJobReqBody,
@@ -640,6 +641,13 @@ class ApiClient {
 
   async deleteBlocked(id: number): Promise<CommonRsp> {
     return this.request<CommonRsp>(`/api/v1/block?id=${id}`, { method: "DELETE" });
+  }
+
+  async updateBlocked(id: number, body: UpdateBlockedReqBody): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/block?id=${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
   }
 
   // ─── Trace (codex hooks) ─────────────────────────────────────────────────────

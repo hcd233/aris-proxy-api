@@ -83,24 +83,29 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	if matched := u.checkContent(req); len(matched) > 0 {
 		_ = u.blockedChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
 
-		var upstreamProtocol enum.ProtocolType
-		switch compatRoute {
-		case enum.CompatRouteNative:
-			upstreamProtocol = enum.ProtocolAnthropicMessage
-		case enum.CompatRouteViaOpenAIChat:
-			upstreamProtocol = enum.ProtocolOpenAIChatCompletion
+		if denyIDs := u.blockedChecker.DenyIDs(matched); len(denyIDs) > 0 {
+			var upstreamProtocol enum.ProtocolType
+			switch compatRoute {
+			case enum.CompatRouteNative:
+				upstreamProtocol = enum.ProtocolAnthropicMessage
+			case enum.CompatRouteViaOpenAIChat:
+				upstreamProtocol = enum.ProtocolOpenAIChatCompletion
+			}
+			words := u.blockedChecker.MatchedWords(denyIDs)
+			auditTask := &dto.ModelCallAuditTask{
+				Ctx:              util.CopyContextValues(ctx),
+				ModelID:          m.ModelID(),
+				Endpoint:         ep.Name(),
+				UpstreamProtocol: upstreamProtocol,
+				APIProtocol:      enum.ProtocolAnthropicMessage,
+				ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
+			}
+			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask)  //nolint:errcheck // best-effort audit
+			return nil, proxyutil.SendAnthropicContentBlockedError() //nolint:nilerr // error returned in response body
 		}
-		words := u.blockedChecker.MatchedWords(matched)
-		auditTask := &dto.ModelCallAuditTask{
-			Ctx:              util.CopyContextValues(ctx),
-			ModelID:          m.ModelID(),
-			Endpoint:         ep.Name(),
-			UpstreamProtocol: upstreamProtocol,
-			APIProtocol:      enum.ProtocolAnthropicMessage,
-			ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
-		}
-		_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask)  //nolint:errcheck // best-effort audit
-		return nil, proxyutil.SendAnthropicContentBlockedError() //nolint:nilerr // error returned in response body
+
+		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
+		ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
 	}
 
 	exposedModel := req.Body.Model

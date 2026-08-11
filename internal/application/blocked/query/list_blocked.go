@@ -28,6 +28,7 @@ func (h *listBlockedHandler) Handle(ctx context.Context, q port.ListBlockedQuery
 		return &port.BlockedView{
 			ID:        b.AggregateID(),
 			Word:      b.Word(),
+			Action:    b.Action(),
 			HitCount:  b.HitCount(),
 			CreatedAt: b.CreatedAt(),
 		}

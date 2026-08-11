@@ -6,6 +6,7 @@ type Blocked struct {
 	BaseModel
 	Word     string `json:"word" gorm:"column:word;type:varchar(512);not null;uniqueIndex:idx_word_deleted_at,priority:1;comment:敏感词"`
 	HitCount uint   `json:"hit_count" gorm:"column:hit_count;not null;default:0;comment:命中次数"`
+	Action   string `json:"action" gorm:"column:action;type:varchar(16);not null;default:deny;comment:命中处理动作"`
 }
 
 func (Blocked) TableName() string {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	domain "github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/domain/blocked/aggregate"
 
@@ -17,12 +18,16 @@ type BlockedService struct {
 	matcher     *ACmatcher
 	wordIDs     map[string]uint
 	wordByID    map[uint]string
+	actionByID  map[uint]string
 	repo        domain.BlockedRepository
 	hitRecorder port.HitRecorder
 }
 
 func NewBlockedService(repo domain.BlockedRepository, hitRecorder port.HitRecorder) *BlockedService {
-	return &BlockedService{repo: repo, matcher: NewACmatcher(make(map[uint]string)), hitRecorder: hitRecorder}
+	return &BlockedService{
+		repo: repo, matcher: NewACmatcher(make(map[uint]string)), hitRecorder: hitRecorder,
+		actionByID: make(map[uint]string),
+	}
 }
 
 func (s *BlockedService) rebuild(words map[uint]string) {
@@ -37,12 +42,16 @@ func (s *BlockedService) Rebuild(ctx context.Context) {
 	all, err := s.repo.ListAll(ctx)
 	if err != nil {
 		s.rebuild(make(map[uint]string))
+		s.actionByID = make(map[uint]string)
 		return
 	}
 	words := lo.SliceToMap(all, func(b *aggregate.Blocked) (uint, string) {
 		return b.AggregateID(), b.Word()
 	})
 	s.rebuild(words)
+	s.actionByID = lo.SliceToMap(all, func(b *aggregate.Blocked) (uint, string) {
+		return b.AggregateID(), b.Action()
+	})
 }
 
 func (s *BlockedService) Check(text string) []uint {
@@ -57,6 +66,15 @@ func (s *BlockedService) MatchedWords(ids []uint) []string {
 	return lo.FilterMap(ids, func(id uint, _ int) (string, bool) {
 		w, ok := s.wordByID[id]
 		return w, ok
+	})
+}
+
+// DenyIDs 过滤出 action=deny（命中即拦截）的词 ID，空值按 deny 兜底
+func (s *BlockedService) DenyIDs(ids []uint) []uint {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return lo.Filter(ids, func(id uint, _ int) bool {
+		return s.actionByID[id] == "" || s.actionByID[id] == enum.BlockedActionDeny
 	})
 }
 
