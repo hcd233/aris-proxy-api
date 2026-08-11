@@ -3,11 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ModelItem } from "@/lib/types";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/lib/i18n";
 import { ChevronDown, Search, X } from "lucide-react";
 import { ClaudeCode } from "@lobehub/icons";
@@ -68,7 +64,7 @@ const TIER_ACCENT: Record<TierKey, { badge: string; ring: string; dot: string }>
 function generateScript(
   baseUrl: string,
   authToken: string,
-  tiers: Record<TierKey, ModelItem | null>
+  tiers: Record<TierKey, ModelItem | null>,
 ): string {
   const envEntries: [string, string][] = [
     ["ANTHROPIC_BASE_URL", baseUrl],
@@ -179,9 +175,7 @@ function TierPicker({ models, selected, onSelect }: TierPickerProps) {
       >
         {selected ? (
           <span className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="truncate font-medium text-foreground">
-              {selected.alias}
-            </span>
+            <span className="truncate font-medium text-foreground">{selected.alias}</span>
             {supports1M(selected) && <OneMBadge />}
             <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">
               {formatTokens(selected.contextLength || 128000)}
@@ -196,10 +190,7 @@ function TierPicker({ models, selected, onSelect }: TierPickerProps) {
         )}
         <ChevronDown className="size-4 shrink-0 text-muted-foreground/60" />
       </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-[var(--anchor-width)] min-w-[260px] gap-0 p-0"
-      >
+      <PopoverContent align="start" className="w-[var(--anchor-width)] min-w-[260px] gap-0 p-0">
         <div className="relative border-b border-border p-2">
           <Search className="absolute left-4 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/60" />
           <Input
@@ -257,7 +248,7 @@ export default function ExportClaudecodeDialog({
 
   // lazy initializer：对话框内容仅在打开时挂载，SSR 与客户端初始渲染无差异
   const [baseUrl, setBaseUrl] = useState(() =>
-    typeof window === "undefined" ? "" : `${window.location.origin}/api/anthropic/v1`
+    typeof window === "undefined" ? "" : `${window.location.origin}/api/anthropic/v1`,
   );
   const [authToken, setAuthToken] = useState("YOUR_API_KEY");
   const [tiers, setTiers] = useState<Record<TierKey, ModelItem | null>>({
@@ -270,7 +261,7 @@ export default function ExportClaudecodeDialog({
 
   const script = useMemo(
     () => (hasAnyTier ? generateScript(baseUrl, authToken, tiers) : ""),
-    [baseUrl, authToken, tiers, hasAnyTier]
+    [baseUrl, authToken, tiers, hasAnyTier],
   );
 
   const setTier = (key: TierKey, m: ModelItem | null) => {
@@ -349,11 +340,7 @@ export default function ExportClaudecodeDialog({
                     {t(`models.export_tier_${key}_desc`)}
                   </span>
                 </div>
-                <TierPicker
-                  models={models}
-                  selected={selected}
-                  onSelect={(m) => setTier(key, m)}
-                />
+                <TierPicker models={models} selected={selected} onSelect={(m) => setTier(key, m)} />
               </div>
             );
           })}

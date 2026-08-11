@@ -88,8 +88,15 @@ export default function UsersPage() {
   const { user: currentUser } = useAuth();
   const [items, setItems] = useState<UserItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.users.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.users.pageSize", 20);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
+    "dashboard.users.pageSize",
+    20,
+  );
+  const [pageInfo, setPageInfo] = useState<PageInfo>({
+    page: persistedPage,
+    pageSize: persistedPageSize,
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [permission, setPermission] = useState("");
@@ -99,25 +106,28 @@ export default function UsersPage() {
   const t = useT();
   const isMobile = useIsMobile();
 
-  const fetchUsers = useCallback(async (page: number, pageSize: number, query?: string, perm?: string) => {
-    setLoading(true);
-    try {
-      const rsp = await api.listUsers(page, pageSize, {
-        query: query || undefined,
-        permission: perm || undefined,
-      });
-      setItems(rsp.items ?? []);
-      if (rsp.pageInfo) {
-        setPageInfo(rsp.pageInfo);
-        setPersistedPage(rsp.pageInfo.page);
-        setPersistedPageSize(rsp.pageInfo.pageSize);
+  const fetchUsers = useCallback(
+    async (page: number, pageSize: number, query?: string, perm?: string) => {
+      setLoading(true);
+      try {
+        const rsp = await api.listUsers(page, pageSize, {
+          query: query || undefined,
+          permission: perm || undefined,
+        });
+        setItems(rsp.items ?? []);
+        if (rsp.pageInfo) {
+          setPageInfo(rsp.pageInfo);
+          setPersistedPage(rsp.pageInfo.page);
+          setPersistedPageSize(rsp.pageInfo.pageSize);
+        }
+      } catch (err) {
+        showErrorToast(err, { title: t("users.load_error") });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      showErrorToast(err, { title: t("users.load_error") });
-    } finally {
-      setLoading(false);
-    }
-  }, [setPersistedPage, setPersistedPageSize, t]);
+    },
+    [setPersistedPage, setPersistedPageSize, t],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch list when the persisted page or size changes */
   useEffect(() => {
@@ -130,46 +140,57 @@ export default function UsersPage() {
     fetchUsers(1, persistedPageSize, searchQuery || undefined, permission || undefined);
   }, [fetchUsers, persistedPageSize, permission, searchQuery, setPersistedPage]);
 
-  const runAction = useCallback(async (action: UserAction, user: UserItem) => {
-    setActing(action);
-    try {
-      switch (action) {
-        case "promote":
-          await api.approveUser(user.id);
-          toast.success(t("users.approved_success"));
-          break;
-        case "demote":
-          await api.demoteUser(user.id);
-          toast.success(t("users.demote_success"));
-          break;
-        case "delete":
-          await api.deleteUser(user.id);
-          toast.success(t("users.delete_success"));
-          break;
+  const runAction = useCallback(
+    async (action: UserAction, user: UserItem) => {
+      setActing(action);
+      try {
+        switch (action) {
+          case "promote":
+            await api.approveUser(user.id);
+            toast.success(t("users.approved_success"));
+            break;
+          case "demote":
+            await api.demoteUser(user.id);
+            toast.success(t("users.demote_success"));
+            break;
+          case "delete":
+            await api.deleteUser(user.id);
+            toast.success(t("users.delete_success"));
+            break;
+        }
+        fetchUsers(
+          pageInfo.page,
+          pageInfo.pageSize,
+          searchQuery || undefined,
+          permission || undefined,
+        );
+      } catch (err) {
+        showErrorToast(err, {
+          title:
+            action === "promote"
+              ? t("users.approve_error")
+              : action === "demote"
+                ? t("users.demote_error")
+                : t("users.delete_error"),
+        });
+      } finally {
+        setActing(null);
       }
-      fetchUsers(pageInfo.page, pageInfo.pageSize, searchQuery || undefined, permission || undefined);
-    } catch (err) {
-      showErrorToast(err, {
-        title:
-          action === "promote"
-            ? t("users.approve_error")
-            : action === "demote"
-              ? t("users.demote_error")
-              : t("users.delete_error"),
-      });
-    } finally {
-      setActing(null);
-    }
-  }, [fetchUsers, pageInfo.page, pageInfo.pageSize, permission, searchQuery, t]);
+    },
+    [fetchUsers, pageInfo.page, pageInfo.pageSize, permission, searchQuery, t],
+  );
 
-  const handleAction = useCallback((action: UserAction, user: UserItem) => {
-    if (action === "promote") {
-      runAction("promote", user);
-      return;
-    }
-    setConfirmAction(action);
-    setConfirmUser(user);
-  }, [runAction]);
+  const handleAction = useCallback(
+    (action: UserAction, user: UserItem) => {
+      if (action === "promote") {
+        runAction("promote", user);
+        return;
+      }
+      setConfirmAction(action);
+      setConfirmUser(user);
+    },
+    [runAction],
+  );
 
   const handleConfirm = useCallback(() => {
     if (confirmAction && confirmUser) {
@@ -203,7 +224,9 @@ export default function UsersPage() {
                 <SelectContent>
                   <SelectItem value="all">{t("users.all_permissions")}</SelectItem>
                   {PERMISSIONS.map((p) => (
-                    <SelectItem key={p} value={p}>{t(`permission.${p}`)}</SelectItem>
+                    <SelectItem key={p} value={p}>
+                      {t(`permission.${p}`)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -217,7 +240,10 @@ export default function UsersPage() {
             {loading ? (
               <TableSkeleton />
             ) : items.length === 0 ? (
-              <ListEmptyState icon={<Users className="mb-3 size-10 text-muted-foreground/40" />} message={t("users.no_users")} />
+              <ListEmptyState
+                icon={<Users className="mb-3 size-10 text-muted-foreground/40" />}
+                message={t("users.no_users")}
+              />
             ) : (
               <>
                 {isMobile ? (
@@ -258,7 +284,9 @@ export default function UsersPage() {
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.name}</TableCell>
                           <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                          <TableCell className="text-muted-foreground">{t(`permission.${user.permission}`)}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {t(`permission.${user.permission}`)}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}
                           </TableCell>
@@ -279,7 +307,9 @@ export default function UsersPage() {
                 )}
                 <PaginationBar
                   pageInfo={pageInfo}
-                  onChange={(page, pageSize) => fetchUsers(page, pageSize, searchQuery || undefined, permission || undefined)}
+                  onChange={(page, pageSize) =>
+                    fetchUsers(page, pageSize, searchQuery || undefined, permission || undefined)
+                  }
                   totalLabel={t("pagination.items")}
                 />
               </>
@@ -295,8 +325,16 @@ export default function UsersPage() {
               setConfirmUser(null);
             }
           }}
-          title={confirmAction === "demote" ? t("users.demote_confirm_title") : t("users.delete_confirm_title")}
-          description={confirmAction === "demote" ? t("users.demote_confirm_desc") : t("users.delete_confirm_desc")}
+          title={
+            confirmAction === "demote"
+              ? t("users.demote_confirm_title")
+              : t("users.delete_confirm_title")
+          }
+          description={
+            confirmAction === "demote"
+              ? t("users.demote_confirm_desc")
+              : t("users.delete_confirm_desc")
+          }
           confirmLabel={confirmAction === "demote" ? t("users.demote") : t("common.delete")}
           loadingLabel={t("common.processing")}
           loading={acting !== null}

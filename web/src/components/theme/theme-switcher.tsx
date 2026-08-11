@@ -3,7 +3,12 @@
 import { usePathname } from "next/navigation";
 import { Feather, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 

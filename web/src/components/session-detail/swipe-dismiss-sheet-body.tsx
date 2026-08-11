@@ -73,8 +73,7 @@ export function SwipeDismissSheetBody({
       return;
     }
     if (restoring) {
-      popup.style.transition =
-        "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
+      popup.style.transition = "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
       popup.style.transform = `translate3d(0, ${dragY}px, 0)`;
       const handle = window.setTimeout(() => {
         popup.style.transition = "";
@@ -88,20 +87,17 @@ export function SwipeDismissSheetBody({
     popup.style.transform = "";
   }, [dragY, dragging, restoring]);
 
-  const beginDrag = useCallback(
-    (clientY: number, fromScroll: boolean) => {
-      dragStateRef.current = {
-        startY: clientY,
-        lastY: clientY,
-        lastT: performance.now(),
-        velocity: 0,
-        active: true,
-        fromScroll,
-      };
-      setDragging(true);
-    },
-    [],
-  );
+  const beginDrag = useCallback((clientY: number, fromScroll: boolean) => {
+    dragStateRef.current = {
+      startY: clientY,
+      lastY: clientY,
+      lastT: performance.now(),
+      velocity: 0,
+      active: true,
+      fromScroll,
+    };
+    setDragging(true);
+  }, []);
 
   const updateDrag = useCallback((clientY: number) => {
     const s = dragStateRef.current;
@@ -120,8 +116,7 @@ export function SwipeDismissSheetBody({
     s.active = false;
     const dy = Math.max(0, s.lastY - s.startY);
     const shouldDismiss =
-      dy > SHEET_DISMISS_DISTANCE ||
-      (dy > 24 && s.velocity > SHEET_DISMISS_VELOCITY);
+      dy > SHEET_DISMISS_DISTANCE || (dy > 24 && s.velocity > SHEET_DISMISS_VELOCITY);
     setDragging(false);
     if (shouldDismiss) {
       setDragY(0);
@@ -201,9 +196,7 @@ export function SwipeDismissSheetBody({
         className="flex items-center gap-2 border-b border-border/60 px-4 pb-3"
       >
         <Wrench className="size-4 text-muted-foreground" />
-        <h2 className="font-display text-[15px] font-semibold text-foreground">
-          {title}
-        </h2>
+        <h2 className="font-display text-[15px] font-semibold text-foreground">{title}</h2>
         <Badge variant="secondary" className="ml-1 text-[10px]">
           {count}
         </Badge>

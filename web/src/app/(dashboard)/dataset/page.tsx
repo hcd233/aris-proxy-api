@@ -27,19 +27,17 @@ import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { Separator } from "@/components/ui/separator";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 hljs.registerLanguage("json", json);
 
@@ -119,22 +117,14 @@ function MetricCard({
       {loading ? (
         <Skeleton className="mt-3 h-8 w-24" />
       ) : (
-        <div className="mt-2 font-display text-3xl font-semibold text-foreground">
-          {value}
-        </div>
+        <div className="mt-2 font-display text-3xl font-semibold text-foreground">{value}</div>
       )}
       {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
     </div>
   );
 }
 
-function StatPill({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function StatPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm">
       <span className="text-muted-foreground">{label}</span>
@@ -158,7 +148,9 @@ function DistributionList({
     <div className="rounded-xl border border-border bg-muted/20 p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium text-foreground">{title}</h3>
-        <Badge variant="secondary" className="font-mono tabular-nums">{items.length}</Badge>
+        <Badge variant="secondary" className="font-mono tabular-nums">
+          {items.length}
+        </Badge>
       </div>
       <div className="space-y-3">
         {items.length === 0 ? (
@@ -173,9 +165,7 @@ function DistributionList({
                   <TooltipRoot>
                     <TooltipTrigger
                       render={
-                        <span className="max-w-[24ch] truncate text-foreground">
-                          {item.label}
-                        </span>
+                        <span className="max-w-[24ch] truncate text-foreground">{item.label}</span>
                       }
                     />
                     <TooltipContent side="top" align="start" className="max-w-xs break-all">
@@ -183,7 +173,9 @@ function DistributionList({
                     </TooltipContent>
                   </TooltipRoot>
                 </TooltipProvider>
-                <span className="font-mono tabular-nums text-muted-foreground">{formatNumber(item.value)}</span>
+                <span className="font-mono tabular-nums text-muted-foreground">
+                  {formatNumber(item.value)}
+                </span>
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-background">
                 <div
@@ -202,8 +194,14 @@ function DistributionList({
 export default function DatasetPage() {
   const t = useT();
   const [minScore, setMinScore] = usePersistentState("dashboard.dataset.minScore", 3);
-  const [selectedModels, setSelectedModels] = usePersistentState<string[]>("dashboard.dataset.models", []);
-  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.dataset.timeRange", "30d");
+  const [selectedModels, setSelectedModels] = usePersistentState<string[]>(
+    "dashboard.dataset.models",
+    [],
+  );
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
+    "dashboard.dataset.timeRange",
+    "30d",
+  );
   const [customStart, setCustomStart] = usePersistentState("dashboard.dataset.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.dataset.customEnd", "");
   const [modelOptions, setModelOptions] = useState<string[]>([]);
@@ -337,7 +335,8 @@ export default function DatasetPage() {
 
   const params = buildParams();
   const totalSessions = preview?.totalSessions ?? 0;
-  const activeFilters = (minScore > 0 ? 1 : 0) + selectedModels.length + (timeRange !== "30d" ? 1 : 0);
+  const activeFilters =
+    (minScore > 0 ? 1 : 0) + selectedModels.length + (timeRange !== "30d" ? 1 : 0);
   const scoreItems = Object.entries(preview?.scoreDistribution ?? {})
     .map(([score, value]) => ({
       label: replaceVars(t("dataset.score_label"), { score }),
@@ -354,7 +353,6 @@ export default function DatasetPage() {
       {/* Page Header — consistent with other dashboard pages */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="max-w-2xl">
-          
           <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("dataset.title")}
           </h1>
@@ -383,23 +381,33 @@ export default function DatasetPage() {
       {/* Step flow indicator */}
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <span className="flex items-center gap-1.5 text-primary">
-          <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold">1</span>
+          <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold">
+            1
+          </span>
           {t("dataset.step_configure")}
         </span>
         <ArrowRight className="size-3" />
         <span className="flex items-center gap-1.5">
-          <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">2</span>
+          <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">
+            2
+          </span>
           {t("dataset.step_review")}
         </span>
         <ArrowRight className="size-3" />
         <span className="flex items-center gap-1.5">
-          <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">3</span>
+          <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">
+            3
+          </span>
           {t("dataset.step_export")}
         </span>
       </div>
 
       {/* Step 1: Configure */}
-      <StepCard index={1} title={t("dataset.step_configure")} description={t("dataset.step_configure_desc")}>
+      <StepCard
+        index={1}
+        title={t("dataset.step_configure")}
+        description={t("dataset.step_configure_desc")}
+      >
         <div className="space-y-5 pt-2">
           <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
             {/* Quality gate */}
@@ -427,7 +435,9 @@ export default function DatasetPage() {
                 aria-label={t("dataset.min_score")}
               />
               <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">
-                {[0, 1, 2, 3, 4, 5].map((score) => <span key={score}>{score}</span>)}
+                {[0, 1, 2, 3, 4, 5].map((score) => (
+                  <span key={score}>{score}</span>
+                ))}
               </div>
             </div>
 
@@ -453,7 +463,12 @@ export default function DatasetPage() {
                   emptyText={t("dataset.no_models")}
                 />
                 {activeFilters > 0 && (
-                  <Button variant="ghost" size="sm" onClick={handleClearFilters} className="gap-1.5 text-muted-foreground hover:text-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearFilters}
+                    className="gap-1.5 text-muted-foreground hover:text-foreground"
+                  >
                     <RotateCcw className="size-3.5" />
                     {t("dataset.clear_filters")}
                   </Button>
@@ -467,7 +482,9 @@ export default function DatasetPage() {
                 </Badge>
                 <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
                   <SlidersHorizontal className="size-3 text-primary" />
-                  {selectedModels.length > 0 ? `${selectedModels.length} ${t("dataset.export_filter_models")}` : t("dataset.export_filter_all_models")}
+                  {selectedModels.length > 0
+                    ? `${selectedModels.length} ${t("dataset.export_filter_models")}`
+                    : t("dataset.export_filter_all_models")}
                 </Badge>
                 <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
                   <FileJson className="size-3 text-primary" />
@@ -480,13 +497,25 @@ export default function DatasetPage() {
       </StepCard>
 
       {/* Step 2: Review */}
-      <StepCard index={2} title={t("dataset.step_review")} description={t("dataset.step_review_desc")}>
+      <StepCard
+        index={2}
+        title={t("dataset.step_review")}
+        description={t("dataset.step_review_desc")}
+      >
         <div className="space-y-5 pt-2">
           {/* Metric cards */}
           <div className="grid gap-3 md:grid-cols-3">
-            <MetricCard label={t("dataset.total_sessions")} value={formatNumber(totalSessions)} loading={loadingPreview} />
+            <MetricCard
+              label={t("dataset.total_sessions")}
+              value={formatNumber(totalSessions)}
+              loading={loadingPreview}
+            />
             <MetricCard label={t("dataset.top_model")} value={topModel} loading={loadingPreview} />
-            <MetricCard label={t("dataset.export_format")} value={t("dataset.export_format_value")} loading={loadingPreview} />
+            <MetricCard
+              label={t("dataset.export_format")}
+              value={t("dataset.export_format_value")}
+              loading={loadingPreview}
+            />
           </div>
 
           {totalSessions === 0 && !loadingPreview ? (
@@ -497,8 +526,16 @@ export default function DatasetPage() {
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              <DistributionList title={t("dataset.score_distribution")} items={scoreItems} emptyText={t("dataset.no_data")} />
-              <DistributionList title={t("dataset.model_distribution")} items={modelItems} emptyText={t("dataset.no_models")} />
+              <DistributionList
+                title={t("dataset.score_distribution")}
+                items={scoreItems}
+                emptyText={t("dataset.no_data")}
+              />
+              <DistributionList
+                title={t("dataset.model_distribution")}
+                items={modelItems}
+                emptyText={t("dataset.no_models")}
+              />
             </div>
           )}
 
@@ -511,9 +548,16 @@ export default function DatasetPage() {
             >
               <span className="flex items-center gap-2.5">
                 <Eye className="size-4 text-primary" />
-                {showFormatPreview ? t("dataset.preview_toggle_hide") : t("dataset.preview_toggle_show")}
+                {showFormatPreview
+                  ? t("dataset.preview_toggle_hide")
+                  : t("dataset.preview_toggle_show")}
               </span>
-              <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", showFormatPreview && "rotate-180")} />
+              <ChevronDown
+                className={cn(
+                  "size-4 text-muted-foreground transition-transform",
+                  showFormatPreview && "rotate-180",
+                )}
+              />
             </button>
             {showFormatPreview && (
               <div className="border-t border-border px-5 py-4">
@@ -576,18 +620,25 @@ export default function DatasetPage() {
               />
               <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm">
                 <FileJson className="size-4 text-primary" />
-                <span className="font-mono text-xs font-medium text-foreground">{t("dataset.export_format_value")}</span>
+                <span className="font-mono text-xs font-medium text-foreground">
+                  {t("dataset.export_format_value")}
+                </span>
               </div>
             </div>
 
             {/* Export action */}
             <div className="min-w-64 space-y-3 rounded-xl border border-primary/15 bg-card p-4">
               <CardDescription>
-                {replaceVars(t("dataset.export_confirm_total"), { total: formatNumber(totalSessions) })}
+                {replaceVars(t("dataset.export_confirm_total"), {
+                  total: formatNumber(totalSessions),
+                })}
               </CardDescription>
               {exporting && (
                 <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out" style={{ width: `${exportProgress}%` }} />
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                    style={{ width: `${exportProgress}%` }}
+                  />
                 </div>
               )}
               <Button

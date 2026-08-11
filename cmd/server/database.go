@@ -23,7 +23,7 @@ var migrateDatabaseCmd = &cobra.Command{
 	},
 }
 
-// runMigrate 执行数据库结构迁移：仅 AutoMigrate 建表/建列。
+// runMigrate 执行数据库结构迁移：仅 AutoMigrate 建表/建列/建索引。
 func runMigrate(ctx context.Context) {
 	lo.Must0(database.AutoMigrate(ctx))
 }

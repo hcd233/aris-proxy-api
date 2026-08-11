@@ -31,15 +31,33 @@ interface RuntimeChartProps {
 function formatTick(unix: number, rangeKey: string): string {
   const d = new Date(unix * 1000);
   if (rangeKey === "15m") {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+    return d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
   }
   if (rangeKey === "24h") {
-    return d.toLocaleString([], { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+    return d.toLocaleString([], {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   }
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-export function RuntimeChart({ title, data, series, unit, rangeKey, emptyLabel }: RuntimeChartProps) {
+export function RuntimeChart({
+  title,
+  data,
+  series,
+  unit,
+  rangeKey,
+  emptyLabel,
+}: RuntimeChartProps) {
   const config: ChartConfig = Object.fromEntries(
     series.map((s) => [s.key, { label: s.label, color: s.color }]),
   );
@@ -98,7 +116,9 @@ export function RuntimeChart({ title, data, series, unit, rangeKey, emptyLabel }
                           <div className="flex flex-1 items-center justify-between leading-none gap-3">
                             <span className="text-muted-foreground">{seriesLabel as string}</span>
                             <span className="font-mono font-medium text-foreground tabular-nums">
-                              {Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                              {Number(value).toLocaleString(undefined, {
+                                maximumFractionDigits: 2,
+                              })}
                               {unit ?? ""}
                             </span>
                           </div>

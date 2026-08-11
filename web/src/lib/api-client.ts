@@ -182,7 +182,11 @@ class ApiClient {
 
     const retryBody = await retryRes.json();
     // 业务层未授权（HTTP 200 包装）同样视为凭据失效
-    if (retryBody && typeof retryBody === "object" && retryBody.error?.code === BusinessErrorCode.Unauthorized) {
+    if (
+      retryBody &&
+      typeof retryBody === "object" &&
+      retryBody.error?.code === BusinessErrorCode.Unauthorized
+    ) {
       this.clearAuthAndPromptLogin();
       throw new ApiError(401, "Authentication required");
     }
@@ -204,10 +208,7 @@ class ApiClient {
     });
   }
 
-  private async request<T>(
-    path: string,
-    options?: RequestInit
-  ): Promise<T> {
+  private async request<T>(path: string, options?: RequestInit): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers: { ...this.getHeaders(), ...options?.headers },
@@ -322,34 +323,30 @@ class ApiClient {
   }
 
   async getSession(sessionId: number): Promise<GetSessionRsp> {
-    return this.request<GetSessionRsp>(
-      `/api/v1/session?id=${sessionId}`
-    );
+    return this.request<GetSessionRsp>(`/api/v1/session?id=${sessionId}`);
   }
 
   async getSessionMetadata(sessionId: number): Promise<GetSessionMetadataRsp> {
-    return this.request<GetSessionMetadataRsp>(
-      `/api/v1/session/metadata?id=${sessionId}`
-    );
+    return this.request<GetSessionMetadataRsp>(`/api/v1/session/metadata?id=${sessionId}`);
   }
 
   async listSessionMessages(
     sessionId: number,
     page: number = 1,
-    pageSize: number = 50
+    pageSize: number = 50,
   ): Promise<ListSessionMessagesRsp> {
     return this.request<ListSessionMessagesRsp>(
-      `/api/v1/session/message/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/message/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
   async listSessionTools(
     sessionId: number,
     page: number = 1,
-    pageSize: number = 20
+    pageSize: number = 20,
   ): Promise<ListSessionToolsRsp> {
     return this.request<ListSessionToolsRsp>(
-      `/api/v1/session/tool/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/tool/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
@@ -377,36 +374,28 @@ class ApiClient {
     });
   }
 
-  async listShares(
-    page: number = 1,
-    pageSize: number = 20
-  ): Promise<ListSharesRsp> {
+  async listShares(page: number = 1, pageSize: number = 20): Promise<ListSharesRsp> {
     return this.request<ListSharesRsp>(
-      `/api/v1/session/share/list?page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/share/list?page=${page}&pageSize=${pageSize}`,
     );
   }
 
   async deleteShare(shareId: string): Promise<CommonRsp> {
-    return this.request<CommonRsp>(
-      `/api/v1/session/share?id=${encodeURIComponent(shareId)}`,
-      { method: "DELETE" }
-    );
+    return this.request<CommonRsp>(`/api/v1/session/share?id=${encodeURIComponent(shareId)}`, {
+      method: "DELETE",
+    });
   }
 
   // ─── Session Delete ──────────────────────────────────────────────────────
 
   async deleteSession(sessionId: number): Promise<DeleteSessionRsp> {
-    return this.request<DeleteSessionRsp>(
-      `/api/v1/session?ids=${sessionId}`,
-      { method: "DELETE" }
-    );
+    return this.request<DeleteSessionRsp>(`/api/v1/session?ids=${sessionId}`, { method: "DELETE" });
   }
 
   async batchDeleteSessions(ids: number[]): Promise<DeleteSessionRsp> {
-    return this.request<DeleteSessionRsp>(
-      `/api/v1/session?ids=${ids.join(",")}`,
-      { method: "DELETE" }
-    );
+    return this.request<DeleteSessionRsp>(`/api/v1/session?ids=${ids.join(",")}`, {
+      method: "DELETE",
+    });
   }
 
   /**
@@ -428,7 +417,7 @@ class ApiClient {
    */
   async getShareMetadata(shareId: string): Promise<GetShareMetadataRsp> {
     return this.publicGet<GetShareMetadataRsp>(
-      `/api/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`
+      `/api/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`,
     );
   }
 
@@ -438,10 +427,10 @@ class ApiClient {
   async listShareMessages(
     shareId: string,
     page: number = 1,
-    pageSize: number = 50
+    pageSize: number = 50,
   ): Promise<ListShareMessagesRsp> {
     return this.publicGet<ListShareMessagesRsp>(
-      `/api/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
@@ -451,10 +440,10 @@ class ApiClient {
   async listShareTools(
     shareId: string,
     page: number = 1,
-    pageSize: number = 20
+    pageSize: number = 20,
   ): Promise<ListShareToolsRsp> {
     return this.publicGet<ListShareToolsRsp>(
-      `/api/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
@@ -463,16 +452,14 @@ class ApiClient {
   async listAPIKeys(
     page: number = 1,
     pageSize: number = 20,
-    query?: string
+    query?: string,
   ): Promise<ListAPIKeysRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
     return this.request<ListAPIKeysRsp>(`/api/v1/apikey/list?${params}`);
   }
 
-  async createAPIKey(
-    body: CreateAPIKeyReqBody
-  ): Promise<CreateAPIKeyRsp> {
+  async createAPIKey(body: CreateAPIKeyReqBody): Promise<CreateAPIKeyRsp> {
     return this.request<CreateAPIKeyRsp>("/api/v1/apikey", {
       method: "POST",
       body: JSON.stringify(body),
@@ -490,26 +477,21 @@ class ApiClient {
   async listEndpoints(
     page: number = 1,
     pageSize: number = 20,
-    query?: string
+    query?: string,
   ): Promise<ListEndpointsRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
     return this.request<ListEndpointsRsp>(`/api/v1/endpoint/list?${params}`);
   }
 
-  async createEndpoint(
-    body: CreateEndpointReqBody
-  ): Promise<ListEndpointsRsp> {
+  async createEndpoint(body: CreateEndpointReqBody): Promise<ListEndpointsRsp> {
     return this.request<ListEndpointsRsp>("/api/v1/endpoint", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
-  async updateEndpoint(
-    id: number,
-    body: UpdateEndpointReqBody
-  ): Promise<ListEndpointsRsp> {
+  async updateEndpoint(id: number, body: UpdateEndpointReqBody): Promise<ListEndpointsRsp> {
     return this.request<ListEndpointsRsp>(`/api/v1/endpoint?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -527,7 +509,7 @@ class ApiClient {
   async listModels(
     page: number = 1,
     pageSize: number = 20,
-    query?: string
+    query?: string,
   ): Promise<ListModelsRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
@@ -541,10 +523,7 @@ class ApiClient {
     });
   }
 
-  async updateModel(
-    id: number,
-    body: UpdateModelReqBody
-  ): Promise<ListModelsRsp> {
+  async updateModel(id: number, body: UpdateModelReqBody): Promise<ListModelsRsp> {
     return this.request<ListModelsRsp>(`/api/v1/model?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -676,7 +655,7 @@ class ApiClient {
   async listTraces(
     page: number = 1,
     pageSize: number = 20,
-    query?: string
+    query?: string,
   ): Promise<ListTracesRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
@@ -690,7 +669,7 @@ class ApiClient {
   async listTraceEvents(
     traceId: number,
     page: number = 1,
-    pageSize: number = 50
+    pageSize: number = 50,
   ): Promise<ListTraceEventsRsp> {
     const params = new URLSearchParams({
       id: String(traceId),
@@ -701,17 +680,11 @@ class ApiClient {
   }
 
   async deleteTrace(traceId: number): Promise<DeleteTraceRsp> {
-    return this.request<DeleteTraceRsp>(
-      `/api/v1/trace?ids=${traceId}`,
-      { method: "DELETE" }
-    );
+    return this.request<DeleteTraceRsp>(`/api/v1/trace?ids=${traceId}`, { method: "DELETE" });
   }
 
   async batchDeleteTraces(ids: number[]): Promise<DeleteTraceRsp> {
-    return this.request<DeleteTraceRsp>(
-      `/api/v1/trace?ids=${ids.join(",")}`,
-      { method: "DELETE" }
-    );
+    return this.request<DeleteTraceRsp>(`/api/v1/trace?ids=${ids.join(",")}`, { method: "DELETE" });
   }
 
   // ─── Cron (admin) ──────────────────────────────────────────────────────────
@@ -772,7 +745,9 @@ class ApiClient {
     return this.request<ListCronCallAuditsRsp>(`/api/v1/audit/cron/log/list?${sp}`);
   }
 
-  async listCronCallAuditOptions(params: CronCallAuditOptionListReq): Promise<CronCallAuditOptionListRsp> {
+  async listCronCallAuditOptions(
+    params: CronCallAuditOptionListReq,
+  ): Promise<CronCallAuditOptionListRsp> {
     const sp = new URLSearchParams();
     sp.set("field", params.field);
     if (params.keyword) sp.set("keyword", params.keyword);
@@ -797,7 +772,8 @@ class ApiClient {
   }): Promise<DatasetPreviewRsp> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));
-    if (params.modelIds && params.modelIds.length > 0) sp.set("modelIds", params.modelIds.join(","));
+    if (params.modelIds && params.modelIds.length > 0)
+      sp.set("modelIds", params.modelIds.join(","));
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<DatasetPreviewRsp>(`/api/v1/dataset/preview?${sp}`);
@@ -812,7 +788,8 @@ class ApiClient {
   }): Promise<DatasetFormatPreviewRsp> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));
-    if (params.modelIds && params.modelIds.length > 0) sp.set("modelIds", params.modelIds.join(","));
+    if (params.modelIds && params.modelIds.length > 0)
+      sp.set("modelIds", params.modelIds.join(","));
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.offset !== undefined) sp.set("offset", String(params.offset));
@@ -827,7 +804,7 @@ class ApiClient {
       endTime?: string;
     },
     onEvent: (event: DatasetExportSSEEvent) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<void> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));

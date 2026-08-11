@@ -39,6 +39,8 @@ func (h *listAuditOptionHandler) Handle(ctx context.Context, q ListAuditOptionQu
 		return h.repo.ListDistinctModels(ctx, q.Keyword, q.StartTime, q.EndTime)
 	case constant.AuditFilterFieldStatus:
 		return h.repo.ListDistinctStatusCodes(ctx, q.StartTime, q.EndTime)
+	case constant.AuditFilterFieldUA:
+		return h.repo.ListDistinctUserAgents(ctx, q.Keyword, q.StartTime, q.EndTime)
 	default:
 		return []string{}, nil
 	}

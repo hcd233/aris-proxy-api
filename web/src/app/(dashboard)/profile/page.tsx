@@ -76,10 +76,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title={t("profile.title")}
-        description={t("profile.subtitle")}
-      />
+      <PageHeader title={t("profile.title")} description={t("profile.subtitle")} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
         <Card>
@@ -92,17 +89,26 @@ export default function ProfilePage() {
                 {localUser.avatar && (
                   <AvatarImage src={localUser.avatar} alt={localUser.name ?? ""} />
                 )}
-                <AvatarFallback className="bg-secondary text-2xl font-medium">{initials}</AvatarFallback>
+                <AvatarFallback className="bg-secondary text-2xl font-medium">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
               <div className="space-y-2">
                 <div>
-                  <p className="font-display text-lg font-medium">{localUser.name ?? t("profile.unnamed")}</p>
+                  <p className="font-display text-lg font-medium">
+                    {localUser.name ?? t("profile.unnamed")}
+                  </p>
                   <p className="text-sm text-muted-foreground">{localUser.email ?? "—"}</p>
                 </div>
-                <Badge variant="secondary" className="text-xs">{localUser.permission}</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {localUser.permission}
+                </Badge>
                 {localUser.createdAt && (
                   <p className="text-xs text-muted-foreground">
-                    {t("profile.joined").replace("{date}", new Date(localUser.createdAt).toLocaleDateString())}
+                    {t("profile.joined").replace(
+                      "{date}",
+                      new Date(localUser.createdAt).toLocaleDateString(),
+                    )}
                   </p>
                 )}
               </div>
@@ -117,7 +123,9 @@ export default function ProfilePage() {
           <CardContent>
             <div className="max-w-md space-y-5">
               <div className="space-y-1.5">
-                <Label htmlFor="profile-name" className="text-sm font-medium">{t("profile.name")}</Label>
+                <Label htmlFor="profile-name" className="text-sm font-medium">
+                  {t("profile.name")}
+                </Label>
                 <Input
                   id="profile-name"
                   value={name}
@@ -128,9 +136,7 @@ export default function ProfilePage() {
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">{t("profile.email")}</Label>
                 <Input value={localUser.email ?? ""} disabled className="opacity-60 bg-muted/30" />
-                <p className="text-xs text-muted-foreground">
-                  {t("profile.email_oauth_hint")}
-                </p>
+                <p className="text-xs text-muted-foreground">{t("profile.email_oauth_hint")}</p>
               </div>
               <Button onClick={handleSave} disabled={saving || name === (localUser.name ?? "")}>
                 {saving ? t("common.saving") : t("common.save")}

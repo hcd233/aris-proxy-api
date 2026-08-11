@@ -41,6 +41,10 @@ var auditFieldConfigs = map[string]filter.FieldConfig{
 		SQLColumn: constant.AuditFilterStatusSQLColumn,
 		IsNumeric: true,
 	},
+	constant.AuditFilterFieldUA: {
+		SQLColumn: constant.AuditFilterUASQLColumn,
+		IsFuzzy:   true,
+	},
 }
 
 // AuditLogView 审计日志列表视图。

@@ -6,7 +6,12 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, TraceSummary } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -34,7 +39,10 @@ import { formatDateTime } from "@/lib/utils";
 export default function TracePage() {
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.trace.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.trace.pageSize", 20);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
+    "dashboard.trace.pageSize",
+    20,
+  );
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: persistedPage,
     pageSize: persistedPageSize,
@@ -67,7 +75,7 @@ export default function TracePage() {
         setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t]
+    [setPersistedPage, setPersistedPageSize, t],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount with persisted filters */
@@ -124,12 +132,10 @@ export default function TracePage() {
         toast.warning(
           t("trace.batch_delete_warning")
             .replace("{deleted}", String(rsp.deletedCount))
-            .replace("{failed}", String(failed))
+            .replace("{failed}", String(failed)),
         );
       } else {
-        toast.success(
-          t("trace.batch_delete_success").replace("{count}", String(rsp.deletedCount))
-        );
+        toast.success(t("trace.batch_delete_success").replace("{count}", String(rsp.deletedCount)));
       }
       setSelected(new Set());
       fetchTraces(1, pageInfo.pageSize, keyword, true);
@@ -177,14 +183,21 @@ export default function TracePage() {
               onChange={setSearchInput}
               onSearch={handleSearch}
               clearable
-              onClear={() => { setSearchInput(""); setKeyword(""); fetchTraces(1, pageInfo.pageSize, ""); }}
+              onClear={() => {
+                setSearchInput("");
+                setKeyword("");
+                fetchTraces(1, pageInfo.pageSize, "");
+              }}
             />
           </div>
 
           {loading ? (
             <TableSkeleton rows={5} rowClassName="h-10" />
           ) : traces.length === 0 ? (
-            <ListEmptyState icon={<Radar className="mb-3 size-10 text-muted-foreground/50" />} message={t("trace.no_traces")} />
+            <ListEmptyState
+              icon={<Radar className="mb-3 size-10 text-muted-foreground/50" />}
+              message={t("trace.no_traces")}
+            />
           ) : (
             <>
               {isMobile ? (
@@ -208,8 +221,13 @@ export default function TracePage() {
                                 render={
                                   <DeleteIconButton
                                     aria-label={t("trace.delete_aria")}
-                                    disabled={deleteConfirm.loading && deleteConfirm.target?.id === tr.id}
-                                    onClick={(e) => { (e as unknown as React.MouseEvent).stopPropagation(); deleteConfirm.openDelete(tr); }}
+                                    disabled={
+                                      deleteConfirm.loading && deleteConfirm.target?.id === tr.id
+                                    }
+                                    onClick={(e) => {
+                                      (e as unknown as React.MouseEvent).stopPropagation();
+                                      deleteConfirm.openDelete(tr);
+                                    }}
                                   />
                                 }
                               />
@@ -286,7 +304,9 @@ export default function TracePage() {
                         <TableCell>{tr.agent}</TableCell>
                         <TableCell>{tr.apiKeyName}</TableCell>
                         <TableCell>{tr.model}</TableCell>
-                        <TableCell className="text-muted-foreground">{formatDateTime(tr.createdAt)}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDateTime(tr.createdAt)}
+                        </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <TooltipProvider>
                             <TooltipRoot>
@@ -294,8 +314,13 @@ export default function TracePage() {
                                 render={
                                   <DeleteIconButton
                                     aria-label={t("trace.delete_aria")}
-                                    disabled={deleteConfirm.loading && deleteConfirm.target?.id === tr.id}
-                                    onClick={(e) => { (e as unknown as React.MouseEvent).stopPropagation(); deleteConfirm.openDelete(tr); }}
+                                    disabled={
+                                      deleteConfirm.loading && deleteConfirm.target?.id === tr.id
+                                    }
+                                    onClick={(e) => {
+                                      (e as unknown as React.MouseEvent).stopPropagation();
+                                      deleteConfirm.openDelete(tr);
+                                    }}
                                   />
                                 }
                               />
@@ -323,7 +348,7 @@ export default function TracePage() {
         title={t("trace.delete_dialog_title")}
         description={t("trace.delete_dialog_desc").replace(
           "{name}",
-          deleteConfirm.target?.sessionId ?? String(deleteConfirm.target?.id ?? "")
+          deleteConfirm.target?.sessionId ?? String(deleteConfirm.target?.id ?? ""),
         )}
         confirmLabel={t("common.delete")}
         loadingLabel={t("common.deleting")}
@@ -339,7 +364,6 @@ export default function TracePage() {
         loading={batchDeleting}
         onConfirm={handleBatchDelete}
       />
-
     </div>
   );
 }

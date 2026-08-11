@@ -19,7 +19,7 @@ BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 GOLANGCI_LINT_VERSION ?= v2.11.4
 GOLANGCI_LINT         := $(shell which golangci-lint 2>/dev/null || echo $(HOME)/go/bin/golangci-lint)
 
-.PHONY: build build-server build-client build-client-all build-upx build-dev build-debug clean test test-cover lint lint-conv lint-static fgprof web-build web-clean help
+.PHONY: build build-server build-client build-client-all build-upx build-dev build-debug clean test test-cover lint lint-conv lint-static web-lint web-format web-format-check fgprof web-build web-clean help
 
 ## build: 生产构建（strip 符号，含前端和四平台客户端）
 build: build-server build-client-all
@@ -87,6 +87,18 @@ warm-cache:
 clean:
 	rm -f $(OUTPUT) aris
 	rm -rf $(CLIENT_OUTPUT_DIR)
+
+## web-lint: 前端 lint（ESLint）
+web-lint:
+	cd web && npm run lint
+
+## web-format: 前端格式化（Prettier 写入）
+web-format:
+	cd web && npm run format
+
+## web-format-check: 前端格式检查（CI 用）
+web-format-check:
+	cd web && npm run format:check
 
 ## web-build: 构建前端静态文件（gzip 预压缩，服务端 embed 直发压缩内容）
 web-build:

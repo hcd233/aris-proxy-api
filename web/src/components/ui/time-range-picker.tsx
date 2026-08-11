@@ -9,11 +9,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -26,7 +22,7 @@ export interface TimeRangePickerProps {
   className?: string;
 }
 
-  const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
+const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
 
 export function TimeRangePicker({
   value,
@@ -67,7 +63,7 @@ export function TimeRangePicker({
     (key: TimeRangeKey) => {
       onChange(key, "", "");
     },
-    [onChange]
+    [onChange],
   );
 
   const handleCustomClick = useCallback(() => {
@@ -135,7 +131,7 @@ export function TimeRangePicker({
         }
       }
     },
-    [value, customStart, customEnd]
+    [value, customStart, customEnd],
   );
 
   const draftLabel = useMemo(() => {
@@ -151,7 +147,8 @@ export function TimeRangePicker({
     return t("time_range.select_date_range");
   }, [dateRange, showTimePicker, t]);
 
-  const customRangeError = customRange && !customRange.isValid ? t("time_range.start_before_end") : "";
+  const customRangeError =
+    customRange && !customRange.isValid ? t("time_range.start_before_end") : "";
   const canApply = Boolean(customRange?.isValid);
 
   const customDisplayLabel = useMemo(() => {
@@ -182,7 +179,7 @@ export function TimeRangePicker({
             "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors",
             value === key
               ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           {timeLabels[key]}
@@ -199,7 +196,7 @@ export function TimeRangePicker({
                 "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
                 value === "custom"
                   ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             />
           }
