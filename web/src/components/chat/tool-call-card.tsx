@@ -22,8 +22,7 @@ function previewFirstArg(argsJSON: string): string {
     const entries = Object.entries(parsed);
     if (entries.length === 0) return "";
     const [key, value] = entries[0];
-    const valStr =
-      typeof value === "string" ? `"${value}"` : String(value);
+    const valStr = typeof value === "string" ? `"${value}"` : String(value);
     return `${key}: ${valStr}`;
   } catch {
     return "";
@@ -43,11 +42,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
   const preview = previewFirstArg(call.arguments);
 
   return (
-    <div
-      className={cn(
-        "mt-3 overflow-hidden rounded-lg border border-border bg-card",
-      )}
-    >
+    <div className={cn("mt-3 overflow-hidden rounded-lg border border-border bg-card")}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -78,9 +73,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
         <div className="border-t border-border bg-background/40 min-w-0">
           {call.id && (
             <div className="border-b border-border/50 px-3 py-1.5">
-              <span className="font-mono text-[10px] text-muted-foreground/60">
-                {call.id}
-              </span>
+              <span className="font-mono text-[10px] text-muted-foreground/60">{call.id}</span>
             </div>
           )}
           <div className="px-3 py-2.5">
@@ -88,10 +81,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
               <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                 {t("tool_call.input")}
               </p>
-              <CopyButton
-                value={args || "{}"}
-                ariaLabel={t("tool_call.copy_input_aria")}
-              />
+              <CopyButton value={args || "{}"} ariaLabel={t("tool_call.copy_input_aria")} />
             </div>
             <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
               {args || "{}"}
@@ -103,10 +93,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   {t("tool_call.output")}
                 </p>
-                <CopyButton
-                  value={out}
-                  ariaLabel={t("tool_call.copy_output_aria")}
-                />
+                <CopyButton value={out} ariaLabel={t("tool_call.copy_output_aria")} />
               </div>
               <pre className="overflow-x-auto rounded-md bg-muted/40 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-foreground/90 max-w-full">
                 {out}

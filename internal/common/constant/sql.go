@@ -123,6 +123,7 @@ var (
 	AuditFilterFieldUser   = "user"
 	AuditFilterFieldModel  = "model"
 	AuditFilterFieldStatus = "status"
+	AuditFilterFieldUA     = "ua"
 
 	BlockedRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldAction, FieldCreatedAt, FieldUpdatedAt}
 
@@ -186,21 +187,25 @@ var (
 	AuditFilterUserSQLColumn   = "u.name"
 	AuditFilterModelSQLColumn  = "model_id"
 	AuditFilterStatusSQLColumn = "upstream_status_code"
+	AuditFilterUASQLColumn     = "user_agent"
 
 	// ── Audit filter JOIN constants (for paginate queries without alias) ──
 	AuditFilterJoinAPIKey = "JOIN proxy_api_keys ON model_call_audits.api_key_id = proxy_api_keys.id"
 	AuditFilterJoinUser   = "JOIN users u ON proxy_api_keys.user_id = u.id"
 
 	// ── Audit distinct query constants ──
-	AuditDistinctTableMCA     = "model_call_audits mca"
-	AuditDistinctSelectUser   = "DISTINCT u.name"
-	AuditDistinctJoinAPIKey   = "JOIN proxy_api_keys pak ON mca.api_key_id = pak.id"
-	AuditDistinctJoinUser     = "JOIN users u ON pak.user_id = u.id"
-	AuditDistinctWhereUser    = "u.name LIKE ? OR u.email LIKE ?"
-	AuditDistinctWhereModel   = "model_id LIKE ?"
-	AuditDistinctSelectModel  = "DISTINCT model_id"
-	AuditDistinctSelectStatus = "DISTINCT upstream_status_code::text"
-	AuditDistinctLimit        = 50
+	AuditDistinctTableMCA        = "model_call_audits mca"
+	AuditDistinctSelectUser      = "DISTINCT u.name"
+	AuditDistinctJoinAPIKey      = "JOIN proxy_api_keys pak ON mca.api_key_id = pak.id"
+	AuditDistinctJoinUser        = "JOIN users u ON pak.user_id = u.id"
+	AuditDistinctWhereUser       = "u.name LIKE ? OR u.email LIKE ?"
+	AuditDistinctWhereModel      = "model_id LIKE ?"
+	AuditDistinctWhereUA         = "user_agent LIKE ?"
+	AuditDistinctWhereUANotEmpty = "user_agent <> ''"
+	AuditDistinctSelectModel     = "DISTINCT model_id"
+	AuditDistinctSelectStatus    = "DISTINCT upstream_status_code::text"
+	AuditDistinctSelectUA        = "DISTINCT user_agent"
+	AuditDistinctLimit           = 50
 
 	AuditDistinctWhereDeletedAtZero = "mca.deleted_at = 0"
 	AuditPaginateWhereDeletedAtZero = "model_call_audits.deleted_at = 0"

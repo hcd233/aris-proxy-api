@@ -68,12 +68,8 @@ export default function LoginPage() {
     return (
       <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
-          <p className="font-display text-3xl font-semibold text-foreground">
-            Aris Proxy
-          </p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            {t("common.loading")}
-          </p>
+          <p className="font-display text-3xl font-semibold text-foreground">Aris Proxy</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -94,9 +90,7 @@ export default function LoginPage() {
               {t("auth.login_subtitle")}
             </p>
           </div>
-          <p className="text-xs text-sidebar-foreground/50">
-            {t("login.secure_access")}
-          </p>
+          <p className="text-xs text-sidebar-foreground/50">{t("login.secure_access")}</p>
         </div>
 
         <div className="flex flex-col justify-center p-8 md:p-10">
@@ -104,17 +98,13 @@ export default function LoginPage() {
             <h1 className="font-display text-5xl font-semibold tracking-tight text-foreground">
               Aris Proxy
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("auth.login_subtitle")}
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("auth.login_subtitle")}</p>
           </div>
           <div className="hidden md:block">
             <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
               {t("login.welcome_back")}
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("login.sign_in")}
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("login.sign_in")}</p>
           </div>
 
           {error && (

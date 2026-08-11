@@ -68,6 +68,40 @@ func TestModelCallAuditAutoMigrateIndexes(t *testing.T) {
 	}
 }
 
+// toolChecksumIndexName tools 表 checksum 复合唯一索引名
+const toolChecksumIndexName = "idx_tool_checksum_deleted"
+
+// TestToolAutoMigrateUniqueIndex 验证 Tool 迁移后生成 (check_sum, deleted_at) 复合唯一索引。
+//
+// 该索引是工具去重的数据库层保证：ON CONFLICT 依赖它推断冲突目标。若后续改动 tag
+// 破坏了索引定义，去重会退化为无约束的"先查后插"，并发下产生重复工具记录。
+func TestToolAutoMigrateUniqueIndex(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	if err := db.AutoMigrate(&dbmodel.Tool{}); err != nil {
+		t.Fatalf("failed to migrate tools: %v", err)
+	}
+
+	var name, indexSQL string
+	row := db.Raw(
+		"SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'tools' AND name = ?",
+		toolChecksumIndexName,
+	).Row()
+	if err := row.Scan(&name, &indexSQL); err != nil {
+		t.Fatalf("index %q missing: %v", toolChecksumIndexName, err)
+	}
+
+	if !strings.Contains(strings.ToUpper(indexSQL), "UNIQUE") {
+		t.Errorf("index %q should be UNIQUE, got sql: %s", toolChecksumIndexName, indexSQL)
+	}
+
+	gotCols := parseIndexColumns(t, indexSQL)
+	wantCols := []string{"check_sum", "deleted_at"}
+	if !equalStrings(gotCols, wantCols) {
+		t.Errorf("index %q columns = %v, want %v", toolChecksumIndexName, gotCols, wantCols)
+	}
+}
+
 // parseIndexColumns 从 sqlite_master 的 index SQL 中解析列名，如
 // "CREATE INDEX idx_mca_apikey_created ON model_call_audits(api_key_id, created_at desc)"。
 func parseIndexColumns(t *testing.T, sql string) []string {

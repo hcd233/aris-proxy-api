@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"maps"
 	"time"
 
 	"github.com/samber/lo"
@@ -54,13 +55,16 @@ func NewThinkExtractRepository(db *gorm.DB) conversation.ThinkExtractRepository 
 
 // BatchSaveDedup 批量去重保存消息
 //
+//	插入挂 ON CONFLICT DO NOTHING：并发下冲突行被跳过（ID 保持 0），随后对这部分补查补齐映射。
+//	任一 checksum 最终仍无有效 ID 则返回错误，避免把零值 ID 写入 session 的 message_ids。
+//
 //	@receiver r *messageRepository
 //	@param ctx context.Context
 //	@param messages []*aggregate.Message
 //	@return []uint 与 messages 顺序对齐的 ID 列表
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-22 19:30:00
+//	@update 2026-08-10 10:00:00
 func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggregate.Message) ([]uint, error) {
 	if len(messages) == 0 {
 		return []uint{}, nil
@@ -70,14 +74,12 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 
 	checksums := lo.Map(messages, func(m *aggregate.Message, _ int) string { return m.Checksum() })
 
-	existing, err := r.dao.BatchGetByField(db, constant.WhereFieldCheckSum, checksums, messageRepoFieldsChecksum)
+	existingMap, err := r.loadIDsByChecksum(db, checksums)
 	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by checksum")
+		return nil, err
 	}
 
-	existingMap := lo.SliceToMap(existing, func(m *dbmodel.Message) (string, uint) { return m.CheckSum, m.ID })
-
-	newRecords := lo.FilterMap(messages, func(m *aggregate.Message, _ int) (*dbmodel.Message, bool) {
+	newRecords := lo.UniqBy(lo.FilterMap(messages, func(m *aggregate.Message, _ int) (*dbmodel.Message, bool) {
 		if _, ok := existingMap[m.Checksum()]; ok {
 			return nil, false
 		}
@@ -86,21 +88,77 @@ func (r *messageRepository) BatchSaveDedup(ctx context.Context, messages []*aggr
 			Message:  m.Content(),
 			CheckSum: m.Checksum(),
 		}, true
-	})
-	newRecords = lo.UniqBy(newRecords, func(m *dbmodel.Message) string { return m.CheckSum })
+	}), func(m *dbmodel.Message) string { return m.CheckSum })
 
 	if len(newRecords) > 0 {
-		if err := r.dao.BatchCreate(db, newRecords); err != nil {
+		if err := r.dao.BatchCreate(db.Clauses(r.dao.ChecksumConflict()), newRecords); err != nil {
 			return nil, ierr.Wrap(ierr.ErrDBCreate, err, "batch create messages")
 		}
-		for _, nm := range newRecords {
-			existingMap[nm.CheckSum] = nm.ID
+		if err := r.mergeCreatedIDs(db, existingMap, newRecords); err != nil {
+			return nil, err
 		}
 	}
 
-	ids := lo.Map(messages, func(m *aggregate.Message, _ int) uint { return existingMap[m.Checksum()] })
-	lo.ForEach(messages, func(m *aggregate.Message, _ int) { m.SetID(existingMap[m.Checksum()]) })
+	ids := make([]uint, len(messages))
+	for i, m := range messages {
+		id := existingMap[m.Checksum()]
+		if id == 0 {
+			return nil, ierr.Newf(ierr.ErrDBCreate, "dedup insert left message checksum %s unresolved", m.Checksum())
+		}
+		ids[i] = id
+		m.SetID(id)
+	}
 	return ids, nil
+}
+
+// loadIDsByChecksum 按 checksum 批量查询消息，返回 checksum → ID 映射
+//
+//	@receiver r *messageRepository
+//	@param db *gorm.DB
+//	@param checksums []string
+//	@return map[string]uint
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-10 10:00:00
+func (r *messageRepository) loadIDsByChecksum(db *gorm.DB, checksums []string) (map[string]uint, error) {
+	rows, err := r.dao.BatchGetByField(db, constant.WhereFieldCheckSum, checksums, messageRepoFieldsChecksum)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get messages by checksum")
+	}
+	return lo.SliceToMap(rows, func(m *dbmodel.Message) (string, uint) { return m.CheckSum, m.ID }), nil
+}
+
+// mergeCreatedIDs 把新插入消息的 ID 合并进映射
+//
+//	成功插入的行由 GORM 回填 ID；被 ON CONFLICT 跳过的行 ID 仍为 0，
+//	说明并发写入抢先插入了同 checksum 记录，对这部分补查一次即可。
+//
+//	@receiver r *messageRepository
+//	@param db *gorm.DB
+//	@param idByChecksum map[string]uint
+//	@param created []*dbmodel.Message
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-10 10:00:00
+func (r *messageRepository) mergeCreatedIDs(db *gorm.DB, idByChecksum map[string]uint, created []*dbmodel.Message) error {
+	var skipped []string
+	for _, m := range created {
+		if m.ID == 0 {
+			skipped = append(skipped, m.CheckSum)
+			continue
+		}
+		idByChecksum[m.CheckSum] = m.ID
+	}
+	if len(skipped) == 0 {
+		return nil
+	}
+
+	refetched, err := r.loadIDsByChecksum(db, skipped)
+	if err != nil {
+		return err
+	}
+	maps.Copy(idByChecksum, refetched)
+	return nil
 }
 
 // FindByIDs 按 ID 批量查询消息

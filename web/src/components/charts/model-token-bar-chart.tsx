@@ -13,7 +13,8 @@ import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
 import { useTokenLayerColors } from "@/lib/theme";
 
-type SortField = "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
+type SortField =
+  "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
 
 function formatTokenCount(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -82,8 +83,12 @@ function BarWithTooltip({
         )}
       </div>
       <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-        <span style={{ color: cacheColor }}>{cacheLabel} {formatTokenCount(cacheValue)}</span>
-        <span style={{ color: mainColor }}>{mainLabel} {formatTokenCount(mainValue)}</span>
+        <span style={{ color: cacheColor }}>
+          {cacheLabel} {formatTokenCount(cacheValue)}
+        </span>
+        <span style={{ color: mainColor }}>
+          {mainLabel} {formatTokenCount(mainValue)}
+        </span>
       </div>
 
       {hovered && (
@@ -128,9 +133,18 @@ function BarWithTooltip({
 export function ModelTokenBarChart() {
   const t = useT();
   const tokenColors = useTokenLayerColors();
-  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>("dashboard.chart.modelTokenBar.timeRange", "7d");
-  const [customStart, setCustomStart] = usePersistentState("dashboard.chart.modelTokenBar.customStart", "");
-  const [customEnd, setCustomEnd] = usePersistentState("dashboard.chart.modelTokenBar.customEnd", "");
+  const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
+    "dashboard.chart.modelTokenBar.timeRange",
+    "7d",
+  );
+  const [customStart, setCustomStart] = usePersistentState(
+    "dashboard.chart.modelTokenBar.customStart",
+    "",
+  );
+  const [customEnd, setCustomEnd] = usePersistentState(
+    "dashboard.chart.modelTokenBar.customEnd",
+    "",
+  );
   const requestIdRef = useRef(0);
   const [data, setData] = useState<ModelUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,24 +152,31 @@ export function ModelTokenBarChart() {
   const [sortField, setSortField] = useState<SortField>("total");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const fetchData = useCallback(async (range?: TimeRangeKey, cs?: string, ce?: string) => {
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(false);
-    try {
-      const { startTime, endTime, granularity } = computeRange(range ?? timeRange, cs ?? customStart, ce ?? customEnd);
-      const rsp = await api.fetchModelUsage({ startTime, endTime, granularity });
-      if (requestId !== requestIdRef.current) return;
-      setData(rsp.data ?? []);
-    } catch {
-      if (requestId !== requestIdRef.current) return;
-      setError(true);
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
+  const fetchData = useCallback(
+    async (range?: TimeRangeKey, cs?: string, ce?: string) => {
+      const requestId = ++requestIdRef.current;
+      setLoading(true);
+      setError(false);
+      try {
+        const { startTime, endTime, granularity } = computeRange(
+          range ?? timeRange,
+          cs ?? customStart,
+          ce ?? customEnd,
+        );
+        const rsp = await api.fetchModelUsage({ startTime, endTime, granularity });
+        if (requestId !== requestIdRef.current) return;
+        setData(rsp.data ?? []);
+      } catch {
+        if (requestId !== requestIdRef.current) return;
+        setError(true);
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
-    }
-  }, [timeRange, customStart, customEnd]);
+    },
+    [timeRange, customStart, customEnd],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -231,10 +252,13 @@ export function ModelTokenBarChart() {
                     className="cursor-pointer py-2 text-right font-medium hover:text-foreground"
                     onClick={() => handleSort("total")}
                   >
-                    {t("charts.total")}{sortIndicator("total")}
+                    {t("charts.total")}
+                    {sortIndicator("total")}
                   </th>
                   <th className="w-[220px] py-2 text-left font-medium">{t("charts.input")}</th>
-                  <th className="w-[220px] py-2 pr-6 text-left font-medium">{t("charts.output")}</th>
+                  <th className="w-[220px] py-2 pr-6 text-left font-medium">
+                    {t("charts.output")}
+                  </th>
                 </tr>
               </thead>
               <tbody>

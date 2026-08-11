@@ -1,6 +1,8 @@
 package audit_dto
 
 import (
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -90,5 +92,29 @@ func TestAuditLogItem_JSONTags(t *testing.T) {
 		t.Errorf("userEmail field missing")
 	} else if v != "alice@example.com" {
 		t.Errorf("userEmail = %v, want alice@example.com", v)
+	}
+}
+
+// TestAuditOptionListReq_FieldEnumIncludesUA 防回归：AuditOptionListReq.Field 的 huma enum
+// 必须包含 ua，否则前端审计页并发请求 field=ua 时会被 huma 422 拦截（线上曾因 DTO 枚举
+// 遗漏 ua 导致 UA 筛选项始终为空）。
+//
+//	@author centonhuang
+//	@update 2026-08-10 16:00:00
+func TestAuditOptionListReq_FieldEnumIncludesUA(t *testing.T) {
+	t.Parallel()
+	reqType := reflect.TypeOf(dto.AuditOptionListReq{})
+	field, ok := reqType.FieldByName("Field")
+	if !ok {
+		t.Fatal("AuditOptionListReq must have Field field")
+	}
+	enum := field.Tag.Get("enum")
+	if enum == "" {
+		t.Fatal(`AuditOptionListReq.Field must have enum tag for huma validation`)
+	}
+	for _, want := range []string{"user", "model", "status", "ua"} {
+		if !strings.Contains(","+enum+",", ","+want+",") {
+			t.Errorf(`AuditOptionListReq.Field enum %q missing %q`, enum, want)
+		}
 	}
 }
