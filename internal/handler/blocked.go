@@ -18,17 +18,20 @@ import (
 type BlockedHandler interface {
 	HandleCreateBlocked(ctx context.Context, req *dto.CreateBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleListBlocked(ctx context.Context, req *dto.ListBlockedReq) (*dto.HTTPResponse[*dto.ListBlockedRsp], error)
+	HandleUpdateBlocked(ctx context.Context, req *dto.UpdateBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleDeleteBlocked(ctx context.Context, req *dto.DeleteBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
 type BlockedDependencies struct {
 	Create port.CreateBlockedHandler
+	Update port.UpdateBlockedHandler
 	Delete port.DeleteBlockedHandler
 	List   port.ListBlockedHandler
 }
 
 type blockedHandler struct {
 	create port.CreateBlockedHandler
+	update port.UpdateBlockedHandler
 	delete port.DeleteBlockedHandler
 	list   port.ListBlockedHandler
 }
@@ -36,6 +39,7 @@ type blockedHandler struct {
 func NewBlockedHandler(deps BlockedDependencies) BlockedHandler {
 	return &blockedHandler{
 		create: deps.Create,
+		update: deps.Update,
 		delete: deps.Delete,
 		list:   deps.List,
 	}
@@ -46,7 +50,8 @@ func (h *blockedHandler) HandleCreateBlocked(ctx context.Context, req *dto.Creat
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	result, err := h.create.Handle(ctx, port.CreateBlockedCommand{
-		Word: req.Body.Word,
+		Word:   req.Body.Word,
+		Action: req.Body.Action,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHandler] Create blocked word failed", zap.Error(err))
@@ -74,11 +79,30 @@ func (h *blockedHandler) HandleListBlocked(ctx context.Context, req *dto.ListBlo
 		return &dto.BlockedItem{
 			ID:        v.ID,
 			Word:      v.Word,
+			Action:    v.Action,
 			HitCount:  v.HitCount,
 			CreatedAt: v.CreatedAt,
 		}
 	})
 	rsp.PageInfo = pageInfo
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *blockedHandler) HandleUpdateBlocked(ctx context.Context, req *dto.UpdateBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	rsp := &dto.EmptyRsp{}
+
+	if req.Body == nil || req.Body.Action == nil {
+		return nil, apiutil.NewHumaBizErrorFromModel(ctx, ierr.ErrValidation.BizError())
+	}
+
+	err := h.update.Handle(ctx, port.UpdateBlockedCommand{BlockedID: req.ID, Action: *req.Body.Action})
+	if err != nil {
+		logger.WithCtx(ctx).Error("[BlockedHandler] Update blocked word failed", zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+
+	logger.WithCtx(ctx).Info("[BlockedHandler] Update blocked word success",
+		zap.Uint("blockedID", req.ID), zap.String("action", *req.Body.Action))
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

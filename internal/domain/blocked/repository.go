@@ -11,6 +11,7 @@ type BlockedRepository interface {
 	FindByID(ctx context.Context, id uint) (*aggregate.Blocked, error)
 	Create(ctx context.Context, word *aggregate.Blocked) (uint, error)
 	Delete(ctx context.Context, id uint) error
+	UpdateAction(ctx context.Context, id uint, action string) error
 	Paginate(ctx context.Context, param model.CommonParam) ([]*aggregate.Blocked, *model.PageInfo, error)
 	ListAll(ctx context.Context) ([]*aggregate.Blocked, error)
 	BatchIncrementHitCount(ctx context.Context, idHits map[uint]uint) error
