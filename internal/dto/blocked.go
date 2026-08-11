@@ -11,7 +11,17 @@ type CreateBlockedReq struct {
 }
 
 type CreateBlockedReqBody struct {
-	Word string `json:"word" required:"true" minLength:"1" maxLength:"512" doc:"敏感词"`
+	Word   string `json:"word" required:"true" minLength:"1" maxLength:"512" doc:"敏感词"`
+	Action string `json:"action,omitempty" enum:"deny,allow" doc:"命中处理动作（默认 deny）"`
+}
+
+type UpdateBlockedReq struct {
+	ID   uint                  `query:"id" required:"true" minimum:"1" doc:"Blocked ID"`
+	Body *UpdateBlockedReqBody `json:"body" doc:"Request body"`
+}
+
+type UpdateBlockedReqBody struct {
+	Action *string `json:"action,omitempty" enum:"deny,allow" doc:"命中处理动作"`
 }
 
 type DeleteBlockedReq struct {
@@ -31,6 +41,7 @@ type ListBlockedRsp struct {
 type BlockedItem struct {
 	ID        uint      `json:"id" doc:"Blocked ID"`
 	Word      string    `json:"word" doc:"敏感词"`
+	Action    string    `json:"action" doc:"命中处理动作"`
 	HitCount  uint      `json:"hitCount" doc:"命中次数"`
 	CreatedAt time.Time `json:"createdAt" doc:"创建时间"`
 }

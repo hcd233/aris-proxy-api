@@ -22,6 +22,9 @@ func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, req *dto.A
 }
 
 func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.AnthropicCreateMessageRequest, assistantMsg *dto.AnthropicMessage, modelID string) {
+	if util.CtxValueBool(ctx, constant.CtxKeySkipStore) {
+		return
+	}
 	log := logger.WithCtx(ctx)
 	unifiedMessages, unifiedTools, inputTokens, outputTokens, err := u.convertAnthropicRequestMessages(ctx, req, assistantMsg)
 	if err != nil {

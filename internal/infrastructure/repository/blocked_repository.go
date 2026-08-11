@@ -44,6 +44,13 @@ func (r *blockedRepository) Delete(ctx context.Context, id uint) error {
 	return r.dao.Delete(db, &dbmodel.Blocked{BaseModel: dbmodel.BaseModel{ID: id}})
 }
 
+func (r *blockedRepository) UpdateAction(ctx context.Context, id uint, action string) error {
+	db := r.db.WithContext(ctx)
+	return db.Model(&dbmodel.Blocked{}).
+		Where(constant.WhereIDEquals, id).
+		UpdateColumn(constant.FieldAction, action).Error
+}
+
 func (r *blockedRepository) Paginate(ctx context.Context, param model.CommonParam) ([]*aggregate.Blocked, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.dao.Paginate(
@@ -90,7 +97,7 @@ func (r *blockedRepository) BatchIncrementHitCount(ctx context.Context, idHits m
 }
 
 func toBlockedAggregate(m *dbmodel.Blocked) *aggregate.Blocked {
-	b, err := aggregate.CreateBlocked(m.ID, m.Word)
+	b, err := aggregate.CreateBlocked(m.ID, m.Word, m.Action)
 	if err != nil {
 		return nil
 	}
@@ -101,6 +108,7 @@ func toBlockedAggregate(m *dbmodel.Blocked) *aggregate.Blocked {
 
 func toBlockedDBModel(b *aggregate.Blocked) *dbmodel.Blocked {
 	return &dbmodel.Blocked{
-		Word: b.Word(),
+		Word:   b.Word(),
+		Action: b.Action(),
 	}
 }
