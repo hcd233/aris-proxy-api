@@ -19,7 +19,7 @@ type BlockedHandler interface {
 	HandleCreateBlocked(ctx context.Context, req *dto.CreateBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleListBlocked(ctx context.Context, req *dto.ListBlockedReq) (*dto.HTTPResponse[*dto.ListBlockedRsp], error)
 	HandleUpdateBlocked(ctx context.Context, req *dto.UpdateBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
-	HandleDeleteBlocked(ctx context.Context, req *dto.DeleteBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleDeleteBlocked(ctx context.Context, req *dto.DeleteBlockedReq) (*dto.HTTPResponse[*dto.DeleteBlockedRsp], error)
 }
 
 type BlockedDependencies struct {
@@ -106,14 +106,23 @@ func (h *blockedHandler) HandleUpdateBlocked(ctx context.Context, req *dto.Updat
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-func (h *blockedHandler) HandleDeleteBlocked(ctx context.Context, req *dto.DeleteBlockedReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
-	rsp := &dto.EmptyRsp{}
+// HandleDeleteBlocked 删除敏感词（支持逗号分隔批量删除）
+func (h *blockedHandler) HandleDeleteBlocked(ctx context.Context, req *dto.DeleteBlockedReq) (*dto.HTTPResponse[*dto.DeleteBlockedRsp], error) {
+	rsp := &dto.DeleteBlockedRsp{}
 
-	err := h.delete.Handle(ctx, port.DeleteBlockedCommand{BlockedID: req.ID})
+	ids, parseErr := parseCommaSeparatedIDs(req.IDs)
+	if parseErr != nil {
+		return nil, apiutil.NewHumaBizError(ctx, parseErr, ierr.ErrValidation.BizError())
+	}
+
+	err := h.delete.Handle(ctx, port.DeleteBlockedCommand{BlockedIDs: ids})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[BlockedHandler] Delete blocked word failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
+
+	rsp.DeletedCount = len(ids)
+	logger.WithCtx(ctx).Info("[BlockedHandler] Blocked word(s) deleted", zap.Int("total", len(ids)))
 
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
