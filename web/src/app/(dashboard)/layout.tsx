@@ -109,7 +109,7 @@ function SidebarNav({
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-2xs"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               } ${collapsed ? "justify-center" : ""}`}
               aria-label={collapsed ? label : undefined}
             >
