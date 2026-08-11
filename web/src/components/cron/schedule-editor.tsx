@@ -37,7 +37,14 @@ interface ParsedSpec {
 function specToParsed(spec: string): ParsedSpec {
   const parts = spec.trim().split(/\s+/);
   if (parts.length !== 5) {
-    return { mode: "advanced", minute: 0, hour: 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: spec };
+    return {
+      mode: "advanced",
+      minute: 0,
+      hour: 0,
+      dayOfMonth: 1,
+      dayOfWeek: 0,
+      advancedSpec: spec,
+    };
   }
 
   const [min, hr, dom, , dow] = parts;
@@ -46,16 +53,44 @@ function specToParsed(spec: string): ParsedSpec {
     return { mode: "minute", minute: 0, hour: 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: spec };
   }
   if (hr === "*" && dom === "*" && dow === "*") {
-    return { mode: "hour", minute: parseInt(min) || 0, hour: 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: spec };
+    return {
+      mode: "hour",
+      minute: parseInt(min) || 0,
+      hour: 0,
+      dayOfMonth: 1,
+      dayOfWeek: 0,
+      advancedSpec: spec,
+    };
   }
   if (dom === "*" && dow === "*") {
-    return { mode: "day", minute: parseInt(min) || 0, hour: parseInt(hr) || 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: spec };
+    return {
+      mode: "day",
+      minute: parseInt(min) || 0,
+      hour: parseInt(hr) || 0,
+      dayOfMonth: 1,
+      dayOfWeek: 0,
+      advancedSpec: spec,
+    };
   }
   if (dom === "*" && dow !== "*") {
-    return { mode: "week", minute: parseInt(min) || 0, hour: parseInt(hr) || 0, dayOfMonth: 1, dayOfWeek: parseInt(dow) || 0, advancedSpec: spec };
+    return {
+      mode: "week",
+      minute: parseInt(min) || 0,
+      hour: parseInt(hr) || 0,
+      dayOfMonth: 1,
+      dayOfWeek: parseInt(dow) || 0,
+      advancedSpec: spec,
+    };
   }
   if (dow === "*") {
-    return { mode: "month", minute: parseInt(min) || 0, hour: parseInt(hr) || 0, dayOfMonth: parseInt(dom) || 1, dayOfWeek: 0, advancedSpec: spec };
+    return {
+      mode: "month",
+      minute: parseInt(min) || 0,
+      hour: parseInt(hr) || 0,
+      dayOfMonth: parseInt(dom) || 1,
+      dayOfWeek: 0,
+      advancedSpec: spec,
+    };
   }
 
   return { mode: "advanced", minute: 0, hour: 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: spec };
@@ -97,7 +132,15 @@ function isValidCronSpec(spec: string): boolean {
   }
 }
 
-const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+const WEEKDAYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
 
 interface ScheduleEditorDialogProps {
   open: boolean;
@@ -106,10 +149,20 @@ interface ScheduleEditorDialogProps {
   onSave: (spec: string) => Promise<void>;
 }
 
-export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: ScheduleEditorDialogProps) {
+export function ScheduleEditorDialog({
+  open,
+  onOpenChange,
+  job,
+  onSave,
+}: ScheduleEditorDialogProps) {
   const { t, locale } = useI18n();
   const [parsed, setParsed] = useState<ParsedSpec>({
-    mode: "day", minute: 0, hour: 0, dayOfMonth: 1, dayOfWeek: 0, advancedSpec: "",
+    mode: "day",
+    minute: 0,
+    hour: 0,
+    dayOfMonth: 1,
+    dayOfWeek: 0,
+    advancedSpec: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -188,7 +241,10 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
 
           {parsed.mode !== "minute" && parsed.mode !== "advanced" && (
             <div className="grid grid-cols-2 gap-3">
-              {(parsed.mode === "hour" || parsed.mode === "day" || parsed.mode === "week" || parsed.mode === "month") && (
+              {(parsed.mode === "hour" ||
+                parsed.mode === "day" ||
+                parsed.mode === "week" ||
+                parsed.mode === "month") && (
                 <div className="space-y-2">
                   <Label>{t("schedule.minute")}</Label>
                   <Input
@@ -196,7 +252,11 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
                     min={0}
                     max={59}
                     value={parsed.minute}
-                    onChange={(e) => updateParsed({ minute: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) })}
+                    onChange={(e) =>
+                      updateParsed({
+                        minute: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)),
+                      })
+                    }
                   />
                 </div>
               )}
@@ -209,7 +269,11 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
                     min={0}
                     max={23}
                     value={parsed.hour}
-                    onChange={(e) => updateParsed({ hour: Math.min(23, Math.max(0, parseInt(e.target.value) || 0)) })}
+                    onChange={(e) =>
+                      updateParsed({
+                        hour: Math.min(23, Math.max(0, parseInt(e.target.value) || 0)),
+                      })
+                    }
                   />
                 </div>
               )}
@@ -222,7 +286,11 @@ export function ScheduleEditorDialog({ open, onOpenChange, job, onSave }: Schedu
                     min={1}
                     max={31}
                     value={parsed.dayOfMonth}
-                    onChange={(e) => updateParsed({ dayOfMonth: Math.min(31, Math.max(1, parseInt(e.target.value) || 1)) })}
+                    onChange={(e) =>
+                      updateParsed({
+                        dayOfMonth: Math.min(31, Math.max(1, parseInt(e.target.value) || 1)),
+                      })
+                    }
                   />
                 </div>
               )}

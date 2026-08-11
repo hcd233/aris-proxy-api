@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Braces,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  Hash,
-  Wrench,
-} from "lucide-react";
+import { Braces, ChevronDown, ChevronRight, FileText, Hash, Wrench } from "lucide-react";
 import type { ToolItem, UnifiedTool } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { CollapsibleText } from "./collapsible-text";
@@ -20,8 +13,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   const toolData: UnifiedTool = tool.tool;
 
   const params = toolData.parameters;
-  const paramProperties =
-    (params?.properties as Record<string, Record<string, unknown>>) ?? {};
+  const paramProperties = (params?.properties as Record<string, Record<string, unknown>>) ?? {};
   const requiredParams = (params?.required as string[]) ?? [];
 
   return (
@@ -71,10 +63,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
               </p>
               <div className="space-y-1.5">
                 {Object.entries(paramProperties).map(([name, schema]) => (
-                  <div
-                    key={name}
-                    className="rounded-md bg-muted/50 px-2.5 py-1.5"
-                  >
+                  <div key={name} className="rounded-md bg-muted/50 px-2.5 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="font-mono text-[12px] font-medium text-foreground">
                         {name}

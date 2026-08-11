@@ -23,12 +23,7 @@ interface CopyButtonProps {
   className?: string;
 }
 
-export function CopyButton({
-  value,
-  ariaLabel,
-  variant = "label",
-  className,
-}: CopyButtonProps) {
+export function CopyButton({ value, ariaLabel, variant = "label", className }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
   const t = useT();
 
@@ -61,11 +56,7 @@ export function CopyButton({
         className,
       )}
     >
-      {copied ? (
-        <Check className="size-3" />
-      ) : (
-        <Copy className="size-3" />
-      )}
+      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
       {variant === "label" && (copied ? t("markdown.copied") : t("markdown.copy"))}
     </button>
   );

@@ -47,8 +47,6 @@ function buildCronAuditFilter(type: string[], status: string[]): string | undefi
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
-
-
 export default function CronAuditPage() {
   const t = useT();
   const statusLabelMap: Record<string, string> = {
@@ -73,9 +71,16 @@ export default function CronAuditPage() {
       .join(" | ");
   }
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cronAudit.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.cronAudit.pageSize", 20);
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
+    "dashboard.cronAudit.pageSize",
+    20,
+  );
   const [logs, setLogs] = useState<CronCallAuditItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({
+    page: persistedPage,
+    pageSize: persistedPageSize,
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
@@ -157,7 +162,16 @@ export default function CronAuditPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterType, filterStatus);
+    fetchLogs(
+      page,
+      pageSize ?? pageInfo.pageSize,
+      searchQuery,
+      timeRange,
+      customStart,
+      customEnd,
+      filterType,
+      filterStatus,
+    );
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
@@ -188,9 +202,7 @@ export default function CronAuditPage() {
           <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
             {t("cron_audit.page_title")}
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("cron_audit.page_subtitle")}
-          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("cron_audit.page_subtitle")}</p>
         </div>
 
         <Card>
@@ -208,7 +220,16 @@ export default function CronAuditPage() {
                     setTimeRange(key);
                     setCustomStart(cs);
                     setCustomEnd(ce);
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce, filterType, filterStatus);
+                    fetchLogs(
+                      1,
+                      pageInfo.pageSize,
+                      searchQuery,
+                      key,
+                      cs,
+                      ce,
+                      filterType,
+                      filterStatus,
+                    );
                   }}
                 />
                 <MultiSelectPill
@@ -217,7 +238,16 @@ export default function CronAuditPage() {
                   value={filterType}
                   onChange={(v) => {
                     setFilterType(v);
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, v, filterStatus);
+                    fetchLogs(
+                      1,
+                      pageInfo.pageSize,
+                      searchQuery,
+                      timeRange,
+                      customStart,
+                      customEnd,
+                      v,
+                      filterStatus,
+                    );
                   }}
                 />
                 <MultiSelectPill
@@ -227,7 +257,16 @@ export default function CronAuditPage() {
                   formatOption={(v) => statusLabelMap[v] ?? v}
                   onChange={(v) => {
                     setFilterStatus(v);
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterType, v);
+                    fetchLogs(
+                      1,
+                      pageInfo.pageSize,
+                      searchQuery,
+                      timeRange,
+                      customStart,
+                      customEnd,
+                      filterType,
+                      v,
+                    );
                   }}
                 />
                 {(filterType.length > 0 || filterStatus.length > 0) && (
@@ -238,12 +277,21 @@ export default function CronAuditPage() {
                     onClick={() => {
                       setFilterType([]);
                       setFilterStatus([]);
-                      fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, [], []);
+                      fetchLogs(
+                        1,
+                        pageInfo.pageSize,
+                        searchQuery,
+                        timeRange,
+                        customStart,
+                        customEnd,
+                        [],
+                        [],
+                      );
                     }}
                   >
                     <X size={14} />
-                  {t("cron_audit.clear_filters")}
-                </Button>
+                    {t("cron_audit.clear_filters")}
+                  </Button>
                 )}
               </div>
               <div className="relative w-full md:max-w-sm">
@@ -286,14 +334,22 @@ export default function CronAuditPage() {
                 </TableHeader>
                 <TableBody>
                   {logs.map((log) => (
-                    <TableRow key={log.id} className={log.status === "success" ? "" : "bg-destructive/5"}>
+                    <TableRow
+                      key={log.id}
+                      className={log.status === "success" ? "" : "bg-destructive/5"}
+                    >
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {formatTime(log.createdAt)}
                       </TableCell>
                       <TableCell className="font-medium">{log.cronName}</TableCell>
                       <TableCell>
-                        <Badge variant={log.triggerSource === "manual" ? "default" : "secondary"} className="text-xs">
-                          {log.triggerSource === "manual" ? t("cron_audit.trigger_manual") : t("cron_audit.trigger_scheduled")}
+                        <Badge
+                          variant={log.triggerSource === "manual" ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {log.triggerSource === "manual"
+                            ? t("cron_audit.trigger_manual")
+                            : t("cron_audit.trigger_scheduled")}
                         </Badge>
                       </TableCell>
                       <TableCell
@@ -302,10 +358,10 @@ export default function CronAuditPage() {
                       >
                         <TooltipProvider>
                           <TooltipRoot>
-                            <TooltipTrigger
-                              render={<span>{log.traceId.slice(-6) || "—"}</span>}
-                            />
-                            <TooltipContent side="top">{t("cron_audit.copy_traceid_title")}</TooltipContent>
+                            <TooltipTrigger render={<span>{log.traceId.slice(-6) || "—"}</span>} />
+                            <TooltipContent side="top">
+                              {t("cron_audit.copy_traceid_title")}
+                            </TooltipContent>
                           </TooltipRoot>
                         </TooltipProvider>
                       </TableCell>
@@ -316,7 +372,10 @@ export default function CronAuditPage() {
                               <TooltipTrigger
                                 render={
                                   <button type="button">
-                                    <Badge variant={statusBadgeVariant(log.status)} className="text-xs">
+                                    <Badge
+                                      variant={statusBadgeVariant(log.status)}
+                                      className="text-xs"
+                                    >
                                       {statusLabelMap[log.status] ?? log.status}
                                     </Badge>
                                   </button>

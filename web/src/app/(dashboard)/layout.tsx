@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Fragment,
-  Suspense,
-  useCallback,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { Fragment, Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -17,14 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
@@ -61,13 +53,33 @@ function getNavItems(): NavItem[] {
     { labelKey: "nav.sessions", href: "/sessions/", icon: <MessageSquare className="size-4" /> },
     { labelKey: "nav.shares", href: "/shares/", icon: <Share2 className="size-4" /> },
     { labelKey: "nav.api_keys", href: "/apikeys/", icon: <Key className="size-4" /> },
-    { labelKey: "nav.endpoints", href: "/endpoints/", icon: <Server className="size-4" />, adminOnly: true },
+    {
+      labelKey: "nav.endpoints",
+      href: "/endpoints/",
+      icon: <Server className="size-4" />,
+      adminOnly: true,
+    },
     { labelKey: "nav.models", href: "/models/", icon: <Cpu className="size-4" />, adminOnly: true },
-    { labelKey: "nav.blocked", href: "/blocked/", icon: <Ban className="size-4" />, adminOnly: true },
+    {
+      labelKey: "nav.blocked",
+      href: "/blocked/",
+      icon: <Ban className="size-4" />,
+      adminOnly: true,
+    },
     { labelKey: "nav.audit", href: "/audit/model/", icon: <ScrollText className="size-4" /> },
     { labelKey: "nav.cron", href: "/cron/", icon: <Timer className="size-4" />, adminOnly: true },
-    { labelKey: "nav.cron_audit", href: "/audit/cron/", icon: <ScrollText className="size-4" />, adminOnly: true },
-    { labelKey: "nav.monitor", href: "/monitor/", icon: <Activity className="size-4" />, adminOnly: true },
+    {
+      labelKey: "nav.cron_audit",
+      href: "/audit/cron/",
+      icon: <ScrollText className="size-4" />,
+      adminOnly: true,
+    },
+    {
+      labelKey: "nav.monitor",
+      href: "/monitor/",
+      icon: <Activity className="size-4" />,
+      adminOnly: true,
+    },
     { labelKey: "nav.users", href: "/users/", icon: <Users className="size-4" />, adminOnly: true },
     { labelKey: "nav.dataset", href: "/dataset/", icon: <Database className="size-4" /> },
     { labelKey: "nav.trace", href: "/trace/", icon: <Radar className="size-4" /> },
@@ -88,18 +100,13 @@ function SidebarNav({
   const { isAdmin } = useAuth();
   const t = useT();
 
-  const visibleItems = items.filter(
-    (item) => !item.adminOnly || isAdmin()
-  );
+  const visibleItems = items.filter((item) => !item.adminOnly || isAdmin());
 
   return (
     <TooltipProvider>
       <nav className="flex flex-col gap-0.5 px-2">
         {visibleItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           const label = t(item.labelKey);
 
           const link = (
@@ -138,13 +145,12 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
 
   if (!user) return null;
 
-  const initials =
-    (user.name ?? user.email ?? "U")
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const initials = (user.name ?? user.email ?? "U")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 p-2 text-sidebar-foreground transition-all duration-150">
@@ -177,7 +183,13 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
               <TooltipRoot>
                 <TooltipTrigger
                   render={
-                    <Button variant="ghost" size="icon-sm" onClick={logout} aria-label={t("nav.logout")} className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={logout}
+                      aria-label={t("nav.logout")}
+                      className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                    >
                       <LogOut className="size-4" />
                     </Button>
                   }
@@ -192,11 +204,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
   );
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -255,7 +263,11 @@ export default function DashboardLayout({
               size="icon-sm"
               onClick={toggleCollapsed}
               disabled={isSessionDetail}
-              className={collapsed ? "mx-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent" : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"}
+              className={
+                collapsed
+                  ? "mx-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              }
             >
               <Menu className="size-4" />
             </Button>
@@ -295,7 +307,9 @@ export default function DashboardLayout({
                 <span className="flex size-6 items-center justify-center rounded-md bg-primary font-display text-xs font-semibold text-primary-foreground shadow-2xs">
                   A
                 </span>
-                <span className="font-display text-lg font-semibold tracking-tight">{t("layout.aris_proxy")}</span>
+                <span className="font-display text-lg font-semibold tracking-tight">
+                  {t("layout.aris_proxy")}
+                </span>
               </span>
             </header>
 
@@ -306,7 +320,10 @@ export default function DashboardLayout({
             </main>
           </div>
 
-          <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+          <SheetContent
+            side="left"
+            className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+          >
             <SheetHeader className="border-b border-sidebar-border/50 px-4 py-3">
               <SheetTitle className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight">
                 <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
@@ -324,7 +341,6 @@ export default function DashboardLayout({
             </div>
           </SheetContent>
         </Sheet>
-
       </div>
     </PermissionGuard>
   );
