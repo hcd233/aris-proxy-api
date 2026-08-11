@@ -82,5 +82,3 @@ function toastDuration(severity: ErrorSeverity): number {
       return 3_000;
   }
 }
-
-

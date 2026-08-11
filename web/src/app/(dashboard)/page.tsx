@@ -6,12 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Key,
-  MessageSquare,
-  Server,
-  Cpu,
-} from "lucide-react";
+import { Key, MessageSquare, Server, Cpu } from "lucide-react";
 import { ModelTrendChart } from "@/components/charts/model-trend-chart";
 import { RequestRateChart } from "@/components/charts/request-rate-chart";
 import { TokenVolumeChart } from "@/components/charts/token-volume-chart";
@@ -44,7 +39,9 @@ function StatCard({
           <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
             {icon}
           </span>
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</span>
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {title}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -100,59 +97,59 @@ export default function DashboardPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{t("dashboard.title")}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("dashboard.overview")}
-          </p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title={t("apikeys.title")}
-            value={stats.apiKeys}
-            icon={<Key className="size-4" />}
-            loading={loading}
-          />
-          <StatCard
-            title={t("sessions.title")}
-            value={stats.sessions}
-            icon={<MessageSquare className="size-4" />}
-            loading={loading}
-          />
-          {isAdmin() && (
-            <StatCard
-              title={t("endpoints.title")}
-              value={stats.endpoints}
-              icon={<Server className="size-4" />}
-              loading={loading}
-            />
-          )}
-          {isAdmin() && (
-            <StatCard
-              title={t("models.title")}
-              value={stats.models}
-              icon={<Cpu className="size-4" />}
-              loading={loading}
-            />
-          )}
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <ModelTrendChart />
-          <RequestRateChart />
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <TokenVolumeChart />
-          <ModelTokenBarChart />
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <FirstTokenLatencyChart />
-          <TokenRateChart />
-        </div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {t("dashboard.title")}
+        </h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">{t("dashboard.overview")}</p>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title={t("apikeys.title")}
+          value={stats.apiKeys}
+          icon={<Key className="size-4" />}
+          loading={loading}
+        />
+        <StatCard
+          title={t("sessions.title")}
+          value={stats.sessions}
+          icon={<MessageSquare className="size-4" />}
+          loading={loading}
+        />
+        {isAdmin() && (
+          <StatCard
+            title={t("endpoints.title")}
+            value={stats.endpoints}
+            icon={<Server className="size-4" />}
+            loading={loading}
+          />
+        )}
+        {isAdmin() && (
+          <StatCard
+            title={t("models.title")}
+            value={stats.models}
+            icon={<Cpu className="size-4" />}
+            loading={loading}
+          />
+        )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ModelTrendChart />
+        <RequestRateChart />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TokenVolumeChart />
+        <ModelTokenBarChart />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <FirstTokenLatencyChart />
+        <TokenRateChart />
+      </div>
+    </div>
   );
 }

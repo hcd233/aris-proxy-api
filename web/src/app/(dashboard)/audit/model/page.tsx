@@ -18,11 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PaginationBar } from "@/components/pagination-bar";
-import {
-  ScrollText,
-  Search,
-  X,
-} from "lucide-react";
+import { ScrollText, Search, X } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -65,13 +61,17 @@ function formatProtocol(protocol: string): string {
   return labels[protocol] || protocol;
 }
 
-
 function formatMs(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
   return `${ms}ms`;
 }
 
-function buildAuditFilter(user: string[], model: string[], status: string[], ua: string[]): string | undefined {
+function buildAuditFilter(
+  user: string[],
+  model: string[],
+  status: string[],
+  ua: string[],
+): string | undefined {
   const parts: string[] = [];
   if (user.length) parts.push(`user:${user.join("|")}`);
   if (model.length) parts.push(`model:${model.join("|")}`);
@@ -174,9 +174,19 @@ export default function AuditPage() {
   }, [timeRange, customStart, customEnd, fetchOptions]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-
   const refresh = (page: number, pageSize?: number) =>
-    fetchLogs(page, pageSize ?? pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, filterStatus, filterUA);
+    fetchLogs(
+      page,
+      pageSize ?? pageInfo.pageSize,
+      searchQuery,
+      timeRange,
+      customStart,
+      customEnd,
+      filterUser,
+      filterModel,
+      filterStatus,
+      filterUA,
+    );
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
@@ -189,12 +199,10 @@ export default function AuditPage() {
   return (
     <div className="space-y-8">
       <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {t("audit.model_page_title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("audit.model_page_subtitle")}
-          </p>
+        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+          {t("audit.model_page_title")}
+        </h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">{t("audit.model_page_subtitle")}</p>
       </div>
 
       <Card>
@@ -213,7 +221,18 @@ export default function AuditPage() {
                   setTimeRange(key);
                   setCustomStart(cs);
                   setCustomEnd(ce);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, key, cs, ce, filterUser, filterModel, filterStatus, filterUA);
+                  fetchLogs(
+                    1,
+                    pageInfo.pageSize,
+                    searchQuery,
+                    key,
+                    cs,
+                    ce,
+                    filterUser,
+                    filterModel,
+                    filterStatus,
+                    filterUA,
+                  );
                 }}
               />
               <MultiSelectPill
@@ -222,7 +241,18 @@ export default function AuditPage() {
                 value={filterUser}
                 onChange={(v) => {
                   setFilterUser(v);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, v, filterModel, filterStatus, filterUA);
+                  fetchLogs(
+                    1,
+                    pageInfo.pageSize,
+                    searchQuery,
+                    timeRange,
+                    customStart,
+                    customEnd,
+                    v,
+                    filterModel,
+                    filterStatus,
+                    filterUA,
+                  );
                 }}
               />
               <MultiSelectPill
@@ -231,7 +261,18 @@ export default function AuditPage() {
                 value={filterModel}
                 onChange={(v) => {
                   setFilterModel(v);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, v, filterStatus, filterUA);
+                  fetchLogs(
+                    1,
+                    pageInfo.pageSize,
+                    searchQuery,
+                    timeRange,
+                    customStart,
+                    customEnd,
+                    filterUser,
+                    v,
+                    filterStatus,
+                    filterUA,
+                  );
                 }}
               />
               <MultiSelectPill
@@ -240,7 +281,18 @@ export default function AuditPage() {
                 value={filterStatus}
                 onChange={(v) => {
                   setFilterStatus(v);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, v, filterUA);
+                  fetchLogs(
+                    1,
+                    pageInfo.pageSize,
+                    searchQuery,
+                    timeRange,
+                    customStart,
+                    customEnd,
+                    filterUser,
+                    filterModel,
+                    v,
+                    filterUA,
+                  );
                 }}
               />
               <MultiSelectPill
@@ -249,10 +301,24 @@ export default function AuditPage() {
                 value={filterUA}
                 onChange={(v) => {
                   setFilterUA(v);
-                  fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, filterUser, filterModel, filterStatus, v);
+                  fetchLogs(
+                    1,
+                    pageInfo.pageSize,
+                    searchQuery,
+                    timeRange,
+                    customStart,
+                    customEnd,
+                    filterUser,
+                    filterModel,
+                    filterStatus,
+                    v,
+                  );
                 }}
               />
-              {(filterUser.length > 0 || filterModel.length > 0 || filterStatus.length > 0 || filterUA.length > 0) && (
+              {(filterUser.length > 0 ||
+                filterModel.length > 0 ||
+                filterStatus.length > 0 ||
+                filterUA.length > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -262,7 +328,18 @@ export default function AuditPage() {
                     setFilterModel([]);
                     setFilterStatus([]);
                     setFilterUA([]);
-                    fetchLogs(1, pageInfo.pageSize, searchQuery, timeRange, customStart, customEnd, [], [], [], []);
+                    fetchLogs(
+                      1,
+                      pageInfo.pageSize,
+                      searchQuery,
+                      timeRange,
+                      customStart,
+                      customEnd,
+                      [],
+                      [],
+                      [],
+                      [],
+                    );
                   }}
                 >
                   <X size={14} />
@@ -302,7 +379,10 @@ export default function AuditPage() {
                 const ok = log.upstreamStatusCode === 200;
                 const hasError = !!log.errorMessage;
                 const isExpanded = expandedId === log.id;
-                const cacheInfo = formatCacheTokens(log.cacheCreationInputTokens, log.cacheReadInputTokens);
+                const cacheInfo = formatCacheTokens(
+                  log.cacheCreationInputTokens,
+                  log.cacheReadInputTokens,
+                );
 
                 return (
                   <div
@@ -326,10 +406,7 @@ export default function AuditPage() {
                           </p>
                         </div>
                         <div className="shrink-0 text-right">
-                          <Badge
-                            variant={ok ? "secondary" : "destructive"}
-                            className="text-xs"
-                          >
+                          <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
                             {log.upstreamStatusCode}
                           </Badge>
                           {hasError && (
@@ -361,7 +438,9 @@ export default function AuditPage() {
                                 </span>
                               }
                             />
-                            <TooltipContent side="top">{t("audit.copy_traceid_title")}</TooltipContent>
+                            <TooltipContent side="top">
+                              {t("audit.copy_traceid_title")}
+                            </TooltipContent>
                           </TooltipRoot>
                         </TooltipProvider>
                       </div>
@@ -384,35 +463,51 @@ export default function AuditPage() {
                         <div className="border-t border-border px-4 pb-4 pt-3">
                           {hasError && (
                             <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-xs">
-                              <span className="font-medium text-destructive">{t("audit.error_label")}</span>
+                              <span className="font-medium text-destructive">
+                                {t("audit.error_label")}
+                              </span>
                               <span className="text-destructive">{log.errorMessage}</span>
                             </div>
                           )}
 
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                             <div>
-                              <span className="text-muted-foreground">{t("audit.input_tokens_label")}</span>
+                              <span className="text-muted-foreground">
+                                {t("audit.input_tokens_label")}
+                              </span>
                               <p>{log.inputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">{t("audit.output_tokens_label")}</span>
+                              <span className="text-muted-foreground">
+                                {t("audit.output_tokens_label")}
+                              </span>
                               <p>{log.outputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">{t("audit.cache_read_colon")}</span>
+                              <span className="text-muted-foreground">
+                                {t("audit.cache_read_colon")}
+                              </span>
                               <p>{log.cacheReadInputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">{t("audit.cache_creation")}</span>
+                              <span className="text-muted-foreground">
+                                {t("audit.cache_creation")}
+                              </span>
                               <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">{t("audit.first_token_label")}</span>
+                              <span className="text-muted-foreground">
+                                {t("audit.first_token_label")}
+                              </span>
                               <p>{formatMs(log.firstTokenLatencyMs)}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">{t("audit.stream_label")}</span>
-                              <p>{log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}</p>
+                              <span className="text-muted-foreground">
+                                {t("audit.stream_label")}
+                              </span>
+                              <p>
+                                {log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}
+                              </p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">{t("audit.upstream")}</span>
@@ -422,7 +517,9 @@ export default function AuditPage() {
                               </p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">{t("audit.endpoint_name")}</span>
+                              <span className="text-muted-foreground">
+                                {t("audit.endpoint_name")}
+                              </span>
                               <p>{log.endpoint || "—"}</p>
                             </div>
                             <div>
@@ -430,7 +527,9 @@ export default function AuditPage() {
                               <p>{log.userName || "—"}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">{t("audit.api_protocol")}</span>
+                              <span className="text-muted-foreground">
+                                {t("audit.api_protocol")}
+                              </span>
                               <p className="flex items-center gap-1.5">
                                 <ProviderIcon protocol={log.apiProtocol} size={14} />
                                 {formatProtocol(log.apiProtocol)}
@@ -481,13 +580,15 @@ export default function AuditPage() {
                 {logs.map((log) => {
                   const ok = log.upstreamStatusCode === 200;
                   const hasError = !!log.errorMessage;
-                  const cacheInfo = formatCacheTokens(log.cacheCreationInputTokens, log.cacheReadInputTokens);
-                  const uaShort = log.userAgent ? log.userAgent.slice(0, 30) + (log.userAgent.length > 30 ? "…" : "") : "—";
+                  const cacheInfo = formatCacheTokens(
+                    log.cacheCreationInputTokens,
+                    log.cacheReadInputTokens,
+                  );
+                  const uaShort = log.userAgent
+                    ? log.userAgent.slice(0, 30) + (log.userAgent.length > 30 ? "…" : "")
+                    : "—";
                   return (
-                    <TableRow
-                      key={log.id}
-                      className={ok ? "" : "bg-destructive/5"}
-                    >
+                    <TableRow key={log.id} className={ok ? "" : "bg-destructive/5"}>
                       <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                         {formatTime(log.createdAt)}
                       </TableCell>
@@ -517,7 +618,10 @@ export default function AuditPage() {
                             <TooltipRoot>
                               <TooltipTrigger
                                 render={
-                                  <button type="button" className="max-w-[100px] cursor-default truncate text-xs text-muted-foreground">
+                                  <button
+                                    type="button"
+                                    className="max-w-[100px] cursor-default truncate text-xs text-muted-foreground"
+                                  >
                                     {log.endpoint}
                                   </button>
                                 }
@@ -548,10 +652,16 @@ export default function AuditPage() {
                               <TooltipRoot>
                                 <TooltipTrigger
                                   render={
-                                    <span className="block max-w-[14ch] truncate">{log.userName}</span>
+                                    <span className="block max-w-[14ch] truncate">
+                                      {log.userName}
+                                    </span>
                                   }
                                 />
-                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                <TooltipContent
+                                  side="top"
+                                  align="start"
+                                  className="max-w-xs break-all"
+                                >
                                   {log.userName}
                                 </TooltipContent>
                               </TooltipRoot>
@@ -566,10 +676,16 @@ export default function AuditPage() {
                               <TooltipRoot>
                                 <TooltipTrigger
                                   render={
-                                    <span className="block max-w-[14ch] truncate">{log.apiKeyName}</span>
+                                    <span className="block max-w-[14ch] truncate">
+                                      {log.apiKeyName}
+                                    </span>
                                   }
                                 />
-                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                <TooltipContent
+                                  side="top"
+                                  align="start"
+                                  className="max-w-xs break-all"
+                                >
                                   {log.apiKeyName}
                                 </TooltipContent>
                               </TooltipRoot>
@@ -598,16 +714,15 @@ export default function AuditPage() {
                             </TooltipRoot>
                           </TooltipProvider>
                         ) : (
-                          <Badge
-                            variant={ok ? "secondary" : "destructive"}
-                            className="text-xs"
-                          >
+                          <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
                             {log.upstreamStatusCode}
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        <div className="text-xs">{formatTokens(log.inputTokens, log.outputTokens)}</div>
+                        <div className="text-xs">
+                          {formatTokens(log.inputTokens, log.outputTokens)}
+                        </div>
                         {cacheInfo && (
                           <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
                         )}
@@ -624,7 +739,10 @@ export default function AuditPage() {
                             <TooltipRoot>
                               <TooltipTrigger
                                 render={
-                                  <button type="button" className="max-w-[80px] cursor-default truncate text-xs text-muted-foreground">
+                                  <button
+                                    type="button"
+                                    className="max-w-[80px] cursor-default truncate text-xs text-muted-foreground"
+                                  >
                                     {uaShort}
                                   </button>
                                 }
@@ -644,10 +762,10 @@ export default function AuditPage() {
                       >
                         <TooltipProvider>
                           <TooltipRoot>
-                            <TooltipTrigger
-                              render={<span>{log.traceId.slice(-6) || "—"}</span>}
-                            />
-                            <TooltipContent side="top">{t("audit.copy_traceid_title")}</TooltipContent>
+                            <TooltipTrigger render={<span>{log.traceId.slice(-6) || "—"}</span>} />
+                            <TooltipContent side="top">
+                              {t("audit.copy_traceid_title")}
+                            </TooltipContent>
                           </TooltipRoot>
                         </TooltipProvider>
                       </TableCell>

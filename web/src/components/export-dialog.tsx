@@ -21,7 +21,7 @@ function generateScript(
   providerId: string,
   baseUrl: string,
   apiKey: string,
-  selectedModels: ModelItem[]
+  selectedModels: ModelItem[],
 ): string {
   if (selectedModels.length === 0) return "";
 
@@ -44,10 +44,10 @@ function generateScript(
             tool_call: true,
           },
         ];
-      })
+      }),
     ),
     null,
-    4
+    4,
   );
 
   return `#!/usr/bin/env bash
@@ -114,29 +114,25 @@ print(f"Provider '{provider_id}' configured with {len(models)} models")
 PYEOF`;
 }
 
-export default function ExportDialog({
-  open,
-  onOpenChange,
-  models,
-}: ExportDialogProps) {
+export default function ExportDialog({ open, onOpenChange, models }: ExportDialogProps) {
   const t = useT();
 
   const [providerId, setProviderId] = useState("aris-proxy");
   // lazy initializer：对话框内容仅在打开时挂载，SSR 与客户端初始渲染无差异
   const [baseUrl, setBaseUrl] = useState(() =>
-    typeof window === "undefined" ? "" : `${window.location.origin}/api/openai/v1`
+    typeof window === "undefined" ? "" : `${window.location.origin}/api/openai/v1`,
   );
   const [apiKey, setApiKey] = useState("YOUR_API_KEY");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const selectedModels = useMemo(
     () => models.filter((m) => selectedIds.has(m.id)),
-    [models, selectedIds]
+    [models, selectedIds],
   );
 
   const script = useMemo(
     () => generateScript(providerId, baseUrl, apiKey, selectedModels),
-    [providerId, baseUrl, apiKey, selectedModels]
+    [providerId, baseUrl, apiKey, selectedModels],
   );
 
   // 统一拦截所有关闭路径，关闭时重置选择态（搜索框状态由 ExportModelPicker 内部管理）
@@ -145,7 +141,7 @@ export default function ExportDialog({
       if (!nextOpen) setSelectedIds(new Set());
       onOpenChange(nextOpen);
     },
-    [onOpenChange]
+    [onOpenChange],
   );
 
   return (

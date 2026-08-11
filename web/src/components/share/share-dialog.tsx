@@ -131,9 +131,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
             {t("share_dialog.title")}
           </DialogTitle>
           <DialogDescription className="min-h-[2.5rem]">
-            {shareURL
-              ? t("share_dialog.desc_created")
-              : t("share_dialog.desc_create")}
+            {shareURL ? t("share_dialog.desc_created") : t("share_dialog.desc_create")}
           </DialogDescription>
         </DialogHeader>
 
@@ -193,7 +191,10 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
                 ].map((opt) => (
                   <div key={opt.value} className="flex items-center gap-1.5">
                     <RadioGroupItem value={opt.value} id={`expire-${opt.value}`} />
-                    <Label htmlFor={`expire-${opt.value}`} className="text-sm font-normal cursor-pointer">
+                    <Label
+                      htmlFor={`expire-${opt.value}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
                       {opt.label}
                     </Label>
                   </div>
@@ -233,18 +234,11 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
         )}
 
         <DialogFooter>
-          <DialogClose
-            render={<Button variant="outline" type="button" />}
-          >
+          <DialogClose render={<Button variant="outline" type="button" />}>
             {t("share_dialog.close")}
           </DialogClose>
           {!shareURL && (
-            <Button
-              type="button"
-              onClick={createShare}
-              disabled={creating}
-              className="gap-1.5"
-            >
+            <Button type="button" onClick={createShare} disabled={creating} className="gap-1.5">
               {creating ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />

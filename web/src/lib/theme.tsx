@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 /* ============================================================
  * Theme registry
@@ -42,10 +36,28 @@ export const THEMES: Record<ThemeName, ThemeMeta> = {
  * ========================================================== */
 
 const CHART_SERIES_COLORS: Record<ThemeName, readonly string[]> = {
-  anthropic: ["#D97757", "#5B8DB8", "#7C6BA5", "#4A9E7D", "#C76B8A", "#8B7355", "#6B8BA4", "#A0522D"],
+  anthropic: [
+    "#D97757",
+    "#5B8DB8",
+    "#7C6BA5",
+    "#4A9E7D",
+    "#C76B8A",
+    "#8B7355",
+    "#6B8BA4",
+    "#A0522D",
+  ],
   /* Moonlit neutrals: achromatic greys lead; desaturated cool tints
    * (moonlight cream, ice blue) only where series must diverge. */
-  moonshot: ["#FFFFFF", "#BFBFBF", "#FFEED9", "#8C8C8C", "#A8BDD8", "#595959", "#D9CBB8", "#6E7B8C"],
+  moonshot: [
+    "#FFFFFF",
+    "#BFBFBF",
+    "#FFEED9",
+    "#8C8C8C",
+    "#A8BDD8",
+    "#595959",
+    "#D9CBB8",
+    "#6E7B8C",
+  ],
 };
 
 export interface TokenLayerColors {
@@ -124,17 +136,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       // private mode etc.: theme still applies for this session
     }
     setThemeState(next);
-    window.setTimeout(
-      () => root.classList.remove("theme-transition"),
-      TRANSITION_MS
-    );
+    window.setTimeout(() => root.classList.remove("theme-transition"), TRANSITION_MS);
   };
 
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

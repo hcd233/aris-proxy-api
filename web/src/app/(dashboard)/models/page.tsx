@@ -19,7 +19,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -58,7 +63,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Cpu, FileDown, ChevronDown, ArrowLeftRight, ArrowUpFromLine, Type, Image as ImageIcon } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Cpu,
+  FileDown,
+  ChevronDown,
+  ArrowLeftRight,
+  ArrowUpFromLine,
+  Type,
+  Image as ImageIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -134,8 +149,15 @@ export default function ModelsPage() {
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.models.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState("dashboard.models.pageSize", 20);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ page: persistedPage, pageSize: persistedPageSize, total: 0 });
+  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
+    "dashboard.models.pageSize",
+    20,
+  );
+  const [pageInfo, setPageInfo] = useState<PageInfo>({
+    page: persistedPage,
+    pageSize: persistedPageSize,
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -149,22 +171,25 @@ export default function ModelsPage() {
   const [exportCodexDialogOpen, setExportCodexDialogOpen] = useState(false);
   const [exportPiDialogOpen, setExportPiDialogOpen] = useState(false);
 
-  const fetchData = useCallback(async (page: number, pageSize: number, query?: string) => {
-    setLoading(true);
-    try {
-      const modelsRsp = await api.listModels(page, pageSize, query);
-      setModels(modelsRsp.models ?? []);
-      if (modelsRsp.pageInfo) {
-        setPageInfo(modelsRsp.pageInfo);
-        setPersistedPage(modelsRsp.pageInfo.page);
-        setPersistedPageSize(modelsRsp.pageInfo.pageSize);
+  const fetchData = useCallback(
+    async (page: number, pageSize: number, query?: string) => {
+      setLoading(true);
+      try {
+        const modelsRsp = await api.listModels(page, pageSize, query);
+        setModels(modelsRsp.models ?? []);
+        if (modelsRsp.pageInfo) {
+          setPageInfo(modelsRsp.pageInfo);
+          setPersistedPage(modelsRsp.pageInfo.page);
+          setPersistedPageSize(modelsRsp.pageInfo.pageSize);
+        }
+      } catch (err) {
+        showErrorToast(err, { title: t("models.load_error") });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      showErrorToast(err, { title: t("models.load_error") });
-    } finally {
-      setLoading(false);
-    }
-  }, [setPersistedPage, setPersistedPageSize, t]);
+    },
+    [setPersistedPage, setPersistedPageSize, t],
+  );
 
   const fetchEndpoints = useCallback(async () => {
     try {
@@ -296,93 +321,91 @@ export default function ModelsPage() {
             actions={
               <div className="flex gap-2">
                 <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={<Button variant="outline" className="gap-1.5" />}
-                >
-                  <FileDown className="size-4" />
-                  {t("models.export")}
-                  <ChevronDown className="size-3.5 opacity-50 transition-transform duration-150 group-aria-expanded/button:rotate-180" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 p-1.5">
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
-                      {t("models.export_target")}
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem
-                      onClick={() => setExportDialogOpen(true)}
-                      className="items-start gap-2.5 rounded-lg px-2 py-2"
-                    >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                        <OpenCode size={17} />
-                      </span>
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium leading-none">
-                          {t("models.export_opencode")}
+                  <DropdownMenuTrigger render={<Button variant="outline" className="gap-1.5" />}>
+                    <FileDown className="size-4" />
+                    {t("models.export")}
+                    <ChevronDown className="size-3.5 opacity-50 transition-transform duration-150 group-aria-expanded/button:rotate-180" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 p-1.5">
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
+                        {t("models.export_target")}
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => setExportDialogOpen(true)}
+                        className="items-start gap-2.5 rounded-lg px-2 py-2"
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                          <OpenCode size={17} />
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {t("models.export_opencode_hint")}
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="text-sm font-medium leading-none">
+                            {t("models.export_opencode")}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {t("models.export_opencode_hint")}
+                          </span>
                         </span>
-                      </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setExportClaudecodeDialogOpen(true)}
-                      className="items-start gap-2.5 rounded-lg px-2 py-2"
-                    >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                        <ClaudeCode.Color size={17} />
-                      </span>
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium leading-none">
-                          {t("models.export_claudecode")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setExportClaudecodeDialogOpen(true)}
+                        className="items-start gap-2.5 rounded-lg px-2 py-2"
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                          <ClaudeCode.Color size={17} />
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {t("models.export_claudecode_hint")}
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="text-sm font-medium leading-none">
+                            {t("models.export_claudecode")}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {t("models.export_claudecode_hint")}
+                          </span>
                         </span>
-                      </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setExportCodexDialogOpen(true)}
-                      className="items-start gap-2.5 rounded-lg px-2 py-2"
-                    >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                        <Codex.Color size={17} />
-                      </span>
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium leading-none">
-                          {t("models.export_codex")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setExportCodexDialogOpen(true)}
+                        className="items-start gap-2.5 rounded-lg px-2 py-2"
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                          <Codex.Color size={17} />
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {t("models.export_codex_hint")}
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="text-sm font-medium leading-none">
+                            {t("models.export_codex")}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {t("models.export_codex_hint")}
+                          </span>
                         </span>
-                      </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setExportPiDialogOpen(true)}
-                      className="items-start gap-2.5 rounded-lg px-2 py-2"
-                    >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                        <Pi size={17} />
-                      </span>
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium leading-none">
-                          {t("models.export_pi")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setExportPiDialogOpen(true)}
+                        className="items-start gap-2.5 rounded-lg px-2 py-2"
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
+                          <Pi size={17} />
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {t("models.export_pi_hint")}
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="text-sm font-medium leading-none">
+                            {t("models.export_pi")}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {t("models.export_pi_hint")}
+                          </span>
                         </span>
-                      </span>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button onClick={openCreate}>
-                <Plus className="mr-1 size-4" />
-                {t("models.create")}
-              </Button>
-            </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button onClick={openCreate}>
+                  <Plus className="mr-1 size-4" />
+                  {t("models.create")}
+                </Button>
+              </div>
             }
           />
-  
+
           <Card>
             <CardHeader>
               <CardTitle className="font-display">{t("models.all_models")}</CardTitle>
@@ -399,20 +422,24 @@ export default function ModelsPage() {
               {loading ? (
                 <TableSkeleton />
               ) : models.length === 0 ? (
-                <ListEmptyState icon={<Cpu className="mb-3 size-10 text-muted-foreground/40" />} message={t("models.no_models")} />
+                <ListEmptyState
+                  icon={<Cpu className="mb-3 size-10 text-muted-foreground/40" />}
+                  message={t("models.no_models")}
+                />
               ) : (
                 <>
                   {isMobile ? (
                     <div className="space-y-3">
                       {models.map((model) => (
-                        <div
-                          key={model.id}
-                          className="rounded-lg border border-border bg-card p-4"
-                        >
+                        <div key={model.id} className="rounded-lg border border-border bg-card p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="flex items-center gap-1.5 text-sm font-medium">
-                                <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
+                                <ProviderIcon
+                                  protocol={model.alias}
+                                  size={14}
+                                  className="shrink-0"
+                                />
                                 {model.alias}
                               </p>
                               <TooltipRoot>
@@ -423,7 +450,11 @@ export default function ModelsPage() {
                                     </p>
                                   }
                                 />
-                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                <TooltipContent
+                                  side="top"
+                                  align="start"
+                                  className="max-w-xs break-all"
+                                >
                                   {model.upstreamModel}
                                 </TooltipContent>
                               </TooltipRoot>
@@ -440,12 +471,19 @@ export default function ModelsPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => openEdit(model)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
                                 <Pencil className="size-3.5" />
                               </Button>
                               <DeleteButton
                                 label={t("common.delete")}
-                                disabled={deleteConfirm.loading && deleteConfirm.target?.id === model.id}
+                                disabled={
+                                  deleteConfirm.loading && deleteConfirm.target?.id === model.id
+                                }
                                 onClick={() => deleteConfirm.openDelete(model)}
                               />
                             </div>
@@ -455,7 +493,9 @@ export default function ModelsPage() {
                               size="sm"
                               checked={model.enabled}
                               onCheckedChange={() => handleToggleEnabled(model)}
-                              aria-label={model.enabled ? t("models.enabled") : t("models.disabled")}
+                              aria-label={
+                                model.enabled ? t("models.enabled") : t("models.disabled")
+                              }
                             />
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -490,12 +530,20 @@ export default function ModelsPage() {
                                 <TooltipTrigger
                                   render={
                                     <span className="flex max-w-[16ch] items-center gap-1.5 font-medium">
-                                      <ProviderIcon protocol={model.alias} size={14} className="shrink-0" />
+                                      <ProviderIcon
+                                        protocol={model.alias}
+                                        size={14}
+                                        className="shrink-0"
+                                      />
                                       <span className="truncate">{model.alias}</span>
                                     </span>
                                   }
                                 />
-                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                <TooltipContent
+                                  side="top"
+                                  align="start"
+                                  className="max-w-xs break-all"
+                                >
                                   {model.alias}
                                 </TooltipContent>
                               </TooltipRoot>
@@ -510,7 +558,11 @@ export default function ModelsPage() {
                                       </span>
                                     }
                                   />
-                                  <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                  <TooltipContent
+                                    side="top"
+                                    align="start"
+                                    className="max-w-xs break-all"
+                                  >
                                     {model.modelId}
                                   </TooltipContent>
                                 </TooltipRoot>
@@ -527,7 +579,11 @@ export default function ModelsPage() {
                                     </span>
                                   }
                                 />
-                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                <TooltipContent
+                                  side="top"
+                                  align="start"
+                                  className="max-w-xs break-all"
+                                >
                                   {model.upstreamModel}
                                 </TooltipContent>
                               </TooltipRoot>
@@ -570,7 +626,9 @@ export default function ModelsPage() {
                                 size="sm"
                                 checked={model.enabled}
                                 onCheckedChange={() => handleToggleEnabled(model)}
-                                aria-label={model.enabled ? t("models.enabled") : t("models.disabled")}
+                                aria-label={
+                                  model.enabled ? t("models.enabled") : t("models.disabled")
+                                }
                               />
                             </TableCell>
                             <TableCell>
@@ -585,7 +643,11 @@ export default function ModelsPage() {
                                     </button>
                                   }
                                 />
-                                <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                                <TooltipContent
+                                  side="top"
+                                  align="start"
+                                  className="max-w-xs break-all"
+                                >
                                   {getEndpointName(model)}
                                 </TooltipContent>
                               </TooltipRoot>
@@ -595,22 +657,29 @@ export default function ModelsPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="icon-sm" onClick={() => openEdit(model)} className="text-muted-foreground hover:text-foreground">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => openEdit(model)}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
                                   <Pencil className="size-3.5" />
                                 </Button>
                                 <DeleteButton
                                   label={t("common.delete")}
-                                  disabled={deleteConfirm.loading && deleteConfirm.target?.id === model.id}
+                                  disabled={
+                                    deleteConfirm.loading && deleteConfirm.target?.id === model.id
+                                  }
                                   onClick={() => deleteConfirm.openDelete(model)}
                                 />
-                            </div>
-                          </TableCell>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   )}
-  
+
                   <PaginationBar
                     pageInfo={pageInfo}
                     onChange={(page, pageSize) => refresh(page, pageSize)}
@@ -620,25 +689,24 @@ export default function ModelsPage() {
               )}
             </CardContent>
           </Card>
-  
+
           <DeleteConfirmDialog
             {...deleteConfirm.dialogProps}
             title={t("common.are_you_sure")}
-            description={t("models.delete_desc").replace("{name}", deleteConfirm.target?.alias ?? "")}
+            description={t("models.delete_desc").replace(
+              "{name}",
+              deleteConfirm.target?.alias ?? "",
+            )}
             confirmLabel={t("common.delete")}
             loadingLabel={t("common.deleting")}
           />
-  
+
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>
-                  {editingId ? t("models.edit") : t("models.create")}
-                </DialogTitle>
+                <DialogTitle>{editingId ? t("models.edit") : t("models.create")}</DialogTitle>
                 <DialogDescription>
-                  {editingId
-                    ? t("models.edit_desc")
-                    : t("models.create_desc")}
+                  {editingId ? t("models.edit_desc") : t("models.create_desc")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
@@ -696,7 +764,9 @@ export default function ModelsPage() {
                         setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }))
                       }
                     />
-                    <p className="text-[11px] text-muted-foreground">{t("models.context_length_hint")}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("models.context_length_hint")}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="model-max-output">{t("models.max_output")}</Label>
@@ -712,7 +782,9 @@ export default function ModelsPage() {
                         setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }))
                       }
                     />
-                    <p className="text-[11px] text-muted-foreground">{t("models.max_output_hint")}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("models.max_output_hint")}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -771,32 +843,38 @@ export default function ModelsPage() {
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={!form.alias.trim() || !form.upstreamModel.trim() || !form.endpointID || saving}
+                  disabled={
+                    !form.alias.trim() || !form.upstreamModel.trim() || !form.endpointID || saving
+                  }
                 >
-                  {saving ? t("common.saving") : editingId ? t("common.update") : t("common.create")}
+                  {saving
+                    ? t("common.saving")
+                    : editingId
+                      ? t("common.update")
+                      : t("common.create")}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-  
+
           <ExportDialog
             open={exportDialogOpen}
             onOpenChange={setExportDialogOpen}
             models={models}
           />
-  
+
           <ExportClaudecodeDialog
             open={exportClaudecodeDialogOpen}
             onOpenChange={setExportClaudecodeDialogOpen}
             models={models}
           />
-  
+
           <ExportCodexDialog
             open={exportCodexDialogOpen}
             onOpenChange={setExportCodexDialogOpen}
             models={models}
           />
-  
+
           <ExportPiDialog
             open={exportPiDialogOpen}
             onOpenChange={setExportPiDialogOpen}

@@ -11,7 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { PaginationBar } from "@/components/pagination-bar";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
@@ -45,7 +50,11 @@ function messageText(inner: Record<string, unknown>): string {
   if (Array.isArray(content)) {
     return content
       .map((part) => {
-        if (part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string") {
+        if (
+          part &&
+          typeof part === "object" &&
+          typeof (part as { text?: unknown }).text === "string"
+        ) {
           return (part as { text: string }).text;
         }
         return "";
@@ -131,7 +140,11 @@ function classifyEvent(ev: TraceEventItem): EventView {
     case "message":
       return { kind: "message", role: String(inner.role ?? "assistant"), text: messageText(inner) };
     case "function_call":
-      return { kind: "tool_call", name: String(inner.name ?? ""), argumentsText: jsonText(inner.arguments) };
+      return {
+        kind: "tool_call",
+        name: String(inner.name ?? ""),
+        argumentsText: jsonText(inner.arguments),
+      };
     case "function_call_output":
       return { kind: "tool_output", outputText: jsonText(inner.output) };
     default:
@@ -141,19 +154,10 @@ function classifyEvent(ev: TraceEventItem): EventView {
 
 // ─── 单条事件卡片 ────────────────────────────────────────────────────────────
 
-function EventCard({
-  ev,
-  t,
-}: {
-  ev: TraceEventItem;
-  t: (k: string, f?: string) => string;
-}) {
+function EventCard({ ev, t }: { ev: TraceEventItem; t: (k: string, f?: string) => string }) {
   const [showJson, setShowJson] = useState(false);
   const view = useMemo(() => classifyEvent(ev), [ev]);
-  const rawJson = useMemo(
-    () => JSON.stringify(ev.payload ?? ev, null, 2),
-    [ev]
-  );
+  const rawJson = useMemo(() => JSON.stringify(ev.payload ?? ev, null, 2), [ev]);
 
   return (
     <div className="rounded-lg border border-border bg-card p-3">
@@ -161,9 +165,13 @@ function EventCard({
         <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs">
           {ev.event || ev.recordType || "—"}
         </span>
-        <Badge variant="outline" className="text-[10px]">{ev.source}</Badge>
+        <Badge variant="outline" className="text-[10px]">
+          {ev.source}
+        </Badge>
         {view.kind === "message" && (
-          <Badge variant="secondary" className="text-[10px]">{view.role}</Badge>
+          <Badge variant="secondary" className="text-[10px]">
+            {view.role}
+          </Badge>
         )}
         {view.kind === "tool_call" && view.name && (
           <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 font-mono text-xs">
@@ -265,11 +273,7 @@ function EventCard({
 
 // ─── 页面主体 ────────────────────────────────────────────────────────────────
 
-export default function TraceDetailClient({
-  traceId,
-}: {
-  traceId: number;
-}) {
+export default function TraceDetailClient({ traceId }: { traceId: number }) {
   const router = useRouter();
   const t = useT();
   const [detail, setDetail] = useState<TraceDetail | null>(null);
@@ -297,7 +301,7 @@ export default function TraceDetailClient({
         setEventsLoading(false);
       }
     },
-    [t]
+    [t],
   );
 
   const fetchDetail = useCallback(async () => {
@@ -339,11 +343,7 @@ export default function TraceDetailClient({
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-muted-foreground">{t("trace.invalid_id")}</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => router.push("/trace/")}
-        >
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/trace/")}>
           {t("trace.back_to_traces")}
         </Button>
       </div>
@@ -370,11 +370,7 @@ export default function TraceDetailClient({
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-muted-foreground">{t("trace.not_found")}</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => router.push("/trace/")}
-        >
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/trace/")}>
           {t("trace.back_to_traces")}
         </Button>
       </div>
@@ -470,11 +466,7 @@ export default function TraceDetailClient({
                 <TooltipProvider>
                   <TooltipRoot>
                     <TooltipTrigger
-                      render={
-                        <p className="mt-1 truncate font-mono text-xs">
-                          {detail.cwd}
-                        </p>
-                      }
+                      render={<p className="mt-1 truncate font-mono text-xs">{detail.cwd}</p>}
                     />
                     <TooltipContent side="top" align="start" className="max-w-xs break-all">
                       {detail.cwd}
@@ -489,13 +481,17 @@ export default function TraceDetailClient({
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
                 {t("trace.created_at")}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">{formatDateTime(detail.createdAt)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatDateTime(detail.createdAt)}
+              </p>
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
                 {t("trace.updated_at")}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">{formatDateTime(detail.updatedAt)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatDateTime(detail.updatedAt)}
+              </p>
             </div>
           </section>
 
@@ -533,7 +529,9 @@ export default function TraceDetailClient({
         <CardContent className="space-y-4">
           {eventsLoading ? (
             <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
             </div>
           ) : events.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("trace.no_events")}</p>

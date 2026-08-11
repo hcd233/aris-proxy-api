@@ -34,9 +34,7 @@ export function UserMessage({ message, index }: UserMessageProps) {
         <div className="rounded-[20px] rounded-br-[6px] bg-accent px-5 py-3.5 text-[15px] leading-[1.6]">
           {parts.length > 0 && <MultimodalParts parts={parts} />}
           {text && <MarkdownLite text={text} raw />}
-          {!text && parts.length === 0 && (
-            <span className="text-muted-foreground/60">—</span>
-          )}
+          {!text && parts.length === 0 && <span className="text-muted-foreground/60">—</span>}
         </div>
       </div>
     </div>

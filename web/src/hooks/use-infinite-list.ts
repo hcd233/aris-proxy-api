@@ -26,9 +26,7 @@ export interface UseInfiniteListResult<T> {
  * - loadMore() 内部用 inFlight ref 保证并发安全
  * - 请求失败不抛错，console.warn 后保持现状（与项目现有 try/catch 静默风格一致）
  */
-export function useInfiniteList<T>(
-  opts: UseInfiniteListOptions<T>
-): UseInfiniteListResult<T> {
+export function useInfiniteList<T>(opts: UseInfiniteListOptions<T>): UseInfiniteListResult<T> {
   const { fetcher, pageSize, enabled } = opts;
   const [items, setItems] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
@@ -50,10 +48,7 @@ export function useInfiniteList<T>(
     setLoading(true);
     try {
       // 用闭包读取最新 offset 不可靠，loadMore 已经被 setOffset 触发的 deps 重算
-      const { items: newItems, total: newTotal } = await fetcher(
-        offset,
-        pageSize,
-      );
+      const { items: newItems, total: newTotal } = await fetcher(offset, pageSize);
       // reset 已发生 → 丢弃本次响应
       if (gen !== generationRef.current) return;
       // 已 loaded 且没有新条目 → 不再触发 setItems 以避免新引用
