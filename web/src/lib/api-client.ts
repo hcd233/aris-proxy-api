@@ -53,6 +53,7 @@ import type {
   CreateBlockedReqBody,
   UpdateBlockedReqBody,
   ListBlockedRsp,
+  DeleteBlockedRsp,
   ListCronJobsRsp,
   UpdateCronJobReqBody,
   ListCronCallAuditsRsp,
