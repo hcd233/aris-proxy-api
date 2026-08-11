@@ -147,7 +147,7 @@ func updateBlockedAction(t *testing.T, baseURL, adminToken string, id uint, acti
 // deleteBlockedWord 删除敏感词（管理接口，admin JWT）。
 func deleteBlockedWord(t *testing.T, baseURL, adminToken string, id uint) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, fmt.Sprintf("%s/api/v1/block?id=%d", baseURL, id), http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, fmt.Sprintf("%s/api/v1/block?ids=%d", baseURL, id), http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -284,5 +284,50 @@ func TestBlocked_Mixed_DenyWins(t *testing.T) {
 	if resp.StatusCode != http.StatusForbidden {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("mixed hit: expected 403 (deny wins), got %d, body: %s", resp.StatusCode, string(body))
+	}
+}
+
+// TestBlocked_BatchDelete 验证 DELETE /api/v1/block?ids=1,2,3 批量删除及 deletedCount 返回。
+func TestBlocked_BatchDelete(t *testing.T) {
+	t.Parallel()
+	baseURL, _, adminToken := mustBlockedE2EEnv(t)
+
+	w1 := uniqueWord("e2ebatch")
+	id1 := createBlockedWord(t, baseURL, adminToken, w1, "deny")
+	id2 := createBlockedWord(t, baseURL, adminToken, uniqueWord("e2ebatch"), "allow")
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete,
+		fmt.Sprintf("%s/api/v1/block?ids=%d,%d", baseURL, id1, id2), http.NoBody)
+	if err != nil {
+		t.Fatalf("failed to create batch delete request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to send batch delete request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("batch delete status = %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	var rsp struct {
+		Data struct {
+			DeletedCount int `json:"deletedCount"`
+		} `json:"data"`
+	}
+	if err := sonic.Unmarshal(respBody, &rsp); err != nil {
+		t.Fatalf("batch delete returned unexpected response: %s", string(respBody))
+	}
+	if rsp.Data.DeletedCount != 2 {
+		t.Fatalf("expected deletedCount=2, got %d", rsp.Data.DeletedCount)
+	}
+
+	// 删除后不应再出现在列表中
+	if _, ok := findBlockedID(t, baseURL, adminToken, w1); ok {
+		t.Fatal("blocked word still exists after batch delete")
 	}
 }
