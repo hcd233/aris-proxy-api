@@ -639,8 +639,14 @@ class ApiClient {
     return this.request<ListBlockedRsp>(`/api/v1/block/list?${params}`);
   }
 
-  async deleteBlocked(id: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/block?id=${id}`, { method: "DELETE" });
+  async deleteBlocked(id: number): Promise<DeleteBlockedRsp> {
+    return this.request<DeleteBlockedRsp>(`/api/v1/block?ids=${id}`, { method: "DELETE" });
+  }
+
+  async batchDeleteBlocked(ids: number[]): Promise<DeleteBlockedRsp> {
+    return this.request<DeleteBlockedRsp>(`/api/v1/block?ids=${ids.join(",")}`, {
+      method: "DELETE",
+    });
   }
 
   async updateBlocked(id: number, body: UpdateBlockedReqBody): Promise<CommonRsp> {
