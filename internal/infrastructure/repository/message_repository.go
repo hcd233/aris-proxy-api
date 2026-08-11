@@ -5,6 +5,7 @@ import (
 	"maps"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 
@@ -215,8 +216,12 @@ func (r *messageRepository) FindThinkExtractCandidates(ctx context.Context, afte
 
 func (r *messageRepository) UpdateMessageContent(ctx context.Context, id uint, message *vo.UnifiedMessage) error {
 	db := r.db.WithContext(ctx)
+	messageJSON, err := sonic.Marshal(message)
+	if err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "marshal message content")
+	}
 	updates := map[string]any{
-		constant.FieldMessage:   message,
+		constant.FieldMessage:   string(messageJSON),
 		constant.FieldUpdatedAt: time.Now().UTC(),
 	}
 	if err := db.Model(&dbmodel.Message{ID: id}).Select([]string{constant.FieldMessage, constant.FieldUpdatedAt}).Updates(updates).Error; err != nil {
