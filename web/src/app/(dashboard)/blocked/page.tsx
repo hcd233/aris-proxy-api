@@ -7,17 +7,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import type { BlockedAction, BlockedItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -32,7 +22,7 @@ import { PageHeader } from "@/components/page-header";
 import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { Ban, Plus, RefreshCw } from "lucide-react";
+import { Ban, Check, Trash2 } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -41,25 +31,57 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const emptyForm = { word: "", action: "deny" as BlockedAction };
-
-const actionOptions: { value: BlockedAction; labelKey: string }[] = [
-  { value: "deny", labelKey: "blocked.action_deny" },
-  { value: "allow", labelKey: "blocked.action_allow" },
-];
-
-function ActionBadge({ action, t }: { action: BlockedAction; t: (key: string) => string }) {
+/** 动作徽章：点击直接切换 deny⇄allow */
+function ActionBadge({
+  action,
+  t,
+  onClick,
+  disabled,
+}: {
+  action: BlockedAction;
+  t: (key: string) => string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <span
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={t("blocked.action_switch_hint")}
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+        "inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors",
+        "hover:ring-2 hover:ring-current/20 disabled:cursor-not-allowed disabled:opacity-60",
         action === "deny"
-          ? "bg-destructive/10 text-destructive"
-          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+          ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+          : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400",
       )}
     >
       {action === "deny" ? t("blocked.action_deny") : t("blocked.action_allow")}
-    </span>
+    </button>
+  );
+}
+
+/** 勾选框（对齐 sessions 的 role="checkbox" 自绘模式） */
+function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
+  return (
+    <div
+      role="checkbox"
+      aria-checked={checked}
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === " " || e.key === "Enter") onToggle();
+      }}
+      className={cn(
+        "flex size-4 cursor-pointer items-center justify-center rounded border transition-colors",
+        checked
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-muted-foreground/30 hover:border-muted-foreground",
+      )}
+    >
+      {checked && <Check className="size-3" />}
+    </div>
   );
 }
 
@@ -77,10 +99,13 @@ export default function BlockPage() {
   });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [inlineWord, setInlineWord] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const t = useT();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
   const isMobile = useIsMobile();
 
   const fetchItems = useCallback(
@@ -95,6 +120,7 @@ export default function BlockPage() {
           setPersistedPage(rsp.pageInfo.page);
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
+        setSelected(new Set()); // 翻页/刷新清空选中（对齐 sessions）
       } catch (err) {
         showErrorToast(err, { title: t("blocked.load_error") });
       } finally {
@@ -115,32 +141,39 @@ export default function BlockPage() {
     fetchItems(1, persistedPageSize, searchQuery || undefined);
   }, [fetchItems, persistedPageSize, searchQuery, setPersistedPage]);
 
-  const handleCreate = useCallback(async () => {
-    if (!form.word.trim()) return;
-    setSaving(true);
+  const handleInlineAdd = useCallback(async () => {
+    const word = inlineWord.trim();
+    if (!word || adding) return;
+    setAdding(true);
     try {
-      await api.createBlocked({ word: form.word.trim(), action: form.action });
+      await api.createBlocked({ word, action: "deny" });
       toast.success(t("blocked.created_success"));
-      setDialogOpen(false);
-      setForm(emptyForm);
+      setInlineWord("");
       fetchItems(persistedPage, persistedPageSize);
     } catch (err) {
       showErrorToast(err, { title: t("blocked.create_error") });
     } finally {
-      setSaving(false);
+      setAdding(false);
     }
-  }, [form.word, form.action, fetchItems, persistedPage, persistedPageSize, t]);
+  }, [inlineWord, adding, fetchItems, persistedPage, persistedPageSize, t]);
 
-  const handleToggleAction = useCallback(async (item: BlockedItem) => {
-    const next: BlockedAction = item.action === "deny" ? "allow" : "deny";
-    try {
-      await api.updateBlocked(item.id, { action: next });
-      toast.success(t("blocked.action_updated"));
-      fetchItems(persistedPage, persistedPageSize);
-    } catch (err) {
-      showErrorToast(err, { title: t("blocked.action_update_error") });
-    }
-  }, [fetchItems, persistedPage, persistedPageSize, t]);
+  const handleToggleAction = useCallback(
+    async (item: BlockedItem) => {
+      if (togglingId !== null) return;
+      const next: BlockedAction = item.action === "deny" ? "allow" : "deny";
+      setTogglingId(item.id);
+      try {
+        await api.updateBlocked(item.id, { action: next });
+        toast.success(t("blocked.action_updated"));
+        fetchItems(persistedPage, persistedPageSize);
+      } catch (err) {
+        showErrorToast(err, { title: t("blocked.action_update_error") });
+      } finally {
+        setTogglingId(null);
+      }
+    },
+    [togglingId, fetchItems, persistedPage, persistedPageSize, t],
+  );
 
   const deleteConfirm = useDeleteConfirm<BlockedItem>({
     onConfirm: async (item) => {
@@ -152,36 +185,83 @@ export default function BlockPage() {
     closeOnError: false,
   });
 
+  const toggleSelect = useCallback((id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selected.size === items.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(items.map((i) => i.id)));
+    }
+  }, [selected.size, items]);
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selected.size === 0) return;
+    setBatchDeleting(true);
+    try {
+      const ids = Array.from(selected);
+      const rsp = await api.batchDeleteBlocked(ids);
+      toast.success(
+        t("blocked.batch_delete_success").replace("{count}", String(rsp.deletedCount ?? ids.length)),
+      );
+      fetchItems(persistedPage, persistedPageSize);
+    } catch (err) {
+      showErrorToast(err, { title: t("blocked.batch_delete_error") });
+    } finally {
+      setBatchDeleting(false);
+      setBatchDeleteConfirmOpen(false);
+    }
+  }, [selected, fetchItems, persistedPage, persistedPageSize, t]);
+
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
-        <PageHeader
-          title={t("blocked.title")}
-          description={t("blocked.subtitle")}
-          actions={
-            <Button
-              onClick={() => {
-                setForm(emptyForm);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus /> {t("blocked.create")}
-            </Button>
-          }
-        />
+        <PageHeader title={t("blocked.title")} description={t("blocked.subtitle")} />
 
         <Card>
           <CardHeader>
             <CardTitle className="font-display">{t("blocked.all_words")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
               <SearchInput
+                className="sm:max-w-xs"
                 placeholder={t("blocked.search_placeholder")}
                 value={searchQuery}
                 onChange={setSearchQuery}
                 onSearch={handleSearch}
               />
+              <Input
+                className="sm:max-w-xs"
+                placeholder={t("blocked.inline_add_placeholder")}
+                value={inlineWord}
+                onChange={(e) => setInlineWord(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleInlineAdd();
+                }}
+                disabled={adding}
+              />
+              {selected.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setBatchDeleteConfirmOpen(true)}
+                  className="gap-1.5 sm:ml-auto"
+                >
+                  <Trash2 className="size-3.5" />
+                  {t("common.delete")} {selected.size}
+                </Button>
+              )}
             </div>
             {loading ? (
               <TableSkeleton />
@@ -194,74 +274,94 @@ export default function BlockPage() {
               <>
                 {isMobile ? (
                   <div className="space-y-3">
-                    {items.map((item) => (
-                      <div key={item.id} className="rounded-lg border border-border bg-card p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">{item.word}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {t("blocked.hit_count")}: {item.hitCount}
-                            </p>
-                            <div className="mt-1.5"><ActionBadge action={item.action} t={t} /></div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              title={t("blocked.action_switch")}
-                              onClick={() => handleToggleAction(item)}
-                            >
-                              <RefreshCw className="size-3.5" />
-                            </Button>
-                            <DeleteButton
-                              label={t("common.delete")}
-                              onClick={() => deleteConfirm.openDelete(item)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-16">{t("blocked.id")}</TableHead>
-                        <TableHead>{t("blocked.word")}</TableHead>
-                        <TableHead className="w-28">{t("blocked.action")}</TableHead>
-                        <TableHead className="w-24">{t("blocked.hit_count")}</TableHead>
-                        <TableHead className="w-32">{t("common.created")}</TableHead>
-                        <TableHead className="w-28">{t("common.actions")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="text-muted-foreground">{item.id}</TableCell>
-                          <TableCell className="font-medium">{item.word}</TableCell>
-                          <TableCell><ActionBadge action={item.action} t={t} /></TableCell>
-                          <TableCell>{item.hitCount}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(item.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                title={t("blocked.action_switch")}
-                                onClick={() => handleToggleAction(item)}
-                              >
-                                <RefreshCw className="size-3.5" />
-                              </Button>
+                    {items.map((item) => {
+                      const isSelected = selected.has(item.id);
+                      return (
+                        <div key={item.id} className="rounded-lg border border-border bg-card p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 flex-1 items-start gap-2">
+                              <SelectCheckbox
+                                checked={isSelected}
+                                onToggle={() => toggleSelect(item.id)}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium">{item.word}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {t("blocked.hit_count")}: {item.hitCount}
+                                </p>
+                                <div className="mt-1.5">
+                                  <ActionBadge
+                                    action={item.action}
+                                    t={t}
+                                    disabled={togglingId !== null}
+                                    onClick={() => handleToggleAction(item)}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
                               <DeleteButton
                                 label={t("common.delete")}
                                 onClick={() => deleteConfirm.openDelete(item)}
                               />
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <SelectCheckbox
+                            checked={selected.size === items.length}
+                            onToggle={toggleSelectAll}
+                          />
+                        </TableHead>
+                        <TableHead className="w-16">{t("blocked.id")}</TableHead>
+                        <TableHead>{t("blocked.word")}</TableHead>
+                        <TableHead className="w-32">{t("blocked.action")}</TableHead>
+                        <TableHead className="w-24">{t("blocked.hit_count")}</TableHead>
+                        <TableHead className="w-32">{t("common.created")}</TableHead>
+                        <TableHead className="w-24">{t("common.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item) => {
+                        const isSelected = selected.has(item.id);
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="w-10">
+                              <SelectCheckbox
+                                checked={isSelected}
+                                onToggle={() => toggleSelect(item.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{item.id}</TableCell>
+                            <TableCell className="font-medium">{item.word}</TableCell>
+                            <TableCell>
+                              <ActionBadge
+                                action={item.action}
+                                t={t}
+                                disabled={togglingId !== null}
+                                onClick={() => handleToggleAction(item)}
+                              />
+                            </TableCell>
+                            <TableCell>{item.hitCount}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <DeleteButton
+                                label={t("common.delete")}
+                                onClick={() => deleteConfirm.openDelete(item)}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -277,55 +377,21 @@ export default function BlockPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{t("blocked.create")}</DialogTitle>
-              <DialogDescription>{t("blocked.create_placeholder")}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                placeholder={t("blocked.create_placeholder")}
-                value={form.word}
-                onChange={(e) => setForm({ ...form, word: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreate();
-                }}
-              />
-              <div className="space-y-2">
-                <Label>{t("blocked.action")}</Label>
-                <RadioGroup
-                  value={form.action}
-                  onValueChange={(v) => setForm({ ...form, action: v as BlockedAction })}
-                  className="flex flex-col gap-2"
-                >
-                  {actionOptions.map((opt) => (
-                    <div key={opt.value} className="flex items-center gap-2">
-                      <RadioGroupItem value={opt.value} id={`blocked-action-${opt.value}`} />
-                      <Label htmlFor={`blocked-action-${opt.value}`} className="cursor-pointer text-sm font-normal">
-                        {t(opt.labelKey)}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button onClick={handleCreate} disabled={!form.word.trim() || saving}>
-                {saving ? t("common.saving") : t("common.create")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         <DeleteConfirmDialog
           {...deleteConfirm.dialogProps}
           title={t("common.are_you_sure")}
           description={t("blocked.delete_confirm")}
           confirmLabel={t("common.delete")}
+        />
+
+        <DeleteConfirmDialog
+          open={batchDeleteConfirmOpen}
+          onOpenChange={setBatchDeleteConfirmOpen}
+          title={t("common.are_you_sure")}
+          description={t("blocked.batch_delete_confirm").replace("{count}", String(selected.size))}
+          confirmLabel={t("common.delete")}
+          loading={batchDeleting}
+          onConfirm={handleBatchDelete}
         />
       </div>
     </PermissionGuard>
