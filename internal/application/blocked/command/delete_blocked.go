@@ -17,7 +17,11 @@ func NewDeleteBlockedHandler(repo blocked.BlockedRepository, rebuildNotify func(
 }
 
 func (h *deleteBlockedHandler) Handle(ctx context.Context, cmd port.DeleteBlockedCommand) error {
-	err := h.repo.Delete(ctx, cmd.BlockedID)
+	// 空列表视为无操作（防御，调用侧已校验）
+	if len(cmd.BlockedIDs) == 0 {
+		return nil
+	}
+	err := h.repo.DeleteBatch(ctx, cmd.BlockedIDs)
 	if err != nil {
 		return err
 	}

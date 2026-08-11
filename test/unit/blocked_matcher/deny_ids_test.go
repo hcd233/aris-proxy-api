@@ -28,6 +28,10 @@ func (f *fakeBlockedRepo) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (f *fakeBlockedRepo) DeleteBatch(ctx context.Context, ids []uint) error {
+	return nil
+}
+
 func (f *fakeBlockedRepo) UpdateAction(ctx context.Context, id uint, action string) error {
 	return nil
 }

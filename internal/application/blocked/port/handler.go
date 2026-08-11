@@ -21,7 +21,7 @@ type CreateBlockedHandler interface {
 }
 
 type DeleteBlockedCommand struct {
-	BlockedID uint
+	BlockedIDs []uint
 }
 
 type DeleteBlockedHandler interface {

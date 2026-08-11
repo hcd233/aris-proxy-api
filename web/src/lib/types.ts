@@ -620,6 +620,10 @@ export interface ListBlockedRsp extends CommonRsp {
   pageInfo?: PageInfo;
 }
 
+export interface DeleteBlockedRsp extends CommonRsp {
+  deletedCount?: number;
+}
+
 // ─── Metrics ───────────────────────────────────────────────────────────────────
 
 export interface RuntimePoint {

@@ -31,6 +31,10 @@ func (f *updateFakeRepo) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
+func (f *updateFakeRepo) DeleteBatch(ctx context.Context, ids []uint) error {
+	return nil
+}
+
 func (f *updateFakeRepo) UpdateAction(ctx context.Context, id uint, action string) error {
 	f.updatedID = id
 	f.updatedAction = action
