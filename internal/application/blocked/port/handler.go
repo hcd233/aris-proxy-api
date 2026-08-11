@@ -8,7 +8,8 @@ import (
 )
 
 type CreateBlockedCommand struct {
-	Word string
+	Word   string
+	Action string
 }
 
 type CreateBlockedResult struct {
@@ -27,9 +28,19 @@ type DeleteBlockedHandler interface {
 	Handle(ctx context.Context, cmd DeleteBlockedCommand) error
 }
 
+type UpdateBlockedCommand struct {
+	BlockedID uint
+	Action    string
+}
+
+type UpdateBlockedHandler interface {
+	Handle(ctx context.Context, cmd UpdateBlockedCommand) error
+}
+
 type BlockedView struct {
 	ID        uint
 	Word      string
+	Action    string
 	HitCount  uint
 	CreatedAt time.Time
 }

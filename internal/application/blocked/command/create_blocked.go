@@ -18,7 +18,7 @@ func NewCreateBlockedHandler(repo blocked.BlockedRepository, rebuildNotify func(
 }
 
 func (h *createBlockedHandler) Handle(ctx context.Context, cmd port.CreateBlockedCommand) (*port.CreateBlockedResult, error) {
-	b, err := aggregate.CreateBlocked(0, cmd.Word)
+	b, err := aggregate.CreateBlocked(0, cmd.Word, cmd.Action)
 	if err != nil {
 		return nil, err
 	}

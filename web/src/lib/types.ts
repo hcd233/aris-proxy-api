@@ -596,13 +596,21 @@ export interface CronCallAuditOptionListRsp extends CommonRsp {
 
 // ─── Blocked Words ─────────────────────────────────────────────────────────
 
+export type BlockedAction = "deny" | "allow";
+
 export interface CreateBlockedReqBody {
   word: string;
+  action?: BlockedAction;
+}
+
+export interface UpdateBlockedReqBody {
+  action: BlockedAction;
 }
 
 export interface BlockedItem {
   id: number;
   word: string;
+  action: BlockedAction;
   hitCount: number;
   createdAt: string;
 }

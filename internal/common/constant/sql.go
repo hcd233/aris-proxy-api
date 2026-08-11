@@ -62,6 +62,7 @@ const (
 	FieldEnabled                  = "enabled"
 	FieldWord                     = "word"
 	FieldHitCount                 = "hit_count"
+	FieldAction                   = "action"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
 
@@ -123,7 +124,7 @@ var (
 	AuditFilterFieldModel  = "model"
 	AuditFilterFieldStatus = "status"
 
-	BlockedRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldCreatedAt, FieldUpdatedAt}
+	BlockedRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldAction, FieldCreatedAt, FieldUpdatedAt}
 
 	AuditMaxPageSize = 500
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { BlockedItem, PageInfo } from "@/lib/types";
+import type { BlockedAction, BlockedItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,6 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -30,15 +32,36 @@ import { PageHeader } from "@/components/page-header";
 import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { Ban, Plus } from "lucide-react";
+import { Ban, Plus, RefreshCw } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
-const emptyForm = { word: "" };
+const emptyForm = { word: "", action: "deny" as BlockedAction };
+
+const actionOptions: { value: BlockedAction; labelKey: string }[] = [
+  { value: "deny", labelKey: "blocked.action_deny" },
+  { value: "allow", labelKey: "blocked.action_allow" },
+];
+
+function ActionBadge({ action, t }: { action: BlockedAction; t: (key: string) => string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+        action === "deny"
+          ? "bg-destructive/10 text-destructive"
+          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+      )}
+    >
+      {action === "deny" ? t("blocked.action_deny") : t("blocked.action_allow")}
+    </span>
+  );
+}
 
 export default function BlockPage() {
   const [items, setItems] = useState<BlockedItem[]>([]);
@@ -84,7 +107,7 @@ export default function BlockPage() {
     if (!form.word.trim()) return;
     setSaving(true);
     try {
-      await api.createBlocked({ word: form.word.trim() });
+      await api.createBlocked({ word: form.word.trim(), action: form.action });
       toast.success(t("blocked.created_success"));
       setDialogOpen(false);
       setForm(emptyForm);
@@ -94,7 +117,18 @@ export default function BlockPage() {
     } finally {
       setSaving(false);
     }
-  }, [form.word, fetchItems, persistedPage, persistedPageSize, t]);
+  }, [form.word, form.action, fetchItems, persistedPage, persistedPageSize, t]);
+
+  const handleToggleAction = useCallback(async (item: BlockedItem) => {
+    const next: BlockedAction = item.action === "deny" ? "allow" : "deny";
+    try {
+      await api.updateBlocked(item.id, { action: next });
+      toast.success(t("blocked.action_updated"));
+      fetchItems(persistedPage, persistedPageSize);
+    } catch (err) {
+      showErrorToast(err, { title: t("blocked.action_update_error") });
+    }
+  }, [fetchItems, persistedPage, persistedPageSize, t]);
 
   const deleteConfirm = useDeleteConfirm<BlockedItem>({
     onConfirm: async (item) => {
@@ -146,11 +180,22 @@ export default function BlockPage() {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">{item.word}</p>
                             <p className="mt-0.5 text-xs text-muted-foreground">{t("blocked.hit_count")}: {item.hitCount}</p>
+                            <div className="mt-1.5"><ActionBadge action={item.action} t={t} /></div>
                           </div>
-                          <DeleteButton
-                            label={t("common.delete")}
-                            onClick={() => deleteConfirm.openDelete(item)}
-                          />
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title={t("blocked.action_switch")}
+                              onClick={() => handleToggleAction(item)}
+                            >
+                              <RefreshCw className="size-3.5" />
+                            </Button>
+                            <DeleteButton
+                              label={t("common.delete")}
+                              onClick={() => deleteConfirm.openDelete(item)}
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -161,9 +206,10 @@ export default function BlockPage() {
                       <TableRow>
                         <TableHead className="w-16">{t("blocked.id")}</TableHead>
                         <TableHead>{t("blocked.word")}</TableHead>
+                        <TableHead className="w-28">{t("blocked.action")}</TableHead>
                         <TableHead className="w-24">{t("blocked.hit_count")}</TableHead>
                         <TableHead className="w-32">{t("common.created")}</TableHead>
-                        <TableHead className="w-20">{t("common.actions")}</TableHead>
+                        <TableHead className="w-28">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -171,13 +217,24 @@ export default function BlockPage() {
                         <TableRow key={item.id}>
                           <TableCell className="text-muted-foreground">{item.id}</TableCell>
                           <TableCell className="font-medium">{item.word}</TableCell>
+                          <TableCell><ActionBadge action={item.action} t={t} /></TableCell>
                           <TableCell>{item.hitCount}</TableCell>
                           <TableCell className="text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                           <TableCell>
-                            <DeleteButton
-                              label={t("common.delete")}
-                              onClick={() => deleteConfirm.openDelete(item)}
-                            />
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title={t("blocked.action_switch")}
+                                onClick={() => handleToggleAction(item)}
+                              >
+                                <RefreshCw className="size-3.5" />
+                              </Button>
+                              <DeleteButton
+                                label={t("common.delete")}
+                                onClick={() => deleteConfirm.openDelete(item)}
+                              />
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -200,13 +257,30 @@ export default function BlockPage() {
               <DialogTitle>{t("blocked.create")}</DialogTitle>
               <DialogDescription>{t("blocked.create_placeholder")}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <Input
                 placeholder={t("blocked.create_placeholder")}
                 value={form.word}
-                onChange={(e) => setForm({ word: e.target.value })}
+                onChange={(e) => setForm({ ...form, word: e.target.value })}
                 onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
               />
+              <div className="space-y-2">
+                <Label>{t("blocked.action")}</Label>
+                <RadioGroup
+                  value={form.action}
+                  onValueChange={(v) => setForm({ ...form, action: v as BlockedAction })}
+                  className="flex flex-col gap-2"
+                >
+                  {actionOptions.map((opt) => (
+                    <div key={opt.value} className="flex items-center gap-2">
+                      <RadioGroupItem value={opt.value} id={`blocked-action-${opt.value}`} />
+                      <Label htmlFor={`blocked-action-${opt.value}`} className="cursor-pointer text-sm font-normal">
+                        {t(opt.labelKey)}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>

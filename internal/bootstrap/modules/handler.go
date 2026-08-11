@@ -156,8 +156,8 @@ func NewModelDependencies(create modelport.CreateModelHandler, update modelport.
 	return handler.ModelDependencies{Create: create, Update: update, Delete: deleteHandler, List: list}
 }
 
-func NewBlockedDependencies(create blockedport.CreateBlockedHandler, del blockedport.DeleteBlockedHandler, list blockedport.ListBlockedHandler) handler.BlockedDependencies {
-	return handler.BlockedDependencies{Create: create, Delete: del, List: list}
+func NewBlockedDependencies(create blockedport.CreateBlockedHandler, update blockedport.UpdateBlockedHandler, del blockedport.DeleteBlockedHandler, list blockedport.ListBlockedHandler) handler.BlockedDependencies {
+	return handler.BlockedDependencies{Create: create, Update: update, Delete: del, List: list}
 }
 
 func NewMetricsDependencies(runtimeMetrics metricsport.RuntimeMetricsService) handler.MetricsDependencies {
