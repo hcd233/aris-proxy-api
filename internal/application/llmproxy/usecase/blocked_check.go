@@ -30,6 +30,17 @@ func extractOpenAIChatText(req *dto.OpenAIChatCompletionRequest) string {
 
 func extractAnthropicMessageText(req *dto.AnthropicCreateMessageRequest) string {
 	var buf strings.Builder
+	// Anthropic system prompt 是顶层字段（不在 messages 内），需单独提取扫描
+	if req.Body.System != nil {
+		if req.Body.System.Text != "" {
+			buf.WriteString(req.Body.System.Text)
+		}
+		for _, block := range req.Body.System.Blocks {
+			if block.Text != nil {
+				buf.WriteString(*block.Text)
+			}
+		}
+	}
 	for _, msg := range req.Body.Messages {
 		if msg.Content != nil {
 			if msg.Content.Text != "" {

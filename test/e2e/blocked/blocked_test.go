@@ -192,9 +192,102 @@ func chatWithWord(t *testing.T, baseURL, apiKey, word string) *http.Response {
 	return resp
 }
 
+// chatWithSystemWord 发送一次非流式 OpenAI chat completion，敏感词放在 system 消息中。
+func chatWithSystemWord(t *testing.T, baseURL, apiKey, word string) *http.Response {
+	t.Helper()
+	body := map[string]any{
+		"model": "gpt-5.5",
+		"messages": []map[string]string{
+			{"role": "system", "content": "system rule says: " + word},
+			{"role": "user", "content": "hello"},
+		},
+		"stream":     false,
+		"max_tokens": 50,
+	}
+	payload, err := sonic.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal chat body: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(payload)))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to send chat request: %v", err)
+	}
+	return resp
+}
+
+// anthropicChatWithSystemWord 发送一次非流式 Anthropic messages 请求，敏感词放在顶层 system 字段。
+func anthropicChatWithSystemWord(t *testing.T, baseURL, apiKey, word string) *http.Response {
+	t.Helper()
+	body := map[string]any{
+		"model":      "deepseek-v4-flash",
+		"system":     "system rule says: " + word,
+		"messages":   []map[string]string{{"role": "user", "content": "hello"}},
+		"max_tokens": 50,
+	}
+	payload, err := sonic.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal chat body: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/anthropic/v1/messages", strings.NewReader(string(payload)))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to send chat request: %v", err)
+	}
+	return resp
+}
+
 // uniqueWord 生成本次测试唯一的敏感词，避免污染环境中的存量数据。
 func uniqueWord(prefix string) string {
 	return fmt.Sprintf("%s_%d", prefix, os.Getpid())
+}
+
+// TestBlocked_SystemMessage_OpenAI_Returns403 验证敏感词出现在 OpenAI system 消息中时同样拦截（403）。
+func TestBlocked_SystemMessage_OpenAI_Returns403(t *testing.T) {
+	t.Parallel()
+	baseURL, apiKey, adminToken := mustBlockedE2EEnv(t)
+
+	word := uniqueWord("e2esysopenai")
+	id := createBlockedWord(t, baseURL, adminToken, word, "deny")
+	defer deleteBlockedWord(t, baseURL, adminToken, id)
+
+	resp := chatWithSystemWord(t, baseURL, apiKey, word)
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusForbidden {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("system message hit: expected 403, got %d, body: %s", resp.StatusCode, string(body))
+	}
+}
+
+// TestBlocked_SystemMessage_Anthropic_Returns403 验证敏感词出现在 Anthropic 顶层 system 字段时同样拦截（403）。
+func TestBlocked_SystemMessage_Anthropic_Returns403(t *testing.T) {
+	t.Parallel()
+	baseURL, apiKey, adminToken := mustBlockedE2EEnv(t)
+
+	word := uniqueWord("e2esysanthropic")
+	id := createBlockedWord(t, baseURL, adminToken, word, "deny")
+	defer deleteBlockedWord(t, baseURL, adminToken, id)
+
+	resp := anthropicChatWithSystemWord(t, baseURL, apiKey, word)
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusForbidden {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("anthropic system field hit: expected 403, got %d, body: %s", resp.StatusCode, string(body))
+	}
 }
 
 // TestBlocked_Deny_Returns403 验证 deny 型敏感词命中时返回 403（现状行为回归）。
