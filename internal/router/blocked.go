@@ -41,6 +41,18 @@ func initBlockedRouter(group huma.API, handler handler.BlockedHandler, db *gorm.
 	}, handler.HandleListBlocked)
 
 	huma.Register(group, huma.Operation{
+		OperationID: "updateBlocked",
+		Method:      http.MethodPatch,
+		Path:        "",
+		Summary:     "UpdateBlocked",
+		Tags:        []string{constant.TagBlocked},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("updateBlocked", enum.PermissionAdmin),
+		},
+	}, handler.HandleUpdateBlocked)
+
+	huma.Register(group, huma.Operation{
 		OperationID: "deleteBlocked",
 		Method:      http.MethodDelete,
 		Path:        "",

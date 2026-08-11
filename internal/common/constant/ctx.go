@@ -50,4 +50,8 @@ const (
 
 	// CtxKeyLocale 请求语言环境
 	CtxKeyLocale enum.CtxKey = "locale"
+
+	// CtxKeySkipStore 命中 allow 型敏感词，跳过 session/message/tool 存储
+	//	@update 2026-08-11 10:00:00
+	CtxKeySkipStore enum.CtxKey = "skipStore"
 )
