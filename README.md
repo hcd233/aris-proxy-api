@@ -313,62 +313,6 @@ Aris 支持将 Agent Harness 的调用过程作为独立 Trace 数据进行采�
 
 Aris 由统一的 Go API 服务承载网关和管理 API，Next.js 管理后台作为内嵌静态资源提供，`aris` Trace 客户端负责采集本地 Agent Harness 事件。服务端通过 PostgreSQL 保存业务数据，通过 Redis 提供缓存、限流、临时状态和分布式协调，并根据 Endpoint/Model 配置访问不同 MaaS 平台的上游模型服务。
 
-```mermaid
-graph TB
-    subgraph Clients[客户端与使用入口]
-        Web[Next.js 管理后台]
-        LLM[OpenAI / Anthropic 客户端]
-        Harness[Codex / Claude Code / OpenCode / Pi]
-        TraceCLI[aris Trace 客户端]
-    end
-
-    subgraph Aris[Aris API 服务]
-        Fiber[Fiber HTTP Server]
-        Huma[Huma API 与 OpenAPI]
-        Middleware[全局与路由中间件]
-        Router[API Router]
-        Handler[Handler]
-        Application[Application UseCase]
-        Domain[Domain Aggregate / Service]
-        Infra[Infrastructure Repository / Transport]
-        Static[embed.FS 静态资源]
-    end
-
-    subgraph Storage[数据与基础设施]
-        PostgreSQL[(PostgreSQL)]
-        Redis[(Redis)]
-        Logs[本地日志 / CLS]
-        Metrics[Prometheus / fgprof]
-    end
-
-    subgraph MaaS[上游 MaaS 平台]
-        OpenAIUpstream[OpenAI 兼容上游]
-        AnthropicUpstream[Anthropic 兼容上游]
-        OtherMaaS[其他 MaaS Endpoint]
-    end
-
-    Web -->|管理 API| Fiber
-    Web -->|加载内嵌资源| Static
-    LLM -->|OpenAI / Anthropic API| Fiber
-    Harness -->|配置导出后调用网关| Fiber
-    TraceCLI -->|Trace 事件上报| Fiber
-
-    Fiber --> Middleware
-    Middleware --> Huma
-    Huma --> Router
-    Router --> Handler
-    Handler --> Application
-    Application --> Domain
-    Application --> Infra
-    Infra --> PostgreSQL
-    Infra --> Redis
-    Infra --> OpenAIUpstream
-    Infra --> AnthropicUpstream
-    Infra --> OtherMaaS
-    Fiber --> Logs
-    Fiber --> Metrics
-```
-
 以下是更详细的分层架构图，完整交互版（可缩放、含校正说明与关键决策卡片）见 [`docs/diagrams/aris-proxy-api-architecture.html`](docs/diagrams/aris-proxy-api-architecture.html)（下载后用浏览器打开）。
 
 **① 系统总览** — 客户端 → 网关 → 应用/领域/基础设施 → 外部依赖，三条接入路径（JWT 管理、APIKey 转发、Trace 上报）
@@ -398,26 +342,7 @@ graph TB
 - 服务端启动数据库、Redis、共享 HTTP Client、Pond 协程池、Cron 模块、日志和业务服务后开始监听 HTTP 请求。
 - `cmd/client` 编译为独立的 `aris` 二进制，只包含 Trace 客户端相关命令，不依赖服务端数据库、Web 静态资源或管理命令。
 
-```mermaid
-flowchart TD
-    Main[cmd/server/main.go] --> Execute[Cobra execute]
-    Execute --> Start[server start]
-    Start --> Config[读取 Viper 配置]
-    Start --> Build[bootstrap.BuildFxApp]
-    Build --> InfraModule[InfraModule]
-    Build --> CronModule[CronModule]
-    Build --> RepositoryModule[RepositoryModule]
-    Build --> ApplicationModule[ApplicationModule]
-    Build --> HandlerModule[HandlerModule]
-    InfraModule --> Resources[PostgreSQL / Redis / HTTP Client / Pond]
-    Build --> Fiber[创建 Fiber App]
-    Build --> Huma[创建 Huma API]
-    Fiber --> Middlewares[注册中间件]
-    Huma --> Routes[注册 API 路由]
-    Resources --> Routes
-    Middlewares --> Listen[开始监听 HTTP]
-    Routes --> Listen
-```
+![服务启动链路](docs/diagrams/aris-detail-01.png)
 
 ### 后端分层架构
 
@@ -474,34 +399,7 @@ router -> handler -> application -> domain
 
 所有请求首先进入 Fiber 全局中间件，再由 Huma 完成路由匹配和 DTO 绑定。不同资源组会叠加 JWT、API Key、权限和限流中间件。
 
-```mermaid
-sequenceDiagram
-    participant Client as 客户端
-    participant Fiber as Fiber
-    participant MW as 中间件链
-    participant Huma as Huma
-    participant Handler as Handler
-    participant UC as Application UseCase
-    participant Domain as Domain
-    participant Repo as Repository
-    participant Upstream as MaaS 上游
-
-    Client->>Fiber: HTTP 请求
-    Fiber->>MW: Recover / Metrics / Inflight / Guard / Trace / Log
-    MW->>Huma: 路由匹配与 DTO 绑定
-    Huma->>MW: JWT 或 API Key 鉴权、权限、限流
-    MW->>Handler: 调用 Handler
-    Handler->>UC: 传入 Command / Query
-    UC->>Domain: 执行领域规则
-    UC->>Repo: 查询或保存数据
-    alt LLM 代理请求
-        UC->>Upstream: 转换后调用上游
-        Upstream-->>UC: 非流式响应或 SSE 事件
-    end
-    UC-->>Handler: UseCase 结果
-    Handler-->>Huma: HTTP 响应 DTO
-    Huma-->>Client: JSON 或 SSE 响应
-```
+![HTTP 请求处理链路](docs/diagrams/aris-detail-02.png)
 
 全局中间件的实际注册顺序为：
 
@@ -520,29 +418,7 @@ sequenceDiagram
 
 LLM 代理将“请求协议适配”“模型路由”“上游传输”“响应转换”和“数据沉淀”拆开：
 
-```mermaid
-flowchart LR
-    Request[OpenAI / Anthropic Request]
-    UseCase[llmproxy UseCase]
-    Resolver[EndpointResolver]
-    Converter[DTO Converter]
-    Transport[HTTP / SSE Transport]
-    ResponseConverter[Response Converter]
-    Store[Message / Session Store]
-    Audit[ModelCallAudit]
-
-    Request --> UseCase
-    UseCase --> Resolver
-    Resolver -->|Model alias| Endpoint[Endpoint + Model + UpstreamCreds]
-    UseCase --> Converter
-    Converter --> Transport
-    Transport --> Upstream[MaaS Upstream]
-    Upstream --> Transport
-    Transport --> ResponseConverter
-    ResponseConverter --> UseCase
-    UseCase --> Store
-    UseCase --> Audit
-```
+![LLM 代理模块结构](docs/diagrams/aris-arch-02.png)
 
 - `EndpointResolver` 接收客户端模型别名，查询 Model 映射和 Endpoint 配置，组装目标真实模型名与协议对应的 `UpstreamCreds`。
 - UseCase 根据入口协议、上游支持能力和模型配置选择原生转发或跨协议转换路径。
@@ -554,25 +430,7 @@ flowchart LR
 
 管理后台不是独立部署的 Node 服务，而是构建后由 Go API 服务统一提供：
 
-```mermaid
-flowchart LR
-    Source[web/src + web/public]
-    NPM[npm ci / npm run build]
-    Out[web/out]
-    Dist[internal/web/dist]
-    Gzip[gzip -9 预压缩]
-    Embed[Go embed.FS]
-    Fiber[Fiber Web Router]
-    Browser[浏览器]
-
-    Source --> NPM
-    NPM --> Out
-    Out -->|make web-build 复制| Dist
-    Dist -->|逐文件预压缩| Gzip
-    Gzip --> Embed
-    Embed --> Fiber
-    Browser --> Fiber
-```
+![前端静态资源构建流程](docs/diagrams/aris-detail-03.png)
 
 - 本地执行 `make web-build` 时，先在 `web/` 执行 `npm ci` 和 `npm run build`。
 - Next.js 静态产物输出到 `web/out`，随后被复制到 `internal/web/dist`。
@@ -930,23 +788,7 @@ func NewHumaAPI(app *fiber.App) huma.API {
 
 #### 管理 API：JWT
 
-```mermaid
-sequenceDiagram
-    participant Browser as 管理后台
-    participant JWT as JwtMiddleware
-    participant Redis as Redis
-    participant Handler as Handler
-    participant UseCase as Application
-
-    Browser->>JWT: Authorization: Bearer access-token
-    JWT->>JWT: 验证 Token 签名与有效期
-    JWT->>Redis: 查询 Token 状态
-    Redis-->>JWT: 返回状态
-    JWT->>JWT: 注入 UserID / Permission
-    JWT->>Handler: 进入受保护路由
-    Handler->>UseCase: 执行用户范围或管理员用例
-    UseCase-->>Browser: JSON 响应
-```
+![JWT 鉴权链路](docs/diagrams/aris-detail-04.png)
 
 - JwtMiddleware 从 `Authorization` Header 提取 Bearer Token。
 - 验证通过后，将 UserID 和 Permission 放入请求 Context。
@@ -974,27 +816,7 @@ openaiGroup.UseMiddleware(
 
 一次模型代理调用在 Application 层由 UseCase 编排，领域服务负责模型路由，Infrastructure 层负责数据库和上游传输：
 
-```mermaid
-flowchart TD
-    Request[客户端请求] --> APIKey[APIKeyMiddleware]
-    APIKey --> Rate[请求限流与 Token 限流]
-    Rate --> Body[DTO 绑定与请求校验]
-    Body --> Blocked[敏感词检查]
-    Blocked --> Resolve[EndpointResolver]
-    Resolve --> Alias[模型 alias]
-    Alias --> Mapping[Model 映射]
-    Mapping --> Endpoint[Endpoint 配置]
-    Endpoint --> Creds[UpstreamCreds + 真实模型名]
-    Creds --> ConvertReq[请求 Converter]
-    ConvertReq --> Transport[HTTP / SSE Transport]
-    Transport --> Retry[失败退避与有限重试]
-    Retry --> Upstream[MaaS 上游]
-    Upstream --> ConvertResp[响应 / SSE Converter]
-    ConvertResp --> Client[客户端 JSON / SSE]
-    ConvertResp --> Usage[Token usage 与延迟统计]
-    Usage --> Store[异步写入 Session / Message / Tool]
-    Usage --> Audit[异步写入 ModelCallAudit]
-```
+![LLM 代理执行流程](docs/diagrams/aris-arch-02.png)
 
 典型执行顺序如下：
 
@@ -1103,34 +925,7 @@ jittered_backoff = backoff * (1 + random(-jitter_factor, +jitter_factor))
 
 模型调用保存的数据分为业务聚合、不可变内容和关系引用：
 
-```mermaid
-erDiagram
-    USER ||--o{ PROXY_API_KEY : owns
-    PROXY_API_KEY ||--o{ SESSION : creates
-    SESSION }o--o{ MESSAGE : references
-    SESSION }o--o{ TOOL : references
-    MESSAGE ||--o{ TOOL : contains
-    SESSION ||--o{ MODEL_CALL_AUDIT : produces
-
-    SESSION {
-        uint id
-        string api_key_owner
-        string model
-        int score
-        string summary
-    }
-    MESSAGE {
-        uint id
-        string checksum
-        json unified_message
-    }
-    TOOL {
-        uint id
-        string checksum
-        json arguments
-        json result
-    }
-```
+![核心数据模型](docs/diagrams/aris-detail-05.png)
 
 - Session 保存会话级元数据和 Message/Tool 引用。
 - Message 和 Tool 内容以 JSON 形式保存，领域层使用 UnifiedMessage 和统一 Tool 结构处理。
@@ -1154,16 +949,7 @@ Session 详情缓存按读取对象拆分为三层：SessionMeta、Message 和 T
 
 模型响应属于用户感知链路，消息和审计写入属于后台持久化链路，项目通过 Pond 将二者分离：
 
-```mermaid
-flowchart LR
-    Request[LLM 请求] --> Proxy[代理上游]
-    Proxy --> Response[返回客户端]
-    Proxy --> StoreTask[SubmitMessageStoreTask]
-    Proxy --> AuditTask[SubmitModelCallAuditTask]
-    StoreTask --> StorePool[Store Pond Pool]
-    AuditTask --> StorePool
-    StorePool --> PostgreSQL[(PostgreSQL)]
-```
+![异步落库与 Pond 协程池](docs/diagrams/aris-detail-06.png)
 
 - Store 池用于消息、Session 和审计等持久化任务。
 - Agent 池用于摘要、思维链提取等 Agent/后台处理任务。
@@ -1202,33 +988,7 @@ SET cron:lock:{module} <instance-id> NX EX <ttl>
 
 Trace 数据从本地 Agent Harness 事件进入客户端 spool，再经过 API Key 鉴权和持久化，最终在 Web 页面中重建为可阅读会话：
 
-```mermaid
-flowchart LR
-    Hook[Codex Hook Event]
-    Rollout[Codex Rollout Record]
-    CLI[aris trace ingest]
-    Spool[~/.aris/trace/spool 0600]
-    Batch[批量 POST]
-    API[POST /api/v1/trace/event]
-    Auth[API Key Owner 校验]
-    Dedup[事件去重与结构化解析]
-    DB[(Trace Repository)]
-    Query[JWT Trace Query]
-    Projection[TraceConversation Projection]
-    Web[Trace Web 页面]
-
-    Hook --> CLI
-    Rollout --> CLI
-    CLI --> Spool
-    Spool --> Batch
-    Batch --> API
-    API --> Auth
-    Auth --> Dedup
-    Dedup --> DB
-    DB --> Query
-    Query --> Projection
-    Projection --> Web
-```
+![Trace 数据管线](docs/diagrams/aris-detail-07.png)
 
 客户端侧：
 
@@ -1336,26 +1096,7 @@ ReadTimeout = config.GetDuration("read.timeout")
 
 应用内部通过 Inflight Tracker 和 draining 状态协作关闭：
 
-```mermaid
-sequenceDiagram
-    participant K8s as Kubernetes
-    participant Pod as Aris Pod
-    participant Ready as /ready
-    participant Inflight as Inflight Tracker
-    participant Pool as Pond Pool
-    participant DB as PostgreSQL / Redis
-
-    K8s->>Pod: SIGTERM
-    K8s->>Pod: preStop sleep 10
-    Pod->>Pod: 停止 Cron 与任务提交
-    Pod->>Ready: draining
-    Ready-->>K8s: 503 Not Ready
-    K8s->>Pod: 从 Service 摘流
-    Pod->>Inflight: 等待 HTTP / SSE 请求
-    Pod->>Pool: 等待已提交异步任务
-    Pod->>DB: 关闭数据库与 Redis
-    K8s->>Pod: 最长等待 660 秒
-```
+![优雅关闭与无损下线](docs/diagrams/aris-detail-08.png)
 
 - `/health` 仍用于判断进程存活，异常时触发重启。
 - `/ready` 用于决定 Pod 是否继续接收流量，draining 后返回 503。
