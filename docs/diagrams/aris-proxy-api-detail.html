@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>aris-proxy-api 细节架构图</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Geist', system-ui, sans-serif; background: #f5f5f5; min-height: 100vh; padding: 3rem 2rem; color: #2d3142; }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .header { margin-bottom: 2.5rem; }
+    .header-eyebrow { font-family: 'Geist Mono', monospace; font-size: 0.66rem; letter-spacing: 0.18em; text-transform: uppercase; color: #4f5d75; margin-bottom: 0.75rem; }
+    h1 { font-family: 'Instrument Serif', 'Times New Roman', serif; font-size: 2rem; font-weight: 400; margin-bottom: 0.5rem; }
+    .subtitle { font-size: 1rem; line-height: 1.55; color: #4f5d75; max-width: 60ch; }
+    .section { margin-top: 3.5rem; }
+    .section-head { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(45,49,66,0.10); padding-bottom: 0.5rem; }
+    .section-head .idx { font-family: 'Geist Mono', monospace; font-size: 0.72rem; color: #eb6c36; letter-spacing: 0.1em; }
+    h2 { font-size: 1.05rem; font-weight: 600; }
+    .diagram-container { overflow-x: auto; }
+    svg.diagram { width: 100%; min-width: 940px; display: block; }
+    .footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(45,49,66,0.10); font-family: 'Geist Mono', monospace; font-size: 0.72rem; color: #7a8399; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Shared markers -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+        </marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+        </marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/>
+        </marker>
+        <marker id="arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polyline points="0 0, 8 3, 0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+        </marker>
+      </defs>
+    </svg>
+
+    <div class="header">
+      <p class="header-eyebrow">Architecture Details · aris-proxy-api</p>
+      <h1>aris-proxy-api 细节架构图</h1>
+      <p class="subtitle">由 README 中原有 Mermaid 图经 diagram-design 重绘而来，并按当前代码事实校正：服务启动链路、HTTP 请求处理、前端构建、JWT 鉴权、数据模型、异步落库、Trace 数据管线与优雅关闭。</p>
+    </div>
+
+    <!-- ============ 图 1 · 服务启动链路 ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">01</span><h2>服务启动链路</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d5-title d5-desc">
+          <title id="d5-title">服务启动链路</title>
+          <desc id="d5-desc">服务端启动顺序：Viper 读取环境变量配置，进入 main.go 与 Cobra 命令，执行 server start 后经 BuildFxApp 构建依赖注入容器，注入五个模块与基础设施，最后由 OnStart 钩子重建敏感词、启动 HTTP 监听与指标 Flusher。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <path d="M 500,96 V 120" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 500,176 V 200" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 500,256 V 280" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 500,336 V 360" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 500,416 V 440" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 500,496 V 520" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 500,576 V 600" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+          <!-- 1 -->
+          <rect x="340" y="40" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="40" width="320" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <rect x="348" y="48" width="28" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
+          <text x="362" y="57" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CFG</text>
+          <text x="500" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">config.init()</text>
+          <text x="500" y="82" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Viper 读环境变量（api.env）</text>
+
+          <!-- 2 -->
+          <rect x="340" y="120" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="120" width="320" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="348" y="128" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="361" y="137" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MAIN</text>
+          <text x="500" y="146" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">cmd/server/main.go</text>
+          <text x="500" y="162" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">execute() → rootCmd.Execute()</text>
+
+          <!-- 3 -->
+          <rect x="340" y="200" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="200" width="320" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="348" y="208" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="363" y="217" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLI</text>
+          <text x="500" y="226" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cobra server start</text>
+          <text x="500" y="242" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">--host 0.0.0.0 --port 8080</text>
+
+          <!-- 4 -->
+          <rect x="340" y="280" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="280" width="320" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <rect x="348" y="288" width="26" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+          <text x="361" y="297" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DI</text>
+          <text x="500" y="306" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">bootstrap.BuildFxApp</text>
+          <text x="500" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">go.uber.org/fx · 构建依赖图</text>
+
+          <!-- 5 -->
+          <rect x="340" y="360" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="360" width="320" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="348" y="368" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="361" y="377" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MOD</text>
+          <text x="500" y="386" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">模块注入（fx.Module）</text>
+          <text x="500" y="402" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Infra · Cron · Repository · Application · Handler</text>
+
+          <!-- 6 -->
+          <rect x="340" y="440" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="440" width="320" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="348" y="448" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="361" y="457" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">INF</text>
+          <text x="500" y="466" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">基础设施初始化</text>
+          <text x="500" y="482" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">PostgreSQL · Redis · Pond · Inflight · HTTP Client</text>
+
+          <!-- 7 -->
+          <rect x="340" y="520" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="520" width="320" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="348" y="528" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="362" y="537" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">RUN</text>
+          <text x="500" y="546" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">OnStart 钩子</text>
+          <text x="500" y="562" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">敏感词重建 → HTTP 监听 → 指标 Flusher</text>
+
+          <!-- 8 -->
+          <rect x="340" y="600" width="320" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="340" y="600" width="320" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+          <rect x="348" y="608" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+          <text x="361" y="617" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SRV</text>
+          <text x="500" y="626" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">开始监听 HTTP</text>
+          <text x="500" y="642" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">:8080 · /health /ready 就绪</text>
+
+          <line x1="30" y1="676" x2="970" y2="676" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="692" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <rect x="90" y="684" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="110" y="693" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">依赖注入（焦点）</text>
+          <rect x="210" y="684" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="230" y="693" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">启动步骤</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ============ 图 2 · HTTP 请求处理链路 (sequence) ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">02</span><h2>HTTP 请求处理链路</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d6-title d6-desc">
+          <title id="d6-title">HTTP 请求处理链路</title>
+          <desc id="d6-desc">时序图：客户端请求经 Fiber 与全局中间件链，进入 Huma 完成路由匹配与鉴权限流，调用 Handler 与 Application UseCase，执行领域规则与仓储读写，必要时协议转换后调用上游 MaaS，最终返回 JSON 或 SSE 响应。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <!-- lifelines -->
+          <line x1="100" y1="88" x2="100" y2="580" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="300" y1="88" x2="300" y2="580" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="500" y1="88" x2="500" y2="580" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="700" y1="88" x2="700" y2="580" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="900" y1="88" x2="900" y2="580" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+          <!-- actors -->
+          <rect x="40" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="40" y="40" width="120" height="48" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="100" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">客户端</text>
+
+          <rect x="240" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="240" y="40" width="120" height="48" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="300" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Fiber + 中间件</text>
+
+          <rect x="440" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="440" y="40" width="120" height="48" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="500" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Huma + Handler</text>
+
+          <rect x="640" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="640" y="40" width="120" height="48" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="700" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Application UseCase</text>
+
+          <rect x="840" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="840" y="40" width="120" height="48" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+          <text x="900" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Domain / 上游</text>
+
+          <!-- messages -->
+          <line x1="100" y1="112" x2="300" y2="112" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="200" y="104" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">HTTP 请求</text>
+
+          <line x1="300" y1="150" x2="500" y2="150" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="400" y="142" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">全局中间件 → 路由匹配 + DTO 绑定</text>
+
+          <line x1="500" y1="188" x2="300" y2="188" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="400" y="180" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">JWT / APIKey 鉴权 + 限流</text>
+
+          <line x1="300" y1="226" x2="500" y2="226" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="400" y="218" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">调用 Handler</text>
+
+          <line x1="500" y1="264" x2="700" y2="264" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="600" y="256" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">Command / Query</text>
+
+          <line x1="700" y1="302" x2="900" y2="302" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="800" y="294" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">领域规则 / 仓储读写</text>
+
+          <line x1="700" y1="340" x2="900" y2="340" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <text x="800" y="332" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">协议转换后调用上游</text>
+
+          <line x1="900" y1="378" x2="700" y2="378" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="800" y="370" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">非流式响应 / SSE</text>
+
+          <line x1="700" y1="416" x2="500" y2="416" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="600" y="408" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">UseCase 结果</text>
+
+          <line x1="500" y1="454" x2="100" y2="454" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="300" y="446" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">HTTP 响应 DTO</text>
+
+          <line x1="500" y1="492" x2="100" y2="492" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+          <text x="300" y="484" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">JSON / SSE 响应</text>
+
+          <line x1="30" y1="612" x2="970" y2="612" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="628" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <line x1="90" y1="624" x2="116" y2="624" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="124" y="628" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">调用</text>
+          <line x1="180" y1="624" x2="206" y2="624" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="214" y="628" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">返回</text>
+          <line x1="270" y1="624" x2="296" y2="624" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+          <text x="304" y="628" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">成功响应</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ============ 图 3 · 前端静态资源构建 ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">03</span><h2>前端静态资源构建流程</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d7-title d7-desc">
+          <title id="d7-title">前端静态资源构建流程</title>
+          <desc id="d7-desc">Next.js 16 源码经静态导出生成 web/out，复制到 internal/web/dist，逐文件 gzip 预压缩后由 Go embed.FS 内嵌，最终由 Fiber Web Router 以 /web 路径提供给浏览器。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <path d="M 128,84 H 160" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 288,84 H 320" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 448,84 H 480" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 608,84 H 640" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 704,112 V 136" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 768,164 H 800" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 900,164 H 928" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+          <!-- row 1 -->
+          <rect x="24" y="56" width="104" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="24" y="56" width="104" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="76" y="82" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">web/src</text>
+          <text x="76" y="98" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">+ public</text>
+
+          <rect x="160" y="56" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="160" y="56" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="224" y="82" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">npm build</text>
+          <text x="224" y="98" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Next.js 16 静态导出</text>
+
+          <rect x="320" y="56" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="320" y="56" width="128" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="384" y="82" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">web/out</text>
+          <text x="384" y="98" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">output: export</text>
+
+          <rect x="480" y="56" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="480" y="56" width="128" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="544" y="82" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">internal/web/dist</text>
+          <text x="544" y="98" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">make web-build 复制</text>
+
+          <rect x="640" y="56" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="640" y="56" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="704" y="82" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">gzip -9</text>
+          <text x="704" y="98" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">逐文件预压缩</text>
+
+          <!-- row 2 -->
+          <rect x="640" y="136" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="640" y="136" width="128" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="704" y="162" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Go embed.FS</text>
+          <text x="704" y="178" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">DistFS //go:embed</text>
+
+          <rect x="800" y="136" width="100" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="800" y="136" width="100" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="850" y="162" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Fiber Router</text>
+          <text x="850" y="178" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/web/*</text>
+
+          <rect x="928" y="136" width="64" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="928" y="136" width="64" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="960" y="162" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">浏览器</text>
+          <text x="960" y="178" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SPA</text>
+
+          <line x1="30" y1="296" x2="970" y2="296" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="312" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <rect x="90" y="304" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="110" y="313" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">内嵌（焦点）</text>
+          <rect x="200" y="304" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="220" y="313" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">产物</text>
+          <rect x="300" y="304" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="320" y="313" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">处理步骤</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ============ 图 4 · JWT 鉴权 (sequence) ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">04</span><h2>JWT 鉴权链路</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d8-title d8-desc">
+          <title id="d8-title">JWT 鉴权链路</title>
+          <desc id="d8-desc">时序图：管理后台携带 Bearer access-token，JwtMiddleware 以 HS256 验签并校验有效期，命中 Redis 缓存的用户信息后注入 UserID 与 Permission，进入受保护路由执行用例并返回 JSON 响应。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <line x1="100" y1="88" x2="100" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="300" y1="88" x2="300" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="500" y1="88" x2="500" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="700" y1="88" x2="700" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="900" y1="88" x2="900" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+          <rect x="40" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="40" y="40" width="120" height="48" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="100" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">管理后台</text>
+
+          <rect x="240" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="240" y="40" width="120" height="48" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="300" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">JwtMiddleware</text>
+
+          <rect x="440" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="440" y="40" width="120" height="48" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="500" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Redis</text>
+
+          <rect x="640" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="640" y="40" width="120" height="48" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="700" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Handler</text>
+
+          <rect x="840" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="840" y="40" width="120" height="48" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="900" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Application</text>
+
+          <line x1="100" y1="112" x2="300" y2="112" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="200" y="104" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">Authorization: Bearer</text>
+
+          <path d="M 300,150 H 336 Q 344,150 344,158 V 172 Q 344,180 336,180 H 300" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="352" y="170" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">HS256 验签 + 有效期</text>
+
+          <line x1="300" y1="212" x2="500" y2="212" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="400" y="204" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">查用户信息 jwt:user:{id}</text>
+
+          <line x1="500" y1="250" x2="300" y2="250" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="400" y="242" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">name + permission</text>
+
+          <path d="M 300,288 H 336 Q 344,288 344,296 V 310 Q 344,318 336,318 H 300" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="352" y="308" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">注入 UserID / Permission</text>
+
+          <line x1="300" y1="350" x2="700" y2="350" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="500" y="342" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">进入受保护路由</text>
+
+          <line x1="700" y1="388" x2="900" y2="388" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="800" y="380" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">执行用例</text>
+
+          <line x1="900" y1="426" x2="100" y2="426" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+          <text x="500" y="418" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">JSON 响应</text>
+
+          <line x1="30" y1="512" x2="970" y2="512" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="528" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <line x1="90" y1="524" x2="116" y2="524" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="124" y="528" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">调用</text>
+          <line x1="180" y1="524" x2="206" y2="524" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="214" y="528" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">返回</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ============ 图 5 · 数据模型 (ER) ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">05</span><h2>核心数据模型</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d9-title d9-desc">
+          <title id="d9-title">核心数据模型</title>
+          <desc id="d9-desc">实体关系图：USER 拥有多个 PROXY_API_KEY，密钥创建多个 SESSION，SESSION 多对多引用 MESSAGE 与 TOOL（内容寻址去重），MESSAGE 包含 TOOL，SESSION 产生多条 MODEL_CALL_AUDIT 审计记录。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <!-- relationships (lines first) -->
+          <line x1="130" y1="180" x2="130" y2="250" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="122" y="220" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">1</text>
+          <text x="138" y="220" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="142" y="206" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace">owns</text>
+
+          <line x1="200" y1="303" x2="420" y2="303" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="208" y="291" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">1</text>
+          <text x="412" y="291" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="310" y="292" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">creates</text>
+
+          <path d="M 520,250 V 120 H 700" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="628" y="108" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="688" y="108" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="660" y="100" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">references</text>
+
+          <path d="M 620,360 V 473 H 700" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="632" y="461" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="688" y="461" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="660" y="452" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">references</text>
+
+          <line x1="780" y1="180" x2="780" y2="420" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="772" y="300" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">1</text>
+          <text x="788" y="300" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="792" y="286" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace">contains</text>
+
+          <line x1="520" y1="400" x2="520" y2="470" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="512" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">1</text>
+          <text x="528" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">N</text>
+          <text x="532" y="426" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace">produces</text>
+
+          <!-- USER -->
+          <rect x="60" y="60" width="140" height="120" rx="6" fill="#f5f5f5"/>
+          <rect x="60" y="60" width="140" height="120" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="68" y="68" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="83" y="77" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENT</text>
+          <text x="130" y="90" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">USER</text>
+          <line x1="60" y1="98" x2="200" y2="98" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="70" y="112" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace"># id</text>
+          <text x="70" y="126" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">name · email</text>
+          <text x="70" y="140" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">avatar</text>
+          <text x="70" y="154" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">permission</text>
+          <text x="70" y="168" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">github/google_bind_id</text>
+
+          <!-- PROXY_API_KEY -->
+          <rect x="60" y="250" width="140" height="106" rx="6" fill="#f5f5f5"/>
+          <rect x="60" y="250" width="140" height="106" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="68" y="258" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="83" y="267" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENT</text>
+          <text x="130" y="280" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PROXY_API_KEY</text>
+          <line x1="60" y1="288" x2="200" y2="288" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="70" y="302" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace"># id</text>
+          <text x="70" y="316" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">→ user_id</text>
+          <text x="70" y="330" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">name</text>
+          <text x="70" y="344" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">key</text>
+
+          <!-- SESSION (focal) -->
+          <rect x="420" y="250" width="200" height="150" rx="6" fill="#f5f5f5"/>
+          <rect x="420" y="250" width="200" height="150" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <rect x="428" y="258" width="30" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+          <text x="443" y="267" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">AGG</text>
+          <text x="520" y="280" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SESSION</text>
+          <line x1="420" y1="288" x2="620" y2="288" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="430" y="302" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace"># id</text>
+          <text x="430" y="316" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">api_key_name</text>
+          <text x="430" y="330" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">message_ids[]</text>
+          <text x="430" y="344" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">tool_ids[]</text>
+          <text x="430" y="358" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">questions[] · model_ids[]</text>
+          <text x="430" y="372" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">metadata</text>
+          <text x="430" y="386" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">score · scored_at</text>
+
+          <!-- MESSAGE -->
+          <rect x="700" y="60" width="160" height="120" rx="6" fill="#f5f5f5"/>
+          <rect x="700" y="60" width="160" height="120" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="708" y="68" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="723" y="77" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENT</text>
+          <text x="780" y="90" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">MESSAGE</text>
+          <line x1="700" y1="98" x2="860" y2="98" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="710" y="112" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace"># id</text>
+          <text x="710" y="126" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">model_id</text>
+          <text x="710" y="140" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">message(json)</text>
+          <text x="710" y="154" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">check_sum</text>
+          <text x="710" y="168" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace">内容寻址 · unique</text>
+
+          <!-- TOOL -->
+          <rect x="700" y="420" width="160" height="106" rx="6" fill="#f5f5f5"/>
+          <rect x="700" y="420" width="160" height="106" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="708" y="428" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="723" y="437" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENT</text>
+          <text x="780" y="450" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">TOOL</text>
+          <line x1="700" y1="458" x2="860" y2="458" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="710" y="472" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace"># id</text>
+          <text x="710" y="486" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">tool(json)</text>
+          <text x="710" y="500" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">check_sum</text>
+          <text x="710" y="514" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace">内容寻址 · unique</text>
+
+          <!-- MODEL_CALL_AUDIT -->
+          <rect x="420" y="470" width="200" height="120" rx="6" fill="#f5f5f5"/>
+          <rect x="420" y="470" width="200" height="120" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="428" y="478" width="30" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+          <text x="443" y="487" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">AUD</text>
+          <text x="520" y="500" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">MODEL_CALL_AUDIT</text>
+          <line x1="420" y1="508" x2="620" y2="508" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="430" y="522" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace"># id · api_key_id</text>
+          <text x="430" y="536" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">model_id · endpoint</text>
+          <text x="430" y="550" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">tokens(4维) · latency(2段)</text>
+          <text x="430" y="564" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">upstream_status_code</text>
+          <text x="430" y="578" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">trace_id</text>
+
+          <line x1="30" y1="600" x2="970" y2="600" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="616" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <rect x="90" y="608" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="110" y="617" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">聚合根（焦点）</text>
+          <rect x="200" y="608" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="220" y="617" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">实体</text>
+          <rect x="300" y="608" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="320" y="617" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">审计表</text>
+          <text x="430" y="617" fill="#7a8399" font-size="9" font-family="'Geist', sans-serif"># 主键 · → 外键</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ============ 图 6 · 异步落库与 Pond 协程池 ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">06</span><h2>异步落库与 Pond 协程池</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d10-title d10-desc">
+          <title id="d10-title">异步落库与 Pond 协程池</title>
+          <desc id="d10-desc">LLM 请求经代理上游转发完成后同步返回客户端，同时异步提交消息存储任务与审计任务到 Store Pond 协程池，由池串行写入 PostgreSQL，避免阻塞响应链路。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <path d="M 128,100 H 160" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 288,72 H 320" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 288,100 V 188 H 320" fill="none" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <path d="M 288,116 H 300 V 268 H 320" fill="none" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <path d="M 476,188 H 508" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 476,268 H 500 V 200 H 508" fill="none" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <path d="M 628,188 H 660" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+          <rect x="24" y="72" width="104" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="24" y="72" width="104" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="76" y="98" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">LLM 请求</text>
+          <text x="76" y="114" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">入站</text>
+
+          <rect x="160" y="72" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="160" y="72" width="128" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="224" y="98" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">代理上游</text>
+          <text x="224" y="114" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">转发完成</text>
+
+          <rect x="320" y="44" width="156" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="320" y="44" width="156" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="398" y="70" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">返回客户端</text>
+          <text x="398" y="86" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">同步 · 不阻塞</text>
+
+          <rect x="320" y="160" width="156" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="320" y="160" width="156" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="398" y="186" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SubmitMessageStoreTask</text>
+          <text x="398" y="202" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">消息去重 + 单事务落库</text>
+
+          <rect x="320" y="240" width="156" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="320" y="240" width="156" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="398" y="266" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SubmitModelCallAuditTask</text>
+          <text x="398" y="282" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">审计写入</text>
+
+          <rect x="508" y="160" width="120" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="508" y="160" width="120" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="568" y="186" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Store Pond Pool</text>
+          <text x="568" y="202" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pond 协程池</text>
+
+          <rect x="660" y="160" width="120" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="660" y="160" width="120" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+          <text x="720" y="186" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PostgreSQL</text>
+          <text x="720" y="202" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">messages · tools · audit</text>
+
+          <line x1="30" y1="316" x2="970" y2="316" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="332" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <line x1="90" y1="328" x2="116" y2="328" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="124" y="332" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">同步</text>
+          <line x1="180" y1="328" x2="206" y2="328" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="214" y="332" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">异步</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ============ 图 7 · Trace 数据管线 ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">07</span><h2>Trace 数据管线</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d11-title d11-desc">
+          <title id="d11-title">Trace 数据管线</title>
+          <desc id="d11-desc">Codex Hook 事件与 Rollout 记录经 aris trace ingest（fail-open）写入本地 spool，批量 POST 到 /api/v1/trace/event，经 APIKey 鉴权与事件去重后落入 Trace Repository，再由 JWT 查询与投影供 Trace Web 页面展示。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <path d="M 128,72 H 152 V 100 H 160" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 128,152 H 152 V 116 H 160" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 288,92 H 320" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 448,92 H 480" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 608,92 H 640" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 768,92 H 800" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 856,120 V 136" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+          <rect x="24" y="44" width="104" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="24" y="44" width="104" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="76" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Codex Hook</text>
+          <text x="76" y="82" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">事件</text>
+
+          <rect x="24" y="124" width="104" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="24" y="124" width="104" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="76" y="146" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Codex Rollout</text>
+          <text x="76" y="162" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">记录</text>
+
+          <rect x="160" y="64" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="160" y="64" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="224" y="86" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">aris trace ingest</text>
+          <text x="224" y="102" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">fail-open 回调</text>
+
+          <rect x="320" y="64" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="320" y="64" width="128" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="384" y="86" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">本地 spool</text>
+          <text x="384" y="102" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">0600 · 256MiB</text>
+
+          <rect x="480" y="64" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="480" y="64" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="544" y="86" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">批量 POST</text>
+          <text x="544" y="102" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">500 条 / 4MiB</text>
+
+          <rect x="640" y="64" width="128" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="640" y="64" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="704" y="86" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">POST /api/v1</text>
+          <text x="704" y="102" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/trace/event</text>
+
+          <rect x="800" y="64" width="112" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="800" y="64" width="112" height="56" rx="6" fill="rgba(235,108,54,0.05)" stroke="rgba(235,108,54,0.50)" stroke-width="1"/>
+          <text x="856" y="86" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">APIKey 鉴权</text>
+          <text x="856" y="102" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">+ 事件去重</text>
+
+          <rect x="800" y="136" width="112" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="800" y="136" width="112" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="856" y="162" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Trace Repository</text>
+          <text x="856" y="178" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">PostgreSQL</text>
+
+          <rect x="800" y="236" width="112" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="800" y="236" width="112" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="856" y="258" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">JWT 查询</text>
+          <text x="856" y="274" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">+ 投影</text>
+
+          <rect x="800" y="332" width="112" height="56" rx="6" fill="#f5f5f5"/>
+          <rect x="800" y="332" width="112" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="856" y="358" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Trace Web</text>
+          <text x="856" y="374" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">页面</text>
+
+          <path d="M 856,192 V 236" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <path d="M 856,292 V 332" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+          <line x1="30" y1="396" x2="970" y2="396" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="412" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <rect x="90" y="404" width="14" height="10" rx="2" fill="rgba(235,108,54,0.05)" stroke="rgba(235,108,54,0.50)" stroke-width="1"/>
+          <text x="110" y="413" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">鉴权</text>
+          <rect x="180" y="404" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="200" y="413" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">存储</text>
+          <rect x="270" y="404" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="290" y="413" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">处理</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ============ 图 8 · 优雅关闭 (sequence) ============ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">08</span><h2>优雅关闭与无损下线</h2></div>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d12-title d12-desc">
+          <title id="d12-title">优雅关闭与无损下线</title>
+          <desc id="d12-desc">时序图：Kubernetes 向 Pod 发送 SIGTERM（preStop sleep 10），Pod 停止 Cron 与协程池并进入 draining，/ready 探针返回 503 摘流，等待在途 HTTP/SSE 与异步任务完成后关闭数据库与 Redis，最长等待 660 秒。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <line x1="100" y1="88" x2="100" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="300" y1="88" x2="300" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="500" y1="88" x2="500" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="700" y1="88" x2="700" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+          <line x1="900" y1="88" x2="900" y2="480" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+          <rect x="40" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="40" y="40" width="120" height="48" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="100" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Kubernetes</text>
+
+          <rect x="240" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="240" y="40" width="120" height="48" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="300" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Aris Pod</text>
+
+          <rect x="440" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="440" y="40" width="120" height="48" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="500" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">/ready 探针</text>
+
+          <rect x="640" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="640" y="40" width="120" height="48" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="700" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">在途请求/任务</text>
+
+          <rect x="840" y="40" width="120" height="48" rx="6" fill="#f5f5f5"/>
+          <rect x="840" y="40" width="120" height="48" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="900" y="68" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PostgreSQL/Redis</text>
+
+          <line x1="100" y1="112" x2="300" y2="112" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="200" y="104" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">SIGTERM · preStop sleep 10</text>
+
+          <path d="M 300,150 H 336 Q 344,150 344,158 V 172 Q 344,180 336,180 H 300" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+          <text x="352" y="170" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">停止 Cron + 协程池</text>
+
+          <line x1="300" y1="212" x2="500" y2="212" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="400" y="204" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">draining 拒绝新请求</text>
+
+          <line x1="500" y1="250" x2="100" y2="250" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="300" y="242" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">503 Not Ready</text>
+
+          <line x1="100" y1="288" x2="300" y2="288" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="200" y="280" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">从 Service 摘流</text>
+
+          <line x1="300" y1="326" x2="700" y2="326" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="500" y="318" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">等待 HTTP/SSE + 异步任务</text>
+
+          <line x1="300" y1="364" x2="900" y2="364" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="600" y="356" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">关闭 DB + Redis</text>
+
+          <line x1="100" y1="402" x2="300" y2="402" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+          <text x="200" y="394" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">最长等待 660s（terminationGracePeriod）</text>
+
+          <line x1="30" y1="512" x2="970" y2="512" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="528" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <line x1="90" y1="524" x2="116" y2="524" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="124" y="528" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">控制</text>
+          <line x1="180" y1="524" x2="206" y2="524" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <text x="214" y="528" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">返回</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>aris-proxy-api · Architecture Details · 8 diagrams · diagram-design v2.2</span>
+    </div>
+
+  </div>
+</body>
+</html>
