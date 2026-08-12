@@ -64,7 +64,7 @@ function ActionBadge({
                 "hover:ring-2 hover:ring-current/20 disabled:cursor-not-allowed disabled:opacity-60",
                 action === "deny"
                   ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                  : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400",
+                  : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400 moonshot:bg-secondary moonshot:text-muted-foreground moonshot:hover:bg-accent",
               )}
             >
               {action === "deny" ? t("blocked.action_deny") : t("blocked.action_omit")}
