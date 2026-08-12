@@ -121,7 +121,7 @@ _Avoid_: interval, time unit, bucket size
 ## Blocked Words（敏感词）
 
 **Blocked（敏感词）**:
-管理员配置的敏感词黑名单条目。每条记录一个 `word`（敏感词内容）、`action`（命中处理动作：`deny` 拦截 / `allow` 放行）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配。`deny` 型命中时 LLM 代理请求返回 403 Forbidden 并记录审计；`allow` 型命中时请求照常转发，但不落库 session/message/tool（审计照常记录，命中计数照常递增）。混合命中时 deny 优先。
+管理员配置的敏感词黑名单条目。每条记录一个 `word`（敏感词内容）、`action`（命中处理动作：`deny` 拦截 / `omit` 省略）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配。`deny` 型命中时 LLM 代理请求返回 403 Forbidden 并记录审计；`omit` 型命中时请求照常转发，但不落库 session/message/tool（审计照常记录，命中计数照常递增）。混合命中时 deny 优先。
 _Avoid_: blocked word, ban word, forbidden term
 
 **BlockedService（敏感词服务）**:
