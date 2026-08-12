@@ -56,8 +56,8 @@ func newServiceWithActions(items map[uint]string) *blocked.BlockedService {
 		b, _ := aggregate.CreateBlocked(id, fmt.Sprintf("word-%d", id), action)
 		agg = append(agg, b)
 	}
-	svc := blocked.NewBlockedService(&fakeBlockedRepo{items: agg}, nil)
-	svc.Rebuild(context.Background())
+	svc := blocked.NewBlockedService(&fakeBlockedRepo{items: agg}, nil, nil)
+	_ = svc.Rebuild(context.Background())
 	return svc
 }
 

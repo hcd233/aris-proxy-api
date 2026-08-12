@@ -54,7 +54,7 @@ func TestDeleteBlockedHandler_Batch(t *testing.T) {
 	t.Parallel()
 	repo := &deleteFakeRepo{}
 	rebuildCalled := false
-	h := command.NewDeleteBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true })
+	h := command.NewDeleteBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true }, func(ctx context.Context) {})
 
 	err := h.Handle(context.Background(), port.DeleteBlockedCommand{BlockedIDs: []uint{1, 2, 3}})
 	if err != nil {
@@ -71,7 +71,7 @@ func TestDeleteBlockedHandler_Batch(t *testing.T) {
 func TestDeleteBlockedHandler_EmptyIDs(t *testing.T) {
 	t.Parallel()
 	repo := &deleteFakeRepo{}
-	h := command.NewDeleteBlockedHandler(repo, func(ctx context.Context) {})
+	h := command.NewDeleteBlockedHandler(repo, func(ctx context.Context) {}, func(ctx context.Context) {})
 
 	err := h.Handle(context.Background(), port.DeleteBlockedCommand{BlockedIDs: []uint{}})
 	if err != nil {
