@@ -4,6 +4,6 @@ package enum
 type BlockedAction = string
 
 const (
-	BlockedActionDeny  BlockedAction = "deny"  // 命中即拦截，返回 403
-	BlockedActionAllow BlockedAction = "allow" // 命中放行，但不记录 session/message/tool
+	BlockedActionDeny BlockedAction = "deny" // 命中即拦截，返回 403
+	BlockedActionOmit BlockedAction = "omit" // 命中省略，不记录 session/message/tool
 )
