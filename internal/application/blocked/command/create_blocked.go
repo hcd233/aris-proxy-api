@@ -2,8 +2,12 @@ package command
 
 import (
 	"context"
+	"errors"
+
+	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/domain/blocked/aggregate"
 )
@@ -25,6 +29,10 @@ func (h *createBlockedHandler) Handle(ctx context.Context, cmd port.CreateBlocke
 	}
 	id, err := h.repo.Create(ctx, b)
 	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			// 唯一索引 (word, deleted_at) 冲突：同词已存在（含软删除记录占用索引的场景）。
+			return nil, ierr.Wrap(ierr.ErrDataExists, err, "blocked word already exists")
+		}
 		return nil, err
 	}
 	h.rebuildNotify(ctx)
