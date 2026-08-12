@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/samber/lo"
 	"github.com/spf13/viper"
@@ -193,6 +194,10 @@ var (
 	// UpstreamRetryJitterFactor float64 上游请求重试退避抖动因子 (0~1)
 	//	@update 2026-06-23 10:00:00
 	UpstreamRetryJitterFactor float64
+
+	// HTTPClientTimeout time.Duration 上游 HTTP 客户端总超时时间（含响应 body 读取）
+	//	@update 2026-08-12 10:00:00
+	HTTPClientTimeout time.Duration
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -228,6 +233,7 @@ func initEnvironment() {
 
 	config.SetDefault("read.timeout", 10*time.Second)
 	config.SetDefault("write.timeout", 5*time.Minute)
+	config.SetDefault("http.client.timeout", constant.HTTPClientTimeout)
 
 	config.SetDefault("log.level", "info")
 	config.SetDefault("log.dir", "./logs")
@@ -256,6 +262,8 @@ func initEnvironment() {
 
 	ReadTimeout = config.GetDuration("read.timeout")
 	WriteTimeout = config.GetDuration("write.timeout")
+
+	HTTPClientTimeout = config.GetDuration("http.client.timeout")
 
 	LogLevel = config.GetString("log.level")
 	LogDirPath = config.GetString("log.dir")

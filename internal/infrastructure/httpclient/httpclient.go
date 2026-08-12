@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"go.uber.org/zap"
 )
@@ -35,13 +36,14 @@ func GetHTTPClient() *http.Client {
 //   - MaxIdleConnsPerHost: 每个 host 空闲连接上限 20
 //   - IdleConnTimeout: 空闲连接回收时间 90s
 //
-// Client.Timeout 保持 5min，因为 LLM 流式响应的总传输时长可能很长
+// Client.Timeout 默认 5min（可通过环境变量 HTTP_CLIENT_TIMEOUT 配置，如 30m），
+// 因为 LLM 流式响应的总传输时长可能很长
 //
 //	@author centonhuang
 //	@update 2026-04-05 10:00:00
 func InitHTTPClient() {
 	client = &http.Client{
-		Timeout: constant.HTTPClientTimeout,
+		Timeout: config.HTTPClientTimeout,
 		Transport: &http.Transport{
 			DialContext: (&net.Dialer{
 				Timeout:   constant.HTTPDialTimeout,
@@ -58,7 +60,7 @@ func InitHTTPClient() {
 	}
 
 	logger.Logger().Info("[HTTPClient] Initialized upstream HTTP client",
-		zap.Duration("timeout", constant.HTTPClientTimeout),
+		zap.Duration("timeout", config.HTTPClientTimeout),
 		zap.Int("maxIdleConns", constant.HTTPMaxIdleConns),
 		zap.Int("maxIdleConnsPerHost", constant.HTTPMaxIdleConnsPerHost),
 	)
