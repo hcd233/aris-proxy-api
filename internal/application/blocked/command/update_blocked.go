@@ -19,8 +19,8 @@ func NewUpdateBlockedHandler(repo blocked.BlockedRepository, rebuildNotify func(
 }
 
 func (h *updateBlockedHandler) Handle(ctx context.Context, cmd port.UpdateBlockedCommand) error {
-	if cmd.Action != enum.BlockedActionDeny && cmd.Action != enum.BlockedActionAllow {
-		return ierr.New(ierr.ErrValidation, "invalid blocked action, must be deny or allow")
+	if cmd.Action != enum.BlockedActionDeny && cmd.Action != enum.BlockedActionOmit {
+		return ierr.New(ierr.ErrValidation, "invalid blocked action, must be deny or omit")
 	}
 	if err := h.repo.UpdateAction(ctx, cmd.BlockedID, cmd.Action); err != nil {
 		return err

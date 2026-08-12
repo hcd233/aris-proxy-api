@@ -61,12 +61,12 @@ func TestUpdateBlockedHandler_Success(t *testing.T) {
 	rebuildCalled := false
 	h := command.NewUpdateBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true })
 
-	err := h.Handle(context.Background(), port.UpdateBlockedCommand{BlockedID: 7, Action: enum.BlockedActionAllow})
+	err := h.Handle(context.Background(), port.UpdateBlockedCommand{BlockedID: 7, Action: enum.BlockedActionOmit})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if repo.updatedID != 7 || repo.updatedAction != enum.BlockedActionAllow {
-		t.Fatalf("expected update (7, allow), got (%d, %q)", repo.updatedID, repo.updatedAction)
+	if repo.updatedID != 7 || repo.updatedAction != enum.BlockedActionOmit {
+		t.Fatalf("expected update (7, omit), got (%d, %q)", repo.updatedID, repo.updatedAction)
 	}
 	if !rebuildCalled {
 		t.Fatal("expected rebuildNotify to be called")

@@ -307,20 +307,20 @@ func TestBlocked_Deny_Returns403(t *testing.T) {
 	}
 }
 
-// TestBlocked_Allow_ForwardsToUpstream 验证 allow 型敏感词命中时请求照常转发（200 + 正常响应）。
-func TestBlocked_Allow_ForwardsToUpstream(t *testing.T) {
+// TestBlocked_Omit_ForwardsToUpstream 验证 omit 型敏感词命中时请求照常转发（200 + 正常响应）。
+func TestBlocked_Omit_ForwardsToUpstream(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustBlockedE2EEnv(t)
 
-	word := uniqueWord("e2eallow")
-	id := createBlockedWord(t, baseURL, adminToken, word, "allow")
+	word := uniqueWord("e2eomit")
+	id := createBlockedWord(t, baseURL, adminToken, word, "omit")
 	defer deleteBlockedWord(t, baseURL, adminToken, id)
 
 	resp := chatWithWord(t, baseURL, apiKey, word)
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("allow word: expected 200, got %d, body: %s", resp.StatusCode, string(body))
+		t.Fatalf("omit word: expected 200, got %d, body: %s", resp.StatusCode, string(body))
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -328,14 +328,14 @@ func TestBlocked_Allow_ForwardsToUpstream(t *testing.T) {
 	}
 	var obj map[string]any
 	if err := sonic.Unmarshal(body, &obj); err != nil {
-		t.Fatalf("allow word: response is not valid JSON: %s", string(body))
+		t.Fatalf("omit word: response is not valid JSON: %s", string(body))
 	}
 	if obj["choices"] == nil {
-		t.Fatalf("allow word: missing choices, body: %s", string(body))
+		t.Fatalf("omit word: missing choices, body: %s", string(body))
 	}
 }
 
-// TestBlocked_UpdateAction_Switches 验证 PATCH 修改 action 后行为切换（deny → 403、allow → 200）。
+// TestBlocked_UpdateAction_Switches 验证 PATCH 修改 action 后行为切换（deny → 403、omit → 200）。
 func TestBlocked_UpdateAction_Switches(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustBlockedE2EEnv(t)
@@ -350,29 +350,29 @@ func TestBlocked_UpdateAction_Switches(t *testing.T) {
 		t.Fatalf("before update: expected 403, got %d", resp.StatusCode)
 	}
 
-	updateBlockedAction(t, baseURL, adminToken, id, "allow")
+	updateBlockedAction(t, baseURL, adminToken, id, "omit")
 
 	resp = chatWithWord(t, baseURL, apiKey, word)
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("after update to allow: expected 200, got %d, body: %s", resp.StatusCode, string(body))
+		t.Fatalf("after update to omit: expected 200, got %d, body: %s", resp.StatusCode, string(body))
 	}
 }
 
-// TestBlocked_Mixed_DenyWins 验证同时命中 deny 与 allow 型词时 deny 优先（403）。
+// TestBlocked_Mixed_DenyWins 验证同时命中 deny 与 omit 型词时 deny 优先（403）。
 func TestBlocked_Mixed_DenyWins(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustBlockedE2EEnv(t)
 
 	denyWord := uniqueWord("e2emixdeny")
-	allowWord := uniqueWord("e2emixallow")
+	omitWord := uniqueWord("e2emixomit")
 	denyID := createBlockedWord(t, baseURL, adminToken, denyWord, "deny")
-	allowID := createBlockedWord(t, baseURL, adminToken, allowWord, "allow")
+	omitID := createBlockedWord(t, baseURL, adminToken, omitWord, "omit")
 	defer deleteBlockedWord(t, baseURL, adminToken, denyID)
-	defer deleteBlockedWord(t, baseURL, adminToken, allowID)
+	defer deleteBlockedWord(t, baseURL, adminToken, omitID)
 
-	resp := chatWithWord(t, baseURL, apiKey, denyWord+" "+allowWord)
+	resp := chatWithWord(t, baseURL, apiKey, denyWord+" "+omitWord)
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusForbidden {
 		body, _ := io.ReadAll(resp.Body)
@@ -387,7 +387,7 @@ func TestBlocked_BatchDelete(t *testing.T) {
 
 	w1 := uniqueWord("e2ebatch")
 	id1 := createBlockedWord(t, baseURL, adminToken, w1, "deny")
-	id2 := createBlockedWord(t, baseURL, adminToken, uniqueWord("e2ebatch"), "allow")
+	id2 := createBlockedWord(t, baseURL, adminToken, uniqueWord("e2ebatch"), "omit")
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete,
 		fmt.Sprintf("%s/api/v1/block?ids=%d,%d", baseURL, id1, id2), http.NoBody)
