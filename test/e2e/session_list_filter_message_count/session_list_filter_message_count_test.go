@@ -123,18 +123,18 @@ func doListSessionOptions(t *testing.T, client *http.Client, baseURL, jwtToken, 
 }
 
 // parseRange 解析 "min-max" 区间值
-func parseRange(t *testing.T, v string) (min, max int) {
+func parseRange(t *testing.T, v string) (minVal, maxVal int) {
 	t.Helper()
 	m := rangeRe.FindStringSubmatch(v)
 	if m == nil {
 		t.Fatalf("invalid range option %q", v)
 	}
-	min, _ = strconv.Atoi(m[1])
-	max, _ = strconv.Atoi(m[2])
-	if max < min {
+	minVal, _ = strconv.Atoi(m[1])
+	maxVal, _ = strconv.Atoi(m[2])
+	if maxVal < minVal {
 		t.Fatalf("range %q has max < min", v)
 	}
-	return min, max
+	return minVal, maxVal
 }
 
 // TestSessionListFilterMessageCount_OptionList 验证 /api/v1/session/option/list?field=messageCount

@@ -54,7 +54,7 @@ func (r *fakeSessionReadRepo) ListDistinctModels(ctx context.Context, keyword st
 	return []string{"gpt-4o", "claude-3-5-sonnet"}, nil
 }
 
-func (r *fakeSessionReadRepo) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (int, map[int]int64, error) {
+func (r *fakeSessionReadRepo) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (maxCount int, bucketCounts map[int]int64, err error) {
 	r.listMessageCountStatsCall++
 	return 82, map[int]int64{0: 5, 1: 3, 2: 7}, nil
 }

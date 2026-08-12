@@ -60,7 +60,7 @@ func TestCreateBlockedHandler_Success(t *testing.T) {
 	t.Parallel()
 	repo := &createFakeRepo{}
 	rebuildCalled := false
-	h := command.NewCreateBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true })
+	h := command.NewCreateBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true }, func(ctx context.Context) {})
 
 	result, err := h.Handle(context.Background(), port.CreateBlockedCommand{Word: "你好", Action: enum.BlockedActionDeny})
 	if err != nil {
@@ -83,7 +83,7 @@ func TestCreateBlockedHandler_DuplicatedKey(t *testing.T) {
 	t.Parallel()
 	repo := &createFakeRepo{createErr: gorm.ErrDuplicatedKey}
 	rebuildCalled := false
-	h := command.NewCreateBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true })
+	h := command.NewCreateBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true }, func(ctx context.Context) {})
 
 	_, err := h.Handle(context.Background(), port.CreateBlockedCommand{Word: "你好", Action: enum.BlockedActionDeny})
 	if !errors.Is(err, ierr.ErrDataExists) {
@@ -98,7 +98,7 @@ func TestCreateBlockedHandler_OtherError_Passthrough(t *testing.T) {
 	t.Parallel()
 	otherErr := ierr.New(ierr.ErrInternal, "db down")
 	repo := &createFakeRepo{createErr: otherErr}
-	h := command.NewCreateBlockedHandler(repo, func(ctx context.Context) {})
+	h := command.NewCreateBlockedHandler(repo, func(ctx context.Context) { /* rebuildNotify */ }, func(ctx context.Context) { /* notifyChanged */ })
 
 	_, err := h.Handle(context.Background(), port.CreateBlockedCommand{Word: "你好", Action: enum.BlockedActionDeny})
 	if !errors.Is(err, otherErr) {

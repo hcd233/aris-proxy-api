@@ -103,6 +103,9 @@ var (
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
+	// 消息数桶固定边界（不含动态上限），与 SessionMessageCountBucketCase 对齐；末桶上限由动态 max 截断
+	SessionMessageCountBucketEdges = []int{10, 50, 100, 200, 500}
+
 	EndpointRepoFieldsFull = []string{FieldID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey,
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage,
 		FieldCreatedAt, FieldUpdatedAt}
@@ -243,6 +246,13 @@ var (
 	// 末桶上限由当前时间范围最大消息数动态截断。
 	SessionMessageCountMaxSelect  = "COALESCE(MAX(jsonb_array_length(message_ids::jsonb)), 0)"
 	SessionMessageCountBucketCase = "CASE WHEN cnt <= 10 THEN 0 WHEN cnt <= 50 THEN 1 WHEN cnt <= 100 THEN 2 WHEN cnt <= 200 THEN 3 WHEN cnt <= 500 THEN 4 ELSE 5 END"
+
+	// 桶区间格式化模板（min-max），options 接口返回桶区间用
+	SessionMessageCountBucketFormat = "%d-%d"
+
+	// 桶子查询别名模板（db.Table 子查询用）
+	SessionMessageCountSubqueryTable = "(?) AS sub"
+	SessionMessageCountBucketIdx     = "bucket_idx"
 
 	// ── Session export query constants ──
 	// 导出行：id, score, message_ids, tool_ids, model_ids
