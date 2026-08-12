@@ -380,6 +380,67 @@ func TestBlocked_Mixed_DenyWins(t *testing.T) {
 	}
 }
 
+// TestBlocked_RecreateAfterDelete 回归（fix/blocked-word-recreate-2026-08-12）：软删除后重新添加同词应成功。
+// 修复前 blocked_words.word 单列唯一索引被软删除记录永久占用，重新添加同词违反唯一约束返回 500；
+// 修复后唯一索引为 (word, deleted_at) 复合，软删记录不再占用索引。
+func TestBlocked_RecreateAfterDelete(t *testing.T) {
+	t.Parallel()
+	baseURL, _, adminToken := mustBlockedE2EEnv(t)
+
+	word := uniqueWord("e2erecreate")
+	id := createBlockedWord(t, baseURL, adminToken, word, "deny")
+	deleteBlockedWord(t, baseURL, adminToken, id)
+
+	// 软删除后再次添加同词：修复前返回 500，修复后应成功
+	id2 := createBlockedWord(t, baseURL, adminToken, word, "deny")
+	deleteBlockedWord(t, baseURL, adminToken, id2)
+}
+
+// TestBlocked_DuplicateCreate_Returns409 回归（fix/blocked-word-recreate-2026-08-12）：
+// 未删除的同词重复添加应返回 409 + code 10004（Data Already Exists），而非 500 Internal Error。
+func TestBlocked_DuplicateCreate_Returns409(t *testing.T) {
+	t.Parallel()
+	baseURL, _, adminToken := mustBlockedE2EEnv(t)
+
+	word := uniqueWord("e2edup")
+	id := createBlockedWord(t, baseURL, adminToken, word, "deny")
+	defer deleteBlockedWord(t, baseURL, adminToken, id)
+
+	payload, err := sonic.Marshal(map[string]string{"word": word, "action": "deny"})
+	if err != nil {
+		t.Fatalf("failed to marshal duplicate create body: %v", err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/v1/block", strings.NewReader(string(payload)))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to send duplicate create request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusConflict {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("duplicate create: expected 409, got %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read duplicate create response: %v", err)
+	}
+	var rsp struct {
+		Error *struct {
+			Code int `json:"code"`
+		} `json:"error"`
+	}
+	if err := sonic.Unmarshal(body, &rsp); err != nil || rsp.Error == nil || rsp.Error.Code != 10004 {
+		t.Fatalf("duplicate create: expected code 10004, body: %s", string(body))
+	}
+}
+
 // TestBlocked_BatchDelete 验证 DELETE /api/v1/block?ids=1,2,3 批量删除及 deletedCount 返回。
 func TestBlocked_BatchDelete(t *testing.T) {
 	t.Parallel()
