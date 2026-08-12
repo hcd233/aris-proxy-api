@@ -26,6 +26,7 @@ import { Ban, Check, Trash2 } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -101,7 +102,6 @@ export default function BlockPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [inlineWord, setInlineWord] = useState("");
   const [adding, setAdding] = useState(false);
-  const [togglingId, setTogglingId] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
@@ -157,23 +157,16 @@ export default function BlockPage() {
     }
   }, [inlineWord, adding, fetchItems, persistedPage, persistedPageSize, t]);
 
-  const handleToggleAction = useCallback(
-    async (item: BlockedItem) => {
-      if (togglingId !== null) return;
-      const next: BlockedAction = item.action === "deny" ? "allow" : "deny";
-      setTogglingId(item.id);
-      try {
-        await api.updateBlocked(item.id, { action: next });
-        toast.success(t("blocked.action_updated"));
-        fetchItems(persistedPage, persistedPageSize);
-      } catch (err) {
-        showErrorToast(err, { title: t("blocked.action_update_error") });
-      } finally {
-        setTogglingId(null);
-      }
+  // action 徽章切换：乐观更新 + 失败回滚，避免整表重拉导致闪烁
+  const toggleAction = useOptimisticUpdate<BlockedItem>({
+    setItems,
+    getKey: (item) => item.id,
+    update: async (item) => {
+      await api.updateBlocked(item.id, { action: item.action });
     },
-    [togglingId, fetchItems, persistedPage, persistedPageSize, t],
-  );
+    onSuccess: () => toast.success(t("blocked.action_updated")),
+    onError: (err) => showErrorToast(err, { title: t("blocked.action_update_error") }),
+  });
 
   const deleteConfirm = useDeleteConfirm<BlockedItem>({
     onConfirm: async (item) => {
@@ -212,7 +205,10 @@ export default function BlockPage() {
       const ids = Array.from(selected);
       const rsp = await api.batchDeleteBlocked(ids);
       toast.success(
-        t("blocked.batch_delete_success").replace("{count}", String(rsp.deletedCount ?? ids.length)),
+        t("blocked.batch_delete_success").replace(
+          "{count}",
+          String(rsp.deletedCount ?? ids.length),
+        ),
       );
       fetchItems(persistedPage, persistedPageSize);
     } catch (err) {
@@ -293,8 +289,12 @@ export default function BlockPage() {
                                   <ActionBadge
                                     action={item.action}
                                     t={t}
-                                    disabled={togglingId !== null}
-                                    onClick={() => handleToggleAction(item)}
+                                    disabled={toggleAction.updatingKey !== null}
+                                    onClick={() =>
+                                      toggleAction.apply(item, {
+                                        action: item.action === "deny" ? "allow" : "deny",
+                                      })
+                                    }
                                   />
                                 </div>
                               </div>
@@ -345,8 +345,12 @@ export default function BlockPage() {
                               <ActionBadge
                                 action={item.action}
                                 t={t}
-                                disabled={togglingId !== null}
-                                onClick={() => handleToggleAction(item)}
+                                disabled={toggleAction.updatingKey !== null}
+                                onClick={() =>
+                                  toggleAction.apply(item, {
+                                    action: item.action === "deny" ? "allow" : "deny",
+                                  })
+                                }
                               />
                             </TableCell>
                             <TableCell>{item.hitCount}</TableCell>

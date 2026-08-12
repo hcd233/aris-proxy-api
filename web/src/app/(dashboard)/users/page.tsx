@@ -38,6 +38,7 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 
@@ -140,23 +141,27 @@ export default function UsersPage() {
     fetchUsers(1, persistedPageSize, searchQuery || undefined, permission || undefined);
   }, [fetchUsers, persistedPageSize, permission, searchQuery, setPersistedPage]);
 
+  // 批准（pending→user）：乐观更新 + 失败回滚，避免整表重拉导致闪烁
+  const promoteUser = useOptimisticUpdate<UserItem>({
+    setItems,
+    getKey: (u) => u.id,
+    update: async (u) => {
+      await api.approveUser(u.id);
+    },
+    onSuccess: () => toast.success(t("users.approved_success")),
+    onError: (err) => showErrorToast(err, { title: t("users.approve_error") }),
+  });
+
   const runAction = useCallback(
     async (action: UserAction, user: UserItem) => {
       setActing(action);
       try {
-        switch (action) {
-          case "promote":
-            await api.approveUser(user.id);
-            toast.success(t("users.approved_success"));
-            break;
-          case "demote":
-            await api.demoteUser(user.id);
-            toast.success(t("users.demote_success"));
-            break;
-          case "delete":
-            await api.deleteUser(user.id);
-            toast.success(t("users.delete_success"));
-            break;
+        if (action === "demote") {
+          await api.demoteUser(user.id);
+          toast.success(t("users.demote_success"));
+        } else {
+          await api.deleteUser(user.id);
+          toast.success(t("users.delete_success"));
         }
         fetchUsers(
           pageInfo.page,
@@ -166,12 +171,7 @@ export default function UsersPage() {
         );
       } catch (err) {
         showErrorToast(err, {
-          title:
-            action === "promote"
-              ? t("users.approve_error")
-              : action === "demote"
-                ? t("users.demote_error")
-                : t("users.delete_error"),
+          title: action === "demote" ? t("users.demote_error") : t("users.delete_error"),
         });
       } finally {
         setActing(null);
@@ -183,13 +183,13 @@ export default function UsersPage() {
   const handleAction = useCallback(
     (action: UserAction, user: UserItem) => {
       if (action === "promote") {
-        runAction("promote", user);
+        promoteUser.apply(user, { permission: "user" });
         return;
       }
       setConfirmAction(action);
       setConfirmUser(user);
     },
-    [runAction],
+    [promoteUser],
   );
 
   const handleConfirm = useCallback(() => {

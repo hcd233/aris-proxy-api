@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
@@ -297,15 +298,16 @@ export default function ModelsPage() {
     onError: (err) => showErrorToast(err, { title: t("models.delete_error") }),
   });
 
-  const handleToggleEnabled = async (model: ModelItem) => {
-    try {
-      await api.updateModel(model.id, { enabled: !model.enabled });
-      toast.success(model.enabled ? t("models.disabled") : t("models.enabled"));
-      fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
-    } catch (err) {
-      showErrorToast(err, { title: t("models.toggle_error") });
-    }
-  };
+  // enabled 开关：乐观更新 + 失败回滚，避免整表重拉导致闪烁
+  const toggleEnabled = useOptimisticUpdate<ModelItem>({
+    setItems: setModels,
+    getKey: (m) => m.id,
+    update: async (m) => {
+      await api.updateModel(m.id, { enabled: m.enabled });
+    },
+    onSuccess: (m) => toast.success(m.enabled ? t("models.enabled") : t("models.disabled")),
+    onError: (err) => showErrorToast(err, { title: t("models.toggle_error") }),
+  });
 
   const getEndpointName = (model: ModelItem) => {
     return model.endpoint?.name ?? `Endpoint #${model.endpoint?.id}`;
@@ -492,7 +494,10 @@ export default function ModelsPage() {
                             <Switch
                               size="sm"
                               checked={model.enabled}
-                              onCheckedChange={() => handleToggleEnabled(model)}
+                              disabled={toggleEnabled.updatingKey !== null}
+                              onCheckedChange={() =>
+                                toggleEnabled.apply(model, { enabled: !model.enabled })
+                              }
                               aria-label={
                                 model.enabled ? t("models.enabled") : t("models.disabled")
                               }
@@ -625,7 +630,10 @@ export default function ModelsPage() {
                               <Switch
                                 size="sm"
                                 checked={model.enabled}
-                                onCheckedChange={() => handleToggleEnabled(model)}
+                                disabled={toggleEnabled.updatingKey !== null}
+                                onCheckedChange={() =>
+                                  toggleEnabled.apply(model, { enabled: !model.enabled })
+                                }
                                 aria-label={
                                   model.enabled ? t("models.enabled") : t("models.disabled")
                                 }
