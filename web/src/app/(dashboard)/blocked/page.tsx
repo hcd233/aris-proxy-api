@@ -31,7 +31,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-/** 动作徽章：点击直接切换 deny⇄allow */
+/** 动作徽章：点击直接切换 deny⇄omit */
 function ActionBadge({
   action,
   t,
@@ -57,7 +57,7 @@ function ActionBadge({
           : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400",
       )}
     >
-      {action === "deny" ? t("blocked.action_deny") : t("blocked.action_allow")}
+      {action === "deny" ? t("blocked.action_deny") : t("blocked.action_omit")}
     </button>
   );
 }
@@ -160,7 +160,7 @@ export default function BlockPage() {
   const handleToggleAction = useCallback(
     async (item: BlockedItem) => {
       if (togglingId !== null) return;
-      const next: BlockedAction = item.action === "deny" ? "allow" : "deny";
+      const next: BlockedAction = item.action === "deny" ? "omit" : "deny";
       setTogglingId(item.id);
       try {
         await api.updateBlocked(item.id, { action: next });

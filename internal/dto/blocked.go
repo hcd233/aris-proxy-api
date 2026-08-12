@@ -12,7 +12,7 @@ type CreateBlockedReq struct {
 
 type CreateBlockedReqBody struct {
 	Word   string `json:"word" required:"true" minLength:"1" maxLength:"512" doc:"敏感词"`
-	Action string `json:"action,omitempty" enum:"deny,allow" doc:"命中处理动作（默认 deny）"`
+	Action string `json:"action,omitempty" enum:"deny,omit" doc:"命中处理动作（默认 deny）"`
 }
 
 type UpdateBlockedReq struct {
@@ -21,7 +21,7 @@ type UpdateBlockedReq struct {
 }
 
 type UpdateBlockedReqBody struct {
-	Action *string `json:"action,omitempty" enum:"deny,allow" doc:"命中处理动作"`
+	Action *string `json:"action,omitempty" enum:"deny,omit" doc:"命中处理动作"`
 }
 
 // DeleteBlockedReq 删除请求（支持逗号分隔批量）
