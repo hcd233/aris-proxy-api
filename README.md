@@ -369,6 +369,24 @@ graph TB
     Fiber --> Metrics
 ```
 
+以下是更详细的分层架构图，完整交互版（可缩放、含校正说明与关键决策卡片）见 [`docs/diagrams/aris-proxy-api-architecture.html`](docs/diagrams/aris-proxy-api-architecture.html)（下载后用浏览器打开）。
+
+**① 系统总览** — 客户端 → 网关 → 应用/领域/基础设施 → 外部依赖，三条接入路径（JWT 管理、APIKey 转发、Trace 上报）
+
+![aris-proxy-api 系统总览](docs/diagrams/aris-arch-01.png)
+
+**② LLM 代理转发核心链路** — 鉴权 → 双层限流 → 敏感词 → 端点解析 → 跨协议转换 → 传输 → 上游 → 统一收尾 seam（recordModelCall）
+
+![LLM 代理转发核心链路](docs/diagrams/aris-arch-02.png)
+
+**③ 会话数据生命周期与后台管理** — 双写入源（LLM 转发 / Trace 摄取）→ Session 聚合 → 缓存 / 导出 / 查询 / 分享
+
+![会话数据生命周期与后台管理](docs/diagrams/aris-arch-03.png)
+
+**④ 部署与发布拓扑** — CI → GHCR → k3s（2 副本）→ LoadBalancer → 生产域名，Trace CLI 经 GitHub Releases 分发
+
+![部署与发布拓扑](docs/diagrams/aris-arch-04.png)
+
 ### 服务启动链路
 
 服务端和 Trace 客户端是两个独立的 Go 程序入口：
