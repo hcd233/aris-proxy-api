@@ -17,6 +17,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteButton } from "@/components/delete-button";
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PageHeader } from "@/components/page-header";
 import { SearchInput } from "@/components/search-input";
@@ -32,7 +38,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-/** 动作徽章：点击直接切换 deny⇄omit */
+/** 动作徽章：点击直接切换 deny⇄omit，悬停用 Tooltip 展示切换提示 */
 function ActionBadge({
   action,
   t,
@@ -45,21 +51,29 @@ function ActionBadge({
   disabled?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={t("blocked.action_switch_hint")}
-      className={cn(
-        "inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors",
-        "hover:ring-2 hover:ring-current/20 disabled:cursor-not-allowed disabled:opacity-60",
-        action === "deny"
-          ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-          : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400",
-      )}
-    >
-      {action === "deny" ? t("blocked.action_deny") : t("blocked.action_omit")}
-    </button>
+    <TooltipProvider>
+      <TooltipRoot>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              onClick={onClick}
+              disabled={disabled}
+              className={cn(
+                "inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors",
+                "hover:ring-2 hover:ring-current/20 disabled:cursor-not-allowed disabled:opacity-60",
+                action === "deny"
+                  ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                  : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400",
+              )}
+            >
+              {action === "deny" ? t("blocked.action_deny") : t("blocked.action_omit")}
+            </button>
+          }
+        />
+        <TooltipContent side="top">{t("blocked.action_switch_hint")}</TooltipContent>
+      </TooltipRoot>
+    </TooltipProvider>
   );
 }
 
