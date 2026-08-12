@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import cronstrue from "cronstrue";
 import { api } from "@/lib/api-client";
 import type { CronJobItem, PageInfo } from "@/lib/types";
@@ -69,7 +70,6 @@ export default function CronPage() {
   });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [editingJob, setEditingJob] = useState<CronJobItem | null>(null);
   const [triggeringJob, setTriggeringJob] = useState<CronJobItem | null>(null);
   const [triggering, setTriggering] = useState(false);
@@ -104,25 +104,25 @@ export default function CronPage() {
   }, [fetchJobs]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
-  const handleToggle = async (job: CronJobItem) => {
+  // enabled 开关：乐观更新 + 失败回滚，避免整表重拉导致闪烁
+  const toggleEnabled = useOptimisticUpdate<CronJobItem>({
+    setItems: setJobs,
+    getKey: (job) => job.name,
+    update: async (job) => {
+      const rsp = await api.updateCronJob({ name: job.name, enabled: job.enabled });
+      if (rsp.error) throw rsp.error;
+    },
+    onSuccess: (job) =>
+      toast.success(`${job.name} ${job.enabled ? t("cron.enabled") : t("cron.disabled")}`),
+    onError: (err) => showErrorToast(err, { title: t("cron.update_error") }),
+  });
+
+  const handleToggle = (job: CronJobItem) => {
     if (job.type === "core") {
       toast.error(t("cron.core_cannot_disable"));
       return;
     }
-    setUpdating((prev) => ({ ...prev, [job.name]: true }));
-    try {
-      const rsp = await api.updateCronJob({ name: job.name, enabled: !job.enabled });
-      if (rsp.error) {
-        showErrorToast(rsp.error, { title: t("cron.update_error") });
-        return;
-      }
-      setJobs((prev) => prev.map((j) => (j.name === job.name ? { ...j, enabled: !j.enabled } : j)));
-      toast.success(`${job.name} ${!job.enabled ? t("cron.enabled") : t("cron.disabled")}`);
-    } catch (err) {
-      showErrorToast(err, { title: t("cron.update_error") });
-    } finally {
-      setUpdating((prev) => ({ ...prev, [job.name]: false }));
-    }
+    toggleEnabled.apply(job, { enabled: !job.enabled });
   };
 
   const handleSaveSpec = useCallback(
@@ -297,7 +297,7 @@ export default function CronPage() {
                           <div className="flex items-center gap-1.5">
                             <Switch
                               checked={job.enabled}
-                              disabled={updating[job.name] || job.type === "core"}
+                              disabled={toggleEnabled.updatingKey !== null || job.type === "core"}
                               onCheckedChange={() => handleToggle(job)}
                             />
                             {job.type === "core" && (
