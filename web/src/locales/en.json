@@ -522,7 +522,7 @@
   "blocked.load_error": "Failed to load blocked words",
   "blocked.action": "Handle Action",
   "blocked.action_deny": "Block",
-  "blocked.action_omit": "Omit (no record)",
+  "blocked.action_omit": "Omit",
   "blocked.action_switch_hint": "Click to switch between block/omit",
   "blocked.action_updated": "Action updated",
   "blocked.action_update_error": "Failed to update action",
