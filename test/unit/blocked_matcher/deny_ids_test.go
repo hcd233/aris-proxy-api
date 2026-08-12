@@ -65,7 +65,7 @@ func TestBlockedService_DenyIDs_Mixed(t *testing.T) {
 	t.Parallel()
 	svc := newServiceWithActions(map[uint]string{
 		1: enum.BlockedActionDeny,
-		2: enum.BlockedActionAllow,
+		2: enum.BlockedActionOmit,
 		3: enum.BlockedActionDeny,
 	})
 	deny := svc.DenyIDs([]uint{1, 2, 3})
@@ -74,11 +74,11 @@ func TestBlockedService_DenyIDs_Mixed(t *testing.T) {
 	}
 }
 
-func TestBlockedService_DenyIDs_AllAllow(t *testing.T) {
+func TestBlockedService_DenyIDs_AllOmit(t *testing.T) {
 	t.Parallel()
 	svc := newServiceWithActions(map[uint]string{
-		1: enum.BlockedActionAllow,
-		2: enum.BlockedActionAllow,
+		1: enum.BlockedActionOmit,
+		2: enum.BlockedActionOmit,
 	})
 	deny := svc.DenyIDs([]uint{1, 2})
 	if len(deny) != 0 {
@@ -90,7 +90,7 @@ func TestBlockedService_DenyIDs_EmptyActionDefaultsDeny(t *testing.T) {
 	t.Parallel()
 	svc := newServiceWithActions(map[uint]string{
 		1: "",
-		2: enum.BlockedActionAllow,
+		2: enum.BlockedActionOmit,
 	})
 	deny := svc.DenyIDs([]uint{1, 2})
 	if len(deny) != 1 || deny[0] != 1 {
@@ -120,11 +120,11 @@ func TestCreateBlocked_ActionDefaultsToDeny(t *testing.T) {
 
 func TestCreateBlocked_ActionPreserved(t *testing.T) {
 	t.Parallel()
-	b, err := aggregate.CreateBlocked(1, "foo", enum.BlockedActionAllow)
+	b, err := aggregate.CreateBlocked(1, "foo", enum.BlockedActionOmit)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if b.Action() != enum.BlockedActionAllow {
-		t.Fatalf("expected allow, got %q", b.Action())
+	if b.Action() != enum.BlockedActionOmit {
+		t.Fatalf("expected omit, got %q", b.Action())
 	}
 }
