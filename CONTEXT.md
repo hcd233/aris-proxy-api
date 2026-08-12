@@ -69,7 +69,7 @@ _Avoid_: model level, model size, model class
 ## Session & Conversation（会话与对话）
 
 **Session（会话）**:
-一次完整的 LLM 交互聚合：由 Proxy Capture 或 Transcript Ingestion 沉淀，包含多个 Message（消息）和 Tool（工具调用）。归属于某个 API Key Owner。支持人工评分（`SessionScore`，范围 1-5）。可被分享（`SessionShare`）给未登录用户查看。
+一次完整的 LLM 交互聚合：由 Proxy Capture 或 Transcript Ingestion 沉淀，包含多个 Message（消息）和 Tool（工具调用）。归属于某个 API Key Owner。支持人工评分（`SessionScore`，范围 1-5）。可被分享（`SessionShare`）给未登录用户查看。会话列表支持按消息数区间筛选：固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500）+ 当前时间范围最大消息数为动态上限的末桶。
 _Avoid_: conversation（"Conversation" 用于其他语境不可混用）, chat, thread
 
 **Message（消息）**:

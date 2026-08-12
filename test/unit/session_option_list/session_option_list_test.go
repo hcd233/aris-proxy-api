@@ -15,8 +15,9 @@ import (
 )
 
 type fakeSessionReadRepo struct {
-	listDistinctModelsCalled bool
-	listDistinctScoresCalled bool
+	listDistinctModelsCalled  bool
+	listDistinctScoresCalled  bool
+	listMessageCountStatsCall int
 }
 
 func (r *fakeSessionReadRepo) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
@@ -51,6 +52,11 @@ func (r *fakeSessionReadRepo) ListDistinctScores(ctx context.Context, startTime,
 func (r *fakeSessionReadRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	r.listDistinctModelsCalled = true
 	return []string{"gpt-4o", "claude-3-5-sonnet"}, nil
+}
+
+func (r *fakeSessionReadRepo) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (int, map[int]int64, error) {
+	r.listMessageCountStatsCall++
+	return 82, map[int]int64{0: 5, 1: 3, 2: 7}, nil
 }
 
 func (r *fakeSessionReadRepo) ListSessionsForExport(ctx context.Context, f session.ExportFilter) ([]*session.ExportSessionRow, error) {
@@ -103,5 +109,27 @@ func TestListSessionOptionHandler_UnknownField(t *testing.T) {
 	}
 	if len(items) != 0 {
 		t.Errorf("expected empty items, got %d", len(items))
+	}
+}
+
+func TestListSessionOptionHandler_FieldMessageCount(t *testing.T) {
+	t.Parallel()
+	repo := &fakeSessionReadRepo{}
+	handler := query.NewListSessionOptionHandler(repo)
+	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: constant.SessionFilterFieldMessageCount})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.listMessageCountStatsCall != 1 {
+		t.Errorf("expected ListMessageCountStats to be called once, got %d", repo.listMessageCountStatsCall)
+	}
+	want := []string{"0-10", "11-50", "51-82"}
+	if len(items) != len(want) {
+		t.Fatalf("expected %d items, got %d: %v", len(want), len(items), items)
+	}
+	for i, w := range want {
+		if items[i] != w {
+			t.Errorf("items[%d] mismatch: want %q, got %q", i, w, items[i])
+		}
 	}
 }

@@ -564,6 +564,55 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 	return models, nil
 }
 
+// ListMessageCountStats 查询消息数统计：
+//   - maxCount：当前时间范围内最大的 session 消息数（无会话时为 0）
+//   - bucketCounts：各固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+）的会话数
+func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (int, map[int]int64, error) {
+	db := r.db.WithContext(ctx)
+
+	maxQuery := db.Model(&dbmodel.Session{}).
+		Select(constant.SessionMessageCountMaxSelect).
+		Where(constant.DBConditionDeletedAtZero)
+	if !startTime.IsZero() {
+		maxQuery = maxQuery.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		maxQuery = maxQuery.Where(constant.WhereCreatedAtLTE, endTime)
+	}
+
+	var maxCount int
+	if err := maxQuery.Scan(&maxCount).Error; err != nil {
+		return 0, nil, ierr.Wrap(ierr.ErrDBQuery, err, "query max message count")
+	}
+
+	subQuery := db.Model(&dbmodel.Session{}).
+		Select(constant.SessionMessageCountSQLExpr + " AS cnt").
+		Where(constant.DBConditionDeletedAtZero)
+	if !startTime.IsZero() {
+		subQuery = subQuery.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		subQuery = subQuery.Where(constant.WhereCreatedAtLTE, endTime)
+	}
+
+	type bucketRow struct {
+		BucketIdx int
+		Cnt       int64
+	}
+	var rows []bucketRow
+	if err := db.Table("(?) AS sub", subQuery).
+		Select(constant.SessionMessageCountBucketCase + " AS bucket_idx, COUNT(*) AS cnt").
+		Group("bucket_idx").
+		Scan(&rows).Error; err != nil {
+		return 0, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count message count buckets")
+	}
+
+	bucketCounts := lo.SliceToMap(rows, func(row bucketRow) (int, int64) {
+		return row.BucketIdx, row.Cnt
+	})
+	return maxCount, bucketCounts, nil
+}
+
 // toSessionAggregate 将 GORM 模型映射为 Session 聚合根
 func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 	score := vo.RestoreSessionScore(m.Score, m.ScoredAt)

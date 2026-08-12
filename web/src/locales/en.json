@@ -65,6 +65,7 @@
   "sessions.search_placeholder": "Search by summary, model or keyword...",
   "sessions.filter_score": "Score",
   "sessions.filter_model": "Model",
+  "sessions.filter_message_count": "Messages",
   "sessions.filter_status": "Status",
   "sessions.summary": "Summary",
   "sessions.models": "Models",
