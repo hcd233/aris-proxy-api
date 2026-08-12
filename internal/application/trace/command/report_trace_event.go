@@ -171,7 +171,7 @@ func insertRecords(
 		}
 		if record.RecordType == constant.TraceRolloutTypeUnknown {
 			// 未知记录类型：打 warning 便于发现 codex 新类型，不入库
-			logger.WithCtx(ctx).Warn("[Trace] unknown record dropped",
+			logger.WithCtx(ctx).Warn("[Trace] Unknown record dropped",
 				zap.String("sessionID", sessionID),
 				zap.String("event", record.Event),
 				zap.Int("payloadBytes", len(record.Payload)),

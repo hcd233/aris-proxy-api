@@ -222,10 +222,14 @@ type PoolConfig struct {
 var Pool PoolConfig
 
 func init() {
-	initEnvironment()
+	InitEnvironment()
 }
 
-func initEnvironment() {
+// InitEnvironment 从环境变量重新加载配置（包 init 时自动调用；测试中可重复调用以验证环境变量覆盖）。
+//
+//	@author centonhuang
+//	@update 2026-08-12 23:00:00
+func InitEnvironment() {
 	config := viper.New()
 	config.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 

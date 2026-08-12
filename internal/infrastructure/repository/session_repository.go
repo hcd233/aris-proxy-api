@@ -567,7 +567,7 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 // ListMessageCountStats 查询消息数统计：
 //   - maxCount：当前时间范围内最大的 session 消息数（无会话时为 0）
 //   - bucketCounts：各固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+）的会话数
-func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (int, map[int]int64, error) {
+func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (maxCount int, bucketCounts map[int]int64, err error) {
 	db := r.db.WithContext(ctx)
 
 	maxQuery := db.Model(&dbmodel.Session{}).
@@ -580,7 +580,6 @@ func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, start
 		maxQuery = maxQuery.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 
-	var maxCount int
 	if err := maxQuery.Scan(&maxCount).Error; err != nil {
 		return 0, nil, ierr.Wrap(ierr.ErrDBQuery, err, "query max message count")
 	}
@@ -600,14 +599,14 @@ func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, start
 		Cnt       int64
 	}
 	var rows []bucketRow
-	if err := db.Table("(?) AS sub", subQuery).
+	if err := db.Table(constant.SessionMessageCountSubqueryTable, subQuery).
 		Select(constant.SessionMessageCountBucketCase + " AS bucket_idx, COUNT(*) AS cnt").
-		Group("bucket_idx").
+		Group(constant.SessionMessageCountBucketIdx).
 		Scan(&rows).Error; err != nil {
 		return 0, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count message count buckets")
 	}
 
-	bucketCounts := lo.SliceToMap(rows, func(row bucketRow) (int, int64) {
+	bucketCounts = lo.SliceToMap(rows, func(row bucketRow) (int, int64) {
 		return row.BucketIdx, row.Cnt
 	})
 	return maxCount, bucketCounts, nil

@@ -225,15 +225,15 @@ func parseRangeValue(v string) (rangeValue, error) {
 	if len(parts) != 2 {
 		return rangeValue{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidRange, v)
 	}
-	min, err := strconv.Atoi(parts[0])
-	if err != nil || min < 0 {
+	minVal, err := strconv.Atoi(parts[0])
+	if err != nil || minVal < 0 {
 		return rangeValue{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidRange, v)
 	}
-	max, err := strconv.Atoi(parts[1])
-	if err != nil || max < min {
+	maxVal, err := strconv.Atoi(parts[1])
+	if err != nil || maxVal < minVal {
 		return rangeValue{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidRange, v)
 	}
-	return rangeValue{min: min, max: max}, nil
+	return rangeValue{min: minVal, max: maxVal}, nil
 }
 
 // buildRangeCondition 构建区间条件（值格式 "min-max"，用于 SQLExpr 计算列）
