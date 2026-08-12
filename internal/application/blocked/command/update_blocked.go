@@ -12,10 +12,11 @@ import (
 type updateBlockedHandler struct {
 	repo          blocked.BlockedRepository
 	rebuildNotify func(ctx context.Context)
+	notifyChanged func(ctx context.Context)
 }
 
-func NewUpdateBlockedHandler(repo blocked.BlockedRepository, rebuildNotify func(ctx context.Context)) port.UpdateBlockedHandler {
-	return &updateBlockedHandler{repo: repo, rebuildNotify: rebuildNotify}
+func NewUpdateBlockedHandler(repo blocked.BlockedRepository, rebuildNotify, notifyChanged func(ctx context.Context)) port.UpdateBlockedHandler {
+	return &updateBlockedHandler{repo: repo, rebuildNotify: rebuildNotify, notifyChanged: notifyChanged}
 }
 
 func (h *updateBlockedHandler) Handle(ctx context.Context, cmd port.UpdateBlockedCommand) error {
@@ -26,5 +27,6 @@ func (h *updateBlockedHandler) Handle(ctx context.Context, cmd port.UpdateBlocke
 		return err
 	}
 	h.rebuildNotify(ctx)
+	h.notifyChanged(ctx)
 	return nil
 }

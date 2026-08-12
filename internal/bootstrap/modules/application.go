@@ -1,6 +1,8 @@
 package modules
 
 import (
+	"context"
+
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
@@ -51,6 +53,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
@@ -328,8 +331,8 @@ func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport
 	return sessionquery.NewListSessionOptionHandler(readRepo)
 }
 
-func NewBlockedService(repo blockeddomain.BlockedRepository, hitRecorder blockedport.HitRecorder) *blockedapp.BlockedService {
-	return blockedapp.NewBlockedService(repo, hitRecorder)
+func NewBlockedService(repo blockeddomain.BlockedRepository, hitRecorder blockedport.HitRecorder, cache *redis.Client) *blockedapp.BlockedService {
+	return blockedapp.NewBlockedService(repo, hitRecorder, cache)
 }
 
 func NewBlockedChecker(svc *blockedapp.BlockedService) usecase.BlockedChecker {
@@ -341,15 +344,27 @@ func NewBlockedHitRecorder(blockedCache *cache.BlockedHitCache) blockedport.HitR
 }
 
 func NewCreateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.CreateBlockedHandler {
-	return blockedcommand.NewCreateBlockedHandler(repo, svc.Rebuild)
+	return blockedcommand.NewCreateBlockedHandler(
+		repo,
+		func(ctx context.Context) { _ = svc.Rebuild(ctx) }, //nolint:errcheck // 本进程立即生效路径，失败由 A/B/C 通道重试
+		svc.NotifyChanged,
+	)
 }
 
 func NewUpdateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.UpdateBlockedHandler {
-	return blockedcommand.NewUpdateBlockedHandler(repo, svc.Rebuild)
+	return blockedcommand.NewUpdateBlockedHandler(
+		repo,
+		func(ctx context.Context) { _ = svc.Rebuild(ctx) }, //nolint:errcheck // 本进程立即生效路径，失败由 A/B/C 通道重试
+		svc.NotifyChanged,
+	)
 }
 
 func NewDeleteBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.DeleteBlockedHandler {
-	return blockedcommand.NewDeleteBlockedHandler(repo, svc.Rebuild)
+	return blockedcommand.NewDeleteBlockedHandler(
+		repo,
+		func(ctx context.Context) { _ = svc.Rebuild(ctx) }, //nolint:errcheck // 本进程立即生效路径，失败由 A/B/C 通道重试
+		svc.NotifyChanged,
+	)
 }
 
 func NewListBlockedHandler(repo blockeddomain.BlockedRepository) blockedport.ListBlockedHandler {
