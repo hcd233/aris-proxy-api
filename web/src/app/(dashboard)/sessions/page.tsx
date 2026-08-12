@@ -83,8 +83,13 @@ export default function SessionsPage() {
     "dashboard.sessions.filterModel",
     [],
   );
+  const [filterMessageCount, setFilterMessageCount] = usePersistentState<string[]>(
+    "dashboard.sessions.filterMessageCount",
+    [],
+  );
   const [scoreOptions, setScoreOptions] = useState<string[]>([]);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [messageCountOptions, setMessageCountOptions] = useState<string[]>([]);
 
   const fetchScoreOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
     const { startTime, endTime } = computeRange(range, cs, ce);
@@ -106,17 +111,43 @@ export default function SessionsPage() {
     }
   }, []);
 
+  const fetchMessageCountOptions = useCallback(
+    async (range: TimeRangeKey, cs: string, ce: string) => {
+      const { startTime, endTime } = computeRange(range, cs, ce);
+      try {
+        const rsp = await api.listSessionOptions({ field: "messageCount", startTime, endTime });
+        if (!rsp.error && rsp.items) setMessageCountOptions(rsp.items);
+      } catch (err) {
+        console.error("Failed to load message count options:", err);
+      }
+    },
+    [],
+  );
+
   /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch filter options when the time range changes */
   useEffect(() => {
     fetchScoreOptions(timeRange, customStart, customEnd);
     fetchModelOptions(timeRange, customStart, customEnd);
-  }, [timeRange, customStart, customEnd, fetchScoreOptions, fetchModelOptions]);
+    fetchMessageCountOptions(timeRange, customStart, customEnd);
+  }, [
+    timeRange,
+    customStart,
+    customEnd,
+    fetchScoreOptions,
+    fetchModelOptions,
+    fetchMessageCountOptions,
+  ]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const buildSessionFilter = (scores: string[], models: string[]): string | undefined => {
+  const buildSessionFilter = (
+    scores: string[],
+    models: string[],
+    msgCounts: string[],
+  ): string | undefined => {
     const parts: string[] = [];
     if (scores.length > 0) parts.push(`score:${scores.join("|")}`);
     if (models.length > 0) parts.push(`model:${models.join("|")}`);
+    if (msgCounts.length > 0) parts.push(`messageCount:${msgCounts.join("|")}`);
     return parts.length > 0 ? parts.join(" ") : undefined;
   };
 
@@ -131,6 +162,7 @@ export default function SessionsPage() {
       kw: string,
       score: string[],
       models: string[],
+      msgCounts: string[],
       silent?: boolean,
     ) => {
       if (!silent) setLoading(true);
@@ -144,7 +176,7 @@ export default function SessionsPage() {
           startTime,
           endTime,
           keyword: kw || undefined,
-          filter: buildSessionFilter(score, models),
+          filter: buildSessionFilter(score, models, msgCounts),
         });
         setSessions(rsp.sessions ?? []);
         if (rsp.pageInfo) {
@@ -173,6 +205,7 @@ export default function SessionsPage() {
       keyword,
       filterScore,
       filterModel,
+      filterMessageCount,
     );
   }, [fetchSessions]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
@@ -188,6 +221,7 @@ export default function SessionsPage() {
       keyword,
       filterScore,
       filterModel,
+      filterMessageCount,
     );
 
   const handleSort = (field: string) => {
@@ -206,6 +240,7 @@ export default function SessionsPage() {
       keyword,
       filterScore,
       filterModel,
+      filterMessageCount,
     );
   };
 
@@ -223,6 +258,7 @@ export default function SessionsPage() {
       kw,
       filterScore,
       filterModel,
+      filterMessageCount,
     );
   };
 
@@ -245,6 +281,7 @@ export default function SessionsPage() {
         keyword,
         filterScore,
         filterModel,
+        filterMessageCount,
         true,
       );
     },
@@ -301,6 +338,7 @@ export default function SessionsPage() {
         keyword,
         filterScore,
         filterModel,
+        filterMessageCount,
         true,
       );
     } catch (err) {
@@ -369,6 +407,7 @@ export default function SessionsPage() {
                     keyword,
                     filterScore,
                     filterModel,
+                    filterMessageCount,
                   );
                 }}
               />
@@ -388,6 +427,7 @@ export default function SessionsPage() {
                     keyword,
                     v,
                     filterModel,
+                    filterMessageCount,
                   );
                 }}
               />
@@ -407,10 +447,33 @@ export default function SessionsPage() {
                     keyword,
                     filterScore,
                     v,
+                    filterMessageCount,
                   );
                 }}
               />
-              {(filterScore.length > 0 || filterModel.length > 0) && (
+              <MultiSelectPill
+                label={t("sessions.filter_message_count")}
+                options={messageCountOptions}
+                value={filterMessageCount}
+                onChange={(v) => {
+                  setFilterMessageCount(v);
+                  fetchSessions(
+                    1,
+                    pageInfo.pageSize,
+                    timeRange,
+                    customStart,
+                    customEnd,
+                    sort,
+                    keyword,
+                    filterScore,
+                    filterModel,
+                    v,
+                  );
+                }}
+              />
+              {(filterScore.length > 0 ||
+                filterModel.length > 0 ||
+                filterMessageCount.length > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -418,6 +481,7 @@ export default function SessionsPage() {
                   onClick={() => {
                     setFilterScore([]);
                     setFilterModel([]);
+                    setFilterMessageCount([]);
                     fetchSessions(
                       1,
                       pageInfo.pageSize,
@@ -426,6 +490,7 @@ export default function SessionsPage() {
                       customEnd,
                       sort,
                       keyword,
+                      [],
                       [],
                       [],
                     );
@@ -456,6 +521,7 @@ export default function SessionsPage() {
                     "",
                     filterScore,
                     filterModel,
+                    filterMessageCount,
                   );
                 }}
               />

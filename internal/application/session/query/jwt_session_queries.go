@@ -39,6 +39,10 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 		SQLColumn:    constant.SessionFilterModelSQLColumn,
 		IsJSONBArray: true,
 	},
+	constant.SessionFilterFieldMessageCount: {
+		SQLExpr: constant.SessionMessageCountSQLExpr,
+		IsRange: true,
+	},
 }
 
 type ownerNameLookup interface {

@@ -46,6 +46,12 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 		return items, nil
 	case constant.SessionFilterFieldModel:
 		return h.readRepo.ListDistinctModels(ctx, q.Keyword, q.StartTime, q.EndTime)
+	case constant.SessionFilterFieldMessageCount:
+		maxCount, bucketCounts, err := h.readRepo.ListMessageCountStats(ctx, q.StartTime, q.EndTime)
+		if err != nil {
+			return nil, err
+		}
+		return BuildMessageCountBuckets(maxCount, bucketCounts), nil
 	default:
 		return []string{}, nil
 	}

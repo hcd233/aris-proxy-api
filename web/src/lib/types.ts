@@ -529,7 +529,7 @@ export interface AuditOptionListRsp extends CommonRsp {
 // ─── Session Option List ─────────────────────────────────────────────────────
 
 export interface SessionOptionListReq {
-  field: "score" | "model";
+  field: "score" | "model" | "messageCount";
   keyword?: string;
   startTime?: string;
   endTime?: string;

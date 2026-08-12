@@ -7,6 +7,7 @@ const (
 	FilterErrUnknownField   = "unknown filter field: %s"
 	FilterErrNullValueOp    = "operator %s not supported for NULL value"
 	FilterErrUnsupportedOp  = "unsupported operator: %s"
+	FilterErrInvalidRange   = "invalid range value: %s"
 
 	// ── Filter SQL fragments ──
 	FilterSQLAND       = " AND "

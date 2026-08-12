@@ -65,6 +65,7 @@
   "sessions.search_placeholder": "概要、モデル、キーワードで検索...",
   "sessions.filter_score": "スコア",
   "sessions.filter_model": "モデル",
+  "sessions.filter_message_count": "メッセージ数",
   "sessions.filter_status": "ステータス",
   "sessions.summary": "概要",
   "sessions.models": "モデル",
