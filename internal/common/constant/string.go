@@ -1,5 +1,7 @@
 package constant
 
+import "time"
+
 const (
 	ProjectName = "aris-proxy-api"
 
@@ -188,6 +190,11 @@ const (
 	BlockedTableName                  = "blocked_words"
 	BlockedHitKeyPrefix               = "blocked:hit:%d"
 	BlockedHitKeyScanPattern          = "blocked:hit:*"
+	BlockedVersionKey                 = "blocked:version"
+	BlockedChangeChannel              = "blocked:changed"
+	BlockedChangeMessage              = "changed"
+	BlockedLowFreqRebuildInterval     = 5 * time.Minute
+	BlockedVersionPollInterval        = 2 * time.Second
 
 	// ── Cron Pub/Sub ──
 	CronReloadChannel = "cron:reload"

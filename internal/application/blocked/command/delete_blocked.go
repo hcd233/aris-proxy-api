@@ -10,10 +10,11 @@ import (
 type deleteBlockedHandler struct {
 	repo          blocked.BlockedRepository
 	rebuildNotify func(ctx context.Context)
+	notifyChanged func(ctx context.Context)
 }
 
-func NewDeleteBlockedHandler(repo blocked.BlockedRepository, rebuildNotify func(ctx context.Context)) port.DeleteBlockedHandler {
-	return &deleteBlockedHandler{repo: repo, rebuildNotify: rebuildNotify}
+func NewDeleteBlockedHandler(repo blocked.BlockedRepository, rebuildNotify, notifyChanged func(ctx context.Context)) port.DeleteBlockedHandler {
+	return &deleteBlockedHandler{repo: repo, rebuildNotify: rebuildNotify, notifyChanged: notifyChanged}
 }
 
 func (h *deleteBlockedHandler) Handle(ctx context.Context, cmd port.DeleteBlockedCommand) error {
@@ -26,5 +27,6 @@ func (h *deleteBlockedHandler) Handle(ctx context.Context, cmd port.DeleteBlocke
 		return err
 	}
 	h.rebuildNotify(ctx)
+	h.notifyChanged(ctx)
 	return nil
 }

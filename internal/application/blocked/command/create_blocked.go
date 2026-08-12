@@ -11,10 +11,11 @@ import (
 type createBlockedHandler struct {
 	repo          blocked.BlockedRepository
 	rebuildNotify func(ctx context.Context)
+	notifyChanged func(ctx context.Context)
 }
 
-func NewCreateBlockedHandler(repo blocked.BlockedRepository, rebuildNotify func(ctx context.Context)) port.CreateBlockedHandler {
-	return &createBlockedHandler{repo: repo, rebuildNotify: rebuildNotify}
+func NewCreateBlockedHandler(repo blocked.BlockedRepository, rebuildNotify, notifyChanged func(ctx context.Context)) port.CreateBlockedHandler {
+	return &createBlockedHandler{repo: repo, rebuildNotify: rebuildNotify, notifyChanged: notifyChanged}
 }
 
 func (h *createBlockedHandler) Handle(ctx context.Context, cmd port.CreateBlockedCommand) (*port.CreateBlockedResult, error) {
@@ -27,5 +28,6 @@ func (h *createBlockedHandler) Handle(ctx context.Context, cmd port.CreateBlocke
 		return nil, err
 	}
 	h.rebuildNotify(ctx)
+	h.notifyChanged(ctx)
 	return &port.CreateBlockedResult{BlockedID: id}, nil
 }

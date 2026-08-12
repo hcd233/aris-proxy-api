@@ -58,10 +58,14 @@ func registerLifecycleHooks(params lifecycleParams) {
 
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			params.BlockedService.Rebuild(ctx)
+			_ = params.BlockedService.Rebuild(ctx) //nolint:errcheck // 启动失败由 syncLoop 兜底
+			params.BlockedService.StartSync(ctx)
 			return nil
 		},
-		OnStop: func(ctx context.Context) error { return nil },
+		OnStop: func(ctx context.Context) error {
+			params.BlockedService.StopSync()
+			return nil
+		},
 	})
 
 	params.Lifecycle.Append(fx.Hook{

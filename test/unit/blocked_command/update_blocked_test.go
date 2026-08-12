@@ -59,7 +59,7 @@ func TestUpdateBlockedHandler_Success(t *testing.T) {
 	t.Parallel()
 	repo := &updateFakeRepo{}
 	rebuildCalled := false
-	h := command.NewUpdateBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true })
+	h := command.NewUpdateBlockedHandler(repo, func(ctx context.Context) { rebuildCalled = true }, func(ctx context.Context) {})
 
 	err := h.Handle(context.Background(), port.UpdateBlockedCommand{BlockedID: 7, Action: enum.BlockedActionOmit})
 	if err != nil {
@@ -76,7 +76,7 @@ func TestUpdateBlockedHandler_Success(t *testing.T) {
 func TestUpdateBlockedHandler_InvalidAction(t *testing.T) {
 	t.Parallel()
 	repo := &updateFakeRepo{}
-	h := command.NewUpdateBlockedHandler(repo, func(ctx context.Context) {})
+	h := command.NewUpdateBlockedHandler(repo, func(ctx context.Context) {}, func(ctx context.Context) {})
 
 	err := h.Handle(context.Background(), port.UpdateBlockedCommand{BlockedID: 7, Action: "ban"})
 	if !errors.Is(err, ierr.ErrValidation) {
