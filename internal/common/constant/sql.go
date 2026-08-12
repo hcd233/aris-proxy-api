@@ -235,6 +235,15 @@ var (
 	SessionDistinctModelOrder  = "model ASC"
 	SessionDistinctModelLimit  = 50
 
+	// ── Session message count filter & query constants ──
+	SessionFilterFieldMessageCount = "messageCount"
+	SessionMessageCountSQLExpr     = "jsonb_array_length(message_ids::jsonb)"
+
+	// 消息数统计（options 接口用）：固定边界桶 0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+，
+	// 末桶上限由当前时间范围最大消息数动态截断。
+	SessionMessageCountMaxSelect  = "COALESCE(MAX(jsonb_array_length(message_ids::jsonb)), 0)"
+	SessionMessageCountBucketCase = "CASE WHEN cnt <= 10 THEN 0 WHEN cnt <= 50 THEN 1 WHEN cnt <= 100 THEN 2 WHEN cnt <= 200 THEN 3 WHEN cnt <= 500 THEN 4 ELSE 5 END"
+
 	// ── Session export query constants ──
 	// 导出行：id, score, message_ids, tool_ids, model_ids
 	SessionExportSelect = "id, score, message_ids, tool_ids, model_ids"

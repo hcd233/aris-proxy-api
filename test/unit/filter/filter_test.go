@@ -147,3 +147,114 @@ func TestJSONBArrayCondition_CombinedWithOtherField(t *testing.T) {
 		t.Errorf("args length want 2, got %d", len(args))
 	}
 }
+
+const messageCountExpr = "jsonb_array_length(message_ids::jsonb)"
+
+func TestRangeCondition_SingleEqual(t *testing.T) {
+	t.Parallel()
+	criteria := &commonfilter.FilterCriteria{
+		Filters: []commonfilter.Filter{
+			{Field: "messageCount", Operator: enum.OpEqual, Values: []string{"0-10"}},
+		},
+		FieldConfigs: map[string]commonfilter.FieldConfig{
+			"messageCount": {SQLExpr: messageCountExpr, IsRange: true},
+		},
+	}
+	sql, args, err := commonfilter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "(" + messageCountExpr + " >= ? AND " + messageCountExpr + " <= ?)"
+	if sql != want {
+		t.Errorf("sql mismatch\nwant: %q\ngot:  %q", want, sql)
+	}
+	if len(args) != 2 || args[0] != 0 || args[1] != 10 {
+		t.Errorf("args mismatch, want [0 10], got %v", args)
+	}
+}
+
+func TestRangeCondition_MultiEqual(t *testing.T) {
+	t.Parallel()
+	criteria := &commonfilter.FilterCriteria{
+		Filters: []commonfilter.Filter{
+			{Field: "messageCount", Operator: enum.OpEqual, Values: []string{"0-10", "11-50"}},
+		},
+		FieldConfigs: map[string]commonfilter.FieldConfig{
+			"messageCount": {SQLExpr: messageCountExpr, IsRange: true},
+		},
+	}
+	sql, args, err := commonfilter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(sql, " OR ") {
+		t.Errorf("multi-value equal should use OR, got %q", sql)
+	}
+	if strings.Count(sql, messageCountExpr) != 4 {
+		t.Errorf("sql should repeat expr per range bound, got %q", sql)
+	}
+	if len(args) != 4 || args[0] != 0 || args[1] != 10 || args[2] != 11 || args[3] != 50 {
+		t.Errorf("args mismatch, want [0 10 11 50], got %v", args)
+	}
+}
+
+func TestRangeCondition_SingleNotEqual(t *testing.T) {
+	t.Parallel()
+	criteria := &commonfilter.FilterCriteria{
+		Filters: []commonfilter.Filter{
+			{Field: "messageCount", Operator: enum.OpNotEqual, Values: []string{"0-10"}},
+		},
+		FieldConfigs: map[string]commonfilter.FieldConfig{
+			"messageCount": {SQLExpr: messageCountExpr, IsRange: true},
+		},
+	}
+	sql, args, err := commonfilter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.HasPrefix(sql, "NOT (") {
+		t.Errorf("not-equal should be negated, got %q", sql)
+	}
+	if len(args) != 2 || args[0] != 0 || args[1] != 10 {
+		t.Errorf("args mismatch, want [0 10], got %v", args)
+	}
+}
+
+func TestRangeCondition_InvalidValue(t *testing.T) {
+	t.Parallel()
+	cases := []string{"abc", "10-5", "-1-10", "10", "1-2-3", "10-"}
+	for _, v := range cases {
+		v := v
+		t.Run(v, func(t *testing.T) {
+			t.Parallel()
+			criteria := &commonfilter.FilterCriteria{
+				Filters: []commonfilter.Filter{
+					{Field: "messageCount", Operator: enum.OpEqual, Values: []string{v}},
+				},
+				FieldConfigs: map[string]commonfilter.FieldConfig{
+					"messageCount": {SQLExpr: messageCountExpr, IsRange: true},
+				},
+			}
+			_, _, err := commonfilter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+			if err == nil {
+				t.Fatalf("expected error for range value %q, got nil", v)
+			}
+		})
+	}
+}
+
+func TestRangeCondition_UnsupportedOperator(t *testing.T) {
+	t.Parallel()
+	criteria := &commonfilter.FilterCriteria{
+		Filters: []commonfilter.Filter{
+			{Field: "messageCount", Operator: enum.OpGreater, Values: []string{"0-10"}},
+		},
+		FieldConfigs: map[string]commonfilter.FieldConfig{
+			"messageCount": {SQLExpr: messageCountExpr, IsRange: true},
+		},
+	}
+	_, _, err := commonfilter.ToSQL(criteria.Filters, criteria.FieldConfigs)
+	if err == nil {
+		t.Fatal("expected error for unsupported operator, got nil")
+	}
+}

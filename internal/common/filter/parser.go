@@ -5,6 +5,7 @@
 package filter
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
@@ -31,9 +32,11 @@ type FilterCriteria struct {
 // FieldConfig 字段配置
 type FieldConfig struct {
 	SQLColumn    string
+	SQLExpr      string // 优先于 SQLColumn 的 SQL 表达式片段（如 jsonb_array_length(message_ids::jsonb)）
 	IsFuzzy      bool
 	IsNumeric    bool
 	IsJSONBArray bool
+	IsRange      bool // 值格式 "min-max"，生成区间（BETWEEN）条件
 	ValueMap     map[string]*string
 }
 
@@ -174,9 +177,16 @@ func ToSQL(filters []Filter, fieldConfigs map[string]FieldConfig) (sql string, a
 // buildCondition 构建单个 SQL 条件（单值或多值）
 func buildCondition(f Filter, config FieldConfig) (sql string, args []any, err error) {
 	column := config.SQLColumn
+	if config.SQLExpr != "" {
+		column = config.SQLExpr
+	}
 
 	if !isMultiValueAllowed(f.Operator) && len(f.Values) > 1 {
 		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrMultiValueWithComparison, f.Operator)
+	}
+
+	if config.IsRange {
+		return buildRangeCondition(column, f)
 	}
 
 	if config.IsJSONBArray {
@@ -201,6 +211,82 @@ func buildCondition(f Filter, config FieldConfig) (sql string, args []any, err e
 // isMultiValueAllowed 判定操作符是否支持多值
 func isMultiValueAllowed(op enum.Operator) bool {
 	return op == enum.OpEqual || op == enum.OpNotEqual
+}
+
+// rangeValue 解析后的区间值
+type rangeValue struct {
+	min int
+	max int
+}
+
+// parseRangeValue 解析 "min-max" 格式的区间值，min/max 均为非负整数且 min <= max
+func parseRangeValue(v string) (rangeValue, error) {
+	parts := strings.SplitN(v, "-", 2)
+	if len(parts) != 2 {
+		return rangeValue{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidRange, v)
+	}
+	min, err := strconv.Atoi(parts[0])
+	if err != nil || min < 0 {
+		return rangeValue{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidRange, v)
+	}
+	max, err := strconv.Atoi(parts[1])
+	if err != nil || max < min {
+		return rangeValue{}, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrInvalidRange, v)
+	}
+	return rangeValue{min: min, max: max}, nil
+}
+
+// buildRangeCondition 构建区间条件（值格式 "min-max"，用于 SQLExpr 计算列）
+// 单值：expr >= ? AND expr <= ?；多值 equal：OR 连接；多值 not equal：AND 连接 NOT
+func buildRangeCondition(expr string, f Filter) (sql string, args []any, err error) {
+	if !isMultiValueAllowed(f.Operator) {
+		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, f.Operator)
+	}
+
+	ranges := make([]rangeValue, 0, len(f.Values))
+	for _, v := range f.Values {
+		r, parseErr := parseRangeValue(v)
+		if parseErr != nil {
+			return "", nil, parseErr
+		}
+		ranges = append(ranges, r)
+	}
+
+	frag := func(r rangeValue) (string, []any) {
+		return "(" + expr + constant.FilterSQLGTE + " AND " + expr + constant.FilterSQLLTE + ")",
+			[]any{r.min, r.max}
+	}
+
+	switch f.Operator {
+	case enum.OpEqual:
+		if len(ranges) == 1 {
+			part, partArgs := frag(ranges[0])
+			return part, partArgs, nil
+		}
+		parts := make([]string, len(ranges))
+		args = make([]any, 0, len(ranges)*2)
+		for i, r := range ranges {
+			part, partArgs := frag(r)
+			parts[i] = part
+			args = append(args, partArgs...)
+		}
+		return "(" + strings.Join(parts, constant.FilterSQLOR) + ")", args, nil
+	case enum.OpNotEqual:
+		if len(ranges) == 1 {
+			part, partArgs := frag(ranges[0])
+			return "NOT " + part, partArgs, nil
+		}
+		parts := make([]string, len(ranges))
+		args = make([]any, 0, len(ranges)*2)
+		for i, r := range ranges {
+			part, partArgs := frag(r)
+			parts[i] = "NOT " + part
+			args = append(args, partArgs...)
+		}
+		return "(" + strings.Join(parts, constant.FilterSQLAND) + ")", args, nil
+	default:
+		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, f.Operator)
+	}
 }
 
 // buildJSONBArrayCondition 构建 JSONB 数组精确包含条件

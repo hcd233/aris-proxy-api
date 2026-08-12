@@ -65,6 +65,7 @@
   "sessions.search_placeholder": "搜索摘要、模型或关键词...",
   "sessions.filter_score": "评分",
   "sessions.filter_model": "模型",
+  "sessions.filter_message_count": "消息数",
   "sessions.filter_status": "状态",
   "sessions.summary": "摘要",
   "sessions.models": "模型",
