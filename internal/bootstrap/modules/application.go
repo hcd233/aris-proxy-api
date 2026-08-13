@@ -2,6 +2,7 @@ package modules
 
 import (
 	"context"
+	"fmt"
 
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
@@ -53,8 +54,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -231,16 +234,32 @@ func NewListUsersHandler(repo identity.UserRepository) identityport.ListUsersHan
 	return identityquery.NewListUsersHandler(repo)
 }
 
-func NewApproveUserHandler(repo identity.UserRepository) identityport.ApproveUserHandler {
-	return identitycommand.NewApproveUserHandler(repo)
+func NewApproveUserHandler(repo identity.UserRepository, cache *redis.Client) identityport.ApproveUserHandler {
+	return identitycommand.NewApproveUserHandler(repo, invalidateJWTUserCache(cache))
 }
 
-func NewDemoteUserHandler(repo identity.UserRepository) identityport.DemoteUserHandler {
-	return identitycommand.NewDemoteUserHandler(repo)
+func NewDemoteUserHandler(repo identity.UserRepository, cache *redis.Client) identityport.DemoteUserHandler {
+	return identitycommand.NewDemoteUserHandler(repo, invalidateJWTUserCache(cache))
 }
 
-func NewDeleteUserHandler(repo identity.UserRepository) identityport.DeleteUserHandler {
-	return identitycommand.NewDeleteUserHandler(repo)
+func NewDeleteUserHandler(repo identity.UserRepository, cache *redis.Client) identityport.DeleteUserHandler {
+	return identitycommand.NewDeleteUserHandler(repo, invalidateJWTUserCache(cache))
+}
+
+// invalidateJWTUserCache 构造删除 Redis jwt:user:{id} 缓存的回调
+//
+// 用户删除/权限变更后调用，使 JwtMiddleware 的用户缓存立即失效（TTL 内不再以旧状态放行）。
+func invalidateJWTUserCache(cache *redis.Client) func(ctx context.Context, userID uint) {
+	return func(ctx context.Context, userID uint) {
+		if cache == nil {
+			return
+		}
+		key := fmt.Sprintf(constant.JWTUserCacheKeyTemplate, userID)
+		if err := cache.Del(ctx, key).Err(); err != nil {
+			logger.WithCtx(ctx).Warn("[IdentityCommand] Failed to invalidate jwt user cache",
+				zap.Error(err), zap.Uint("userID", userID), zap.String("key", key))
+		}
+	}
 }
 
 func NewListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditLogsByUserHandler {

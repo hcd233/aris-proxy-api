@@ -136,8 +136,14 @@ func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) 
 	if e.DedupKey != "" {
 		if e.RecordType == constant.TraceRecordTypeEventMsg && e.Event == constant.TraceEventTokenCount {
 			// token_count 固定 dedup key（客户端 D1a）：同 key 冲突时覆盖 payload，最终保留最后一条
+			// 注意：dedup_key 唯一索引是部分索引（WHERE dedup_key <> ''），
+			// PG 对 ON CONFLICT 的 arbiter 推断必须给出匹配的 index_predicate，
+			// 否则每条 INSERT 抛 42P10（there is no unique or exclusion constraint matching）。
 			query = query.Clauses(clause.OnConflict{
 				Columns: []clause.Column{{Name: constant.FieldDedupKey}},
+				TargetWhere: clause.Where{Exprs: []clause.Expression{
+					clause.Expr{SQL: constant.DBConditionDedupKeyNotZero},
+				}},
 				DoUpdates: clause.AssignmentColumns([]string{
 					constant.FieldTraceID, constant.FieldPayload, constant.FieldUpdatedAt,
 				}),

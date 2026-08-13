@@ -16,7 +16,7 @@ func TestApproveUser_PendingToUser(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo(newUser(t, "bob", "bob@example.com", enum.PermissionPending))
 	target := repo.users[0]
-	handler := command.NewApproveUserHandler(repo)
+	handler := command.NewApproveUserHandler(repo, nil)
 
 	if err := handler.Handle(ctx, port.ApproveUserCommand{OperatorID: 99, UserID: target.AggregateID()}); err != nil {
 		t.Fatalf("approve failed: %v", err)
@@ -37,7 +37,7 @@ func TestApproveUser_RejectsNonPending(t *testing.T) {
 		newUser(t, "alice", "alice@example.com", enum.PermissionUser),
 		newUser(t, "carol", "carol@example.com", enum.PermissionAdmin),
 	)
-	handler := command.NewApproveUserHandler(repo)
+	handler := command.NewApproveUserHandler(repo, nil)
 
 	for _, u := range repo.users {
 		if err := handler.Handle(ctx, port.ApproveUserCommand{OperatorID: 99, UserID: u.AggregateID()}); err == nil {
@@ -51,7 +51,7 @@ func TestApproveUser_RejectsNonPending(t *testing.T) {
 func TestApproveUser_UserNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	handler := command.NewApproveUserHandler(newFakeUserRepo())
+	handler := command.NewApproveUserHandler(newFakeUserRepo(), nil)
 
 	err := handler.Handle(ctx, port.ApproveUserCommand{OperatorID: 99, UserID: 404})
 	if err == nil {

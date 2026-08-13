@@ -49,20 +49,20 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	rsp := &dto.EmptyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
-	result, err := h.create.Handle(ctx, port.CreateModelCommand{
+	_, err := h.create.Handle(ctx, port.CreateModelCommand{
 		Alias:           req.Body.Alias,
 		ModelID:         req.Body.ModelID,
 		UpstreamModel:   req.Body.UpstreamModel,
 		EndpointID:      req.Body.EndpointID,
 		ContextLength:   req.Body.ContextLength,
 		MaxOutputTokens: req.Body.MaxOutputTokens,
+		Capabilities:    req.Body.Capabilities,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Create model failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
-	_ = result.ModelID
 	logger.WithCtx(ctx).Info("[ModelHandler] Create model success",
 		zap.Uint("userID", userID), zap.String("alias", req.Body.Alias))
 	return apiutil.WrapHTTPResponse(rsp, nil)

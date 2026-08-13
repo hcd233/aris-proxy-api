@@ -2,11 +2,13 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/domain/blocked/aggregate"
@@ -52,9 +54,21 @@ func (r *blockedRepository) DeleteBatch(ctx context.Context, ids []uint) error {
 
 func (r *blockedRepository) UpdateAction(ctx context.Context, id uint, action string) error {
 	db := r.db.WithContext(ctx)
-	return db.Model(&dbmodel.Blocked{}).
+	result := db.Model(&dbmodel.Blocked{}).
 		Where(constant.WhereIDEquals, id).
-		UpdateColumn(constant.FieldAction, action).Error
+		Where(constant.DBConditionDeletedAtZero).
+		Updates(map[string]any{
+			constant.FieldAction:    action,
+			constant.FieldUpdatedAt: time.Now().UTC(),
+		})
+	if result.Error != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, result.Error, "update blocked action")
+	}
+	// 目标不存在或已软删：不静默成功，返回明确错误（与 FindByID 语义一致）
+	if result.RowsAffected == 0 {
+		return ierr.New(ierr.ErrDataNotExists, "blocked word not found")
+	}
+	return nil
 }
 
 func (r *blockedRepository) Paginate(ctx context.Context, param model.CommonParam) ([]*aggregate.Blocked, *model.PageInfo, error) {
