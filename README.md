@@ -39,9 +39,21 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ![前端构建与内嵌交付](docs/diagrams/aris-web-delivery.png)
 
-**运维与运行时治理**：① **运行时指标采集**：进程内 `HTTPCollector`（时延/成功）/ `SSEGauge`（并发连接）/ `TokenUsageCounter`（吞吐）+ Go runtime 采集器注册到 Prometheus Registry；每 Pod 一个 `MetricsFlusher` 周期 `BuildSnapshot` 写入 Redis（retention 过期清理），`/metrics` Prometheus 拉取与运行时大盘消费，聚合层对相邻快照做 delta/桶宽 计算 QPS / P95 / 成功率 / CPU% / tokens·s。② **优雅退出**：`SIGINT` / `SIGTERM` 触发 `fx.Lifecycle.OnStop` 逆序执行，依次停 cron → 停 `pond` 协程池 → `inflight` drain 等在途 → `ShutdownWithContext` 泄流 SSE 长连接 → 同步日志 → 关 DB → 关 Redis；K8s 配合 `preStop sleep 10` + `terminationGracePeriodSeconds 660` 无损下线。③ **敏感词热更新**：管理后台 `/api/v1/block` 写入 DB 后 `NotifyChanged` 经 Redis `Publish(blocked:changed)` 即时信号 + `INCR(blocked:version)` 广播；各 Pod `BlockedService` 通过 pub/sub 订阅、版本轮询（2s）与低频兜底（5min）三重同步触发全量 `Rebuild` 内存 Aho-Corasick matcher；命中计数经 `BlockedHitSync` cron（每 5min）批量回写 DB。④ **定时任务触发与执行**：管理后台 `/api/v1/cron` 更新 spec / enabled 或手动触发 `CronManager.Trigger`；`CronManager` 热重载并经 `cron:reload` Redis pub/sub 跨 Pod 广播；任务以 Redis 分布式锁（TTL 5min + ticker 续期）保证单实例执行，`wrapCronFunc` 注入 traceID / panic 恢复 / 启用检查，每次执行落 `CronCallAudit`（status + duration + trigger source）。
+**运行时指标采集**：进程内 `HTTPCollector`（请求时延 histogram + 成功/失败 counter）、`SSEGauge`（SSE 并发连接）、`TokenUsageCounter`（输入/输出 token 吞吐）与 Go runtime 采集器（`go_goroutines` / `go_memstats_alloc_bytes` / `process_cpu_seconds_total`）注册进 Prometheus Registry；每 Pod 一个 `MetricsFlusher` 周期（5s）`BuildSnapshot` 把快照写入 Redis（ZSET `metrics:runtime:data:{pod}` + 实例注册表，retention 24h 清理）；运行时大盘经聚合层对相邻快照做 gauge 桶内均值 / counter 正向 delta÷桶宽 / histogram 桶合并求 P95，产出 QPS / P95 / 成功率 / CPU% / tokens·s；`/metrics` 端点经 `promhttp.Handler` 直读本 Pod Registry。
 
-![运维与运行时治理](docs/diagrams/aris-runtime-ops.png)
+![运行时指标采集](docs/diagrams/aris-runtime-metrics.png)
+
+**优雅退出**：`SIGINT` / `SIGTERM` 触发 `fx.Lifecycle.OnStop` 逆序执行（注册顺序 Redis → DB → BlockedService → Logger → HTTP → Flusher → Inflight → Pool → Cron，故 OnStop 反序）；依次停 cron（`CronManager.StopAll`，3min）→ 停 `pond` 协程池（`StopWithContext`，3min）→ `inflight` drain 等在途（5min）→ 关 HTTP（`ShutdownWithContext` 30s，泄流 SSE 长连接，停 Flusher）→ 同步日志 + 停 BlockedService pub/sub → 关 DB → 关 Redis；K8s 配合 `preStop sleep 10` + `terminationGracePeriodSeconds 660` 无损下线。
+
+![优雅退出序列](docs/diagrams/aris-graceful-shutdown.png)
+
+**敏感词热更新**：管理后台 `/api/v1/block` 写入 DB 后 `NotifyChanged` 经 Redis `Publish(blocked:changed)` 即时信号 + `INCR(blocked:version)` 版本广播；各 Pod `BlockedService` 通过 pub/sub 订阅、版本轮询（2s）与低频兜底（5min）三重同步触发全量 `Rebuild`（`ListAll` 重建内存 Aho-Corasick matcher）；LLM 请求经 `Check` 命中后按 action 拦截（deny）/ 打码（omit），命中计数经 `BlockedHitSync` cron（每 5min `PopAll` → `BatchIncrementHitCount`）批量回写 DB。
+
+![敏感词热更新](docs/diagrams/aris-blocked-hot-reload.png)
+
+**定时任务触发与执行**：管理后台 `/api/v1/cron` 更新 spec / enabled（`update_cron_job` 校验 spec、核心任务禁关）或手动触发 `CronManager.Trigger`；`CronManager` 热重载（`Restart` / `Enable` / `Disable`）并经 `cron:reload` Redis pub/sub 跨 Pod 广播（其他 Pod `handleMessage` 同步）；任务以 Redis 分布式锁（`cron:lock:{name}`，TTL 5min + ticker 续期）保证单实例执行，`wrapCronFunc` 注入 traceID / enabled 检查 / panic 恢复，4 个任务（dedup 每小时 / purge 周日 04:00 / think 每日 00:00 / hit-sync 每 5min）每次执行落 `CronCallAudit`（status + duration + trigger source）。
+
+![定时任务触发与执行](docs/diagrams/aris-cron-execution.png)
 
 ## 技术栈
 
