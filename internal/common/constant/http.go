@@ -63,9 +63,15 @@ const (
 
 	// MaxLLMProxyBodyBytes LLM 代理路由请求体大小上限（huma Operation.MaxBodyBytes）。
 	// huma 语义：0 为默认 1MB，-1 为不限制。LLM 请求体可能包含长上下文、多模态
-	// base64 内容（单图即可达数 MB），远超默认 1MB 限制，故代理路由显式放开；
-	// 最终限制由上游供应商（OpenAI/Anthropic）按自身策略执行。
+	// base64 内容（单图即可达数 MB），远超默认 1MB 限制，故代理路由显式放开 huma 层限制。
+	// 注意：请求体仍受 fiber 层 MaxHTTPBodyBytes 兜底（见 api/fiber.go BodyLimit），
+	// 防止无限 body + 全量内存缓冲导致的内存 DoS。
 	MaxLLMProxyBodyBytes int64 = -1
+
+	// MaxHTTPBodyBytes fiber 层全局请求体上限（BodyLimit）。
+	// fiber 默认 4MB（BodyLimit<=0 回落默认），超过即 413；
+	// 管理路由仍受 huma 默认 1MB 限制，此处仅兜底 LLM 代理路由放开后的大 body。
+	MaxHTTPBodyBytes int = 16 * 1024 * 1024
 
 	MIMETypeOctetStream = "application/octet-stream"
 

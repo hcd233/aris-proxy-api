@@ -17,9 +17,12 @@ func NewFiberApp() *fiber.App {
 		ReadTimeout:  config.ReadTimeout,
 		WriteTimeout: config.WriteTimeout,
 		IdleTimeout:  constant.IdleTimeout,
-		JSONEncoder:  sonic.Marshal,
-		JSONDecoder:  sonic.Unmarshal,
-		TrustProxy:   true,
+		// BodyLimit 兜底 LLM 代理路由（huma 层 MaxBodyBytes=-1 不限）后的大 body；
+		// fiber 默认 4MB（BodyLimit<=0 回落默认），超限直接 413。
+		BodyLimit:   constant.MaxHTTPBodyBytes,
+		JSONEncoder: sonic.Marshal,
+		JSONDecoder: sonic.Unmarshal,
+		TrustProxy:  true,
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Proxies: config.TrustedProxies,
 		},

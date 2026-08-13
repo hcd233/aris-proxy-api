@@ -14,17 +14,19 @@ import (
 )
 
 type deleteUserHandler struct {
-	repo identity.UserRepository
+	repo                identity.UserRepository
+	invalidateUserCache func(ctx context.Context, userID uint)
 }
 
 // NewDeleteUserHandler 构造
 //
 //	@param repo identity.UserRepository
+//	@param invalidateUserCache 用户删除后清理 Redis JWT 用户缓存（可为 nil）
 //	@return DeleteUserHandler
 //	@author centonhuang
 //	@update 2026-08-08 10:00:00
-func NewDeleteUserHandler(repo identity.UserRepository) port.DeleteUserHandler {
-	return &deleteUserHandler{repo: repo}
+func NewDeleteUserHandler(repo identity.UserRepository, invalidateUserCache func(ctx context.Context, userID uint)) port.DeleteUserHandler {
+	return &deleteUserHandler{repo: repo, invalidateUserCache: invalidateUserCache}
 }
 
 // Handle 执行用户删除（软删除 + 级联撤销 API Keys）
@@ -66,6 +68,10 @@ func (h *deleteUserHandler) Handle(ctx context.Context, cmd port.DeleteUserComma
 	if err := h.repo.DeleteCascade(ctx, cmd.UserID); err != nil {
 		log.Error("[IdentityCommand] DeleteCascade failed", zap.Error(err), zap.Uint("targetID", cmd.UserID))
 		return err
+	}
+	// 用户已删除：失效 Redis JWT 用户缓存，避免 TTL 内继续以已删用户身份访问
+	if h.invalidateUserCache != nil {
+		h.invalidateUserCache(ctx, cmd.UserID)
 	}
 	log.Info("[IdentityCommand] Delete user",
 		zap.Uint("operatorID", cmd.OperatorID), zap.Uint("targetID", cmd.UserID))

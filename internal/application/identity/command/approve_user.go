@@ -14,17 +14,19 @@ import (
 )
 
 type approveUserHandler struct {
-	repo identity.UserRepository
+	repo                identity.UserRepository
+	invalidateUserCache func(ctx context.Context, userID uint)
 }
 
 // NewApproveUserHandler 构造
 //
 //	@param repo identity.UserRepository
+//	@param invalidateUserCache 用户权限变更后清理 Redis JWT 用户缓存（可为 nil）
 //	@return ApproveUserHandler
 //	@author centonhuang
 //	@update 2026-08-07 10:00:00
-func NewApproveUserHandler(repo identity.UserRepository) port.ApproveUserHandler {
-	return &approveUserHandler{repo: repo}
+func NewApproveUserHandler(repo identity.UserRepository, invalidateUserCache func(ctx context.Context, userID uint)) port.ApproveUserHandler {
+	return &approveUserHandler{repo: repo, invalidateUserCache: invalidateUserCache}
 }
 
 // Handle 执行用户审核：仅允许 pending → user
@@ -63,6 +65,10 @@ func (h *approveUserHandler) Handle(ctx context.Context, cmd port.ApproveUserCom
 	if err := h.repo.Save(ctx, user); err != nil {
 		log.Error("[IdentityCommand] Save user failed", zap.Error(err), zap.Uint("targetID", cmd.UserID))
 		return err
+	}
+	// 权限已变更：失效 Redis JWT 用户缓存，避免 TTL 内继续以旧权限访问
+	if h.invalidateUserCache != nil {
+		h.invalidateUserCache(ctx, cmd.UserID)
 	}
 	log.Info("[IdentityCommand] Approve user",
 		zap.Uint("operatorID", cmd.OperatorID), zap.Uint("targetID", cmd.UserID))
