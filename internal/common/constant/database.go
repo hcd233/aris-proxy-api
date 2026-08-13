@@ -15,6 +15,7 @@ const (
 	DBConditionIDGreaterThan    = "id > ?"
 	DBConditionWhereIDIn        = "id IN ?"
 	DBOrderByID                 = "id"
+	DBConditionDedupKeyNotZero  = "dedup_key <> ''"
 
 	DBJSONConditionAssistantRole  = "(message::jsonb)->>'role' = 'assistant'"
 	DBJSONConditionHasThinkTag    = "(message::jsonb)->>'content' LIKE '%<think>%'"
