@@ -15,7 +15,9 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ## 系统架构
 
-![系统总览](docs/diagrams/aris-arch-01.png)
+后端按 DDD 分层组织：接口层（router / 十级中间件链 / handler / dto）→ 应用层（14 个用例模块的 `command`/`query`/`port`）→ 领域层（聚合、值对象、仓储接口）；基础设施层反向实现仓储接口完成依赖倒置，Cron 定时治理与 `bootstrap`/Fx 装配作为横切关注点。三类调用方分别是 Web 管理后台（JWT）、`aris` Trace CLI 与 Agentic 客户端（`X-API-Key`）。
+
+![系统总览 · DDD 分层](docs/diagrams/aris-arch-01.png)
 
 **LLM 代理链路**：鉴权/限流/敏感词 → 端点解析 → 跨协议转换 → 上游；响应同步返回，消息与审计经 Pond 协程池异步落库，不阻塞请求。
 
@@ -28,6 +30,14 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 **Agent Harness Trace 摄取**：Codex / Claude Code Hook 与 Rollout 事件由 `aris` CLI（fail-open）本地 spool 批量上报，鉴权去重后落库，Web 端投影为可阅读的调用链路。
 
 ![Agent Harness Trace 摄取](docs/diagrams/aris-trace-ingest.png)
+
+**Web 管理后台前端架构**：浏览器加载静态导出产物 → 根布局 Provider 链（I18n → Theme → Auth）→ 路由组（后台 14 页 / 公开 3 页，管理员页由 `PermissionGuard` 守卫）→ 组件与 6 个通用 hooks → `src/lib` 作为唯一后端出入口（Bearer 注入、401 单飞刷新、错误码 toast、数据集 SSE 导出）。
+
+![Web 管理后台前端架构](docs/diagrams/aris-web-frontend.png)
+
+**前端构建与内嵌交付**：`next build` 静态导出（`basePath: /web`）→ `make web-build` 拷贝并逐文件 `gzip -9` 预压缩（10MB → 3.5MB）→ `embed.FS` 随服务端二进制发布 → `/web/*` 显式解析 `Accept-Encoding` 直发预压缩内容，非静态路径回落 `index.html`。
+
+![前端构建与内嵌交付](docs/diagrams/aris-web-delivery.png)
 
 ## 技术栈
 
@@ -142,6 +152,9 @@ internal/
   bootstrap/      Fx 依赖注入与生命周期
   web/dist        前端构建产物（embed.FS）
 web/              Next.js 管理后台源码
+  src/app/        App Router 路由组（(dashboard) 14 页 · login / callback / share）
+  src/components/ 基础与业务组件（ui / charts / chat / session-detail / trace-detail）
+  src/lib/        api-client · auth-context · i18n · theme · types（后端 DTO 镜像）
 docker/           Dockerfile 与 Compose 配置
 env/              环境变量模板
 docs/             设计文档与架构图
