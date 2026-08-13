@@ -15,28 +15,19 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ## 系统架构
 
-```text
-客户端 (任意 LLM 客户端 / Agent Harness)
-    │
-    ▼
-Go API 服务 (Fiber + Huma)
-    ├── LLM 代理: 鉴权 → 双层限流 → 敏感词 → 端点解析 → 协议转换 → 上游 MaaS
-    ├── 管理 API: JWT + 权限 + Owner 隔离
-    └── Trace 上报: API Key + Owner 隔离
-    │
-    ├── PostgreSQL  业务数据持久化 (GORM)
-    ├── Redis       缓存 / 限流 / 分布式锁 / 临时状态
-    └── 对象存储     MinIO / 腾讯云 COS
-```
-
 ![系统总览](docs/diagrams/aris-arch-01.png)
 
-更多架构图（代理链路、会话生命周期、部署拓扑、启动链路、优雅关闭等）见 [docs/diagrams/](docs/diagrams/)，交互式版本（可缩放、含关键决策说明）：
+**LLM 代理链路**：鉴权/限流/敏感词 → 端点解析 → 跨协议转换 → 上游；响应同步返回，消息与审计经 Pond 协程池异步落库，不阻塞请求。
 
-- [aris-proxy-api-architecture.html](docs/diagrams/aris-proxy-api-architecture.html)
-- [aris-proxy-api-detail.html](docs/diagrams/aris-proxy-api-detail.html)
+![LLM 代理链路](docs/diagrams/aris-proxy-pipeline.png)
 
-（下载后用浏览器打开）
+**会话数据模型与生命周期**：LLM 转发与 Trace 摄取两路写入 Session 聚合根，Message/Tool 按 checksum 内容寻址去重，审计、缓存、导出与后台消费围绕其展开。
+
+![会话数据模型与生命周期](docs/diagrams/aris-session-data.png)
+
+**Agent Harness Trace 摄取**：Codex / Claude Code Hook 与 Rollout 事件由 `aris` CLI（fail-open）本地 spool 批量上报，鉴权去重后落库，Web 端投影为可阅读的调用链路。
+
+![Agent Harness Trace 摄取](docs/diagrams/aris-trace-ingest.png)
 
 ## 技术栈
 
@@ -133,6 +124,8 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 - **单机 Compose**：`docker compose -f docker/docker-compose-single.yml up -d`（需 `env/api.env`、`IMAGE_TAG` 和外部网络 `1panel-network`，迁移容器成功后 API 才启动，宿主机 `7070` → 容器 `8080`）；开发环境用 `docker-compose-dev-single.yml`（`7060` 端口）。
 - **Kubernetes**：Deployment + Service + ConfigMap/Secret，滚动更新；`preStop` + draining + `terminationGracePeriodSeconds` 支持 SSE 长连接无损下线。
 - **CI**：GitHub Actions 构建 GHCR 镜像并发布 `aris` 客户端 Release（tar.gz + sha256），服务端 `/install.sh` 提供自包含安装脚本。
+
+![部署与发布拓扑](docs/diagrams/aris-deploy-topology.png)
 
 ## 项目结构
 
