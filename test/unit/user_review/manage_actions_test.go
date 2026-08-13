@@ -16,7 +16,7 @@ func TestDemoteUser_UserToPending(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo(newUser(t, "bob", "bob@example.com", enum.PermissionUser))
 	target := repo.users[0]
-	handler := command.NewDemoteUserHandler(repo)
+	handler := command.NewDemoteUserHandler(repo, nil)
 
 	if err := handler.Handle(ctx, port.DemoteUserCommand{OperatorID: 99, UserID: target.AggregateID()}); err != nil {
 		t.Fatalf("demote failed: %v", err)
@@ -37,7 +37,7 @@ func TestDemoteUser_RejectsNonUser(t *testing.T) {
 		newUser(t, "alice", "alice@example.com", enum.PermissionPending),
 		newUser(t, "carol", "carol@example.com", enum.PermissionAdmin),
 	)
-	handler := command.NewDemoteUserHandler(repo)
+	handler := command.NewDemoteUserHandler(repo, nil)
 
 	for _, u := range repo.users {
 		if err := handler.Handle(ctx, port.DemoteUserCommand{OperatorID: 99, UserID: u.AggregateID()}); err == nil {
@@ -53,7 +53,7 @@ func TestDemoteUser_RejectsSelf(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo(newUser(t, "dave", "dave@example.com", enum.PermissionUser))
 	target := repo.users[0]
-	handler := command.NewDemoteUserHandler(repo)
+	handler := command.NewDemoteUserHandler(repo, nil)
 
 	if err := handler.Handle(ctx, port.DemoteUserCommand{OperatorID: target.AggregateID(), UserID: target.AggregateID()}); err == nil {
 		t.Fatalf("expected error for self-demote, got nil")
@@ -65,7 +65,7 @@ func TestDemoteUser_RejectsSelf(t *testing.T) {
 func TestDemoteUser_UserNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	handler := command.NewDemoteUserHandler(newFakeUserRepo())
+	handler := command.NewDemoteUserHandler(newFakeUserRepo(), nil)
 
 	err := handler.Handle(ctx, port.DemoteUserCommand{OperatorID: 99, UserID: 404})
 	if err == nil {
@@ -81,7 +81,7 @@ func TestDeleteUser_SoftDeletesUser(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo(newUser(t, "bob", "bob@example.com", enum.PermissionUser))
 	target := repo.users[0]
-	handler := command.NewDeleteUserHandler(repo)
+	handler := command.NewDeleteUserHandler(repo, nil)
 
 	if err := handler.Handle(ctx, port.DeleteUserCommand{OperatorID: 99, UserID: target.AggregateID()}); err != nil {
 		t.Fatalf("delete failed: %v", err)
@@ -100,7 +100,7 @@ func TestDeleteUser_RejectsAdmin(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo(newUser(t, "carol", "carol@example.com", enum.PermissionAdmin))
 	target := repo.users[0]
-	handler := command.NewDeleteUserHandler(repo)
+	handler := command.NewDeleteUserHandler(repo, nil)
 
 	if err := handler.Handle(ctx, port.DeleteUserCommand{OperatorID: 99, UserID: target.AggregateID()}); err == nil {
 		t.Fatalf("expected error for deleting admin, got nil")
@@ -114,7 +114,7 @@ func TestDeleteUser_RejectsSelf(t *testing.T) {
 	ctx := context.Background()
 	repo := newFakeUserRepo(newUser(t, "dave", "dave@example.com", enum.PermissionUser))
 	target := repo.users[0]
-	handler := command.NewDeleteUserHandler(repo)
+	handler := command.NewDeleteUserHandler(repo, nil)
 
 	if err := handler.Handle(ctx, port.DeleteUserCommand{OperatorID: target.AggregateID(), UserID: target.AggregateID()}); err == nil {
 		t.Fatalf("expected error for self-delete, got nil")
@@ -126,7 +126,7 @@ func TestDeleteUser_RejectsSelf(t *testing.T) {
 func TestDeleteUser_UserNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	handler := command.NewDeleteUserHandler(newFakeUserRepo())
+	handler := command.NewDeleteUserHandler(newFakeUserRepo(), nil)
 
 	err := handler.Handle(ctx, port.DeleteUserCommand{OperatorID: 99, UserID: 404})
 	if err == nil {

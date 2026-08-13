@@ -34,6 +34,21 @@ func bigBody(size int) string {
 func newTestApp(t *testing.T, maxBodyBytes *int64) *fiber.App {
 	t.Helper()
 	app := fiber.New()
+	return registerEchoOp(t, app, maxBodyBytes)
+}
+
+// newTestAppWithBodyLimit 类似 newTestApp，但显式设置 fiber 层 BodyLimit（全局兜底），
+// 并配合 huma MaxBodyBytes=-1（模拟 LLM 代理路由），使仅有 fiber 层限制生效。
+func newTestAppWithBodyLimit(t *testing.T, bodyLimit int) *fiber.App {
+	t.Helper()
+	app := fiber.New(fiber.Config{BodyLimit: bodyLimit})
+	unlimited := int64(-1)
+	return registerEchoOp(t, app, &unlimited)
+}
+
+// registerEchoOp 在给定 fiber app 上注册 echoBody operation（huma）。
+func registerEchoOp(t *testing.T, app *fiber.App, maxBodyBytes *int64) *fiber.App {
+	t.Helper()
 	humaAPI := humafiber.New(app, huma.Config{
 		OpenAPI:       &huma.OpenAPI{},
 		Formats:       huma.DefaultFormats,
@@ -111,6 +126,57 @@ func TestDefaultBodyLimit_RejectsOversizedBody(t *testing.T) {
 		body := new(strings.Builder)
 		_, _ = io.Copy(body, resp.Body)
 		t.Fatalf("默认限制路由大 body 请求状态码 = %d, want %d, body=%s", resp.StatusCode, http.StatusRequestEntityTooLarge, body)
+	}
+}
+
+// TestFiberBodyLimit_AllowsBodyAboveDefault4MB 验证 fiber 层 BodyLimit
+// 显式配置后，超过 fiber 默认 4MB 的 LLM 代理请求体可正常通过。
+//
+// 背景（Major，2026-08-12 review 发现）：
+//   - 此前仅设置 huma MaxBodyBytes=-1，fiber 默认 BodyLimit=4MB（<=0 回落默认），
+//     超过 4MB 的单图多模态请求仍 413，与「已放开限制」的注释不符。
+//   - 修复：fiber.New 显式配置 constant.MaxHTTPBodyBytes（16MB）兜底。
+func TestFiberBodyLimit_AllowsBodyAboveDefault4MB(t *testing.T) {
+	t.Parallel()
+	if constant.MaxHTTPBodyBytes <= 4*1024*1024 {
+		t.Fatalf("constant.MaxHTTPBodyBytes = %d, want > 4MB", constant.MaxHTTPBodyBytes)
+	}
+	app := newTestAppWithBodyLimit(t, constant.MaxHTTPBodyBytes)
+
+	// 5MB body，超过 fiber 默认 4MB（旧实现会 413），修复后应通过。
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/body", strings.NewReader(bigBody(5*1024*1024)))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body := new(strings.Builder)
+		_, _ = io.Copy(body, resp.Body)
+		t.Fatalf("5MB body 状态码 = %d, want %d, body=%s", resp.StatusCode, http.StatusOK, body)
+	}
+}
+
+// TestFiberBodyLimit_RejectsBodyAboveLimit 验证 fiber 层 BodyLimit 之上
+// 的超大请求体仍被拒绝（防内存 DoS 兜底）。
+func TestFiberBodyLimit_RejectsBodyAboveLimit(t *testing.T) {
+	t.Parallel()
+	app := newTestAppWithBodyLimit(t, constant.MaxHTTPBodyBytes)
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/body", strings.NewReader(bigBody(constant.MaxHTTPBodyBytes+1)))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		// fiber/fasthttp 在读取阶段即拦截超限 body（测试环境无 HTTP 响应对象）
+		t.Logf("超限 body 被拦截: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusRequestEntityTooLarge {
+		body := new(strings.Builder)
+		_, _ = io.Copy(body, resp.Body)
+		t.Fatalf("超限 body 状态码 = %d, want %d, body=%s", resp.StatusCode, http.StatusRequestEntityTooLarge, body)
 	}
 }
 

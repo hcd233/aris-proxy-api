@@ -35,6 +35,7 @@ type ThinkExtractCron struct {
 	cron    *cron.Cron
 	repo    conversation.ThinkExtractRepository
 	locker  *lock.RedisLocker
+	cache   *redis.Client
 	lockKey string
 }
 
@@ -50,6 +51,7 @@ func NewThinkExtractCron(repo conversation.ThinkExtractRepository, cache *redis.
 		),
 		repo:   repo,
 		locker: lock.NewLocker(cache),
+		cache:  cache,
 	}
 }
 
@@ -151,6 +153,13 @@ func (c *ThinkExtractCron) extract(ctx context.Context) (*commonmodel.CronCallAu
 			if err := c.repo.UpdateMessageContent(ctx, msg.ID, msg.Message); err != nil {
 				log.Error("[ThinkExtractCron] Update error", zap.Uint("id", msg.ID), zap.Error(err))
 				continue
+			}
+			// DB 内容已变更：失效 session 详情中的消息缓存（message:{id}），
+			// 否则用户在缓存 TTL（60min）内看到的是带 <think> 标签的旧内容。
+			msgCacheKey := fmt.Sprintf(constant.MessageKeyTemplate, msg.ID)
+			if delErr := c.cache.Del(ctx, msgCacheKey).Err(); delErr != nil {
+				log.Warn("[ThinkExtractCron] Invalidate message cache failed",
+					zap.Uint("id", msg.ID), zap.String("key", msgCacheKey), zap.Error(delErr))
 			}
 			totalProcessed++
 		}
