@@ -74,7 +74,7 @@
     <div class="header">
       <p class="header-eyebrow">Architecture · aris-proxy-api · LLM Proxy Gateway</p>
       <h1>aris-proxy-api 架构全景</h1>
-      <p class="subtitle">一个 Go 实现的 LLM 代理网关与管理后台：统一接入多个 MaaS 平台与 API 协议，承载 7 条跨协议转发路径，向下沉淀会话与审计数据，向上提供管理 API、训练数据导出与 Agent Harness Trace 分析。以下七张图分别刻画 DDD 分层总览、LLM 代理链路、会话数据模型、Trace 摄取管线、Web 管理后台前端架构、前端内嵌交付链路与部署发布拓扑。</p>
+      <p class="subtitle">一个 Go 实现的 LLM 代理网关与管理后台：统一接入多个 MaaS 平台与 API 协议，承载 7 条跨协议转发路径，向下沉淀会话与审计数据，向上提供管理 API、训练数据导出与 Agent Harness Trace 分析。以下八张图分别刻画 DDD 分层总览、LLM 代理链路、会话数据模型、Trace 摄取管线、Web 管理后台前端架构、前端内嵌交付链路、部署发布拓扑与运维运行时治理。</p>
     </div>
 
     <!-- ============================================================ -->
@@ -1209,6 +1209,267 @@
       </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- 图 8 · 运维与运行时治理 → aris-runtime-ops.png -->
+    <!-- ============================================================ -->
+    <div class="section">
+      <div class="section-head"><span class="idx">08</span><h2>运维与运行时治理</h2></div>
+      <p class="section-sub">运行时指标采集与聚合 · 优雅退出序列 · 敏感词热更新 · 定时任务触发与执行（Redis 分布式锁 + 跨 Pod 广播 + 审计）</p>
+      <div class="diagram-container">
+        <svg class="diagram" viewBox="0 0 1000 876" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dops-title dops-desc">
+          <title id="dops-title">运维与运行时治理</title>
+          <desc id="dops-desc">运维与横切关注点四宫格：其一运行时指标采集——进程内 HTTPCollector/SSEGauge/TokenUsageCounter 与 Go runtime 采集器经每 Pod 一个的 Metrics Flusher 周期性 BuildSnapshot 写入 Redis 快照（retention 过期清理），再由 /metrics Prometheus 与运行时大盘消费；其二优雅退出序列——SIGINT/SIGTERM 触发 Fx OnStop 逆序执行，依次停 cron、停 pond 协程池、inflight drain 等在途、关 HTTP（ShutdownWithContext 泄流 SSE 长连接）、关 DB/Redis 并同步日志；其三敏感词热更新——管理后台 /block 写入 DB 后 NotifyChanged（Redis Publish 即时信号 + INCR 版本计数），各 Pod BlockedService 经 pub/sub、版本轮询与低频兜底三重同步全量 Rebuild 内存 AC 匹配器，命中计数经 hit-sync cron 每 5 分钟回写 DB；其四定时任务触发与执行——管理后台 /cron 更新 spec 或手动触发，CronManager 热重载并经 Redis pub/sub 跨 Pod 广播，任务以 Redis 分布式锁（TTL + ticker 续期）保证单实例执行，执行注入 traceID、panic 恢复并落 CronCallAudit 审计。</desc>
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+          <!-- ================= Zone 1 · Metrics ================= -->
+          <rect x="30" y="40" width="940" height="176" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="38" y="44" width="204" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="140" y="53" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">01 · METRICS · 运行时指标采集</text>
+
+          <!-- ================= Zone 2 · Shutdown ================= -->
+          <rect x="30" y="240" width="940" height="176" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="38" y="244" width="204" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="140" y="253" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">02 · SHUTDOWN · 优雅退出序列</text>
+
+          <!-- ================= Zone 3 · Blocked hot-reload ================= -->
+          <rect x="30" y="440" width="940" height="176" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="38" y="444" width="204" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="140" y="453" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">03 · BLOCKED · 敏感词热更新</text>
+
+          <!-- ================= Zone 4 · Cron trigger & execute ================= -->
+          <rect x="30" y="640" width="940" height="176" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="38" y="644" width="204" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="140" y="653" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">04 · CRON · 定时任务触发与执行</text>
+
+          <!-- ================= ARROWS ================= -->
+          <!-- Zone 1 arrows (y=128) -->
+          <path d="M 264,128 H 304" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="270" y="108" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="284" y="117" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">采集</text>
+
+          <path d="M 504,128 H 544" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="510" y="108" width="44" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="532" y="117" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">写快照</text>
+
+          <path d="M 724,128 H 764" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="730" y="108" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="744" y="117" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">聚合</text>
+
+          <!-- Zone 2 arrows (y=328) -->
+          <path d="M 164,328 H 204" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="170" y="308" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="184" y="317" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">信号</text>
+
+          <path d="M 344,328 H 384" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="350" y="308" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="364" y="317" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">逆序</text>
+
+          <path d="M 584,328 H 624" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="590" y="308" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="604" y="317" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">停后台</text>
+
+          <path d="M 784,328 H 824" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="790" y="308" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="804" y="317" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">drain</text>
+
+          <!-- Zone 3 arrows (y=528) -->
+          <path d="M 194,528 H 234" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="200" y="508" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="214" y="517" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">广播</text>
+
+          <path d="M 374,528 H 414" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="380" y="508" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="394" y="517" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">同步</text>
+
+          <path d="M 614,528 H 654" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="620" y="508" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="634" y="517" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">重建</text>
+
+          <path d="M 804,528 H 844" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="810" y="508" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="824" y="517" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">命中</text>
+
+          <!-- Zone 4 arrows (y=728) -->
+          <path d="M 214,728 H 254" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="220" y="708" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="234" y="717" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">触发</text>
+
+          <path d="M 484,728 H 524" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="490" y="708" width="44" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="512" y="717" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">热重载</text>
+
+          <path d="M 744,728 H 784" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="750" y="708" width="28" height="12" rx="2" fill="#f5f5f5"/>
+          <text x="764" y="717" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">加锁</text>
+
+          <!-- ================= NODES · Zone 1 ================= -->
+          <rect x="44" y="76" width="220" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="44" y="76" width="220" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="52" y="84" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="65" y="93" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SRC</text>
+          <text x="154" y="102" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">进程内采集器</text>
+          <text x="154" y="120" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">HTTPCollector 时延 · 成功计数</text>
+          <text x="154" y="134" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SSEGauge 连接 · Token 吞吐</text>
+          <text x="154" y="148" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Go runtime goroutines/heap/CPU</text>
+
+          <rect x="304" y="76" width="200" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="304" y="76" width="200" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="312" y="84" width="38" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="331" y="93" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FLUSH</text>
+          <text x="404" y="102" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Metrics Flusher</text>
+          <text x="404" y="120" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">每 Pod 一实例 · 不进 cron</text>
+          <text x="404" y="134" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">BuildSnapshot 周期采集</text>
+          <text x="404" y="148" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">interval 定时循环</text>
+
+          <rect x="544" y="76" width="180" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="544" y="76" width="180" height="104" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="552" y="84" width="22" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+          <text x="563" y="93" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+          <text x="634" y="102" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Redis 快照</text>
+          <text x="634" y="120" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">每实例一份 Snapshot</text>
+          <text x="634" y="134" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">retention 过期清理</text>
+
+          <rect x="764" y="76" width="192" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="764" y="76" width="192" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="772" y="84" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="785" y="93" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">USE</text>
+          <text x="860" y="102" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">指标消费</text>
+          <text x="860" y="120" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/metrics Prometheus</text>
+          <text x="860" y="134" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">大盘 QPS · P95 · 成功率</text>
+          <text x="860" y="148" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">CPU · tokens/s · SSE</text>
+
+          <!-- ================= NODES · Zone 2 ================= -->
+          <rect x="44" y="276" width="120" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="44" y="276" width="120" height="104" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <rect x="52" y="284" width="30" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
+          <text x="67" y="293" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TRIG</text>
+          <text x="104" y="302" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">终止信号</text>
+          <text x="104" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SIGINT</text>
+          <text x="104" y="336" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SIGTERM</text>
+
+          <rect x="204" y="276" width="140" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="204" y="276" width="140" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="212" y="284" width="22" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="223" y="293" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FX</text>
+          <text x="274" y="302" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Fx Lifecycle</text>
+          <text x="274" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">OnStop 逆序执行</text>
+          <text x="274" y="336" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">8 个 Hook 链</text>
+
+          <rect x="384" y="276" width="200" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="384" y="276" width="200" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="392" y="284" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="407" y="293" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STOP</text>
+          <text x="484" y="302" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">后台收尾</text>
+          <text x="484" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">停 cron · 停 pond 协程池</text>
+          <text x="484" y="336" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">inflight drain 等在途</text>
+
+          <rect x="624" y="276" width="160" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="624" y="276" width="160" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="632" y="284" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="647" y="293" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HTTP</text>
+          <text x="704" y="302" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">关闭 HTTP</text>
+          <text x="704" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ShutdownWithContext</text>
+          <text x="704" y="336" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SSE 长连接泄流</text>
+
+          <rect x="824" y="276" width="132" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="824" y="276" width="132" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="832" y="284" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="845" y="293" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">REL</text>
+          <text x="890" y="302" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">释放资源</text>
+          <text x="890" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">关 DB · 关 Redis</text>
+          <text x="890" y="336" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">日志 Sync</text>
+
+          <!-- ================= NODES · Zone 3 ================= -->
+          <rect x="44" y="476" width="150" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="44" y="476" width="150" height="104" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <rect x="52" y="484" width="22" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
+          <text x="63" y="493" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+          <text x="119" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">管理后台 /block</text>
+          <text x="119" y="522" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">create/update/delete</text>
+          <text x="119" y="536" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">写 DB + 广播</text>
+
+          <rect x="234" y="476" width="140" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="234" y="476" width="140" height="104" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="242" y="484" width="22" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+          <text x="253" y="493" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+          <text x="304" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">变更信号</text>
+          <text x="304" y="522" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Publish 即时信号</text>
+          <text x="304" y="536" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">INCR 版本计数</text>
+
+          <rect x="414" y="476" width="200" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="414" y="476" width="200" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="422" y="484" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="436" y="493" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">POD</text>
+          <text x="514" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">各 Pod BlockedService</text>
+          <text x="514" y="522" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pub/sub · 版本轮询 2s</text>
+          <text x="514" y="536" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">低频兜底 5min · 全量 Rebuild</text>
+
+          <rect x="654" y="476" width="150" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="654" y="476" width="150" height="104" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <rect x="662" y="484" width="36" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+          <text x="680" y="493" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MATCH</text>
+          <text x="729" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">AC 匹配器</text>
+          <text x="729" y="522" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">内存 matcher</text>
+          <text x="729" y="536" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">命中 deny / omit</text>
+
+          <rect x="844" y="476" width="112" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="844" y="476" width="112" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="852" y="484" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="868" y="493" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CRON</text>
+          <text x="900" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">命中回写</text>
+          <text x="900" y="522" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">每 5min</text>
+          <text x="900" y="536" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">PopAll → DB</text>
+
+          <!-- ================= NODES · Zone 4 ================= -->
+          <rect x="44" y="676" width="170" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="44" y="676" width="170" height="104" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <rect x="52" y="684" width="22" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
+          <text x="63" y="693" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+          <text x="129" y="702" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">管理后台 /cron</text>
+          <text x="129" y="722" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">更新 spec / enabled</text>
+          <text x="129" y="736" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">手动触发</text>
+
+          <rect x="254" y="676" width="230" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="254" y="676" width="230" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="262" y="684" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="276" y="693" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MGR</text>
+          <text x="369" y="702" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">CronManager 热重载</text>
+          <text x="369" y="722" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Restart / Enable / Disable</text>
+          <text x="369" y="736" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pub/sub 跨 Pod 广播</text>
+
+          <rect x="524" y="676" width="220" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="524" y="676" width="220" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="532" y="684" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="545" y="693" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">JOB</text>
+          <text x="634" y="702" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">4 个 cron 任务 · 分布式锁</text>
+          <text x="634" y="722" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">dedup 每小时 · purge 周日</text>
+          <text x="634" y="736" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Redis 锁 TTL 5min + 续期</text>
+
+          <rect x="784" y="676" width="172" height="104" rx="6" fill="#f5f5f5"/>
+          <rect x="784" y="676" width="172" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="792" y="684" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+          <text x="806" y="693" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">RUN</text>
+          <text x="870" y="702" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">执行 + 审计</text>
+          <text x="870" y="722" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">traceID · panic 恢复</text>
+          <text x="870" y="736" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">CronCallAudit 落库</text>
+
+          <!-- Legend -->
+          <line x1="30" y1="840" x2="970" y2="840" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <text x="30" y="860" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+          <rect x="90" y="852" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="110" y="860" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">进程内组件</text>
+          <rect x="208" y="852" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="228" y="860" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">存储 · Redis</text>
+          <rect x="332" y="852" width="14" height="10" rx="2" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+          <text x="352" y="860" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">触发 / 客户端</text>
+          <rect x="470" y="852" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+          <text x="490" y="860" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">焦点 · 内存 matcher</text>
+          <line x1="616" y1="857" x2="636" y2="857" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <text x="644" y="860" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">数据流 / 信号 / 触发</text>
+        </svg>
+      </div>
+    </div>
+
     <!-- Cards -->
     <div class="cards">
       <div class="card">
@@ -1236,7 +1497,9 @@
           <li>限流：请求 <code>100/min</code> + Token <code>2M/min</code>（per API Key，Redis 令牌桶）。</li>
           <li>Trace spool：<code>256MiB</code> 上限 · 批量 <code>500 条 / 4MiB</code> · 超时 <code>5s</code> · rejected 保留 <code>7d</code>。</li>
           <li>K8s：limits <code>512Mi/300m</code> · <code>GOMEMLIMIT 440Mi</code> · preStop <code>10s</code> · grace <code>660s</code>。</li>
-          <li>Cron：dedup 每小时 · purge 周日 04:00 · think 每日 00:00 · hit-sync 每 5min。</li>
+          <li>Cron：dedup 每小时 · purge 周日 04:00 · think 每日 00:00 · hit-sync 每 5min · 锁 TTL <code>5min</code> + ticker 续期。</li>
+          <li>敏感词热更新：Publish 即时信号 + 版本轮询 <code>2s</code> + 低频兜底 <code>5min</code>，各 Pod 全量 Rebuild AC matcher。</li>
+          <li>Metrics：每 Pod Flusher 周期采集写 Redis 快照（retention 清理），聚合层 delta/桶宽 求 QPS/P95/成功率/CPU/tokens。</li>
           <li>缓存/分享：SessionDetailCache TTL <code>1h</code> · 分享默认 <code>24h</code>（1d/7d/30d/never）。</li>
         </ul>
       </div>
@@ -1254,7 +1517,7 @@
     </div>
 
     <div class="footer">
-      <span>aris-proxy-api · Architecture Overview · 7 diagrams</span>
+      <span>aris-proxy-api · Architecture Overview · 8 diagrams</span>
       <span>diagram-design v2.2 · accent #eb6c36</span>
     </div>
 
