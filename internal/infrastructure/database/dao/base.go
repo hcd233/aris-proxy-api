@@ -248,10 +248,7 @@ func (dao *baseDAO[ModelT]) Paginate(db *gorm.DB, where *ModelT, fields []string
 		})
 
 		if len(expressions) > 0 {
-			sql = sql.Where(expressions[0])
-			for _, expr := range expressions[1:] {
-				sql = sql.Or(expr)
-			}
+			sql = sql.Where(clause.Or(expressions...))
 		}
 	}
 
