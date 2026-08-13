@@ -127,6 +127,36 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
 
+	if matched := u.checkResponseContent(req); len(matched) > 0 {
+		_ = u.blockedChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
+
+		if denyIDs := u.blockedChecker.DenyIDs(matched); len(denyIDs) > 0 {
+			var upstreamProtocol enum.ProtocolType
+			switch compatRoute {
+			case enum.CompatRouteNative:
+				upstreamProtocol = enum.ProtocolOpenAIResponse
+			case enum.CompatRouteViaAnthropicMessage:
+				upstreamProtocol = enum.ProtocolAnthropicMessage
+			case enum.CompatRouteViaOpenAIChat:
+				upstreamProtocol = enum.ProtocolOpenAIChatCompletion
+			}
+			words := u.blockedChecker.MatchedWords(denyIDs)
+			auditTask := &dto.ModelCallAuditTask{
+				Ctx:              util.CopyContextValues(ctx),
+				ModelID:          m.ModelID(),
+				Endpoint:         ep.Name(),
+				UpstreamProtocol: upstreamProtocol,
+				APIProtocol:      enum.ProtocolOpenAIResponse,
+				ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
+			}
+			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
+			return nil, proxyutil.SendOpenAIContentBlockedError()   //nolint:nilerr // error returned in response body
+		}
+
+		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
+		ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+	}
+
 	switch compatRoute {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
