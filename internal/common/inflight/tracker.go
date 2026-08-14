@@ -1,6 +1,7 @@
 package inflight
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -11,13 +12,16 @@ import (
 )
 
 type Tracker struct {
-	wg    sync.WaitGroup
-	state atomic.Int32
+	wg         sync.WaitGroup
+	state      atomic.Int32
+	cancelCh   chan struct{}
+	cancelOnce sync.Once
 }
 
 func NewTracker() *Tracker {
 	t := &Tracker{}
 	t.state.Store(constant.InflightStateRunning)
+	t.cancelCh = make(chan struct{})
 	return t
 }
 
@@ -37,7 +41,16 @@ func (t *Tracker) Untrack() {
 	t.wg.Done()
 }
 
-func (t *Tracker) Drain(timeout time.Duration) bool {
+// Drain 两阶段排空：soft 窗口内等待所有请求自然完成；soft 到点广播取消信号
+// （CancelOnDrain 派生的 ctx 被取消，使阻塞的上游读返回 context canceled），
+// 再等 hard 窗口让被截断的请求写完错误帧、计量并 Untrack。
+//
+//	@param soft time.Duration 自然等待窗口
+//	@param hard time.Duration 广播后的收尾窗口
+//	@return bool 所有请求是否已释放（hard 超时返回 false，由 HTTP shutdown 兜底）
+//	@author centonhuang
+//	@update 2026-08-15 10:00:00
+func (t *Tracker) Drain(soft, hard time.Duration) bool {
 	t.state.Store(constant.InflightStateDraining)
 
 	done := make(chan struct{})
@@ -50,11 +63,44 @@ func (t *Tracker) Drain(timeout time.Duration) bool {
 	case <-done:
 		logger.Logger().Info("[Inflight] All inflight requests completed")
 		return true
-	case <-time.After(timeout):
-		logger.Logger().Warn("[Inflight] Drain timed out, some requests may not have completed",
-			zap.Duration("timeout", timeout))
-		return false
+	case <-time.After(soft):
+		t.broadcastCancel()
+		logger.Logger().Warn("[Inflight] Drain soft deadline reached, canceling inflight requests",
+			zap.Duration("softTimeout", soft))
+		select {
+		case <-done:
+			logger.Logger().Info("[Inflight] All inflight requests completed after cancel")
+			return true
+		case <-time.After(hard):
+			logger.Logger().Warn("[Inflight] Drain hard deadline reached, some requests may not have completed",
+				zap.Duration("hardTimeout", hard))
+			return false
+		}
 	}
+}
+
+// CancelOnDrain 返回 ctx 的派生 context：drain soft deadline 广播时取消派生 ctx，
+// 使依赖该 ctx 的阻塞操作（如上游 SSE 读）退出。goroutine 在派生 ctx
+// （随请求结束而 done）时退出，不泄漏。
+//
+//	@param ctx context.Context
+//	@return context.Context
+//	@author centonhuang
+//	@update 2026-08-15 10:00:00
+func (t *Tracker) CancelOnDrain(ctx context.Context) context.Context {
+	derived, cancel := context.WithCancel(ctx)
+	go func() {
+		select {
+		case <-t.cancelCh:
+			cancel()
+		case <-derived.Done():
+		}
+	}()
+	return derived
+}
+
+func (t *Tracker) broadcastCancel() {
+	t.cancelOnce.Do(func() { close(t.cancelCh) })
 }
 
 func (t *Tracker) IsDraining() bool {

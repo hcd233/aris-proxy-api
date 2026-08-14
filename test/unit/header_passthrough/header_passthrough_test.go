@@ -19,6 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
@@ -247,7 +248,7 @@ func TestOpenAIProxy_CanonicalizesPassthroughHeader(t *testing.T) {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, map[string]string{
 		headerName: headerValue,
 	})
-	proxy := transport.NewOpenAIProxy()
+	proxy := transport.NewOpenAIProxy(inflight.NewTracker())
 	_, err = proxy.ForwardChatCompletion(ctx, vo.UpstreamEndpoint{
 		Model:   "test-model",
 		APIKey:  "test-key",
