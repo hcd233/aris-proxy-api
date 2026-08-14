@@ -10,8 +10,12 @@ const (
 	SSEDoneSignal  = "[DONE]"
 	SSEEventPrefix = "event: "
 
-	AnthropicMessageStopSSEFrame = "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
-	AnthropicMessageStopData     = `{"type":"message_stop"}`
+	AnthropicMessageStopSSEFrame  = "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+	AnthropicMessageStopData      = `{"type":"message_stop"}`
+	AnthropicContentBlockStopData = `{"type":"content_block_stop","index":0}`
+
+	// ResponseObjectValue Response API 响应对象的 object 字段值
+	ResponseObjectValue = "response"
 
 	SSEDataFrameTemplate        = "data: %s\n\n"
 	SSEEventFrameTemplate       = "event: %s\ndata: %s\n\n"

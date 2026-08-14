@@ -155,7 +155,7 @@ const (
 	TagOpenAI    = "OpenAI"
 	TagSession   = "Session"
 	TagTrace     = "Trace"
-	TagBlocked   = "Blocked"
+	TagTrigger   = "Trigger"
 	TagDataset   = "Dataset"
 	TagUser      = "User"
 
@@ -180,21 +180,25 @@ const (
 	// ── Session option values ──
 	SessionOptionScoreValueUnscored = "unscored"
 
-	// ── Blocked Word constants ──
-	BlockedContentBlockedErrorMessage = "ContentBlocked"
-	BlockedContentBlockedErrorType    = "forbidden"
-	BlockedContentBlockedErrorCode    = "content_blocked"
-	BlockedAuditRemark                = "trigger blocked word"
-	BlockedAuditRemarkTemplate        = "trigger blocked word: %s"
-	BlockedWordSeparator              = ", "
-	BlockedTableName                  = "blocked_words"
-	BlockedHitKeyPrefix               = "blocked:hit:%d"
-	BlockedHitKeyScanPattern          = "blocked:hit:*"
-	BlockedVersionKey                 = "blocked:version"
-	BlockedChangeChannel              = "blocked:changed"
-	BlockedChangeMessage              = "changed"
-	BlockedLowFreqRebuildInterval     = 5 * time.Minute
-	BlockedVersionPollInterval        = 2 * time.Second
+	// ── Trigger Word constants ──
+	TriggerContentBlockedErrorMessage = "ContentBlocked"
+	TriggerContentBlockedErrorType    = "forbidden"
+	TriggerContentBlockedErrorCode    = "content_blocked"
+	TriggerAuditRemark                = "deny by trigger word"
+	TriggerAuditRemarkTemplate        = "deny by trigger word: %s"
+	TriggerCaptureAuditRemark         = "capture context by trigger word"
+	TriggerCaptureAuditTemplate       = "capture context by trigger word: %s"
+	TriggerCaptureSavedReply          = "Context saved."
+	TriggerCaptureEmptyReply          = "No conversation history to save."
+	TriggerWordSeparator              = ", "
+	TriggerTableName                  = "trigger_words"
+	TriggerHitKeyPrefix               = "trigger:hit:%d"
+	TriggerHitKeyScanPattern          = "trigger:hit:*"
+	TriggerVersionKey                 = "trigger:version"
+	TriggerChangeChannel              = "trigger:changed"
+	TriggerChangeMessage              = "changed"
+	TriggerLowFreqRebuildInterval     = 5 * time.Minute
+	TriggerVersionPollInterval        = 2 * time.Second
 
 	// ── Cron Pub/Sub ──
 	CronReloadChannel = "cron:reload"

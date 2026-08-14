@@ -10,52 +10,57 @@ import (
 	"github.com/samber/lo"
 )
 
-// fakeBlockedChecker 可配置的 BlockedChecker 假实现：
-// blockedIDs 命中即返回；denyIDs 控制哪些命中词为 deny。
-type fakeBlockedChecker struct {
-	blockedIDs []uint
+// fakeTriggerChecker 可配置的 TriggerChecker 假实现：
+// triggerIDs 命中即返回；denyIDs 控制哪些命中词为 deny；captureIDs 控制哪些命中词为 capture。
+type fakeTriggerChecker struct {
+	triggerIDs []uint
 	denyIDs    []uint
+	captureIDs []uint
 	hits       []uint
 }
 
-func (f *fakeBlockedChecker) Check(text string) []uint {
-	if len(f.blockedIDs) == 0 {
+func (f *fakeTriggerChecker) Check(text string) []uint {
+	if len(f.triggerIDs) == 0 {
 		return nil
 	}
-	return f.blockedIDs
+	return f.triggerIDs
 }
 
-func (f *fakeBlockedChecker) MatchedWords(ids []uint) []string {
-	return []string{"敏感词"}
+func (f *fakeTriggerChecker) MatchedWords(ids []uint) []string {
+	return []string{"触发词"}
 }
 
-func (f *fakeBlockedChecker) DenyIDs(ids []uint) []uint {
+func (f *fakeTriggerChecker) DenyIDs(ids []uint) []uint {
 	return f.denyIDs
 }
 
-func (f *fakeBlockedChecker) IncrementHits(_ context.Context, ids []uint) error {
+func (f *fakeTriggerChecker) CaptureIDs(ids []uint) []uint {
+	return f.captureIDs
+}
+
+func (f *fakeTriggerChecker) IncrementHits(_ context.Context, ids []uint) error {
 	f.hits = append(f.hits, ids...)
 	return nil
 }
 
-// TestOpenAICreateResponse_DenyBlockedInput
-// /responses 输入命中 deny 敏感词时必须返回 403 拦截（ContentBlocked），
+// TestOpenAICreateResponse_DenyTriggerInput
+// /responses 输入命中 deny 触发词时必须返回 403 拦截（ContentBlocked），
 // 且不触达上游代理（responseUnaryCalled 保持 false）。
-func TestOpenAICreateResponse_DenyBlockedInput(t *testing.T) {
+func TestOpenAICreateResponse_DenyTriggerInput(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	blocked := &fakeBlockedChecker{blockedIDs: []uint{1}, denyIDs: []uint{1}}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, blocked, nil)
+	trigger := &fakeTriggerChecker{triggerIDs: []uint{1}, denyIDs: []uint{1}}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, trigger, nil)
 
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("test-alias"),
-		Input: &dto.ResponseInput{Text: "这条消息包含敏感词内容"},
+		Input: &dto.ResponseInput{Text: "这条消息包含触发词内容"},
 	}}
 
 	result, err := uc.CreateResponse(context.Background(), req)
 	if err == nil {
-		t.Fatalf("expected blocked error, got nil result=%v", result)
+		t.Fatalf("expected trigger error, got nil result=%v", result)
 	}
 	proxyErr, ok := err.(*port.ProxyError)
 	if !ok {
@@ -65,54 +70,54 @@ func TestOpenAICreateResponse_DenyBlockedInput(t *testing.T) {
 		t.Fatalf("status = %d, want 403", proxyErr.StatusCode)
 	}
 	if proxy.responseUnaryCalled || proxy.responseStreamCalled {
-		t.Fatal("upstream must not be called for blocked request")
+		t.Fatal("upstream must not be called for trigger request")
 	}
 }
 
-// TestOpenAICreateResponse_DenyBlockedInstructions
-// Instructions（系统指令）字段同样参与敏感词扫描。
-func TestOpenAICreateResponse_DenyBlockedInstructions(t *testing.T) {
+// TestOpenAICreateResponse_DenyTriggerInstructions
+// Instructions（系统指令）字段同样参与触发词扫描。
+func TestOpenAICreateResponse_DenyTriggerInstructions(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	blocked := &fakeBlockedChecker{blockedIDs: []uint{1}, denyIDs: []uint{1}}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, blocked, nil)
+	trigger := &fakeTriggerChecker{triggerIDs: []uint{1}, denyIDs: []uint{1}}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, trigger, nil)
 
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
 		Model:        lo.ToPtr("test-alias"),
-		Instructions: lo.ToPtr("系统指令里也有敏感词"),
+		Instructions: lo.ToPtr("系统指令里也有触发词"),
 	}}
 
 	_, err := uc.CreateResponse(context.Background(), req)
 	if err == nil {
-		t.Fatal("expected blocked error for instructions, got nil")
+		t.Fatal("expected trigger error for instructions, got nil")
 	}
 	if proxyErr, ok := err.(*port.ProxyError); !ok || proxyErr.StatusCode != 403 {
 		t.Fatalf("err = %v, want 403 ProxyError", err)
 	}
 }
 
-// TestOpenAICreateResponse_DenyBlockedItemContent
+// TestOpenAICreateResponse_DenyTriggerItemContent
 // ResponseInputItem 的 Content.Text / Queries / Arguments 均参与扫描。
-func TestOpenAICreateResponse_DenyBlockedItemContent(t *testing.T) {
+func TestOpenAICreateResponse_DenyTriggerItemContent(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	blocked := &fakeBlockedChecker{blockedIDs: []uint{1}, denyIDs: []uint{1}}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, blocked, nil)
+	trigger := &fakeTriggerChecker{triggerIDs: []uint{1}, denyIDs: []uint{1}}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, trigger, nil)
 
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("test-alias"),
 		Input: &dto.ResponseInput{Items: []*dto.ResponseInputItem{
-			{Content: &dto.ResponseInputMessageContent{Text: "包含敏感词的消息文本"}},
-			{Queries: []string{"file-search 查询含敏感词"}},
-			{Arguments: lo.ToPtr(`{"query":"函数参数含敏感词"}`)},
+			{Content: &dto.ResponseInputMessageContent{Text: "包含触发词的消息文本"}},
+			{Queries: []string{"file-search 查询含触发词"}},
+			{Arguments: lo.ToPtr(`{"query":"函数参数含触发词"}`)},
 		}},
 	}}
 
 	_, err := uc.CreateResponse(context.Background(), req)
 	if err == nil {
-		t.Fatal("expected blocked error for item content, got nil")
+		t.Fatal("expected trigger error for item content, got nil")
 	}
 	if proxyErr, ok := err.(*port.ProxyError); !ok || proxyErr.StatusCode != 403 {
 		t.Fatalf("err = %v, want 403 ProxyError", err)
@@ -125,8 +130,8 @@ func TestOpenAICreateResponse_OmitSkipsStore(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	blocked := &fakeBlockedChecker{blockedIDs: []uint{2}, denyIDs: nil}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, blocked, nil)
+	trigger := &fakeTriggerChecker{triggerIDs: []uint{2}, denyIDs: nil}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, trigger, nil)
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -150,14 +155,14 @@ func TestOpenAICreateResponse_OmitSkipsStore(t *testing.T) {
 	}
 }
 
-// TestOpenAICreateResponse_NoBlockedPassesThrough
+// TestOpenAICreateResponse_NoTriggerPassesThrough
 // 无命中词时正常转发（回归护栏）。
-func TestOpenAICreateResponse_NoBlockedPassesThrough(t *testing.T) {
+func TestOpenAICreateResponse_NoTriggerPassesThrough(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	blocked := &fakeBlockedChecker{blockedIDs: nil}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, blocked, nil)
+	trigger := &fakeTriggerChecker{triggerIDs: nil}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, trigger, nil)
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{

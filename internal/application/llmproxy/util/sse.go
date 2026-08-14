@@ -95,9 +95,9 @@ func SendOpenAIModelNotFoundError(modelName string) *port.ProxyError {
 //	@update 2026-07-25 10:00:00
 func SendOpenAIContentBlockedError() *port.ProxyError {
 	body := lo.Must1(sonic.Marshal(&dto.OpenAIError{
-		Message: constant.BlockedContentBlockedErrorMessage,
-		Type:    constant.BlockedContentBlockedErrorType,
-		Code:    constant.BlockedContentBlockedErrorCode,
+		Message: constant.TriggerContentBlockedErrorMessage,
+		Type:    constant.TriggerContentBlockedErrorType,
+		Code:    constant.TriggerContentBlockedErrorCode,
 	}))
 	return &port.ProxyError{
 		StatusCode: http.StatusForbidden,
@@ -118,8 +118,8 @@ func SendAnthropicContentBlockedError() *port.ProxyError {
 	body := lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
 		Type: constant.AnthropicInternalErrorBodyType,
 		Error: &dto.AnthropicError{
-			Type:    constant.BlockedContentBlockedErrorType,
-			Message: constant.BlockedContentBlockedErrorMessage,
+			Type:    constant.TriggerContentBlockedErrorType,
+			Message: constant.TriggerContentBlockedErrorMessage,
 		},
 	}))
 	return &port.ProxyError{

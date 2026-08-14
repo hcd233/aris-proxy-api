@@ -594,33 +594,33 @@ export interface CronCallAuditOptionListRsp extends CommonRsp {
   items: string[];
 }
 
-// ─── Blocked Words ─────────────────────────────────────────────────────────
+// ─── Trigger Words ──────────────────────────────────────────────────────────
 
-export type BlockedAction = "deny" | "omit";
+export type TriggerAction = "deny" | "omit" | "capture";
 
-export interface CreateBlockedReqBody {
+export interface CreateTriggerReqBody {
   word: string;
-  action?: BlockedAction;
+  action?: TriggerAction;
 }
 
-export interface UpdateBlockedReqBody {
-  action: BlockedAction;
+export interface UpdateTriggerReqBody {
+  action: TriggerAction;
 }
 
-export interface BlockedItem {
+export interface TriggerItem {
   id: number;
   word: string;
-  action: BlockedAction;
+  action: TriggerAction;
   hitCount: number;
   createdAt: string;
 }
 
-export interface ListBlockedRsp extends CommonRsp {
-  blocked?: BlockedItem[];
+export interface ListTriggerRsp extends CommonRsp {
+  trigger?: TriggerItem[];
   pageInfo?: PageInfo;
 }
 
-export interface DeleteBlockedRsp extends CommonRsp {
+export interface DeleteTriggerRsp extends CommonRsp {
   deletedCount?: number;
 }
 

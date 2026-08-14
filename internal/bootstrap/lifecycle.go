@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
-	blockedapp "github.com/hcd233/aris-proxy-api/internal/application/blocked"
+	triggerapp "github.com/hcd233/aris-proxy-api/internal/application/trigger"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
@@ -32,7 +32,7 @@ type lifecycleParams struct {
 	MetricsFlusher  *metrics.Flusher
 	CronEntries     []cron.Cron
 	CronManager     *cron.CronManager
-	BlockedService  *blockedapp.BlockedService
+	TriggerService  *triggerapp.TriggerService
 	ListenHost      string `name:"listenHost"`
 	ListenPort      string `name:"listenPort"`
 }
@@ -58,12 +58,12 @@ func registerLifecycleHooks(params lifecycleParams) {
 
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			_ = params.BlockedService.Rebuild(ctx) //nolint:errcheck // 启动失败由 syncLoop 兜底
-			params.BlockedService.StartSync(ctx)
+			_ = params.TriggerService.Rebuild(ctx) //nolint:errcheck // 启动失败由 syncLoop 兜底
+			params.TriggerService.StartSync(ctx)
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			params.BlockedService.StopSync()
+			params.TriggerService.StopSync()
 			return nil
 		},
 	})

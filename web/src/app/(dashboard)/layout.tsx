@@ -61,8 +61,8 @@ function getNavItems(): NavItem[] {
     },
     { labelKey: "nav.models", href: "/models/", icon: <Cpu className="size-4" />, adminOnly: true },
     {
-      labelKey: "nav.blocked",
-      href: "/blocked/",
+      labelKey: "nav.trigger",
+      href: "/trigger/",
       icon: <Ban className="size-4" />,
       adminOnly: true,
     },

@@ -15,7 +15,7 @@ import (
 )
 
 // TestProxyError_PreservesFields 验证 ProxyError 能完整携带 adapter 构造 HTTP JSON 响应所需的全部信息：
-// status、headers、body、cause 和入口协议。后续迁移路径中业务错误（model not found、content blocked）
+// status、headers、body、cause 和入口协议。后续迁移路径中业务错误（model not found、content trigger）
 // 与上游 Open 错误都通过此类型向 adapter 传递。
 func TestProxyError_PreservesFields(t *testing.T) {
 	t.Parallel()

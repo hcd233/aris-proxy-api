@@ -3,7 +3,6 @@ package modules
 import (
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
-	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
@@ -15,6 +14,7 @@ import (
 	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
+	triggerport "github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
@@ -47,8 +47,8 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewCronHandler,
 		handler.NewOpenAIHandler,
 		handler.NewAnthropicHandler,
-		NewBlockedDependencies,
-		handler.NewBlockedHandler,
+		NewTriggerDependencies,
+		handler.NewTriggerHandler,
 		NewMetricsDependencies,
 		handler.NewMetricsHandler,
 		NewDatasetDependencies,
@@ -156,8 +156,8 @@ func NewModelDependencies(create modelport.CreateModelHandler, update modelport.
 	return handler.ModelDependencies{Create: create, Update: update, Delete: deleteHandler, List: list}
 }
 
-func NewBlockedDependencies(create blockedport.CreateBlockedHandler, update blockedport.UpdateBlockedHandler, del blockedport.DeleteBlockedHandler, list blockedport.ListBlockedHandler) handler.BlockedDependencies {
-	return handler.BlockedDependencies{Create: create, Update: update, Delete: del, List: list}
+func NewTriggerDependencies(create triggerport.CreateTriggerHandler, update triggerport.UpdateTriggerHandler, del triggerport.DeleteTriggerHandler, list triggerport.ListTriggerHandler) handler.TriggerDependencies {
+	return handler.TriggerDependencies{Create: create, Update: update, Delete: del, List: list}
 }
 
 func NewMetricsDependencies(runtimeMetrics metricsport.RuntimeMetricsService) handler.MetricsDependencies {

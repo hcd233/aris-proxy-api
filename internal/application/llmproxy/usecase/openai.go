@@ -31,7 +31,7 @@ type openAIUseCase struct {
 	openAIProxy    OpenAIProxyPort
 	anthropicProxy AnthropicProxyPort
 	taskSubmitter  TaskSubmitter
-	blockedChecker BlockedChecker
+	triggerChecker TriggerChecker
 	tokenMetrics   *metrics.TokenUsageCounter
 }
 
@@ -41,7 +41,7 @@ func NewOpenAIUseCase(
 	openAIProxy OpenAIProxyPort,
 	anthropicProxy AnthropicProxyPort,
 	taskSubmitter TaskSubmitter,
-	blockedChecker BlockedChecker,
+	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
 ) port.OpenAIUseCase {
 	return &openAIUseCase{
@@ -50,7 +50,7 @@ func NewOpenAIUseCase(
 		openAIProxy:    openAIProxy,
 		anthropicProxy: anthropicProxy,
 		taskSubmitter:  taskSubmitter,
-		blockedChecker: blockedChecker,
+		triggerChecker: triggerChecker,
 		tokenMetrics:   tokenMetrics,
 	}
 }
@@ -73,9 +73,9 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	}
 
 	if matched := u.checkContent(req); len(matched) > 0 {
-		_ = u.blockedChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
+		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
 
-		if denyIDs := u.blockedChecker.DenyIDs(matched); len(denyIDs) > 0 {
+		if denyIDs := u.triggerChecker.DenyIDs(matched); len(denyIDs) > 0 {
 			var upstreamProtocol enum.ProtocolType
 			switch compatRoute {
 			case enum.CompatRouteNative:
@@ -83,17 +83,28 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 			case enum.CompatRouteViaAnthropicMessage:
 				upstreamProtocol = enum.ProtocolAnthropicMessage
 			}
-			words := u.blockedChecker.MatchedWords(denyIDs)
+			words := u.triggerChecker.MatchedWords(denyIDs)
 			auditTask := &dto.ModelCallAuditTask{
 				Ctx:              util.CopyContextValues(ctx),
 				ModelID:          m.ModelID(),
 				Endpoint:         ep.Name(),
 				UpstreamProtocol: upstreamProtocol,
 				APIProtocol:      enum.ProtocolOpenAIChatCompletion,
-				ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
+				ErrorMessage:     fmt.Sprintf(constant.TriggerAuditRemarkTemplate, formatTriggerWords(words)),
 			}
 			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
 			return nil, proxyutil.SendOpenAIContentBlockedError()   //nolint:nilerr // error returned in response body
+		}
+
+		var chatUpstreamProtocol enum.ProtocolType
+		switch compatRoute {
+		case enum.CompatRouteViaAnthropicMessage:
+			chatUpstreamProtocol = enum.ProtocolAnthropicMessage
+		default:
+			chatUpstreamProtocol = enum.ProtocolOpenAIChatCompletion
+		}
+		if result := u.interceptChatCapture(ctx, req, m, ep, chatUpstreamProtocol, matched, lo.FromPtr(req.Body.Stream)); result != nil {
+			return result, nil
 		}
 
 		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
@@ -128,9 +139,9 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	}
 
 	if matched := u.checkResponseContent(req); len(matched) > 0 {
-		_ = u.blockedChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
+		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
 
-		if denyIDs := u.blockedChecker.DenyIDs(matched); len(denyIDs) > 0 {
+		if denyIDs := u.triggerChecker.DenyIDs(matched); len(denyIDs) > 0 {
 			var upstreamProtocol enum.ProtocolType
 			switch compatRoute {
 			case enum.CompatRouteNative:
@@ -140,17 +151,30 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 			case enum.CompatRouteViaOpenAIChat:
 				upstreamProtocol = enum.ProtocolOpenAIChatCompletion
 			}
-			words := u.blockedChecker.MatchedWords(denyIDs)
+			words := u.triggerChecker.MatchedWords(denyIDs)
 			auditTask := &dto.ModelCallAuditTask{
 				Ctx:              util.CopyContextValues(ctx),
 				ModelID:          m.ModelID(),
 				Endpoint:         ep.Name(),
 				UpstreamProtocol: upstreamProtocol,
 				APIProtocol:      enum.ProtocolOpenAIResponse,
-				ErrorMessage:     fmt.Sprintf(constant.BlockedAuditRemarkTemplate, formatBlockedWords(words)),
+				ErrorMessage:     fmt.Sprintf(constant.TriggerAuditRemarkTemplate, formatTriggerWords(words)),
 			}
 			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
 			return nil, proxyutil.SendOpenAIContentBlockedError()   //nolint:nilerr // error returned in response body
+		}
+
+		var responseUpstreamProtocol enum.ProtocolType
+		switch compatRoute {
+		case enum.CompatRouteViaAnthropicMessage:
+			responseUpstreamProtocol = enum.ProtocolAnthropicMessage
+		case enum.CompatRouteViaOpenAIChat:
+			responseUpstreamProtocol = enum.ProtocolOpenAIChatCompletion
+		default:
+			responseUpstreamProtocol = enum.ProtocolOpenAIResponse
+		}
+		if result := u.interceptResponseCapture(ctx, req, m, ep, responseUpstreamProtocol, matched, lo.FromPtr(req.Body.Stream)); result != nil {
+			return result, nil
 		}
 
 		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）

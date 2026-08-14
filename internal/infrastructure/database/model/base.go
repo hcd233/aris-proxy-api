@@ -27,7 +27,7 @@ var Models = []any{
 	&Model{},
 	&ProxyAPIKey{},
 	&ModelCallAudit{},
-	&Blocked{},
+	&Trigger{},
 	&CronJob{},
 	&CronCallAudit{},
 	&Trace{},

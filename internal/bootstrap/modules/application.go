@@ -9,10 +9,6 @@ import (
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	auditquery "github.com/hcd233/aris-proxy-api/internal/application/audit/query"
-	blockedapp "github.com/hcd233/aris-proxy-api/internal/application/blocked"
-	blockedcommand "github.com/hcd233/aris-proxy-api/internal/application/blocked/command"
-	blockedport "github.com/hcd233/aris-proxy-api/internal/application/blocked/port"
-	blockedquery "github.com/hcd233/aris-proxy-api/internal/application/blocked/query"
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronauditquery "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/query"
 	cronmgmtcommand "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/command"
@@ -40,11 +36,14 @@ import (
 	tracecommand "github.com/hcd233/aris-proxy-api/internal/application/trace/command"
 	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	tracequery "github.com/hcd233/aris-proxy-api/internal/application/trace/query"
+	triggerapp "github.com/hcd233/aris-proxy-api/internal/application/trigger"
+	triggercommand "github.com/hcd233/aris-proxy-api/internal/application/trigger/command"
+	triggerport "github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
+	triggerquery "github.com/hcd233/aris-proxy-api/internal/application/trigger/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	cronpkg "github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
-	blockeddomain "github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -52,6 +51,7 @@ import (
 	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
+	triggerdomain "github.com/hcd233/aris-proxy-api/internal/domain/trigger"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -120,13 +120,13 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		usecase.NewCountTokens,
 		usecase.NewOpenAIUseCase,
 		usecase.NewAnthropicUseCase,
-		NewBlockedService,
-		NewBlockedChecker,
-		NewBlockedHitRecorder,
-		NewCreateBlockedHandler,
-		NewUpdateBlockedHandler,
-		NewDeleteBlockedHandler,
-		NewListBlockedHandler,
+		NewTriggerService,
+		NewTriggerChecker,
+		NewTriggerHitRecorder,
+		NewCreateTriggerHandler,
+		NewUpdateTriggerHandler,
+		NewDeleteTriggerHandler,
+		NewListTriggerHandler,
 		NewRuntimeMetricsHandler,
 		NewPreviewDatasetHandler,
 		NewExportDatasetHandler,
@@ -350,44 +350,44 @@ func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport
 	return sessionquery.NewListSessionOptionHandler(readRepo)
 }
 
-func NewBlockedService(repo blockeddomain.BlockedRepository, hitRecorder blockedport.HitRecorder, cache *redis.Client) *blockedapp.BlockedService {
-	return blockedapp.NewBlockedService(repo, hitRecorder, cache)
+func NewTriggerService(repo triggerdomain.TriggerRepository, hitRecorder triggerport.HitRecorder, cache *redis.Client) *triggerapp.TriggerService {
+	return triggerapp.NewTriggerService(repo, hitRecorder, cache)
 }
 
-func NewBlockedChecker(svc *blockedapp.BlockedService) usecase.BlockedChecker {
+func NewTriggerChecker(svc *triggerapp.TriggerService) usecase.TriggerChecker {
 	return svc
 }
 
-func NewBlockedHitRecorder(blockedCache *cache.BlockedHitCache) blockedport.HitRecorder {
-	return blockedCache
+func NewTriggerHitRecorder(triggerCache *cache.TriggerHitCache) triggerport.HitRecorder {
+	return triggerCache
 }
 
-func NewCreateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.CreateBlockedHandler {
-	return blockedcommand.NewCreateBlockedHandler(
+func NewCreateTriggerHandler(repo triggerdomain.TriggerRepository, svc *triggerapp.TriggerService) triggerport.CreateTriggerHandler {
+	return triggercommand.NewCreateTriggerHandler(
 		repo,
 		func(ctx context.Context) { _ = svc.Rebuild(ctx) }, //nolint:errcheck // 本进程立即生效路径，失败由 A/B/C 通道重试
 		svc.NotifyChanged,
 	)
 }
 
-func NewUpdateBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.UpdateBlockedHandler {
-	return blockedcommand.NewUpdateBlockedHandler(
+func NewUpdateTriggerHandler(repo triggerdomain.TriggerRepository, svc *triggerapp.TriggerService) triggerport.UpdateTriggerHandler {
+	return triggercommand.NewUpdateTriggerHandler(
 		repo,
 		func(ctx context.Context) { _ = svc.Rebuild(ctx) }, //nolint:errcheck // 本进程立即生效路径，失败由 A/B/C 通道重试
 		svc.NotifyChanged,
 	)
 }
 
-func NewDeleteBlockedHandler(repo blockeddomain.BlockedRepository, svc *blockedapp.BlockedService) blockedport.DeleteBlockedHandler {
-	return blockedcommand.NewDeleteBlockedHandler(
+func NewDeleteTriggerHandler(repo triggerdomain.TriggerRepository, svc *triggerapp.TriggerService) triggerport.DeleteTriggerHandler {
+	return triggercommand.NewDeleteTriggerHandler(
 		repo,
 		func(ctx context.Context) { _ = svc.Rebuild(ctx) }, //nolint:errcheck // 本进程立即生效路径，失败由 A/B/C 通道重试
 		svc.NotifyChanged,
 	)
 }
 
-func NewListBlockedHandler(repo blockeddomain.BlockedRepository) blockedport.ListBlockedHandler {
-	return blockedquery.NewListBlockedHandler(repo)
+func NewListTriggerHandler(repo triggerdomain.TriggerRepository) triggerport.ListTriggerHandler {
+	return triggerquery.NewListTriggerHandler(repo)
 }
 
 func NewRuntimeMetricsHandler(runtimeCache *cache.RuntimeMetricsCache) metricsport.RuntimeMetricsService {

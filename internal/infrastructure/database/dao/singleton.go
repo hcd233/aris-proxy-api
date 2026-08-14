@@ -9,7 +9,7 @@ var (
 	modelDAOSingleton          *ModelDAO
 	proxyAPIKeyDAOSingleton    *ProxyAPIKeyDAO
 	modelCallAuditDAOSingleton *ModelCallAuditDAO
-	blockedDAOSingleton        *BlockedDAO
+	triggerDAOSingleton        *TriggerDAO
 	cronJobDAOSingleton        *CronJobDAO
 	cronCallAuditDAOSingleton  *CronCallAuditDAO
 	traceDAOSingleton          *TraceDAO
@@ -25,7 +25,7 @@ func init() {
 	modelDAOSingleton = &ModelDAO{}
 	proxyAPIKeyDAOSingleton = &ProxyAPIKeyDAO{}
 	modelCallAuditDAOSingleton = &ModelCallAuditDAO{}
-	blockedDAOSingleton = &BlockedDAO{}
+	triggerDAOSingleton = &TriggerDAO{}
 	cronJobDAOSingleton = &CronJobDAO{}
 	cronCallAuditDAOSingleton = &CronCallAuditDAO{}
 	traceDAOSingleton = &TraceDAO{}
@@ -96,8 +96,8 @@ func GetModelCallAuditDAO() *ModelCallAuditDAO {
 	return modelCallAuditDAOSingleton
 }
 
-func GetBlockedDAO() *BlockedDAO {
-	return blockedDAOSingleton
+func GetTriggerDAO() *TriggerDAO {
+	return triggerDAOSingleton
 }
 
 // GetCronJobDAO 获取 CronJob DAO

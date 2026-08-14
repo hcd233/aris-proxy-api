@@ -49,10 +49,11 @@ type OpenAIProxyPort interface {
 	ReadCreateResponseStream(ctx context.Context, stream io.ReadCloser, onEvent func(event string, data []byte) error) error
 }
 
-// BlockedChecker 敏感词检查端口
-type BlockedChecker interface {
+// TriggerChecker 触发词检查端口
+type TriggerChecker interface {
 	Check(text string) []uint
 	MatchedWords(ids []uint) []string
 	DenyIDs(ids []uint) []uint
+	CaptureIDs(ids []uint) []uint
 	IncrementHits(ctx context.Context, ids []uint) error
 }
