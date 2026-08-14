@@ -35,7 +35,7 @@ type APIRouterDependencies struct {
 	CronHandler      handler.CronHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
-	BlockedHandler   handler.BlockedHandler
+	TriggerHandler   handler.TriggerHandler
 	MetricsHandler   handler.MetricsHandler
 	DatasetHandler   handler.DatasetHandler
 	TraceHandler     handler.TraceHandler
@@ -120,8 +120,8 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	cronGroup := huma.NewGroup(v1Group, "/cron")
 	initCronRouter(cronGroup, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
-	blockedGroup := huma.NewGroup(v1Group, "/block")
-	initBlockedRouter(blockedGroup, deps.BlockedHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	triggerGroup := huma.NewGroup(v1Group, "/trigger")
+	initTriggerRouter(triggerGroup, deps.TriggerHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)

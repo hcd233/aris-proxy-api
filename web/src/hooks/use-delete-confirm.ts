@@ -7,7 +7,7 @@ interface UseDeleteConfirmOptions<T> {
   onConfirm: (target: T) => Promise<void>;
   /** 删除失败回调（如 showErrorToast），不传则静默 */
   onError?: (err: unknown) => void;
-  /** 失败后是否关闭对话框，默认 true（与多数列表页 finally 关闭一致）；blocked 等页面传 false */
+  /** 失败后是否关闭对话框，默认 true（与多数列表页 finally 关闭一致）；trigger 等页面传 false */
   closeOnError?: boolean;
 }
 

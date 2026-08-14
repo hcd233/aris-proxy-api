@@ -12,7 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/blocked"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -20,6 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	"github.com/hcd233/aris-proxy-api/internal/domain/trigger"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
@@ -55,8 +55,8 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewStateManager,
 		NewTaskSubmitter,
 		NewEndpointResolver,
-		NewBlockedRepository,
-		NewBlockedCache,
+		NewTriggerRepository,
+		NewTriggerCache,
 		NewCronRepository,
 		NewCronCallAuditRepository,
 		fx.Annotate(
@@ -151,12 +151,12 @@ func NewEndpointResolver(
 	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo)
 }
 
-func NewBlockedRepository(db *gorm.DB) blocked.BlockedRepository {
-	return repository.NewBlockedRepository(db)
+func NewTriggerRepository(db *gorm.DB) trigger.TriggerRepository {
+	return repository.NewTriggerRepository(db)
 }
 
-func NewBlockedCache(c *redis.Client) *cache.BlockedHitCache {
-	return cache.NewBlockedHitCache(c)
+func NewTriggerCache(c *redis.Client) *cache.TriggerHitCache {
+	return cache.NewTriggerHitCache(c)
 }
 
 func NewCronRepository(db *gorm.DB) cronmgmtport.CronJobRepository {

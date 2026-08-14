@@ -34,7 +34,7 @@ type routeParams struct {
 	CronHandler      handler.CronHandler
 	OpenAIHandler    handler.OpenAIHandler
 	AnthropicHandler handler.AnthropicHandler
-	BlockedHandler   handler.BlockedHandler
+	TriggerHandler   handler.TriggerHandler
 	MetricsHandler   handler.MetricsHandler
 	DatasetHandler   handler.DatasetHandler
 	TraceHandler     handler.TraceHandler
@@ -60,7 +60,7 @@ func registerRoutes(params routeParams) {
 		CronHandler:      params.CronHandler,
 		OpenAIHandler:    params.OpenAIHandler,
 		AnthropicHandler: params.AnthropicHandler,
-		BlockedHandler:   params.BlockedHandler,
+		TriggerHandler:   params.TriggerHandler,
 		MetricsHandler:   params.MetricsHandler,
 		DatasetHandler:   params.DatasetHandler,
 		TraceHandler:     params.TraceHandler,

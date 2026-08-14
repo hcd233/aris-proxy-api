@@ -128,7 +128,7 @@ var (
 	AuditFilterFieldStatus = "status"
 	AuditFilterFieldUA     = "ua"
 
-	BlockedRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldAction, FieldCreatedAt, FieldUpdatedAt}
+	TriggerRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldAction, FieldCreatedAt, FieldUpdatedAt}
 
 	AuditMaxPageSize = 500
 

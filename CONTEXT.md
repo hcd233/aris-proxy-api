@@ -118,14 +118,14 @@ _Avoid_: response status, call result
 审计数据按时间窗口聚合的粒度：`minute` / `hour` / `day` / `week`。用于仪表盘的时序图和时间范围选择。
 _Avoid_: interval, time unit, bucket size
 
-## Blocked Words（敏感词）
+## Trigger Words（触发词）
 
-**Blocked（敏感词）**:
-管理员配置的敏感词黑名单条目。每条记录一个 `word`（敏感词内容）、`action`（命中处理动作：`deny` 拦截 / `omit` 忽略）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配。`deny` 型命中时 LLM 代理请求返回 403 Forbidden 并记录审计；`omit` 型命中时请求照常转发，但不落库 session/message/tool（审计照常记录，命中计数照常递增）。混合命中时 deny 优先。
-_Avoid_: blocked word, ban word, forbidden term
+**Trigger（触发词）**:
+管理员配置的词表条目（2026-08-15 由「敏感词 Blocked Words」全量更名而来：表 `trigger_words`、路由 `/api/v1/trigger`、Redis key `trigger:*`）。每条记录一个 `word`（触发词内容）、`action`（命中处理动作）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配，全文扫描（含 system prompt）。三种 action：`deny` 命中即拦截返回 403 并记录审计；`omit` 照常转发但不落库 session/message/tool（审计照常）；`capture`（2026-08-15 新增）保存触发消息之前的对话历史至 session（无 assistant 回复、不保存触发消息本身）、不请求上游、返回固定回复（`Context saved.` / 无历史时 `No conversation history to save.`，stream 跟随请求参数按协议 SSE 吐出）。capture 仅当触发词位于「最后一条 role=user 且无 tool_call_id 的消息」时生效，只出现在历史消息/system 中不触发。混合命中优先级：deny > capture > omit。
+_Avoid_: blocked word, ban word, forbidden term, sensitive word
 
-**BlockedService（敏感词服务）**:
-管理 AC 自动机生命周期的领域服务。启动时从 DB 加载所有活跃敏感词构建自动机；增删敏感词后重建（`sync.RWMutex` 保护）；提供 `Check(text) []uint` 方法，返回所有命中词 ID。命中计数先递增 Redis（`blocked:hit:{id}`），再由 cron 定时同步回 DB。
+**TriggerService（触发词服务）**:
+管理 AC 自动机生命周期的领域服务。启动时从 DB 加载所有活跃触发词构建自动机；增删触发词后经 Redis Pub/Sub（`trigger:changed`）+ 版本号轮询（`trigger:version`）热更新（`sync.RWMutex` 保护）；提供 `Check(text) []uint` 与 `DenyIDs` / `CaptureIDs` 动作过滤。命中计数先递增 Redis（`trigger:hit:{id}`），再由 cron 定时同步回 DB。
 _Avoid_: word filter, content moderation, block service
 
 ## Authentication Middleware（认证中间件）

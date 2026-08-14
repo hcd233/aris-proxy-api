@@ -181,15 +181,15 @@ func buildRegistryEntries() []CronRegistryEntry {
 			},
 		},
 		{
-			Name:        constant.CronModuleBlockedHitSync,
+			Name:        constant.CronModuleTriggerHitSync,
 			Type:        constant.CronTypeCore,
-			Spec:        constant.CronSpecBlockedHitSync,
-			Description: constant.CronDescriptionBlockedHitSync,
+			Spec:        constant.CronSpecTriggerHitSync,
+			Description: constant.CronDescriptionTriggerHitSync,
 			Enabled:     func() bool { return true },
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
-				blockedRepo := repository.NewBlockedRepository(db)
-				hitCache := cachepkg.NewBlockedHitCache(cache)
-				return NewBlockedHitSyncCron(db, blockedRepo, hitCache, cache)
+				triggerRepo := repository.NewTriggerRepository(db)
+				hitCache := cachepkg.NewTriggerHitCache(cache)
+				return NewTriggerHitSyncCron(db, triggerRepo, hitCache, cache)
 			},
 		},
 	}

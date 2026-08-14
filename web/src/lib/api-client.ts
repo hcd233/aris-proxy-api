@@ -50,10 +50,10 @@ import type {
   AuditOptionListRsp,
   SessionOptionListReq,
   SessionOptionListRsp,
-  CreateBlockedReqBody,
-  UpdateBlockedReqBody,
-  ListBlockedRsp,
-  DeleteBlockedRsp,
+  CreateTriggerReqBody,
+  UpdateTriggerReqBody,
+  ListTriggerRsp,
+  DeleteTriggerRsp,
   ListCronJobsRsp,
   UpdateCronJobReqBody,
   ListCronCallAuditsRsp,
@@ -625,33 +625,33 @@ class ApiClient {
     return this.request<FirstTokenLatencyRsp>(`/api/v1/audit/stats/token/latency?${sp}`);
   }
 
-  // ─── Blocked Words ─────────────────────────────────────────────────────
+  // ─── Trigger Words ─────────────────────────────────────────────────────
 
-  async createBlocked(body: CreateBlockedReqBody): Promise<CommonRsp> {
-    return this.request<CommonRsp>("/api/v1/block", {
+  async createTrigger(body: CreateTriggerReqBody): Promise<CommonRsp> {
+    return this.request<CommonRsp>("/api/v1/trigger", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
-  async listBlocked(page: number, pageSize: number, query?: string): Promise<ListBlockedRsp> {
+  async listTrigger(page: number, pageSize: number, query?: string): Promise<ListTriggerRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
-    return this.request<ListBlockedRsp>(`/api/v1/block/list?${params}`);
+    return this.request<ListTriggerRsp>(`/api/v1/trigger/list?${params}`);
   }
 
-  async deleteBlocked(id: number): Promise<DeleteBlockedRsp> {
-    return this.request<DeleteBlockedRsp>(`/api/v1/block?ids=${id}`, { method: "DELETE" });
+  async deleteTrigger(id: number): Promise<DeleteTriggerRsp> {
+    return this.request<DeleteTriggerRsp>(`/api/v1/trigger?ids=${id}`, { method: "DELETE" });
   }
 
-  async batchDeleteBlocked(ids: number[]): Promise<DeleteBlockedRsp> {
-    return this.request<DeleteBlockedRsp>(`/api/v1/block?ids=${ids.join(",")}`, {
+  async batchDeleteTrigger(ids: number[]): Promise<DeleteTriggerRsp> {
+    return this.request<DeleteTriggerRsp>(`/api/v1/trigger?ids=${ids.join(",")}`, {
       method: "DELETE",
     });
   }
 
-  async updateBlocked(id: number, body: UpdateBlockedReqBody): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/block?id=${id}`, {
+  async updateTrigger(id: number, body: UpdateTriggerReqBody): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/trigger?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });

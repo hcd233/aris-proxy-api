@@ -9,8 +9,8 @@ const (
 	CronSpecSoftDeletePurge   = "0 4 * * 0"
 	CronModuleThinkExtract    = "ThinkExtractCron"
 	CronSpecThinkExtract      = "0 0 * * *"
-	CronModuleBlockedHitSync  = "BlockedHitSyncCron"
-	CronSpecBlockedHitSync    = "*/5 * * * *"
+	CronModuleTriggerHitSync  = "TriggerHitSyncCron"
+	CronSpecTriggerHitSync    = "*/5 * * * *"
 
 	// CronTriggerSourceScheduled 定时触发
 	CronTriggerSourceScheduled = "scheduled"
@@ -36,7 +36,7 @@ const (
 	CronDescriptionSessionDeduplicate = "Clean up redundant sessions whose message IDs are contained by other sessions"
 	CronDescriptionSoftDeletePurge    = "Permanently delete soft-deleted records past retention period"
 	CronDescriptionThinkExtract       = "Extract and cache think content from sessions"
-	CronDescriptionBlockedHitSync     = "Sync blocked word hit counts to database"
+	CronDescriptionTriggerHitSync     = "Sync trigger word hit counts to database"
 
 	// CronLockDefaultTTL 默认 cron 任务分布式锁 TTL
 	CronLockDefaultTTL = 5 * time.Minute
