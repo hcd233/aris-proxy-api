@@ -14,6 +14,7 @@ import (
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -26,12 +27,14 @@ import (
 	usecase "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 )
 
-type openAIProxy struct{}
+type openAIProxy struct {
+	tracker *inflight.Tracker
+}
 
 var _ usecase.OpenAIProxyPort = (*openAIProxy)(nil)
 
-func NewOpenAIProxy() usecase.OpenAIProxyPort {
-	return &openAIProxy{}
+func NewOpenAIProxy(tracker *inflight.Tracker) usecase.OpenAIProxyPort {
+	return &openAIProxy{tracker: tracker}
 }
 
 func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
@@ -119,8 +122,11 @@ func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {
 	return mo.Some(chunk)
 }
 
-// doUpstreamRequest 构建并发送上游 HTTP 请求，对可重试错误自动重试
+// doUpstreamRequest 构建并发送上游 HTTP 请求，对可重试错误自动重试。
+// ctx 融合 drain 广播：优雅退出 soft deadline 到达时取消上游连接，
+// 使阻塞的 SSE 读循环返回 context canceled（礼貌断流的前半段）。
 func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
+	ctx = p.tracker.CancelOnDrain(ctx)
 	sendFn := func() (*http.Response, error) {
 		return p.sendUpstreamRequestOnce(ctx, ep, body, pathSuffix)
 	}

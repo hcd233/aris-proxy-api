@@ -21,6 +21,7 @@ const (
 	SSEOpenAIInternalErrorFrame = "data: {\"error\":{\"message\":\"internal server error\",\"type\":\"server_error\",\"code\":\"internal_error\"}}\n\n"
 	SSEOpenAIUpstreamErrorData  = `{"error":{"message":"upstream returned status %d","type":"server_error","code":"upstream_error"}}`
 	SSEOpenAIInternalErrorData  = `{"error":{"message":"internal server error","type":"server_error","code":"internal_error"}}`
+	SSEOpenAIShuttingDownData   = `{"error":{"message":"server is restarting, please retry","type":"server_error","code":"server_shutting_down"}}`
 
 	SSEProviderOpenAI    = "openai"
 	SSEProviderAnthropic = "anthropic"

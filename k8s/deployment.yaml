@@ -12,7 +12,7 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
-      maxSurge: 1
+      maxSurge: 2
   selector:
     matchLabels:
       app: aris-proxy-api
@@ -23,7 +23,8 @@ spec:
     spec:
       securityContext:
         fsGroup: 65532
-      terminationGracePeriodSeconds: 660
+      # 终止预算：preStop 10s + drain soft 5min + hard 30s + HTTP/DB/Redis 收尾 ≈ 400s
+      terminationGracePeriodSeconds: 480
       containers:
       - name: app
         image: ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER

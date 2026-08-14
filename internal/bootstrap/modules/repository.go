@@ -8,6 +8,7 @@ import (
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
@@ -116,12 +117,12 @@ func NewSessionDetailCache(redisClient *redis.Client) sessionport.SessionDetailC
 	return cache.NewSessionDetailCache(redisClient)
 }
 
-func NewOpenAIProxy() usecase.OpenAIProxyPort {
-	return transport.NewOpenAIProxy()
+func NewOpenAIProxy(tracker *inflight.Tracker) usecase.OpenAIProxyPort {
+	return transport.NewOpenAIProxy(tracker)
 }
 
-func NewAnthropicProxy() usecase.AnthropicProxyPort {
-	return transport.NewAnthropicProxy()
+func NewAnthropicProxy(tracker *inflight.Tracker) usecase.AnthropicProxyPort {
+	return transport.NewAnthropicProxy(tracker)
 }
 
 func NewAPIKeyGenerator() apikeyservice.APIKeyGenerator {

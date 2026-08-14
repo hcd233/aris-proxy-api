@@ -14,6 +14,7 @@ import (
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -25,12 +26,14 @@ import (
 	usecase "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 )
 
-type anthropicProxy struct{}
+type anthropicProxy struct {
+	tracker *inflight.Tracker
+}
 
 var _ usecase.AnthropicProxyPort = (*anthropicProxy)(nil)
 
-func NewAnthropicProxy() usecase.AnthropicProxyPort {
-	return &anthropicProxy{}
+func NewAnthropicProxy(tracker *inflight.Tracker) usecase.AnthropicProxyPort {
+	return &anthropicProxy{tracker: tracker}
 }
 
 func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error) {
@@ -143,8 +146,11 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.UpstreamE
 	return rsp, nil
 }
 
-// sendRequest 构建并发送 Anthropic 协议的上游请求，对可重试错误自动重试
+// sendRequest 构建并发送 Anthropic 协议的上游请求，对可重试错误自动重试。
+// ctx 融合 drain 广播：优雅退出 soft deadline 到达时取消上游连接，
+// 使阻塞的 SSE 读循环返回 context canceled（礼貌断流的前半段）。
 func (p *anthropicProxy) sendRequest(ctx context.Context, ep vo.UpstreamEndpoint, path string, body []byte) (*http.Response, error) {
+	ctx = p.tracker.CancelOnDrain(ctx)
 	sendFn := func() (*http.Response, error) {
 		return p.sendRequestOnce(ctx, ep, path, body)
 	}
