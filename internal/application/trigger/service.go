@@ -22,7 +22,6 @@ import (
 type TriggerService struct {
 	mu           sync.RWMutex
 	matcher      *ACmatcher
-	wordIDs      map[string]uint
 	wordByID     map[uint]string
 	actionByID   map[uint]string
 	repo         domain.TriggerRepository
@@ -30,6 +29,7 @@ type TriggerService struct {
 	cache        *redis.Client
 	pubSub       *redis.PubSub
 	syncInterval time.Duration
+	syncCancel   context.CancelFunc
 
 	lastSeenVersion atomic.Int64
 	lastRebuildAt   atomic.Int64 // UnixNano；0 表示从未成功重建
@@ -45,7 +45,6 @@ func NewTriggerService(repo domain.TriggerRepository, hitRecorder port.HitRecord
 
 func (s *TriggerService) rebuild(words map[uint]string) {
 	s.matcher = NewACmatcher(words)
-	s.wordIDs = lo.Invert(words)
 	s.wordByID = words
 }
 
@@ -90,6 +89,7 @@ func (s *TriggerService) StartSync(ctx context.Context) {
 	if s.cache == nil {
 		return
 	}
+	ctx, s.syncCancel = context.WithCancel(ctx)
 	s.pubSub = s.cache.Subscribe(ctx, constant.TriggerChangeChannel)
 	go s.syncLoop(ctx)
 	go func() {
@@ -101,8 +101,12 @@ func (s *TriggerService) StartSync(ctx context.Context) {
 	s.checkVersion(ctx)
 }
 
-// StopSync 关闭 pub/sub 订阅（lifecycle OnStop 调用）。
+// StopSync 停止版本轮询与 pub/sub 订阅（lifecycle OnStop 调用）。
 func (s *TriggerService) StopSync() {
+	if s.syncCancel != nil {
+		s.syncCancel()
+		s.syncCancel = nil
+	}
 	if s.pubSub != nil {
 		_ = s.pubSub.Close() //nolint:errcheck // 关闭失败无副作用，goroutine 随 ctx 结束
 	}

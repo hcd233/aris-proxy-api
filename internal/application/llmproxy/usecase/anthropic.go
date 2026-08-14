@@ -84,13 +84,7 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
 
 		if denyIDs := u.triggerChecker.DenyIDs(matched); len(denyIDs) > 0 {
-			var upstreamProtocol enum.ProtocolType
-			switch compatRoute {
-			case enum.CompatRouteNative:
-				upstreamProtocol = enum.ProtocolAnthropicMessage
-			case enum.CompatRouteViaOpenAIChat:
-				upstreamProtocol = enum.ProtocolOpenAIChatCompletion
-			}
+			upstreamProtocol := anthropicRouteUpstreamProtocol(compatRoute)
 			words := u.triggerChecker.MatchedWords(denyIDs)
 			auditTask := &dto.ModelCallAuditTask{
 				Ctx:              util.CopyContextValues(ctx),
@@ -105,7 +99,7 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 			return proxyutil.BuildAnthropicContentFilter(req.Body.Model, req.Body.Stream != nil && *req.Body.Stream), nil
 		}
 
-		if result := u.interceptAnthropicCapture(ctx, req, m, ep, captureUpstreamProtocol(compatRoute), matched, req.Body.Stream != nil && *req.Body.Stream); result != nil {
+		if result := u.interceptAnthropicCapture(ctx, req, m, ep, anthropicRouteUpstreamProtocol(compatRoute), matched, req.Body.Stream != nil && *req.Body.Stream); result != nil {
 			return result, nil
 		}
 

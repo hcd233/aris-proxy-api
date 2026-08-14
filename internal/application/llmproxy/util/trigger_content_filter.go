@@ -39,6 +39,17 @@ func (s *presetStream) Read(_ context.Context, sink port.EventSink) error {
 
 func (s *presetStream) Close() error { return nil }
 
+// presetStreamResult 包装预生成事件序列为短路响应的 SSE 形态 StreamResult。
+// 供 deny 内容拦截与 capture 固定回复的 stream 分支复用（无上游连接）。
+func presetStreamResult(events []presetEvent, protocol enum.ProtocolKind) *port.StreamResult {
+	return &port.StreamResult{
+		Protocol: protocol,
+		Open: func(context.Context) (port.Stream, error) {
+			return &presetStream{events: events}, nil
+		},
+	}
+}
+
 // BuildOpenAIChatContentFilter 构造 OpenAI Chat 内容拦截消息（HTTP 200）。
 //
 // deny 敏感词命中时替代 403 返回协议原生 content_filter 形态：
@@ -114,12 +125,7 @@ func buildOpenAIChatContentFilterStream(model string) *port.StreamResult {
 		events = append(events, presetEvent{data: lo.Must1(sonic.Marshal(chunk))})
 	}
 	events = append(events, presetEvent{data: []byte(constant.SSEDoneSignal)})
-	return &port.StreamResult{
-		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(context.Context) (port.Stream, error) {
-			return &presetStream{events: events}, nil
-		},
-	}
+	return presetStreamResult(events, enum.ProtocolKindOpenAI)
 }
 
 // BuildOpenAIResponseContentFilter 构造 OpenAI Response API 内容拦截消息（HTTP 200）。
@@ -231,12 +237,7 @@ func buildOpenAIResponseContentFilterStream(model string) *port.StreamResult {
 		}))},
 		{event: enum.ResponseStreamEventCompleted, data: lo.Must1(sonic.Marshal(&dto.ResponseStreamTerminalEvent{Type: enum.ResponseStreamEventCompleted, Response: rsp}))},
 	}
-	return &port.StreamResult{
-		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(context.Context) (port.Stream, error) {
-			return &presetStream{events: events}, nil
-		},
-	}
+	return presetStreamResult(events, enum.ProtocolKindOpenAI)
 }
 
 // BuildAnthropicContentFilter 构造 Anthropic 内容拦截消息（HTTP 200）。
@@ -314,10 +315,5 @@ func buildAnthropicContentFilterStream(model string) *port.StreamResult {
 		}))},
 		{event: enum.AnthropicSSEEventTypeMessageStop, data: []byte(constant.AnthropicMessageStopData)},
 	}
-	return &port.StreamResult{
-		Protocol: enum.ProtocolKindAnthropic,
-		Open: func(context.Context) (port.Stream, error) {
-			return &presetStream{events: events}, nil
-		},
-	}
+	return presetStreamResult(events, enum.ProtocolKindAnthropic)
 }
