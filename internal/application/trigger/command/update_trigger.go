@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"slices"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -20,7 +21,7 @@ func NewUpdateTriggerHandler(repo trigger.TriggerRepository, rebuildNotify, noti
 }
 
 func (h *updateTriggerHandler) Handle(ctx context.Context, cmd port.UpdateTriggerCommand) error {
-	if cmd.Action != enum.TriggerActionDeny && cmd.Action != enum.TriggerActionOmit && cmd.Action != enum.TriggerActionCapture {
+	if !slices.Contains(enum.TriggerActions, cmd.Action) {
 		return ierr.New(ierr.ErrValidation, "invalid trigger action, must be deny, omit or capture")
 	}
 	if err := h.repo.UpdateAction(ctx, cmd.TriggerID, cmd.Action); err != nil {

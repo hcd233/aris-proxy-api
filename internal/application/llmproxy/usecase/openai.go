@@ -76,13 +76,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
 
 		if denyIDs := u.triggerChecker.DenyIDs(matched); len(denyIDs) > 0 {
-			var upstreamProtocol enum.ProtocolType
-			switch compatRoute {
-			case enum.CompatRouteNative:
-				upstreamProtocol = enum.ProtocolOpenAIChatCompletion
-			case enum.CompatRouteViaAnthropicMessage:
-				upstreamProtocol = enum.ProtocolAnthropicMessage
-			}
+			upstreamProtocol := openAIChatRouteUpstreamProtocol(compatRoute)
 			words := u.triggerChecker.MatchedWords(denyIDs)
 			auditTask := &dto.ModelCallAuditTask{
 				Ctx:              util.CopyContextValues(ctx),
@@ -97,14 +91,7 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 			return proxyutil.BuildOpenAIChatContentFilter(req.Body.Model, lo.FromPtr(req.Body.Stream)), nil
 		}
 
-		var chatUpstreamProtocol enum.ProtocolType
-		switch compatRoute {
-		case enum.CompatRouteViaAnthropicMessage:
-			chatUpstreamProtocol = enum.ProtocolAnthropicMessage
-		default:
-			chatUpstreamProtocol = enum.ProtocolOpenAIChatCompletion
-		}
-		if result := u.interceptChatCapture(ctx, req, m, ep, chatUpstreamProtocol, matched, lo.FromPtr(req.Body.Stream)); result != nil {
+		if result := u.interceptChatCapture(ctx, req, m, ep, openAIChatRouteUpstreamProtocol(compatRoute), matched, lo.FromPtr(req.Body.Stream)); result != nil {
 			return result, nil
 		}
 
@@ -143,15 +130,7 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
 
 		if denyIDs := u.triggerChecker.DenyIDs(matched); len(denyIDs) > 0 {
-			var upstreamProtocol enum.ProtocolType
-			switch compatRoute {
-			case enum.CompatRouteNative:
-				upstreamProtocol = enum.ProtocolOpenAIResponse
-			case enum.CompatRouteViaAnthropicMessage:
-				upstreamProtocol = enum.ProtocolAnthropicMessage
-			case enum.CompatRouteViaOpenAIChat:
-				upstreamProtocol = enum.ProtocolOpenAIChatCompletion
-			}
+			upstreamProtocol := openAIResponseRouteUpstreamProtocol(compatRoute)
 			words := u.triggerChecker.MatchedWords(denyIDs)
 			auditTask := &dto.ModelCallAuditTask{
 				Ctx:              util.CopyContextValues(ctx),
@@ -166,16 +145,7 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 			return proxyutil.BuildOpenAIResponseContentFilter(model, lo.FromPtr(req.Body.Stream)), nil
 		}
 
-		var responseUpstreamProtocol enum.ProtocolType
-		switch compatRoute {
-		case enum.CompatRouteViaAnthropicMessage:
-			responseUpstreamProtocol = enum.ProtocolAnthropicMessage
-		case enum.CompatRouteViaOpenAIChat:
-			responseUpstreamProtocol = enum.ProtocolOpenAIChatCompletion
-		default:
-			responseUpstreamProtocol = enum.ProtocolOpenAIResponse
-		}
-		if result := u.interceptResponseCapture(ctx, req, m, ep, responseUpstreamProtocol, matched, lo.FromPtr(req.Body.Stream)); result != nil {
+		if result := u.interceptResponseCapture(ctx, req, m, ep, openAIResponseRouteUpstreamProtocol(compatRoute), matched, lo.FromPtr(req.Body.Stream)); result != nil {
 			return result, nil
 		}
 

@@ -104,18 +104,7 @@ func (u *openAIUseCase) captureHitOnLastChatQuestion(matched []uint, req *dto.Op
 		return nil
 	}
 	lastQ := req.Body.Messages[idx]
-	var buf strings.Builder
-	if lastQ.Content != nil {
-		if lastQ.Content.Text != "" {
-			buf.WriteString(lastQ.Content.Text)
-		}
-		for _, part := range lastQ.Content.Parts {
-			if part != nil && part.Text != nil {
-				buf.WriteString(*part.Text)
-			}
-		}
-	}
-	hits := lo.Intersect(u.triggerChecker.Check(buf.String()), captureIDs)
+	hits := lo.Intersect(u.triggerChecker.Check(extractOpenAIChatContentText(lastQ.Content)), captureIDs)
 	if len(hits) == 0 {
 		return nil
 	}
@@ -160,14 +149,7 @@ func (u *openAIUseCase) captureHitOnLastResponseQuestion(matched []uint, req *dt
 	}
 	lastQ := req.Body.Input.Items[idx]
 	var buf strings.Builder
-	if lastQ.Content.Text != "" {
-		buf.WriteString(lastQ.Content.Text)
-	}
-	for _, part := range lastQ.Content.Parts {
-		if part != nil && part.Text != nil {
-			buf.WriteString(*part.Text)
-		}
-	}
+	extractResponseItemContent(&buf, lastQ.Content)
 	hits := lo.Intersect(u.triggerChecker.Check(buf.String()), captureIDs)
 	if len(hits) == 0 {
 		return nil
@@ -217,13 +199,35 @@ func submitCaptureStore(ctx context.Context, submitter TaskSubmitter, modelID st
 	}
 }
 
-// captureUpstreamProtocol anthropic 入口按 compatRoute 得到审计用上游协议。
-func captureUpstreamProtocol(compatRoute enum.CompatRoute) enum.ProtocolType {
+// anthropicRouteUpstreamProtocol 按 compatRoute 得到 anthropic 入口的审计用上游协议。
+func anthropicRouteUpstreamProtocol(compatRoute enum.CompatRoute) enum.ProtocolType {
 	switch compatRoute {
 	case enum.CompatRouteViaOpenAIChat:
 		return enum.ProtocolOpenAIChatCompletion
 	default:
 		return enum.ProtocolAnthropicMessage
+	}
+}
+
+// openAIChatRouteUpstreamProtocol 按 compatRoute 得到 OpenAI Chat 入口的审计用上游协议。
+func openAIChatRouteUpstreamProtocol(compatRoute enum.CompatRoute) enum.ProtocolType {
+	switch compatRoute {
+	case enum.CompatRouteViaAnthropicMessage:
+		return enum.ProtocolAnthropicMessage
+	default:
+		return enum.ProtocolOpenAIChatCompletion
+	}
+}
+
+// openAIResponseRouteUpstreamProtocol 按 compatRoute 得到 OpenAI Response 入口的审计用上游协议。
+func openAIResponseRouteUpstreamProtocol(compatRoute enum.CompatRoute) enum.ProtocolType {
+	switch compatRoute {
+	case enum.CompatRouteViaAnthropicMessage:
+		return enum.ProtocolAnthropicMessage
+	case enum.CompatRouteViaOpenAIChat:
+		return enum.ProtocolOpenAIChatCompletion
+	default:
+		return enum.ProtocolOpenAIResponse
 	}
 }
 
@@ -240,9 +244,12 @@ func (u *anthropicUseCase) interceptAnthropicCapture(ctx context.Context, req *d
 		hist := req.Body.Messages[:hit.lastIdx]
 		unified := make([]*convvo.UnifiedMessage, 0, len(hist))
 		for _, msg := range hist {
-			if um, err := dto.FromAnthropicMessage(msg); err == nil {
-				unified = append(unified, um)
+			um, err := dto.FromAnthropicMessage(msg)
+			if err != nil {
+				logger.WithCtx(ctx).Warn("[TriggerCapture] Skip message conversion in history", zap.Error(err))
+				continue
 			}
+			unified = append(unified, um)
 		}
 		tools := lo.Map(req.Body.Tools, func(tool *dto.AnthropicTool, _ int) *convvo.UnifiedTool {
 			return dto.FromAnthropicTool(tool)
@@ -264,9 +271,12 @@ func (u *openAIUseCase) interceptChatCapture(ctx context.Context, req *dto.OpenA
 		hist := req.Body.Messages[:hit.lastIdx]
 		unified := make([]*convvo.UnifiedMessage, 0, len(hist))
 		for _, msg := range hist {
-			if um, err := dto.FromOpenAIMessage(msg); err == nil {
-				unified = append(unified, um)
+			um, err := dto.FromOpenAIMessage(msg)
+			if err != nil {
+				logger.WithCtx(ctx).Warn("[TriggerCapture] Skip message conversion in history", zap.Error(err))
+				continue
 			}
+			unified = append(unified, um)
 		}
 		tools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *convvo.UnifiedTool {
 			return dto.FromOpenAITool(&tool)
@@ -274,6 +284,27 @@ func (u *openAIUseCase) interceptChatCapture(ctx context.Context, req *dto.OpenA
 		submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, req.Body.Metadata)
 	}
 	return proxyutil.NewOpenAIChatCaptureReply(captureReplyText(hit.hasHist), req.Body.Model, stream)
+}
+
+// captureResponseHistory 组装 Response 入口的历史上下文（Instructions + 触发消息前的 input items）。
+// 转换失败的消息跳过并记录 Warn，不阻断保存其余历史。
+func captureResponseHistory(ctx context.Context, req *dto.OpenAICreateResponseRequest, lastIdx int) []*convvo.UnifiedMessage {
+	var unified []*convvo.UnifiedMessage
+	if req.Body.Instructions != nil && *req.Body.Instructions != "" {
+		unified = append(unified, &convvo.UnifiedMessage{
+			Role:    enum.RoleSystem,
+			Content: &convvo.UnifiedContent{Text: *req.Body.Instructions},
+		})
+	}
+	if req.Body.Input == nil || len(req.Body.Input.Items) == 0 || lastIdx <= 0 {
+		return unified
+	}
+	ums, err := dto.FromResponseAPIInputItems(req.Body.Input.Items[:lastIdx])
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[TriggerCapture] Skip input items conversion in history", zap.Error(err))
+		return unified
+	}
+	return append(unified, ums...)
 }
 
 // interceptResponseCapture OpenAI Response 入口的 capture 短路。
@@ -285,18 +316,7 @@ func (u *openAIUseCase) interceptResponseCapture(ctx context.Context, req *dto.O
 	submitCaptureAudit(ctx, u.taskSubmitter, m, ep.Name(), upstreamProtocol, enum.ProtocolOpenAIResponse, hit.words)
 
 	if hit.hasHist {
-		var unified []*convvo.UnifiedMessage
-		if req.Body.Instructions != nil && *req.Body.Instructions != "" {
-			unified = append(unified, &convvo.UnifiedMessage{
-				Role:    enum.RoleSystem,
-				Content: &convvo.UnifiedContent{Text: *req.Body.Instructions},
-			})
-		}
-		if req.Body.Input != nil && len(req.Body.Input.Items) > 0 && hit.lastIdx > 0 {
-			if ums, err := dto.FromResponseAPIInputItems(req.Body.Input.Items[:hit.lastIdx]); err == nil {
-				unified = append(unified, ums...)
-			}
-		}
+		unified := captureResponseHistory(ctx, req, hit.lastIdx)
 		tools := dto.FromResponseAPITools(req.Body.Tools)
 		submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, req.Body.Metadata)
 	}

@@ -1,7 +1,7 @@
 package proxyutil
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -18,33 +18,8 @@ import (
 // ==================== Capture 固定回复 ====================
 //
 // 触发词 capture 命中短路时不请求上游，按入口协议返回固定回复。
-// stream=true 时以预生成事件序列经 presetEventStream 一次性写出，复用各协议
+// stream=true 时以预生成事件序列经 presetStream 一次性写出，复用各协议
 // 现有的 SSE 事件形态，保证 Claude Code / Codex 等流式客户端可正常解析。
-
-// presetEventStream 消费预生成事件序列的 port.Stream 实现（无上游连接）。
-type presetEventStream struct {
-	events []dto.AnthropicSSEEvent
-}
-
-func (s *presetEventStream) Read(_ context.Context, sink port.EventSink) error {
-	for _, e := range s.events {
-		if err := sink.WriteEvent(e.Event, e.Data); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (*presetEventStream) Close() error { return nil }
-
-func presetStreamResult(events []dto.AnthropicSSEEvent, protocol enum.ProtocolKind) port.Result {
-	return &port.StreamResult{
-		Protocol: protocol,
-		Open: func(_ context.Context) (port.Stream, error) {
-			return &presetEventStream{events: events}, nil
-		},
-	}
-}
 
 func captureJSONHeaders() map[string]string {
 	return map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON}
@@ -59,7 +34,7 @@ func captureJSONHeaders() map[string]string {
 // message_delta(end_turn) → message_stop）。
 func NewAnthropicCaptureReply(reply, exposedModel string, stream bool) port.Result {
 	msg := &dto.AnthropicMessage{
-		ID:         "msg_capture_" + uuid.NewString(),
+		ID:         fmt.Sprintf(constant.AnthropicMessageIDTemplate, uuid.NewString()),
 		Type:       constant.AnthropicMessageType,
 		Role:       enum.RoleAssistant,
 		Model:      exposedModel,
@@ -108,13 +83,13 @@ func NewAnthropicCaptureReply(reply, exposedModel string, stream bool) port.Resu
 		Delta: dto.AnthropicSSEMessageDeltaPayload{StopReason: msg.StopReason},
 		Usage: &dto.AnthropicUsage{},
 	}))
-	events := []dto.AnthropicSSEEvent{
-		{Event: enum.AnthropicSSEEventTypeMessageStart, Data: sonic.NoCopyRawMessage(messageStart)},
-		{Event: enum.AnthropicSSEEventTypeContentBlockStart, Data: sonic.NoCopyRawMessage(blockStart)},
-		{Event: enum.AnthropicSSEEventTypeContentBlockDelta, Data: sonic.NoCopyRawMessage(textDelta)},
-		{Event: enum.AnthropicSSEEventTypeContentBlockStop, Data: sonic.NoCopyRawMessage(blockStop)},
-		{Event: enum.AnthropicSSEEventTypeMessageDelta, Data: sonic.NoCopyRawMessage(messageDelta)},
-		{Event: enum.AnthropicSSEEventTypeMessageStop, Data: sonic.NoCopyRawMessage(constant.AnthropicMessageStopData)},
+	events := []presetEvent{
+		{event: enum.AnthropicSSEEventTypeMessageStart, data: messageStart},
+		{event: enum.AnthropicSSEEventTypeContentBlockStart, data: blockStart},
+		{event: enum.AnthropicSSEEventTypeContentBlockDelta, data: textDelta},
+		{event: enum.AnthropicSSEEventTypeContentBlockStop, data: blockStop},
+		{event: enum.AnthropicSSEEventTypeMessageDelta, data: messageDelta},
+		{event: enum.AnthropicSSEEventTypeMessageStop, data: []byte(constant.AnthropicMessageStopData)},
 	}
 	return presetStreamResult(events, enum.ProtocolKindAnthropic)
 }
@@ -125,7 +100,7 @@ func NewAnthropicCaptureReply(reply, exposedModel string, stream bool) port.Resu
 //
 // stream=true 时输出 role chunk → content chunk → finish chunk → [DONE]。
 func NewOpenAIChatCaptureReply(reply, exposedModel string, stream bool) port.Result {
-	id := "chatcmpl-capture-" + uuid.NewString()
+	id := fmt.Sprintf(constant.OpenAIChunkIDTemplate, uuid.NewString())
 	created := time.Now().Unix()
 	usage := &dto.OpenAICompletionUsage{}
 
@@ -153,8 +128,8 @@ func NewOpenAIChatCaptureReply(reply, exposedModel string, stream bool) port.Res
 		}
 	}
 
-	marshalChunk := func(delta *dto.OpenAIChatCompletionChunkDelta, finish *enum.FinishReason) sonic.NoCopyRawMessage {
-		return sonic.NoCopyRawMessage(lo.Must1(sonic.Marshal(&dto.OpenAIChatCompletionChunk{
+	marshalChunk := func(delta *dto.OpenAIChatCompletionChunkDelta, finish *enum.FinishReason) []byte {
+		return lo.Must1(sonic.Marshal(&dto.OpenAIChatCompletionChunk{
 			ID:      id,
 			Object:  enum.CompletionObjectChatCompletionChunk,
 			Created: created,
@@ -164,16 +139,16 @@ func NewOpenAIChatCaptureReply(reply, exposedModel string, stream bool) port.Res
 				Delta:        delta,
 				FinishReason: finish,
 			}},
-		})))
+		}))
 	}
 	roleChunk := marshalChunk(&dto.OpenAIChatCompletionChunkDelta{Role: enum.RoleAssistant}, nil)
 	contentChunk := marshalChunk(&dto.OpenAIChatCompletionChunkDelta{Content: lo.ToPtr(reply)}, nil)
 	finishChunk := marshalChunk(&dto.OpenAIChatCompletionChunkDelta{}, lo.ToPtr(enum.FinishReasonStop))
-	events := []dto.AnthropicSSEEvent{
-		{Event: "", Data: roleChunk},
-		{Event: "", Data: contentChunk},
-		{Event: "", Data: finishChunk},
-		{Event: "", Data: sonic.NoCopyRawMessage(constant.SSEDoneSignal)},
+	events := []presetEvent{
+		{data: roleChunk},
+		{data: contentChunk},
+		{data: finishChunk},
+		{data: []byte(constant.SSEDoneSignal)},
 	}
 	return presetStreamResult(events, enum.ProtocolKindOpenAI)
 }
@@ -186,10 +161,10 @@ func NewOpenAIChatCaptureReply(reply, exposedModel string, stream bool) port.Res
 // content_part.added → output_text.delta → output_text.done →
 // content_part.done → output_item.done → response.completed。
 func NewOpenAIResponseCaptureReply(reply, exposedModel string, stream bool) port.Result {
-	responseID := "resp_capture_" + uuid.NewString()
-	itemID := "msg_" + responseID
+	responseID := uuid.NewString()
+	itemID := fmt.Sprintf(constant.ResponseItemIDTemplate, responseID)
 	rsp := &dto.OpenAICreateResponseRsp{
-		ID:        responseID,
+		ID:        fmt.Sprintf(constant.ResponseIDTemplate, responseID),
 		Object:    constant.ResponseObjectValue,
 		CreatedAt: time.Now().Unix(),
 		Status:    enum.ResponseStatusCompleted,
@@ -217,8 +192,8 @@ func NewOpenAIResponseCaptureReply(reply, exposedModel string, stream bool) port
 		}
 	}
 
-	marshalEvent := func(payload map[string]any) sonic.NoCopyRawMessage {
-		return sonic.NoCopyRawMessage(lo.Must1(sonic.Marshal(payload)))
+	marshalEvent := func(payload map[string]any) []byte {
+		return lo.Must1(sonic.Marshal(payload))
 	}
 	outputItem := map[string]any{
 		constant.ResponseStreamFieldID:     itemID,
@@ -231,16 +206,16 @@ func NewOpenAIResponseCaptureReply(reply, exposedModel string, stream bool) port
 			constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 		}},
 	}
-	events := []dto.AnthropicSSEEvent{
-		{Event: enum.ResponseStreamEventCreated, Data: marshalEvent(map[string]any{
+	events := []presetEvent{
+		{event: enum.ResponseStreamEventCreated, data: marshalEvent(map[string]any{
 			constant.ResponseStreamFieldType: enum.ResponseStreamEventCreated,
 			constant.ResponseStreamFieldResponse: map[string]any{
-				constant.ResponseStreamFieldID:     responseID,
+				constant.ResponseStreamFieldID:     rsp.ID,
 				constant.ResponseStreamFieldType:   constant.ResponseObjectValue,
 				constant.ResponseStreamFieldStatus: enum.ResponseStatusInProgress,
 			},
 		})},
-		{Event: enum.ResponseStreamEventOutputItemAdded, Data: marshalEvent(map[string]any{
+		{event: enum.ResponseStreamEventOutputItemAdded, data: marshalEvent(map[string]any{
 			constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemAdded,
 			constant.ResponseStreamFieldOutputItem: 0,
 			constant.ResponseStreamFieldItem: map[string]any{
@@ -251,7 +226,7 @@ func NewOpenAIResponseCaptureReply(reply, exposedModel string, stream bool) port
 				constant.ResponseStreamFieldContent: []any{},
 			},
 		})},
-		{Event: enum.ResponseStreamEventContentPartAdded, Data: marshalEvent(map[string]any{
+		{event: enum.ResponseStreamEventContentPartAdded, data: marshalEvent(map[string]any{
 			constant.ResponseStreamFieldType:         enum.ResponseStreamEventContentPartAdded,
 			constant.ResponseStreamFieldItemID:       itemID,
 			constant.ResponseStreamFieldOutputIndex:  0,
@@ -262,21 +237,21 @@ func NewOpenAIResponseCaptureReply(reply, exposedModel string, stream bool) port
 				constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 			},
 		})},
-		{Event: enum.ResponseStreamEventOutputTextDelta, Data: marshalEvent(map[string]any{
+		{event: enum.ResponseStreamEventOutputTextDelta, data: marshalEvent(map[string]any{
 			constant.ResponseStreamFieldType:         enum.ResponseStreamEventOutputTextDelta,
 			constant.ResponseStreamFieldItemID:       itemID,
 			constant.ResponseStreamFieldOutputIndex:  0,
 			constant.ResponseStreamFieldContentIndex: 0,
 			constant.ResponseStreamFieldDelta:        reply,
 		})},
-		{Event: enum.ResponseStreamEventOutputTextDone, Data: marshalEvent(map[string]any{
+		{event: enum.ResponseStreamEventOutputTextDone, data: marshalEvent(map[string]any{
 			constant.ResponseStreamFieldType:         enum.ResponseStreamEventOutputTextDone,
 			constant.ResponseStreamFieldItemID:       itemID,
 			constant.ResponseStreamFieldOutputIndex:  0,
 			constant.ResponseStreamFieldContentIndex: 0,
 			constant.ResponseStreamFieldText:         reply,
 		})},
-		{Event: enum.ResponseStreamEventContentPartDone, Data: marshalEvent(map[string]any{
+		{event: enum.ResponseStreamEventContentPartDone, data: marshalEvent(map[string]any{
 			constant.ResponseStreamFieldType:         enum.ResponseStreamEventContentPartDone,
 			constant.ResponseStreamFieldItemID:       itemID,
 			constant.ResponseStreamFieldOutputIndex:  0,
@@ -287,14 +262,14 @@ func NewOpenAIResponseCaptureReply(reply, exposedModel string, stream bool) port
 				constant.ResponseStreamFieldAnnotations: constant.ResponseStreamFieldAnnotationsEmpty,
 			},
 		})},
-		{Event: enum.ResponseStreamEventOutputItemDone, Data: marshalEvent(map[string]any{
+		{event: enum.ResponseStreamEventOutputItemDone, data: marshalEvent(map[string]any{
 			constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemDone,
 			constant.ResponseStreamFieldOutputItem: 0,
 			constant.ResponseStreamFieldItem:       outputItem,
 		})},
-		{Event: enum.ResponseStreamEventCompleted, Data: sonic.NoCopyRawMessage(lo.Must1(sonic.Marshal(
+		{event: enum.ResponseStreamEventCompleted, data: lo.Must1(sonic.Marshal(
 			&dto.ResponseStreamTerminalEvent{Type: enum.ResponseStreamEventCompleted, Response: rsp},
-		)))},
+		))},
 	}
 	return presetStreamResult(events, enum.ProtocolKindOpenAI)
 }

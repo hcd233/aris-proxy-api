@@ -8,19 +8,27 @@ import (
 	"github.com/samber/lo"
 )
 
+// extractOpenAIChatContentText 提取单条 OpenAI Chat 消息内容的可控文本（Text + Parts）。
+func extractOpenAIChatContentText(content *dto.OpenAIMessageContent) string {
+	if content == nil {
+		return ""
+	}
+	var buf strings.Builder
+	if content.Text != "" {
+		buf.WriteString(content.Text)
+	}
+	for _, part := range content.Parts {
+		if part != nil && part.Text != nil {
+			buf.WriteString(*part.Text)
+		}
+	}
+	return buf.String()
+}
+
 func extractOpenAIChatText(req *dto.OpenAIChatCompletionRequest) string {
 	var buf strings.Builder
 	for _, msg := range req.Body.Messages {
-		if msg.Content != nil {
-			if msg.Content.Text != "" {
-				buf.WriteString(msg.Content.Text)
-			}
-			for _, part := range msg.Content.Parts {
-				if part.Text != nil {
-					buf.WriteString(*part.Text)
-				}
-			}
-		}
+		buf.WriteString(extractOpenAIChatContentText(msg.Content))
 		if msg.ReasoningContent != nil {
 			buf.WriteString(*msg.ReasoningContent)
 		}
@@ -121,17 +129,7 @@ func extractAnthropicMessageText(req *dto.AnthropicCreateMessageRequest) string 
 	}
 	for _, msg := range req.Body.Messages {
 		if msg.Content != nil {
-			if msg.Content.Text != "" {
-				buf.WriteString(msg.Content.Text)
-			}
-			for _, block := range msg.Content.Blocks {
-				if block.Text != nil {
-					buf.WriteString(*block.Text)
-				}
-				if block.Thinking != nil {
-					buf.WriteString(*block.Thinking)
-				}
-			}
+			buf.WriteString(extractAnthropicContentText(msg.Content))
 		}
 	}
 	return buf.String()
