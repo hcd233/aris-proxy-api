@@ -73,6 +73,20 @@ func TestUpdateTriggerHandler_Success(t *testing.T) {
 	}
 }
 
+func TestUpdateTriggerHandler_CaptureAction(t *testing.T) {
+	t.Parallel()
+	repo := &updateFakeRepo{}
+	h := command.NewUpdateTriggerHandler(repo, func(ctx context.Context) {}, func(ctx context.Context) {})
+
+	err := h.Handle(context.Background(), port.UpdateTriggerCommand{TriggerID: 7, Action: enum.TriggerActionCapture})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.updatedID != 7 || repo.updatedAction != enum.TriggerActionCapture {
+		t.Fatalf("expected update (7, capture), got (%d, %q)", repo.updatedID, repo.updatedAction)
+	}
+}
+
 func TestUpdateTriggerHandler_InvalidAction(t *testing.T) {
 	t.Parallel()
 	repo := &updateFakeRepo{}

@@ -20,8 +20,8 @@ func NewUpdateTriggerHandler(repo trigger.TriggerRepository, rebuildNotify, noti
 }
 
 func (h *updateTriggerHandler) Handle(ctx context.Context, cmd port.UpdateTriggerCommand) error {
-	if cmd.Action != enum.TriggerActionDeny && cmd.Action != enum.TriggerActionOmit {
-		return ierr.New(ierr.ErrValidation, "invalid trigger action, must be deny or omit")
+	if cmd.Action != enum.TriggerActionDeny && cmd.Action != enum.TriggerActionOmit && cmd.Action != enum.TriggerActionCapture {
+		return ierr.New(ierr.ErrValidation, "invalid trigger action, must be deny, omit or capture")
 	}
 	if err := h.repo.UpdateAction(ctx, cmd.TriggerID, cmd.Action); err != nil {
 		return err
