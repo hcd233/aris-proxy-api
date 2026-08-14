@@ -181,6 +181,7 @@ const (
 	SessionOptionScoreValueUnscored = "unscored"
 
 	// ── Blocked Word constants ──
+	BlockedContentFilterMessage       = "Content blocked by policy"
 	BlockedContentBlockedErrorMessage = "ContentBlocked"
 	BlockedContentBlockedErrorType    = "forbidden"
 	BlockedContentBlockedErrorCode    = "content_blocked"

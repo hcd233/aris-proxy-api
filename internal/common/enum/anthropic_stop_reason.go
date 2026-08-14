@@ -31,4 +31,10 @@ const (
 	//	@author centonhuang
 	//	@update 2026-04-09 15:00:00
 	AnthropicStopReasonToolUse AnthropicStopReason = "tool_use"
+
+	// AnthropicStopReasonRefusal 流式分类器介入处理潜在策略违规（refusal）
+	//
+	//	@author centonhuang
+	//	@update 2026-08-15 10:00:00
+	AnthropicStopReasonRefusal AnthropicStopReason = "refusal"
 )
