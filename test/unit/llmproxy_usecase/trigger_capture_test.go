@@ -231,11 +231,18 @@ func TestAnthropicCreateMessage_DenyWinsOverCapture(t *testing.T) {
 	}}
 
 	result, err := uc.CreateMessage(context.Background(), req)
-	if err == nil {
-		t.Fatal("deny should return proxy error (403), not capture reply")
+	if err != nil {
+		t.Fatalf("deny should return content filter result, got error: %v", err)
 	}
-	if result != nil {
-		t.Fatalf("deny should return nil result, got %T", result)
+	json, ok := result.(*port.JSONResult)
+	if !ok {
+		t.Fatalf("expect JSONResult (deny content filter), got %T", result)
+	}
+	if json.StatusCode != 200 {
+		t.Fatalf("deny content filter: expect 200, got %d", json.StatusCode)
+	}
+	if strings.Contains(string(json.Body), constant.TriggerCaptureSavedReply) {
+		t.Fatal("deny must not return capture reply")
 	}
 	if len(submitter.storeTasks) != 0 {
 		t.Fatal("deny must not store context")

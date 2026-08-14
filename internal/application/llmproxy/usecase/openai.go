@@ -93,7 +93,8 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 				ErrorMessage:     fmt.Sprintf(constant.TriggerAuditRemarkTemplate, formatTriggerWords(words)),
 			}
 			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
-			return nil, proxyutil.SendOpenAIContentBlockedError()   //nolint:nilerr // error returned in response body
+			// 内容拦截：返回协议原生 content_filter 消息（200），替代 403
+			return proxyutil.BuildOpenAIChatContentFilter(req.Body.Model, lo.FromPtr(req.Body.Stream)), nil
 		}
 
 		var chatUpstreamProtocol enum.ProtocolType
@@ -161,7 +162,8 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 				ErrorMessage:     fmt.Sprintf(constant.TriggerAuditRemarkTemplate, formatTriggerWords(words)),
 			}
 			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
-			return nil, proxyutil.SendOpenAIContentBlockedError()   //nolint:nilerr // error returned in response body
+			// 内容拦截：返回协议原生 content_filter 消息（200），替代 403
+			return proxyutil.BuildOpenAIResponseContentFilter(model, lo.FromPtr(req.Body.Stream)), nil
 		}
 
 		var responseUpstreamProtocol enum.ProtocolType

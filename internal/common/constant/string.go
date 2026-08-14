@@ -181,24 +181,22 @@ const (
 	SessionOptionScoreValueUnscored = "unscored"
 
 	// ── Trigger Word constants ──
-	TriggerContentBlockedErrorMessage = "ContentBlocked"
-	TriggerContentBlockedErrorType    = "forbidden"
-	TriggerContentBlockedErrorCode    = "content_blocked"
-	TriggerAuditRemark                = "deny by trigger word"
-	TriggerAuditRemarkTemplate        = "deny by trigger word: %s"
-	TriggerCaptureAuditRemark         = "capture context by trigger word"
-	TriggerCaptureAuditTemplate       = "capture context by trigger word: %s"
-	TriggerCaptureSavedReply          = "Context saved."
-	TriggerCaptureEmptyReply          = "No conversation history to save."
-	TriggerWordSeparator              = ", "
-	TriggerTableName                  = "trigger_words"
-	TriggerHitKeyPrefix               = "trigger:hit:%d"
-	TriggerHitKeyScanPattern          = "trigger:hit:*"
-	TriggerVersionKey                 = "trigger:version"
-	TriggerChangeChannel              = "trigger:changed"
-	TriggerChangeMessage              = "changed"
-	TriggerLowFreqRebuildInterval     = 5 * time.Minute
-	TriggerVersionPollInterval        = 2 * time.Second
+	TriggerContentFilterMessage   = "Content blocked by policy"
+	TriggerAuditRemark            = "deny by trigger word"
+	TriggerAuditRemarkTemplate    = "deny by trigger word: %s"
+	TriggerCaptureAuditRemark     = "capture context by trigger word"
+	TriggerCaptureAuditTemplate   = "capture context by trigger word: %s"
+	TriggerCaptureSavedReply      = "Context saved."
+	TriggerCaptureEmptyReply      = "No conversation history to save."
+	TriggerWordSeparator          = ", "
+	TriggerTableName              = "trigger_words"
+	TriggerHitKeyPrefix           = "trigger:hit:%d"
+	TriggerHitKeyScanPattern      = "trigger:hit:*"
+	TriggerVersionKey             = "trigger:version"
+	TriggerChangeChannel          = "trigger:changed"
+	TriggerChangeMessage          = "changed"
+	TriggerLowFreqRebuildInterval = 5 * time.Minute
+	TriggerVersionPollInterval    = 2 * time.Second
 
 	// ── Cron Pub/Sub ──
 	CronReloadChannel = "cron:reload"

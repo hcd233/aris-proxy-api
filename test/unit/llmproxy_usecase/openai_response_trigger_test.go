@@ -2,6 +2,7 @@ package llmproxy_usecase
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
@@ -44,7 +45,7 @@ func (f *fakeTriggerChecker) IncrementHits(_ context.Context, ids []uint) error 
 }
 
 // TestOpenAICreateResponse_DenyTriggerInput
-// /responses 输入命中 deny 触发词时必须返回 403 拦截（ContentBlocked），
+// /responses 输入命中 deny 触发词时必须返回 200 内容拦截消息（content_filter + refusal part），
 // 且不触达上游代理（responseUnaryCalled 保持 false）。
 func TestOpenAICreateResponse_DenyTriggerInput(t *testing.T) {
 	t.Parallel()
@@ -59,16 +60,17 @@ func TestOpenAICreateResponse_DenyTriggerInput(t *testing.T) {
 	}}
 
 	result, err := uc.CreateResponse(context.Background(), req)
-	if err == nil {
-		t.Fatalf("expected trigger error, got nil result=%v", result)
+	if err != nil {
+		t.Fatalf("deny should return content filter result, got error: %v", err)
 	}
-	proxyErr, ok := err.(*port.ProxyError)
+	jsonResult, ok := result.(*port.JSONResult)
 	if !ok {
-		t.Fatalf("err = %T, want *port.ProxyError", err)
+		t.Fatalf("result = %T, want *port.JSONResult", result)
 	}
-	if proxyErr.StatusCode != 403 {
-		t.Fatalf("status = %d, want 403", proxyErr.StatusCode)
+	if jsonResult.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", jsonResult.StatusCode)
 	}
+	assertResponseContentFilterBody(t, jsonResult.Body)
 	if proxy.responseUnaryCalled || proxy.responseStreamCalled {
 		t.Fatal("upstream must not be called for trigger request")
 	}
@@ -89,11 +91,8 @@ func TestOpenAICreateResponse_DenyTriggerInstructions(t *testing.T) {
 	}}
 
 	_, err := uc.CreateResponse(context.Background(), req)
-	if err == nil {
-		t.Fatal("expected trigger error for instructions, got nil")
-	}
-	if proxyErr, ok := err.(*port.ProxyError); !ok || proxyErr.StatusCode != 403 {
-		t.Fatalf("err = %v, want 403 ProxyError", err)
+	if err != nil {
+		t.Fatalf("deny should return content filter result, got error: %v", err)
 	}
 }
 
@@ -116,11 +115,8 @@ func TestOpenAICreateResponse_DenyTriggerItemContent(t *testing.T) {
 	}}
 
 	_, err := uc.CreateResponse(context.Background(), req)
-	if err == nil {
-		t.Fatal("expected trigger error for item content, got nil")
-	}
-	if proxyErr, ok := err.(*port.ProxyError); !ok || proxyErr.StatusCode != 403 {
-		t.Fatalf("err = %v, want 403 ProxyError", err)
+	if err != nil {
+		t.Fatalf("deny should return content filter result, got error: %v", err)
 	}
 }
 

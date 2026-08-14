@@ -141,6 +141,22 @@ const (
 	AnthropicContentBlockTypeWebFetchToolResult AnthropicContentBlockType = "web_fetch_tool_result"
 )
 
+// ==================== Anthropic Stop Details Types ====================
+
+// AnthropicStopDetailsType Anthropic stop_details 类型
+//
+//	@author centonhuang
+//	@update 2026-08-15 10:00:00
+type AnthropicStopDetailsType = string
+
+const (
+	// AnthropicStopDetailsTypeRefusal 拒绝停止详情（策略违规拦截）
+	//
+	//	@author centonhuang
+	//	@update 2026-08-15 10:00:00
+	AnthropicStopDetailsTypeRefusal AnthropicStopDetailsType = "refusal"
+)
+
 // ==================== Anthropic Delta Types ====================
 
 // AnthropicDeltaType Anthropic Delta 类型

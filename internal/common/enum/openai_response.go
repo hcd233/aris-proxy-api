@@ -87,6 +87,14 @@ const (
 	ResponseContentTypeReasoningText ResponseContentType = "reasoning_text"
 )
 
+// ResponseIncompleteReason Response API 响应未完成原因枚举
+type ResponseIncompleteReason = string
+
+const (
+	// ResponseIncompleteReasonContentFilter 内容被内容过滤器拦截
+	ResponseIncompleteReasonContentFilter ResponseIncompleteReason = "content_filter"
+)
+
 // ResponseComputerActionType ComputerCall 动作类型
 type ResponseComputerActionType = string
 

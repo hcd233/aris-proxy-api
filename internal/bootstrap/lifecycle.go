@@ -39,8 +39,9 @@ type lifecycleParams struct {
 
 func registerLifecycleHooks(params lifecycleParams) {
 	// OnStop hooks run in REVERSE order of registration.
-	// Desired stop order: Cron → Pool → Inflight → HTTP → Logger → DB → Redis
-	// So register in reverse: Redis → DB → Logger → HTTP → Inflight → Pool → Cron
+	// Desired stop order: Cron → Inflight → Pool → HTTP → Logger → DB → Redis
+	// (Inflight 先于 Pool：drain 期间协程池必须存活，被截断流的计量/存储才能落库)
+	// So register in reverse: Redis → DB → Logger → HTTP → Pool → Inflight → Cron
 
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error { return nil },
@@ -109,7 +110,11 @@ func registerLifecycleHooks(params lifecycleParams) {
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error { return nil },
 		OnStop: func(ctx context.Context) error {
-			params.InflightTracker.Drain(constant.InflightDrainTimeout)
+			poolCtx, cancel := context.WithTimeout(context.Background(), constant.PoolStopTimeout)
+			defer cancel()
+			if err := params.PoolManager.StopWithContext(poolCtx); err != nil {
+				logger.Logger().Warn("[Server] Pool stop error", zap.Error(err))
+			}
 			return nil
 		},
 	})
@@ -117,11 +122,7 @@ func registerLifecycleHooks(params lifecycleParams) {
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error { return nil },
 		OnStop: func(ctx context.Context) error {
-			poolCtx, cancel := context.WithTimeout(context.Background(), constant.PoolStopTimeout)
-			defer cancel()
-			if err := params.PoolManager.StopWithContext(poolCtx); err != nil {
-				logger.Logger().Warn("[Server] Pool stop error", zap.Error(err))
-			}
+			params.InflightTracker.Drain(constant.InflightDrainSoftTimeout, constant.InflightDrainHardTimeout)
 			return nil
 		},
 	})

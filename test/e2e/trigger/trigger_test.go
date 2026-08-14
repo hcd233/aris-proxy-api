@@ -256,8 +256,63 @@ func uniqueWord(prefix string) string {
 	return fmt.Sprintf("%s_%d", prefix, os.Getpid())
 }
 
-// TestTrigger_SystemMessage_OpenAI_Returns403 验证触发词出现在 OpenAI system 消息中时同样拦截（403）。
-func TestTrigger_SystemMessage_OpenAI_Returns403(t *testing.T) {
+// assertOpenAIContentFilterResp 断言 OpenAI chat 响应为内容拦截形态：200 + finish_reason=content_filter。
+func assertOpenAIContentFilterResp(t *testing.T, resp *http.Response) {
+	t.Helper()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("deny word: expected 200, got %d, body: %s", resp.StatusCode, string(body))
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read chat response: %v", err)
+	}
+	var obj struct {
+		Choices []struct {
+			FinishReason string `json:"finish_reason"`
+		} `json:"choices"`
+	}
+	if err := sonic.Unmarshal(body, &obj); err != nil {
+		t.Fatalf("deny word: response is not valid JSON: %s", string(body))
+	}
+	if len(obj.Choices) == 0 {
+		t.Fatalf("deny word: missing choices, body: %s", string(body))
+	}
+	if obj.Choices[0].FinishReason != "content_filter" {
+		t.Fatalf("deny word: finish_reason = %q, want content_filter, body: %s", obj.Choices[0].FinishReason, string(body))
+	}
+}
+
+// assertAnthropicRefusalResp 断言 Anthropic 响应为内容拦截形态：200 + stop_reason=refusal。
+func assertAnthropicRefusalResp(t *testing.T, resp *http.Response) {
+	t.Helper()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("deny word: expected 200, got %d, body: %s", resp.StatusCode, string(body))
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read anthropic response: %v", err)
+	}
+	var obj struct {
+		StopReason  string `json:"stop_reason"`
+		StopDetails *struct {
+			Type string `json:"type"`
+		} `json:"stop_details"`
+	}
+	if err := sonic.Unmarshal(body, &obj); err != nil {
+		t.Fatalf("deny word: response is not valid JSON: %s", string(body))
+	}
+	if obj.StopReason != "refusal" {
+		t.Fatalf("deny word: stop_reason = %q, want refusal, body: %s", obj.StopReason, string(body))
+	}
+	if obj.StopDetails == nil || obj.StopDetails.Type != "refusal" {
+		t.Fatalf("deny word: stop_details = %+v, want type=refusal, body: %s", obj.StopDetails, string(body))
+	}
+}
+
+// TestTrigger_SystemMessage_OpenAI_ContentFilter 验证触发词出现在 OpenAI system 消息中时拦截（200 content_filter）。
+func TestTrigger_SystemMessage_OpenAI_ContentFilter(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustTriggerE2EEnv(t)
 
@@ -267,14 +322,11 @@ func TestTrigger_SystemMessage_OpenAI_Returns403(t *testing.T) {
 
 	resp := chatWithSystemWord(t, baseURL, apiKey, word)
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusForbidden {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("system message hit: expected 403, got %d, body: %s", resp.StatusCode, string(body))
-	}
+	assertOpenAIContentFilterResp(t, resp)
 }
 
-// TestTrigger_SystemMessage_Anthropic_Returns403 验证触发词出现在 Anthropic 顶层 system 字段时同样拦截（403）。
-func TestTrigger_SystemMessage_Anthropic_Returns403(t *testing.T) {
+// TestTrigger_SystemMessage_Anthropic_Refusal 验证触发词出现在 Anthropic 顶层 system 字段时拦截（200 refusal）。
+func TestTrigger_SystemMessage_Anthropic_Refusal(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustTriggerE2EEnv(t)
 
@@ -284,14 +336,11 @@ func TestTrigger_SystemMessage_Anthropic_Returns403(t *testing.T) {
 
 	resp := anthropicChatWithSystemWord(t, baseURL, apiKey, word)
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusForbidden {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("anthropic system field hit: expected 403, got %d, body: %s", resp.StatusCode, string(body))
-	}
+	assertAnthropicRefusalResp(t, resp)
 }
 
-// TestTrigger_Deny_Returns403 验证 deny 型触发词命中时返回 403（现状行为回归）。
-func TestTrigger_Deny_Returns403(t *testing.T) {
+// TestTrigger_Deny_ContentFilter 验证 deny 型触发词命中时返回 200 内容拦截消息（content_filter）。
+func TestTrigger_Deny_ContentFilter(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustTriggerE2EEnv(t)
 
@@ -301,10 +350,7 @@ func TestTrigger_Deny_Returns403(t *testing.T) {
 
 	resp := chatWithWord(t, baseURL, apiKey, word)
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusForbidden {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("deny word: expected 403, got %d, body: %s", resp.StatusCode, string(body))
-	}
+	assertOpenAIContentFilterResp(t, resp)
 }
 
 // TestTrigger_Omit_ForwardsToUpstream 验证 omit 型触发词命中时请求照常转发（200 + 正常响应）。
@@ -335,7 +381,7 @@ func TestTrigger_Omit_ForwardsToUpstream(t *testing.T) {
 	}
 }
 
-// TestTrigger_UpdateAction_Switches 验证 PATCH 修改 action 后行为切换（deny → 403、omit → 200）。
+// TestTrigger_UpdateAction_Switches 验证 PATCH 修改 action 后行为切换（deny → 200 content_filter、omit → 正常转发）。
 func TestTrigger_UpdateAction_Switches(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustTriggerE2EEnv(t)
@@ -345,10 +391,8 @@ func TestTrigger_UpdateAction_Switches(t *testing.T) {
 	defer deleteTriggerWord(t, baseURL, adminToken, id)
 
 	resp := chatWithWord(t, baseURL, apiKey, word)
+	assertOpenAIContentFilterResp(t, resp)
 	_ = resp.Body.Close()
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("before update: expected 403, got %d", resp.StatusCode)
-	}
 
 	updateTriggerAction(t, baseURL, adminToken, id, "omit")
 
@@ -360,7 +404,7 @@ func TestTrigger_UpdateAction_Switches(t *testing.T) {
 	}
 }
 
-// TestTrigger_Mixed_DenyWins 验证同时命中 deny 与 omit 型词时 deny 优先（403）。
+// TestTrigger_Mixed_DenyWins 验证同时命中 deny 与 omit 型词时 deny 优先（200 content_filter，不转发）。
 func TestTrigger_Mixed_DenyWins(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustTriggerE2EEnv(t)
@@ -374,10 +418,7 @@ func TestTrigger_Mixed_DenyWins(t *testing.T) {
 
 	resp := chatWithWord(t, baseURL, apiKey, denyWord+" "+omitWord)
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusForbidden {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("mixed hit: expected 403 (deny wins), got %d, body: %s", resp.StatusCode, string(body))
-	}
+	assertOpenAIContentFilterResp(t, resp)
 }
 
 // TestTrigger_RecreateAfterDelete 回归（fix/trigger-word-recreate-2026-08-12）：软删除后重新添加同词应成功。
@@ -674,7 +715,8 @@ func TestTrigger_Capture_WordOnlyInHistory_Forwards(t *testing.T) {
 	}
 }
 
-// TestTrigger_Mixed_DenyWinsOverCapture 验证同时命中 deny 与 capture 词时 deny 优先（403，不保存不回复）。
+// TestTrigger_Mixed_DenyWinsOverCapture 验证同时命中 deny 与 capture 词时 deny 优先
+// （200 content_filter 拦截消息，不保存上下文、不返回 capture 固定回复）。
 func TestTrigger_Mixed_DenyWinsOverCapture(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, adminToken := mustTriggerE2EEnv(t)
@@ -711,8 +753,9 @@ func TestTrigger_Mixed_DenyWinsOverCapture(t *testing.T) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusForbidden {
-		respBody, _ := io.ReadAll(resp.Body)
-		t.Fatalf("deny+capture: expected 403 (deny wins), got %d, body: %s", resp.StatusCode, string(respBody))
+	assertOpenAIContentFilterResp(t, resp)
+	respBody, _ := io.ReadAll(resp.Body)
+	if strings.Contains(string(respBody), "Context saved.") {
+		t.Fatalf("deny+capture: deny wins, capture reply must not appear, body: %s", string(respBody))
 	}
 }

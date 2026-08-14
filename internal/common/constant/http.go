@@ -78,13 +78,14 @@ const (
 	CORSAllowOrigins    = "http://localhost:3000"
 	CORSPreflightMaxAge = 12 * time.Hour
 
-	IdleTimeout                 = 2 * time.Minute
-	ShutdownTimeout             = 10 * time.Minute
-	CronStopTimeout             = 3 * time.Minute
-	PoolStopTimeout             = 3 * time.Minute
-	InflightDrainTimeout        = 5 * time.Minute
-	FiberShutdownTimeout        = 30 * time.Second
-	InflightStateRunning  int32 = 0
-	InflightStateDraining int32 = 1
-	ServerShuttingDownMsg       = "server is shutting down"
+	IdleTimeout                    = 2 * time.Minute
+	ShutdownTimeout                = 10 * time.Minute
+	CronStopTimeout                = 3 * time.Minute
+	PoolStopTimeout                = 3 * time.Minute
+	InflightDrainSoftTimeout       = 5 * time.Minute
+	InflightDrainHardTimeout       = 30 * time.Second
+	FiberShutdownTimeout           = 30 * time.Second
+	InflightStateRunning     int32 = 0
+	InflightStateDraining    int32 = 1
+	ServerShuttingDownMsg          = "server is shutting down"
 )

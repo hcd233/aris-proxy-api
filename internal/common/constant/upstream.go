@@ -27,6 +27,8 @@ const (
 	ResponseStreamFieldItem             = "item"
 	ResponseStreamFieldPart             = "part"
 	ResponseStreamFieldText             = "text"
+	ResponseStreamFieldRefusal          = "refusal"
+	ResponseStreamFieldIndex            = "index"
 	ResponseStreamFieldAnnotations      = "annotations"
 	ResponseStreamFieldRole             = "role"
 	ResponseStreamFieldContent          = "content"

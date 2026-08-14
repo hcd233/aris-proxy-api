@@ -113,3 +113,9 @@ func (e *UpstreamConnectionError) Error() string {
 	}
 	return constant.UpstreamConnectionErrorMsg
 }
+
+// Unwrap 透传 Cause，使 errors.Is(err, context.Canceled) 能穿透判断
+// （优雅退出 soft deadline 广播取消上游连接时，读循环据此识别断流原因）。
+func (e *UpstreamConnectionError) Unwrap() error {
+	return e.Cause
+}

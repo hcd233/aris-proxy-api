@@ -100,8 +100,9 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 				APIProtocol:      enum.ProtocolAnthropicMessage,
 				ErrorMessage:     fmt.Sprintf(constant.TriggerAuditRemarkTemplate, formatTriggerWords(words)),
 			}
-			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask)  //nolint:errcheck // best-effort audit
-			return nil, proxyutil.SendAnthropicContentBlockedError() //nolint:nilerr // error returned in response body
+			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
+			// 内容拦截：返回协议原生 refusal 消息（200），替代 403
+			return proxyutil.BuildAnthropicContentFilter(req.Body.Model, req.Body.Stream != nil && *req.Body.Stream), nil
 		}
 
 		if result := u.interceptAnthropicCapture(ctx, req, m, ep, captureUpstreamProtocol(compatRoute), matched, req.Body.Stream != nil && *req.Body.Stream); result != nil {
