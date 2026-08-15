@@ -6,39 +6,43 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
+
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 )
 
 // APIRouterDependencies API 路由依赖
 //
 //	@author centonhuang
-//	@update 2026-04-28 10:00:00
+//	@update 2026-08-16 10:00:00
 type APIRouterDependencies struct {
-	DB               *gorm.DB
-	Cache            *redis.Client
-	AccessSigner     jwt.TokenSigner
-	PingHandler      handler.PingHandler
-	TokenHandler     handler.TokenHandler
-	Oauth2Handler    handler.Oauth2Handler
-	UserHandler      handler.UserHandler
-	APIKeyHandler    handler.APIKeyHandler
-	SessionHandler   handler.SessionHandler
-	EndpointHandler  handler.EndpointHandler
-	ModelHandler     handler.ModelHandler
-	AuditHandler     handler.AuditHandler
-	CronHandler      handler.CronHandler
-	OpenAIHandler    handler.OpenAIHandler
-	AnthropicHandler handler.AnthropicHandler
-	TriggerHandler   handler.TriggerHandler
-	MetricsHandler   handler.MetricsHandler
-	DatasetHandler   handler.DatasetHandler
-	TraceHandler     handler.TraceHandler
+	DB                 *gorm.DB
+	Cache              *redis.Client
+	AccessSigner       jwt.TokenSigner
+	DemoModuleAccessor demoport.DemoModuleAccessor
+	PingHandler        handler.PingHandler
+	TokenHandler       handler.TokenHandler
+	Oauth2Handler      handler.Oauth2Handler
+	UserHandler        handler.UserHandler
+	DemoHandler        handler.DemoHandler
+	APIKeyHandler      handler.APIKeyHandler
+	SessionHandler     handler.SessionHandler
+	EndpointHandler    handler.EndpointHandler
+	ModelHandler       handler.ModelHandler
+	AuditHandler       handler.AuditHandler
+	CronHandler        handler.CronHandler
+	OpenAIHandler      handler.OpenAIHandler
+	AnthropicHandler   handler.AnthropicHandler
+	TriggerHandler     handler.TriggerHandler
+	MetricsHandler     handler.MetricsHandler
+	DatasetHandler     handler.DatasetHandler
+	TraceHandler       handler.TraceHandler
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -99,29 +103,32 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	userGroup := huma.NewGroup(v1Group, "/user")
 	initUserRouter(userGroup, deps.UserHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
+	demoGroup := huma.NewGroup(v1Group, "/demo")
+	initDemoRouter(demoGroup, deps.DemoHandler, deps.DB, deps.Cache, deps.AccessSigner)
+
 	apikeyGroup := huma.NewGroup(v1Group, "/apikey")
 	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	sessionJWTGroup := huma.NewGroup(v1Group, "/session")
-	initSessionJWTRouter(sessionJWTGroup, deps.SessionHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	initSessionJWTRouter(sessionJWTGroup, deps.SessionHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
 
 	sessionPublicGroup := huma.NewGroup(v1Group, "/session")
 	initSessionPublicRouter(sessionPublicGroup, deps.SessionHandler, deps.Cache)
 
 	endpointGroup := huma.NewGroup(v1Group, "/endpoint")
-	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
 
 	modelGroup := huma.NewGroup(v1Group, "/model")
-	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
-	initAuditRouter(auditGroup, deps.AuditHandler, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	initAuditRouter(auditGroup, deps.AuditHandler, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
 
 	cronGroup := huma.NewGroup(v1Group, "/cron")
-	initCronRouter(cronGroup, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	initCronRouter(cronGroup, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
 
 	triggerGroup := huma.NewGroup(v1Group, "/trigger")
-	initTriggerRouter(triggerGroup, deps.TriggerHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	initTriggerRouter(triggerGroup, deps.TriggerHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)
@@ -130,7 +137,7 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.Cache)
 
 	metricsGroup := huma.NewGroup(v1Group, "/metrics")
-	initMetricsRouter(metricsGroup, deps.MetricsHandler, deps.DB, deps.Cache, deps.AccessSigner)
+	initMetricsRouter(metricsGroup, deps.MetricsHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
 
 	datasetGroup := huma.NewGroup(v1Group, "/dataset")
 	initDatasetRouter(datasetGroup, deps.DatasetHandler, deps.DB, deps.Cache, deps.AccessSigner)

@@ -75,8 +75,9 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	var projections []*session.SessionSummaryProjection
 	var pageInfo *model.PageInfo
 
-	if q.IsAdmin {
-		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword, criteria)
+	// demo 视角（SampleModulus > 0）与 admin 同走全量分支，但按 id % K == 0 抽样
+	if q.IsAdmin || q.SampleModulus > 0 {
+		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword, criteria, q.SampleModulus)
 	} else {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
@@ -189,6 +190,13 @@ func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRe
 
 func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error) {
 	log := logger.WithCtx(ctx)
+
+	// demo 视角：仅允许访问抽样内的会话（id % K == 0），越权返回不存在
+	if q.SampleModulus > 0 && q.SessionID%q.SampleModulus != 0 {
+		log.Info("[SessionQuery] Demo session access denied by sample modulus",
+			zap.Uint("sessionID", q.SessionID), zap.Uint("sampleModulus", q.SampleModulus))
+		return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
+	}
 
 	detail, err := h.readRepo.GetSessionDetail(ctx, q.SessionID)
 	if err != nil {

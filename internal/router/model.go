@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -13,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
+func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	modelGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	modelGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
 		cache, "modelManage", constant.CtxKeyUserID, constant.PeriodManageAPIKey, constant.LimitManageAPIKey,
@@ -45,7 +46,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("listModels", enum.PermissionAdmin),
+			middleware.LimitUserPermissionWithDemoMiddleware("listModels", enum.PermissionAdmin, enum.DemoModuleModels, demoAccessor),
 		},
 	}, modelHandler.HandleListModels)
 

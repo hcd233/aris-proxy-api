@@ -190,7 +190,7 @@ export default function EndpointsPage() {
   });
 
   return (
-    <PermissionGuard adminOnly>
+    <PermissionGuard adminOnly module="endpoints">
       <div className="space-y-8">
         <PageHeader
           title={t("endpoints.title")}

@@ -240,7 +240,7 @@ export default function TriggerPage() {
   }, [selected, fetchItems, persistedPage, persistedPageSize, t]);
 
   return (
-    <PermissionGuard adminOnly>
+    <PermissionGuard adminOnly module="trigger">
       <div className="space-y-8">
         <PageHeader title={t("trigger.title")} description={t("trigger.subtitle")} />
 

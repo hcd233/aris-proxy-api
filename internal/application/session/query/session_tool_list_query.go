@@ -35,9 +35,10 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q sessionport.List
 	log := logger.WithCtx(ctx)
 
 	meta, err := h.metaQuery.Handle(ctx, sessionport.GetSessionMetaByUserQuery{
-		UserID:    q.UserID,
-		IsAdmin:   q.IsAdmin,
-		SessionID: q.SessionID,
+		UserID:        q.UserID,
+		IsAdmin:       q.IsAdmin,
+		SessionID:     q.SessionID,
+		SampleModulus: q.SampleModulus,
 	})
 	if err != nil {
 		return nil, err

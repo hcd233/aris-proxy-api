@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, History, MessagesSquare, Share2, Wrench } from "lucide-react";
@@ -32,6 +33,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const router = useRouter();
   const isMobile = useIsMobile();
   const t = useT();
+  const { isDemo } = useAuth();
   const [metadata, setMetadata] = useState<SessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -319,6 +321,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         </p>
       </div>
 
+      {!isDemo() && (
       <ScoreDots
         score={score}
         scoring={scoring}
@@ -326,7 +329,9 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         onClear={handleDeleteScore}
         size={isMobile ? 20 : 16}
       />
+      )}
 
+      {!isDemo() && (
       <TooltipProvider>
         <TooltipRoot>
           <TooltipTrigger
@@ -354,7 +359,9 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           </TooltipContent>
         </TooltipRoot>
       </TooltipProvider>
+      )}
 
+      {!isDemo() && (
       <TooltipProvider>
         <TooltipRoot>
           <TooltipTrigger
@@ -370,6 +377,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           <TooltipContent side="top">{t("session_detail.delete_title")}</TooltipContent>
         </TooltipRoot>
       </TooltipProvider>
+      )}
 
       {metadata.toolCount > 0 && (
         <TooltipProvider>

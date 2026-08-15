@@ -79,6 +79,8 @@ type ListSessionsByUserQuery struct {
 	EndTime   time.Time
 	Keyword   string
 	Filter    string
+	// SampleModulus demo 视角抽样模数（>0 时全量分支按 id % K == 0 过滤）
+	SampleModulus uint
 }
 
 // ListSessionsByUserHandler 列出 session handler 接口
@@ -92,6 +94,8 @@ type GetSessionByUserQuery struct {
 	IsAdmin            bool
 	SkipOwnershipCheck bool
 	SessionID          uint
+	// SampleModulus demo 视角抽样模数（>0 时校验 sessionID % K == 0，越权访问未抽样会话返回不存在）
+	SampleModulus uint
 }
 
 // GetSessionByUserHandler 获取 session 详情 handler 接口
@@ -104,6 +108,8 @@ type GetSessionMetaByUserQuery struct {
 	UserID    uint
 	IsAdmin   bool
 	SessionID uint
+	// SampleModulus demo 视角抽样模数（>0 时校验 sessionID % K == 0）
+	SampleModulus uint
 }
 
 // GetSessionMetaByUserHandler 元数据查询 handler 接口
@@ -118,6 +124,8 @@ type ListSessionMessagesQuery struct {
 	SessionID uint
 	Page      int
 	PageSize  int
+	// SampleModulus demo 视角抽样模数（>0 时校验 sessionID % K == 0）
+	SampleModulus uint
 }
 
 // ListSessionMessagesResult 分页结果
@@ -138,6 +146,8 @@ type ListSessionToolsQuery struct {
 	SessionID uint
 	Page      int
 	PageSize  int
+	// SampleModulus demo 视角抽样模数（>0 时校验 sessionID % K == 0）
+	SampleModulus uint
 }
 
 // ListSessionToolsResult 分页结果

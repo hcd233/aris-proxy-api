@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import { PermissionGuard } from "@/components/permission-guard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Key, MessageSquare, Server, Cpu } from "lucide-react";
@@ -57,7 +58,7 @@ function StatCard({
 
 export default function DashboardPage() {
   const t = useT();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isDemo, isModuleOpen } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     apiKeys: 0,
     sessions: 0,
@@ -68,18 +69,25 @@ export default function DashboardPage() {
 
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
+    const demoUser = isDemo();
     try {
+      // demo 未开放 apikeys 模块，跳过探测（避免 403）
+      const keysPromise = demoUser
+        ? Promise.resolve(null)
+        : api.listAPIKeys(1, 1).catch(() => null);
       const [keysRsp, sessionsRsp] = await Promise.all([
-        api.listAPIKeys(1, 1),
-        api.listSessions({ page: 1, pageSize: 1 }),
+        keysPromise,
+        api.listSessions({ page: 1, pageSize: 1 }).catch(() => null),
       ]);
 
-      const endpointsRsp = isAdmin() ? await api.listEndpoints(1, 1).catch(() => null) : null; // 仅探测是否存在 endpoint
-      const modelsRsp = isAdmin() ? await api.listModels(1, 1).catch(() => null) : null;
+      const canListEndpoints = isAdmin() || isModuleOpen("endpoints");
+      const canListModels = isAdmin() || isModuleOpen("models");
+      const endpointsRsp = canListEndpoints ? await api.listEndpoints(1, 1).catch(() => null) : null; // 仅探测是否存在 endpoint
+      const modelsRsp = canListModels ? await api.listModels(1, 1).catch(() => null) : null;
 
       setStats({
-        apiKeys: keysRsp.pageInfo?.total ?? 0,
-        sessions: sessionsRsp.pageInfo?.total ?? 0,
+        apiKeys: keysRsp?.pageInfo?.total ?? 0,
+        sessions: sessionsRsp?.pageInfo?.total ?? 0,
         endpoints: endpointsRsp?.pageInfo?.total ?? 0,
         models: modelsRsp?.pageInfo?.total ?? 0,
       });
@@ -88,7 +96,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, isDemo, isModuleOpen]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
@@ -97,6 +105,7 @@ export default function DashboardPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
+    <PermissionGuard module="dashboard">
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
@@ -106,19 +115,21 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title={t("apikeys.title")}
-          value={stats.apiKeys}
-          icon={<Key className="size-4" />}
-          loading={loading}
-        />
+        {!isDemo() && (
+          <StatCard
+            title={t("apikeys.title")}
+            value={stats.apiKeys}
+            icon={<Key className="size-4" />}
+            loading={loading}
+          />
+        )}
         <StatCard
           title={t("sessions.title")}
           value={stats.sessions}
           icon={<MessageSquare className="size-4" />}
           loading={loading}
         />
-        {isAdmin() && (
+        {(isAdmin() || isModuleOpen("endpoints")) && (
           <StatCard
             title={t("endpoints.title")}
             value={stats.endpoints}
@@ -126,7 +137,7 @@ export default function DashboardPage() {
             loading={loading}
           />
         )}
-        {isAdmin() && (
+        {(isAdmin() || isModuleOpen("models")) && (
           <StatCard
             title={t("models.title")}
             value={stats.models}
@@ -151,5 +162,6 @@ export default function DashboardPage() {
         <TokenRateChart />
       </div>
     </div>
+    </PermissionGuard>
   );
 }

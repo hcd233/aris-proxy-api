@@ -13,6 +13,8 @@ type RequestRateQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
+	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
+	SampleModulus uint
 }
 
 type RequestRateByUserQuery struct {
@@ -48,7 +50,7 @@ func NewRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.
 }
 
 func (h *requestRateHandler) Handle(ctx context.Context, q RequestRateQuery) ([]*modelcall.RequestRatePoint, error) {
-	return h.repo.QueryRequestRate(ctx, nil, q.StartTime, q.EndTime, q.Granularity)
+	return h.repo.QueryRequestRate(ctx, nil, q.StartTime, q.EndTime, q.Granularity, q.SampleModulus)
 }
 
 func (h *requestRateByUserHandler) Handle(ctx context.Context, q RequestRateByUserQuery) ([]*modelcall.RequestRatePoint, error) {
@@ -56,5 +58,5 @@ func (h *requestRateByUserHandler) Handle(ctx context.Context, q RequestRateByUs
 	if err != nil {
 		return nil, err
 	}
-	return h.repo.QueryRequestRate(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity)
+	return h.repo.QueryRequestRate(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity, 0)
 }

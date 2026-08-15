@@ -182,6 +182,10 @@ func (r *stubUserRepo) ListUsers(ctx context.Context, param model.CommonParam, p
 	return nil, nil, nil
 }
 
+func (r *stubUserRepo) FindByPermission(ctx context.Context, permission enum.Permission) (*aggregate.User, error) {
+	return nil, nil
+}
+
 func (r *stubUserRepo) DeleteCascade(ctx context.Context, id uint) error {
 	return nil
 }

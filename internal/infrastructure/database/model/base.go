@@ -32,4 +32,5 @@ var Models = []any{
 	&CronCallAudit{},
 	&Trace{},
 	&TraceEvent{},
+	&DemoConfig{},
 }

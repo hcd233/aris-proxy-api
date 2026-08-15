@@ -148,6 +148,7 @@ const (
 	TagAudit     = "Audit"
 	TagCron      = "Cron"
 	TagCronAudit = "CronAudit"
+	TagDemo      = "Demo"
 	TagEndpoint  = "Endpoint"
 	TagHealth    = "Health"
 	TagModel     = "Model"
@@ -200,6 +201,11 @@ const (
 
 	// ── Cron Pub/Sub ──
 	CronReloadChannel = "cron:reload"
+
+	// ── Demo account ──
+	DemoConfigTableName      = "demo_configs"
+	DemoConfigSingletonID    = 1
+	DemoDefaultSampleModulus = 10
 
 	// ── Locale ──
 	LocaleEmbedDir        = "locales"

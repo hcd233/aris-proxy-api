@@ -97,3 +97,25 @@ type DeleteUserCommand struct {
 type DeleteUserHandler interface {
 	Handle(ctx context.Context, cmd DeleteUserCommand) error
 }
+
+// SetDemoUserCommand 设置全局单例 Demo 账户命令
+type SetDemoUserCommand struct {
+	OperatorID uint // 操作者
+	UserID     uint // 目标用户
+}
+
+// SetDemoUserHandler 设置 Demo 账户命令处理器
+type SetDemoUserHandler interface {
+	Handle(ctx context.Context, cmd SetDemoUserCommand) error
+}
+
+// RestoreDemoUserCommand 恢复 Demo 账户为普通用户命令
+type RestoreDemoUserCommand struct {
+	OperatorID uint // 操作者
+	UserID     uint // 目标用户
+}
+
+// RestoreDemoUserHandler 恢复 Demo 账户命令处理器
+type RestoreDemoUserHandler interface {
+	Handle(ctx context.Context, cmd RestoreDemoUserCommand) error
+}

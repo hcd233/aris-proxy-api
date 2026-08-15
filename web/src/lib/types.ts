@@ -19,7 +19,49 @@ export interface PageInfo {
 
 // ─── Permission ─────────────────────────────────────────────────────────────────
 
-export type Permission = "pending" | "user" | "admin";
+export type Permission = "pending" | "demo" | "user" | "admin";
+
+// ─── Demo Account ──────────────────────────────────────────────────────────────
+
+export type DemoModule =
+  | "dashboard"
+  | "sessions"
+  | "audit"
+  | "models"
+  | "trigger"
+  | "endpoints"
+  | "monitor"
+  | "cron"
+  | "cron_audit";
+
+export interface DemoStatusRsp extends CommonRsp {
+  loginEnabled: boolean;
+  demoUserExists: boolean;
+}
+
+export interface DemoLoginRsp extends CommonRsp {
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+export interface DemoConfig {
+  loginEnabled: boolean;
+  sampleModulus: number;
+  modules: DemoModule[];
+  updatedAt?: string;
+}
+
+export interface GetDemoConfigRsp extends CommonRsp {
+  config?: DemoConfig;
+}
+
+export interface UpdateDemoConfigReqBody {
+  config: {
+    loginEnabled?: boolean;
+    sampleModulus?: number;
+    modules?: DemoModule[];
+  };
+}
 
 // ─── Auth / OAuth2 ─────────────────────────────────────────────────────────────
 

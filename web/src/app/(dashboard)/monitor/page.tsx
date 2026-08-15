@@ -5,6 +5,7 @@ import { Activity, MemoryStick, Radio } from "lucide-react";
 
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
+import { PermissionGuard } from "@/components/permission-guard";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import type { RuntimeInstanceSeries, RuntimePoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -260,6 +261,7 @@ export default function MonitorPage() {
   ];
 
   return (
+    <PermissionGuard module="monitor">
     <div className="space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -386,5 +388,6 @@ export default function MonitorPage() {
         />
       </div>
     </div>
+    </PermissionGuard>
   );
 }

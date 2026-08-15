@@ -13,6 +13,8 @@ type ModelTrendQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
+	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
+	SampleModulus uint
 }
 
 type ModelTrendByUserQuery struct {
@@ -48,7 +50,7 @@ func NewModelTrendByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.A
 }
 
 func (h *modelTrendHandler) Handle(ctx context.Context, q ModelTrendQuery) ([]*modelcall.ModelTrendPoint, error) {
-	return h.repo.QueryModelTrend(ctx, nil, q.StartTime, q.EndTime, q.Granularity)
+	return h.repo.QueryModelTrend(ctx, nil, q.StartTime, q.EndTime, q.Granularity, q.SampleModulus)
 }
 
 func (h *modelTrendByUserHandler) Handle(ctx context.Context, q ModelTrendByUserQuery) ([]*modelcall.ModelTrendPoint, error) {
@@ -56,5 +58,5 @@ func (h *modelTrendByUserHandler) Handle(ctx context.Context, q ModelTrendByUser
 	if err != nil {
 		return nil, err
 	}
-	return h.repo.QueryModelTrend(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity)
+	return h.repo.QueryModelTrend(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity, 0)
 }

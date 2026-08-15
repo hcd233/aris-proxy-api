@@ -156,6 +156,27 @@ func (r *userRepository) FindByGoogleBindID(ctx context.Context, bindID string) 
 	return toUserAggregate(record), nil
 }
 
+// FindByPermission 按权限精确查询（全局单例 Demo 账户定位）
+//
+//	@receiver r *userRepository
+//	@param ctx context.Context
+//	@param permission enum.Permission
+//	@return *aggregate.User 未找到返回 nil
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-16 10:00:00
+func (r *userRepository) FindByPermission(ctx context.Context, permission enum.Permission) (*aggregate.User, error) {
+	db := r.db.WithContext(ctx)
+	record, err := r.dao.Get(db, &dbmodel.User{Permission: permission}, constant.UserRepoFieldsFull)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get user by permission")
+	}
+	return toUserAggregate(record), nil
+}
+
 // toUserAggregate 将 GORM 模型映射为聚合根
 func toUserAggregate(m *dbmodel.User) *aggregate.User {
 	return aggregate.RestoreUser(

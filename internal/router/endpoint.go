@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -13,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.EndpointHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
+func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.EndpointHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	endpointGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	endpointGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
 		cache, "endpointManage", constant.CtxKeyUserID, constant.PeriodManageAPIKey, constant.LimitManageAPIKey,
@@ -45,7 +46,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("listEndpoints", enum.PermissionAdmin),
+			middleware.LimitUserPermissionWithDemoMiddleware("listEndpoints", enum.PermissionAdmin, enum.DemoModuleEndpoints, demoAccessor),
 		},
 	}, endpointHandler.HandleListEndpoints)
 

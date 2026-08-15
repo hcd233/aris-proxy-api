@@ -314,7 +314,7 @@ export default function ModelsPage() {
   };
 
   return (
-    <PermissionGuard adminOnly>
+    <PermissionGuard adminOnly module="models">
       <TooltipProvider>
         <div className="space-y-8">
           <PageHeader

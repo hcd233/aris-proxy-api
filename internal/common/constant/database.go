@@ -14,6 +14,7 @@ const (
 	DBConditionInTemplate       = "%s IN ?"
 	DBConditionIDGreaterThan    = "id > ?"
 	DBConditionWhereIDIn        = "id IN ?"
+	DBConditionIDModuloZero     = "id % ? = 0"
 	DBOrderByID                 = "id"
 	DBConditionDedupKeyNotZero  = "dedup_key <> ''"
 

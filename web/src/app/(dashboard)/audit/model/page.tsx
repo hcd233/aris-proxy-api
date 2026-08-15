@@ -23,6 +23,7 @@ import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
+import { PermissionGuard } from "@/components/permission-guard";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -197,6 +198,7 @@ export default function AuditPage() {
   };
 
   return (
+    <PermissionGuard module="audit">
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
@@ -784,5 +786,6 @@ export default function AuditPage() {
         </CardContent>
       </Card>
     </div>
+    </PermissionGuard>
   );
 }

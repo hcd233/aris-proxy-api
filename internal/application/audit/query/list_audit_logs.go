@@ -131,6 +131,8 @@ type ListAllAuditLogsQuery struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Filter    string
+	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
+	SampleModulus uint
 }
 
 // ListAllAuditLogsHandler 全量审计列表查询处理器
@@ -159,7 +161,7 @@ func (h *listAllAuditLogsHandler) Handle(ctx context.Context, q ListAllAuditLogs
 	if err != nil {
 		return nil, nil, err
 	}
-	audits, pageInfo, err := h.repo.ListAll(ctx, param, q.StartTime, q.EndTime, criteria)
+	audits, pageInfo, err := h.repo.ListAll(ctx, param, q.StartTime, q.EndTime, criteria, q.SampleModulus)
 	if err != nil {
 		return nil, nil, err
 	}

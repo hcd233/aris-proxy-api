@@ -14,6 +14,10 @@ const (
 	PeriodOAuth2Callback = 5 * time.Second
 	LimitOAuth2Callback  = 16
 
+	// Demo 登录入口限流（IP 维度，防刷）
+	PeriodDemoLogin = 5 * time.Second
+	LimitDemoLogin  = 8
+
 	OAuthStateManagerTTL = 10 * time.Minute
 	OAuthStateMaxPending = 100
 
