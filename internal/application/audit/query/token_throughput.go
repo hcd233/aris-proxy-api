@@ -13,6 +13,8 @@ type TokenThroughputQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
+	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
+	SampleModulus uint
 }
 
 type TokenThroughputByUserQuery struct {
@@ -48,7 +50,7 @@ func NewTokenThroughputByUserHandler(repo modelcall.AuditRepository, apiKeyIDs p
 }
 
 func (h *tokenThroughputHandler) Handle(ctx context.Context, q TokenThroughputQuery) ([]*modelcall.TokenThroughputPoint, error) {
-	return h.repo.QueryTokenThroughput(ctx, nil, q.StartTime, q.EndTime, q.Granularity)
+	return h.repo.QueryTokenThroughput(ctx, nil, q.StartTime, q.EndTime, q.Granularity, q.SampleModulus)
 }
 
 func (h *tokenThroughputByUserHandler) Handle(ctx context.Context, q TokenThroughputByUserQuery) ([]*modelcall.TokenThroughputPoint, error) {
@@ -56,5 +58,5 @@ func (h *tokenThroughputByUserHandler) Handle(ctx context.Context, q TokenThroug
 	if err != nil {
 		return nil, err
 	}
-	return h.repo.QueryTokenThroughput(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity)
+	return h.repo.QueryTokenThroughput(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity, 0)
 }

@@ -238,7 +238,7 @@ type sessionSummaryRow struct {
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
-func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria, sampleModulus uint) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -248,6 +248,11 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	}
 
 	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
+
+	// demo 视角抽样：仅返回 id % K == 0 的行
+	if sampleModulus > 1 {
+		sql = sql.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 
 	if !startTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)

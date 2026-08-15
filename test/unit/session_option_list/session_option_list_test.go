@@ -20,7 +20,7 @@ type fakeSessionReadRepo struct {
 	listMessageCountStatsCall int
 }
 
-func (r *fakeSessionReadRepo) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *fakeSessionReadRepo) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria, sampleModulus uint) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 

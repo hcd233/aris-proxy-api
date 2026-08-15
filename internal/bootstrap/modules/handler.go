@@ -6,6 +6,7 @@ import (
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	llmproxyport "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
@@ -27,6 +28,7 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		NewTokenDependencies,
 		NewOauth2Dependencies,
 		NewUserDependencies,
+		NewDemoDependencies,
 		NewAPIKeyDependencies,
 		NewEndpointDependencies,
 		NewModelDependencies,
@@ -39,6 +41,7 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewTokenHandler,
 		handler.NewOauth2Handler,
 		handler.NewUserHandler,
+		handler.NewDemoHandler,
 		handler.NewAPIKeyHandler,
 		handler.NewEndpointHandler,
 		handler.NewModelHandler,
@@ -71,14 +74,27 @@ func NewOauth2Dependencies(initiate oauthport.InitiateLoginHandler, callback oau
 
 func NewUserDependencies(getCurrentUser identityport.GetCurrentUserHandler, updateProfile identityport.UpdateProfileHandler,
 	listUsers identityport.ListUsersHandler, approveUser identityport.ApproveUserHandler,
-	demoteUser identityport.DemoteUserHandler, deleteUser identityport.DeleteUserHandler) handler.UserDependencies {
+	demoteUser identityport.DemoteUserHandler, deleteUser identityport.DeleteUserHandler,
+	setDemoUser identityport.SetDemoUserHandler, restoreDemoUser identityport.RestoreDemoUserHandler) handler.UserDependencies {
 	return handler.UserDependencies{
-		GetCurrentUser: getCurrentUser,
-		UpdateProfile:  updateProfile,
-		ListUsers:      listUsers,
-		ApproveUser:    approveUser,
-		DemoteUser:     demoteUser,
-		DeleteUser:     deleteUser,
+		GetCurrentUser:  getCurrentUser,
+		UpdateProfile:   updateProfile,
+		ListUsers:       listUsers,
+		ApproveUser:     approveUser,
+		DemoteUser:      demoteUser,
+		DeleteUser:      deleteUser,
+		SetDemoUser:     setDemoUser,
+		RestoreDemoUser: restoreDemoUser,
+	}
+}
+
+func NewDemoDependencies(login demoport.DemoLoginHandler, status demoport.DemoStatusHandler,
+	getConfig demoport.GetDemoConfigHandler, updateConfig demoport.UpdateDemoConfigHandler) handler.DemoHandlerDependencies {
+	return handler.DemoHandlerDependencies{
+		Login:        login,
+		Status:       status,
+		GetConfig:    getConfig,
+		UpdateConfig: updateConfig,
 	}
 }
 
@@ -103,6 +119,7 @@ func NewSessionDependencies(
 	deleteScoreSession sessionport.DeleteScoreSessionHandler,
 	sessionCache sessionport.SessionDetailCache,
 	listOption sessionport.ListSessionOptionHandler,
+	demoScope demoport.DemoScopeProvider,
 ) handler.SessionDependencies {
 	return handler.SessionDependencies{
 		ListByUser:         listByUser,
@@ -117,6 +134,7 @@ func NewSessionDependencies(
 		DeleteScoreSession: deleteScoreSession,
 		SessionCache:       sessionCache,
 		ListOption:         listOption,
+		DemoScope:          demoScope,
 	}
 }
 

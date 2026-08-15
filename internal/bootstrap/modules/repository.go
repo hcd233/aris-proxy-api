@@ -3,6 +3,7 @@ package modules
 import (
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -38,6 +39,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewSessionReadRepository,
 		NewSessionWriteRepository,
 		NewAuditRepository,
+		NewDemoConfigRepository,
 		NewEndpointRepository,
 		NewModelRepository,
 		NewEndpointReadRepository,
@@ -88,6 +90,10 @@ func NewSessionWriteRepository(db *gorm.DB) session.SessionRepository {
 
 func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 	return repository.NewAuditRepository(db)
+}
+
+func NewDemoConfigRepository(db *gorm.DB) demoport.DemoConfigRepository {
+	return repository.NewDemoConfigRepository(db)
 }
 
 func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {

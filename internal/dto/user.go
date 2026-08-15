@@ -57,7 +57,7 @@ type UpdateUserReqBody struct {
 // ListUsersReq 用户列表请求（管理员视图）
 type ListUsersReq struct {
 	model.CommonParam
-	Permission string `query:"permission" enum:"pending,user,admin" doc:"按权限过滤，空=全部"`
+	Permission string `query:"permission" enum:"pending,demo,user,admin" doc:"按权限过滤，空=全部"`
 }
 
 // ListUsersRsp 用户列表响应
@@ -90,5 +90,15 @@ type DemoteUserReq struct {
 
 // DeleteUserReq 删除用户请求（admin）
 type DeleteUserReq struct {
+	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
+}
+
+// SetDemoUserReq 设置 Demo 账户请求（pending/user → demo，admin）
+type SetDemoUserReq struct {
+	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
+}
+
+// RestoreDemoUserReq 恢复 Demo 账户请求（demo → user，admin）
+type RestoreDemoUserReq struct {
 	ID uint `query:"id" required:"true" minimum:"1" doc:"User ID"`
 }

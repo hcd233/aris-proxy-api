@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -13,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
+func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	group.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 
 	huma.Register(group, huma.Operation{
@@ -36,7 +37,7 @@ func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.
 		Tags:        []string{constant.TagTrigger},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("listTrigger", enum.PermissionAdmin),
+			middleware.LimitUserPermissionWithDemoMiddleware("listTrigger", enum.PermissionAdmin, enum.DemoModuleTrigger, demoAccessor),
 		},
 	}, handler.HandleListTrigger)
 

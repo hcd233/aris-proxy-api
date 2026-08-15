@@ -28,6 +28,8 @@ type UserHandler interface {
 	HandleApproveUser(ctx context.Context, req *dto.ApproveUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleDemoteUser(ctx context.Context, req *dto.DemoteUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleDeleteUser(ctx context.Context, req *dto.DeleteUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleSetDemoUser(ctx context.Context, req *dto.SetDemoUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleRestoreDemoUser(ctx context.Context, req *dto.RestoreDemoUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
 
 // UserDependencies UserHandler 依赖项（用于依赖注入）
@@ -35,21 +37,25 @@ type UserHandler interface {
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type UserDependencies struct {
-	GetCurrentUser port.GetCurrentUserHandler
-	UpdateProfile  port.UpdateProfileHandler
-	ListUsers      port.ListUsersHandler
-	ApproveUser    port.ApproveUserHandler
-	DemoteUser     port.DemoteUserHandler
-	DeleteUser     port.DeleteUserHandler
+	GetCurrentUser  port.GetCurrentUserHandler
+	UpdateProfile   port.UpdateProfileHandler
+	ListUsers       port.ListUsersHandler
+	ApproveUser     port.ApproveUserHandler
+	DemoteUser      port.DemoteUserHandler
+	DeleteUser      port.DeleteUserHandler
+	SetDemoUser     port.SetDemoUserHandler
+	RestoreDemoUser port.RestoreDemoUserHandler
 }
 
 type userHandler struct {
-	getCurrentUser port.GetCurrentUserHandler
-	updateProfile  port.UpdateProfileHandler
-	listUsers      port.ListUsersHandler
-	approveUser    port.ApproveUserHandler
-	demoteUser     port.DemoteUserHandler
-	deleteUser     port.DeleteUserHandler
+	getCurrentUser  port.GetCurrentUserHandler
+	updateProfile   port.UpdateProfileHandler
+	listUsers       port.ListUsersHandler
+	approveUser     port.ApproveUserHandler
+	demoteUser      port.DemoteUserHandler
+	deleteUser      port.DeleteUserHandler
+	setDemoUser     port.SetDemoUserHandler
+	restoreDemoUser port.RestoreDemoUserHandler
 }
 
 // NewUserHandler 创建用户处理器
@@ -60,12 +66,14 @@ type userHandler struct {
 //	@update 2026-04-26 10:00:00
 func NewUserHandler(deps UserDependencies) UserHandler {
 	return &userHandler{
-		getCurrentUser: deps.GetCurrentUser,
-		updateProfile:  deps.UpdateProfile,
-		listUsers:      deps.ListUsers,
-		approveUser:    deps.ApproveUser,
-		demoteUser:     deps.DemoteUser,
-		deleteUser:     deps.DeleteUser,
+		getCurrentUser:  deps.GetCurrentUser,
+		updateProfile:   deps.UpdateProfile,
+		listUsers:       deps.ListUsers,
+		approveUser:     deps.ApproveUser,
+		demoteUser:      deps.DemoteUser,
+		deleteUser:      deps.DeleteUser,
+		setDemoUser:     deps.SetDemoUser,
+		restoreDemoUser: deps.RestoreDemoUser,
 	}
 }
 
@@ -228,6 +236,48 @@ func (h *userHandler) HandleDeleteUser(ctx context.Context, req *dto.DeleteUserR
 		UserID:     req.ID,
 	}); err != nil {
 		logger.WithCtx(ctx).Error("[UserHandler] Delete user failed", zap.Error(err), zap.Uint("targetID", req.ID))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	return apiutil.WrapHTTPResponse(&dto.EmptyRsp{}, nil)
+}
+
+// HandleSetDemoUser 设置 Demo 账户：pending/user → demo（admin）
+//
+//	@receiver h *userHandler
+//	@param ctx context.Context
+//	@param req *dto.SetDemoUserReq
+//	@return *dto.HTTPResponse[*dto.EmptyRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-16 10:00:00
+func (h *userHandler) HandleSetDemoUser(ctx context.Context, req *dto.SetDemoUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	operatorID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	if err := h.setDemoUser.Handle(ctx, port.SetDemoUserCommand{
+		OperatorID: operatorID,
+		UserID:     req.ID,
+	}); err != nil {
+		logger.WithCtx(ctx).Error("[UserHandler] Set demo user failed", zap.Error(err), zap.Uint("targetID", req.ID))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	return apiutil.WrapHTTPResponse(&dto.EmptyRsp{}, nil)
+}
+
+// HandleRestoreDemoUser 恢复 Demo 账户：demo → user（admin）
+//
+//	@receiver h *userHandler
+//	@param ctx context.Context
+//	@param req *dto.RestoreDemoUserReq
+//	@return *dto.HTTPResponse[*dto.EmptyRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-16 10:00:00
+func (h *userHandler) HandleRestoreDemoUser(ctx context.Context, req *dto.RestoreDemoUserReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
+	operatorID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	if err := h.restoreDemoUser.Handle(ctx, port.RestoreDemoUserCommand{
+		OperatorID: operatorID,
+		UserID:     req.ID,
+	}); err != nil {
+		logger.WithCtx(ctx).Error("[UserHandler] Restore demo user failed", zap.Error(err), zap.Uint("targetID", req.ID))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(&dto.EmptyRsp{}, nil)

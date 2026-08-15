@@ -196,7 +196,7 @@ export default function CronAuditPage() {
   };
 
   return (
-    <PermissionGuard adminOnly>
+    <PermissionGuard adminOnly module="cron_audit">
       <div className="space-y-8">
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">

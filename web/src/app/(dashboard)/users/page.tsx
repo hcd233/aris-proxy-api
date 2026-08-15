@@ -6,6 +6,7 @@ import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
+import { DemoConfigCard } from "@/components/demo-config-card";
 import type { PageInfo, UserItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,9 +43,9 @@ import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 
-const PERMISSIONS = ["pending", "user", "admin"] as const;
+const PERMISSIONS = ["pending", "demo", "user", "admin"] as const;
 
-type UserAction = "promote" | "demote" | "delete";
+type UserAction = "promote" | "demote" | "delete" | "setDemo" | "restoreDemo";
 
 interface UserRowActionsProps {
   user: UserItem;
@@ -52,7 +53,7 @@ interface UserRowActionsProps {
   onAction: (action: UserAction, user: UserItem) => void;
 }
 
-/** 行操作菜单：pending→升为 User；user→降级为 Pending；均可删除；admin 与自己只读 */
+/** 行操作菜单：pending→升为 User；user→降级为 Pending；pending/user→设为 Demo；demo→恢复为 User；均可删除；admin 与自己只读 */
 function UserRowActions({ user, currentUserId, onAction }: UserRowActionsProps) {
   const t = useT();
   const canOperate = user.permission !== "admin" && user.id !== currentUserId;
@@ -75,6 +76,16 @@ function UserRowActions({ user, currentUserId, onAction }: UserRowActionsProps) 
         {user.permission === "user" && (
           <DropdownMenuItem onClick={() => onAction("demote", user)}>
             {t("users.demote")}
+          </DropdownMenuItem>
+        )}
+        {(user.permission === "pending" || user.permission === "user") && (
+          <DropdownMenuItem onClick={() => onAction("setDemo", user)}>
+            {t("users.set_demo")}
+          </DropdownMenuItem>
+        )}
+        {user.permission === "demo" && (
+          <DropdownMenuItem onClick={() => onAction("restoreDemo", user)}>
+            {t("users.restore_demo")}
           </DropdownMenuItem>
         )}
         <DropdownMenuItem variant="destructive" onClick={() => onAction("delete", user)}>
@@ -159,6 +170,12 @@ export default function UsersPage() {
         if (action === "demote") {
           await api.demoteUser(user.id);
           toast.success(t("users.demote_success"));
+        } else if (action === "setDemo") {
+          await api.setDemoUser(user.id);
+          toast.success(t("users.set_demo_success"));
+        } else if (action === "restoreDemo") {
+          await api.restoreDemoUser(user.id);
+          toast.success(t("users.restore_demo_success"));
         } else {
           await api.deleteUser(user.id);
           toast.success(t("users.delete_success"));
@@ -170,9 +187,14 @@ export default function UsersPage() {
           permission || undefined,
         );
       } catch (err) {
-        showErrorToast(err, {
-          title: action === "demote" ? t("users.demote_error") : t("users.delete_error"),
-        });
+        const titles: Record<UserAction, string> = {
+          promote: t("users.approve_error"),
+          demote: t("users.demote_error"),
+          delete: t("users.delete_error"),
+          setDemo: t("users.set_demo_error"),
+          restoreDemo: t("users.restore_demo_error"),
+        };
+        showErrorToast(err, { title: titles[action] });
       } finally {
         setActing(null);
       }
@@ -191,6 +213,32 @@ export default function UsersPage() {
     },
     [promoteUser],
   );
+
+  const confirmMeta: Record<
+    Exclude<UserAction, "promote">,
+    { title: string; desc: string; label: string }
+  > = {
+    demote: {
+      title: t("users.demote_confirm_title"),
+      desc: t("users.demote_confirm_desc"),
+      label: t("users.demote"),
+    },
+    delete: {
+      title: t("users.delete_confirm_title"),
+      desc: t("users.delete_confirm_desc"),
+      label: t("common.delete"),
+    },
+    setDemo: {
+      title: t("users.set_demo_confirm_title"),
+      desc: t("users.set_demo_confirm_desc"),
+      label: t("users.set_demo"),
+    },
+    restoreDemo: {
+      title: t("users.restore_demo_confirm_title"),
+      desc: t("users.restore_demo_confirm_desc"),
+      label: t("users.restore_demo"),
+    },
+  };
 
   const handleConfirm = useCallback(() => {
     if (confirmAction && confirmUser) {
@@ -317,6 +365,8 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
+        <DemoConfigCard />
+
         <DeleteConfirmDialog
           open={confirmAction !== null}
           onOpenChange={(open) => {
@@ -326,16 +376,14 @@ export default function UsersPage() {
             }
           }}
           title={
-            confirmAction === "demote"
-              ? t("users.demote_confirm_title")
-              : t("users.delete_confirm_title")
+            confirmAction && confirmAction !== "promote" ? confirmMeta[confirmAction].title : ""
           }
           description={
-            confirmAction === "demote"
-              ? t("users.demote_confirm_desc")
-              : t("users.delete_confirm_desc")
+            confirmAction && confirmAction !== "promote" ? confirmMeta[confirmAction].desc : ""
           }
-          confirmLabel={confirmAction === "demote" ? t("users.demote") : t("common.delete")}
+          confirmLabel={
+            confirmAction && confirmAction !== "promote" ? confirmMeta[confirmAction].label : ""
+          }
           loadingLabel={t("common.processing")}
           loading={acting !== null}
           onConfirm={handleConfirm}

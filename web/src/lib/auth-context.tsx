@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { api } from "./api-client";
-import type { DetailedUser, OAuth2Provider } from "./types";
+import type { DemoModule, DetailedUser, OAuth2Provider } from "./types";
 
 interface AuthContextValue {
   user: DetailedUser | null;
@@ -21,6 +21,10 @@ interface AuthContextValue {
   logout: () => void;
   isAdmin: () => boolean;
   isUser: () => boolean;
+  isDemo: () => boolean;
+  /** demo 用户可访问的模块（非 demo 用户为 null） */
+  demoModules: DemoModule[] | null;
+  isModuleOpen: (module: DemoModule) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -34,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<DetailedUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(() => readStorage("access_token"));
   const [isLoading, setIsLoading] = useState(true);
+  const [demoModules, setDemoModules] = useState<DemoModule[] | null>(null);
   const initRan = useRef(false);
 
   const fetchUser = useCallback(async () => {
@@ -43,8 +48,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(rsp.error.message);
       }
       setUser(rsp.user ?? null);
+      // demo 用户加载模块配置（导航/守卫渲染用）；失败按空模块处理（fail-closed）
+      if (rsp.user?.permission === "demo") {
+        try {
+          const cfgRsp = await api.getDemoConfig();
+          setDemoModules(cfgRsp.config?.modules ?? []);
+        } catch {
+          setDemoModules([]);
+        }
+      } else {
+        setDemoModules(null);
+      }
     } catch {
       setUser(null);
+      setDemoModules(null);
     }
   }, []);
 
@@ -117,12 +134,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("refresh_token");
     setAccessToken(null);
     setUser(null);
+    setDemoModules(null);
   }, []);
 
   const isAdmin = useCallback(() => user?.permission === "admin", [user]);
   const isUser = useCallback(
     () => user?.permission === "user" || user?.permission === "admin",
     [user],
+  );
+  const isDemo = useCallback(() => user?.permission === "demo", [user]);
+  const isModuleOpen = useCallback(
+    (module: DemoModule) => demoModules?.includes(module) ?? false,
+    [demoModules],
   );
 
   return (
@@ -136,6 +159,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         isAdmin,
         isUser,
+        isDemo,
+        demoModules,
+        isModuleOpen,
       }}
     >
       {children}

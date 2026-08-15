@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -13,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
+func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	metricsGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 
 	huma.Register(metricsGroup, huma.Operation{
@@ -24,6 +25,6 @@ func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHand
 		Description: "Get cross-pod aggregated runtime metrics time series for the monitor dashboard. Admin only.",
 		Tags:        []string{constant.TagMonitor},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("getRuntimeMetrics", enum.PermissionAdmin)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getRuntimeMetrics", enum.PermissionAdmin, enum.DemoModuleMonitor, demoAccessor)},
 	}, metricsHandler.HandleGetRuntimeMetrics)
 }

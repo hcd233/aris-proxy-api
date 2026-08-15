@@ -77,9 +77,9 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 //	@receiver r *auditRepository
 //	@author centonhuang
 //	@update 2026-06-09 10:00:00
-func (r *auditRepository) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (r *auditRepository) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria, sampleModulus uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
-	return r.paginate(db, param, startTime, endTime, criteria)
+	return r.paginate(db, param, startTime, endTime, criteria, sampleModulus)
 }
 
 // ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
@@ -99,7 +99,7 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 		return nil, &model.PageInfo{Page: page, PageSize: pageSize, Total: 0}, nil
 	}
 	db := r.db.WithContext(ctx).Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), apiKeyIDs)
-	return r.paginate(db, param, startTime, endTime, criteria)
+	return r.paginate(db, param, startTime, endTime, criteria, 0)
 }
 
 // ListDistinctUserNames 查询去重的用户名列表
@@ -248,7 +248,7 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 // paginate 通用分页：在调用方已附加范围过滤的 db 上做时间范围、模糊搜索、排序、count、limit/offset。
 //
 // 不复用 baseDAO.Paginate，因为后者只接受 *ModelT 等值 where 不支持 IN 条件。
-func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria, sampleModulus uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	if param.Page < 1 {
 		param.Page = 1
 	}
@@ -257,6 +257,11 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 	}
 
 	sql := db.Model(&dbmodel.ModelCallAudit{}).Select(constant.AuditRepoFields).Where(constant.AuditPaginateWhereDeletedAtZero)
+
+	// demo 视角抽样：仅统计 id % K == 0 的行
+	if sampleModulus > 1 {
+		sql = sql.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 
 	if !startTime.IsZero() {
 		sql = sql.Where(constant.AuditPaginateWhereCreatedAtGTE, startTime)
@@ -375,10 +380,14 @@ func dateTruncSQL(granularity string) string {
 	}
 }
 
-func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
+func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.ModelTrendPoint, error) {
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)
+
+	if sampleModulus > 1 {
+		db = db.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
@@ -395,10 +404,14 @@ func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint,
 	return results, nil
 }
 
-func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
+func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.RequestRatePoint, error) {
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)
+
+	if sampleModulus > 1 {
+		db = db.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
@@ -415,10 +428,14 @@ func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint
 	return results, nil
 }
 
-func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.TokenThroughputPoint, error) {
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)
+
+	if sampleModulus > 1 {
+		db = db.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
@@ -442,10 +459,14 @@ func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []
 	return results, nil
 }
 
-func (r *auditRepository) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
+func (r *auditRepository) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.FirstTokenLatencyPoint, error) {
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)
+
+	if sampleModulus > 1 {
+		db = db.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)

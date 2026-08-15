@@ -18,6 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
+import { PermissionGuard } from "@/components/permission-guard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDateTime, truncateText } from "@/lib/utils";
 import { ScoreDots } from "@/components/session-detail/score-dots";
@@ -47,6 +49,7 @@ const SORTABLE_COLUMNS: Record<string, string> = {
 export default function SessionsPage() {
   const t = useT();
   const isMobile = useIsMobile();
+  const { isDemo } = useAuth();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.sessions.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState(
@@ -378,6 +381,7 @@ export default function SessionsPage() {
   };
 
   return (
+    <PermissionGuard module="sessions">
     <div className="space-y-8">
       <PageHeader title={t("sessions.title")} description={t("sessions.subtitle")} />
 
@@ -525,7 +529,7 @@ export default function SessionsPage() {
                   );
                 }}
               />
-              {selected.size > 0 && (
+              {!isDemo() && selected.size > 0 && (
                 <Button
                   variant="destructive"
                   size="sm"
@@ -587,6 +591,7 @@ export default function SessionsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
+                            {!isDemo() && (
                             <ScoreDots
                               score={s.score}
                               scoring={scoring === s.id}
@@ -594,12 +599,14 @@ export default function SessionsPage() {
                               onClear={() => handleDeleteScore(s.id)}
                               size={isMobile ? 20 : 16}
                             />
+                            )}
                             <Badge variant="secondary" className="text-xs">
                               {t("sessions.msg_count").replace(
                                 "{count}",
                                 String(s.messageCount ?? 0),
                               )}
                             </Badge>
+                            {!isDemo() && (
                             <DeleteIconButton
                               disabled={deleteConfirm.loading && deleteConfirm.target?.id === s.id}
                               onClick={(e) => {
@@ -608,6 +615,7 @@ export default function SessionsPage() {
                               }}
                               aria-label={t("sessions.delete_aria")}
                             />
+                            )}
                           </div>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -752,6 +760,7 @@ export default function SessionsPage() {
                           </TableCell>
                           <TableCell className="w-16">
                             <div className="flex justify-center">
+                              {!isDemo() && (
                               <DeleteIconButton
                                 disabled={
                                   deleteConfirm.loading && deleteConfirm.target?.id === s.id
@@ -762,6 +771,7 @@ export default function SessionsPage() {
                                 }}
                                 aria-label={t("sessions.delete_aria")}
                               />
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -813,5 +823,6 @@ export default function SessionsPage() {
         onConfirm={handleBatchDelete}
       />
     </div>
+    </PermissionGuard>
   );
 }

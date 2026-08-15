@@ -6,6 +6,10 @@ import type {
   LoginRsp,
   RefreshTokenRsp,
   RefreshTokenReqBody,
+  DemoStatusRsp,
+  DemoLoginRsp,
+  GetDemoConfigRsp,
+  UpdateDemoConfigReqBody,
   GetCurUserRsp,
   UpdateUserReqBody,
   ListUsersRsp,
@@ -253,6 +257,27 @@ class ApiClient {
     });
   }
 
+  // ─── Demo Account ──────────────────────────────────────────────────────────
+
+  async getDemoStatus(): Promise<DemoStatusRsp> {
+    return this.request<DemoStatusRsp>("/api/v1/demo/status");
+  }
+
+  async demoLogin(): Promise<DemoLoginRsp> {
+    return this.request<DemoLoginRsp>("/api/v1/demo/login", { method: "POST" });
+  }
+
+  async getDemoConfig(): Promise<GetDemoConfigRsp> {
+    return this.request<GetDemoConfigRsp>("/api/v1/demo/config");
+  }
+
+  async updateDemoConfig(body: UpdateDemoConfigReqBody): Promise<GetDemoConfigRsp> {
+    return this.request<GetDemoConfigRsp>("/api/v1/demo/config", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  }
+
   // ─── User ───────────────────────────────────────────────────────────────────
 
   async getCurrentUser(): Promise<GetCurUserRsp> {
@@ -287,6 +312,14 @@ class ApiClient {
 
   async deleteUser(id: number): Promise<CommonRsp> {
     return this.request<CommonRsp>(`/api/v1/user/delete?id=${id}`, { method: "DELETE" });
+  }
+
+  async setDemoUser(id: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/user/demo?id=${id}`, { method: "POST" });
+  }
+
+  async restoreDemoUser(id: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/user/demo/restore?id=${id}`, { method: "POST" });
   }
 
   // ─── Session (JWT auth) ────────────────────────────────────────────────────

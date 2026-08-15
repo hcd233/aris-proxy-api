@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -13,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
+func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	cronGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 
 	huma.Register(cronGroup, huma.Operation{
@@ -24,7 +25,7 @@ func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gor
 		Description: "List all cron jobs with their enabled status",
 		Tags:        []string{constant.TagCron},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listCronJobs", enum.PermissionAdmin)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronJobs", enum.PermissionAdmin, enum.DemoModuleCron, demoAccessor)},
 	}, cronHandler.HandleListCronJobs)
 
 	huma.Register(cronGroup, huma.Operation{

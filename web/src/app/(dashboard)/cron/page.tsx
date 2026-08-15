@@ -163,7 +163,7 @@ export default function CronPage() {
     fetchJobs(page, pageSize ?? pageInfo.pageSize, searchQuery);
 
   return (
-    <PermissionGuard adminOnly>
+    <PermissionGuard adminOnly module="cron">
       <TooltipProvider>
         <div className="space-y-8">
           <PageHeader title={t("cron.title")} description={t("cron.subtitle")} />

@@ -108,4 +108,34 @@ func initUserRouter(userGroup huma.API, userHandler handler.UserHandler, db *gor
 			middleware.LimitUserPermissionMiddleware("deleteUser", enum.PermissionAdmin),
 		},
 	}, userHandler.HandleDeleteUser)
+
+	huma.Register(userGroup, huma.Operation{
+		OperationID: "setDemoUser",
+		Method:      http.MethodPost,
+		Path:        "/demo",
+		Summary:     "SetDemoUser",
+		Description: "Set a pending/user account as the global demo account, replacing the existing one (admin only)",
+		Tags:        []string{constant.TagUser},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("setDemoUser", enum.PermissionAdmin),
+		},
+	}, userHandler.HandleSetDemoUser)
+
+	huma.Register(userGroup, huma.Operation{
+		OperationID: "restoreDemoUser",
+		Method:      http.MethodPost,
+		Path:        "/demo/restore",
+		Summary:     "RestoreDemoUser",
+		Description: "Restore the demo account back to a regular user (admin only)",
+		Tags:        []string{constant.TagUser},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("restoreDemoUser", enum.PermissionAdmin),
+		},
+	}, userHandler.HandleRestoreDemoUser)
 }

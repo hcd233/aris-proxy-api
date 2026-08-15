@@ -11,6 +11,7 @@ export default function LoginPage() {
   const { login, handleCallback, accessToken, user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [demoAvailable, setDemoAvailable] = useState(false);
   const t = useT();
 
   const processCallback = useCallback(async () => {
@@ -56,6 +57,16 @@ export default function LoginPage() {
       processCallback();
     }
   }, [processCallback]);
+
+  useEffect(() => {
+    // demo 入口显隐：开关开启且已配置 demo 账户时展示按钮
+    api
+      .getDemoStatus()
+      .then((rsp) => {
+        setDemoAvailable(rsp.loginEnabled && rsp.demoUserExists);
+      })
+      .catch(() => setDemoAvailable(false));
+  }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -63,6 +74,29 @@ export default function LoginPage() {
       window.location.href = "/web/";
     }
   }, [accessToken, user]);
+
+  const demoLogin = useCallback(async () => {
+    setError(null);
+    setProcessing(true);
+    try {
+      const rsp = await api.demoLogin();
+      if (rsp.error) {
+        setError(rsp.error.message);
+        setProcessing(false);
+        return;
+      }
+      if (rsp.accessToken && rsp.refreshToken) {
+        await handleCallback(rsp.accessToken, rsp.refreshToken);
+        window.location.href = "/web/";
+      } else {
+        setError(t("login.failed_no_tokens"));
+        setProcessing(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("login.failed"));
+      setProcessing(false);
+    }
+  }, [handleCallback, t]);
 
   if (processing) {
     return (
@@ -120,6 +154,18 @@ export default function LoginPage() {
             <Button size="lg" variant="outline" onClick={() => login("google")}>
               {t("auth.login_google")}
             </Button>
+            {demoAvailable && (
+              <>
+                <div className="my-1 flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" aria-hidden />
+                  <span>{t("login.demo_or")}</span>
+                  <span className="h-px flex-1 bg-border" aria-hidden />
+                </div>
+                <Button size="lg" variant="secondary" onClick={demoLogin}>
+                  {t("login.demo_continue")}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

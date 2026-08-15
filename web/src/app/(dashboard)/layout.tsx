@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import type { DemoModule } from "@/lib/types";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -45,12 +46,24 @@ interface NavItem {
   href: string;
   icon: ReactNode;
   adminOnly?: boolean;
+  /** demo 用户可配置开放的模块 key；无 key 的导航项对 demo 隐藏 */
+  demoModule?: DemoModule;
 }
 
 function getNavItems(): NavItem[] {
   return [
-    { labelKey: "nav.dashboard", href: "/", icon: <LayoutDashboard className="size-4" /> },
-    { labelKey: "nav.sessions", href: "/sessions/", icon: <MessageSquare className="size-4" /> },
+    {
+      labelKey: "nav.dashboard",
+      href: "/",
+      icon: <LayoutDashboard className="size-4" />,
+      demoModule: "dashboard",
+    },
+    {
+      labelKey: "nav.sessions",
+      href: "/sessions/",
+      icon: <MessageSquare className="size-4" />,
+      demoModule: "sessions",
+    },
     { labelKey: "nav.shares", href: "/shares/", icon: <Share2 className="size-4" /> },
     { labelKey: "nav.api_keys", href: "/apikeys/", icon: <Key className="size-4" /> },
     {
@@ -58,27 +71,48 @@ function getNavItems(): NavItem[] {
       href: "/endpoints/",
       icon: <Server className="size-4" />,
       adminOnly: true,
+      demoModule: "endpoints",
     },
-    { labelKey: "nav.models", href: "/models/", icon: <Cpu className="size-4" />, adminOnly: true },
+    {
+      labelKey: "nav.models",
+      href: "/models/",
+      icon: <Cpu className="size-4" />,
+      adminOnly: true,
+      demoModule: "models",
+    },
     {
       labelKey: "nav.trigger",
       href: "/trigger/",
       icon: <Ban className="size-4" />,
       adminOnly: true,
+      demoModule: "trigger",
     },
-    { labelKey: "nav.audit", href: "/audit/model/", icon: <ScrollText className="size-4" /> },
-    { labelKey: "nav.cron", href: "/cron/", icon: <Timer className="size-4" />, adminOnly: true },
+    {
+      labelKey: "nav.audit",
+      href: "/audit/model/",
+      icon: <ScrollText className="size-4" />,
+      demoModule: "audit",
+    },
+    {
+      labelKey: "nav.cron",
+      href: "/cron/",
+      icon: <Timer className="size-4" />,
+      adminOnly: true,
+      demoModule: "cron",
+    },
     {
       labelKey: "nav.cron_audit",
       href: "/audit/cron/",
       icon: <ScrollText className="size-4" />,
       adminOnly: true,
+      demoModule: "cron_audit",
     },
     {
       labelKey: "nav.monitor",
       href: "/monitor/",
       icon: <Activity className="size-4" />,
       adminOnly: true,
+      demoModule: "monitor",
     },
     { labelKey: "nav.users", href: "/users/", icon: <Users className="size-4" />, adminOnly: true },
     { labelKey: "nav.dataset", href: "/dataset/", icon: <Database className="size-4" /> },
@@ -97,10 +131,16 @@ function SidebarNav({
   collapsed?: boolean;
 }) {
   const pathname = usePathname();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isDemo, isModuleOpen } = useAuth();
   const t = useT();
 
-  const visibleItems = items.filter((item) => !item.adminOnly || isAdmin());
+  const visibleItems = items.filter((item) => {
+    // demo 用户：仅显示开放的模块（shares/apikeys/dataset/trace/profile 等无 key 项隐藏）
+    if (isDemo()) {
+      return item.demoModule !== undefined && isModuleOpen(item.demoModule);
+    }
+    return !item.adminOnly || isAdmin();
+  });
 
   return (
     <TooltipProvider>
@@ -239,7 +279,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <PermissionGuard>
+    <PermissionGuard allowDemo>
       <div className="page-surface flex h-screen overflow-hidden bg-background text-foreground">
         {/* Desktop sidebar */}
         <aside

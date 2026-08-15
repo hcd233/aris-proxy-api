@@ -16,6 +16,9 @@ import (
 	cronmgmtquery "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/query"
 	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
 	datasetquery "github.com/hcd233/aris-proxy-api/internal/application/dataset/query"
+	democommand "github.com/hcd233/aris-proxy-api/internal/application/demo/command"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
+	demoquery "github.com/hcd233/aris-proxy-api/internal/application/demo/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
@@ -82,6 +85,14 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewApproveUserHandler,
 		NewDemoteUserHandler,
 		NewDeleteUserHandler,
+		NewSetDemoUserHandler,
+		NewRestoreDemoUserHandler,
+		demoquery.NewGetDemoConfigHandler,
+		demoquery.NewDemoModuleAccessor,
+		demoquery.NewDemoScopeProvider,
+		democommand.NewUpdateDemoConfigHandler,
+		NewDemoLoginHandler,
+		NewDemoStatusHandler,
 		NewInitiateLoginHandler,
 		NewHandleCallbackHandler,
 		auditquery.NewListAllAuditLogsHandler,
@@ -246,6 +257,31 @@ func NewDeleteUserHandler(repo identity.UserRepository, cache *redis.Client) ide
 	return identitycommand.NewDeleteUserHandler(repo, invalidateJWTUserCache(cache))
 }
 
+func NewSetDemoUserHandler(repo identity.UserRepository, cache *redis.Client) identityport.SetDemoUserHandler {
+	return identitycommand.NewSetDemoUserHandler(repo, invalidateJWTUserCache(cache))
+}
+
+func NewRestoreDemoUserHandler(repo identity.UserRepository, cache *redis.Client) identityport.RestoreDemoUserHandler {
+	return identitycommand.NewRestoreDemoUserHandler(repo, invalidateJWTUserCache(cache))
+}
+
+type demoLoginParams struct {
+	fx.In
+
+	ConfigRepo    demoport.DemoConfigRepository
+	UserRepo      identity.UserRepository
+	AccessSigner  identityservice.TokenSigner `name:"accessSigner"`
+	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
+}
+
+func NewDemoLoginHandler(params demoLoginParams) demoport.DemoLoginHandler {
+	return democommand.NewDemoLoginHandler(params.ConfigRepo, params.UserRepo, params.AccessSigner, params.RefreshSigner)
+}
+
+func NewDemoStatusHandler(configRepo demoport.DemoConfigRepository, userRepo identity.UserRepository) demoport.DemoStatusHandler {
+	return democommand.NewDemoStatusHandler(configRepo, userRepo)
+}
+
 // invalidateJWTUserCache 构造删除 Redis jwt:user:{id} 缓存的回调
 //
 // 用户删除/权限变更后调用，使 JwtMiddleware 的用户缓存立即失效（TTL 内不再以旧状态放行）。
@@ -306,8 +342,9 @@ func NewAuditService(
 	modelUsageByUser auditquery.ModelUsageByUserHandler,
 	firstTokenLatency auditquery.FirstTokenLatencyHandler,
 	firstTokenLatencyByUser auditquery.FirstTokenLatencyByUserHandler,
+	demoScope demoport.DemoScopeProvider,
 ) auditport.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)
+	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, demoScope)
 }
 
 func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {

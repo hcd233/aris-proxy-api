@@ -3,10 +3,15 @@
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import type { DemoModule } from "@/lib/types";
 
 interface PermissionGuardProps {
   children: ReactNode;
   adminOnly?: boolean;
+  /** 页面对应的 demo 模块 key；demo 用户仅当该模块开放时放行 */
+  module?: DemoModule;
+  /** demo 用户直接放行（仅用于 dashboard 布局壳，页面内容各自按 module 守卫） */
+  allowDemo?: boolean;
 }
 
 function GuardState({ title, description }: { title: string; description: string }) {
@@ -20,8 +25,8 @@ function GuardState({ title, description }: { title: string; description: string
   );
 }
 
-export function PermissionGuard({ children, adminOnly = false }: PermissionGuardProps) {
-  const { user, isLoading, isUser, isAdmin } = useAuth();
+export function PermissionGuard({ children, adminOnly = false, module, allowDemo = false }: PermissionGuardProps) {
+  const { user, isLoading, isUser, isAdmin, isDemo, isModuleOpen } = useAuth();
   const t = useT();
 
   useEffect(() => {
@@ -42,6 +47,19 @@ export function PermissionGuard({ children, adminOnly = false }: PermissionGuard
   if (!user) {
     // Redirecting to login
     return null;
+  }
+
+  if (isDemo()) {
+    // demo 只读受限：布局壳直接放行；页面按模块开放判断（module 未声明视为不开放）
+    if (allowDemo || (module && isModuleOpen(module))) {
+      return <>{children}</>;
+    }
+    return (
+      <GuardState
+        title={t("permission_guard.access_denied")}
+        description={t("permission_guard.demo_denied_desc")}
+      />
+    );
   }
 
   if (user.permission === "pending") {

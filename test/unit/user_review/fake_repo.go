@@ -101,6 +101,15 @@ func (r *fakeUserRepo) ListUsers(ctx context.Context, param model.CommonParam, p
 }
 
 // DeleteCascade 模拟软删除用户及其 API Keys（内存实现从列表移除用户）
+func (r *fakeUserRepo) FindByPermission(ctx context.Context, permission enum.Permission) (*aggregate.User, error) {
+	for _, u := range r.users {
+		if u.Permission() == permission {
+			return u, nil
+		}
+	}
+	return nil, nil
+}
+
 func (r *fakeUserRepo) DeleteCascade(ctx context.Context, id uint) error {
 	for i, u := range r.users {
 		if u.AggregateID() == id {

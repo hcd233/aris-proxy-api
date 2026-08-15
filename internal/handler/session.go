@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -61,6 +62,7 @@ type SessionDependencies struct {
 	DeleteScoreSession port.DeleteScoreSessionHandler
 	SessionCache       port.SessionDetailCache
 	ListOption         port.ListSessionOptionHandler
+	DemoScope          demoport.DemoScopeProvider
 }
 
 type sessionHandler struct {
@@ -76,6 +78,7 @@ type sessionHandler struct {
 	deleteScoreSession port.DeleteScoreSessionHandler
 	sessionCache       port.SessionDetailCache
 	listOption         port.ListSessionOptionHandler
+	demoScope          demoport.DemoScopeProvider
 }
 
 // NewSessionHandler 创建Session处理器
@@ -98,7 +101,29 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 		deleteScoreSession: deps.DeleteScoreSession,
 		sessionCache:       deps.SessionCache,
 		listOption:         deps.ListOption,
+		demoScope:          deps.DemoScope,
 	}
+}
+
+// resolveDemoScope 解析 demo 数据视角参数；非 demo 用户零开销返回 (false, 0, nil)
+//
+//	@receiver h *sessionHandler
+//	@param ctx context.Context
+//	@param permission enum.Permission
+//	@return bool isDemo
+//	@return uint sampleModulus
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-16 10:00:00
+func (h *sessionHandler) resolveDemoScope(ctx context.Context, permission enum.Permission) (isDemo bool, sampleModulus uint, err error) {
+	if permission != enum.PermissionDemo {
+		return false, 0, nil
+	}
+	modulus, err := h.demoScope.SampleModulus(ctx)
+	if err != nil {
+		return false, 0, err
+	}
+	return true, modulus, nil
 }
 
 // HandleListSessionsByUser 分页获取当前用户的Session列表（JWT认证）
@@ -116,17 +141,24 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
+	isDemo, modulus, scopeErr := h.resolveDemoScope(ctx, permission)
+	if scopeErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo scope failed", zap.Error(scopeErr))
+		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
 	views, pageInfo, err := h.listByUser.Handle(ctx, port.ListSessionsByUserQuery{
-		UserID:    userID,
-		IsAdmin:   isAdmin,
-		Page:      req.Page,
-		PageSize:  req.PageSize,
-		Sort:      req.Sort,
-		SortField: req.SortField,
-		StartTime: req.StartTime,
-		EndTime:   req.EndTime,
-		Keyword:   req.Keyword,
-		Filter:    req.Filter,
+		UserID:        userID,
+		IsAdmin:       isAdmin || isDemo,
+		Page:          req.Page,
+		PageSize:      req.PageSize,
+		Sort:          req.Sort,
+		SortField:     req.SortField,
+		StartTime:     req.StartTime,
+		EndTime:       req.EndTime,
+		Keyword:       req.Keyword,
+		Filter:        req.Filter,
+		SampleModulus: modulus,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List sessions by user failed", zap.Error(err))
@@ -164,10 +196,17 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
+	isDemo, modulus, scopeErr := h.resolveDemoScope(ctx, permission)
+	if scopeErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo scope failed", zap.Error(scopeErr))
+		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
 	view, err := h.getByUser.Handle(ctx, port.GetSessionByUserQuery{
-		UserID:    userID,
-		IsAdmin:   isAdmin,
-		SessionID: req.SessionID,
+		UserID:        userID,
+		IsAdmin:       isAdmin || isDemo,
+		SessionID:     req.SessionID,
+		SampleModulus: modulus,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Get session by user failed",
@@ -350,10 +389,17 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
+	isDemo, modulus, scopeErr := h.resolveDemoScope(ctx, permission)
+	if scopeErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo scope failed", zap.Error(scopeErr))
+		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
 	view, err := h.getMetaByUser.Handle(ctx, port.GetSessionMetaByUserQuery{
-		UserID:    userID,
-		IsAdmin:   isAdmin,
-		SessionID: req.SessionID,
+		UserID:        userID,
+		IsAdmin:       isAdmin || isDemo,
+		SessionID:     req.SessionID,
+		SampleModulus: modulus,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Get session metadata failed",
@@ -400,12 +446,19 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
+	isDemo, modulus, scopeErr := h.resolveDemoScope(ctx, permission)
+	if scopeErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo scope failed", zap.Error(scopeErr))
+		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
 	result, err := h.listMessages.Handle(ctx, port.ListSessionMessagesQuery{
-		UserID:    userID,
-		IsAdmin:   isAdmin,
-		SessionID: req.SessionID,
-		Page:      req.Page,
-		PageSize:  req.PageSize,
+		UserID:        userID,
+		IsAdmin:       isAdmin || isDemo,
+		SessionID:     req.SessionID,
+		Page:          req.Page,
+		PageSize:      req.PageSize,
+		SampleModulus: modulus,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session messages failed",
@@ -440,12 +493,19 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 	permission := util.CtxValuePermission(ctx)
 	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
 
+	isDemo, modulus, scopeErr := h.resolveDemoScope(ctx, permission)
+	if scopeErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo scope failed", zap.Error(scopeErr))
+		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
 	result, err := h.listTools.Handle(ctx, port.ListSessionToolsQuery{
-		UserID:    userID,
-		IsAdmin:   isAdmin,
-		SessionID: req.SessionID,
-		Page:      req.Page,
-		PageSize:  req.PageSize,
+		UserID:        userID,
+		IsAdmin:       isAdmin || isDemo,
+		SessionID:     req.SessionID,
+		Page:          req.Page,
+		PageSize:      req.PageSize,
+		SampleModulus: modulus,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session tools failed",

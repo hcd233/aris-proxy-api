@@ -45,6 +45,13 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 		return nil, ierr.New(ierr.ErrValidation, "sessionID must be greater than 0")
 	}
 
+	// demo 视角：仅允许访问抽样内的会话（id % K == 0），越权返回不存在
+	if q.SampleModulus > 0 && q.SessionID%q.SampleModulus != 0 {
+		log.Info("[SessionQuery] Demo session access denied by sample modulus",
+			zap.Uint("sessionID", q.SessionID), zap.Uint("sampleModulus", q.SampleModulus))
+		return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
+	}
+
 	var ownerNames []string
 	if !q.IsAdmin {
 		names, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
