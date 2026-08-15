@@ -46,6 +46,12 @@ const (
 	//	@update 2026-04-01 10:00:00
 	AnthropicSSEEventTypeMessageStop AnthropicSSEEventType = "message_stop"
 
+	// AnthropicSSEEventTypeError error 事件（流中错误，如优雅退出断流）
+	//
+	//	@author centonhuang
+	//	@update 2026-08-15 10:00:00
+	AnthropicSSEEventTypeError AnthropicSSEEventType = "error"
+
 	// AnthropicSSEEventTypePing ping 心跳事件
 	//
 	//	@author centonhuang

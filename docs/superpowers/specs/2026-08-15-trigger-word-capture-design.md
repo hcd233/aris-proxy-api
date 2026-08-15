@@ -115,6 +115,7 @@ Resolve → Check(全文) → IncrementHits(照常)
 - **OpenAI Response**：`Instructions` + `input.Items[:索引]`（含字符串 input 场景：字符串 input 本身即触发消息，历史仅剩 Instructions）。
 - 触发消息索引 = 0（无历史，D5）→ 不提交 store，直接返回特殊回复。
 - `InputTokens/OutputTokens = 0`（无上游调用）。
+- **best-effort 语义**：store 任务提交失败（队列满等）仅记录 Error 日志，不改变响应——客户端仍收到固定回复。历史丢失不阻断请求；如需强一致需引入同步落库与错误回复形态，暂不做（YAGNI）。
 
 ### 4.5 固定回复（D7）
 

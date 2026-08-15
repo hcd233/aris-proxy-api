@@ -207,7 +207,7 @@ func (s *openAIChatNativeStream) Read(ctx context.Context, sink port.EventSink) 
 			logger.WithCtx(ctx).Debug("[OpenAIUseCase] Failed to write SSE done signal", zap.Error(writeErr))
 		}
 	} else {
-		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, err, enum.ProtocolKindOpenAI)
 	}
 
 	s.u.storeOpenAIChatFromCompletion(ctx, s.req, completion, err, s.m.ModelID())
@@ -299,7 +299,7 @@ func (s *openAIChatViaAnthropicStream) Close() error {
 
 func (s *openAIChatViaAnthropicStream) finalizeOpenAIChatStream(ctx context.Context, sink port.EventSink, err error) {
 	if err != nil {
-		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, err, enum.ProtocolKindOpenAI)
 		return
 	}
 	_ = sink.WriteEvent("", []byte(constant.SSEDoneSignal)) //nolint:errcheck // best-effort write

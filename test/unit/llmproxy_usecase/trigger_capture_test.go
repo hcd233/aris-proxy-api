@@ -11,6 +11,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
@@ -210,6 +211,53 @@ func TestAnthropicCreateMessage_CaptureWordOnlyInHistory(t *testing.T) {
 	}
 	if _, isJSON := result.(*port.JSONResult); !isJSON {
 		t.Fatalf("expect forwarded JSONResult, got %T", result)
+	}
+}
+
+// tool 结果回传消息（role=user 仅含 tool_result 块）不是用户提问，
+// capture 判定应跳过它、命中更早的 user 提问（对齐 OpenAI Chat 版口径）。
+func TestAnthropicCreateMessage_CaptureSkipsToolResult(t *testing.T) {
+	t.Parallel()
+	proxy := &mockAnthropicProxyForAnthropic{}
+	submitter := &captureTaskSubmitter{}
+	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
+	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil)
+
+	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
+		Model: "test-alias",
+		Messages: []*dto.AnthropicMessageParam{
+			{Role: "user", Content: &dto.AnthropicMessageContent{Text: "first question"}},
+			{Role: "assistant", Content: &dto.AnthropicMessageContent{Text: "first answer"}},
+			{Role: "user", Content: &dto.AnthropicMessageContent{Text: "please /save"}},
+			{Role: "assistant", Content: &dto.AnthropicMessageContent{Blocks: []*dto.AnthropicContentBlock{{
+				Type: enum.AnthropicContentBlockTypeToolUse,
+			}}}},
+			{Role: "user", Content: &dto.AnthropicMessageContent{Blocks: []*dto.AnthropicContentBlock{{
+				Type: enum.AnthropicContentBlockTypeToolResult,
+			}}}},
+		},
+	}}
+
+	result, err := uc.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if proxy.messageUnaryCalled || proxy.messageStreamCalled {
+		t.Fatal("trigger word in last real user question should capture despite trailing tool_result")
+	}
+	json, ok := result.(*port.JSONResult)
+	if !ok {
+		t.Fatalf("expect JSONResult, got %T", result)
+	}
+	if !strings.Contains(string(json.Body), constant.TriggerCaptureSavedReply) {
+		t.Fatalf("reply body should contain fixed reply: %s", json.Body)
+	}
+	if len(submitter.storeTasks) != 1 {
+		t.Fatalf("expect 1 store task, got %d", len(submitter.storeTasks))
+	}
+	if msgs := submitter.storeTasks[0].Messages; len(msgs) != 2 {
+		t.Fatalf("expect 2 history messages (trigger msg excluded, tool_use/tool_result excluded), got %d", len(msgs))
 	}
 }
 

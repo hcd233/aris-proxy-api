@@ -333,8 +333,16 @@ func TestAnthropicCreateMessage_DenyTriggerStream(t *testing.T) {
 	if start.Message == nil || start.Message.Role != enum.RoleAssistant {
 		t.Fatalf("message_start message = %+v, want role=assistant", start.Message)
 	}
-	if start.Message.StopReason == nil || *start.Message.StopReason != enum.AnthropicStopReasonRefusal {
-		t.Fatalf("message_start stop_reason = %v, want %q", start.Message.StopReason, enum.AnthropicStopReasonRefusal)
+	if len(start.Message.Content) != 0 {
+		t.Fatalf("message_start content = %+v, want empty (text delivered via delta only)", start.Message.Content)
+	}
+
+	var blockStart dto.AnthropicSSEContentBlockStart
+	if err := sonic.Unmarshal(events[1].data, &blockStart); err != nil {
+		t.Fatalf("failed to unmarshal content_block_start: %v", err)
+	}
+	if blockStart.ContentBlock == nil || blockStart.ContentBlock.Text == nil || *blockStart.ContentBlock.Text != "" {
+		t.Fatalf("content_block_start text = %+v, want empty (text delivered via delta only)", blockStart.ContentBlock)
 	}
 
 	var delta dto.AnthropicSSEContentBlockDelta
