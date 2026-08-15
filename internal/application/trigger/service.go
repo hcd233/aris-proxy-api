@@ -23,7 +23,7 @@ type TriggerService struct {
 	mu           sync.RWMutex
 	matcher      *ACmatcher
 	wordByID     map[uint]string
-	actionByID   map[uint]string
+	actionByID   map[uint]enum.TriggerAction
 	repo         domain.TriggerRepository
 	hitRecorder  port.HitRecorder
 	cache        *redis.Client
@@ -38,7 +38,7 @@ type TriggerService struct {
 func NewTriggerService(repo domain.TriggerRepository, hitRecorder port.HitRecorder, cache *redis.Client) *TriggerService {
 	return &TriggerService{
 		repo: repo, matcher: NewACmatcher(make(map[uint]string)), hitRecorder: hitRecorder, cache: cache,
-		actionByID:   make(map[uint]string),
+		actionByID:   make(map[uint]enum.TriggerAction),
 		syncInterval: defaultSyncInterval,
 	}
 }
@@ -61,7 +61,7 @@ func (s *TriggerService) Rebuild(ctx context.Context) error {
 		return b.AggregateID(), b.Word()
 	})
 	s.rebuild(words)
-	s.actionByID = lo.SliceToMap(all, func(b *aggregate.Trigger) (uint, string) {
+	s.actionByID = lo.SliceToMap(all, func(b *aggregate.Trigger) (uint, enum.TriggerAction) {
 		return b.AggregateID(), b.Action()
 	})
 	s.lastRebuildAt.Store(time.Now().UnixNano())

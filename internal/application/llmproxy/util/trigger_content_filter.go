@@ -187,9 +187,10 @@ func buildOpenAIResponseContentFilterStream(model string) *port.StreamResult {
 	rsp := buildOpenAIResponseContentFilterRsp(model)
 	itemID := lo.FromPtr(rsp.Output[0].ID)
 
-	// response.created 事件中的 response 对象 output 为空（与原生流一致）
+	// response.created 事件中的 response 对象 output/incomplete_details 为空（与原生流一致）
 	createdRsp := *rsp
 	createdRsp.Output = nil
+	createdRsp.IncompleteDetails = nil
 
 	refusalPart := map[string]any{
 		constant.ResponseStreamFieldType:    enum.ResponseContentTypeRefusal,
@@ -292,12 +293,24 @@ func buildAnthropicContentFilterJSON(model string) *port.JSONResult {
 
 func buildAnthropicContentFilterStream(model string) *port.StreamResult {
 	msg := buildAnthropicContentFilterMessage(model)
-	textBlock := msg.Content[0]
 	stopDetails := msg.StopDetails
 
+	// message_start/content_block_start 均不带文案（与原生流一致，也与 capture_reply.go
+	// 的 Anthropic 流形态对齐）：文案仅经 content_block_delta 递送，避免客户端按
+	// start 预填 + delta 累积语义拼出重复文案。
 	events := []presetEvent{
-		{event: enum.AnthropicSSEEventTypeMessageStart, data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEMessageStart{Message: msg}))},
-		{event: enum.AnthropicSSEEventTypeContentBlockStart, data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEContentBlockStart{Index: 0, ContentBlock: textBlock}))},
+		{event: enum.AnthropicSSEEventTypeMessageStart, data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEMessageStart{Message: &dto.AnthropicMessage{
+			ID:      msg.ID,
+			Type:    msg.Type,
+			Role:    msg.Role,
+			Model:   msg.Model,
+			Content: []*dto.AnthropicContentBlock{},
+			Usage:   &dto.AnthropicUsage{},
+		}}))},
+		{event: enum.AnthropicSSEEventTypeContentBlockStart, data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEContentBlockStart{
+			Index:        0,
+			ContentBlock: &dto.AnthropicContentBlock{Type: enum.AnthropicContentBlockTypeText, Text: lo.ToPtr("")},
+		}))},
 		{event: enum.AnthropicSSEEventTypeContentBlockDelta, data: lo.Must1(sonic.Marshal(&dto.AnthropicSSEContentBlockDelta{
 			Index: 0,
 			Delta: dto.AnthropicSSEContentBlockDeltaPayload{Type: enum.AnthropicDeltaTypeTextDelta, Text: constant.TriggerContentFilterMessage},

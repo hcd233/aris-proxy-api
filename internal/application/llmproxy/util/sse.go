@@ -36,18 +36,25 @@ func WriteAnthropicMessageStop(sink port.EventSink) error {
 // 当上游在流式请求开始后（HTTP 200 已发送）返回错误时，本函数将上游错误体
 // 以 SSE data 帧的形式写入客户端，避免客户端收到空的截断流。
 // context.Canceled 表示优雅退出 soft deadline 广播取消了上游连接（或客户端断开），
-// 写入 server_shutting_down 帧，客户端可识别为服务发布并自动重试。
+// 按 protocol 写入协议原生形态的 server_shutting_down 帧，客户端可识别为服务发布并自动重试。
 //
 //	@param ctx context.Context
 //	@param sink port.EventSink
 //	@param err error
+//	@param protocol enum.ProtocolKind 客户端侧 API 协议（决定错误帧形态）
 //	@author centonhuang
 //	@update 2026-07-25 10:00:00
-func WriteUpstreamSSEError(ctx context.Context, sink port.EventSink, err error) {
+func WriteUpstreamSSEError(ctx context.Context, sink port.EventSink, err error, protocol enum.ProtocolKind) {
 	log := logger.WithCtx(ctx)
 	if errors.Is(err, context.Canceled) {
 		log.Warn("[WriteUpstreamSSEError] Upstream canceled by drain or client disconnect", zap.Error(err))
-		if writeErr := sink.WriteEvent("", []byte(constant.SSEOpenAIShuttingDownData)); writeErr != nil {
+		var writeErr error
+		if protocol == enum.ProtocolKindAnthropic {
+			writeErr = sink.WriteEvent(enum.AnthropicSSEEventTypeError, []byte(constant.SSEAnthropicShuttingDownData))
+		} else {
+			writeErr = sink.WriteEvent("", []byte(constant.SSEOpenAIShuttingDownData))
+		}
+		if writeErr != nil {
 			log.Debug("[WriteUpstreamSSEError] Failed to write shutting down frame", zap.Error(writeErr))
 		}
 		return

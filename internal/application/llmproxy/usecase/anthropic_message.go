@@ -197,7 +197,7 @@ func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.Event
 			logger.WithCtx(ctx).Debug("[AnthropicUseCase] Failed to write message_stop", zap.Error(writeErr))
 		}
 	} else {
-		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, err, enum.ProtocolKindAnthropic)
 	}
 
 	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.ModelID())
@@ -279,7 +279,7 @@ func (s *anthropicMessageViaChatStream) Close() error {
 
 func (s *anthropicMessageViaChatStream) finalizeAnthropicChatStream(ctx context.Context, sink port.EventSink, completion *dto.OpenAIChatCompletion, upstreamErr error) *dto.AnthropicMessage {
 	if upstreamErr != nil {
-		proxyutil.WriteUpstreamSSEError(ctx, sink, upstreamErr)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, upstreamErr, enum.ProtocolKindAnthropic)
 		return nil
 	}
 	var anthropicMsg *dto.AnthropicMessage

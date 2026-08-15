@@ -368,7 +368,7 @@ func (s *responseNativeStream) finalize(sink port.EventSink, proxyErr error) {
 	s.timer.finish()
 	if proxyErr != nil {
 		logger.WithCtx(s.ctx).Error("[OpenAIUseCase] Native response stream error", zap.Error(proxyErr))
-		proxyutil.WriteUpstreamSSEError(s.ctx, sink, proxyErr)
+		proxyutil.WriteUpstreamSSEError(s.ctx, sink, proxyErr, enum.ProtocolKindOpenAI)
 	}
 	if s.finalResponse != nil && len(s.finalResponse.Output) == 0 && len(s.accumulatedOutput) > 0 {
 		s.finalResponse.Output = s.accumulatedOutput
@@ -422,7 +422,7 @@ func (s *responseViaChatStream) Read(ctx context.Context, sink port.EventSink) e
 
 	var rsp *dto.OpenAICreateResponseRsp
 	if err != nil {
-		proxyutil.WriteUpstreamSSEError(ctx, sink, err)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, err, enum.ProtocolKindOpenAI)
 	} else {
 		rsp = converter.FinalizeResponseFromChatCompletion(sink, completion, s.exposedModel, s.responseID, s.conv)
 	}
@@ -539,7 +539,7 @@ func (s *responseViaAnthropicStream) finalize(sink port.EventSink, anthropicMsg 
 
 func finalizeResponseFromAnthropicStream(ctx context.Context, sink port.EventSink, upstreamErr error, chatCompletion *dto.OpenAIChatCompletion, anthropicMsg *dto.AnthropicMessage, exposedModel, responseID string, anthropicConv *converter.AnthropicProtocolConverter, responseConv *converter.ResponseProtocolConverter) *dto.OpenAICreateResponseRsp {
 	if upstreamErr != nil {
-		proxyutil.WriteUpstreamSSEError(ctx, sink, upstreamErr)
+		proxyutil.WriteUpstreamSSEError(ctx, sink, upstreamErr, enum.ProtocolKindOpenAI)
 		return nil
 	}
 	if chatCompletion == nil && anthropicMsg != nil {

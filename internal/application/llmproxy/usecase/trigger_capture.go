@@ -43,6 +43,18 @@ func findLastIndex[T any](slice []T, match func(T) bool) int {
 	return -1
 }
 
+// isAnthropicToolResult 判定 Anthropic tool 结果回传消息（role=user 但内容为
+// tool_result 块）：它不是用户提问，capture 判定需跳过——对齐 OpenAI Chat 版
+// 排除 tool_call_id 用户消息的口径，保证两协议命中位置判定一致。
+func isAnthropicToolResult(msg *dto.AnthropicMessageParam) bool {
+	if msg == nil || msg.Role != enum.RoleUser || msg.Content == nil {
+		return false
+	}
+	return lo.ContainsBy(msg.Content.Blocks, func(block *dto.AnthropicContentBlock) bool {
+		return block != nil && block.Type == enum.AnthropicContentBlockTypeToolResult
+	})
+}
+
 // captureHitOnLastQuestion 判定 capture 词是否出现在最后一条用户提问消息中。
 // 返回 nil 表示 capture 未生效（词只出现在历史/system 中），请求照常转发。
 func (u *anthropicUseCase) captureHitOnLastQuestion(matched []uint, req *dto.AnthropicCreateMessageRequest) *captureHit {
@@ -51,7 +63,7 @@ func (u *anthropicUseCase) captureHitOnLastQuestion(matched []uint, req *dto.Ant
 		return nil
 	}
 	idx := findLastIndex(req.Body.Messages, func(msg *dto.AnthropicMessageParam) bool {
-		return msg != nil && msg.Role == enum.RoleUser
+		return msg != nil && msg.Role == enum.RoleUser && !isAnthropicToolResult(msg)
 	})
 	if idx < 0 {
 		return nil
