@@ -11,7 +11,7 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 - **审计与运行监控**：每次调用记录 Token 四类用量、首 Token 延迟、流式时长、上游状态码和 Trace ID；提供趋势/成功率/吞吐/用量统计、Cron 审计，以及跨 Pod 的 QPS、P95、SSE 连接、goroutines/heap/CPU 运行时监控。
 - **Agent Harness Trace 分析**：独立编译的 `aris` CLI 采集 Codex Hook 事件与 rollout 记录，本地 spool 批量上报；服务端将事件重建为可阅读的 TraceConversation，用于观察 Agent 的模型请求、推理过程与工具调用链路。
 - **客户端配置导出**：从管理后台一键生成 OpenCode、Claude Code、Codex、Pi 的接入配置或安装脚本，幂等 patch、`.bak` 备份、原子替换、凭证文件 `0600`。
-- **安全与治理**：GitHub/Google OAuth2 登录 + JWT 管理鉴权，Proxy API Key 调用鉴权，`pending`/`user`/`admin` 三级权限与用户审核，Aho-Corasick 敏感词拦截，Redis 令牌桶请求限流与 Token 用量限流。
+- **安全与治理**：GitHub/Google OAuth2 登录 + JWT 管理鉴权，Proxy API Key 调用鉴权，`pending`/`demo`/`user`/`admin` 四级权限与用户审核（demo 演示账户：模块白名单 + 行为数据取模抽样 + 一键登录），Aho-Corasick 敏感词拦截，Redis 令牌桶请求限流与 Token 用量限流。
 
 ## 系统架构
 
@@ -54,6 +54,10 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 **定时任务触发与执行**：管理后台 `/api/v1/cron` 更新 spec / enabled（`update_cron_job` 校验 spec、核心任务禁关）或手动触发 `CronManager.Trigger`；`CronManager` 热重载（`Restart` / `Enable` / `Disable`）并经 `cron:reload` Redis pub/sub 跨 Pod 广播（其他 Pod `handleMessage` 同步）；任务以 Redis 分布式锁（`cron:lock:{name}`，TTL 5min + ticker 续期）保证单实例执行，`wrapCronFunc` 注入 traceID / enabled 检查 / panic 恢复，4 个任务（dedup 每小时 / purge 周日 04:00 / think 每日 00:00 / hit-sync 每 5min）每次执行落 `CronCallAudit`（status + duration + trigger source）。
 
 ![定时任务触发与执行](docs/diagrams/aris-cron-execution.png)
+
+**Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。admin 在 users 页设置 demo 账户（替换语义：旧 demo 自动降为 pending）并经 `PATCH /api/v1/demo/config` 写入单行配置表（登录开关、9 个模块白名单、抽样模数 K）。运行时权限中间件按模块白名单放行（fail-closed，读失败即拒绝），会话与审计等行为数据按 `WHERE id % K = 0` 取模抽样（详情接口校验 `sessionID % K` 防遍历）；全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
+
+![Demo 演示账户架构](docs/diagrams/aris-demo-account.png)
 
 ## 技术栈
 
