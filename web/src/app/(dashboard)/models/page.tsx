@@ -6,6 +6,7 @@ import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { ModelItem, EndpointItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -146,6 +147,7 @@ function formatTokens(n: number): string {
 export default function ModelsPage() {
   const router = useRouter();
   const t = useT();
+  const { isDemo } = useAuth();
   const isMobile = useIsMobile();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
@@ -483,6 +485,7 @@ export default function ModelsPage() {
                               </Button>
                               <DeleteButton
                                 label={t("common.delete")}
+                                locked={isDemo()}
                                 disabled={
                                   deleteConfirm.loading && deleteConfirm.target?.id === model.id
                                 }
@@ -675,6 +678,7 @@ export default function ModelsPage() {
                                 </Button>
                                 <DeleteButton
                                   label={t("common.delete")}
+                                  locked={isDemo()}
                                   disabled={
                                     deleteConfirm.loading && deleteConfirm.target?.id === model.id
                                   }
