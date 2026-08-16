@@ -6,7 +6,7 @@ import { CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -31,7 +31,8 @@ export function TimeRangePicker({
   onChange,
   className,
 }: TimeRangePickerProps) {
-  const t = useT();
+  // t 引用已稳定化（见 lib/i18n.tsx），依赖 t 的 useMemo 改依赖 locale 以响应语言切换
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (value === "custom" && customStart && customEnd) {
@@ -145,7 +146,9 @@ export function TimeRangePicker({
       return `${format(dateRange.from, "MMM d")} – ${t("time_range.select_end")}`;
     }
     return t("time_range.select_date_range");
-  }, [dateRange, showTimePicker, t]);
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange, showTimePicker, locale, t]);
 
   const customRangeError =
     customRange && !customRange.isValid ? t("time_range.start_before_end") : "";
@@ -158,7 +161,9 @@ export function TimeRangePicker({
       return `${format(start, "MMM d")} – ${format(end, "MMM d")}`;
     }
     return t("time.custom");
-  }, [value, customStart, customEnd, t]);
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, customStart, customEnd, locale, t]);
 
   const timeLabels: Record<TimeRangeKey, string> = {
     "1h": t("time.last_1h"),

@@ -49,12 +49,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("locale", next);
   }, []);
 
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      return translations[locale]?.[key] ?? fallback ?? key;
-    },
-    [locale],
-  );
+  // t 的引用必须永久稳定：全库 30+ 处 hook 把 t 写进依赖数组，若 t 随 locale
+  // 变化（挂载后 en→检测值必然发生一次），登录回调与各列表页的数据加载
+  // effect 会被整体重放，造成 /user/current、/demo/config 等接口重复请求。
+  // 语言响应性由 context value（含 locale）变化触发重渲染承担；client 侧与
+  // translate() 一致，每次调用实时读取当前 locale，不缓存旧翻译。
+  const t = useCallback((key: string, fallback?: string): string => {
+    const active: Locale = typeof window === "undefined" ? "en" : detectBrowserLocale();
+    return translations[active]?.[key] ?? fallback ?? key;
+  }, []);
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 

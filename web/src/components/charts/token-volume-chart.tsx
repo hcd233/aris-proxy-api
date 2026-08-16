@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { api } from "@/lib/api-client";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import type { TokenThroughputPoint } from "@/lib/types";
 import { LineChartCard } from "@/components/charts/line-chart-card";
 import { useTokenLayerColors } from "@/lib/theme";
@@ -14,7 +14,8 @@ function formatTokenCount(v: number): string {
 }
 
 export function TokenVolumeChart() {
-  const t = useT();
+  // t 引用已稳定化（见 lib/i18n.tsx），useMemo 改依赖 locale 以响应语言切换
+  const { t, locale } = useI18n();
   const tokenColors = useTokenLayerColors();
   const layers = useMemo(
     () =>
@@ -28,7 +29,9 @@ export function TokenVolumeChart() {
         },
         { key: "outputTokens", label: t("charts.output"), color: tokenColors.output },
       ] as const,
-    [t, tokenColors],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, t, tokenColors],
   );
 
   const toChart = useCallback(
