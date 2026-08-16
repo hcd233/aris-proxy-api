@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Key, Plus, Copy, Check } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
+import { PermissionGuard } from "@/components/permission-guard";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
@@ -132,174 +133,178 @@ export default function APIKeysPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={t("apikeys.title")}
-        description={t("apikeys.subtitle")}
-        actions={
-          <Dialog
-            open={createOpen}
-            onOpenChange={(open) => {
-              if (!open) closeCreateDialog();
-              else setCreateOpen(true);
-            }}
-          >
-            <DialogTrigger render={<Button />}>
-              <Plus className="mr-1 size-4" />
-              {t("apikeys.create_key")}
-            </DialogTrigger>
-            <DialogContent>
-              {createdKey ? (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>{t("apikeys.key_created")}</DialogTitle>
-                    <DialogDescription>{t("apikeys.copy_key_warning")}</DialogDescription>
-                  </DialogHeader>
-                  <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
-                    <code className="flex-1 break-all text-sm">{createdKey.key}</code>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => handleCopy(createdKey.key)}
-                    >
-                      {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                    </Button>
-                  </div>
-                  <DialogFooter showCloseButton>
-                    <Button onClick={closeCreateDialog}>{t("common.done")}</Button>
-                  </DialogFooter>
-                </>
-              ) : (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>{t("apikeys.create")}</DialogTitle>
-                    <DialogDescription>{t("apikeys.create_description")}</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-2">
-                    <Label htmlFor="key-name">{t("apikeys.create_name_label")}</Label>
-                    <Input
-                      id="key-name"
-                      placeholder={t("apikeys.create_name_placeholder")}
-                      value={newKeyName}
-                      onChange={(e) => setNewKeyName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCreate();
-                      }}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={closeCreateDialog}>
-                      {t("common.cancel")}
-                    </Button>
-                    <Button onClick={handleCreate} disabled={!newKeyName.trim() || creating}>
-                      {creating ? t("common.creating") : t("common.create")}
-                    </Button>
-                  </DialogFooter>
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
-        }
-      />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display">{t("apikeys.your_keys")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <SearchInput
-              placeholder={t("apikeys.search_keys")}
-              value={searchQuery}
-              onChange={setSearchQuery}
-              onSearch={() => fetchKeys(1, pageInfo.pageSize, searchQuery || undefined)}
-            />
-          </div>
-          {loading ? (
-            <TableSkeleton />
-          ) : keys.length === 0 ? (
-            <ListEmptyState
-              icon={<Key className="mb-3 size-10 text-muted-foreground/40" />}
-              message={t("apikeys.empty")}
-            />
-          ) : (
-            <>
-              {isMobile ? (
-                <div className="space-y-3">
-                  {keys.map((key) => (
-                    <div key={key.id} className="rounded-lg border border-border bg-card p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{key.name}</p>
-                          <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                            {key.key}
-                          </p>
-                        </div>
-                        <DeleteButton
-                          label={t("common.delete")}
-                          disabled={deleteConfirm.loading && deleteConfirm.target?.id === key.id}
-                          onClick={() => deleteConfirm.openDelete(key)}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {t("apikeys.created")} {new Date(key.createdAt).toLocaleDateString()}
-                      </p>
+    <PermissionGuard>
+      <div className="space-y-8">
+        <PageHeader
+          title={t("apikeys.title")}
+          description={t("apikeys.subtitle")}
+          actions={
+            <Dialog
+              open={createOpen}
+              onOpenChange={(open) => {
+                if (!open) closeCreateDialog();
+                else setCreateOpen(true);
+              }}
+            >
+              <DialogTrigger render={<Button />}>
+                <Plus className="mr-1 size-4" />
+                {t("apikeys.create_key")}
+              </DialogTrigger>
+              <DialogContent>
+                {createdKey ? (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>{t("apikeys.key_created")}</DialogTitle>
+                      <DialogDescription>{t("apikeys.copy_key_warning")}</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
+                      <code className="flex-1 break-all text-sm">{createdKey.key}</code>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => handleCopy(createdKey.key)}
+                      >
+                        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("apikeys.name")}</TableHead>
-                      <TableHead>{t("apikeys.key")}</TableHead>
-                      <TableHead>{t("apikeys.created")}</TableHead>
-                      <TableHead className="text-right">{t("common.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                    <DialogFooter showCloseButton>
+                      <Button onClick={closeCreateDialog}>{t("common.done")}</Button>
+                    </DialogFooter>
+                  </>
+                ) : (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>{t("apikeys.create")}</DialogTitle>
+                      <DialogDescription>{t("apikeys.create_description")}</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                      <Label htmlFor="key-name">{t("apikeys.create_name_label")}</Label>
+                      <Input
+                        id="key-name"
+                        placeholder={t("apikeys.create_name_placeholder")}
+                        value={newKeyName}
+                        onChange={(e) => setNewKeyName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleCreate();
+                        }}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={closeCreateDialog}>
+                        {t("common.cancel")}
+                      </Button>
+                      <Button onClick={handleCreate} disabled={!newKeyName.trim() || creating}>
+                        {creating ? t("common.creating") : t("common.create")}
+                      </Button>
+                    </DialogFooter>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
+          }
+        />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display">{t("apikeys.your_keys")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <SearchInput
+                placeholder={t("apikeys.search_keys")}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={() => fetchKeys(1, pageInfo.pageSize, searchQuery || undefined)}
+              />
+            </div>
+            {loading ? (
+              <TableSkeleton />
+            ) : keys.length === 0 ? (
+              <ListEmptyState
+                icon={<Key className="mb-3 size-10 text-muted-foreground/40" />}
+                message={t("apikeys.empty")}
+              />
+            ) : (
+              <>
+                {isMobile ? (
+                  <div className="space-y-3">
                     {keys.map((key) => (
-                      <TableRow key={key.id}>
-                        <TableCell className="font-medium">{key.name}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {key.key}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(key.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
+                      <div key={key.id} className="rounded-lg border border-border bg-card p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{key.name}</p>
+                            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                              {key.key}
+                            </p>
+                          </div>
                           <DeleteButton
                             label={t("common.delete")}
                             disabled={deleteConfirm.loading && deleteConfirm.target?.id === key.id}
                             onClick={() => deleteConfirm.openDelete(key)}
                           />
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {t("apikeys.created")} {new Date(key.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              )}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("apikeys.name")}</TableHead>
+                        <TableHead>{t("apikeys.key")}</TableHead>
+                        <TableHead>{t("apikeys.created")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {keys.map((key) => (
+                        <TableRow key={key.id}>
+                          <TableCell className="font-medium">{key.name}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {key.key}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(key.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DeleteButton
+                              label={t("common.delete")}
+                              disabled={
+                                deleteConfirm.loading && deleteConfirm.target?.id === key.id
+                              }
+                              onClick={() => deleteConfirm.openDelete(key)}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
 
-              <PaginationBar
-                pageInfo={pageInfo}
-                onChange={(page, pageSize) => fetchKeys(page, pageSize, searchQuery || undefined)}
-                totalLabel={t("pagination.keys")}
-              />
-            </>
+                <PaginationBar
+                  pageInfo={pageInfo}
+                  onChange={(page, pageSize) => fetchKeys(page, pageSize, searchQuery || undefined)}
+                  totalLabel={t("pagination.keys")}
+                />
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <DeleteConfirmDialog
+          {...deleteConfirm.dialogProps}
+          title={t("common.are_you_sure")}
+          description={t("apikeys.delete_description").replace(
+            "{name}",
+            deleteConfirm.target?.name ?? "",
           )}
-        </CardContent>
-      </Card>
-
-      <DeleteConfirmDialog
-        {...deleteConfirm.dialogProps}
-        title={t("common.are_you_sure")}
-        description={t("apikeys.delete_description").replace(
-          "{name}",
-          deleteConfirm.target?.name ?? "",
-        )}
-        confirmLabel={t("common.delete")}
-        loadingLabel={t("common.deleting")}
-      />
-    </div>
+          confirmLabel={t("common.delete")}
+          loadingLabel={t("common.deleting")}
+        />
+      </div>
+    </PermissionGuard>
   );
 }

@@ -263,13 +263,25 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 		t.Fatalf("demo list sessions (open module) expected 200, got %d: %s", status, body)
 	}
 
-	// 7. 未开放模块（audit 图表）拒绝
+	// 7. shares 接口拒绝（shares 不在 demo 模块白名单，越权回归：修复前 demo 可直调）
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session/share/list", demoToken)
+	if status == http.StatusOK && bizErrorCode(body) == 0 {
+		t.Fatalf("demo list shares expected error, got 200: %s", body)
+	}
+	createSharePayload := map[string]any{"body": map[string]any{"sessionId": 1}}
+	csb, _ := sonic.Marshal(createSharePayload)
+	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/v1/session/share", demoToken, csb)
+	if status == http.StatusOK && bizErrorCode(body) == 0 {
+		t.Fatalf("demo create share expected error, got 200: %s", body)
+	}
+
+	// 8. 未开放模块（audit 图表）拒绝
 	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/audit/stats/model/trend?startTime=2026-01-01T00:00:00Z&endTime=2026-12-31T23:59:59Z&granularity=day", demoToken)
 	if status == http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("demo closed-module audit expected error, got 200: %s", body)
 	}
 
-	// 8. 写接口拒绝（签发 API Key）
+	// 9. 写接口拒绝（签发 API Key）
 	createKey := map[string]any{"body": map[string]any{"name": "e2e-demo-should-fail"}}
 	cb, _ := sonic.Marshal(createKey)
 	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/v1/apikey", demoToken, cb)
@@ -277,7 +289,7 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 		t.Fatalf("demo write apikey expected error, got 200: %s", body)
 	}
 
-	// 9. 恢复 demo → user，入口失效
+	// 10. 恢复 demo → user，入口失效
 	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo/restore?id="+itoa(target.ID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("restore demo user expected 200, got %d: %s", status, body)

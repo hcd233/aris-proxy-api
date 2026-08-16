@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import SessionDetailClient from "@/components/session-detail/session-detail-client";
+import { PermissionGuard } from "@/components/permission-guard";
 
 function SessionDetailContent() {
   const searchParams = useSearchParams();
@@ -12,8 +13,10 @@ function SessionDetailContent() {
 
 export default function SessionDetailPage() {
   return (
-    <Suspense fallback={null}>
-      <SessionDetailContent />
-    </Suspense>
+    <PermissionGuard module="sessions">
+      <Suspense fallback={null}>
+        <SessionDetailContent />
+      </Suspense>
+    </PermissionGuard>
   );
 }

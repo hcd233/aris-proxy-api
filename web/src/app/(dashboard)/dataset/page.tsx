@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { PermissionGuard } from "@/components/permission-guard";
 
 hljs.registerLanguage("json", json);
 
@@ -349,315 +350,323 @@ export default function DatasetPage() {
   const topModel = modelItems[0]?.label ?? "-";
 
   return (
-    <div className="space-y-8">
-      {/* Page Header — consistent with other dashboard pages */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="max-w-2xl">
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("dataset.title")}
-          </h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-            {t("dataset.subtitle")}
-          </p>
-        </div>
+    <PermissionGuard>
+      <div className="space-y-8">
+        {/* Page Header — consistent with other dashboard pages */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-2xl">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+              {t("dataset.title")}
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
+              {t("dataset.subtitle")}
+            </p>
+          </div>
 
-        {/* Quick stats */}
-        <div className="grid grid-cols-2 gap-3 md:min-w-64">
-          <div className="rounded-xl border border-border bg-muted/20 p-3.5">
-            <div className="text-xs text-muted-foreground">{t("dataset.total_sessions")}</div>
-            <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-              {loadingPreview ? "..." : formatNumber(totalSessions)}
+          {/* Quick stats */}
+          <div className="grid grid-cols-2 gap-3 md:min-w-64">
+            <div className="rounded-xl border border-border bg-muted/20 p-3.5">
+              <div className="text-xs text-muted-foreground">{t("dataset.total_sessions")}</div>
+              <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
+                {loadingPreview ? "..." : formatNumber(totalSessions)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/20 p-3.5">
+              <div className="text-xs text-muted-foreground">{t("dataset.active_filters")}</div>
+              <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
+                {activeFilters}
+              </div>
             </div>
           </div>
-          <div className="rounded-xl border border-border bg-muted/20 p-3.5">
-            <div className="text-xs text-muted-foreground">{t("dataset.active_filters")}</div>
-            <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-              {activeFilters}
-            </div>
-          </div>
         </div>
-      </div>
 
-      {/* Step flow indicator */}
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        <span className="flex items-center gap-1.5 text-primary">
-          <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold">
-            1
+        {/* Step flow indicator */}
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-primary">
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold">
+              1
+            </span>
+            {t("dataset.step_configure")}
           </span>
-          {t("dataset.step_configure")}
-        </span>
-        <ArrowRight className="size-3" />
-        <span className="flex items-center gap-1.5">
-          <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">
-            2
+          <ArrowRight className="size-3" />
+          <span className="flex items-center gap-1.5">
+            <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">
+              2
+            </span>
+            {t("dataset.step_review")}
           </span>
-          {t("dataset.step_review")}
-        </span>
-        <ArrowRight className="size-3" />
-        <span className="flex items-center gap-1.5">
-          <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">
-            3
+          <ArrowRight className="size-3" />
+          <span className="flex items-center gap-1.5">
+            <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px]">
+              3
+            </span>
+            {t("dataset.step_export")}
           </span>
-          {t("dataset.step_export")}
-        </span>
-      </div>
+        </div>
 
-      {/* Step 1: Configure */}
-      <StepCard
-        index={1}
-        title={t("dataset.step_configure")}
-        description={t("dataset.step_configure_desc")}
-      >
-        <div className="space-y-5 pt-2">
-          <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
-            {/* Quality gate */}
-            <div className="rounded-xl border border-border bg-muted/20 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <Gauge className="size-4 text-primary" />
-                    {t("dataset.quality_gate")}
+        {/* Step 1: Configure */}
+        <StepCard
+          index={1}
+          title={t("dataset.step_configure")}
+          description={t("dataset.step_configure_desc")}
+        >
+          <div className="space-y-5 pt-2">
+            <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+              {/* Quality gate */}
+              <div className="rounded-xl border border-border bg-muted/20 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Gauge className="size-4 text-primary" />
+                      {t("dataset.quality_gate")}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {t("dataset.min_score")}
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{t("dataset.min_score")}</div>
+                  <div className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+                    {minScore}
+                  </div>
                 </div>
-                <div className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-                  {minScore}
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  value={minScore}
+                  onChange={(event) => setMinScore(Number(event.target.value))}
+                  className="mt-5 h-2 w-full cursor-pointer accent-primary"
+                  aria-label={t("dataset.min_score")}
+                />
+                <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">
+                  {[0, 1, 2, 3, 4, 5].map((score) => (
+                    <span key={score}>{score}</span>
+                  ))}
                 </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="5"
-                step="1"
-                value={minScore}
-                onChange={(event) => setMinScore(Number(event.target.value))}
-                className="mt-5 h-2 w-full cursor-pointer accent-primary"
-                aria-label={t("dataset.min_score")}
-              />
-              <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">
-                {[0, 1, 2, 3, 4, 5].map((score) => (
-                  <span key={score}>{score}</span>
-                ))}
+
+              {/* Filters */}
+              <div className="flex flex-col gap-4 rounded-xl border border-border bg-muted/20 p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <TimeRangePicker
+                    value={timeRange}
+                    customStart={customStart}
+                    customEnd={customEnd}
+                    onChange={(key, cs, ce) => {
+                      setTimeRange(key);
+                      setCustomStart(cs);
+                      setCustomEnd(ce);
+                    }}
+                  />
+                  <MultiSelectPill
+                    label={t("sessions.filter_model")}
+                    options={modelOptions}
+                    value={selectedModels}
+                    onChange={setSelectedModels}
+                    searchable
+                    emptyText={t("dataset.no_models")}
+                  />
+                  {activeFilters > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearFilters}
+                      className="gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCcw className="size-3.5" />
+                      {t("dataset.clear_filters")}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
+                    <Filter className="size-3 text-primary" />
+                    {t("dataset.export_filter_score")}: {minScore}
+                  </Badge>
+                  <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
+                    <SlidersHorizontal className="size-3 text-primary" />
+                    {selectedModels.length > 0
+                      ? `${selectedModels.length} ${t("dataset.export_filter_models")}`
+                      : t("dataset.export_filter_all_models")}
+                  </Badge>
+                  <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
+                    <FileJson className="size-3 text-primary" />
+                    {t("dataset.export_format_value")}
+                  </Badge>
+                </div>
               </div>
             </div>
+          </div>
+        </StepCard>
 
-            {/* Filters */}
-            <div className="flex flex-col gap-4 rounded-xl border border-border bg-muted/20 p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <TimeRangePicker
-                  value={timeRange}
-                  customStart={customStart}
-                  customEnd={customEnd}
-                  onChange={(key, cs, ce) => {
-                    setTimeRange(key);
-                    setCustomStart(cs);
-                    setCustomEnd(ce);
-                  }}
+        {/* Step 2: Review */}
+        <StepCard
+          index={2}
+          title={t("dataset.step_review")}
+          description={t("dataset.step_review_desc")}
+        >
+          <div className="space-y-5 pt-2">
+            {/* Metric cards */}
+            <div className="grid gap-3 md:grid-cols-3">
+              <MetricCard
+                label={t("dataset.total_sessions")}
+                value={formatNumber(totalSessions)}
+                loading={loadingPreview}
+              />
+              <MetricCard
+                label={t("dataset.top_model")}
+                value={topModel}
+                loading={loadingPreview}
+              />
+              <MetricCard
+                label={t("dataset.export_format")}
+                value={t("dataset.export_format_value")}
+                loading={loadingPreview}
+              />
+            </div>
+
+            {totalSessions === 0 && !loadingPreview ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/10 px-4 py-12 text-center">
+                <Database className="mb-3 size-8 text-muted-foreground/30" />
+                <div className="font-medium text-foreground">{t("dataset.no_data")}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{t("dataset.empty_hint")}</div>
+              </div>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <DistributionList
+                  title={t("dataset.score_distribution")}
+                  items={scoreItems}
+                  emptyText={t("dataset.no_data")}
                 />
-                <MultiSelectPill
-                  label={t("sessions.filter_model")}
-                  options={modelOptions}
-                  value={selectedModels}
-                  onChange={setSelectedModels}
-                  searchable
+                <DistributionList
+                  title={t("dataset.model_distribution")}
+                  items={modelItems}
                   emptyText={t("dataset.no_models")}
                 />
-                {activeFilters > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearFilters}
-                    className="gap-1.5 text-muted-foreground hover:text-foreground"
-                  >
-                    <RotateCcw className="size-3.5" />
-                    {t("dataset.clear_filters")}
-                  </Button>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
-                  <Filter className="size-3 text-primary" />
-                  {t("dataset.export_filter_score")}: {minScore}
-                </Badge>
-                <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
-                  <SlidersHorizontal className="size-3 text-primary" />
-                  {selectedModels.length > 0
-                    ? `${selectedModels.length} ${t("dataset.export_filter_models")}`
-                    : t("dataset.export_filter_all_models")}
-                </Badge>
-                <Badge variant="outline" className="gap-1.5 rounded-lg px-3 py-1.5">
-                  <FileJson className="size-3 text-primary" />
-                  {t("dataset.export_format_value")}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-      </StepCard>
-
-      {/* Step 2: Review */}
-      <StepCard
-        index={2}
-        title={t("dataset.step_review")}
-        description={t("dataset.step_review_desc")}
-      >
-        <div className="space-y-5 pt-2">
-          {/* Metric cards */}
-          <div className="grid gap-3 md:grid-cols-3">
-            <MetricCard
-              label={t("dataset.total_sessions")}
-              value={formatNumber(totalSessions)}
-              loading={loadingPreview}
-            />
-            <MetricCard label={t("dataset.top_model")} value={topModel} loading={loadingPreview} />
-            <MetricCard
-              label={t("dataset.export_format")}
-              value={t("dataset.export_format_value")}
-              loading={loadingPreview}
-            />
-          </div>
-
-          {totalSessions === 0 && !loadingPreview ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/10 px-4 py-12 text-center">
-              <Database className="mb-3 size-8 text-muted-foreground/30" />
-              <div className="font-medium text-foreground">{t("dataset.no_data")}</div>
-              <div className="mt-1 text-sm text-muted-foreground">{t("dataset.empty_hint")}</div>
-            </div>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <DistributionList
-                title={t("dataset.score_distribution")}
-                items={scoreItems}
-                emptyText={t("dataset.no_data")}
-              />
-              <DistributionList
-                title={t("dataset.model_distribution")}
-                items={modelItems}
-                emptyText={t("dataset.no_models")}
-              />
-            </div>
-          )}
-
-          {/* Format preview */}
-          <div className="overflow-hidden rounded-xl border border-border">
-            <button
-              type="button"
-              className="flex min-h-12 w-full items-center justify-between gap-3 bg-muted/20 px-5 py-3.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/40"
-              onClick={() => setShowFormatPreview((value) => !value)}
-            >
-              <span className="flex items-center gap-2.5">
-                <Eye className="size-4 text-primary" />
-                {showFormatPreview
-                  ? t("dataset.preview_toggle_hide")
-                  : t("dataset.preview_toggle_show")}
-              </span>
-              <ChevronDown
-                className={cn(
-                  "size-4 text-muted-foreground transition-transform",
-                  showFormatPreview && "rotate-180",
-                )}
-              />
-            </button>
-            {showFormatPreview && (
-              <div className="border-t border-border px-5 py-4">
-                {loadingFormat ? (
-                  <Skeleton className="h-48 w-full rounded-lg" />
-                ) : formatPreview?.sharegptJson ? (
-                  <div className="space-y-3">
-                    <div className="text-xs text-muted-foreground">
-                      {replaceVars(t("dataset.sample_of"), {
-                        current: String((formatPreview.offset ?? 0) + 1),
-                        total: String(formatPreview.totalCount ?? 0),
-                      })}
-                    </div>
-                    <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-(--code-bg) p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
-                      <code
-                        className="font-mono whitespace-pre"
-                        dangerouslySetInnerHTML={{
-                          __html: formatAndHighlight(formatPreview.sharegptJson),
-                        }}
-                      />
-                    </pre>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
-                    {t("dataset.no_data")}
-                  </div>
-                )}
               </div>
             )}
-          </div>
-        </div>
-      </StepCard>
 
-      {/* Step 3: Export */}
-      <Card className="border-primary/20 bg-primary/[0.03]">
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              3
-            </div>
-            <div>
-              <CardTitle>{t("dataset.step_export")}</CardTitle>
-              <CardDescription className="mt-1">{t("dataset.step_export_desc")}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <Separator className="mx-4" />
-        <CardContent>
-          <div className="grid gap-5 pt-2 lg:grid-cols-[1fr_auto] lg:items-end">
-            {/* Export summary */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatPill label={t("dataset.export_filter_score")} value={String(minScore)} />
-              <StatPill
-                label={t("dataset.export_filter_models")}
-                value={selectedModels.join(", ") || t("dataset.export_filter_all_models")}
-              />
-              <StatPill
-                label={t("dataset.export_filter_time")}
-                value={formatTimeRange(params.startTime, params.endTime)}
-              />
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm">
-                <FileJson className="size-4 text-primary" />
-                <span className="font-mono text-xs font-medium text-foreground">
-                  {t("dataset.export_format_value")}
+            {/* Format preview */}
+            <div className="overflow-hidden rounded-xl border border-border">
+              <button
+                type="button"
+                className="flex min-h-12 w-full items-center justify-between gap-3 bg-muted/20 px-5 py-3.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/40"
+                onClick={() => setShowFormatPreview((value) => !value)}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Eye className="size-4 text-primary" />
+                  {showFormatPreview
+                    ? t("dataset.preview_toggle_hide")
+                    : t("dataset.preview_toggle_show")}
                 </span>
-              </div>
-            </div>
-
-            {/* Export action */}
-            <div className="min-w-64 space-y-3 rounded-xl border border-primary/15 bg-card p-4">
-              <CardDescription>
-                {replaceVars(t("dataset.export_confirm_total"), {
-                  total: formatNumber(totalSessions),
-                })}
-              </CardDescription>
-              {exporting && (
-                <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-                    style={{ width: `${exportProgress}%` }}
-                  />
+                <ChevronDown
+                  className={cn(
+                    "size-4 text-muted-foreground transition-transform",
+                    showFormatPreview && "rotate-180",
+                  )}
+                />
+              </button>
+              {showFormatPreview && (
+                <div className="border-t border-border px-5 py-4">
+                  {loadingFormat ? (
+                    <Skeleton className="h-48 w-full rounded-lg" />
+                  ) : formatPreview?.sharegptJson ? (
+                    <div className="space-y-3">
+                      <div className="text-xs text-muted-foreground">
+                        {replaceVars(t("dataset.sample_of"), {
+                          current: String((formatPreview.offset ?? 0) + 1),
+                          total: String(formatPreview.totalCount ?? 0),
+                        })}
+                      </div>
+                      <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-(--code-bg) p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
+                        <code
+                          className="font-mono whitespace-pre"
+                          dangerouslySetInnerHTML={{
+                            __html: formatAndHighlight(formatPreview.sharegptJson),
+                          }}
+                        />
+                      </pre>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
+                      {t("dataset.no_data")}
+                    </div>
+                  )}
                 </div>
               )}
-              <Button
-                className="h-11 w-full gap-2"
-                size="lg"
-                onClick={handleExport}
-                disabled={exporting || loadingPreview || totalSessions === 0}
-              >
-                {exporting ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                {exporting ? t("dataset.exporting") : t("dataset.export")}
-              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </StepCard>
+
+        {/* Step 3: Export */}
+        <Card className="border-primary/20 bg-primary/[0.03]">
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                3
+              </div>
+              <div>
+                <CardTitle>{t("dataset.step_export")}</CardTitle>
+                <CardDescription className="mt-1">{t("dataset.step_export_desc")}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <Separator className="mx-4" />
+          <CardContent>
+            <div className="grid gap-5 pt-2 lg:grid-cols-[1fr_auto] lg:items-end">
+              {/* Export summary */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatPill label={t("dataset.export_filter_score")} value={String(minScore)} />
+                <StatPill
+                  label={t("dataset.export_filter_models")}
+                  value={selectedModels.join(", ") || t("dataset.export_filter_all_models")}
+                />
+                <StatPill
+                  label={t("dataset.export_filter_time")}
+                  value={formatTimeRange(params.startTime, params.endTime)}
+                />
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm">
+                  <FileJson className="size-4 text-primary" />
+                  <span className="font-mono text-xs font-medium text-foreground">
+                    {t("dataset.export_format_value")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Export action */}
+              <div className="min-w-64 space-y-3 rounded-xl border border-primary/15 bg-card p-4">
+                <CardDescription>
+                  {replaceVars(t("dataset.export_confirm_total"), {
+                    total: formatNumber(totalSessions),
+                  })}
+                </CardDescription>
+                {exporting && (
+                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                      style={{ width: `${exportProgress}%` }}
+                    />
+                  </div>
+                )}
+                <Button
+                  className="h-11 w-full gap-2"
+                  size="lg"
+                  onClick={handleExport}
+                  disabled={exporting || loadingPreview || totalSessions === 0}
+                >
+                  {exporting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                  {exporting ? t("dataset.exporting") : t("dataset.export")}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PermissionGuard>
   );
 }

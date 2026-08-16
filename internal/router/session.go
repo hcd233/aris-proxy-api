@@ -129,6 +129,8 @@ func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.Sessio
 		Description: "Create a share link for a session",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		// shares 不在 demo 模块白名单，demo 一律拒绝
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("createShare", enum.PermissionUser)},
 	}, sessionHandler.HandleCreateShare)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -139,6 +141,7 @@ func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.Sessio
 		Description: "List all share links for current user",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listShares", enum.PermissionUser)},
 	}, sessionHandler.HandleListShares)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -149,6 +152,7 @@ func initSessionShareRouter(sessionGroup huma.API, sessionHandler handler.Sessio
 		Description: "Delete a share link",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("deleteShare", enum.PermissionUser)},
 	}, sessionHandler.HandleDeleteShare)
 }
 
