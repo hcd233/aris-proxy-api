@@ -4,7 +4,7 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 SOURCE_DIR="$REPO_ROOT/.agents/skills"
-TARGET_DIRS="$REPO_ROOT/.claude/skills $REPO_ROOT/.codebuddy/skills"
+TARGET_DIRS="$REPO_ROOT/.claude/skills $REPO_ROOT/.codebuddy/skills $REPO_ROOT/.zcode/skills"
 RELATIVE_SOURCE_PREFIX="../../.agents/skills"
 
 INFO="\033[34m[INFO]\033[0m"
