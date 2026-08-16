@@ -17,10 +17,13 @@ import (
 	_ "github.com/hcd233/aris-proxy-api/internal/api"
 )
 
-// TestErrorStatusCode 验证业务错误码 → HTTP 状态码映射。
+// TestErrorStatusCode 验证业务错误码 → HTTP 状态码映射函数本身。
+//
+// 注意：该映射仅保留作语义参考（如中间件显式指定状态码），
+// 管理 API 统一错误契约下 huma 错误响应恒为 HTTP 200，见 TestUnifiedHTTP200Contract。
 //
 //	@author centonhuang
-//	@update 2026-08-06 10:00:00
+//	@update 2026-08-16 15:00:00
 func TestErrorStatusCode(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -48,10 +51,11 @@ func TestErrorStatusCode(t *testing.T) {
 	}
 }
 
-// TestNewHumaBizError_JSONStructure 验证 handler 业务错误序列化为顶层 {"error":{code,message}}。
+// TestNewHumaBizError_JSONStructure 验证 handler 业务错误序列化为顶层 {"error":{code,message}}，
+// 且 HTTP 状态码恒为 200（统一错误契约，错误语义由 error 体承载）。
 //
 //	@author centonhuang
-//	@update 2026-08-06 10:00:00
+//	@update 2026-08-16 15:00:00
 func TestNewHumaBizError_JSONStructure(t *testing.T) {
 	t.Parallel()
 	err := apiutil.NewHumaBizError(context.Background(), ierr.New(ierr.ErrDataNotExists, "session missing"), ierr.ErrInternal.BizError())
@@ -60,8 +64,8 @@ func TestNewHumaBizError_JSONStructure(t *testing.T) {
 	if !errors.As(err, &statusErr) {
 		t.Fatalf("NewHumaBizError result does not implement huma.StatusError")
 	}
-	if got := statusErr.GetStatus(); got != http.StatusNotFound {
-		t.Errorf("GetStatus() = %d, want %d", got, http.StatusNotFound)
+	if got := statusErr.GetStatus(); got != http.StatusOK {
+		t.Errorf("GetStatus() = %d, want %d", got, http.StatusOK)
 	}
 
 	raw, marshalErr := sonic.Marshal(err)
@@ -75,10 +79,11 @@ func TestNewHumaBizError_JSONStructure(t *testing.T) {
 	}
 }
 
-// TestNewHumaBizError_Fallback 验证非 InternalError 时使用 fallback 业务错误。
+// TestNewHumaBizError_Fallback 验证非 InternalError 时使用 fallback 业务错误，
+// HTTP 状态码仍为 200（统一错误契约）。
 //
 //	@author centonhuang
-//	@update 2026-08-06 10:00:00
+//	@update 2026-08-16 15:00:00
 func TestNewHumaBizError_Fallback(t *testing.T) {
 	t.Parallel()
 	err := apiutil.NewHumaBizError(context.Background(), context.DeadlineExceeded, ierr.ErrInternal.BizError())
@@ -87,15 +92,15 @@ func TestNewHumaBizError_Fallback(t *testing.T) {
 	if !errors.As(err, &statusErr) {
 		t.Fatalf("result does not implement huma.StatusError")
 	}
-	if got := statusErr.GetStatus(); got != http.StatusInternalServerError {
-		t.Errorf("GetStatus() = %d, want %d", got, http.StatusInternalServerError)
+	if got := statusErr.GetStatus(); got != http.StatusOK {
+		t.Errorf("GetStatus() = %d, want %d", got, http.StatusOK)
 	}
 }
 
-// TestNewHumaBizError_Unauthorized 验证认证错误映射为 401。
+// TestNewHumaBizError_Unauthorized 验证认证错误序列化结构正确，HTTP 状态码恒为 200。
 //
 //	@author centonhuang
-//	@update 2026-08-06 10:00:00
+//	@update 2026-08-16 15:00:00
 func TestNewHumaBizError_Unauthorized(t *testing.T) {
 	t.Parallel()
 	err := apiutil.NewHumaBizError(context.Background(), ierr.New(ierr.ErrUnauthorized, "token invalid"), ierr.ErrInternal.BizError())
@@ -103,8 +108,8 @@ func TestNewHumaBizError_Unauthorized(t *testing.T) {
 	if !errors.As(err, &statusErr) {
 		t.Fatalf("result does not implement huma.StatusError")
 	}
-	if got := statusErr.GetStatus(); got != http.StatusUnauthorized {
-		t.Errorf("GetStatus() = %d, want %d", got, http.StatusUnauthorized)
+	if got := statusErr.GetStatus(); got != http.StatusOK {
+		t.Errorf("GetStatus() = %d, want %d", got, http.StatusOK)
 	}
 }
 
@@ -128,10 +133,11 @@ func TestHumaNewErrorReplaced(t *testing.T) {
 	}
 }
 
-// TestFrameworkError 验证 huma 框架错误（校验失败 422 等）也输出统一结构。
+// TestFrameworkError 验证 huma 框架错误（校验失败 422 等）输出统一结构，
+// HTTP 状态码恒为 200（统一错误契约）。
 //
 //	@author centonhuang
-//	@update 2026-08-06 10:00:00
+//	@update 2026-08-16 15:00:00
 func TestFrameworkError(t *testing.T) {
 	t.Parallel()
 	err := apiutil.FrameworkError(http.StatusUnprocessableEntity, "validation failed")
@@ -140,8 +146,8 @@ func TestFrameworkError(t *testing.T) {
 	if !errors.As(err, &statusErr) {
 		t.Fatalf("FrameworkError result does not implement huma.StatusError")
 	}
-	if got := statusErr.GetStatus(); got != http.StatusUnprocessableEntity {
-		t.Errorf("GetStatus() = %d, want %d", got, http.StatusUnprocessableEntity)
+	if got := statusErr.GetStatus(); got != http.StatusOK {
+		t.Errorf("GetStatus() = %d, want %d", got, http.StatusOK)
 	}
 
 	raw, marshalErr := sonic.Marshal(err)
@@ -152,5 +158,32 @@ func TestFrameworkError(t *testing.T) {
 	want := `{"error":{"code":10006,"message":"validation failed"}}`
 	if got != want {
 		t.Errorf("JSON = %s, want %s", got, want)
+	}
+}
+
+// TestUnifiedHTTP200Contract 验证统一错误契约：管理 API 所有错误路径
+// （业务错误、框架错误）HTTP 状态码恒为 200，错误语义由 error 体承载。
+//
+//	@author centonhuang
+//	@update 2026-08-16 15:00:00
+func TestUnifiedHTTP200Contract(t *testing.T) {
+	t.Parallel()
+	// 业务错误：数据不存在 → 200 + error 体
+	err := apiutil.NewHumaBizError(context.Background(), ierr.New(ierr.ErrDataNotExists, "missing"), ierr.ErrInternal.BizError())
+	var statusErr huma.StatusError
+	if !errors.As(err, &statusErr) {
+		t.Fatalf("result does not implement huma.StatusError")
+	}
+	if got := statusErr.GetStatus(); got != http.StatusOK {
+		t.Errorf("biz error GetStatus() = %d, want %d", got, http.StatusOK)
+	}
+
+	// 框架错误：路由未匹配 404 → 200 + error 体
+	fwErr := huma.NewError(http.StatusNotFound, "route not found")
+	if !errors.As(fwErr, &statusErr) {
+		t.Fatalf("framework error does not implement huma.StatusError")
+	}
+	if got := statusErr.GetStatus(); got != http.StatusOK {
+		t.Errorf("framework error GetStatus() = %d, want %d", got, http.StatusOK)
 	}
 }

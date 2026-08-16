@@ -463,9 +463,9 @@ func TestTrigger_DuplicateCreate_Returns409(t *testing.T) {
 		t.Fatalf("failed to send duplicate create request: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusConflict {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("duplicate create: expected 409, got %d, body: %s", resp.StatusCode, string(body))
+		t.Fatalf("duplicate create: unified contract expected 200, got %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -757,5 +757,44 @@ func TestTrigger_Mixed_DenyWinsOverCapture(t *testing.T) {
 	respBody, _ := io.ReadAll(resp.Body)
 	if strings.Contains(string(respBody), "Context saved.") {
 		t.Fatalf("deny+capture: deny wins, capture reply must not appear, body: %s", string(respBody))
+	}
+}
+
+// TestE2E_TriggerDeleteNoPermission 验证统一错误契约：普通用户删除触发词
+// 返回 HTTP 200 + error 10002（旧契约为 403），前端据此识别失败而非误判成功。
+// 需要 USER_TOKEN（普通用户 JWT）；缺失时跳过。
+func TestE2E_TriggerDeleteNoPermission(t *testing.T) {
+	t.Parallel()
+	baseURL, _, _ := mustTriggerE2EEnv(t)
+	userToken := os.Getenv("USER_TOKEN")
+	if userToken == "" {
+		t.Skip("USER_TOKEN is required for no-permission trigger delete e2e test")
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, baseURL+"/api/v1/trigger?ids=1", http.NoBody)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+userToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to send no-permission delete request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unified contract: expected 200 for no-permission delete, got %d, body: %s", resp.StatusCode, string(respBody))
+	}
+	var rsp struct {
+		Error *struct {
+			Code int `json:"code"`
+		} `json:"error"`
+	}
+	if err := sonic.Unmarshal(respBody, &rsp); err != nil || rsp.Error == nil || rsp.Error.Code != 10002 {
+		t.Fatalf("expected error code 10002 for no-permission delete, body=%s", string(respBody))
 	}
 }

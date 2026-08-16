@@ -47,8 +47,16 @@ func TestE2E_RegularUserCannotManageUsers(t *testing.T) {
 		{http.MethodDelete, baseURL + "/api/v1/user/delete?id=1"},
 	} {
 		status, body := doJSON(t, client, tc.method, tc.url, userToken)
-		if status != http.StatusForbidden && status != http.StatusUnauthorized {
-			t.Fatalf("regular user %s %s expected 403/401, got %d: %s", tc.method, tc.url, status, body)
+		if status != http.StatusOK {
+			t.Fatalf("regular user %s %s unified contract expected 200, got %d: %s", tc.method, tc.url, status, body)
+		}
+		var rsp struct {
+			Error *struct {
+				Code int `json:"code"`
+			} `json:"error"`
+		}
+		if err := sonic.Unmarshal(body, &rsp); err != nil || rsp.Error == nil || (rsp.Error.Code != 10002 && rsp.Error.Code != 10001) {
+			t.Fatalf("regular user %s %s expected error 10002/10001, body=%s", tc.method, tc.url, string(body))
 		}
 	}
 }

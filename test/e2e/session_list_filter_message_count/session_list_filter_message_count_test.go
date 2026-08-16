@@ -222,8 +222,11 @@ func TestSessionListFilterMessageCount_InvalidRange(t *testing.T) {
 			if status == http.StatusInternalServerError {
 				t.Fatalf("filter=%q returned 500, body=%+v", f, body)
 			}
-			if status != http.StatusBadRequest {
-				t.Fatalf("filter=%q status=%d, want 400; body=%+v", f, status, body)
+			if status != http.StatusOK {
+				t.Fatalf("filter=%q unified contract expected 200, got %d; body=%+v", f, status, body)
+			}
+			if body.Error == nil || body.Error.Code != 10006 {
+				t.Fatalf("filter=%q expected error code 10006, body=%+v", f, body)
 			}
 		})
 	}

@@ -15,7 +15,8 @@ import (
 // bizHTTPError 统一业务错误响应模型。
 //
 // 实现 huma.StatusError：handler 返回该 error 时，huma 直接序列化本结构，
-// 输出顶层 {"error": {code, message}} + 由业务错误码推导的 HTTP 状态码。
+// 输出顶层 {"error": {code, message}}。除 proxy 透传路径外，管理 API 一律
+// 返回 HTTP 200，错误语义完全由 error 体承载，前端只判断 body.error。
 // 与中间件层 apiutil.WriteErrorResponse / WriteErrorHTTPResponse 的输出结构一致。
 type bizHTTPError struct {
 	ErrorBody *model.Error `json:"error" doc:"业务错误体"`
@@ -79,21 +80,22 @@ func newBizHTTPError(ctx context.Context, bizErr *model.Error) error {
 	localized := bizErr.Localize(i18n.FromCtx(ctx))
 	return &bizHTTPError{
 		ErrorBody: localized,
-		status:    localized.StatusCode(),
+		status:    http.StatusOK,
 	}
 }
 
 // FrameworkError 将 huma 框架错误（校验失败 422、路由 404 等）转换为统一的
-// {"error": {code, message}} 结构。HTTP 状态码保留 huma 传入的原始状态码，
-// 业务码由状态码反向推导（未识别状态码兜底为内部错误）。
+// {"error": {code, message}} 结构。除 proxy 透传路径外管理 API 一律返回
+// HTTP 200，错误语义由 error 体承载；业务码由 huma 传入的状态码反向推导
+// （未识别状态码兜底为内部错误）。
 // errs 中的字段校验细节（huma.ErrorDetail 等）会拼接到 message，避免信息丢失。
 //
-//	@param status int huma 传入的 HTTP 状态码
+//	@param status int huma 传入的 HTTP 状态码（仅用于推导业务码）
 //	@param message string huma 传入的错误消息
 //	@param errs ...error 字段级错误细节
 //	@return huma.StatusError
 //	@author centonhuang
-//	@update 2026-08-06 10:00:00
+//	@update 2026-08-16 15:00:00
 func FrameworkError(status int, message string, errs ...error) huma.StatusError {
 	if status <= 0 {
 		status = http.StatusInternalServerError
@@ -115,7 +117,7 @@ func FrameworkError(status int, message string, errs ...error) huma.StatusError 
 			Code:    statusToBizCode(status),
 			Message: detail,
 		},
-		status: status,
+		status: http.StatusOK,
 	}
 }
 

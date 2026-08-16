@@ -34,6 +34,28 @@ func mustE2EEnv(t *testing.T) (baseURL, adminToken, userToken string) {
 	return strings.TrimRight(baseURL, "/"), adminToken, userToken
 }
 
+// assertErrorCode 验证响应体携带统一错误结构且 code 命中允许列表（新契约：HTTP 200 + {error}）。
+func assertErrorCode(t *testing.T, body []byte, allowedCodes ...int) {
+	t.Helper()
+	var rsp struct {
+		Error *struct {
+			Code int `json:"code"`
+		} `json:"error"`
+	}
+	if err := sonic.Unmarshal(body, &rsp); err != nil {
+		t.Fatalf("decode error body: %v", err)
+	}
+	if rsp.Error == nil {
+		t.Fatalf("response carries no error structure: %s", string(body))
+	}
+	for _, c := range allowedCodes {
+		if rsp.Error.Code == c {
+			return
+		}
+	}
+	t.Fatalf("error code %d not in allowed %v, body=%s", rsp.Error.Code, allowedCodes, string(body))
+}
+
 func doJSON(t *testing.T, client *http.Client, method, url, token string) (statusCode int, respBody []byte) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(context.Background(), method, url, http.NoBody)
@@ -132,12 +154,14 @@ func TestE2E_RegularUserGetsForbidden(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=20", userToken)
-	if status != http.StatusForbidden && status != http.StatusUnauthorized {
-		t.Fatalf("regular user list expected 403/401, got %d: %s", status, body)
+	if status != http.StatusOK {
+		t.Fatalf("regular user list unified contract expected 200, got %d: %s", status, body)
 	}
+	assertErrorCode(t, body, 10002, 10001)
 
 	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/approve?id=1", userToken)
-	if status != http.StatusForbidden && status != http.StatusUnauthorized {
-		t.Fatalf("regular user approve expected 403/401, got %d: %s", status, body)
+	if status != http.StatusOK {
+		t.Fatalf("regular user approve unified contract expected 200, got %d: %s", status, body)
 	}
+	assertErrorCode(t, body, 10002, 10001)
 }
