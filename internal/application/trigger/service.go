@@ -194,6 +194,15 @@ func (s *TriggerService) CaptureIDs(ids []uint) []uint {
 	})
 }
 
+// OmitIDs 过滤出 action=omit（命中放行但跳过存储）的词 ID
+func (s *TriggerService) OmitIDs(ids []uint) []uint {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return lo.Filter(ids, func(id uint, _ int) bool {
+		return s.actionByID[id] == enum.TriggerActionOmit
+	})
+}
+
 func (s *TriggerService) IncrementHits(ctx context.Context, ids []uint) error {
 	if s.hitRecorder == nil {
 		return nil

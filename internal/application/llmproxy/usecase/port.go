@@ -54,6 +54,7 @@ type TriggerChecker interface {
 	Check(text string) []uint
 	MatchedWords(ids []uint) []string
 	DenyIDs(ids []uint) []uint
+	OmitIDs(ids []uint) []uint
 	CaptureIDs(ids []uint) []uint
 	IncrementHits(ctx context.Context, ids []uint) error
 }

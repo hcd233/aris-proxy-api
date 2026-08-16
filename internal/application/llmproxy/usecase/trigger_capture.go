@@ -251,24 +251,48 @@ func (u *anthropicUseCase) interceptAnthropicCapture(ctx context.Context, req *d
 		return nil
 	}
 	submitCaptureAudit(ctx, u.taskSubmitter, m, ep.Name(), upstreamProtocol, enum.ProtocolAnthropicMessage, hit.words)
-
-	if hit.hasHist {
-		hist := req.Body.Messages[:hit.lastIdx]
-		unified := make([]*convvo.UnifiedMessage, 0, len(hist))
-		for _, msg := range hist {
-			um, err := dto.FromAnthropicMessage(msg)
-			if err != nil {
-				logger.WithCtx(ctx).Warn("[TriggerCapture] Skip message conversion in history", zap.Error(err))
-				continue
-			}
-			unified = append(unified, um)
-		}
-		tools := lo.Map(req.Body.Tools, func(tool *dto.AnthropicTool, _ int) *convvo.UnifiedTool {
-			return dto.FromAnthropicTool(tool)
-		})
-		submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, proxyutil.ExtractAnthropicMetadata(req.Body.Metadata))
-	}
+	u.storeAnthropicHistory(ctx, req, m, hit.lastIdx)
 	return proxyutil.NewAnthropicCaptureReply(captureReplyText(hit.hasHist), req.Body.Model, stream)
+}
+
+// storeAnthropicHistory 保存 Anthropic 请求中指定上界之前的历史上下文（无 assistant 回复）。
+func (u *anthropicUseCase) storeAnthropicHistory(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, lastIdx int) {
+	if lastIdx <= 0 {
+		return
+	}
+	hist := req.Body.Messages[:lastIdx]
+	unified := make([]*convvo.UnifiedMessage, 0, len(hist))
+	for _, msg := range hist {
+		um, err := dto.FromAnthropicMessage(msg)
+		if err != nil {
+			logger.WithCtx(ctx).Warn("[TriggerCapture] Skip message conversion in history", zap.Error(err))
+			continue
+		}
+		unified = append(unified, um)
+	}
+	tools := lo.Map(req.Body.Tools, func(tool *dto.AnthropicTool, _ int) *convvo.UnifiedTool {
+		return dto.FromAnthropicTool(tool)
+	})
+	submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, proxyutil.ExtractAnthropicMetadata(req.Body.Metadata))
+}
+
+// omitAndCaptureMessageHit 判定「同时命中 omit 与 capture 词且 capture 未短路」的旁路保存。
+// capture 词未落在最后一条用户提问中（captureHitOnLastQuestion 未命中）时，仍保存
+// 最后一条用户提问之前的历史，不短路、照常转发——omit 与 capture 两个逻辑都执行。
+func (u *anthropicUseCase) omitAndCaptureMessageHit(matched []uint, req *dto.AnthropicCreateMessageRequest) *captureHit {
+	if len(u.triggerChecker.OmitIDs(matched)) == 0 || len(u.triggerChecker.CaptureIDs(matched)) == 0 {
+		return nil
+	}
+	idx := findLastIndex(req.Body.Messages, func(msg *dto.AnthropicMessageParam) bool {
+		return msg != nil && msg.Role == enum.RoleUser && !isAnthropicToolResult(msg)
+	})
+	if idx < 0 {
+		return nil
+	}
+	return &captureHit{
+		words:   u.triggerChecker.MatchedWords(u.triggerChecker.CaptureIDs(matched)),
+		lastIdx: idx,
+	}
 }
 
 // interceptChatCapture OpenAI Chat 入口的 capture 短路。
@@ -278,24 +302,46 @@ func (u *openAIUseCase) interceptChatCapture(ctx context.Context, req *dto.OpenA
 		return nil
 	}
 	submitCaptureAudit(ctx, u.taskSubmitter, m, ep.Name(), upstreamProtocol, enum.ProtocolOpenAIChatCompletion, hit.words)
-
-	if hit.hasHist {
-		hist := req.Body.Messages[:hit.lastIdx]
-		unified := make([]*convvo.UnifiedMessage, 0, len(hist))
-		for _, msg := range hist {
-			um, err := dto.FromOpenAIMessage(msg)
-			if err != nil {
-				logger.WithCtx(ctx).Warn("[TriggerCapture] Skip message conversion in history", zap.Error(err))
-				continue
-			}
-			unified = append(unified, um)
-		}
-		tools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *convvo.UnifiedTool {
-			return dto.FromOpenAITool(&tool)
-		})
-		submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, req.Body.Metadata)
-	}
+	u.storeOpenAIChatHistory(ctx, req, m, hit.lastIdx)
 	return proxyutil.NewOpenAIChatCaptureReply(captureReplyText(hit.hasHist), req.Body.Model, stream)
+}
+
+// storeOpenAIChatHistory 保存 OpenAI Chat 请求中指定上界之前的历史上下文（无 assistant 回复）。
+func (u *openAIUseCase) storeOpenAIChatHistory(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, lastIdx int) {
+	if lastIdx <= 0 {
+		return
+	}
+	hist := req.Body.Messages[:lastIdx]
+	unified := make([]*convvo.UnifiedMessage, 0, len(hist))
+	for _, msg := range hist {
+		um, err := dto.FromOpenAIMessage(msg)
+		if err != nil {
+			logger.WithCtx(ctx).Warn("[TriggerCapture] Skip message conversion in history", zap.Error(err))
+			continue
+		}
+		unified = append(unified, um)
+	}
+	tools := lo.Map(req.Body.Tools, func(tool dto.OpenAIChatCompletionTool, _ int) *convvo.UnifiedTool {
+		return dto.FromOpenAITool(&tool)
+	})
+	submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, req.Body.Metadata)
+}
+
+// omitAndCaptureChatHit OpenAI Chat 版「同时命中 omit 与 capture 词且 capture 未短路」的旁路保存判定。
+func (u *openAIUseCase) omitAndCaptureChatHit(matched []uint, req *dto.OpenAIChatCompletionRequest) *captureHit {
+	if len(u.triggerChecker.OmitIDs(matched)) == 0 || len(u.triggerChecker.CaptureIDs(matched)) == 0 {
+		return nil
+	}
+	idx := findLastIndex(req.Body.Messages, func(msg *dto.OpenAIChatCompletionMessageParam) bool {
+		return msg != nil && msg.Role == enum.RoleUser && lo.FromPtr(msg.ToolCallID) == ""
+	})
+	if idx < 0 {
+		return nil
+	}
+	return &captureHit{
+		words:   u.triggerChecker.MatchedWords(u.triggerChecker.CaptureIDs(matched)),
+		lastIdx: idx,
+	}
 }
 
 // captureResponseHistory 组装 Response 入口的历史上下文（Instructions + 触发消息前的 input items）。
@@ -317,6 +363,35 @@ func captureResponseHistory(ctx context.Context, req *dto.OpenAICreateResponseRe
 		return unified
 	}
 	return append(unified, ums...)
+}
+
+// omitAndCaptureResponseHit OpenAI Response 版「同时命中 omit 与 capture 词且 capture 未短路」的旁路保存判定。
+func (u *openAIUseCase) omitAndCaptureResponseHit(matched []uint, req *dto.OpenAICreateResponseRequest) *captureHit {
+	if len(u.triggerChecker.OmitIDs(matched)) == 0 || len(u.triggerChecker.CaptureIDs(matched)) == 0 {
+		return nil
+	}
+	if req.Body.Input == nil {
+		return nil
+	}
+
+	// 字符串 input：历史仅剩 Instructions（若有），由 captureResponseHistory 组装
+	if len(req.Body.Input.Items) == 0 {
+		return &captureHit{
+			words:   u.triggerChecker.MatchedWords(u.triggerChecker.CaptureIDs(matched)),
+			lastIdx: 0,
+		}
+	}
+
+	idx := findLastIndex(req.Body.Input.Items, func(item *dto.ResponseInputItem) bool {
+		return item != nil && lo.FromPtr(item.Role) == enum.RoleUser && item.Content != nil
+	})
+	if idx < 0 {
+		return nil
+	}
+	return &captureHit{
+		words:   u.triggerChecker.MatchedWords(u.triggerChecker.CaptureIDs(matched)),
+		lastIdx: idx,
+	}
 }
 
 // interceptResponseCapture OpenAI Response 入口的 capture 短路。

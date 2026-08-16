@@ -50,6 +50,8 @@ func (*lastUserTextCaptureChecker) MatchedWords(ids []uint) []string {
 
 func (*lastUserTextCaptureChecker) DenyIDs(ids []uint) []uint { return nil }
 
+func (*lastUserTextCaptureChecker) OmitIDs(ids []uint) []uint { return nil }
+
 func (*lastUserTextCaptureChecker) CaptureIDs(ids []uint) []uint { return []uint{7} }
 
 func (*lastUserTextCaptureChecker) IncrementHits(_ context.Context, _ []uint) error { return nil }
@@ -72,6 +74,8 @@ func (*denyAndCaptureChecker) MatchedWords(ids []uint) []string {
 }
 
 func (*denyAndCaptureChecker) DenyIDs(ids []uint) []uint { return []uint{1} }
+
+func (*denyAndCaptureChecker) OmitIDs(ids []uint) []uint { return nil }
 
 func (*denyAndCaptureChecker) CaptureIDs(ids []uint) []uint { return []uint{7} }
 

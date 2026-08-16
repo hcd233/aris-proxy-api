@@ -95,6 +95,13 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 			return result, nil
 		}
 
+		// 同时命中 omit 与 capture 词（capture 词未落在最后一条用户提问中、未短路）时：
+		// capture 的上下文保存照常执行，omit 的跳过存储照常生效，请求继续转发——两个逻辑都跑。
+		if hit := u.omitAndCaptureChatHit(matched, req); hit != nil {
+			submitCaptureAudit(ctx, u.taskSubmitter, m, ep.Name(), openAIChatRouteUpstreamProtocol(compatRoute), enum.ProtocolOpenAIChatCompletion, hit.words)
+			u.storeOpenAIChatHistory(ctx, req, m, hit.lastIdx)
+		}
+
 		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
 		ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
 	}
@@ -147,6 +154,14 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 
 		if result := u.interceptResponseCapture(ctx, req, m, ep, openAIResponseRouteUpstreamProtocol(compatRoute), matched, lo.FromPtr(req.Body.Stream)); result != nil {
 			return result, nil
+		}
+
+		// 同时命中 omit 与 capture 词（capture 词未落在最后一条用户提问中、未短路）时：旁路保存上下文。
+		if hit := u.omitAndCaptureResponseHit(matched, req); hit != nil {
+			submitCaptureAudit(ctx, u.taskSubmitter, m, ep.Name(), openAIResponseRouteUpstreamProtocol(compatRoute), enum.ProtocolOpenAIResponse, hit.words)
+			unified := captureResponseHistory(ctx, req, hit.lastIdx)
+			tools := dto.FromResponseAPITools(req.Body.Tools)
+			submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, req.Body.Metadata)
 		}
 
 		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）

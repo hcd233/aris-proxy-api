@@ -35,6 +35,8 @@ func (f *fakeTriggerChecker) DenyIDs(ids []uint) []uint {
 	return f.denyIDs
 }
 
+func (f *fakeTriggerChecker) OmitIDs(ids []uint) []uint { return nil }
+
 func (f *fakeTriggerChecker) CaptureIDs(ids []uint) []uint {
 	return f.captureIDs
 }

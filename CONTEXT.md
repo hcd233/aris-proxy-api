@@ -129,11 +129,11 @@ _Avoid_: interval, time unit, bucket size
 ## Trigger Words（触发词）
 
 **Trigger（触发词）**:
-管理员配置的词表条目（2026-08-15 由「敏感词 Blocked Words」全量更名而来：表 `trigger_words`、路由 `/api/v1/trigger`、Redis key `trigger:*`）。每条记录一个 `word`（触发词内容）、`action`（命中处理动作）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配，全文扫描（含 system prompt）。三种 action：`deny` 命中即拦截返回 403 并记录审计；`omit` 照常转发但不落库 session/message/tool（审计照常）；`capture`（2026-08-15 新增）保存触发消息之前的对话历史至 session（无 assistant 回复、不保存触发消息本身）、不请求上游、返回固定回复（`Context saved.` / 无历史时 `No conversation history to save.`，stream 跟随请求参数按协议 SSE 吐出）。capture 仅当触发词位于「最后一条 role=user 且无 tool_call_id 的消息」时生效，只出现在历史消息/system 中不触发。混合命中优先级：deny > capture > omit。
+管理员配置的词表条目（2026-08-15 由「敏感词 Blocked Words」全量更名而来：表 `trigger_words`、路由 `/api/v1/trigger`、Redis key `trigger:*`）。每条记录一个 `word`（触发词内容）、`action`（命中处理动作）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配，全文扫描（含 system prompt）。三种 action：`deny` 命中即拦截返回 403 并记录审计；`omit` 照常转发但不落库 session/message/tool（审计照常）；`capture`（2026-08-15 新增）保存触发消息之前的对话历史至 session（无 assistant 回复、不保存触发消息本身）、不请求上游、返回固定回复（`Context saved.` / 无历史时 `No conversation history to save.`，stream 跟随请求参数按协议 SSE 吐出）。capture 仅当触发词位于「最后一条 role=user 且无 tool_call_id 的消息」时生效，只出现在历史消息/system 中不触发。混合命中优先级：deny > capture > omit；同请求同时命中 omit 与 capture 词且 capture 词未落在最后一条用户提问（未短路）时，capture 的上下文保存照常执行（保存最后一条用户提问之前的历史）、omit 的跳过存储照常生效、请求照常转发（两个逻辑都跑，不短路打断对话）。
 _Avoid_: blocked word, ban word, forbidden term, sensitive word
 
 **TriggerService（触发词服务）**:
-管理 AC 自动机生命周期的领域服务。启动时从 DB 加载所有活跃触发词构建自动机；增删触发词后经 Redis Pub/Sub（`trigger:changed`）+ 版本号轮询（`trigger:version`）热更新（`sync.RWMutex` 保护）；提供 `Check(text) []uint` 与 `DenyIDs` / `CaptureIDs` 动作过滤。命中计数先递增 Redis（`trigger:hit:{id}`），再由 cron 定时同步回 DB。
+管理 AC 自动机生命周期的领域服务。启动时从 DB 加载所有活跃触发词构建自动机；增删触发词后经 Redis Pub/Sub（`trigger:changed`）+ 版本号轮询（`trigger:version`）热更新（`sync.RWMutex` 保护）；提供 `Check(text) []uint` 与 `DenyIDs` / `OmitIDs` / `CaptureIDs` 动作过滤。命中计数先递增 Redis（`trigger:hit:{id}`），再由 cron 定时同步回 DB。
 _Avoid_: word filter, content moderation, block service
 
 ## Authentication Middleware（认证中间件）

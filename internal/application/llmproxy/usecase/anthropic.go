@@ -103,6 +103,12 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 			return result, nil
 		}
 
+		// 同时命中 omit 与 capture 词（capture 词未落在最后一条用户提问中、未短路）时：旁路保存上下文。
+		if hit := u.omitAndCaptureMessageHit(matched, req); hit != nil {
+			submitCaptureAudit(ctx, u.taskSubmitter, m, ep.Name(), anthropicRouteUpstreamProtocol(compatRoute), enum.ProtocolAnthropicMessage, hit.words)
+			u.storeAnthropicHistory(ctx, req, m, hit.lastIdx)
+		}
+
 		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
 		ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
 	}

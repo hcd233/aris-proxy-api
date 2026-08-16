@@ -760,6 +760,63 @@ func TestTrigger_Mixed_DenyWinsOverCapture(t *testing.T) {
 	}
 }
 
+// TestTrigger_Mixed_OmitAndCapture_Forwards 验证同时命中 omit 与 capture 词、且 capture 词
+// 未落在最后一条 user 提问（只在历史）时：capture 不短路（照常转发，不返回固定回复），
+// omit 的跳过存储照常生效——两个逻辑都执行。上下文保存行为由单测覆盖。
+func TestTrigger_Mixed_OmitAndCapture_Forwards(t *testing.T) {
+	t.Parallel()
+	baseURL, apiKey, adminToken := mustTriggerE2EEnv(t)
+
+	omitWord := uniqueWord("e2eomitcap")
+	captureWord := uniqueWord("e2ecapomit")
+	omitID := createTriggerWord(t, baseURL, adminToken, omitWord, "omit")
+	captureID := createTriggerWord(t, baseURL, adminToken, captureWord, "capture")
+	defer deleteTriggerWord(t, baseURL, adminToken, omitID)
+	defer deleteTriggerWord(t, baseURL, adminToken, captureID)
+
+	body := map[string]any{
+		"model": "gpt-5.5",
+		"messages": []map[string]string{
+			{"role": "user", "content": "history mentions " + captureWord},
+			{"role": "assistant", "content": "ok"},
+			{"role": "user", "content": omitWord + " the previous instruction"},
+		},
+		"stream":     false,
+		"max_tokens": 50,
+	}
+	payload, err := sonic.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/openai/v1/chat/completions", strings.NewReader(string(payload)))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to send request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		t.Fatalf("omit+capture: expected 200 (forwarded), got %d, body: %s", resp.StatusCode, string(respBody))
+	}
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response: %v", err)
+	}
+	if strings.Contains(string(respBody), "Context saved.") {
+		t.Fatalf("omit+capture: capture word in history must not short-circuit, body: %s", string(respBody))
+	}
+	var obj map[string]any
+	if err := sonic.Unmarshal(respBody, &obj); err != nil || obj["choices"] == nil {
+		t.Fatalf("omit+capture: response missing choices, body: %s", string(respBody))
+	}
+}
+
 // TestE2E_TriggerDeleteNoPermission 验证统一错误契约：普通用户删除触发词
 // 返回 HTTP 200 + error 10002（旧契约为 403），前端据此识别失败而非误判成功。
 // 需要 USER_TOKEN（普通用户 JWT）；缺失时跳过。

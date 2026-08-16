@@ -91,10 +91,14 @@ Resolve → Check(全文) → IncrementHits(照常)
   ├─ CaptureIDs 非空 且 触发词位于最后一条用户提问消息（§4.3）
   │     ├─ 该消息之前有消息 → storeTriggerContext(历史) → 200 固定回复
   │     └─ 无历史 → 200 特殊回复
+  ├─ OmitIDs 与 CaptureIDs 同时非空（capture 词未落在最后一条用户提问中、未短路）
+  │     → storeTriggerContext(最后一条用户提问之前的历史) + SkipStore → 正常转发
   └─ 否则 →（omit 命中则 SkipStore）→ 正常转发
 ```
 
 注意：capture 词命中但**不在**最后一条用户提问消息中（只在历史/system 里）时，capture 视为未生效——继续走 omit 判定与正常转发，请求行为与不含该词完全一致（除命中计数已递增）。
+
+**2026-08-16 补充（omit+capture 混合 bug 修复）**：原实现中「capture 词只在历史 + omit 词命中最后一条用户提问」时只执行 omit 的跳过存储，capture 的上下文保存完全丢失。修复为：同请求同时命中 omit 与 capture 词（capture 词未短路）时，**两个逻辑都执行**——保存最后一条用户提问之前的历史上下文（与短路保存同一路径 `storeOpenAIChatHistory` / `storeAnthropicHistory` / `captureResponseHistory`，同样提交 capture 审计）、omit 的 SkipStore 照常生效、请求照常转发（不短路，避免打断对话）。仅命中 capture（无 omit）时行为不变：未落在最后一条用户提问则不保存（D6）。
 
 ### 4.3 触发位置判定（D6）
 
