@@ -24,6 +24,8 @@ func InflightMiddleware(tracker *inflight.Tracker) fiber.Handler {
 
 		if !tracker.Track() {
 			c.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
+			// 保持 503：inflight 拒绝是优雅退出的流量摘除信号（K8s/负载均衡据此
+			// 停止转发），不属于业务错误语义，不受统一 200 契约约束。
 			c.Status(fiber.StatusServiceUnavailable)
 
 			body, _ := sonic.Marshal(&dto.CommonRsp{ //nolint:errcheck // Marshal always succeeds for static struct

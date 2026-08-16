@@ -239,7 +239,7 @@ func TestCronHandler_TriggerCronJob_Error(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected huma.StatusError, got %T", err)
 	}
-	if humaErr.GetStatus() != http.StatusLocked {
-		t.Fatalf("expected HTTP 423 for locked cron job, got %d", humaErr.GetStatus())
+	if humaErr.GetStatus() != http.StatusOK {
+		t.Fatalf("unified contract: expected HTTP 200 for locked cron job, got %d", humaErr.GetStatus())
 	}
 }

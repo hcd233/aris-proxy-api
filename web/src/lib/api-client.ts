@@ -139,12 +139,24 @@ class ApiClient {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
         });
-        if (!res.ok) return false;
-        const data = await res.json();
-        if (data.accessToken) {
-          localStorage.setItem("access_token", data.accessToken);
-          if (data.refreshToken) {
-            localStorage.setItem("refresh_token", data.refreshToken);
+        // 统一错误契约：刷新接口错误也以 200 + {error} 返回，成功与否只看 accessToken 字段。
+        const text = await res.text();
+        let data: unknown = null;
+        try {
+          data = text ? JSON.parse(text) : null;
+        } catch {
+          data = null;
+        }
+        const accessToken =
+          data && typeof data === "object" ? (data as { accessToken?: unknown }).accessToken : null;
+        if (typeof accessToken === "string" && accessToken) {
+          localStorage.setItem("access_token", accessToken);
+          const refreshToken =
+            data && typeof data === "object"
+              ? (data as { refreshToken?: unknown }).refreshToken
+              : null;
+          if (typeof refreshToken === "string" && refreshToken) {
+            localStorage.setItem("refresh_token", refreshToken);
           }
           return true;
         }
@@ -160,10 +172,10 @@ class ApiClient {
   }
 
   /**
-   * 401 处理：等待（或触发）一次 token 刷新后重试原请求。
-   * tryRefreshToken 内部以 Promise 做并发去重，因此并发 401 会共享同一次刷新，
+   * 401/未授权处理：等待（或触发）一次 token 刷新后重试原请求。
+   * tryRefreshToken 内部以 Promise 做并发去重，因此并发未授权会共享同一次刷新，
    * 不会出现“一个请求刷新成功、另一个请求误判已重试而强制登出”的竞态。
-   * 刷新后仍 401（refresh token 已失效）才清空凭据并提示重新登录。
+   * 刷新后仍未授权（refresh token 已失效）才清空凭据并提示重新登录。
    */
   private async handleAuthFailure<T>(path: string, options?: RequestInit): Promise<T> {
     const refreshed = await this.tryRefreshToken();
@@ -181,17 +193,10 @@ class ApiClient {
       this.clearAuthAndPromptLogin();
       throw new ApiError(401, "Authentication required");
     }
-    if (!retryRes.ok) {
-      throw new ApiError(retryRes.status, await retryRes.text());
-    }
 
-    const retryBody = await retryRes.json();
-    // 业务层未授权（HTTP 200 包装）同样视为凭据失效
-    if (
-      retryBody &&
-      typeof retryBody === "object" &&
-      retryBody.error?.code === BusinessErrorCode.Unauthorized
-    ) {
+    const retryBody = await resolveResponse(retryRes);
+    // 统一契约下未授权以 200 + {error:{code:10001}} 返回，同样视为凭据失效
+    if (extractBizError(retryBody)?.code === BusinessErrorCode.Unauthorized) {
       this.clearAuthAndPromptLogin();
       throw new ApiError(401, "Authentication required");
     }
@@ -223,14 +228,10 @@ class ApiClient {
       return this.handleAuthFailure<T>(path, options);
     }
 
-    if (!res.ok) {
-      throw new ApiError(res.status, await res.text());
-    }
-
-    const body = await res.json();
-
-    // Unified response: business-level auth error returned with HTTP 200
-    if (body && typeof body === "object" && body.error?.code === BusinessErrorCode.Unauthorized) {
+    // 统一错误契约：管理 API 除 proxy 外恒返回 HTTP 200，错误语义由 body.error 承载。
+    // 只要有合法 error 结构即抛错（10001 未授权除外，走 token 刷新流程）。
+    const body = await resolveResponse(res);
+    if (extractBizError(body)?.code === BusinessErrorCode.Unauthorized) {
       return this.handleAuthFailure<T>(path, options);
     }
 
@@ -434,16 +435,15 @@ class ApiClient {
 
   /**
    * 公开只读接口（无需鉴权），仅携带 Accept-Language。
+   * 同样遵循统一错误契约：body 携带 error 结构即抛错。
    */
   private async publicGet<T>(path: string): Promise<T> {
     const headers: HeadersInit = { "Content-Type": "application/json" };
     const locale = typeof window !== "undefined" ? localStorage.getItem("locale") : null;
     if (locale === "zh" || locale === "en") headers["Accept-Language"] = locale;
     const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
-    if (!res.ok) {
-      throw new ApiError(res.status, await res.text());
-    }
-    return res.json();
+    const body = await resolveResponse(res);
+    return body as T;
   }
 
   /**
@@ -865,15 +865,18 @@ class ApiClient {
       const refreshed = await this.tryRefreshToken();
       if (refreshed) {
         res = await doFetch();
-        if (!res.ok) throw new ApiError(res.status, await res.text());
       } else {
         this.clearAuthAndPromptLogin();
         throw new ApiError(401, "Authentication required");
       }
     }
 
-    if (!res.ok) {
-      throw new ApiError(res.status, await res.text());
+    // 统一错误契约：管理 API 错误以 200 + {error} JSON 返回，而非 SSE 帧。
+    // 非 text/event-stream 的响应说明握手阶段即失败（如权限不足），直接抛错。
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("text/event-stream")) {
+      await resolveResponse(res);
+      return;
     }
 
     if (!res.body) throw new ApiError(500, "No response body");
@@ -906,6 +909,45 @@ class ApiClient {
       reader.releaseLock();
     }
   }
+}
+
+/**
+ * 从响应体中提取统一业务错误结构；body 无 error 或 error 为 null（成功）时返回 null。
+ * 管理 API 统一错误契约：HTTP 200 + {error:{code,message}}，成功时 error 为 null 或缺失。
+ */
+function extractBizError(body: unknown): { code: number; message: string } | null {
+  if (!body || typeof body !== "object") return null;
+  const err = (body as { error?: unknown }).error;
+  if (!err || typeof err !== "object") return null;
+  const biz = err as { code?: unknown; message?: unknown };
+  if (typeof biz.code === "number" && typeof biz.message === "string") {
+    return { code: biz.code, message: biz.message };
+  }
+  return null;
+}
+
+/**
+ * 读取响应并按统一错误契约解析：
+ * - body 携带合法 error 结构 → 抛 ApiError（10001 未授权豁免，由调用方决定刷新/登出流程）
+ * - 非 2xx 且无 error 结构（理论仅在异常路径出现）→ 抛 ApiError
+ * - 其余情况返回解析后的 body（可能为 null，如空 body / 非 JSON）
+ */
+async function resolveResponse(res: Response): Promise<unknown> {
+  const text = await res.text();
+  let body: unknown = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = null;
+  }
+  const bizErr = extractBizError(body);
+  if (bizErr && bizErr.code !== BusinessErrorCode.Unauthorized) {
+    throw new ApiError(res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, text);
+  }
+  return body;
 }
 
 function parseSSEFrame(frame: string): DatasetExportSSEEvent | null {

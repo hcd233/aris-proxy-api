@@ -131,7 +131,15 @@ func TestE2E_CronTrigger_NotFound(t *testing.T) {
 	baseURL, jwtToken := mustE2EEnv(t)
 	client := newE2EClient()
 	status, traceID, body := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/cron/trigger?name=non-existent-job", jwtToken)
-	if status != http.StatusNotFound {
-		t.Fatalf("expected 404 for unknown cron job, got status=%d traceID=%s body=%s", status, traceID, string(body))
+	if status != http.StatusOK {
+		t.Fatalf("unified contract: expected 200 for unknown cron job, got status=%d traceID=%s body=%s", status, traceID, string(body))
+	}
+	var rsp struct {
+		Error *struct {
+			Code int `json:"code"`
+		} `json:"error"`
+	}
+	if err := sonic.Unmarshal(body, &rsp); err != nil || rsp.Error == nil || rsp.Error.Code != 10003 {
+		t.Fatalf("expected error code 10003 for unknown cron job, body=%s", string(body))
 	}
 }
