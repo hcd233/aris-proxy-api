@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, X } from "lucide-react";
+import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, Lock, X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -529,14 +529,15 @@ export default function SessionsPage() {
                   );
                 }}
               />
-              {!isDemo() && selected.size > 0 && (
+              {selected.size > 0 && (
                 <Button
                   variant="destructive"
                   size="sm"
+                  disabled={isDemo()}
                   onClick={() => setBatchDeleteConfirmOpen(true)}
                   className="gap-1.5"
                 >
-                  <Trash2 className="size-3.5" />
+                  {isDemo() ? <Lock className="size-3.5" /> : <Trash2 className="size-3.5" />}
                   {t("common.delete")} {selected.size}
                 </Button>
               )}
@@ -606,8 +607,8 @@ export default function SessionsPage() {
                                 String(s.messageCount ?? 0),
                               )}
                             </Badge>
-                            {!isDemo() && (
                             <DeleteIconButton
+                              locked={isDemo()}
                               disabled={deleteConfirm.loading && deleteConfirm.target?.id === s.id}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -615,7 +616,6 @@ export default function SessionsPage() {
                               }}
                               aria-label={t("sessions.delete_aria")}
                             />
-                            )}
                           </div>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -760,8 +760,8 @@ export default function SessionsPage() {
                           </TableCell>
                           <TableCell className="w-16">
                             <div className="flex justify-center">
-                              {!isDemo() && (
                               <DeleteIconButton
+                                locked={isDemo()}
                                 disabled={
                                   deleteConfirm.loading && deleteConfirm.target?.id === s.id
                                 }
@@ -771,7 +771,6 @@ export default function SessionsPage() {
                                 }}
                                 aria-label={t("sessions.delete_aria")}
                               />
-                              )}
                             </div>
                           </TableCell>
                         </TableRow>

@@ -361,12 +361,12 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
       </TooltipProvider>
       )}
 
-      {!isDemo() && (
       <TooltipProvider>
         <TooltipRoot>
           <TooltipTrigger
             render={
               <DeleteIconButton
+                locked={isDemo()}
                 className="size-10 text-foreground/70"
                 iconClassName="size-5"
                 onClick={() => setDeleteConfirmOpen(true)}
@@ -374,10 +374,11 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
               />
             }
           />
-          <TooltipContent side="top">{t("session_detail.delete_title")}</TooltipContent>
+          <TooltipContent side="top">
+            {isDemo() ? t("common.demo_locked") : t("session_detail.delete_title")}
+          </TooltipContent>
         </TooltipRoot>
       </TooltipProvider>
-      )}
 
       {metadata.toolCount > 0 && (
         <TooltipProvider>

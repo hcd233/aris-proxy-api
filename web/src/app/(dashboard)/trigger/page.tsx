@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { TriggerAction, TriggerItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import { PageHeader } from "@/components/page-header";
 import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { Ban, Check, Trash2 } from "lucide-react";
+import { Ban, Check, Lock, Trash2 } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -126,6 +127,7 @@ export default function TriggerPage() {
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const t = useT();
+  const { isDemo } = useAuth();
   const isMobile = useIsMobile();
 
   const fetchItems = useCallback(
@@ -271,10 +273,11 @@ export default function TriggerPage() {
                 <Button
                   variant="destructive"
                   size="sm"
+                  disabled={isDemo()}
                   onClick={() => setBatchDeleteConfirmOpen(true)}
                   className="gap-1.5 sm:ml-auto"
                 >
-                  <Trash2 className="size-3.5" />
+                  {isDemo() ? <Lock className="size-3.5" /> : <Trash2 className="size-3.5" />}
                   {t("common.delete")} {selected.size}
                 </Button>
               )}
@@ -327,6 +330,7 @@ export default function TriggerPage() {
                             <div className="flex shrink-0 items-center gap-1">
                               <DeleteButton
                                 label={t("common.delete")}
+                                locked={isDemo()}
                                 onClick={() => deleteConfirm.openDelete(item)}
                               />
                             </div>
@@ -390,6 +394,7 @@ export default function TriggerPage() {
                             <TableCell>
                               <DeleteButton
                                 label={t("common.delete")}
+                                locked={isDemo()}
                                 onClick={() => deleteConfirm.openDelete(item)}
                               />
                             </TableCell>

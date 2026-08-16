@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { EndpointItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,7 @@ const emptyForm: EndpointForm = {
 
 export default function EndpointsPage() {
   const t = useT();
+  const { isDemo } = useAuth();
   const isMobile = useIsMobile();
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.endpoints.page", 1);
@@ -260,6 +262,7 @@ export default function EndpointsPage() {
                             </Button>
                             <DeleteButton
                               label={t("common.delete")}
+                              locked={isDemo()}
                               disabled={deleteConfirm.loading && deleteConfirm.target?.id === ep.id}
                               onClick={() => deleteConfirm.openDelete(ep)}
                             />
@@ -398,6 +401,7 @@ export default function EndpointsPage() {
                               </Button>
                               <DeleteButton
                                 label={t("common.delete")}
+                                locked={isDemo()}
                                 disabled={
                                   deleteConfirm.loading && deleteConfirm.target?.id === ep.id
                                 }

@@ -39,6 +39,7 @@ import {
   Database,
   Radar,
   Users,
+  Lock,
 } from "lucide-react";
 
 interface NavItem {
@@ -135,10 +136,8 @@ function SidebarNav({
   const t = useT();
 
   const visibleItems = items.filter((item) => {
-    // demo 用户：仅显示开放的模块（shares/apikeys/dataset/trace/profile 等无 key 项隐藏）
-    if (isDemo()) {
-      return item.demoModule !== undefined && isModuleOpen(item.demoModule);
-    }
+    // demo 用户：全部显示，未开放的模块置灰锁定；其余按 admin 权限过滤
+    if (isDemo()) return true;
     return !item.adminOnly || isAdmin();
   });
 
@@ -148,8 +147,25 @@ function SidebarNav({
         {visibleItems.map((item) => {
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           const label = t(item.labelKey);
+          const demoLocked =
+            isDemo() && !(item.demoModule !== undefined && isModuleOpen(item.demoModule));
 
-          const link = (
+          const link = demoLocked ? (
+            <span
+              aria-disabled="true"
+              className={`flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/45 ${
+                collapsed ? "justify-center" : ""
+              }`}
+            >
+              <span className="opacity-60">{item.icon}</span>
+              {!collapsed && (
+                <>
+                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  <Lock className="size-3.5 shrink-0 opacity-60" />
+                </>
+              )}
+            </span>
+          ) : (
             <Link
               href={item.href}
               onClick={onNavigate}
@@ -165,10 +181,12 @@ function SidebarNav({
             </Link>
           );
 
-          return collapsed ? (
+          return collapsed || demoLocked ? (
             <TooltipRoot key={item.href}>
               <TooltipTrigger render={link} />
-              <TooltipContent side="right">{label}</TooltipContent>
+              <TooltipContent side="right">
+                {demoLocked ? `${label} · ${t("nav.demo_locked")}` : label}
+              </TooltipContent>
             </TooltipRoot>
           ) : (
             <Fragment key={item.href}>{link}</Fragment>
