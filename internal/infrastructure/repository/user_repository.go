@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -175,6 +176,48 @@ func (r *userRepository) FindByPermission(ctx context.Context, permission enum.P
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get user by permission")
 	}
 	return toUserAggregate(record), nil
+}
+
+// ReplaceDemoUser 在同一事务内替换全局 Demo 用户。
+func (r *userRepository) ReplaceDemoUser(ctx context.Context, targetID uint) (previousDemoID uint, err error) {
+	db := r.db.WithContext(ctx)
+	err = db.Transaction(func(tx *gorm.DB) error {
+		target := &dbmodel.User{}
+		if queryErr := tx.Clauses(clause.Locking{Strength: constant.DBLockStrengthUpdate}).
+			Where(constant.FieldID+" = ? AND "+constant.DBConditionDeletedAtZero, targetID).
+			First(target).Error; queryErr != nil {
+			if errors.Is(queryErr, gorm.ErrRecordNotFound) {
+				return ierr.New(ierr.ErrDataNotExists, "user not found")
+			}
+			return ierr.Wrap(ierr.ErrDBQuery, queryErr, "lock demo target user")
+		}
+		if target.Permission != enum.PermissionPending && target.Permission != enum.PermissionUser {
+			return ierr.Newf(ierr.ErrValidation, "user %d is not pending or user", targetID)
+		}
+
+		currentDemo := &dbmodel.User{}
+		queryErr := tx.Clauses(clause.Locking{Strength: constant.DBLockStrengthUpdate}).
+			Where(constant.FieldPermission+" = ? AND "+constant.DBConditionDeletedAtZero, enum.PermissionDemo).
+			First(currentDemo).Error
+		if queryErr != nil && !errors.Is(queryErr, gorm.ErrRecordNotFound) {
+			return ierr.Wrap(ierr.ErrDBQuery, queryErr, "lock current demo user")
+		}
+		if queryErr == nil {
+			previousDemoID = currentDemo.ID
+			if updateErr := tx.Model(&dbmodel.User{}).
+				Where(constant.FieldID+" = ?", currentDemo.ID).
+				Update(constant.FieldPermission, enum.PermissionPending).Error; updateErr != nil {
+				return ierr.Wrap(ierr.ErrDBUpdate, updateErr, "demote current demo user")
+			}
+		}
+		if updateErr := tx.Model(&dbmodel.User{}).
+			Where(constant.FieldID+" = ?", targetID).
+			Update(constant.FieldPermission, enum.PermissionDemo).Error; updateErr != nil {
+			return ierr.Wrap(ierr.ErrDBUpdate, updateErr, "promote demo user")
+		}
+		return nil
+	})
+	return previousDemoID, err
 }
 
 // toUserAggregate 将 GORM 模型映射为聚合根

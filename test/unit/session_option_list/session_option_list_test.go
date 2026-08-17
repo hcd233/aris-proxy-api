@@ -18,6 +18,7 @@ type fakeSessionReadRepo struct {
 	listDistinctModelsCalled  bool
 	listDistinctScoresCalled  bool
 	listMessageCountStatsCall int
+	lastSampleModulus         uint
 }
 
 func (r *fakeSessionReadRepo) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria, sampleModulus uint) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
@@ -44,18 +45,21 @@ func (r *fakeSessionReadRepo) FindToolsByIDs(ctx context.Context, ids []uint) ([
 	return nil, nil
 }
 
-func (r *fakeSessionReadRepo) ListDistinctScores(ctx context.Context, startTime, endTime time.Time) ([]int, error) {
+func (r *fakeSessionReadRepo) ListDistinctScores(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]int, error) {
 	r.listDistinctScoresCalled = true
+	r.lastSampleModulus = sampleModulus
 	return []int{1, 3, 5}, nil
 }
 
-func (r *fakeSessionReadRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+func (r *fakeSessionReadRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	r.listDistinctModelsCalled = true
+	r.lastSampleModulus = sampleModulus
 	return []string{"gpt-4o", "claude-3-5-sonnet"}, nil
 }
 
-func (r *fakeSessionReadRepo) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (maxCount int, bucketCounts map[int]int64, err error) {
+func (r *fakeSessionReadRepo) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) (maxCount int, bucketCounts map[int]int64, err error) {
 	r.listMessageCountStatsCall++
+	r.lastSampleModulus = sampleModulus
 	return 82, map[int]int64{0: 5, 1: 3, 2: 7}, nil
 }
 
@@ -80,6 +84,23 @@ func TestListSessionOptionHandler_FieldModel(t *testing.T) {
 	}
 	if len(items) != 2 {
 		t.Errorf("expected 2 items, got %d", len(items))
+	}
+}
+
+func TestListSessionOptionHandler_PassesSampleModulus(t *testing.T) {
+	t.Parallel()
+
+	const sampleModulus = 10
+	repo := &fakeSessionReadRepo{}
+	handler := query.NewListSessionOptionHandler(repo)
+	if _, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{
+		Field:         constant.SessionFilterFieldMessageCount,
+		SampleModulus: sampleModulus,
+	}); err != nil {
+		t.Fatalf("list message count options: %v", err)
+	}
+	if repo.lastSampleModulus != sampleModulus {
+		t.Fatalf("sample modulus = %d, want %d", repo.lastSampleModulus, sampleModulus)
 	}
 }
 

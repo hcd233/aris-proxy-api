@@ -10,10 +10,11 @@ import (
 
 // ListAuditOptionQuery 审计筛选选项查询
 type ListAuditOptionQuery struct {
-	Field     string
-	Keyword   string
-	StartTime time.Time
-	EndTime   time.Time
+	Field         string
+	Keyword       string
+	StartTime     time.Time
+	EndTime       time.Time
+	SampleModulus uint
 }
 
 // ListAuditOptionHandler 审计筛选选项查询处理器
@@ -34,13 +35,13 @@ func NewListAuditOptionHandler(repo modelcall.AuditRepository) ListAuditOptionHa
 func (h *listAuditOptionHandler) Handle(ctx context.Context, q ListAuditOptionQuery) ([]string, error) {
 	switch q.Field {
 	case constant.AuditFilterFieldUser:
-		return h.repo.ListDistinctUserNames(ctx, q.Keyword, q.StartTime, q.EndTime)
+		return h.repo.ListDistinctUserNames(ctx, q.Keyword, q.StartTime, q.EndTime, q.SampleModulus)
 	case constant.AuditFilterFieldModel:
-		return h.repo.ListDistinctModels(ctx, q.Keyword, q.StartTime, q.EndTime)
+		return h.repo.ListDistinctModels(ctx, q.Keyword, q.StartTime, q.EndTime, q.SampleModulus)
 	case constant.AuditFilterFieldStatus:
-		return h.repo.ListDistinctStatusCodes(ctx, q.StartTime, q.EndTime)
+		return h.repo.ListDistinctStatusCodes(ctx, q.StartTime, q.EndTime, q.SampleModulus)
 	case constant.AuditFilterFieldUA:
-		return h.repo.ListDistinctUserAgents(ctx, q.Keyword, q.StartTime, q.EndTime)
+		return h.repo.ListDistinctUserAgents(ctx, q.Keyword, q.StartTime, q.EndTime, q.SampleModulus)
 	default:
 		return []string{}, nil
 	}

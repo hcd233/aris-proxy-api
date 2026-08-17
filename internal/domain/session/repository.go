@@ -156,12 +156,12 @@ type SessionReadRepository interface {
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 	// FindToolsByIDs 批量查询工具投影
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
-	// ListDistinctScores 查询去重的评分列表（支持时间范围过滤）
-	ListDistinctScores(ctx context.Context, startTime, endTime time.Time) ([]int, error)
-	// ListDistinctModels 查询去重的模型列表（支持时间范围与关键字过滤）
-	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
-	// ListMessageCountStats 查询消息数统计（当前时间范围最大消息数 + 各固定桶的会话数）
-	ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (maxCount int, bucketCounts map[int]int64, err error)
+	// ListDistinctScores 查询去重的评分列表（支持时间范围与 Demo 抽样过滤）
+	ListDistinctScores(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]int, error)
+	// ListDistinctModels 查询去重的模型列表（支持时间范围、关键字与 Demo 抽样过滤）
+	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	// ListMessageCountStats 查询消息数统计（当前时间范围最大消息数 + 各固定桶的会话数，支持 Demo 抽样过滤）
+	ListMessageCountStats(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) (maxCount int, bucketCounts map[int]int64, err error)
 	// ListSessionsForExport 按筛选条件查询导出用会话行（不含消息内容，仅 IDs）
 	ListSessionsForExport(ctx context.Context, f ExportFilter) ([]*ExportSessionRow, error)
 	// PreviewExport 按筛选条件统计预览（会话数 + 评分分布 + 模型分布）

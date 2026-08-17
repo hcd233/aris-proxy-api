@@ -757,11 +757,18 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.SessionOptionListReq) (*dto.HTTPResponse[*dto.SessionOptionListRsp], error) {
 	rsp := &dto.SessionOptionListRsp{}
 
+	_, modulus, scopeErr := h.resolveDemoScope(ctx, util.CtxValuePermission(ctx))
+	if scopeErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo scope failed", zap.Error(scopeErr))
+		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
 	items, err := h.listOption.Handle(ctx, port.ListSessionOptionQuery{
-		Field:     req.Field,
-		Keyword:   req.Keyword,
-		StartTime: req.StartTime,
-		EndTime:   req.EndTime,
+		Field:         req.Field,
+		Keyword:       req.Keyword,
+		StartTime:     req.StartTime,
+		EndTime:       req.EndTime,
+		SampleModulus: modulus,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session options failed", zap.Error(err))

@@ -25,7 +25,7 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 	case constant.FieldScore:
 		items := []string{constant.SessionOptionScoreValueUnscored}
 
-		scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime)
+		scores, err := h.readRepo.ListDistinctScores(ctx, q.StartTime, q.EndTime, q.SampleModulus)
 		if err != nil {
 			return nil, err
 		}
@@ -45,9 +45,9 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 
 		return items, nil
 	case constant.SessionFilterFieldModel:
-		return h.readRepo.ListDistinctModels(ctx, q.Keyword, q.StartTime, q.EndTime)
+		return h.readRepo.ListDistinctModels(ctx, q.Keyword, q.StartTime, q.EndTime, q.SampleModulus)
 	case constant.SessionFilterFieldMessageCount:
-		maxCount, bucketCounts, err := h.readRepo.ListMessageCountStats(ctx, q.StartTime, q.EndTime)
+		maxCount, bucketCounts, err := h.readRepo.ListMessageCountStats(ctx, q.StartTime, q.EndTime, q.SampleModulus)
 		if err != nil {
 			return nil, err
 		}

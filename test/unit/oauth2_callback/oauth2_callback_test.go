@@ -186,6 +186,10 @@ func (r *stubUserRepo) FindByPermission(ctx context.Context, permission enum.Per
 	return nil, nil
 }
 
+func (r *stubUserRepo) ReplaceDemoUser(ctx context.Context, targetID uint) (uint, error) {
+	return 0, nil
+}
+
 func (r *stubUserRepo) DeleteCascade(ctx context.Context, id uint) error {
 	return nil
 }

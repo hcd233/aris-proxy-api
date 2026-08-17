@@ -26,10 +26,10 @@ type fakeAuditRepo struct {
 	listByAPIKeyIDsFn      func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 	queryTokenThroughputFn func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.TokenThroughputPoint, error)
 
-	listDistinctUserNamesFn   func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
-	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
-	listDistinctStatusCodesFn func(ctx context.Context, startTime, endTime time.Time) ([]string, error)
-	listDistinctUserAgentsFn  func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	listDistinctUserNamesFn   func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	listDistinctStatusCodesFn func(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	listDistinctUserAgentsFn  func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
 
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
@@ -78,30 +78,30 @@ func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	if f.listDistinctUserNamesFn != nil {
-		return f.listDistinctUserNamesFn(ctx, keyword, startTime, endTime)
+		return f.listDistinctUserNamesFn(ctx, keyword, startTime, endTime, sampleModulus)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	if f.listDistinctModelsFn != nil {
-		return f.listDistinctModelsFn(ctx, keyword, startTime, endTime)
+		return f.listDistinctModelsFn(ctx, keyword, startTime, endTime, sampleModulus)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	if f.listDistinctStatusCodesFn != nil {
-		return f.listDistinctStatusCodesFn(ctx, startTime, endTime)
+		return f.listDistinctStatusCodesFn(ctx, startTime, endTime, sampleModulus)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	if f.listDistinctUserAgentsFn != nil {
-		return f.listDistinctUserAgentsFn(ctx, keyword, startTime, endTime)
+		return f.listDistinctUserAgentsFn(ctx, keyword, startTime, endTime, sampleModulus)
 	}
 	return []string{}, nil
 }
@@ -294,19 +294,19 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 		listAllFunc:            nil,
 		listByAPIKeyIDsFn:      nil,
 		queryTokenThroughputFn: nil,
-		listDistinctUserNamesFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+		listDistinctUserNamesFn: func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 			userNamesCalled = true
 			return []string{"user1", "user2"}, nil
 		},
-		listDistinctModelsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+		listDistinctModelsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 			modelsCalled = true
 			return []string{"gpt-4", "claude"}, nil
 		},
-		listDistinctStatusCodesFn: func(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
+		listDistinctStatusCodesFn: func(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 			statusCodesCalled = true
 			return []string{"200", "400", "500"}, nil
 		},
-		listDistinctUserAgentsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+		listDistinctUserAgentsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 			userAgentsCalled = true
 			return []string{"Mozilla/5.0", "curl/8.0"}, nil
 		},
@@ -389,6 +389,46 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 			t.Errorf("items = %v, want []", items)
 		}
 	})
+}
+
+func TestAuditService_DemoOptionsUseSampleModulus(t *testing.T) {
+	t.Parallel()
+
+	const sampleModulus = 10
+	repo := &fakeAuditRepo{
+		listDistinctUserAgentsFn: func(_ context.Context, _ string, _ time.Time, _ time.Time, gotModulus uint) ([]string, error) {
+			if gotModulus != sampleModulus {
+				t.Fatalf("sample modulus = %d, want %d", gotModulus, sampleModulus)
+			}
+			return []string{"sampled-agent"}, nil
+		},
+	}
+	svc := auditquery.NewAuditService(
+		nil,
+		nil,
+		auditquery.NewListAuditOptionHandler(repo),
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		fakeDemoScope{modulus: sampleModulus},
+	)
+
+	items, err := svc.ListAuditOption(context.Background(), enum.PermissionDemo, constant.AuditFilterFieldUA, "", time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatalf("list demo audit options: %v", err)
+	}
+	if len(items) != 1 || items[0] != "sampled-agent" {
+		t.Fatalf("items = %v, want [sampled-agent]", items)
+	}
 }
 
 // ─── FillTrendSeries / FillRateSeries 测试 ────────────────────────

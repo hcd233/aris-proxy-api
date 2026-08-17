@@ -60,6 +60,24 @@ func TestSetDemoUser_ReplacesExistingDemo(t *testing.T) {
 	}
 }
 
+func TestSetDemoUser_UsesAtomicRepositoryReplace(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo := newFakeUserRepo(
+		newUser(t, "old-demo", "old@example.com", enum.PermissionDemo),
+		newUser(t, "bob", "bob@example.com", enum.PermissionUser),
+	)
+	target := repo.users[1]
+	handler := command.NewSetDemoUserHandler(repo, nil)
+
+	if err := handler.Handle(ctx, port.SetDemoUserCommand{OperatorID: 99, UserID: target.AggregateID()}); err != nil {
+		t.Fatalf("set demo failed: %v", err)
+	}
+	if repo.replaceDemoCalls != 1 {
+		t.Fatalf("ReplaceDemoUser calls = %d, want 1", repo.replaceDemoCalls)
+	}
+}
+
 func TestSetDemoUser_RejectsAdmin(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

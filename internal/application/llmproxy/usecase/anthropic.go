@@ -109,8 +109,9 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 			u.storeAnthropicHistory(ctx, req, m, hit.lastIdx)
 		}
 
-		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
-		ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		if len(u.triggerChecker.OmitIDs(matched)) > 0 {
+			ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		}
 	}
 
 	exposedModel := req.Body.Model

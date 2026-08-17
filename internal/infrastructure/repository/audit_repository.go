@@ -102,8 +102,8 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 	return r.paginate(db, param, startTime, endTime, criteria, 0)
 }
 
-// ListDistinctUserNames 查询去重的用户名列表
-func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+// ListDistinctUserNames 查询去重的用户名列表。
+func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var names []string
@@ -112,14 +112,15 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 		Joins(constant.AuditDistinctJoinAPIKey).
 		Joins(constant.AuditDistinctJoinUser).
 		Where(constant.AuditDistinctWhereDeletedAtZero)
-
+	if sampleModulus > 1 {
+		query = query.Where(constant.AuditDistinctWhereIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.AuditDistinctWhereCreatedAtGTE, startTime)
 	}
 	if !endTime.IsZero() {
 		query = query.Where(constant.AuditDistinctWhereCreatedAtLTE, endTime)
 	}
-
 	if keyword != "" {
 		query = query.Where(constant.AuditDistinctWhereUser, "%"+keyword+"%", "%"+keyword+"%")
 	}
@@ -131,22 +132,23 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 	return names, nil
 }
 
-// ListDistinctModels 查询去重的模型列表
-func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+// ListDistinctModels 查询去重的模型列表。
+func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var models []string
 	query := db.Model(&dbmodel.ModelCallAudit{}).
 		Select(constant.AuditDistinctSelectModel).
 		Where(constant.DBConditionDeletedAtZero)
-
+	if sampleModulus > 1 {
+		query = query.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
 	if !endTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
-
 	if keyword != "" {
 		query = query.Where(constant.AuditDistinctWhereModel, "%"+keyword+"%")
 	}
@@ -158,8 +160,8 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string
 	return models, nil
 }
 
-// ListDistinctStatusCodes 查询去重的上游状态码列表
-func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
+// ListDistinctStatusCodes 查询去重的上游状态码列表。
+func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var codes []string
@@ -167,7 +169,9 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime
 		Select(constant.AuditDistinctSelectStatus).
 		Where(constant.DBConditionDeletedAtZero).
 		Order(constant.FieldUpstreamStatusCode)
-
+	if sampleModulus > 1 {
+		query = query.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -182,8 +186,8 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime
 	return codes, nil
 }
 
-// ListDistinctUserAgents 查询去重的 User-Agent 列表（排除空值）
-func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+// ListDistinctUserAgents 查询去重的 User-Agent 列表（排除空值）。
+func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var agents []string
@@ -191,14 +195,15 @@ func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, keyword st
 		Select(constant.AuditDistinctSelectUA).
 		Where(constant.DBConditionDeletedAtZero).
 		Where(constant.AuditDistinctWhereUANotEmpty)
-
+	if sampleModulus > 1 {
+		query = query.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
 	if !endTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
-
 	if keyword != "" {
 		query = query.Where(constant.AuditDistinctWhereUA, "%"+keyword+"%")
 	}

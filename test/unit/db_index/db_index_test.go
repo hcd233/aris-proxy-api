@@ -75,6 +75,32 @@ const toolChecksumIndexName = "idx_tool_checksum_deleted"
 //
 // 该索引是工具去重的数据库层保证：ON CONFLICT 依赖它推断冲突目标。若后续改动 tag
 // 破坏了索引定义，去重会退化为无约束的"先查后插"，并发下产生重复工具记录。
+func TestUserAutoMigrateSingleDemoIndex(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	if err := db.AutoMigrate(&dbmodel.User{}); err != nil {
+		t.Fatalf("failed to migrate users: %v", err)
+	}
+
+	const indexName = "idx_user_single_demo"
+	var indexSQL string
+	if err := db.Raw(
+		"SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'users' AND name = ?",
+		indexName,
+	).Scan(&indexSQL).Error; err != nil {
+		t.Fatalf("query index %q: %v", indexName, err)
+	}
+	if indexSQL == "" {
+		t.Fatalf("index %q missing", indexName)
+	}
+	if !strings.Contains(strings.ToUpper(indexSQL), "UNIQUE") {
+		t.Errorf("index %q must be UNIQUE, got %s", indexName, indexSQL)
+	}
+	if !strings.Contains(indexSQL, "WHERE permission = 'demo' AND deleted_at = 0") {
+		t.Errorf("index %q must constrain active demo users only, got %s", indexName, indexSQL)
+	}
+}
+
 func TestToolAutoMigrateUniqueIndex(t *testing.T) {
 	t.Parallel()
 	db := newTestDB(t)

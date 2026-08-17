@@ -102,8 +102,9 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 			u.storeOpenAIChatHistory(ctx, req, m, hit.lastIdx)
 		}
 
-		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
-		ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		if len(u.triggerChecker.OmitIDs(matched)) > 0 {
+			ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		}
 	}
 
 	switch compatRoute {
@@ -164,8 +165,9 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 			submitCaptureStore(ctx, u.taskSubmitter, m.ModelID(), unified, tools, req.Body.Metadata)
 		}
 
-		// 全部命中词为 allow：放行转发，但跳过 session/message/tool 存储（audit 正常记录）
-		ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		if len(u.triggerChecker.OmitIDs(matched)) > 0 {
+			ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		}
 	}
 
 	switch compatRoute {

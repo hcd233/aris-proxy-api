@@ -17,6 +17,7 @@ const (
 	DBConditionIDModuloZero     = "id % ? = 0"
 	DBOrderByID                 = "id"
 	DBConditionDedupKeyNotZero  = "dedup_key <> ''"
+	DBLockStrengthUpdate        = "UPDATE"
 
 	DBJSONConditionAssistantRole  = "(message::jsonb)->>'role' = 'assistant'"
 	DBJSONConditionHasThinkTag    = "(message::jsonb)->>'content' LIKE '%<think>%'"
