@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // captureTaskSubmitter 记录提交任务的 mockTaskSubmitter，用于断言存储/审计行为。
@@ -216,6 +217,9 @@ func TestAnthropicCreateMessage_CaptureWordOnlyInHistory(t *testing.T) {
 	if _, isJSON := result.(*port.JSONResult); !isJSON {
 		t.Fatalf("expect forwarded JSONResult, got %T", result)
 	}
+	if util.CtxValueBool(proxy.lastMessageCtx, constant.CtxKeySkipStore) {
+		t.Fatal("capture word only in history must not skip normal message storage")
+	}
 }
 
 // tool 结果回传消息（role=user 仅含 tool_result 块）不是用户提问，
@@ -382,6 +386,34 @@ func TestOpenAICreateChatCompletion_CaptureWithHistory(t *testing.T) {
 	}
 }
 
+func TestOpenAICreateChatCompletion_CaptureWordOnlyInHistoryKeepsStore(t *testing.T) {
+	t.Parallel()
+	proxy := &mockOpenAIProxy{}
+	submitter := &captureTaskSubmitter{}
+	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
+	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+
+	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
+		Model: "test-alias",
+		Messages: []*dto.OpenAIChatCompletionMessageParam{
+			{Role: "user", Content: &dto.OpenAIMessageContent{Text: "history mentions /save"}},
+			{Role: "assistant", Content: &dto.OpenAIMessageContent{Text: "ok"}},
+			{Role: "user", Content: &dto.OpenAIMessageContent{Text: "normal question"}},
+		},
+	}}
+
+	if _, err := uc.CreateChatCompletion(context.Background(), req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !proxy.chatUnaryCalled {
+		t.Fatal("capture word only in history should forward normally")
+	}
+	if util.CtxValueBool(proxy.lastChatCtx, constant.CtxKeySkipStore) {
+		t.Fatal("capture word only in history must not skip normal message storage")
+	}
+}
+
 // tool_call_id 非空的 user 消息（tool 结果回传）不是用户提问，不作为触发位置。
 func TestOpenAICreateChatCompletion_CaptureSkipsToolResultUser(t *testing.T) {
 	t.Parallel()
@@ -442,6 +474,36 @@ func TestOpenAICreateResponse_CaptureWithHistory(t *testing.T) {
 	}
 	if len(submitter.storeTasks) != 1 || len(submitter.storeTasks[0].Messages) != 2 {
 		t.Fatalf("expect 1 store task with 2 history messages, got %+v", submitter.storeTasks)
+	}
+}
+
+func TestOpenAICreateResponse_CaptureWordOnlyInHistoryKeepsStore(t *testing.T) {
+	t.Parallel()
+	proxy := &mockOpenAIProxy{}
+	submitter := &captureTaskSubmitter{}
+	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
+	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("test-endpoint", true, true, false), resolveModel: buildTestModel()}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+
+	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
+		Model: lo.ToPtr("test-alias"),
+		Input: &dto.ResponseInput{
+			Items: []*dto.ResponseInputItem{
+				{Role: lo.ToPtr("user"), Content: &dto.ResponseInputMessageContent{Text: "history mentions /save"}},
+				{Role: lo.ToPtr("assistant"), Content: &dto.ResponseInputMessageContent{Text: "ok"}},
+				{Role: lo.ToPtr("user"), Content: &dto.ResponseInputMessageContent{Text: "normal question"}},
+			},
+		},
+	}}
+
+	if _, err := uc.CreateResponse(context.Background(), req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !proxy.responseUnaryCalled {
+		t.Fatal("capture word only in history should forward normally")
+	}
+	if util.CtxValueBool(proxy.lastResponseCtx, constant.CtxKeySkipStore) {
+		t.Fatal("capture word only in history must not skip normal message storage")
 	}
 }
 

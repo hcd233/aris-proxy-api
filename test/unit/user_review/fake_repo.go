@@ -7,14 +7,16 @@ import (
 	"strings"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 )
 
 // fakeUserRepo 内存版 UserRepository，支持 Save/FindByID/ListUsers。
 type fakeUserRepo struct {
-	users []*aggregate.User
-	next  uint
+	users            []*aggregate.User
+	next             uint
+	replaceDemoCalls int
 }
 
 func newFakeUserRepo(seed ...*aggregate.User) *fakeUserRepo {
@@ -108,6 +110,30 @@ func (r *fakeUserRepo) FindByPermission(ctx context.Context, permission enum.Per
 		}
 	}
 	return nil, nil
+}
+
+func (r *fakeUserRepo) ReplaceDemoUser(ctx context.Context, targetID uint) (uint, error) {
+	r.replaceDemoCalls++
+
+	var target *aggregate.User
+	var previousDemoID uint
+	for _, user := range r.users {
+		if user.AggregateID() == targetID {
+			target = user
+		}
+		if user.Permission() == enum.PermissionDemo && user.AggregateID() != targetID {
+			previousDemoID = user.AggregateID()
+			user.ChangePermission(enum.PermissionPending)
+		}
+	}
+	if target == nil {
+		return 0, ierr.New(ierr.ErrDataNotExists, "user not found")
+	}
+	if target.Permission() != enum.PermissionPending && target.Permission() != enum.PermissionUser {
+		return 0, ierr.New(ierr.ErrValidation, "target user is not settable")
+	}
+	target.ChangePermission(enum.PermissionDemo)
+	return previousDemoID, nil
 }
 
 func (r *fakeUserRepo) DeleteCascade(ctx context.Context, id uint) error {

@@ -211,6 +211,7 @@ var (
 	AuditDistinctLimit           = 50
 
 	AuditDistinctWhereDeletedAtZero = "mca.deleted_at = 0"
+	AuditDistinctWhereIDModuloZero  = "mca.id % ? = 0"
 	AuditPaginateWhereDeletedAtZero = "model_call_audits.deleted_at = 0"
 
 	AuditPaginateWhereCreatedAtGTE = "model_call_audits.created_at >= ?"

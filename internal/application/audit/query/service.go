@@ -150,8 +150,18 @@ func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
 	})
 }
 
-func (s *auditService) ListAuditOption(ctx context.Context, field, keyword string, startTime, endTime time.Time) ([]string, error) {
-	return s.listAuditOption.Handle(ctx, ListAuditOptionQuery{Field: field, Keyword: keyword, StartTime: startTime, EndTime: endTime})
+func (s *auditService) ListAuditOption(ctx context.Context, permission enum.Permission, field, keyword string, startTime, endTime time.Time) ([]string, error) {
+	modulus, err := s.resolveSampleModulus(ctx, permission)
+	if err != nil {
+		return nil, err
+	}
+	return s.listAuditOption.Handle(ctx, ListAuditOptionQuery{
+		Field:         field,
+		Keyword:       keyword,
+		StartTime:     startTime,
+		EndTime:       endTime,
+		SampleModulus: modulus,
+	})
 }
 
 func (s *auditService) ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {

@@ -13,11 +13,11 @@ _Avoid_: account, member, operator
 _Avoid_: role, role group
 
 **DemoAccount（演示账户）**:
-全局单例的只读演示用户（permission=demo），供潜在用户免 OAuth 体验产品。由 admin 在用户管理页将 pending/user 账户「设为 Demo」产生（已有 Demo 时替换，旧 Demo 回 pending，双方 JWT 缓存失效）。通过登录页「以 Demo 账户继续」按钮经 `POST /api/v1/demo/login`（无 OAuth，IP 限流）签发 token pair；多访客共用同一账户互不影响。demo 账户的存量 API Key 在转发链路被拒绝（只读，不可调用 LLM）。
+全局单例的只读演示用户（permission=demo），供潜在用户免 OAuth 体验产品。由 admin 在用户管理页将 pending/user 账户「设为 Demo」产生（事务内替换已有 Demo，旧 Demo 回 pending，部分唯一索引保证活跃 Demo 单例，双方 JWT 缓存提交后失效）。通过登录页「以 Demo 账户继续」按钮经 `POST /api/v1/demo/login`（无 OAuth，IP 限流）签发 token pair；多访客共用同一账户互不影响。demo 账户的存量 API Key 在转发链路被拒绝（只读，不可调用 LLM）。
 _Avoid_: guest account, trial account, sandbox user
 
 **DemoConfig（演示配置）**:
-Demo 演示行为的单行配置表（`demo_configs`，固定 ID=1）：`loginEnabled`（登录入口开关，关闭后登录页按钮隐藏且登录接口拒绝）、`sampleModulus`（行为数据取模抽样模数，SQL `id % K == 0`，最小 2——demo 不能看全量真实数据；作用于 sessions 列表/详情与模型审计日志及聚合图表，详情类接口对非抽样 sessionID 返回不存在以防遍历越权）、`modules`（开放模块白名单：dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit；配置类数据与运行指标全量只读，无隐私问题）。读取失败 fail-closed（模块关闭、请求拒绝）。admin 经 `PATCH /api/v1/demo/config` 修改；任意登录用户可读（前端渲染 demo 导航用）。
+Demo 演示行为的单行配置表（`demo_configs`，固定 ID=1）：`loginEnabled`（登录入口开关，关闭后登录页按钮隐藏且登录接口拒绝）、`sampleModulus`（行为数据取模抽样模数，SQL `id % K == 0`，最小 2——demo 不能看全量真实数据；作用于 sessions 列表/详情/筛选选项及模型审计日志/筛选选项/聚合图表，详情类接口对非抽样 sessionID 返回不存在以防遍历越权）、`modules`（开放模块白名单：dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit；配置类数据与运行指标全量只读，无隐私问题）。读取失败 fail-closed（模块关闭、请求拒绝）。admin 经 `PATCH /api/v1/demo/config` 修改；任意登录用户可读（前端渲染 demo 导航用）。
 _Avoid_: demo settings, showcase config
 
 **ProxyAPIKey（代理密钥）**:

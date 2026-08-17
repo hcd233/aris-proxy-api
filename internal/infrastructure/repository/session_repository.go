@@ -518,8 +518,8 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 	return items
 }
 
-// ListDistinctScores 查询去重的评分列表
-func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTime, endTime time.Time) ([]int, error) {
+// ListDistinctScores 查询去重的评分列表。
+func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]int, error) {
 	db := r.db.WithContext(ctx)
 
 	var scores []int
@@ -527,7 +527,9 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTim
 		Select(constant.SessionDistinctScoreSelect).
 		Where(constant.SessionDistinctScoreWhere).
 		Where(constant.DBConditionDeletedAtZero)
-
+	if sampleModulus > 1 {
+		query = query.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -542,8 +544,8 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTim
 	return scores, nil
 }
 
-// ListDistinctModels 查询去重的模型列表
-func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+// ListDistinctModels 查询去重的模型列表。
+func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var models []string
@@ -551,7 +553,9 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 		Select(constant.SessionDistinctModelSelect).
 		Where(constant.DBConditionDeletedAtZero).
 		Where(constant.SessionDistinctModelWhere)
-
+	if sampleModulus > 1 {
+		query = query.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -572,12 +576,15 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 // ListMessageCountStats 查询消息数统计：
 //   - maxCount：当前时间范围内最大的 session 消息数（无会话时为 0）
 //   - bucketCounts：各固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+）的会话数
-func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time) (maxCount int, bucketCounts map[int]int64, err error) {
+func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) (maxCount int, bucketCounts map[int]int64, err error) {
 	db := r.db.WithContext(ctx)
 
 	maxQuery := db.Model(&dbmodel.Session{}).
 		Select(constant.SessionMessageCountMaxSelect).
 		Where(constant.DBConditionDeletedAtZero)
+	if sampleModulus > 1 {
+		maxQuery = maxQuery.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		maxQuery = maxQuery.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -592,6 +599,9 @@ func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, start
 	subQuery := db.Model(&dbmodel.Session{}).
 		Select(constant.SessionMessageCountSQLExpr + " AS cnt").
 		Where(constant.DBConditionDeletedAtZero)
+	if sampleModulus > 1 {
+		subQuery = subQuery.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	}
 	if !startTime.IsZero() {
 		subQuery = subQuery.Where(constant.WhereCreatedAtGTE, startTime)
 	}

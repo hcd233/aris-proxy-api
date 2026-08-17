@@ -212,10 +212,11 @@ type DeleteScoreSessionHandler interface {
 
 // ListSessionOptionQuery 会话筛选选项查询
 type ListSessionOptionQuery struct {
-	Field     string
-	Keyword   string
-	StartTime time.Time
-	EndTime   time.Time
+	Field         string
+	Keyword       string
+	StartTime     time.Time
+	EndTime       time.Time
+	SampleModulus uint
 }
 
 // ListSessionOptionHandler 会话筛选选项查询处理器

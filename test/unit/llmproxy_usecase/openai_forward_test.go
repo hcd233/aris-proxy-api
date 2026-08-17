@@ -27,13 +27,16 @@ type mockOpenAIProxy struct {
 	responseStreamCalled     bool
 	readChatStreamCalled     bool
 	readResponseStreamCalled bool
+	lastChatCtx              context.Context
+	lastResponseCtx          context.Context
 	lastChatBody             []byte
 	openChatStreamErr        error
 	openResponseStreamErr    error
 }
 
-func (p *mockOpenAIProxy) ForwardChatCompletion(_ context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
+func (p *mockOpenAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
 	p.chatUnaryCalled = true
+	p.lastChatCtx = ctx
 	p.lastChatBody = append([]byte(nil), body...)
 	return &dto.OpenAIChatCompletion{
 		ID:    "chatcmpl-test",
@@ -80,8 +83,9 @@ func (p *mockOpenAIProxy) ReadChatCompletionStream(_ context.Context, _ io.ReadC
 	}, nil
 }
 
-func (p *mockOpenAIProxy) ForwardCreateResponse(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) ([]byte, error) {
+func (p *mockOpenAIProxy) ForwardCreateResponse(ctx context.Context, _ vo.UpstreamEndpoint, _ []byte) ([]byte, error) {
 	p.responseUnaryCalled = true
+	p.lastResponseCtx = ctx
 	return []byte(`{"id":"resp_test","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}`), nil
 }
 

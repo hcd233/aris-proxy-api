@@ -21,12 +21,14 @@ import (
 type mockAnthropicProxyForAnthropic struct {
 	messageUnaryCalled   bool
 	messageStreamCalled  bool
+	lastMessageCtx       context.Context
 	openMessageStreamErr error
 	readMessageStreamCnt int
 }
 
-func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessage(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
+func (p *mockAnthropicProxyForAnthropic) ForwardCreateMessage(ctx context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicMessage, error) {
 	p.messageUnaryCalled = true
+	p.lastMessageCtx = ctx
 	return &dto.AnthropicMessage{ID: "test"}, nil
 }
 
