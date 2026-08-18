@@ -42,6 +42,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverDescription,
+} from "@/components/ui/popover";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Switch } from "@/components/ui/switch";
@@ -80,13 +88,6 @@ import {
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 
 interface ModelForm {
   alias: string;
@@ -156,53 +157,59 @@ function formatTokens(n: number): string {
 const CONTEXT_LENGTH_PRESETS = [32_000, 64_000, 128_000, 256_000, 1_000_000];
 const MAX_OUTPUT_PRESETS = [4_096, 8_192, 16_384, 32_768, 64_000, 131_072];
 
-// 预设值底部抽屉：点选预设即写入表单并关闭；当前值高亮为主色，其余为 outline
-interface TokenPresetSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
+// 预设值 Popover：锚定在输入框旁，点选预设即写入表单并关闭；当前值高亮为主色，其余为 outline，自定义值无高亮
+interface TokenPresetPopoverProps {
+  label: string;
   description: string;
   value: number;
   presets: number[];
   onSelect: (v: number) => void;
 }
 
-function TokenPresetSheet({
-  open,
-  onOpenChange,
-  title,
-  description,
-  value,
-  presets,
-  onSelect,
-}: TokenPresetSheetProps) {
+function TokenPresetPopover({ label, description, value, presets, onSelect }: TokenPresetPopoverProps) {
+  const [open, setOpen] = useState(false);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="mx-auto w-full max-w-md">
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
-        </SheetHeader>
-        <div className="grid grid-cols-3 gap-2 px-4 pb-6">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label={label}
+          />
+        }
+      >
+        <SlidersHorizontal className="size-4" />
+      </PopoverTrigger>
+      <PopoverContent align="end" sideOffset={8} className="w-64 p-2.5">
+        <PopoverHeader className="px-0.5 pb-1">
+          <PopoverTitle className="text-xs">{label}</PopoverTitle>
+          <PopoverDescription className="text-[11px]">{description}</PopoverDescription>
+        </PopoverHeader>
+        <div className="grid grid-cols-3 gap-1.5">
           {presets.map((preset) => {
             const active = preset === value;
             return (
               <Button
                 key={preset}
                 type="button"
-                size="default"
+                size="sm"
                 variant={active ? "default" : "outline"}
-                className="h-11 font-mono tabular-nums"
                 aria-pressed={active}
-                onClick={() => onSelect(preset)}
+                className="font-mono tabular-nums"
+                onClick={() => {
+                  onSelect(preset);
+                  setOpen(false);
+                }}
               >
                 {formatTokens(preset)}
               </Button>
             );
           })}
         </div>
-      </SheetContent>
-    </Sheet>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -230,8 +237,6 @@ export default function ModelsPage() {
   const [form, setForm] = useState<ModelForm>(emptyForm);
   // 标记用户是否手动改过 modelId；未手动改时新建表单跟随 alias 同步输入
   const [modelIdTouched, setModelIdTouched] = useState(false);
-  // 当前打开的 token 预设抽屉："context" | "maxOutput" | null
-  const [presetSheet, setPresetSheet] = useState<"context" | "maxOutput" | null>(null);
   const [saving, setSaving] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportClaudecodeDialogOpen, setExportClaudecodeDialogOpen] = useState(false);
@@ -842,15 +847,13 @@ export default function ModelsPage() {
                           setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }))
                         }
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        aria-label={t("models.context_length_presets")}
-                        onClick={() => setPresetSheet("context")}
-                      >
-                        <SlidersHorizontal className="size-4" />
-                      </Button>
+                      <TokenPresetPopover
+                        label={t("models.context_length_presets")}
+                        description={t("models.preset_desc")}
+                        value={form.contextLength}
+                        presets={CONTEXT_LENGTH_PRESETS}
+                        onSelect={(v) => setForm((f) => ({ ...f, contextLength: v }))}
+                      />
                     </div>
                     <p className="text-[11px] text-muted-foreground">
                       {t("models.context_length_hint")}
@@ -872,15 +875,13 @@ export default function ModelsPage() {
                           setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }))
                         }
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        aria-label={t("models.max_output_presets")}
-                        onClick={() => setPresetSheet("maxOutput")}
-                      >
-                        <SlidersHorizontal className="size-4" />
-                      </Button>
+                      <TokenPresetPopover
+                        label={t("models.max_output_presets")}
+                        description={t("models.preset_desc")}
+                        value={form.maxOutputTokens}
+                        presets={MAX_OUTPUT_PRESETS}
+                        onSelect={(v) => setForm((f) => ({ ...f, maxOutputTokens: v }))}
+                      />
                     </div>
                     <p className="text-[11px] text-muted-foreground">
                       {t("models.max_output_hint")}
@@ -956,36 +957,6 @@ export default function ModelsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          <TokenPresetSheet
-            open={presetSheet === "context"}
-            onOpenChange={(open) => {
-              if (!open) setPresetSheet(null);
-            }}
-            title={t("models.context_length")}
-            description={t("models.preset_desc")}
-            value={form.contextLength}
-            presets={CONTEXT_LENGTH_PRESETS}
-            onSelect={(v) => {
-              setForm((f) => ({ ...f, contextLength: v }));
-              setPresetSheet(null);
-            }}
-          />
-
-          <TokenPresetSheet
-            open={presetSheet === "maxOutput"}
-            onOpenChange={(open) => {
-              if (!open) setPresetSheet(null);
-            }}
-            title={t("models.max_output")}
-            description={t("models.preset_desc")}
-            value={form.maxOutputTokens}
-            presets={MAX_OUTPUT_PRESETS}
-            onSelect={(v) => {
-              setForm((f) => ({ ...f, maxOutputTokens: v }));
-              setPresetSheet(null);
-            }}
-          />
 
           <ExportDialog
             open={exportDialogOpen}
