@@ -173,6 +173,8 @@
   "models.context_length_hint": "Max context window in tokens",
   "models.max_output": "Max Output",
   "models.max_output_hint": "Max output tokens",
+  "models.context_length_presets": "Quick presets",
+  "models.max_output_presets": "Quick presets",
   "models.capabilities": "Capabilities",
   "models.capability_text": "Text input",
   "models.capability_image": "Image input",

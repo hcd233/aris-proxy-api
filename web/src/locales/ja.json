@@ -177,6 +177,8 @@
   "models.context_length_hint": "最大コンテキストウィンドウ（トークン）",
   "models.max_output": "最大出力",
   "models.max_output_hint": "最大出力トークン数",
+  "models.context_length_presets": "クイックプリセット",
+  "models.max_output_presets": "クイックプリセット",
   "models.capability_text": "テキスト入力",
   "models.capability_image": "画像入力",
   "models.capabilities_require_text": "テキスト入力のサポートは必須です",

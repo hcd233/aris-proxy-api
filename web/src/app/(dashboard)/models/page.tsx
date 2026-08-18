@@ -79,6 +79,7 @@ import {
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 interface ModelForm {
   alias: string;
@@ -142,6 +143,45 @@ function formatTokens(n: number): string {
     return `${Number.isInteger(v) ? v : v.toFixed(1)}K`;
   }
   return String(n);
+}
+
+// 常用 token 预设档位：点击即写入表单，替代上下箭头微调
+const CONTEXT_LENGTH_PRESETS = [32_000, 64_000, 128_000, 256_000, 1_000_000];
+const MAX_OUTPUT_PRESETS = [4_096, 8_192, 16_384, 32_768, 64_000, 131_072];
+
+// 预设 chips：选中项高亮为主色，未选中为 outline，支持自定义值（无高亮）
+interface TokenPresetChipsProps {
+  value: number;
+  presets: number[];
+  label: string;
+  onChange: (v: number) => void;
+}
+
+function TokenPresetChips({ value, presets, label, onChange }: TokenPresetChipsProps) {
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+      <span className="mr-0.5 text-[11px] text-muted-foreground">{label}</span>
+      {presets.map((preset) => {
+        const active = preset === value;
+        return (
+          <Button
+            key={preset}
+            type="button"
+            size="xs"
+            aria-pressed={active}
+            variant={active ? "default" : "outline"}
+            className={cn(
+              "h-7 min-w-0 px-2.5 font-mono tabular-nums",
+              active && "shadow-none",
+            )}
+            onClick={() => onChange(preset)}
+          >
+            {formatTokens(preset)}
+          </Button>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function ModelsPage() {
@@ -776,6 +816,12 @@ export default function ModelsPage() {
                         setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }))
                       }
                     />
+                    <TokenPresetChips
+                      value={form.contextLength}
+                      presets={CONTEXT_LENGTH_PRESETS}
+                      label={t("models.context_length_presets")}
+                      onChange={(v) => setForm((f) => ({ ...f, contextLength: v }))}
+                    />
                     <p className="text-[11px] text-muted-foreground">
                       {t("models.context_length_hint")}
                     </p>
@@ -793,6 +839,12 @@ export default function ModelsPage() {
                       onChange={(e) =>
                         setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }))
                       }
+                    />
+                    <TokenPresetChips
+                      value={form.maxOutputTokens}
+                      presets={MAX_OUTPUT_PRESETS}
+                      label={t("models.max_output_presets")}
+                      onChange={(v) => setForm((f) => ({ ...f, maxOutputTokens: v }))}
                     />
                     <p className="text-[11px] text-muted-foreground">
                       {t("models.max_output_hint")}
