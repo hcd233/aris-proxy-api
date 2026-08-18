@@ -70,6 +70,6 @@
 
 - 本地完整链路：先后端 `go run ./cmd/server server start ...`，再 `cd web && npm run dev`，浏览器访问 `http://localhost:3000/web`。
 - 生产路径：`make build` → 镜像里 Go 二进制内置 `internal/web/dist/`，浏览器访问 `https://<host>/web/`。
-- CI：`.github/workflows/docker-publish.yml` 的 path filter **不包含** `web/**`，所以纯前端改动不会触发镜像重建；纯前端发布需要触发后端文件改动或在 PR 描述中说明，必要时手工触发 workflow。
+- CI：`.github/workflows/docker-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发 Docker-Publish：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。
 - 测试：当前没有强制的前端单测/e2e 框架；改动后至少运行 `cd web && npm run lint && npm run build` 验证类型与导出能成功。
 - 提交：前端改动同样遵循 `.worktrees/` + `feature|bugfix|refactor|chore|docs|test|hotfix/...-YYYY-MM-DD` 分支规范；与后端联动的功能尽量在同一个 PR 中提交，避免接口前后不一致。
