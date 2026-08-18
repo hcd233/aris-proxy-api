@@ -75,11 +75,18 @@ import {
   ArrowUpFromLine,
   Type,
   Image as ImageIcon,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 interface ModelForm {
   alias: string;
@@ -149,38 +156,53 @@ function formatTokens(n: number): string {
 const CONTEXT_LENGTH_PRESETS = [32_000, 64_000, 128_000, 256_000, 1_000_000];
 const MAX_OUTPUT_PRESETS = [4_096, 8_192, 16_384, 32_768, 64_000, 131_072];
 
-// 预设 chips：选中项高亮为主色，未选中为 outline，支持自定义值（无高亮）
-interface TokenPresetChipsProps {
+// 预设值底部抽屉：点选预设即写入表单并关闭；当前值高亮为主色，其余为 outline
+interface TokenPresetSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
   value: number;
   presets: number[];
-  label: string;
-  onChange: (v: number) => void;
+  onSelect: (v: number) => void;
 }
 
-function TokenPresetChips({ value, presets, label, onChange }: TokenPresetChipsProps) {
+function TokenPresetSheet({
+  open,
+  onOpenChange,
+  title,
+  description,
+  value,
+  presets,
+  onSelect,
+}: TokenPresetSheetProps) {
   return (
-    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-      <span className="mr-0.5 text-[11px] text-muted-foreground">{label}</span>
-      {presets.map((preset) => {
-        const active = preset === value;
-        return (
-          <Button
-            key={preset}
-            type="button"
-            size="xs"
-            aria-pressed={active}
-            variant={active ? "default" : "outline"}
-            className={cn(
-              "h-7 min-w-0 px-2.5 font-mono tabular-nums",
-              active && "shadow-none",
-            )}
-            onClick={() => onChange(preset)}
-          >
-            {formatTokens(preset)}
-          </Button>
-        );
-      })}
-    </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="mx-auto w-full max-w-md">
+        <SheetHeader>
+          <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>{description}</SheetDescription>
+        </SheetHeader>
+        <div className="grid grid-cols-3 gap-2 px-4 pb-6">
+          {presets.map((preset) => {
+            const active = preset === value;
+            return (
+              <Button
+                key={preset}
+                type="button"
+                size="default"
+                variant={active ? "default" : "outline"}
+                className="h-11 font-mono tabular-nums"
+                aria-pressed={active}
+                onClick={() => onSelect(preset)}
+              >
+                {formatTokens(preset)}
+              </Button>
+            );
+          })}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -208,6 +230,8 @@ export default function ModelsPage() {
   const [form, setForm] = useState<ModelForm>(emptyForm);
   // 标记用户是否手动改过 modelId；未手动改时新建表单跟随 alias 同步输入
   const [modelIdTouched, setModelIdTouched] = useState(false);
+  // 当前打开的 token 预设抽屉："context" | "maxOutput" | null
+  const [presetSheet, setPresetSheet] = useState<"context" | "maxOutput" | null>(null);
   const [saving, setSaving] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportClaudecodeDialogOpen, setExportClaudecodeDialogOpen] = useState(false);
@@ -804,48 +828,60 @@ export default function ModelsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="model-context-length">{t("models.context_length")}</Label>
-                    <Input
-                      id="model-context-length"
-                      type="number"
-                      min={0}
-                      step={1000}
-                      inputMode="numeric"
-                      placeholder="128000"
-                      value={form.contextLength || ""}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }))
-                      }
-                    />
-                    <TokenPresetChips
-                      value={form.contextLength}
-                      presets={CONTEXT_LENGTH_PRESETS}
-                      label={t("models.context_length_presets")}
-                      onChange={(v) => setForm((f) => ({ ...f, contextLength: v }))}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="model-context-length"
+                        type="number"
+                        min={0}
+                        step={1000}
+                        inputMode="numeric"
+                        placeholder="128000"
+                        className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        value={form.contextLength || ""}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={t("models.context_length_presets")}
+                        onClick={() => setPresetSheet("context")}
+                      >
+                        <SlidersHorizontal className="size-4" />
+                      </Button>
+                    </div>
                     <p className="text-[11px] text-muted-foreground">
                       {t("models.context_length_hint")}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="model-max-output">{t("models.max_output")}</Label>
-                    <Input
-                      id="model-max-output"
-                      type="number"
-                      min={0}
-                      step={1000}
-                      inputMode="numeric"
-                      placeholder="64000"
-                      value={form.maxOutputTokens || ""}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }))
-                      }
-                    />
-                    <TokenPresetChips
-                      value={form.maxOutputTokens}
-                      presets={MAX_OUTPUT_PRESETS}
-                      label={t("models.max_output_presets")}
-                      onChange={(v) => setForm((f) => ({ ...f, maxOutputTokens: v }))}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="model-max-output"
+                        type="number"
+                        min={0}
+                        step={1000}
+                        inputMode="numeric"
+                        placeholder="64000"
+                        className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        value={form.maxOutputTokens || ""}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={t("models.max_output_presets")}
+                        onClick={() => setPresetSheet("maxOutput")}
+                      >
+                        <SlidersHorizontal className="size-4" />
+                      </Button>
+                    </div>
                     <p className="text-[11px] text-muted-foreground">
                       {t("models.max_output_hint")}
                     </p>
@@ -920,6 +956,36 @@ export default function ModelsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <TokenPresetSheet
+            open={presetSheet === "context"}
+            onOpenChange={(open) => {
+              if (!open) setPresetSheet(null);
+            }}
+            title={t("models.context_length")}
+            description={t("models.preset_desc")}
+            value={form.contextLength}
+            presets={CONTEXT_LENGTH_PRESETS}
+            onSelect={(v) => {
+              setForm((f) => ({ ...f, contextLength: v }));
+              setPresetSheet(null);
+            }}
+          />
+
+          <TokenPresetSheet
+            open={presetSheet === "maxOutput"}
+            onOpenChange={(open) => {
+              if (!open) setPresetSheet(null);
+            }}
+            title={t("models.max_output")}
+            description={t("models.preset_desc")}
+            value={form.maxOutputTokens}
+            presets={MAX_OUTPUT_PRESETS}
+            onSelect={(v) => {
+              setForm((f) => ({ ...f, maxOutputTokens: v }));
+              setPresetSheet(null);
+            }}
+          />
 
           <ExportDialog
             open={exportDialogOpen}

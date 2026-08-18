@@ -246,6 +246,7 @@
   "models.max_output_hint": "最大输出长度（tokens）",
   "models.context_length_presets": "快速预设",
   "models.max_output_presets": "快速预设",
+  "models.preset_desc": "选择一个预设值，或在输入框中自定义。",
   "models.capabilities": "能力",
   "models.capability_text": "文本输入",
   "models.capability_image": "图片输入",

@@ -175,6 +175,7 @@
   "models.max_output_hint": "Max output tokens",
   "models.context_length_presets": "Quick presets",
   "models.max_output_presets": "Quick presets",
+  "models.preset_desc": "Pick a preset value, or type a custom one in the field.",
   "models.capabilities": "Capabilities",
   "models.capability_text": "Text input",
   "models.capability_image": "Image input",
