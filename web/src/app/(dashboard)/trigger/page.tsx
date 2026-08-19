@@ -200,6 +200,14 @@ export default function TriggerPage() {
     closeOnError: false,
   });
 
+  const handleCopyWord = (word: string) => {
+    if (!word) return;
+    navigator.clipboard.writeText(word).then(
+      () => toast.success(t("common.copied_to_clipboard")),
+      () => toast.error(t("common.copy_failed")),
+    );
+  };
+
   const toggleSelect = useCallback((id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -304,7 +312,23 @@ export default function TriggerPage() {
                                 onToggle={() => toggleSelect(item.id)}
                               />
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium">{item.word}</p>
+                                <TooltipProvider>
+                                  <TooltipRoot>
+                                    <TooltipTrigger
+                                      render={
+                                        <p
+                                          className="cursor-pointer text-sm font-medium underline-offset-2 hover:underline"
+                                          onClick={() => handleCopyWord(item.word)}
+                                        >
+                                          {item.word}
+                                        </p>
+                                      }
+                                    />
+                                    <TooltipContent side="top">
+                                      {t("trigger.copy_word_title")}
+                                    </TooltipContent>
+                                  </TooltipRoot>
+                                </TooltipProvider>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                   {t("trigger.hit_count")}: {item.hitCount}
                                 </p>
@@ -369,7 +393,25 @@ export default function TriggerPage() {
                               />
                             </TableCell>
                             <TableCell className="text-muted-foreground">{item.id}</TableCell>
-                            <TableCell className="font-medium">{item.word}</TableCell>
+                            <TableCell className="font-medium">
+                              <TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <span
+                                        className="cursor-pointer underline-offset-2 hover:underline"
+                                        onClick={() => handleCopyWord(item.word)}
+                                      >
+                                        {item.word}
+                                      </span>
+                                    }
+                                  />
+                                  <TooltipContent side="top">
+                                    {t("trigger.copy_word_title")}
+                                  </TooltipContent>
+                                </TooltipRoot>
+                              </TooltipProvider>
+                            </TableCell>
                             <TableCell>
                               <ActionBadge
                                 action={item.action}

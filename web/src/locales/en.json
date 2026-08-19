@@ -537,6 +537,7 @@
   "trigger.batch_delete_confirm": "Delete the selected {count} trigger words?",
   "trigger.batch_delete_success": "Deleted {count} trigger words",
   "trigger.batch_delete_error": "Failed to batch delete",
+  "trigger.copy_word_title": "Click to copy trigger word",
   "audit.model_page_title": "Model Call Audit",
   "audit.model_page_subtitle": "Inspect model call records, latency, errors, and trace IDs.",
   "audit.logs_title": "Audit Logs",

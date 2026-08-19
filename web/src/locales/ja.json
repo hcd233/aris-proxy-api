@@ -476,6 +476,7 @@
   "trigger.batch_delete_confirm": "選択した {count} 件のトリガーワードを削除しますか？",
   "trigger.batch_delete_success": "{count} 件のトリガーワードを削除しました",
   "trigger.batch_delete_error": "一括削除に失敗しました",
+  "trigger.copy_word_title": "クリックでトリガーワードをコピー",
   "audit.model_page_title": "モデル呼び出し監査",
   "audit.model_page_subtitle": "モデル呼び出しレコード、レイテンシ、エラー、トレース ID を確認します。",
   "audit.logs_title": "監査ログ",

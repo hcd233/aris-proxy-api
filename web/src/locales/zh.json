@@ -537,6 +537,7 @@
   "trigger.batch_delete_confirm": "确定要删除选中的 {count} 个触发词吗？",
   "trigger.batch_delete_success": "已删除 {count} 个触发词",
   "trigger.batch_delete_error": "批量删除失败",
+  "trigger.copy_word_title": "点击复制触发词",
   "audit.model_page_title": "模型调用审计",
   "audit.model_page_subtitle": "查看模型调用记录、延迟、错误和追踪 ID。",
   "audit.logs_title": "审计日志",

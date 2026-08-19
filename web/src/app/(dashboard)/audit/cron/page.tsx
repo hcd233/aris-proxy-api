@@ -66,7 +66,9 @@ export default function CronAuditPage() {
   };
   function formatMetadata(metadata: Record<string, number> | undefined | null): string {
     if (!metadata || Object.keys(metadata).length === 0) return "—";
-    return Object.entries(metadata)
+    const entries = Object.entries(metadata).filter(([, val]) => val !== 0);
+    if (entries.length === 0) return "—";
+    return entries
       .map(([key, val]) => `${metadataLabelMap[key] ?? key}: ${val}`)
       .join(" | ");
   }
