@@ -105,8 +105,8 @@ const emptyForm: ModelForm = {
   modelId: "",
   upstreamModel: "",
   endpointID: 0,
-  contextLength: 128000,
-  maxOutputTokens: 64000,
+  contextLength: 256000,
+  maxOutputTokens: 65536,
   supportText: true,
   supportImage: false,
 };
@@ -154,8 +154,8 @@ function formatTokens(n: number): string {
 }
 
 // 常用 token 预设档位：点击即写入表单，替代上下箭头微调
-const CONTEXT_LENGTH_PRESETS = [32_000, 64_000, 128_000, 256_000, 1_000_000];
-const MAX_OUTPUT_PRESETS = [4_096, 8_192, 16_384, 32_768, 64_000, 131_072];
+const CONTEXT_LENGTH_PRESETS = [256_000, 512_000, 1_000_000];
+const MAX_OUTPUT_PRESETS = [4_096, 8_192, 16_384, 32_768, 65_536, 131_072];
 
 // 预设值 Popover：锚定在输入框旁，点选预设即写入表单并关闭；当前值高亮为主色，其余为 outline，自定义值无高亮
 interface TokenPresetPopoverProps {
@@ -300,8 +300,8 @@ export default function ModelsPage() {
       modelId: model.modelId ?? "",
       upstreamModel: model.upstreamModel,
       endpointID: model.endpoint.id,
-      contextLength: model.contextLength || 128000,
-      maxOutputTokens: model.maxOutputTokens || 64000,
+      contextLength: model.contextLength || 256000,
+      maxOutputTokens: model.maxOutputTokens || 65536,
       supportText: (model.capabilities ?? ["text"]).includes("text"),
       supportImage: (model.capabilities ?? []).includes("image"),
     });
@@ -840,7 +840,7 @@ export default function ModelsPage() {
                         min={0}
                         step={1000}
                         inputMode="numeric"
-                        placeholder="128000"
+                        placeholder="256000"
                         className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         value={form.contextLength || ""}
                         onChange={(e) =>
@@ -868,7 +868,7 @@ export default function ModelsPage() {
                         min={0}
                         step={1000}
                         inputMode="numeric"
-                        placeholder="64000"
+                        placeholder="65536"
                         className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         value={form.maxOutputTokens || ""}
                         onChange={(e) =>
