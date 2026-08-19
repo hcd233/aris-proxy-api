@@ -1,7 +1,7 @@
 [
     {
         "name": "basic_subarray_containment",
-        "description": "Session B [1,2,3] is a subarray of Session A [1,2,3,4,5], B should be removed",
+        "description": "Session B [1,2,3] is a prefix of Session A [1,2,3,4,5], B should be removed",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
             {"id": 2, "message_ids": [1, 2, 3]}
@@ -10,25 +10,25 @@
     },
     {
         "name": "tail_subarray",
-        "description": "Session B [3,4,5] is a tail subarray of Session A [1,2,3,4,5], B should be removed",
+        "description": "Session B [3,4,5] is a tail (not prefix) subarray of Session A [1,2,3,4,5]. Under prefix semantics B is NOT redundant: a different first message means a different conversation root. Verified against full production data (2026-08-19): zero such pairs exist.",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
             {"id": 2, "message_ids": [3, 4, 5]}
         ],
-        "expected_redundant_ids": [2]
+        "expected_redundant_ids": []
     },
     {
         "name": "middle_subarray",
-        "description": "Session B [2,3,4] is a middle subarray of Session A [1,2,3,4,5], B should be removed",
+        "description": "Session B [2,3,4] is a middle (not prefix) subarray of Session A [1,2,3,4,5]. Under prefix semantics B is NOT redundant. Verified against full production data (2026-08-19): zero such pairs exist.",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
             {"id": 2, "message_ids": [2, 3, 4]}
         ],
-        "expected_redundant_ids": [2]
+        "expected_redundant_ids": []
     },
     {
         "name": "no_containment",
-        "description": "No session is a subarray of another, nothing should be removed",
+        "description": "No session is a prefix of another, nothing should be removed",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3]},
             {"id": 2, "message_ids": [4, 5, 6]},
@@ -47,7 +47,7 @@
     },
     {
         "name": "chain_containment",
-        "description": "Session C is subarray of B, B is subarray of A; both B and C should be removed",
+        "description": "Session C is a prefix of B, B is a prefix of A; both B and C should be removed and merge into A",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
             {"id": 2, "message_ids": [1, 2, 3, 4]},
@@ -57,16 +57,16 @@
     },
     {
         "name": "single_element_subarray",
-        "description": "Single element session [3] is a subarray of [1,2,3,4,5]",
+        "description": "Single element session [3] is a mid subarray but NOT a prefix of [1,2,3,4,5], so it is kept. Verified against full production data (2026-08-19): zero such pairs exist.",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
             {"id": 2, "message_ids": [3]}
         ],
-        "expected_redundant_ids": [2]
+        "expected_redundant_ids": []
     },
     {
         "name": "non_contiguous_not_subarray",
-        "description": "Session B [1,3,5] shares elements but is NOT a contiguous subarray of A [1,2,3,4,5]",
+        "description": "Session B [1,3,5] shares the first message with A [1,2,3,4,5] but is not a prefix of it",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5]},
             {"id": 2, "message_ids": [1, 3, 5]}
@@ -75,14 +75,14 @@
     },
     {
         "name": "multiple_subarrays_of_same_parent",
-        "description": "Multiple short sessions are subarrays of one long session",
+        "description": "Only the prefix [10,20] is redundant. [30,40,50] (tail) and [20,30] (middle) start from a different message id, so they belong to other conversation roots and are kept.",
         "sessions": [
             {"id": 1, "message_ids": [10, 20, 30, 40, 50]},
             {"id": 2, "message_ids": [10, 20]},
             {"id": 3, "message_ids": [30, 40, 50]},
             {"id": 4, "message_ids": [20, 30]}
         ],
-        "expected_redundant_ids": [2, 3, 4]
+        "expected_redundant_ids": [2]
     },
     {
         "name": "empty_message_ids_ignored",
@@ -113,8 +113,27 @@
         "expected_redundant_ids": [5, 7]
     },
     {
+        "name": "cross_group_not_redundant",
+        "description": "Sessions with different first message ids belong to different conversations and never dedup each other, even if one's ids are a contiguous subset of the other's.",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4]},
+            {"id": 2, "message_ids": [7, 2, 3]}
+        ],
+        "expected_redundant_ids": []
+    },
+    {
+        "name": "forked_conversation",
+        "description": "A conversation that forks: [1,2] is a prefix of both [1,2,3] and [1,2,4]. Only [1,2] is redundant; both branches are kept. Its ToolIDs merge into the first matching keeper (longest, then smallest id) = session 1.",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3], "tool_ids": [10]},
+            {"id": 2, "message_ids": [1, 2, 4], "tool_ids": [20]},
+            {"id": 3, "message_ids": [1, 2], "tool_ids": [30]}
+        ],
+        "expected_redundant_ids": [3]
+    },
+    {
         "name": "merge_tool_ids",
-        "description": "When session B is a subarray of A, B's tool_ids should be merged into A",
+        "description": "When session B is a prefix of A, B's tool_ids should be merged into A",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5], "tool_ids": [1, 2]},
             {"id": 2, "message_ids": [1, 2, 3], "tool_ids": [2, 3]}
@@ -123,11 +142,21 @@
     },
     {
         "name": "merge_multiple_tool_ids",
-        "description": "Multiple redundant sessions' tool_ids should all be merged into the parent session",
+        "description": "Only the prefix session [1,2,3] merges its tool_ids into the parent. [3,4,5] is a tail subarray with a different first message id, so it is kept and its tool_ids stay with it.",
         "sessions": [
             {"id": 1, "message_ids": [1, 2, 3, 4, 5], "tool_ids": [1]},
             {"id": 2, "message_ids": [1, 2, 3], "tool_ids": [2]},
             {"id": 3, "message_ids": [3, 4, 5], "tool_ids": [3]}
+        ],
+        "expected_redundant_ids": [2]
+    },
+    {
+        "name": "two_prefix_members_same_keeper",
+        "description": "Two redundant members merging into the same keeper must accumulate, not overwrite, their ToolIDs.",
+        "sessions": [
+            {"id": 1, "message_ids": [1, 2, 3, 4, 5, 6], "tool_ids": [100]},
+            {"id": 2, "message_ids": [1, 2, 3], "tool_ids": [20]},
+            {"id": 3, "message_ids": [1, 2, 3, 4], "tool_ids": [30]}
         ],
         "expected_redundant_ids": [2, 3]
     }

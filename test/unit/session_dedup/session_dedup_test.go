@@ -182,7 +182,24 @@ func TestFindRedundantSessionsWithMerge(t *testing.T) {
 		{
 			name: "merge_multiple_tool_ids",
 			expectedMergedToolIDs: map[uint][]uint{
-				1: {1, 2, 3}, // Session 1 should have tool_ids [1, 2, 3] (union of [1], [2], and [3])
+				// 只有前缀 session 2 并入；session 3 [3,4,5] 是尾部子数组，
+				// 首个 message id 不同即属另一对话根，保持独立
+				1: {1, 2},
+			},
+		},
+		{
+			name: "two_prefix_members_same_keeper",
+			expectedMergedToolIDs: map[uint][]uint{
+				// 两个前缀成员并入同一 keeper 必须累积而非覆盖
+				1: {20, 30, 100},
+			},
+		},
+		{
+			name: "forked_conversation",
+			expectedMergedToolIDs: map[uint][]uint{
+				// [1,2] 并入首个匹配的 keeper（最长、ID 最小）= session 1；
+				// 分叉分支 session 2 不接收任何合并
+				1: {10, 30},
 			},
 		},
 	}
@@ -248,6 +265,9 @@ func TestFindRedundantSessions(t *testing.T) {
 		"empty_message_ids_ignored",
 		"single_session",
 		"three_identical_sessions",
+		"cross_group_not_redundant",
+		"forked_conversation",
+		"two_prefix_members_same_keeper",
 	}
 
 	for _, caseName := range caseNames {
