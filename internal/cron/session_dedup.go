@@ -564,11 +564,10 @@ func processTerminalToolCallSession(s *dbmodel.Session, sessions []*dbmodel.Sess
 		return
 	}
 
-	parentOwn := lo.SliceToMap(sessionByID[parentID].ToolIDs, func(tid uint) (uint, struct{}) { return tid, struct{}{} })
-	incoming := lo.SliceToMap(s.ToolIDs, func(tid uint) (uint, struct{}) { return tid, struct{}{} })
-	// 必须合并而非覆盖：同一 parent 可能有多个 terminal 子 session，
+	parentOwn := sessionByID[parentID].ToolIDs
+	// 复用累积语义的 helper：同一 parent 可能有多个 terminal 子 session，
 	// 直接赋值会丢掉先前子 session 已并入的 ToolIDs
-	result.MergeMapping[parentID] = mergeToolIDs(mergeToolIDs(result.MergeMapping[parentID], parentOwn), incoming)
+	mergeToolIDsIntoMapping(result.MergeMapping, parentID, parentOwn, s.ToolIDs)
 }
 
 func findParentSessionID(target *dbmodel.Session, sessions []*dbmodel.Session) uint {
