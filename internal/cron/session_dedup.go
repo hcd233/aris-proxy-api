@@ -11,7 +11,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
@@ -20,7 +19,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"github.com/samber/lo"
-	"github.com/samber/mo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -145,14 +143,14 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) (*commonmodel.
 	}
 
 	// 额外检查：Session最后一条消息是assistant且有tool_calls的也标记为冗余
-	messages, err := c.loadLastMessagesForTerminalToolCheck(db, sessions, terminalExcludeIDs)
+	terminalMsgIDs, err := c.loadTerminalToolCallMsgIDs(db, sessions, terminalExcludeIDs)
 	if err != nil {
-		log.Error("[SessionDeduplicateCron] Failed to load last messages for terminal tool call check", zap.Error(err))
+		log.Error("[SessionDeduplicateCron] Failed to load terminal tool call message ids", zap.Error(err))
 		// 不return，继续执行已有的去重结果
 	}
 
-	if len(messages) > 0 {
-		terminalToolCallResult := FindTerminalToolCallSessions(sessions, messages, terminalExcludeIDs)
+	if len(terminalMsgIDs) > 0 {
+		terminalToolCallResult := FindTerminalToolCallSessions(sessions, terminalMsgIDs, terminalExcludeIDs)
 		if len(terminalToolCallResult.RedundantIDs) > 0 {
 			mergeResult.RedundantIDs = append(mergeResult.RedundantIDs, terminalToolCallResult.RedundantIDs...)
 
@@ -170,33 +168,9 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) (*commonmodel.
 		}, nil
 	}
 
-	// 合并ToolIDs到保留的Session
-	mergedCount := 0
-	for sessionID, toolIDSet := range mergeResult.MergeMapping {
-		if len(toolIDSet) == 0 {
-			continue
-		}
-
-		// 将集合转换为排序后的切片
-		mergedToolIDs := lo.Keys(toolIDSet)
-		slices.Sort(mergedToolIDs)
-
-		// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
-		err := c.sessionDAO.Update(db, &dbmodel.Session{ID: sessionID}, map[string]any{
-			constant.FieldToolIDs: lo.Must1(sonic.MarshalString(mergedToolIDs)),
-		})
-		if err != nil {
-			log.Error("[SessionDeduplicateCron] Failed to update session tool_ids",
-				zap.Uint("sessionID", sessionID),
-				zap.Error(err))
-			continue
-		}
-		mergedCount++
-	}
-
-	err = c.sessionDAO.BatchDeleteByField(db, constant.WhereFieldID, mergeResult.RedundantIDs)
+	mergedCount, err := ApplyMergeResult(db, c.sessionDAO, mergeResult)
 	if err != nil {
-		log.Error("[SessionDeduplicateCron] Failed to delete redundant sessions", zap.Error(err))
+		log.Error("[SessionDeduplicateCron] Failed to apply deduplication", zap.Error(err))
 		return nil, err
 	}
 
@@ -211,7 +185,69 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) (*commonmodel.
 	}, nil
 }
 
-func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.DB, sessions []*dbmodel.Session, excludeIDs []uint) ([]*dbmodel.Message, error) {
+// ApplyMergeResult 在单个事务内写回 ToolIDs 合并结果并软删冗余 Session
+//
+// 原子性是必需的：若 tool_ids 更新失败却仍执行删除，被删 session 的 tool 引用
+// 会永久丢失。任一步骤失败即整体回滚，任务幂等，下个整点重跑。
+//
+//	导出以便外部测试包验证写回行为。
+//
+//	@param db *gorm.DB
+//	@param sessionDAO *dao.SessionDAO
+//	@param result MergeResult
+//	@return int 成功合并 ToolIDs 的 Session 数
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-19 10:00:00
+func ApplyMergeResult(db *gorm.DB, sessionDAO *dao.SessionDAO, result MergeResult) (int, error) {
+	mergedCount := 0
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		mergedCount = 0
+		for sessionID, toolIDSet := range result.MergeMapping {
+			if len(toolIDSet) == 0 {
+				continue
+			}
+
+			// 将集合转换为排序后的切片，保证写入内容稳定
+			mergedToolIDs := lo.Keys(toolIDSet)
+			slices.Sort(mergedToolIDs)
+
+			// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
+			toolIDsJSON, err := sonic.MarshalString(mergedToolIDs)
+			if err != nil {
+				return err
+			}
+			if err := sessionDAO.Update(tx, &dbmodel.Session{ID: sessionID}, map[string]any{
+				constant.FieldToolIDs: toolIDsJSON,
+			}); err != nil {
+				return err
+			}
+			mergedCount++
+		}
+
+		return sessionDAO.BatchDeleteByField(tx, constant.WhereFieldID, result.RedundantIDs)
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return mergedCount, nil
+}
+
+// loadTerminalToolCallMsgIDs 取出候选 session 的末条 message ID，并下推 SQL 筛出终端 tool_call 消息
+//
+//	lo.Uniq 后的 ID 仅用于 WHERE IN 查询，调用方按集合语义使用返回值，不依赖顺序。
+//
+//	@receiver c *SessionDeduplicateCron
+//	@param db *gorm.DB
+//	@param sessions []*dbmodel.Session
+//	@param excludeIDs []uint
+//	@return []uint
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-19 10:00:00
+func (c *SessionDeduplicateCron) loadTerminalToolCallMsgIDs(db *gorm.DB, sessions []*dbmodel.Session, excludeIDs []uint) ([]uint, error) {
 	excludeSet := lo.SliceToMap(excludeIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
 
 	lastMsgIDs := lo.FilterMap(sessions, func(s *dbmodel.Session, _ int) (uint, bool) {
@@ -228,17 +264,7 @@ func (c *SessionDeduplicateCron) loadLastMessagesForTerminalToolCheck(db *gorm.D
 		return nil, nil
 	}
 
-	// lo.Uniq 去重保留首次出现顺序，但传入 BatchGetByField 做 WHERE IN 查询时
-	// 数据库不保证返回顺序与 IN 子句一致。当前代码用 msgMap 按 ID 映射取值，
-	// 因此不依赖查询结果的顺序。如需依赖顺序，须在此处手动排序。
-	uniqIDs := lo.Uniq(lastMsgIDs)
-	messages, err := c.messageDAO.BatchGetByField(db, constant.WhereFieldID, uniqIDs,
-		[]string{constant.FieldID, constant.FieldMessage})
-	if err != nil {
-		return nil, err
-	}
-
-	return messages, nil
+	return c.messageDAO.FilterTerminalToolCallIDs(db, lo.Uniq(lastMsgIDs))
 }
 
 // MergeResult 表示Session去重后的合并结果
@@ -474,20 +500,23 @@ func isEqualSlice(a, b []uint) bool {
 	return slices.Equal(a, b)
 }
 
-// FindTerminalToolCallSessions 查找最后一条消息是assistant且有tool_calls的session
+// FindTerminalToolCallSessions 查找末条消息为 assistant+tool_calls 的 session
 //
-// 这些session的对话在工具调用阶段中断，属于不完整分支。
-// 标记为冗余并尝试查找parent session以合并ToolIDs。
+// 这些 session 的对话在工具调用阶段中断，属于不完整分支。
+// 标记为冗余并尝试查找 parent session 以合并 ToolIDs。
+//
+// role/tool_calls 的判定已下推到 SQL（见 MessageDAO.FilterTerminalToolCallIDs），
+// 本函数只消费判定结果，不再加载 message payload。
 //
 //	@param sessions []*dbmodel.Session
-//	@param messages []*dbmodel.Message
-//	@param excludeIDs []uint 已被子数组检查标记为冗余的session ID
+//	@param terminalMsgIDs []uint 已判定为 assistant+tool_calls 的 message ID
+//	@param excludeIDs []uint 已被子数组检查标记为冗余或作为 merge target 的 session ID
 //	@return MergeResult
 //	@author centonhuang
-//	@update 2026-05-24 10:00:00
-func FindTerminalToolCallSessions(sessions []*dbmodel.Session, messages []*dbmodel.Message, excludeIDs []uint) MergeResult {
+//	@update 2026-08-19 10:00:00
+func FindTerminalToolCallSessions(sessions []*dbmodel.Session, terminalMsgIDs, excludeIDs []uint) MergeResult {
 	excludeSet := lo.SliceToMap(excludeIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
-	msgMap := lo.SliceToMap(messages, func(m *dbmodel.Message) (uint, *dbmodel.Message) { return m.ID, m })
+	terminalSet := lo.SliceToMap(terminalMsgIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
 	sessionByID := lo.SliceToMap(sessions, func(s *dbmodel.Session) (uint, *dbmodel.Session) { return s.ID, s })
 
 	result := MergeResult{
@@ -499,7 +528,7 @@ func FindTerminalToolCallSessions(sessions []*dbmodel.Session, messages []*dbmod
 		if _, excluded := excludeSet[s.ID]; excluded {
 			continue
 		}
-		processTerminalToolCallSession(s, sessions, msgMap, sessionByID, &result)
+		processTerminalToolCallSession(s, sessions, terminalSet, sessionByID, &result)
 	}
 
 	return result
@@ -509,30 +538,18 @@ func FindTerminalToolCallSessions(sessions []*dbmodel.Session, messages []*dbmod
 //
 //	@param s *dbmodel.Session
 //	@param sessions []*dbmodel.Session
-//	@param msgMap map[uint]*dbmodel.Message
+//	@param terminalSet map[uint]struct{} 终端 tool_call message ID 集合
 //	@param sessionByID map[uint]*dbmodel.Session
 //	@param result *MergeResult
 //	@author centonhuang
-//	@update 2026-06-04 10:00:00
-func processTerminalToolCallSession(s *dbmodel.Session, sessions []*dbmodel.Session, msgMap map[uint]*dbmodel.Message, sessionByID map[uint]*dbmodel.Session, result *MergeResult) {
+//	@update 2026-08-19 10:00:00
+func processTerminalToolCallSession(s *dbmodel.Session, sessions []*dbmodel.Session, terminalSet map[uint]struct{}, sessionByID map[uint]*dbmodel.Session, result *MergeResult) {
 	if len(s.MessageIDs) == 0 {
 		return
 	}
 
 	lastMsgID := s.MessageIDs[len(s.MessageIDs)-1]
-	msg, msgOk := msgMap[lastMsgID]
-	hasMsg := mo.TupleToOption(msg, msgOk).
-		FlatMap(func(m *dbmodel.Message) mo.Option[*dbmodel.Message] {
-			if m.Message == nil {
-				return mo.None[*dbmodel.Message]()
-			}
-			return mo.Some(m)
-		}).IsPresent()
-	if !hasMsg {
-		return
-	}
-
-	if msg.Message.Role != enum.RoleAssistant || len(msg.Message.ToolCalls) == 0 {
+	if _, terminal := terminalSet[lastMsgID]; !terminal {
 		return
 	}
 
@@ -547,11 +564,10 @@ func processTerminalToolCallSession(s *dbmodel.Session, sessions []*dbmodel.Sess
 		return
 	}
 
-	parentToolIDSet := lo.Assign(
-		lo.SliceToMap(sessionByID[parentID].ToolIDs, func(tid uint) (uint, struct{}) { return tid, struct{}{} }),
-		lo.SliceToMap(s.ToolIDs, func(tid uint) (uint, struct{}) { return tid, struct{}{} }),
-	)
-	result.MergeMapping[parentID] = parentToolIDSet
+	parentOwn := sessionByID[parentID].ToolIDs
+	// 复用累积语义的 helper：同一 parent 可能有多个 terminal 子 session，
+	// 直接赋值会丢掉先前子 session 已并入的 ToolIDs
+	mergeToolIDsIntoMapping(result.MergeMapping, parentID, parentOwn, s.ToolIDs)
 }
 
 func findParentSessionID(target *dbmodel.Session, sessions []*dbmodel.Session) uint {

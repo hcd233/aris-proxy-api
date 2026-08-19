@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	vo "github.com/hcd233/aris-proxy-api/internal/common/vo"
 	"github.com/hcd233/aris-proxy-api/internal/cron"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
@@ -89,28 +88,14 @@ func findFindRedundantSessionsCase(t *testing.T, cases []findRedundantSessionsCa
 
 // terminalToolCallCase represents a test case for FindTerminalToolCallSessions
 type terminalToolCallCase struct {
-	Name                 string                       `json:"name"`
-	Description          string                       `json:"description"`
-	Sessions             []sessionFixture             `json:"sessions"`
-	Messages             []terminalToolCallMessageFix `json:"messages"`
-	ExcludeIDs           []uint                       `json:"exclude_ids"`
-	ExpectedRedundantIDs []uint                       `json:"expected_redundant_ids"`
-	ExpectedMergeMapping map[uint][]uint              `json:"expected_merge_mapping"`
-}
-
-// terminalToolCallMessageFix represents a message fixture for terminal tool call tests
-type terminalToolCallMessageFix struct {
-	ID        uint                  `json:"id"`
-	Role      string                `json:"role"`
-	ToolCalls []terminalToolCallFix `json:"tool_calls"`
-}
-
-// terminalToolCallFix represents a tool call fixture
-type terminalToolCallFix struct {
-	ID       string `json:"id"`
-	Function struct {
-		Name string `json:"name"`
-	} `json:"function"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Sessions    []sessionFixture `json:"sessions"`
+	// TerminalMsgIDs 已由 SQL 判定为 assistant+tool_calls 的 message ID
+	TerminalMsgIDs       []uint          `json:"terminal_msg_ids"`
+	ExcludeIDs           []uint          `json:"exclude_ids"`
+	ExpectedRedundantIDs []uint          `json:"expected_redundant_ids"`
+	ExpectedMergeMapping map[uint][]uint `json:"expected_merge_mapping"`
 }
 
 // loadTerminalToolCallCases loads FindTerminalToolCallSessions test cases from fixtures
@@ -125,29 +110,6 @@ func loadTerminalToolCallCases(t *testing.T) []terminalToolCallCase {
 		t.Fatalf("failed to unmarshal fixtures/terminal_tool_call_cases.json: %v", err)
 	}
 	return cases
-}
-
-// toDBMessages converts fixture messages to database model messages
-func toDBMessages(fixtures []terminalToolCallMessageFix) []*dbmodel.Message {
-	messages := make([]*dbmodel.Message, 0, len(fixtures))
-	for _, f := range fixtures {
-		toolCalls := make([]*vo.UnifiedToolCall, 0, len(f.ToolCalls))
-		for _, tc := range f.ToolCalls {
-			toolCalls = append(toolCalls, &vo.UnifiedToolCall{
-				ID:   tc.ID,
-				Name: tc.Function.Name,
-			})
-		}
-		m := &dbmodel.Message{
-			Message: &vo.UnifiedMessage{
-				Role:      f.Role,
-				ToolCalls: toolCalls,
-			},
-		}
-		m.ID = f.ID
-		messages = append(messages, m)
-	}
-	return messages
 }
 
 // toDBSessions converts fixture sessions to database model sessions
@@ -335,6 +297,7 @@ func TestFindTerminalToolCallSessions(t *testing.T) {
 		"terminal_tool_call_last_msg_not_assistant",
 		"terminal_tool_call_empty_sessions",
 		"terminal_tool_call_merge_target_excluded",
+		"terminal_tool_call_two_children_same_parent",
 	}
 
 	for _, caseName := range caseNames {
@@ -349,8 +312,7 @@ func TestFindTerminalToolCallSessions(t *testing.T) {
 		t.Run(caseName, func(t *testing.T) {
 			t.Parallel()
 			sessions := toDBSessions(tc.Sessions)
-			messages := toDBMessages(tc.Messages)
-			result := cron.FindTerminalToolCallSessions(sessions, messages, tc.ExcludeIDs)
+			result := cron.FindTerminalToolCallSessions(sessions, tc.TerminalMsgIDs, tc.ExcludeIDs)
 
 			t.Logf("description: %s", tc.Description)
 			t.Logf("redundant IDs: %v, expected: %v", result.RedundantIDs, tc.ExpectedRedundantIDs)
@@ -419,15 +381,7 @@ func TestFindParentSessionID(t *testing.T) {
 
 	// Session 3 [1,2,3] is subarray of both session 1 [1,2,3,4,5,6] and session 2 [1,2,3,4,5]
 	// findParentSessionID should pick session 1 (longest MessageIDs)
-	messages := toDBMessages([]terminalToolCallMessageFix{
-		{ID: 3, Role: "assistant", ToolCalls: []terminalToolCallFix{
-			{ID: "tc1", Function: struct {
-				Name string `json:"name"`
-			}{Name: "search"}},
-		}},
-	})
-
-	result := cron.FindTerminalToolCallSessions(sessions, messages, nil)
+	result := cron.FindTerminalToolCallSessions(sessions, []uint{3}, nil)
 
 	found := false
 	for _, id := range result.RedundantIDs {
@@ -486,13 +440,8 @@ func TestMergeTargetNotDuplicatedInTerminalToolCall(t *testing.T) {
 		{ID: 3, MessageIDs: []uint{10, 20, 30}, ToolIDs: []uint{30}},
 	})
 
-	messages := toDBMessages([]terminalToolCallMessageFix{
-		{ID: 50, Role: "assistant", ToolCalls: []terminalToolCallFix{
-			{ID: "tc1", Function: struct {
-				Name string `json:"name"`
-			}{Name: "search"}},
-		}},
-	})
+	// message 50 是 session 2 的末条消息，已由 SQL 判定为 assistant+tool_calls
+	terminalMsgIDs := []uint{50}
 
 	// Step 1: FindRedundantSessionsWithMerge
 	// Session 3 ([10,20,30]) is a subarray of session 2 ([10,20,30,40,50])
@@ -518,7 +467,7 @@ func TestMergeTargetNotDuplicatedInTerminalToolCall(t *testing.T) {
 
 	// Step 2: Simulate the BUG - FindTerminalToolCallSessions with ONLY redundant IDs as excludeIDs
 	// This is what deduplicate currently does (the bug)
-	resultWithoutMergeExclude := cron.FindTerminalToolCallSessions(sessions, messages, mergeResult.RedundantIDs)
+	resultWithoutMergeExclude := cron.FindTerminalToolCallSessions(sessions, terminalMsgIDs, mergeResult.RedundantIDs)
 
 	// BUG ASSERTION: With the bug, session 2 IS in redundantIDs from terminal tool call
 	// because merge target IDs were NOT passed as excludeIDs
@@ -545,7 +494,7 @@ func TestMergeTargetNotDuplicatedInTerminalToolCall(t *testing.T) {
 		excludeIDs = append(excludeIDs, sessionID)
 	}
 
-	resultFixed := cron.FindTerminalToolCallSessions(sessions, messages, excludeIDs)
+	resultFixed := cron.FindTerminalToolCallSessions(sessions, terminalMsgIDs, excludeIDs)
 
 	// With the fix, session 2 should NOT be in the redundant list
 	for _, id := range resultFixed.RedundantIDs {
