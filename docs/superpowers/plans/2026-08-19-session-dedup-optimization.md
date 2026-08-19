@@ -141,14 +141,31 @@ Expected: PASS
 
 - [ ] **Step 6: 在生产只读验证 SQL 谓词等价性**
 
-谓词是 PostgreSQL 专有且单测覆盖不到，必须实测一次。把下面 SQL 存为本地临时文件后执行（结束后删除该文件）：
+谓词是 PostgreSQL 专有且单测覆盖不到，必须实测一次。
+
+> **不要用「活跃 session 的 last message 命中数」做断言。** 该值是时间敏感的：cron 每小时把命中的 session 清理掉，低流量时段查询会得到 0，与谓词是否正确无关。2026-08-19 实测踩过这个坑（期望 30，实得 0，实为 cron 已在 03:00/04:00 清理完且之后 2h 无新流量）。
+>
+> 用下面两个**不依赖当下待清理存量**的稳定断言。
+
+把下面 SQL 存为本地临时文件后执行（结束后删除该文件）：
 
 ```sql
 SET statement_timeout = '60000ms';
+
+\echo '=== A. predicate can identify tool_calls at all (whole table) ==='
+SELECT count(*) AS total_msgs,
+       count(*) FILTER (
+           WHERE jsonb_typeof((message::jsonb) -> 'tool_calls') = 'array'
+             AND jsonb_array_length((message::jsonb) -> 'tool_calls') > 0
+       ) AS tool_calls_non_empty
+FROM messages
+WHERE deleted_at = 0;
+
+\echo '=== B. predicate agrees with what the cron has historically deleted ==='
 WITH last_ids AS (
     SELECT DISTINCT (message_ids::jsonb ->> (jsonb_array_length(message_ids::jsonb) - 1))::bigint AS last_msg_id
     FROM sessions
-    WHERE deleted_at = 0 AND jsonb_array_length(message_ids::jsonb) > 0
+    WHERE deleted_at <> 0 AND jsonb_array_length(message_ids::jsonb) > 0
 )
 SELECT count(*) AS candidates,
        count(*) FILTER (
@@ -164,7 +181,18 @@ WHERE m.deleted_at = 0;
 ssh -o ConnectTimeout=15 ubuntu@api.lvlvko.top 'set -a; . /home/ubuntu/code/aris-proxy-api/env/api.env; set +a; docker exec -i -e PGPASSWORD="$POSTGRES_PASSWORD" postgresql psql --no-psqlrc --username="$POSTGRES_USER" --dbname="$POSTGRES_DATABASE" -f -' < /tmp/verify-predicate.sql
 ```
 
-Expected: `candidates` 约 2080、`hits` 约 30（2026-08-19 基线）。`hits` 若为 0 或接近 `candidates`，说明谓词写错，停止并修正。
+Expected（2026-08-19 实测基线）：
+
+| 断言 | 期望 | 实测 |
+|---|---|---|
+| A `tool_calls_non_empty` | 数万级、远大于 0 | 52,357 / 123,715 |
+| B `hits / candidates` | > 90% | 1230 / 1255 = 98% |
+
+A 为 0 说明谓词识别不到 tool_calls（写错了）。B 命中率低说明谓词与 cron 既有行为不一致。任一不达标即停止并修正。
+
+> 顺带的诊断技巧：若 A 正常而 B 异常，用
+> `SELECT coalesce(jsonb_typeof((m.message::jsonb) -> 'tool_calls'), '<sql-null>'), count(*) ... GROUP BY 1`
+> 看类型分布——`<sql-null>` 表示键不存在，`null` 表示键存在但值为 JSON null，两者要区分对待。
 
 > 通过 SSH 到生产前先加载 `login-prod-server` skill；只读查询无需授权，禁止输出凭据。
 

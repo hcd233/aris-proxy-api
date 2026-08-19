@@ -198,7 +198,8 @@ _Avoid_: cron mutex, scheduled lock, scheduler lock
 定时 cron 任务，遍历被软删除的 Session，提取引用的 Message/Tool IDs，与活跃 Session 引用的 IDs 计算差集后硬删除孤儿记录。避免多 Session 共享 Message/Tool 时误删。使用 `lo.Difference` 做集合运算。
 
 **SessionDedup（会话去重）**:
-定时 cron 任务，检查 Session 间是否存在内容完全相同的 Message/Tool 引用（通过 checksum 比对），合并冗余引用，软删除空 Session。
+定时 cron 任务，清理同一对话的中间快照。每次 LLM 请求都会把完整对话历史落库并新建一条 Session，历史 Message 按 checksum 复用同一行，因此第 k 轮的 MessageIDs 必然是第 k+1 轮的**前缀**——冗余判定即前缀判定，而非任意子数组。任务按首个 Message ID 分组（同一对话的快照集合），组内保留最长者（长度相同取 ID 最小），把被删快照的 ToolIDs 并入保留者；对话分叉时组内可有多个保留者。此外，未吸收任何冗余成员的 Session 若末条消息是 assistant 且带 tool_calls（对话在工具调用处中断，属不完整分支）也会被清理；已吸收冗余成员的保留者（merge target）受保护不被清理，否则并入它的 ToolIDs 会一起丢失。ToolIDs 合并与冗余软删在同一事务内完成。
+_Avoid_: session merge, snapshot cleanup
 
 **CronModule（定时任务模块）**:
 平台所有定时任务遵循 `CronRegistryEntry` 模式注册：`SessionScore`（已废弃，原 LLM 自动评分）、`SessionSummarize`（自动摘要）、`SessionDedup`（去重合并）、`ThinkExtract`（推理内容提取）、`SoftDeletePurge`（清理孤儿数据）。
