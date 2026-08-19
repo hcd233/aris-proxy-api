@@ -168,33 +168,9 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) (*commonmodel.
 		}, nil
 	}
 
-	// 合并ToolIDs到保留的Session
-	mergedCount := 0
-	for sessionID, toolIDSet := range mergeResult.MergeMapping {
-		if len(toolIDSet) == 0 {
-			continue
-		}
-
-		// 将集合转换为排序后的切片
-		mergedToolIDs := lo.Keys(toolIDSet)
-		slices.Sort(mergedToolIDs)
-
-		// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
-		err := c.sessionDAO.Update(db, &dbmodel.Session{ID: sessionID}, map[string]any{
-			constant.FieldToolIDs: lo.Must1(sonic.MarshalString(mergedToolIDs)),
-		})
-		if err != nil {
-			log.Error("[SessionDeduplicateCron] Failed to update session tool_ids",
-				zap.Uint("sessionID", sessionID),
-				zap.Error(err))
-			continue
-		}
-		mergedCount++
-	}
-
-	err = c.sessionDAO.BatchDeleteByField(db, constant.WhereFieldID, mergeResult.RedundantIDs)
+	mergedCount, err := ApplyMergeResult(db, c.sessionDAO, mergeResult)
 	if err != nil {
-		log.Error("[SessionDeduplicateCron] Failed to delete redundant sessions", zap.Error(err))
+		log.Error("[SessionDeduplicateCron] Failed to apply deduplication", zap.Error(err))
 		return nil, err
 	}
 
@@ -207,6 +183,56 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) (*commonmodel.
 		CheckedSessions: checkedCount,
 		DedupedSessions: int64(len(mergeResult.RedundantIDs)),
 	}, nil
+}
+
+// ApplyMergeResult 在单个事务内写回 ToolIDs 合并结果并软删冗余 Session
+//
+// 原子性是必需的：若 tool_ids 更新失败却仍执行删除，被删 session 的 tool 引用
+// 会永久丢失。任一步骤失败即整体回滚，任务幂等，下个整点重跑。
+//
+//	导出以便外部测试包验证写回行为。
+//
+//	@param db *gorm.DB
+//	@param sessionDAO *dao.SessionDAO
+//	@param result MergeResult
+//	@return int 成功合并 ToolIDs 的 Session 数
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-19 10:00:00
+func ApplyMergeResult(db *gorm.DB, sessionDAO *dao.SessionDAO, result MergeResult) (int, error) {
+	mergedCount := 0
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		mergedCount = 0
+		for sessionID, toolIDSet := range result.MergeMapping {
+			if len(toolIDSet) == 0 {
+				continue
+			}
+
+			// 将集合转换为排序后的切片，保证写入内容稳定
+			mergedToolIDs := lo.Keys(toolIDSet)
+			slices.Sort(mergedToolIDs)
+
+			// tool_ids列为text类型(GORM serializer:json)，直接存JSON字符串
+			toolIDsJSON, err := sonic.MarshalString(mergedToolIDs)
+			if err != nil {
+				return err
+			}
+			if err := sessionDAO.Update(tx, &dbmodel.Session{ID: sessionID}, map[string]any{
+				constant.FieldToolIDs: toolIDsJSON,
+			}); err != nil {
+				return err
+			}
+			mergedCount++
+		}
+
+		return sessionDAO.BatchDeleteByField(tx, constant.WhereFieldID, result.RedundantIDs)
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return mergedCount, nil
 }
 
 // loadTerminalToolCallMsgIDs 取出候选 session 的末条 message ID，并下推 SQL 筛出终端 tool_call 消息
