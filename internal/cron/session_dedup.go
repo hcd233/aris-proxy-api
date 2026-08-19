@@ -133,34 +133,16 @@ func (c *SessionDeduplicateCron) deduplicate(ctx context.Context) (*commonmodel.
 		}, nil
 	}
 
-	mergeResult := FindRedundantSessionsWithMerge(sessions)
-
-	// 构建TerminalToolCall检查的排除ID列表，包含已标记冗余的ID和merge target ID
-	// 防止merge target session被FindTerminalToolCallSessions标记为冗余导致被误删
-	terminalExcludeIDs := make([]uint, len(mergeResult.RedundantIDs))
-	copy(terminalExcludeIDs, mergeResult.RedundantIDs)
-	for sessionID := range mergeResult.MergeMapping {
-		terminalExcludeIDs = append(terminalExcludeIDs, sessionID)
-	}
-
-	// 额外检查：Session最后一条消息是assistant且有tool_calls的也标记为冗余
-	terminalMsgIDs, err := c.loadTerminalToolCallMsgIDs(db, sessions, terminalExcludeIDs)
+	// 终端 tool_call 判定下推 SQL：只取末条消息为 assistant+tool_calls 的 message ID。
+	// 不再需要 exclude 列表来缩小候选集（下推后单次查询约 1 KB），
+	// merge target 的保护统一由 FindRedundantSessions 内部的 absorbed 集合表达。
+	terminalMsgIDs, err := c.loadTerminalToolCallMsgIDs(db, sessions, nil)
 	if err != nil {
 		log.Error("[SessionDeduplicateCron] Failed to load terminal tool call message ids", zap.Error(err))
-		// 不return，继续执行已有的去重结果
+		// 不return，退化为仅执行前缀去重
 	}
 
-	if len(terminalMsgIDs) > 0 {
-		terminalToolCallResult := FindTerminalToolCallSessions(sessions, terminalMsgIDs, terminalExcludeIDs)
-		if len(terminalToolCallResult.RedundantIDs) > 0 {
-			mergeResult.RedundantIDs = append(mergeResult.RedundantIDs, terminalToolCallResult.RedundantIDs...)
-
-			// 合并TerminalToolCall的ToolIDs映射到主结果
-			for sessionID, toolIDSet := range terminalToolCallResult.MergeMapping {
-				mergeResult.MergeMapping[sessionID] = mergeToolIDs(mergeResult.MergeMapping[sessionID], toolIDSet)
-			}
-		}
-	}
+	mergeResult := FindRedundantSessions(sessions, terminalMsgIDs)
 
 	if len(mergeResult.RedundantIDs) == 0 {
 		log.Info("[SessionDeduplicateCron] No redundant sessions found", zap.Int("total", len(sessions)))
@@ -289,30 +271,76 @@ type sessionEntry struct {
 	toolIDs    []uint
 }
 
-// FindRedundantSessionsWithMerge 查找 MessageIDs 是其他 Session 前缀的冗余 Session，并返回 ToolIDs 合并信息
+// FindRedundantSessions 查找冗余 Session 并给出 ToolIDs 合并映射
 //
 // 算法：
 //
-//  1. 按首个 message ID 分组，组内按 MessageIDs 长度降序、ID 升序排列
+//  1. 按首个 message ID 分组（同一对话的快照集合），组内按 MessageIDs 长度降序、ID 升序排列
 //
 //  2. 组内扫描并维护 keeper 列表：成员若是某个 keeper 的前缀则判为冗余，
 //     ToolIDs 并入首个匹配的 keeper；否则自身成为新 keeper（处理对话分叉）
 //
+//  3. 对未吸收任何冗余成员的 session（含分叉 keeper 与单例组成员）应用终端规则：
+//     末条 message 属于 terminalMsgIDs（assistant 且 tool_calls 非空，即对话在
+//     工具调用处中断）则判为冗余。吸收过冗余成员的 keeper 是 merge target，
+//     受保护不被删除，否则并入它的 ToolIDs 会随之丢失
+//
 //     @param sessions []*dbmodel.Session
+//     @param terminalMsgIDs []uint 已判定为 assistant+tool_calls 的 message ID
 //     @return MergeResult 包含需要删除的 Session ID 和 ToolIDs 合并映射
 //     @author centonhuang
 //     @update 2026-08-19 10:00:00
-func FindRedundantSessionsWithMerge(sessions []*dbmodel.Session) MergeResult {
+func FindRedundantSessions(sessions []*dbmodel.Session, terminalMsgIDs []uint) MergeResult {
 	result := MergeResult{
 		RedundantIDs: make([]uint, 0),
 		MergeMapping: make(map[uint]map[uint]struct{}),
 	}
+	absorbed := make(map[uint]struct{})
 
-	for _, entries := range groupByFirstMessageID(sessions) {
-		resolveGroup(entries, &result)
+	groups := groupByFirstMessageID(sessions)
+	for _, entries := range groups {
+		resolveGroup(entries, &result, absorbed)
 	}
 
+	applyTerminalRule(groups, terminalMsgIDs, absorbed, &result)
+
 	return result
+}
+
+// applyTerminalRule 对未吸收冗余成员的 session 应用终端 tool_call 规则
+//
+//	保护条件是「是否吸收过冗余成员」而非「是否有 tool_ids」：merge target 被删会让
+//	并入它的 ToolIDs 一起丢失。旧实现用 MergeMapping 的 key 作代理，而双方 tool_ids
+//	全空时该 key 不会创建，于是无 tool 的 merge target 失去保护、连同整组被删。
+//
+//	@param groups map[uint][]sessionEntry
+//	@param terminalMsgIDs []uint
+//	@param absorbed map[uint]struct{} 已吸收冗余成员的 merge target，受保护
+//	@param result *MergeResult
+//	@author centonhuang
+//	@update 2026-08-19 10:00:00
+func applyTerminalRule(groups map[uint][]sessionEntry, terminalMsgIDs []uint, absorbed map[uint]struct{}, result *MergeResult) {
+	if len(terminalMsgIDs) == 0 {
+		return
+	}
+
+	terminalSet := lo.SliceToMap(terminalMsgIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
+	redundantSet := lo.SliceToMap(result.RedundantIDs, func(id uint) (uint, struct{}) { return id, struct{}{} })
+
+	for _, entries := range groups {
+		for _, e := range entries {
+			if _, protected := absorbed[e.id]; protected {
+				continue
+			}
+			if _, already := redundantSet[e.id]; already {
+				continue
+			}
+			if _, terminal := terminalSet[e.messageIDs[len(e.messageIDs)-1]]; !terminal {
+				continue
+			}
+			result.RedundantIDs = append(result.RedundantIDs, e.id)
+		}
+	}
 }
 
 // groupByFirstMessageID 按首个 message ID 将 session 分组，组内按 MessageIDs 长度降序、ID 升序排列
@@ -364,9 +392,10 @@ func groupByFirstMessageID(sessions []*dbmodel.Session) map[uint][]sessionEntry 
 //
 //	@param entries []sessionEntry 组内条目，已按长度降序、ID 升序排列
 //	@param result *MergeResult
+//	@param absorbed map[uint]struct{} 记录吸收过冗余成员的 keeper（merge target）
 //	@author centonhuang
 //	@update 2026-08-19 10:00:00
-func resolveGroup(entries []sessionEntry, result *MergeResult) {
+func resolveGroup(entries []sessionEntry, result *MergeResult, absorbed map[uint]struct{}) {
 	keepers := make([]sessionEntry, 0, len(entries))
 
 	for _, e := range entries {
@@ -380,6 +409,9 @@ func resolveGroup(entries []sessionEntry, result *MergeResult) {
 
 		result.RedundantIDs = append(result.RedundantIDs, e.id)
 		mergeToolIDsIntoMapping(result.MergeMapping, container.id, container.toolIDs, e.toolIDs)
+		// 记录「吸收过冗余成员」而非「落进 MergeMapping」：双方 tool_ids 全空时
+		// mergeToolIDsIntoMapping 不会建条目，用它作保护代理会漏掉这类 merge target
+		absorbed[container.id] = struct{}{}
 	}
 }
 
@@ -420,45 +452,6 @@ func mergeToolIDsIntoMapping(mapping map[uint]map[uint]struct{}, targetID uint, 
 	for _, tid := range sourceToolIDs {
 		mapping[targetID][tid] = struct{}{}
 	}
-}
-
-// mergeToolIDs 合并两个 ToolID 集合，返回新的集合
-//
-//	@param existing map[uint]struct{} 已有的 ToolID 集合（可以为 nil）
-//	@param incoming map[uint]struct{} 需要合并的 ToolID 集合
-//	@return map[uint]struct{} 合并后的集合
-//	@author centonhuang
-//	@update 2026-05-24 10:00:00
-func mergeToolIDs(existing, incoming map[uint]struct{}) map[uint]struct{} {
-	if len(incoming) == 0 {
-		return existing
-	}
-	if existing == nil {
-		existing = make(map[uint]struct{}, len(incoming))
-	}
-	for tid := range incoming {
-		existing[tid] = struct{}{}
-	}
-	return existing
-}
-
-// FindRedundantSessions 查找MessageIDs被其他Session完全包含（子数组）的冗余Session
-//
-// 算法：
-//
-//  1. 按MessageIDs长度降序排序，长度相同则按ID升序（保留较早的Session）
-//
-//  2. 对每个Session，构建首元素索引加速查找
-//
-//  3. 短Session的MessageIDs如果是某个长Session的连续子数组，则标记为冗余
-//
-//     @param sessions []*dbmodel.Session
-//     @return []uint 需要删除的Session ID列表
-//     @author centonhuang
-//     @update 2026-03-19 10:00:00
-func FindRedundantSessions(sessions []*dbmodel.Session) []uint {
-	result := FindRedundantSessionsWithMerge(sessions)
-	return result.RedundantIDs
 }
 
 // IsSubArray 判断 sub 是否是 arr 的连续子数组

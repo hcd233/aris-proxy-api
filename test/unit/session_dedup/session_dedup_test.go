@@ -2,6 +2,7 @@ package session_dedup
 
 import (
 	"os"
+	"slices"
 	"sort"
 	"testing"
 
@@ -28,10 +29,12 @@ type sessionFixture struct {
 
 // findRedundantSessionsCase represents a test case for FindRedundantSessions
 type findRedundantSessionsCase struct {
-	Name                 string           `json:"name"`
-	Description          string           `json:"description"`
-	Sessions             []sessionFixture `json:"sessions"`
-	ExpectedRedundantIDs []uint           `json:"expected_redundant_ids"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Sessions    []sessionFixture `json:"sessions"`
+	// TerminalMsgIDs 已由 SQL 判定为 assistant+tool_calls 的 message ID，缺省为空
+	TerminalMsgIDs       []uint `json:"terminal_msg_ids"`
+	ExpectedRedundantIDs []uint `json:"expected_redundant_ids"`
 }
 
 // loadIsSubArrayCases loads IsSubArray test cases from fixtures
@@ -210,7 +213,7 @@ func TestFindRedundantSessionsWithMerge(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			sessions := toDBSessions(fixtureCase.Sessions)
-			result := cron.FindRedundantSessionsWithMerge(sessions)
+			result := cron.FindRedundantSessions(sessions, nil)
 
 			t.Logf("description: %s", fixtureCase.Description)
 			t.Logf("merge mapping: %v", result.MergeMapping)
@@ -268,6 +271,9 @@ func TestFindRedundantSessions(t *testing.T) {
 		"cross_group_not_redundant",
 		"forked_conversation",
 		"two_prefix_members_same_keeper",
+		"group_keeper_protected_without_tools",
+		"forked_keeper_not_protected",
+		"singleton_terminal_tool_call",
 	}
 
 	for _, caseName := range caseNames {
@@ -276,7 +282,7 @@ func TestFindRedundantSessions(t *testing.T) {
 		t.Run(caseName, func(t *testing.T) {
 			t.Parallel()
 			sessions := toDBSessions(tc.Sessions)
-			got := cron.FindRedundantSessions(sessions)
+			got := cron.FindRedundantSessions(sessions, tc.TerminalMsgIDs).RedundantIDs
 
 			t.Logf("description: %s", tc.Description)
 			t.Logf("input sessions: %d, got redundant IDs: %v, expected: %v",
@@ -440,18 +446,23 @@ func TestFindParentSessionID(t *testing.T) {
 	}
 }
 
-// TestMergeTargetNotDuplicatedInTerminalToolCall is a regression test for the bug
-// where a session that was a merge target in FindRedundantSessionsWithMerge
-// was later marked as redundant by FindTerminalToolCallSessions, causing the
-// session to be both updated (with merged tool IDs) and then deleted.
+// TestMergeTargetProtectedFromTerminalRule 回归测试：吸收过冗余成员的 merge target
+// 不能被终端 tool_call 规则删除，否则并入它的 ToolIDs 会随之丢失。
 //
-// Bug scenario (from production trace 77a87daf):
-//   - Session 2 (merge target): shorter session 3's tool IDs merge into session 2
-//   - Session 2's last message is assistant+tool_calls
-//   - Bug: deduplicate passed only RedundantIDs as excludeIDs to FindTerminalToolCallSessions,
-//     NOT merge target IDs. So session 2 was NOT excluded and got marked redundant.
-//   - Result: session 2's tool_ids updated from merge, then session 2 deleted.
-func TestMergeTargetNotDuplicatedInTerminalToolCall(t *testing.T) {
+// 场景来自生产 trace 77a87daf：
+//   - session 3 ([10,20,30]) 是 session 2 ([10,20,30,40,50]) 的前缀，被并入 session 2
+//   - session 2 的末条消息 50 是 assistant+tool_calls，会命中终端规则
+//   - 旧实现用 MergeMapping 的 key 作保护代理，需要 deduplicate 手工把 merge target
+//     拼进 excludeIDs，漏拼即导致 session 2 既被更新又被删除（#85）
+//   - 现在保护由单一入口内部的 absorbed 集合表达，调用方无需关心，
+//     且不再受「tool_ids 是否为空」影响
+//
+// session 1 与 session 2 在 [10,20] 之后分别走 70.. 与 30..，构成对话分叉，
+// 因此 session 2 既是分叉分支又是 merge target。
+//
+//	@author centonhuang
+//	@update 2026-08-19 10:00:00
+func TestMergeTargetProtectedFromTerminalRule(t *testing.T) {
 	t.Parallel()
 
 	sessions := toDBSessions([]sessionFixture{
@@ -461,69 +472,17 @@ func TestMergeTargetNotDuplicatedInTerminalToolCall(t *testing.T) {
 	})
 
 	// message 50 是 session 2 的末条消息，已由 SQL 判定为 assistant+tool_calls
-	terminalMsgIDs := []uint{50}
+	result := cron.FindRedundantSessions(sessions, []uint{50})
 
-	// Step 1: FindRedundantSessionsWithMerge
-	// Session 3 ([10,20,30]) is a subarray of session 2 ([10,20,30,40,50])
-	// Session 2 should be the merge target (kept), session 3 redundant
-	mergeResult := cron.FindRedundantSessionsWithMerge(sessions)
+	t.Logf("redundantIDs=%v, mergeMapping=%v", result.RedundantIDs, result.MergeMapping)
 
-	// Verify session 2 is a merge target (will receive merged tool IDs)
-	if _, exists := mergeResult.MergeMapping[2]; !exists {
-		t.Fatalf("Expected session 2 to be a merge target, got MergeMapping=%v", mergeResult.MergeMapping)
+	if slices.Contains(result.RedundantIDs, 2) {
+		t.Errorf("session 2 is a merge target and must not be deleted by the terminal rule, got redundant=%v", result.RedundantIDs)
 	}
-
-	// Verify session 3 is redundant
-	found3 := false
-	for _, id := range mergeResult.RedundantIDs {
-		if id == 3 {
-			found3 = true
-			break
-		}
+	if !slices.Contains(result.RedundantIDs, 3) {
+		t.Errorf("session 3 ([10,20,30] is a prefix of session 2) should be redundant, got %v", result.RedundantIDs)
 	}
-	if !found3 {
-		t.Fatalf("Session 3 should be redundant (subarray of session 2)")
+	if _, ok := result.MergeMapping[2]; !ok {
+		t.Errorf("session 3's ToolIDs should merge into session 2, got mapping=%v", result.MergeMapping)
 	}
-
-	// Step 2: Simulate the BUG - FindTerminalToolCallSessions with ONLY redundant IDs as excludeIDs
-	// This is what deduplicate currently does (the bug)
-	resultWithoutMergeExclude := cron.FindTerminalToolCallSessions(sessions, terminalMsgIDs, mergeResult.RedundantIDs)
-
-	// BUG ASSERTION: With the bug, session 2 IS in redundantIDs from terminal tool call
-	// because merge target IDs were NOT passed as excludeIDs
-	session2InBug := false
-	for _, id := range resultWithoutMergeExclude.RedundantIDs {
-		if id == 2 {
-			session2InBug = true
-			break
-		}
-	}
-
-	if session2InBug {
-		// This is the bug: session 2 would be both merged AND deleted
-		t.Log("BUG CONFIRMED: session 2 (merge target) is also in terminal tool call redundant list")
-		t.Log("  This means session 2 will be both updated with merged tool_ids AND deleted")
-	} else {
-		t.Log("Session 2 was NOT marked redundant (no parent found or other reason)")
-	}
-
-	// Step 3: The FIX - include merge target IDs in exclude list
-	excludeIDs := make([]uint, len(mergeResult.RedundantIDs))
-	copy(excludeIDs, mergeResult.RedundantIDs)
-	for sessionID := range mergeResult.MergeMapping {
-		excludeIDs = append(excludeIDs, sessionID)
-	}
-
-	resultFixed := cron.FindTerminalToolCallSessions(sessions, terminalMsgIDs, excludeIDs)
-
-	// With the fix, session 2 should NOT be in the redundant list
-	for _, id := range resultFixed.RedundantIDs {
-		if id == 2 {
-			t.Error("BUG FIX FAILED: Session 2 (merge target) should NOT be in redundant list after fix")
-		}
-	}
-
-	t.Logf("mergeResult: redundantIDs=%v, mergeMapping=%v", mergeResult.RedundantIDs, mergeResult.MergeMapping)
-	t.Logf("Without fix: redundantIDs=%v", resultWithoutMergeExclude.RedundantIDs)
-	t.Logf("With fix: redundantIDs=%v", resultFixed.RedundantIDs)
 }
