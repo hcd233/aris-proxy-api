@@ -369,3 +369,137 @@ html.theme-transition *::after {
     fill 350ms ease,
     stroke 350ms ease !important;
 }
+
+/* === Motion system "Silk Paper" ===
+ * Editorial motion language: paper settling, no bounce. transform/opacity
+ * only, expo-out easing, staggered entrances. Keyframes live at root level
+ * (not inside @theme) so plain-CSS rules below can reference them too.
+ * Everything is neutralized by the prefers-reduced-motion guard at the end. */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@theme {
+  --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-rise: rise 480ms var(--ease-silk) both;
+  --animate-fade: fade 300ms ease-out both;
+  --animate-scale-in: scale-in 380ms var(--ease-silk) both;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Staggered entrance: direct children rise one after another (50ms steps).
+ * `both` fill keeps later children hidden until their delay elapses. */
+.stagger-rise > * {
+  animation: rise 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger-rise > :nth-child(2) {
+  animation-delay: 50ms;
+}
+.stagger-rise > :nth-child(3) {
+  animation-delay: 100ms;
+}
+.stagger-rise > :nth-child(4) {
+  animation-delay: 150ms;
+}
+.stagger-rise > :nth-child(5) {
+  animation-delay: 200ms;
+}
+.stagger-rise > :nth-child(6) {
+  animation-delay: 250ms;
+}
+.stagger-rise > :nth-child(7) {
+  animation-delay: 300ms;
+}
+.stagger-rise > :nth-child(8) {
+  animation-delay: 350ms;
+}
+
+/* Manual entrance delays for orchestrated layouts (60ms steps). */
+.motion-delay-1 {
+  animation-delay: 60ms;
+}
+.motion-delay-2 {
+  animation-delay: 120ms;
+}
+.motion-delay-3 {
+  animation-delay: 180ms;
+}
+.motion-delay-4 {
+  animation-delay: 240ms;
+}
+.motion-delay-5 {
+  animation-delay: 300ms;
+}
+.motion-delay-6 {
+  animation-delay: 360ms;
+}
+
+/* Skeleton shimmer: a soft highlight sweeping across the placeholder,
+ * tinted from --foreground so it reads on light/dark/moonshot alike. */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--foreground) 9%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Global reduced-motion guard: honor the OS setting by collapsing every
+ * animation/transition (theme switch included) to an instant change. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

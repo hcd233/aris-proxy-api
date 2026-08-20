@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export default function ProfilePage() {
@@ -53,8 +54,8 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-40 animate-pulse rounded bg-muted" />
-        <div className="h-48 w-full animate-pulse rounded bg-muted" />
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
