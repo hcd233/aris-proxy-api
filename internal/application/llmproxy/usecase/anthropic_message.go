@@ -51,7 +51,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindAnthropic,
@@ -75,7 +75,7 @@ func (u *anthropicUseCase) forwardMessageNativeUnary(ctx context.Context, req *d
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
 		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	anthropicMsg.Model = exposedModel
 	bodyBytes := lo.Must1(sonic.Marshal(anthropicMsg))
@@ -107,7 +107,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindAnthropic,
@@ -134,7 +134,7 @@ func (u *anthropicUseCase) forwardMessageViaChatUnary(ctx context.Context, req *
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
 		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolOpenAIChatCompletion, enum.ProtocolAnthropicMessage, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindAnthropic, anthropicInternalErrorBody)
 	}
 	anthropicMsg, convErr := conv.ToAnthropicResponse(completion)
 	if convErr != nil {

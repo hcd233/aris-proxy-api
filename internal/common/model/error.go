@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -118,4 +119,30 @@ func (e *UpstreamConnectionError) Error() string {
 // （优雅退出 soft deadline 广播取消上游连接时，读循环据此识别断流原因）。
 func (e *UpstreamConnectionError) Unwrap() error {
 	return e.Cause
+}
+
+// CircuitOpenError 熔断器打开导致的快速失败错误。
+//
+//	@author centonhuang
+//	@update 2026-08-20 10:00:00
+type CircuitOpenError struct {
+	Key        string
+	RetryAfter time.Duration
+}
+
+func (e *CircuitOpenError) Error() string {
+	return fmt.Sprintf(constant.CircuitOpenErrorTemplate, e.Key, e.RetryAfter)
+}
+
+// BulkheadFullError 信号量满载（等待超时）导致的快速失败错误。
+//
+//	@author centonhuang
+//	@update 2026-08-20 10:00:00
+type BulkheadFullError struct {
+	Key   string
+	Limit int
+}
+
+func (e *BulkheadFullError) Error() string {
+	return fmt.Sprintf(constant.BulkheadFullErrorTemplate, e.Key, e.Limit)
 }

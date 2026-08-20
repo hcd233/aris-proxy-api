@@ -248,7 +248,7 @@ func TestOpenAIProxy_CanonicalizesPassthroughHeader(t *testing.T) {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, map[string]string{
 		headerName: headerValue,
 	})
-	proxy := transport.NewOpenAIProxy(inflight.NewTracker())
+	proxy := transport.NewOpenAIProxy(inflight.NewTracker(), transport.NewEndpointGuard(nil))
 	_, err = proxy.ForwardChatCompletion(ctx, vo.UpstreamEndpoint{
 		Model:   "test-model",
 		APIKey:  "test-key",

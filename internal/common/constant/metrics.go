@@ -9,6 +9,8 @@ const (
 	MetricNamespaceHTTP = "http"
 	// MetricNamespaceLLM LLM 指标命名空间（最终指标名形如 llm_token_usage_total）
 	MetricNamespaceLLM = "llm"
+	// MetricNamespaceUpstream 上游容错指标命名空间（最终指标名形如 upstream_circuit_state）
+	MetricNamespaceUpstream = "upstream"
 
 	// MetricNameRequestDuration 请求时延直方图（不含 namespace）
 	MetricNameRequestDuration = "request_duration_seconds"
@@ -27,6 +29,26 @@ const (
 	MetricLabelDirection = "direction"
 	// MetricLabelResult HTTP 请求结果 counter 的结果 label
 	MetricLabelResult = "result"
+
+	// —— 上游容错指标（Namespace=upstream；完整名如 upstream_circuit_state）——
+	// MetricUpstreamCircuitStateName 熔断状态 gauge（0=closed, 1=open, 2=half-open）
+	MetricUpstreamCircuitStateName = "circuit_state"
+	// MetricUpstreamCircuitStateHelp
+	MetricUpstreamCircuitStateHelp = "Upstream circuit breaker state (0=closed, 1=open, 2=half-open)"
+	// MetricUpstreamCircuitOpenTotalName 熔断打开次数 counter
+	MetricUpstreamCircuitOpenTotalName = "circuit_open_total"
+	// MetricUpstreamCircuitOpenTotalHelp
+	MetricUpstreamCircuitOpenTotalHelp = "Total circuit breaker open transitions"
+	// MetricUpstreamCircuitRejectedTotalName 熔断拒绝请求数 counter
+	MetricUpstreamCircuitRejectedTotalName = "circuit_rejected_total"
+	// MetricUpstreamCircuitRejectedTotalHelp
+	MetricUpstreamCircuitRejectedTotalHelp = "Total requests rejected by open circuit breaker"
+	// MetricUpstreamBulkheadRejectedTotalName 信号量满载拒绝请求数 counter
+	MetricUpstreamBulkheadRejectedTotalName = "bulkhead_rejected_total"
+	// MetricUpstreamBulkheadRejectedTotalHelp
+	MetricUpstreamBulkheadRejectedTotalHelp = "Total requests rejected by full bulkhead"
+	// MetricLabelKey 容错指标的 key 标签（上游 BaseURL|APIKey）
+	MetricLabelKey = "key"
 
 	// —— flusher 从 registry.Gather() 抽取快照时用的完整指标名 ——
 	MetricFullRequestDuration = "http_request_duration_seconds"
