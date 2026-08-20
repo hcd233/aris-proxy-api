@@ -73,6 +73,7 @@ type EndpointView struct {
 // ListEndpointsQuery 列出 Endpoints 查询命令
 type ListEndpointsQuery struct {
 	model.CommonParam
+	IsDemo bool
 }
 
 // ListEndpointsHandler 查询处理器
