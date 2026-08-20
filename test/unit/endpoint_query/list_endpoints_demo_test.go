@@ -52,7 +52,7 @@ func newDemoFixture() (port.ListEndpointsHandler, error) {
 	}), nil
 }
 
-// TestListEndpoints_DemoMasksBaseURLs demo 视角须脱敏 BaseURL，但 Name 保持原样（按契约）。
+// TestListEndpoints_DemoMasksBaseURLs demo 视角须脱敏 BaseURL 与 Name（APIKey 已脱敏）。
 func TestListEndpoints_DemoMasksBaseURLs(t *testing.T) {
 	t.Parallel()
 
@@ -79,9 +79,9 @@ func TestListEndpoints_DemoMasksBaseURLs(t *testing.T) {
 	if v.AnthropicBaseURL != commonutil.MaskSecret(anthropicBaseURL) {
 		t.Fatalf("AnthropicBaseURL not masked: got %q, want %q", v.AnthropicBaseURL, commonutil.MaskSecret(anthropicBaseURL))
 	}
-	// 契约仅要求脱敏 BaseURL，Name 保持原样。
-	if v.Name != endpointName {
-		t.Fatalf("Endpoint.Name unexpectedly changed: got %q, want %q", v.Name, endpointName)
+	// demo 视角须脱敏 Name（与 models 嵌套 endpoint 一致）。
+	if v.Name != commonutil.MaskSecret(endpointName) {
+		t.Fatalf("Endpoint.Name not masked: got %q, want %q", v.Name, commonutil.MaskSecret(endpointName))
 	}
 	if v.MaskedAPIKey != commonutil.MaskSecret("sk-secret-key-123") {
 		t.Fatalf("MaskedAPIKey unexpected: %q", v.MaskedAPIKey)

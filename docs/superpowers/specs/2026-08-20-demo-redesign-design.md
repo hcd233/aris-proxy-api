@@ -104,7 +104,7 @@ func (DemoSession) TableName() string { return constant.DemoSessionTableName }
 
 - **audit**（`internal/application/audit/query/list_audit_logs.go` `buildAuditViews`）：传入 `isDemo`，为 true 时对 `UserName`、`UserEmail`、`APIKeyName`、`Endpoint`、`TraceID` 脱敏。`auditService.ListLogs` 对 demo 分支传 `isDemo=true`。
 - **models**（`internal/application/model/query/list_models.go`）：`ListModelsQuery` 增加 `isDemo`；true 时 `UpstreamModel`、嵌套 `EndpointView` 的 BaseURL/名称脱敏（APIKey 已 `MaskSecret`）。
-- **endpoints**（`internal/application/endpoint/query/list_endpoints.go`）：`ListEndpointsQuery` 增加 `isDemo`；true 时 BaseURL 脱敏（APIKey 已脱敏）。
+- **endpoints**（`internal/application/endpoint/query/list_endpoints.go`）：`ListEndpointsQuery` 增加 `isDemo`；true 时 `OpenaiBaseURL`/`AnthropicBaseURL`/`Name` → `MaskSecret`（APIKey 已脱敏）。
 
 > 保留字段：`ModelID`/`Alias`（别名）、token/latency/status 数字、协议、UA、错误信息。
 
@@ -175,3 +175,11 @@ group.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAcce
 - **白名单 session 内容明文**：admin 选取即授权，需 admin 自觉只选可公开的会话。
 - **`demo_sessions` 孤儿条目**：session 软删后白名单条目残留，查询时自然过滤，不做主动清理（ponytail）。
 - **迁移**：`demo_configs` 删除 `sample_modulus` 列需 DB 迁移脚本；`demo_sessions` 为新表。
+
+  部署后手动执行（登录生产库）：
+
+  ```sql
+  ALTER TABLE demo_configs DROP COLUMN IF EXISTS sample_modulus;
+  ```
+
+  `demo_sessions` 新表由 GORM AutoMigrate 自动创建，无需手动迁移。

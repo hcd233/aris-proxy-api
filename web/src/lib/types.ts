@@ -74,7 +74,6 @@ export interface GetDemoConfigRsp extends CommonRsp {
 export interface UpdateDemoConfigReqBody {
   config: {
     loginEnabled?: boolean;
-    sampleModulus?: number;
     modules?: DemoModule[];
   };
 }
