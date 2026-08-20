@@ -376,6 +376,54 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 	return out, pageInfo, nil
 }
 
+func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	if len(ids) == 0 {
+		return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: 0}, nil
+	}
+	db := r.db.WithContext(ctx)
+	if param.Page < 1 {
+		param.Page = 1
+	}
+	if param.PageSize < 1 {
+		param.PageSize = 20
+	}
+
+	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
+	sql = sql.Where(constant.FieldID+" IN ?", ids)
+
+	if param.Sort != "" && param.SortField != "" {
+		param.SortField = util.SafeSortField(param.SortField)
+	}
+	if param.Sort != "" && param.SortField != "" {
+		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
+
+	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
+	var rows []sessionSummaryRow
+	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions by ids")
+	}
+
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if len(rows) > 0 {
+		pageInfo.Total = rows[0].TotalCount
+	}
+
+	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
+		return &session.SessionSummaryProjection{
+			ID:           row.ID,
+			CreatedAt:    row.CreatedAt,
+			UpdatedAt:    row.UpdatedAt,
+			Questions:    row.Questions,
+			ModelIDs:     row.ModelIDs,
+			Score:        row.Score,
+			MessageCount: row.MessageCount,
+			ToolCount:    row.ToolCount,
+		}
+	})
+	return out, pageInfo, nil
+}
+
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (*session.SessionDetailProjection, error) {
 	db := r.db.WithContext(ctx)

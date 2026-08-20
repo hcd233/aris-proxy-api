@@ -70,4 +70,40 @@ func initDemoRouter(demoGroup huma.API, demoHandler handler.DemoHandler, db *gor
 			middleware.LimitUserPermissionMiddleware("updateDemoConfig", enum.PermissionAdmin),
 		},
 	}, demoHandler.HandleUpdateConfig)
+
+	demoSessionsGroup := huma.NewGroup(demoGroup, "/sessions")
+	demoSessionsGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+
+	huma.Register(demoSessionsGroup, huma.Operation{
+		OperationID: "listDemoSessions",
+		Method:      http.MethodGet,
+		Path:        "/list",
+		Summary:     "ListDemoSessions",
+		Description: "List sessions whitelisted for the demo account (admin only)",
+		Tags:        []string{constant.TagDemo},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listDemoSessions", enum.PermissionAdmin)},
+	}, demoHandler.HandleListDemoSessions)
+
+	huma.Register(demoSessionsGroup, huma.Operation{
+		OperationID: "addDemoSessions",
+		Method:      http.MethodPost,
+		Path:        "",
+		Summary:     "AddDemoSessions",
+		Description: "Batch add sessions to the demo whitelist (admin only)",
+		Tags:        []string{constant.TagDemo},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("addDemoSessions", enum.PermissionAdmin)},
+	}, demoHandler.HandleAddDemoSessions)
+
+	huma.Register(demoSessionsGroup, huma.Operation{
+		OperationID: "removeDemoSessions",
+		Method:      http.MethodDelete,
+		Path:        "",
+		Summary:     "RemoveDemoSessions",
+		Description: "Batch remove sessions from the demo whitelist (admin only)",
+		Tags:        []string{constant.TagDemo},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("removeDemoSessions", enum.PermissionAdmin)},
+	}, demoHandler.HandleRemoveDemoSessions)
 }

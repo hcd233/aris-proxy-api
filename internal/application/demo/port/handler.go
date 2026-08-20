@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
 // DemoConfigView Demo 配置视图
@@ -109,4 +110,44 @@ type DemoSessionAccessor interface {
 	AllowedIDs(ctx context.Context) ([]uint, error)
 	// IsAllowed 判断 sessionID 是否在白名单；读取失败返回 false
 	IsAllowed(ctx context.Context, sessionID uint) (bool, error)
+}
+
+// DemoSessionView 白名单会话摘要视图（用于 admin 已选列表）
+type DemoSessionView struct {
+	ID           uint
+	Summary      string
+	MessageCount int
+	ToolCount    int
+	CreatedAt    time.Time
+}
+
+// ListDemoSessionsQuery 查询白名单会话
+type ListDemoSessionsQuery struct {
+	Page     int
+	PageSize int
+}
+
+// ListDemoSessionsHandler 列出白名单会话
+type ListDemoSessionsHandler interface {
+	Handle(ctx context.Context, q ListDemoSessionsQuery) ([]*DemoSessionView, *model.PageInfo, error)
+}
+
+// AddDemoSessionsCommand 批量添加白名单会话
+type AddDemoSessionsCommand struct {
+	SessionIDs []uint
+}
+
+// AddDemoSessionsHandler 批量添加
+type AddDemoSessionsHandler interface {
+	Handle(ctx context.Context, cmd AddDemoSessionsCommand) ([]uint, error)
+}
+
+// RemoveDemoSessionsCommand 批量移除白名单会话
+type RemoveDemoSessionsCommand struct {
+	SessionIDs []uint
+}
+
+// RemoveDemoSessionsHandler 批量移除
+type RemoveDemoSessionsHandler interface {
+	Handle(ctx context.Context, cmd RemoveDemoSessionsCommand) error
 }

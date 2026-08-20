@@ -148,6 +148,8 @@ type SessionReadRepository interface {
 	ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria, sampleModulus uint) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影
 	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	// ListSessionsByIDs 按会话 ID 集合分页查询列表投影（demo 白名单视角 / admin 管理列表）
+	ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
 	// GetSessionMeta 查询 Session 元数据（不含 Message/Tool 内容，仅含 IDs 数组）；未找到返回 (nil, nil)

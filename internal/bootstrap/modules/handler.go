@@ -89,12 +89,17 @@ func NewUserDependencies(getCurrentUser identityport.GetCurrentUserHandler, upda
 }
 
 func NewDemoDependencies(login demoport.DemoLoginHandler, status demoport.DemoStatusHandler,
-	getConfig demoport.GetDemoConfigHandler, updateConfig demoport.UpdateDemoConfigHandler) handler.DemoHandlerDependencies {
+	getConfig demoport.GetDemoConfigHandler, updateConfig demoport.UpdateDemoConfigHandler,
+	listDemoSessions demoport.ListDemoSessionsHandler, addDemoSessions demoport.AddDemoSessionsHandler,
+	removeDemoSessions demoport.RemoveDemoSessionsHandler) handler.DemoHandlerDependencies {
 	return handler.DemoHandlerDependencies{
-		Login:        login,
-		Status:       status,
-		GetConfig:    getConfig,
-		UpdateConfig: updateConfig,
+		Login:              login,
+		Status:             status,
+		GetConfig:          getConfig,
+		UpdateConfig:       updateConfig,
+		ListDemoSessions:   listDemoSessions,
+		AddDemoSessions:    addDemoSessions,
+		RemoveDemoSessions: removeDemoSessions,
 	}
 }
 
