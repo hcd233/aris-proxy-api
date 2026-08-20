@@ -7,9 +7,11 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
@@ -135,12 +137,21 @@ func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
 }
 
 func (s *auditService) ListAuditOption(ctx context.Context, permission enum.Permission, field, keyword string, startTime, endTime time.Time) ([]string, error) {
-	return s.listAuditOption.Handle(ctx, ListAuditOptionQuery{
+	items, err := s.listAuditOption.Handle(ctx, ListAuditOptionQuery{
 		Field:     field,
 		Keyword:   keyword,
 		StartTime: startTime,
 		EndTime:   endTime,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if permission == enum.PermissionDemo && field == constant.AuditFilterFieldUser {
+		return lo.Uniq(lo.Map(items, func(item string, _ int) string {
+			return commonutil.MaskIdentity(item)
+		})), nil
+	}
+	return items, nil
 }
 
 func (s *auditService) ModelTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {

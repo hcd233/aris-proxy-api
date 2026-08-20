@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -258,6 +259,13 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			view.APIKeyName = relation.APIKeyName
 			view.UserName = relation.UserName
 			view.UserEmail = relation.UserEmail
+		}
+		if isDemo {
+			view.APIKeyName = commonutil.MaskSecret(view.APIKeyName)
+			view.UserName = commonutil.MaskIdentity(view.UserName)
+			view.UserEmail = commonutil.MaskIdentity(view.UserEmail)
+			view.Endpoint = commonutil.MaskSecret(view.Endpoint)
+			view.TraceID = commonutil.MaskSecret(view.TraceID)
 		}
 		return view
 	})

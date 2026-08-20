@@ -30,6 +30,7 @@ type fakeAuditRepo struct {
 	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 	listDistinctStatusCodesFn func(ctx context.Context, startTime, endTime time.Time) ([]string, error)
 	listDistinctUserAgentsFn  func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	batchGetRelationsFn       func(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error)
 
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
@@ -56,6 +57,9 @@ func (f *fakeAuditRepo) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, p
 }
 
 func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error) {
+	if f.batchGetRelationsFn != nil {
+		return f.batchGetRelationsFn(ctx, apiKeyIDs)
+	}
 	return map[uint]*modelcall.AuditRelation{}, nil
 }
 
