@@ -6,7 +6,6 @@ import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
-import { DemoConfigCard } from "@/components/demo-config-card";
 import type { PageInfo, UserItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -364,8 +363,6 @@ export default function UsersPage() {
             )}
           </CardContent>
         </Card>
-
-        <DemoConfigCard />
 
         <DeleteConfirmDialog
           open={confirmAction !== null}
