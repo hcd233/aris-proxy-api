@@ -16,10 +16,27 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/i18n"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
+
+// RateLimiterOption 限流中间件可选项
+type RateLimiterOption func(*rateLimiterConfig)
+
+// rateLimiterConfig 限流中间件配置
+type rateLimiterConfig struct {
+	// permissionFilter 仅对匹配权限的用户生效；空串表示不过滤（现状行为）
+	permissionFilter enum.Permission
+}
+
+// WithPermissionFilter 仅对指定权限的用户启用限流（如 demo），其余用户零开销放行
+func WithPermissionFilter(p enum.Permission) RateLimiterOption {
+	return func(c *rateLimiterConfig) {
+		c.permissionFilter = p
+	}
+}
 
 // tokenBucketLua 令牌桶限流Lua脚本
 //
@@ -95,7 +112,12 @@ return {tostring(tokens), "0", tostring(capacity)}
 //     @return func(ctx huma.Context, next func(huma.Context))
 //     @author centonhuang
 //     @update 2026-03-20 10:00:00
-func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, key enum.CtxKey, period time.Duration, capacity int64) func(ctx huma.Context, next func(huma.Context)) {
+func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, key enum.CtxKey, period time.Duration, capacity int64, opts ...RateLimiterOption) func(ctx huma.Context, next func(huma.Context)) {
+	cfg := &rateLimiterConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	// 每微秒补充的令牌数
 	refillRate := float64(capacity) / float64(period.Microseconds())
 	expireMs := period.Milliseconds() * 2
@@ -104,6 +126,11 @@ func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, k
 	retryAfterSeconds := int(math.Ceil(1.0 / (refillRate * 1e6)))
 
 	return func(ctx huma.Context, next func(huma.Context)) {
+		// 权限过滤：不匹配时直接放行，零开销（不碰 Redis）
+		if cfg.permissionFilter != "" && util.CtxValuePermission(ctx.Context()) != cfg.permissionFilter {
+			next(ctx)
+			return
+		}
 		logger := logger.WithCtx(ctx.Context())
 		if cache == nil {
 			logger.Error("[TokenBucketRateLimiter] Redis dependency is nil")

@@ -18,6 +18,10 @@ const (
 	PeriodDemoLogin = 5 * time.Second
 	LimitDemoLogin  = 8
 
+	// Demo 登录后的接口访问限流（IP 维度，防单访客刷爆共享账户）
+	PeriodDemoAccess = 5 * time.Second
+	LimitDemoAccess  = 30
+
 	OAuthStateManagerTTL = 10 * time.Minute
 	OAuthStateMaxPending = 100
 
