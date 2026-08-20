@@ -762,10 +762,15 @@ func (h *sessionHandler) HandleDeleteScoreSession(ctx context.Context, req *dto.
 func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.SessionOptionListReq) (*dto.HTTPResponse[*dto.SessionOptionListRsp], error) {
 	rsp := &dto.SessionOptionListRsp{}
 
-	_, allowedIDs, scopeErr := h.resolveDemoAccess(ctx, util.CtxValuePermission(ctx))
+	isDemo, allowedIDs, scopeErr := h.resolveDemoAccess(ctx, util.CtxValuePermission(ctx))
 	if scopeErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo access failed", zap.Error(scopeErr))
 		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
+	if isDemo && len(allowedIDs) == 0 {
+		rsp.Items = []string{}
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	items, err := h.listOption.Handle(ctx, port.ListSessionOptionQuery{

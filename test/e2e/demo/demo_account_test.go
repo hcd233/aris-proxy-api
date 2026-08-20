@@ -113,10 +113,10 @@ func TestE2E_DemoStatusPublic(t *testing.T) {
 	}
 }
 
-// TestE2E_DemoConfigPermission 配置读写权限：普通用户只读，admin 可改；非法 modulus 拒绝
+// TestE2E_DemoConfigPermission 配置读写权限：普通用户只读，admin 可改
 func TestE2E_DemoConfigPermission(t *testing.T) {
 	t.Parallel()
-	baseURL, adminToken, userToken := mustE2EEnv(t)
+	baseURL, _, userToken := mustE2EEnv(t)
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	// 任意登录用户可读
@@ -133,13 +133,6 @@ func TestE2E_DemoConfigPermission(t *testing.T) {
 		t.Fatalf("user patch demo config expected business error, got %d: %s", status, body)
 	}
 
-	// admin 非法 modulus（=1）拒绝
-	badPatch := map[string]any{"config": map[string]any{"sampleModulus": 1}}
-	badBody, _ := sonic.Marshal(badPatch)
-	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, badBody)
-	if status == http.StatusOK && bizErrorCode(body) == 0 {
-		t.Fatalf("admin patch sampleModulus=1 expected validation error, got %d: %s", status, body)
-	}
 }
 
 // TestE2E_DemoAccountLifecycle 完整闭环：设 demo → 开入口 → demo 登录 → 模块白名单/只读校验 → 恢复
@@ -167,9 +160,8 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 	// 记录当前 demo 配置，测试结束恢复
 	var origConfig struct {
 		Config struct {
-			LoginEnabled  bool     `json:"loginEnabled"`
-			SampleModulus uint     `json:"sampleModulus"`
-			Modules       []string `json:"modules"`
+			LoginEnabled bool     `json:"loginEnabled"`
+			Modules      []string `json:"modules"`
 		} `json:"config"`
 	}
 	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/config", adminToken)
@@ -190,11 +182,10 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 	restore := func(t *testing.T) {
 		t.Helper()
 		// 恢复 demo 配置
-		if len(origConfig.Config.Modules) > 0 || origConfig.Config.SampleModulus > 0 {
+		if len(origConfig.Config.Modules) > 0 {
 			restorePatch := map[string]any{"config": map[string]any{
-				"loginEnabled":  origConfig.Config.LoginEnabled,
-				"sampleModulus": origConfig.Config.SampleModulus,
-				"modules":       origConfig.Config.Modules,
+				"loginEnabled": origConfig.Config.LoginEnabled,
+				"modules":      origConfig.Config.Modules,
 			}}
 			rb, _ := sonic.Marshal(restorePatch)
 			_, _ = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, rb)
@@ -216,9 +207,8 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 
 	// 3. 开放入口 + 仅开放 sessions 模块
 	openPatch := map[string]any{"config": map[string]any{
-		"loginEnabled":  true,
-		"sampleModulus": 10,
-		"modules":       []string{"sessions"},
+		"loginEnabled": true,
+		"modules":      []string{"sessions"},
 	}}
 	ob, _ := sonic.Marshal(openPatch)
 	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, ob)
