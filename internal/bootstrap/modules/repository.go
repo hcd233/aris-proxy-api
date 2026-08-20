@@ -40,6 +40,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewSessionWriteRepository,
 		NewAuditRepository,
 		NewDemoConfigRepository,
+		NewDemoSessionRepository,
 		NewEndpointRepository,
 		NewModelRepository,
 		NewEndpointReadRepository,
@@ -94,6 +95,10 @@ func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 
 func NewDemoConfigRepository(db *gorm.DB) demoport.DemoConfigRepository {
 	return repository.NewDemoConfigRepository(db)
+}
+
+func NewDemoSessionRepository(db *gorm.DB) demoport.DemoSessionRepository {
+	return repository.NewDemoSessionRepository(db)
 }
 
 func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {

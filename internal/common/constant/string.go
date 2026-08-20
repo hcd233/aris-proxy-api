@@ -204,6 +204,7 @@ const (
 
 	// ── Demo account ──
 	DemoConfigTableName      = "demo_configs"
+	DemoSessionTableName     = "demo_sessions"
 	DemoConfigSingletonID    = 1
 	DemoDefaultSampleModulus = 10
 

@@ -92,3 +92,21 @@ type DemoScopeProvider interface {
 	// SampleModulus 返回抽样模数（>=2）；配置读取失败返回 error，调用方必须拒绝请求
 	SampleModulus(ctx context.Context) (uint, error)
 }
+
+// DemoSessionRepository demo 会话白名单仓储
+type DemoSessionRepository interface {
+	// List 返回全部白名单 sessionID（升序）
+	List(ctx context.Context) ([]uint, error)
+	// Add 批量插入（去重，已存在忽略）
+	Add(ctx context.Context, ids []uint) error
+	// Remove 批量删除
+	Remove(ctx context.Context, ids []uint) error
+}
+
+// DemoSessionAccessor demo 会话白名单放行判断（session 查询视角，读取失败 fail-closed）
+type DemoSessionAccessor interface {
+	// AllowedIDs 返回白名单 sessionID 集合；读取失败返回 error（调用方拒绝请求）
+	AllowedIDs(ctx context.Context) ([]uint, error)
+	// IsAllowed 判断 sessionID 是否在白名单；读取失败返回 false
+	IsAllowed(ctx context.Context, sessionID uint) (bool, error)
+}
