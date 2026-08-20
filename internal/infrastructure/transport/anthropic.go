@@ -28,12 +28,13 @@ import (
 
 type anthropicProxy struct {
 	tracker *inflight.Tracker
+	guard   *EndpointGuard
 }
 
 var _ usecase.AnthropicProxyPort = (*anthropicProxy)(nil)
 
-func NewAnthropicProxy(tracker *inflight.Tracker) usecase.AnthropicProxyPort {
-	return &anthropicProxy{tracker: tracker}
+func NewAnthropicProxy(tracker *inflight.Tracker, guard *EndpointGuard) usecase.AnthropicProxyPort {
+	return &anthropicProxy{tracker: tracker, guard: guard}
 }
 
 func (p *anthropicProxy) ForwardCreateMessage(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicMessage, error) {
@@ -146,15 +147,24 @@ func (p *anthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.UpstreamE
 	return rsp, nil
 }
 
-// sendRequest 构建并发送 Anthropic 协议的上游请求，对可重试错误自动重试。
+// sendRequest 构建并发送 Anthropic 协议的上游请求：先过容错守卫（熔断/信号量），再对可重试错误自动重试。
 // ctx 融合 drain 广播：优雅退出 soft deadline 到达时取消上游连接，
 // 使阻塞的 SSE 读循环返回 context canceled（礼貌断流的前半段）。
 func (p *anthropicProxy) sendRequest(ctx context.Context, ep vo.UpstreamEndpoint, path string, body []byte) (*http.Response, error) {
 	ctx = p.tracker.CancelOnDrain(ctx)
+	key := EndpointKey(ep)
+	release, err := p.guard.Allow(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	sendFn := func() (*http.Response, error) {
 		return p.sendRequestOnce(ctx, ep, path, body)
 	}
-	return SendUpstreamWithRetry(ctx, constant.ModuleAnthropicProxy, sendFn)
+	resp, err := SendUpstreamWithRetry(ctx, constant.ModuleAnthropicProxy, sendFn)
+	p.guard.Report(key, !IsCircuitError(err))
+	return resp, err
 }
 
 // sendRequestOnce 执行单次 Anthropic 协议上游请求发送（不含重试逻辑）

@@ -29,12 +29,13 @@ import (
 
 type openAIProxy struct {
 	tracker *inflight.Tracker
+	guard   *EndpointGuard
 }
 
 var _ usecase.OpenAIProxyPort = (*openAIProxy)(nil)
 
-func NewOpenAIProxy(tracker *inflight.Tracker) usecase.OpenAIProxyPort {
-	return &openAIProxy{tracker: tracker}
+func NewOpenAIProxy(tracker *inflight.Tracker, guard *EndpointGuard) usecase.OpenAIProxyPort {
+	return &openAIProxy{tracker: tracker, guard: guard}
 }
 
 func (p *openAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
@@ -122,15 +123,24 @@ func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {
 	return mo.Some(chunk)
 }
 
-// doUpstreamRequest 构建并发送上游 HTTP 请求，对可重试错误自动重试。
+// doUpstreamRequest 构建并发送上游 HTTP 请求：先过容错守卫（熔断/信号量），再对可重试错误自动重试。
 // ctx 融合 drain 广播：优雅退出 soft deadline 到达时取消上游连接，
 // 使阻塞的 SSE 读循环返回 context canceled（礼貌断流的前半段）。
 func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
 	ctx = p.tracker.CancelOnDrain(ctx)
+	key := EndpointKey(ep)
+	release, err := p.guard.Allow(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	sendFn := func() (*http.Response, error) {
 		return p.sendUpstreamRequestOnce(ctx, ep, body, pathSuffix)
 	}
-	return SendUpstreamWithRetry(ctx, constant.ModuleOpenAIProxy, sendFn)
+	resp, err := SendUpstreamWithRetry(ctx, constant.ModuleOpenAIProxy, sendFn)
+	p.guard.Report(key, !IsCircuitError(err))
+	return resp, err
 }
 
 // sendUpstreamRequestOnce 执行单次上游 HTTP 请求发送（不含重试逻辑）
