@@ -218,6 +218,8 @@ export function LineChartCard<T>({
         fill={s.color}
         strokeOpacity={getStrokeOpacity(s.key)}
         fillOpacity={0.6}
+        animationDuration={600}
+        animationEasing="ease-out"
       />
     ) : (
       <Line
@@ -228,6 +230,8 @@ export function LineChartCard<T>({
         strokeWidth={2}
         strokeOpacity={getStrokeOpacity(s.key)}
         dot={false}
+        animationDuration={600}
+        animationEasing="ease-out"
       />
     ),
   );

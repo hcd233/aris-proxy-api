@@ -8,6 +8,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Key, MessageSquare, Server, Cpu } from "lucide-react";
+import { CountUp } from "@/components/count-up";
 import { ModelTrendChart } from "@/components/charts/model-trend-chart";
 import { RequestRateChart } from "@/components/charts/request-rate-chart";
 import { TokenVolumeChart } from "@/components/charts/token-volume-chart";
@@ -49,7 +50,9 @@ function StatCard({
         {loading ? (
           <Skeleton className="h-10 w-20" />
         ) : (
-          <div className="font-display text-3xl font-semibold text-foreground">{value}</div>
+          <div className="font-display text-3xl font-semibold tabular-nums text-foreground">
+            <CountUp value={value} />
+          </div>
         )}
       </CardContent>
     </Card>
@@ -107,14 +110,14 @@ export default function DashboardPage() {
   return (
     <PermissionGuard module="dashboard">
     <div className="space-y-8">
-      <div>
+      <div className="animate-rise">
         <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("dashboard.title")}
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">{t("dashboard.overview")}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger-rise grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {!isDemo() && (
           <StatCard
             title={t("apikeys.title")}
@@ -147,17 +150,17 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="stagger-rise grid gap-4 lg:grid-cols-2">
         <ModelTrendChart />
         <RequestRateChart />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="stagger-rise grid gap-4 lg:grid-cols-2">
         <TokenVolumeChart />
         <ModelTokenBarChart />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="stagger-rise grid gap-4 lg:grid-cols-2">
         <FirstTokenLatencyChart />
         <TokenRateChart />
       </div>

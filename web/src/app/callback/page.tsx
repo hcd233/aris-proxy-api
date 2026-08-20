@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
+import { Loader2 } from "lucide-react";
 
 export default function CallbackPage() {
   const { handleCallback } = useAuth();
@@ -56,7 +57,7 @@ export default function CallbackPage() {
   if (error) {
     return (
       <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center">
+        <div className="animate-scale-in w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center">
           <h1 className="font-display text-2xl font-semibold text-destructive">
             {t("callback.login_failed")}
           </h1>
@@ -74,7 +75,8 @@ export default function CallbackPage() {
 
   return (
     <div className="page-surface flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
+      <div className="animate-rise text-center">
+        <Loader2 className="mx-auto mb-4 size-6 animate-spin text-muted-foreground" />
         <p className="font-display text-xl font-semibold text-foreground">
           {t("callback.completing")}
         </p>

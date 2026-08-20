@@ -101,40 +101,42 @@ export default function LoginPage() {
   if (processing) {
     return (
       <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
-          <p className="font-display text-3xl font-semibold text-foreground">Aris Proxy</p>
-          <p className="mt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
-        </div>
+      <div className="animate-scale-in w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
+        <p className="font-display text-3xl font-semibold text-foreground">Aris Proxy</p>
+        <p className="mt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
+      </div>
       </div>
     );
   }
 
   return (
     <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
+      <div className="animate-scale-in grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--sidebar-primary)_14%,transparent),transparent_55%)]">
           <div>
-            <div className="mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm">
+            <div className="animate-rise mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm">
               A
             </div>
-            <h1 className="font-display text-5xl font-semibold leading-none tracking-tight">
+            <h1 className="animate-rise motion-delay-1 font-display text-5xl font-semibold leading-none tracking-tight">
               Aris Proxy
             </h1>
-            <p className="mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
+            <p className="animate-rise motion-delay-2 mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
               {t("auth.login_subtitle")}
             </p>
           </div>
-          <p className="text-xs text-sidebar-foreground/50">{t("login.secure_access")}</p>
+          <p className="animate-rise motion-delay-4 text-xs text-sidebar-foreground/50">
+            {t("login.secure_access")}
+          </p>
         </div>
 
         <div className="flex flex-col justify-center p-8 md:p-10">
-          <div className="mb-8 md:hidden">
+          <div className="animate-rise motion-delay-1 mb-8 md:hidden">
             <h1 className="font-display text-5xl font-semibold tracking-tight text-foreground">
               Aris Proxy
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">{t("auth.login_subtitle")}</p>
           </div>
-          <div className="hidden md:block">
+          <div className="animate-rise motion-delay-1 hidden md:block">
             <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
               {t("login.welcome_back")}
             </h2>
@@ -142,12 +144,12 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div className="animate-fade mt-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </div>
           )}
 
-          <div className="mt-8 flex flex-col gap-3">
+          <div className="stagger-rise mt-8 flex flex-col gap-3">
             <Button size="lg" onClick={() => login("github")}>
               {t("auth.login_github")}
             </Button>
