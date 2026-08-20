@@ -83,16 +83,19 @@ func WriteUpstreamSSEError(ctx context.Context, sink port.EventSink, err error, 
 //
 // 返回 *port.ProxyError 由 adapter 映射为 HTTP JSON 响应；
 // application 不构造 Huma response，也不设置 HTTP status/header。
+// body 按 OpenAI 官方错误格式包装为 {"error": {message, type, param, code}}。
 //
 //	@param modelName string
 //	@return *port.ProxyError
 //	@author centonhuang
-//	@update 2026-07-25 10:00:00
+//	@update 2026-08-20 10:00:00
 func SendOpenAIModelNotFoundError(modelName string) *port.ProxyError {
-	body := lo.Must1(sonic.Marshal(&dto.OpenAIError{
-		Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
-		Type:    constant.OpenAIInvalidRequestErrorType,
-		Code:    constant.OpenAIModelNotFoundCode,
+	body := lo.Must1(sonic.Marshal(&dto.OpenAIErrorResponse{
+		Error: &dto.OpenAIError{
+			Message: fmt.Sprintf(constant.OpenAIModelNotFoundMessageTemplate, modelName),
+			Type:    constant.OpenAIInvalidRequestErrorType,
+			Code:    constant.OpenAIModelNotFoundCode,
+		},
 	}))
 	return &port.ProxyError{
 		StatusCode: http.StatusNotFound,

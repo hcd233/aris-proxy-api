@@ -671,9 +671,10 @@ type OpenAIModel struct {
 //	@author centonhuang
 //	@update 2026-03-10 10:00:00
 type OpenAIError struct {
-	Message string `json:"message" doc:"错误消息"`
-	Type    string `json:"type" doc:"错误类型"`
-	Code    string `json:"code" doc:"错误代码"`
+	Message string  `json:"message" doc:"错误消息"`
+	Type    string  `json:"type" doc:"错误类型"`
+	Param   *string `json:"param" doc:"触发错误的参数名，无则为 null"`
+	Code    string  `json:"code" doc:"错误代码"`
 }
 
 // OpenAIErrorResponse OpenAI错误响应包装
