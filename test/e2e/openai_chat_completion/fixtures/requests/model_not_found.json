@@ -1,0 +1,9 @@
+{
+  "model": "nonexistent-model-e2e-xyz",
+  "messages": [
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ]
+}

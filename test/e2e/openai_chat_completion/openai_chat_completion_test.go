@@ -350,6 +350,55 @@ func TestChatCompletion_ToolObjectMissingProperties_Stream(t *testing.T) {
 
 // hasSubstantiveDelta 检查一条 SSE chunk payload 是否携带了实质内容
 // （content 非空 或 reasoning_content 非空），用于判定流式链路是否真的在产 token。
+// TestChatCompletion_ModelNotFound_StandardErrorBody 回归用例：请求不存在的模型时，
+// 代理层必须以 404 + OpenAI 官方错误格式 {"error":{message,type,param,code}} 返回，
+// 而不是未包装的 {"message":...}（否则 OpenAI SDK 的 e.body 为 undefined、
+// 错误消息带 "404 " 前缀——用户感知为"404 + 空 body"）。
+func TestChatCompletion_ModelNotFound_StandardErrorBody(t *testing.T) {
+	t.Parallel()
+	baseURL, apiKey := mustE2EEnv(t)
+
+	resp := postChatCompletions(t, baseURL, apiKey, loadFixture(t, "model_not_found"))
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, want %d (traceID=%s); body: %s", resp.StatusCode, http.StatusNotFound, resp.Header.Get("X-Trace-Id"), string(body))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+	if len(respBody) == 0 {
+		t.Fatal("404 model not found must not return an empty body")
+	}
+
+	var errBody struct {
+		Error struct {
+			Message string  `json:"message"`
+			Type    string  `json:"type"`
+			Param   *string `json:"param"`
+			Code    string  `json:"code"`
+		} `json:"error"`
+	}
+	if err := sonic.Unmarshal(respBody, &errBody); err != nil {
+		t.Fatalf("response body is not valid OpenAI error JSON: %v; raw=%s", err, string(respBody))
+	}
+	if errBody.Error.Code != "model_not_found" {
+		t.Fatalf("error.code = %q, want model_not_found; raw=%s", errBody.Error.Code, string(respBody))
+	}
+	if errBody.Error.Type != "invalid_request_error" {
+		t.Fatalf("error.type = %q, want invalid_request_error; raw=%s", errBody.Error.Type, string(respBody))
+	}
+	if errBody.Error.Message == "" {
+		t.Fatalf("error.message is empty; raw=%s", string(respBody))
+	}
+	if errBody.Error.Param != nil {
+		t.Fatalf("error.param = %v, want null; raw=%s", *errBody.Error.Param, string(respBody))
+	}
+}
+
 // 只有 role 字段的空壳 chunk 返回 false。
 func hasSubstantiveDelta(payload string) bool {
 	var chunk struct {
