@@ -76,7 +76,7 @@ type ListDemoSessionsRsp struct {
 
 // AddDemoSessionsReq 批量添加白名单会话请求
 type AddDemoSessionsReq struct {
-	Body *AddDemoSessionsReqBody `json:"body" doc:"请求体"`
+	Body *AddDemoSessionsReqBody `json:"body" required:"true" doc:"请求体"`
 }
 
 // AddDemoSessionsReqBody 批量添加白名单会话请求体

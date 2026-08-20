@@ -26,7 +26,10 @@ func (h *addDemoSessionsHandler) Handle(ctx context.Context, cmd port.AddDemoSes
 		return nil, ierr.New(ierr.ErrValidation, "sessionIds is required")
 	}
 	// 校验存在性：仅存在的 session 可加入（fail-closed：查询失败拒绝全部）
-	existing := existingSessionIDs(ctx, h.readRepo, ids)
+	existing, err := existingSessionIDs(ctx, h.readRepo, ids)
+	if err != nil {
+		return nil, err
+	}
 	valid := lo.Filter(ids, func(id uint, _ int) bool { return existing[id] })
 	if err := h.demoRepo.Add(ctx, valid); err != nil {
 		return nil, err
@@ -34,16 +37,20 @@ func (h *addDemoSessionsHandler) Handle(ctx context.Context, cmd port.AddDemoSes
 	return valid, nil
 }
 
-// existingSessionIDs 返回 ids 中实际存在的会话 ID 集合；查询失败返回空集（fail-closed 拒绝添加）
-func existingSessionIDs(ctx context.Context, readRepo session.SessionReadRepository, ids []uint) map[uint]bool {
+// existingSessionIDs 返回 ids 中实际存在的会话 ID 集合。
+// 查询失败返回 error（fail-closed 拒绝添加），仅"无匹配结果"返回空 map（无 error）。
+func existingSessionIDs(ctx context.Context, readRepo session.SessionReadRepository, ids []uint) (map[uint]bool, error) {
 	param := model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: len(ids)}}
 	projections, _, err := readRepo.ListSessionsByIDs(ctx, ids, param)
-	if err != nil || len(projections) == 0 {
-		return map[uint]bool{}
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "validate demo session ids")
+	}
+	if len(projections) == 0 {
+		return map[uint]bool{}, nil
 	}
 	return lo.SliceToMap(projections, func(p *session.SessionSummaryProjection) (uint, bool) {
 		return p.ID, true
-	})
+	}), nil
 }
 
 type removeDemoSessionsHandler struct {

@@ -191,6 +191,9 @@ func (h *demoHandler) HandleListDemoSessions(ctx context.Context, req *dto.ListD
 
 // HandleAddDemoSessions 批量添加白名单会话（admin）
 func (h *demoHandler) HandleAddDemoSessions(ctx context.Context, req *dto.AddDemoSessionsReq) (*dto.HTTPResponse[*dto.ListDemoSessionsRsp], error) {
+	if req.Body == nil {
+		return nil, apiutil.NewHumaBizError(ctx, ierr.New(ierr.ErrValidation, "body is required"), ierr.ErrValidation.BizError())
+	}
 	_, err := h.addDemoSessions.Handle(ctx, port.AddDemoSessionsCommand{SessionIDs: req.Body.SessionIDs})
 	if err != nil {
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
