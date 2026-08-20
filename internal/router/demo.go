@@ -43,6 +43,7 @@ func initDemoRouter(demoGroup huma.API, demoHandler handler.DemoHandler, db *gor
 	// JWT 组：配置读取（登录用户均可）与更新（admin）
 	demoConfigGroup := huma.NewGroup(demoGroup, "/config")
 	demoConfigGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	demoConfigGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
 	huma.Register(demoConfigGroup, huma.Operation{
 		OperationID: "getDemoConfig",

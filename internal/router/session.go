@@ -17,6 +17,7 @@ import (
 
 func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	sessionGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	sessionGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessions",

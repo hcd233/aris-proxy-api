@@ -16,6 +16,7 @@ import (
 
 func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.EndpointHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	endpointGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	endpointGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 	endpointGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
 		cache, "endpointManage", constant.CtxKeyUserID, constant.PeriodManageAPIKey, constant.LimitManageAPIKey,
 	))

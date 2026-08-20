@@ -16,6 +16,7 @@ import (
 
 func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	cronGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	cronGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
 	huma.Register(cronGroup, huma.Operation{
 		OperationID: "listCronJobs",
