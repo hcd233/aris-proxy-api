@@ -14,16 +14,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 )
 
-func TestAuditService_DispatchesDemoToSampledAll(t *testing.T) {
+func TestAuditService_DispatchesDemoToFullAll(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	t1 := time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 
-	var capturedModulus uint
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria, sampleModulus uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
-			capturedModulus = sampleModulus
+		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			return nil, &model.PageInfo{Page: 1, PageSize: 20, Total: 0}, nil
 		},
 	}
@@ -43,7 +41,6 @@ func TestAuditService_DispatchesDemoToSampledAll(t *testing.T) {
 		auditquery.NewModelUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewFirstTokenLatencyHandler(repo),
 		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		fakeDemoScope{modulus: 7},
 	)
 
 	if _, _, err := svc.ListLogs(ctx, enum.PermissionDemo, 1, auditport.ListAuditLogsParams{
@@ -53,9 +50,6 @@ func TestAuditService_DispatchesDemoToSampledAll(t *testing.T) {
 	}
 	if repo.listAllCalls != 1 {
 		t.Fatalf("expected listAll called once, got %d", repo.listAllCalls)
-	}
-	if capturedModulus != 7 {
-		t.Fatalf("expected sample modulus 7 propagated, got %d", capturedModulus)
 	}
 	if repo.listByAPIKeyIDsCnt != 0 {
 		t.Fatalf("expected no byUser dispatch for demo, got %d", repo.listByAPIKeyIDsCnt)

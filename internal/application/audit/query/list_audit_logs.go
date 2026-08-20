@@ -131,8 +131,8 @@ type ListAllAuditLogsQuery struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Filter    string
-	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
-	SampleModulus uint
+	// IsDemo demo 视角标记（Task 9 补齐脱敏逻辑）
+	IsDemo bool
 }
 
 // ListAllAuditLogsHandler 全量审计列表查询处理器
@@ -161,11 +161,11 @@ func (h *listAllAuditLogsHandler) Handle(ctx context.Context, q ListAllAuditLogs
 	if err != nil {
 		return nil, nil, err
 	}
-	audits, pageInfo, err := h.repo.ListAll(ctx, param, q.StartTime, q.EndTime, criteria, q.SampleModulus)
+	audits, pageInfo, err := h.repo.ListAll(ctx, param, q.StartTime, q.EndTime, criteria)
 	if err != nil {
 		return nil, nil, err
 	}
-	views, err := buildAuditViews(ctx, h.repo, audits)
+	views, err := buildAuditViews(ctx, h.repo, audits, q.IsDemo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -221,14 +221,14 @@ func (h *listAuditLogsByUserHandler) Handle(ctx context.Context, q ListAuditLogs
 	if err != nil {
 		return nil, nil, err
 	}
-	views, err := buildAuditViews(ctx, h.repo, audits)
+	views, err := buildAuditViews(ctx, h.repo, audits, false)
 	if err != nil {
 		return nil, nil, err
 	}
 	return views, pageInfo, nil
 }
 
-func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits []*aggregate.ModelCallAudit) ([]*AuditLogView, error) {
+func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits []*aggregate.ModelCallAudit, isDemo bool) ([]*AuditLogView, error) {
 	apiKeyIDs := lo.Uniq(lo.Map(audits, func(audit *aggregate.ModelCallAudit, _ int) uint { return audit.APIKeyID() }))
 	relations, err := repo.BatchGetRelations(ctx, apiKeyIDs)
 	if err != nil {

@@ -23,10 +23,9 @@ type DemoStatusRsp struct {
 
 // DemoConfig Demo 配置实体
 type DemoConfig struct {
-	LoginEnabled  bool      `json:"loginEnabled" doc:"Whether the demo login entry is enabled"`
-	SampleModulus uint      `json:"sampleModulus" doc:"Modulus for behavior data sampling (id % K == 0, must be >= 2)"`
-	Modules       []string  `json:"modules" doc:"Open modules for the demo account"`
-	UpdatedAt     time.Time `json:"updatedAt,omitzero" doc:"Last update time"`
+	LoginEnabled bool      `json:"loginEnabled" doc:"Whether the demo login entry is enabled"`
+	Modules      []string  `json:"modules" doc:"Open modules for the demo account"`
+	UpdatedAt    time.Time `json:"updatedAt,omitzero" doc:"Last update time"`
 }
 
 // GetDemoConfigRsp 读取 Demo 配置响应
@@ -47,9 +46,8 @@ type UpdateDemoConfigReqBody struct {
 
 // DemoConfigBody Demo 配置更新体
 type DemoConfigBody struct {
-	LoginEnabled  *bool    `json:"loginEnabled,omitempty" doc:"Whether the demo login entry is enabled"`
-	SampleModulus *uint    `json:"sampleModulus,omitempty" minimum:"2" doc:"Modulus for behavior data sampling (id % K == 0, must be >= 2)"`
-	Modules       []string `json:"modules,omitempty" doc:"Open modules for the demo account (dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit)"`
+	LoginEnabled *bool    `json:"loginEnabled,omitempty" doc:"Whether the demo login entry is enabled"`
+	Modules      []string `json:"modules,omitempty" doc:"Open modules for the demo account (dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit)"`
 }
 
 // DemoSession 白名单会话摘要

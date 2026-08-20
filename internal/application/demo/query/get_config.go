@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/demo/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -46,10 +45,9 @@ func (h *getDemoConfigHandler) Handle(ctx context.Context, q port.GetDemoConfigQ
 
 func toDemoConfigView(entity *port.DemoConfigEntity) *port.DemoConfigView {
 	return &port.DemoConfigView{
-		LoginEnabled:  entity.LoginEnabled,
-		SampleModulus: entity.SampleModulus,
-		Modules:       entity.Modules,
-		UpdatedAt:     entity.UpdatedAt,
+		LoginEnabled: entity.LoginEnabled,
+		Modules:      entity.Modules,
+		UpdatedAt:    entity.UpdatedAt,
 	}
 }
 
@@ -84,41 +82,4 @@ func (a *demoModuleAccessor) IsModuleOpen(ctx context.Context, module enum.DemoM
 		return false
 	}
 	return lo.Contains(entity.Modules, module)
-}
-
-// demoScopeProvider Demo 行为数据抽样模数提供者
-type demoScopeProvider struct {
-	repo port.DemoConfigRepository
-}
-
-// NewDemoScopeProvider 构造
-//
-//	@param repo port.DemoConfigRepository
-//	@return port.DemoScopeProvider
-//	@author centonhuang
-//	@update 2026-08-16 10:00:00
-func NewDemoScopeProvider(repo port.DemoConfigRepository) port.DemoScopeProvider {
-	return &demoScopeProvider{repo: repo}
-}
-
-// SampleModulus 返回抽样模数；配置读取失败返回 error（fail-closed，调用方拒绝请求）
-//
-//	@receiver p *demoScopeProvider
-//	@param ctx context.Context
-//	@return uint
-//	@return error
-//	@author centonhuang
-//	@update 2026-08-16 10:00:00
-func (p *demoScopeProvider) SampleModulus(ctx context.Context) (uint, error) {
-	entity, err := p.repo.Get(ctx)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[DemoQuery] Read demo config failed for sample modulus", zap.Error(err))
-		return 0, err
-	}
-	if entity.SampleModulus < 2 {
-		logger.WithCtx(ctx).Warn("[DemoQuery] Sample modulus < 2, fallback to default",
-			zap.Uint("sampleModulus", entity.SampleModulus))
-		return constant.DemoDefaultSampleModulus, nil
-	}
-	return entity.SampleModulus, nil
 }

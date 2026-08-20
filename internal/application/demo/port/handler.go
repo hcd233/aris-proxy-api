@@ -11,10 +11,9 @@ import (
 
 // DemoConfigView Demo 配置视图
 type DemoConfigView struct {
-	LoginEnabled  bool
-	SampleModulus uint
-	Modules       []enum.DemoModule
-	UpdatedAt     time.Time
+	LoginEnabled bool
+	Modules      []enum.DemoModule
+	UpdatedAt    time.Time
 }
 
 // GetDemoConfigQuery 读取 Demo 配置
@@ -27,9 +26,8 @@ type GetDemoConfigHandler interface {
 
 // UpdateDemoConfigCommand 更新 Demo 配置；nil 字段表示不修改
 type UpdateDemoConfigCommand struct {
-	LoginEnabled  *bool
-	SampleModulus *uint
-	Modules       []enum.DemoModule
+	LoginEnabled *bool
+	Modules      []enum.DemoModule
 }
 
 // UpdateDemoConfigHandler 更新 Demo 配置（admin）
@@ -76,22 +74,15 @@ type DemoConfigRepository interface {
 
 // DemoConfigEntity 配置仓储实体（与 DB 解耦的基本类型）
 type DemoConfigEntity struct {
-	LoginEnabled  bool
-	SampleModulus uint
-	Modules       []enum.DemoModule
-	UpdatedAt     time.Time
+	LoginEnabled bool
+	Modules      []enum.DemoModule
+	UpdatedAt    time.Time
 }
 
 // DemoModuleAccessor Demo 模块放行判断（供权限中间件使用，读取失败 fail-closed）
 type DemoModuleAccessor interface {
 	// IsModuleOpen 判断模块是否对 Demo 开放；配置读取失败返回 false
 	IsModuleOpen(ctx context.Context, module enum.DemoModule) bool
-}
-
-// DemoScopeProvider 提供 Demo 数据视角参数（行为数据取模抽样模数）
-type DemoScopeProvider interface {
-	// SampleModulus 返回抽样模数（>=2）；配置读取失败返回 error，调用方必须拒绝请求
-	SampleModulus(ctx context.Context) (uint, error)
 }
 
 // DemoSessionRepository demo 会话白名单仓储

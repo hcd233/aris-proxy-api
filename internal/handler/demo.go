@@ -146,9 +146,8 @@ func (h *demoHandler) HandleUpdateConfig(ctx context.Context, req *dto.UpdateDem
 	rsp := &dto.GetDemoConfigRsp{}
 	body := req.Body.Config
 	view, err := h.updateConfig.Handle(ctx, port.UpdateDemoConfigCommand{
-		LoginEnabled:  body.LoginEnabled,
-		SampleModulus: body.SampleModulus,
-		Modules:       toDemoModules(body.Modules),
+		LoginEnabled: body.LoginEnabled,
+		Modules:      toDemoModules(body.Modules),
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[DemoHandler] Update demo config failed", zap.Error(err))
@@ -162,10 +161,9 @@ func toDemoConfigDTO(view *port.DemoConfigView) *dto.DemoConfig {
 	modules := make([]string, 0, len(view.Modules))
 	modules = append(modules, view.Modules...)
 	return &dto.DemoConfig{
-		LoginEnabled:  view.LoginEnabled,
-		SampleModulus: view.SampleModulus,
-		Modules:       modules,
-		UpdatedAt:     view.UpdatedAt,
+		LoginEnabled: view.LoginEnabled,
+		Modules:      modules,
+		UpdatedAt:    view.UpdatedAt,
 	}
 }
 

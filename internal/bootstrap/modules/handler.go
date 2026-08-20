@@ -124,7 +124,7 @@ func NewSessionDependencies(
 	deleteScoreSession sessionport.DeleteScoreSessionHandler,
 	sessionCache sessionport.SessionDetailCache,
 	listOption sessionport.ListSessionOptionHandler,
-	demoScope demoport.DemoScopeProvider,
+	demoAccess demoport.DemoSessionAccessor,
 ) handler.SessionDependencies {
 	return handler.SessionDependencies{
 		ListByUser:         listByUser,
@@ -139,7 +139,7 @@ func NewSessionDependencies(
 		DeleteScoreSession: deleteScoreSession,
 		SessionCache:       sessionCache,
 		ListOption:         listOption,
-		DemoScope:          demoScope,
+		DemoAccess:         demoAccess,
 	}
 }
 
