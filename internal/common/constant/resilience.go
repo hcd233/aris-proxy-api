@@ -9,3 +9,8 @@ const ResilienceWindowBucketCount = 6
 //
 //	@update 2026-08-20 10:00:00
 const CircuitOpenErrorTemplate = "circuit breaker open for upstream %s, retry after %s"
+
+// BulkheadFullErrorTemplate 信号量满载错误消息模板（参数：key、并发上限）。
+//
+//	@update 2026-08-20 10:00:00
+const BulkheadFullErrorTemplate = "bulkhead full for upstream %s (limit %d)"

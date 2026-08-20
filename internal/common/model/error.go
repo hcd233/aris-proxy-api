@@ -133,3 +133,16 @@ type CircuitOpenError struct {
 func (e *CircuitOpenError) Error() string {
 	return fmt.Sprintf(constant.CircuitOpenErrorTemplate, e.Key, e.RetryAfter)
 }
+
+// BulkheadFullError 信号量满载（等待超时）导致的快速失败错误。
+//
+//	@author centonhuang
+//	@update 2026-08-20 10:00:00
+type BulkheadFullError struct {
+	Key   string
+	Limit int
+}
+
+func (e *BulkheadFullError) Error() string {
+	return fmt.Sprintf(constant.BulkheadFullErrorTemplate, e.Key, e.Limit)
+}
