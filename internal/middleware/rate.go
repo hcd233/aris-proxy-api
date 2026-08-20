@@ -22,9 +22,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// RateLimiterOption 限流中间件可选项
-type RateLimiterOption func(*rateLimiterConfig)
-
 // rateLimiterConfig 限流中间件配置
 type rateLimiterConfig struct {
 	// permissionFilter 仅对匹配权限的用户生效；空串表示不过滤（现状行为）
@@ -32,7 +29,7 @@ type rateLimiterConfig struct {
 }
 
 // WithPermissionFilter 仅对指定权限的用户启用限流（如 demo），其余用户零开销放行
-func WithPermissionFilter(p enum.Permission) RateLimiterOption {
+func WithPermissionFilter(p enum.Permission) func(*rateLimiterConfig) {
 	return func(c *rateLimiterConfig) {
 		c.permissionFilter = p
 	}
@@ -112,7 +109,7 @@ return {tostring(tokens), "0", tostring(capacity)}
 //     @return func(ctx huma.Context, next func(huma.Context))
 //     @author centonhuang
 //     @update 2026-03-20 10:00:00
-func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, key enum.CtxKey, period time.Duration, capacity int64, opts ...RateLimiterOption) func(ctx huma.Context, next func(huma.Context)) {
+func TokenBucketRateLimiterMiddleware(cache *redis.Client, serviceName string, key enum.CtxKey, period time.Duration, capacity int64, opts ...func(*rateLimiterConfig)) func(ctx huma.Context, next func(huma.Context)) {
 	cfg := &rateLimiterConfig{}
 	for _, opt := range opts {
 		opt(cfg)
