@@ -16,7 +16,7 @@ LDFLAGS    := -s -w
 BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 
 # golangci-lint release tag (https://github.com/golangci/golangci-lint/releases)
-GOLANGCI_LINT_VERSION ?= v2.11.4
+GOLANGCI_LINT_VERSION ?= v2.12.2
 GOLANGCI_LINT         := $(shell which golangci-lint 2>/dev/null || echo $(HOME)/go/bin/golangci-lint)
 
 .PHONY: build build-server build-client build-client-all build-upx build-dev build-debug clean test test-cover lint lint-conv lint-static web-lint web-format web-format-check fgprof web-build web-clean help
