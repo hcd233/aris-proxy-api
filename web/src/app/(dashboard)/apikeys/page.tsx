@@ -33,10 +33,11 @@ import { toast } from "sonner";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PageHeader } from "@/components/page-header";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 
@@ -55,12 +56,18 @@ export default function APIKeysPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<APIKeyDetail | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.apikeys",
+    facets: [],
+    freeTextPlaceholder: t("apikeys.search_keys"),
+  });
+  const { queryParams } = filterBar;
 
   const fetchKeys = useCallback(
     async (page: number, pageSize: number, query?: string) => {
@@ -82,10 +89,10 @@ export default function APIKeysPage() {
     [t, setPersistedPage, setPersistedPageSize],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
-    fetchKeys(persistedPage, persistedPageSize);
-  }, [fetchKeys]);
+    fetchKeys(1, pageInfo.pageSize, queryParams.freeText || undefined);
+  }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleCreate = async () => {
@@ -101,7 +108,7 @@ export default function APIKeysPage() {
         setCreatedKey(rsp.key);
         setNewKeyName("");
         toast.success(t("apikeys.created_success"));
-        fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
+        fetchKeys(pageInfo.page, pageInfo.pageSize, queryParams.freeText || undefined);
       }
     } catch (err) {
       showErrorToast(err, { title: t("apikeys.create_error") });
@@ -114,7 +121,7 @@ export default function APIKeysPage() {
     onConfirm: async (key) => {
       await api.deleteAPIKey(key.id);
       toast.success(t("apikeys.deleted_success"));
-      fetchKeys(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
+      fetchKeys(pageInfo.page, pageInfo.pageSize, queryParams.freeText || undefined);
     },
     onError: (err) => showErrorToast(err, { title: t("apikeys.delete_error") }),
   });
@@ -209,14 +216,15 @@ export default function APIKeysPage() {
             <CardTitle className="font-display">{t("apikeys.your_keys")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <SearchInput
-                placeholder={t("apikeys.search_keys")}
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={() => fetchKeys(1, pageInfo.pageSize, searchQuery || undefined)}
-              />
+            {/* Search — faceted bar */}
+            <div className="mb-4 flex">
+              <FilterBar {...filterBar} facets={[]} placeholder={t("apikeys.search_keys")} />
             </div>
+            {filterBar.tokens.length > 0 && (
+              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+              </p>
+            )}
             {loading ? (
               <TableSkeleton />
             ) : keys.length === 0 ? (
@@ -286,7 +294,9 @@ export default function APIKeysPage() {
 
                 <PaginationBar
                   pageInfo={pageInfo}
-                  onChange={(page, pageSize) => fetchKeys(page, pageSize, searchQuery || undefined)}
+                  onChange={(page, pageSize) =>
+                    fetchKeys(page, pageSize, queryParams.freeText || undefined)
+                  }
                   totalLabel={t("pagination.keys")}
                 />
               </>

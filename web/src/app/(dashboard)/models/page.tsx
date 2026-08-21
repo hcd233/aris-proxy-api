@@ -56,10 +56,11 @@ import { Switch } from "@/components/ui/switch";
 import { PaginationBar } from "@/components/pagination-bar";
 import { ProviderIcon } from "@/components/provider-icon";
 import { PageHeader } from "@/components/page-header";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import ExportDialog from "@/components/export-dialog";
 import ExportClaudecodeDialog from "@/components/export-claudecode-dialog";
 import ExportCodexDialog from "@/components/export-codex-dialog";
@@ -231,7 +232,6 @@ export default function ModelsPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ModelForm>(emptyForm);
@@ -242,6 +242,13 @@ export default function ModelsPage() {
   const [exportClaudecodeDialogOpen, setExportClaudecodeDialogOpen] = useState(false);
   const [exportCodexDialogOpen, setExportCodexDialogOpen] = useState(false);
   const [exportPiDialogOpen, setExportPiDialogOpen] = useState(false);
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.models",
+    facets: [],
+    freeTextPlaceholder: t("models.search_placeholder"),
+  });
+  const { queryParams } = filterBar;
 
   const fetchData = useCallback(
     async (page: number, pageSize: number, query?: string) => {
@@ -275,15 +282,20 @@ export default function ModelsPage() {
     }
   }, [t]);
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
+  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchData(persistedPage, persistedPageSize);
     fetchEndpoints();
-  }, [fetchData, fetchEndpoints]);
+  }, [fetchEndpoints]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
+  useEffect(() => {
+    fetchData(1, pageInfo.pageSize, queryParams.freeText || undefined);
+  }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchData(page, pageSize ?? pageInfo.pageSize, searchQuery || undefined);
+    fetchData(page, pageSize ?? pageInfo.pageSize, queryParams.freeText || undefined);
 
   const openCreate = () => {
     setEditingId(null);
@@ -352,7 +364,7 @@ export default function ModelsPage() {
         toast.success(t("models.created_success"));
       }
       setDialogOpen(false);
-      fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
+      fetchData(pageInfo.page, pageInfo.pageSize, queryParams.freeText || undefined);
     } catch (err) {
       showErrorToast(err, { title: t("models.save_error") });
     } finally {
@@ -364,7 +376,7 @@ export default function ModelsPage() {
     onConfirm: async (model) => {
       await api.deleteModel(model.id);
       toast.success(t("models.deleted_success"));
-      fetchData(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
+      fetchData(pageInfo.page, pageInfo.pageSize, queryParams.freeText || undefined);
     },
     onError: (err) => showErrorToast(err, { title: t("models.delete_error") }),
   });
@@ -484,14 +496,18 @@ export default function ModelsPage() {
               <CardTitle className="font-display">{t("models.all_models")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
-                <SearchInput
-                  placeholder={t("models.search_placeholder")}
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  onSearch={() => fetchData(1, pageInfo.pageSize, searchQuery || undefined)}
-                />
+              {/* Search — faceted bar */}
+              <div className="mb-4 flex">
+                <FilterBar {...filterBar} facets={[]} placeholder={t("models.search_placeholder")} />
               </div>
+              {filterBar.tokens.length > 0 && (
+                <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                  {t("filter_bar.applied_count").replace(
+                    "{count}",
+                    String(filterBar.tokens.length),
+                  )}
+                </p>
+              )}
               {loading ? (
                 <TableSkeleton />
               ) : models.length === 0 ? (
