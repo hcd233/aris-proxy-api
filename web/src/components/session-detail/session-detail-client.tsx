@@ -372,6 +372,8 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         pending={pending}
         loginEnabled={loginEnabled}
         onToggle={toggle}
+        className="size-10"
+        iconClassName="size-5"
       />
 
       <TooltipProvider>
