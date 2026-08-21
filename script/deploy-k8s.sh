@@ -167,7 +167,7 @@ spec:
       containers:
       - name: db-migrate
         image: ${IMAGE}
-        imagePullPolicy: Always
+        imagePullPolicy: ${PULL_POLICY}
         command: ["/app/aris-proxy-api", "database", "migrate"]
         envFrom:
         - configMapRef:
@@ -206,9 +206,14 @@ git -C "${REPO_DIR}" fetch --prune origin
 git -C "${REPO_DIR}" pull --ff-only origin "${BRANCH_NAME}"
 
 COMMIT_SHA=$(git -C "${REPO_DIR}" rev-parse --short=7 HEAD)
-IMAGE_TAG="${DEPLOY_IMAGE_TAG:-master}"
-IMAGE="ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}"
-log "Deploying to k3s (branch: ${BRANCH_NAME}, commit: ${COMMIT_SHA}, image: ${IMAGE})"
+# DEPLOY_IMAGE（CI 传入）为 digest 引用，精确且可配 IfNotPresent 跳过重复拉取校验；
+# 手动部署回退到 master tag + Always
+IMAGE="${DEPLOY_IMAGE:-ghcr.io/hcd233/aris-proxy-api:${DEPLOY_IMAGE_TAG:-master}}"
+PULL_POLICY="Always"
+if [[ "${IMAGE}" == *"@"* ]]; then
+  PULL_POLICY="IfNotPresent"
+fi
+log "Deploying to k3s (branch: ${BRANCH_NAME}, commit: ${COMMIT_SHA}, image: ${IMAGE}, pull: ${PULL_POLICY})"
 
 kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${NAMESPACE}"
 
@@ -233,7 +238,9 @@ log "Running database migration job ${MIGRATION_JOB}"
 run_migration
 
 log "Applying deployment and service"
-sed "s|ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER|${IMAGE}|g" "${K8S_DIR}/deployment.yaml" | kubectl apply -f -
+sed -e "s|ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER|${IMAGE}|g" \
+    -e "s|imagePullPolicy: Always|imagePullPolicy: ${PULL_POLICY}|g" \
+    "${K8S_DIR}/deployment.yaml" | kubectl apply -f -
 kubectl apply -f "${K8S_DIR}/service.yaml"
 
 log "Cleaning up stuck pods before rollout (if any)"

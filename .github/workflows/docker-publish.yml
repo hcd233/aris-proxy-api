@@ -36,6 +36,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -102,6 +104,7 @@ jobs:
             type=sha
 
       - name: Build and push image
+        id: image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -133,6 +136,7 @@ jobs:
             cd ${{ secrets.PRODUCTION_REPO_PATH }}
             git fetch --prune origin
             git reset --hard origin/master
+            export DEPLOY_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
             bash script/deploy-k8s.sh
             for i in $(seq 1 60); do
               if curl -kfsS --max-time 5 https://api.lvlvko.top/health; then

@@ -61,10 +61,12 @@ spec:
           httpGet:
             path: /ready
             port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 3
-          failureThreshold: 6
+          # /ready 为纯内存 draining 标志检查（毫秒级），收紧探测粒度加快滚动就绪；
+          # failureThreshold×periodSeconds=60s 与旧配置（6×10）等价，draining 下线节奏不变
+          initialDelaySeconds: 0
+          periodSeconds: 2
+          timeoutSeconds: 1
+          failureThreshold: 30
         resources:
           requests:
             cpu: 50m
