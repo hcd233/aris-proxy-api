@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, MessageSquare, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
-import { useT } from "@/lib/i18n";
+import { useI18n, useT } from "@/lib/i18n";
 import type { DemoSession, PageInfo, SessionSummary } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -31,6 +30,12 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { cn, formatDateTime } from "@/lib/utils";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
+import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
+import { TimeRangePicker } from "@/components/ui/time-range-picker";
+import type { TimeRangeKey } from "@/lib/time-range";
+import { computeRange } from "@/lib/time-range";
 
 /** 两个列表共用的行结构（DemoSession 与 SessionSummary 均可赋值） */
 interface SessionRow {
@@ -215,6 +220,7 @@ export function DemoSessionsManager() {
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   // ─── 选择器（候选 sessions） ─────────────────────────────────────────────
+  const { locale } = useI18n();
   const [candidates, setCandidates] = useState<SessionSummary[]>([]);
   const [candidatePage, setCandidatePage] = usePersistentState(
     "dashboard.demo.candidates.page",
@@ -230,22 +236,45 @@ export function DemoSessionsManager() {
     total: 0,
   });
   const [candidateLoading, setCandidateLoading] = useState(true);
-  const [candidateSearchInput, setCandidateSearchInput] = usePersistentState(
-    "dashboard.demo.candidates.searchInput",
+  const [candidateTimeRange, setCandidateTimeRange] = usePersistentState<TimeRangeKey>(
+    "dashboard.demo.candidates.timeRange",
+    "30d",
+  );
+  const [candidateCustomStart, setCandidateCustomStart] = usePersistentState(
+    "dashboard.demo.candidates.customStart",
     "",
   );
-  const [candidateKeyword, setCandidateKeyword] = usePersistentState(
-    "dashboard.demo.candidates.keyword",
+  const [candidateCustomEnd, setCandidateCustomEnd] = usePersistentState(
+    "dashboard.demo.candidates.customEnd",
     "",
   );
   const [candidateIds, setCandidateIds] = useState<Set<number>>(new Set());
   const [adding, setAdding] = useState(false);
 
+  interface CandidatesQuery {
+    page: number;
+    pageSize: number;
+    qp: FilterBarQueryParams;
+    range?: { key: TimeRangeKey; cs: string; ce: string };
+  }
+
   const fetchCandidates = useCallback(
-    async (page: number, pageSize: number, keyword?: string) => {
+    async (q: CandidatesQuery) => {
       setCandidateLoading(true);
       try {
-        const rsp = await api.listSessions({ page, pageSize, keyword: keyword || undefined });
+        const { startTime, endTime } = computeRange(
+          q.range?.key ?? candidateTimeRange,
+          q.range?.cs ?? candidateCustomStart,
+          q.range?.ce ?? candidateCustomEnd,
+        );
+        const rsp = await api.listSessions({
+          page: q.page,
+          pageSize: q.pageSize,
+          startTime,
+          endTime,
+          keyword: q.qp.freeText || undefined,
+          filter: q.qp.filter,
+        });
         setCandidates(rsp.sessions ?? []);
         if (rsp.pageInfo) {
           setCandidatePageInfo(rsp.pageInfo);
@@ -259,34 +288,66 @@ export function DemoSessionsManager() {
         setCandidateLoading(false);
       }
     },
-    [setCandidatePage, setCandidatePageSize, t],
+    [
+      candidateTimeRange,
+      candidateCustomStart,
+      candidateCustomEnd,
+      setCandidatePage,
+      setCandidatePageSize,
+      t,
+    ],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial fetch on mount with persisted pagination and keyword */
+  const fetchOptionsFor = useCallback(
+    (field: "score" | "model" | "messageCount") => async () => {
+      const { startTime, endTime } = computeRange(
+        candidateTimeRange,
+        candidateCustomStart,
+        candidateCustomEnd,
+      );
+      const rsp = await api.listSessionOptions({ field, startTime, endTime });
+      return rsp.items ?? [];
+    },
+    [candidateTimeRange, candidateCustomStart, candidateCustomEnd],
+  );
+
+  const facets = useMemo<FacetDef[]>(
+    () => [
+      {
+        key: "score",
+        label: t("sessions.filter_score"),
+        options: fetchOptionsFor("score"),
+        formatValue: (v) => (v === "unscored" ? t("sessions.filter_unscored") : `★${v}`),
+      },
+      { key: "model", label: t("sessions.filter_model"), options: fetchOptionsFor("model") },
+      {
+        key: "messageCount",
+        label: t("sessions.filter_message_count"),
+        options: fetchOptionsFor("messageCount"),
+      },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, fetchOptionsFor],
+  );
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.demo.candidates",
+    facets,
+    freeTextPlaceholder: t("demo.search_placeholder"),
+    legacyKeys: {
+      keyword: "dashboard.demo.candidates.keyword",
+    },
+    legacyFreeTextKey: "dashboard.demo.candidates.searchInput",
+    optionsCacheKey: `${candidateTimeRange}:${candidateCustomStart}:${candidateCustomEnd}`,
+  });
+  const { queryParams } = filterBar;
+
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial fetch on mount with persisted pagination and filters */
   useEffect(() => {
-    fetchCandidates(candidatePage, candidatePageSize, candidateKeyword || undefined);
-  }, [fetchCandidates]);
+    fetchCandidates({ page: candidatePage, pageSize: candidatePageSize, qp: queryParams });
+  }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-
-  const handleCandidateSearch = useCallback(() => {
-    const kw = candidateSearchInput.trim();
-    setCandidateKeyword(kw);
-    setCandidatePage(1);
-    fetchCandidates(1, candidatePageSize, kw || undefined);
-  }, [
-    candidatePageSize,
-    candidateSearchInput,
-    fetchCandidates,
-    setCandidateKeyword,
-    setCandidatePage,
-  ]);
-
-  const clearCandidateSearch = useCallback(() => {
-    setCandidateSearchInput("");
-    setCandidateKeyword("");
-    setCandidatePage(1);
-    fetchCandidates(1, candidatePageSize, undefined);
-  }, [candidatePageSize, fetchCandidates, setCandidateKeyword, setCandidatePage, setCandidateSearchInput]);
 
   const toggleSelectedId = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -406,28 +467,45 @@ export function DemoSessionsManager() {
           <CardDescription>{t("demo.selector_desc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <SearchInput
-              className="sm:max-w-xs"
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <TimeRangePicker
+              value={candidateTimeRange}
+              customStart={candidateCustomStart}
+              customEnd={candidateCustomEnd}
+              onChange={(key, cs, ce) => {
+                setCandidateTimeRange(key);
+                setCandidateCustomStart(cs);
+                setCandidateCustomEnd(ce);
+                fetchCandidates({
+                  page: 1,
+                  pageSize: candidatePageSize,
+                  qp: queryParams,
+                  range: { key, cs, ce },
+                });
+              }}
+            />
+            <FilterBar
+              {...filterBar}
+              facets={facets}
               placeholder={t("demo.search_placeholder")}
-              value={candidateSearchInput}
-              onChange={setCandidateSearchInput}
-              onSearch={handleCandidateSearch}
-              clearable
-              onClear={clearCandidateSearch}
             />
             {candidateIds.size > 0 && (
               <Button
                 size="sm"
                 disabled={adding}
                 onClick={handleAdd}
-                className="gap-1.5 sm:ml-auto"
+                className="gap-1.5 md:ml-auto"
               >
                 <Plus className="size-3.5" />
                 {t("demo.add_selected")} {candidateIds.size}
               </Button>
             )}
           </div>
+          {filterBar.tokens.length > 0 && (
+            <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+              {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+            </p>
+          )}
 
           {candidateLoading ? (
             <TableSkeleton rows={3} />
@@ -445,7 +523,7 @@ export function DemoSessionsManager() {
           <PaginationBar
             pageInfo={candidatePageInfo}
             onChange={(page, pageSize) =>
-              fetchCandidates(page, pageSize, candidateKeyword || undefined)
+              fetchCandidates({ page, pageSize, qp: queryParams })
             }
             totalLabel={t("pagination.sessions")}
           />
