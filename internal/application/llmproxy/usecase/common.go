@@ -103,20 +103,20 @@ func guardRejectedProxyError(cause error, protocol enum.ProtocolKind, body []byt
 	}
 }
 
-// guardOpenFallbackBody 熔断打开的降级错误体（按协议格式）。
+// guardOpenFallbackBody 熔断打开的降级错误体（按协议格式；type 用官方枚举，不暴露内部实现语义）。
 func guardOpenFallbackBody(protocol enum.ProtocolKind) []byte {
 	if protocol == enum.ProtocolKindAnthropic {
 		return []byte(`{"type":"error","error":{"type":"overloaded_error","message":"上游服务暂时不可用，请稍后重试或更换模型"}}`)
 	}
-	return []byte(`{"error":{"message":"上游服务暂时不可用，请稍后重试或更换模型","type":"circuit_open","code":503}}`)
+	return []byte(`{"error":{"message":"上游服务暂时不可用，请稍后重试或更换模型","type":"server_error","code":"circuit_open"}}`)
 }
 
-// guardFullFallbackBody 信号量满载的降级错误体（按协议格式）。
+// guardFullFallbackBody 信号量满载的降级错误体（按协议格式；type 用官方枚举，不暴露内部实现语义）。
 func guardFullFallbackBody(protocol enum.ProtocolKind) []byte {
 	if protocol == enum.ProtocolKindAnthropic {
 		return []byte(`{"type":"error","error":{"type":"overloaded_error","message":"上游负载过高，请稍后重试"}}`)
 	}
-	return []byte(`{"error":{"message":"上游负载过高，请稍后重试","type":"bulkhead_full","code":503}}`)
+	return []byte(`{"error":{"message":"上游负载过高，请稍后重试","type":"server_error","code":"bulkhead_full"}}`)
 }
 
 // extractUpstreamStatusAndError 从 err 提取上游状态码与错误信息，用于审计任务。

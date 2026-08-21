@@ -126,21 +126,28 @@ func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {
 // doUpstreamRequest 构建并发送上游 HTTP 请求：先过容错守卫（熔断/信号量），再对可重试错误自动重试。
 // ctx 融合 drain 广播：优雅退出 soft deadline 到达时取消上游连接，
 // 使阻塞的 SSE 读循环返回 context canceled（礼貌断流的前半段）。
+// bulkhead 槽位与熔断上报绑定到返回 body 的 Close（见 BindLease）：
+// 流式响应在整个消费阶段占用并发槽，流中断计入熔断窗口。
 func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
 	ctx = p.tracker.CancelOnDrain(ctx)
 	key := EndpointKey(ep)
-	release, err := p.guard.Allow(ctx, key)
+	lease, err := p.guard.Allow(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	sendFn := func() (*http.Response, error) {
 		return p.sendUpstreamRequestOnce(ctx, ep, body, pathSuffix)
 	}
 	resp, err := SendUpstreamWithRetry(ctx, constant.ModuleOpenAIProxy, sendFn)
-	p.guard.Report(key, !IsCircuitError(err))
-	return resp, err
+	if err != nil || resp == nil {
+		// 未拿到响应体：立即结束租约并上报结果
+		lease.Done(!IsCircuitError(err))
+		return resp, err
+	}
+	// 响应头已到达；成功与否延迟到 body 消费完成时判定上报
+	resp.Body = p.guard.BindLease(resp.Body, lease, true)
+	return resp, nil
 }
 
 // sendUpstreamRequestOnce 执行单次上游 HTTP 请求发送（不含重试逻辑）

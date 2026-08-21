@@ -120,3 +120,68 @@ func TestGuardIntegration_OpenThenRecover(t *testing.T) { //nolint:paralleltest 
 		t.Fatalf("steady state request failed: %v", err)
 	}
 }
+
+// TestGuardLease_BulkheadHeldUntilBodyClose 验证 bulkhead 槽位在响应 body Close 前持续占用：
+// MaxConcurrent=1 时，第一个流未消费完（body 未 Close）则第二个请求满载拒绝；
+// Close 后槽位释放，后续请求恢复放行。
+func TestGuardLease_BulkheadHeldUntilBodyClose(t *testing.T) { //nolint:paralleltest // modifies global config
+	orig := []any{
+		config.UpstreamCircuitEnabled,
+		config.UpstreamBulkheadEnabled,
+		config.UpstreamBulkheadMaxConcurrent,
+		config.UpstreamBulkheadAcquireTimeout,
+	}
+	t.Cleanup(func() {
+		config.UpstreamCircuitEnabled = orig[0].(bool)
+		config.UpstreamBulkheadEnabled = orig[1].(bool)
+		config.UpstreamBulkheadMaxConcurrent = orig[2].(int)
+		config.UpstreamBulkheadAcquireTimeout = orig[3].(time.Duration)
+	})
+	config.UpstreamCircuitEnabled = false // 只验证 bulkhead 路径
+	config.UpstreamBulkheadEnabled = true
+	config.UpstreamBulkheadMaxConcurrent = 1
+	config.UpstreamBulkheadAcquireTimeout = 20 * time.Millisecond
+
+	// 上游挂起不返回，模拟慢流：响应头已到但 body 持续可读
+	releaseBody := make(chan struct{})
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: hello\n\n"))
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		<-releaseBody // 挂住连接，直到测试放行
+	}))
+	defer func() { close(releaseBody); mock.Close() }()
+
+	guard := transport.NewEndpointGuard(nil)
+	proxy := transport.NewOpenAIProxy(inflight.NewTracker(), guard)
+	ep := vo.UpstreamEndpoint{Model: "m", APIKey: "k", BaseURL: mock.URL}
+	ctx := context.Background()
+
+	stream, err := proxy.OpenChatCompletionStream(ctx, ep, []byte(`{"messages":[]}`))
+	if err != nil {
+		t.Fatalf("first stream should pass: %v", err)
+	}
+
+	// body 未 Close：唯一槽位被占用，第二个请求应满载拒绝
+	_, err = proxy.OpenChatCompletionStream(ctx, ep, []byte(`{"messages":[]}`))
+	var bf *model.BulkheadFullError
+	if !errors.As(err, &bf) {
+		t.Fatalf("err = %v, want BulkheadFullError while lease held", err)
+	}
+
+	// Close body → 租约结束、槽位释放 → 恢复放行
+	if cerr := stream.Close(); cerr != nil {
+		t.Fatalf("close stream: %v", cerr)
+	}
+	waitUntil(t, 2*time.Second, func() bool {
+		s, serr := proxy.OpenChatCompletionStream(ctx, ep, []byte(`{"messages":[]}`))
+		if serr != nil {
+			return false
+		}
+		_ = s.Close()
+		return true
+	}, "slot released after body close")
+}

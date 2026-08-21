@@ -2,6 +2,7 @@
 package transport_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -13,8 +14,18 @@ import (
 func TestEndpointKey(t *testing.T) {
 	t.Parallel()
 	ep := vo.UpstreamEndpoint{Model: "m", APIKey: "secret-key", BaseURL: "https://api.example.com"}
-	if got := transport.EndpointKey(ep); got != "https://api.example.com|secret-key" {
-		t.Fatalf("EndpointKey = %q", got)
+	got := transport.EndpointKey(ep)
+	// APIKey 不得明文出现在 key 中（key 会进入 Prometheus label 与错误消息）
+	if strings.Contains(got, "secret-key") {
+		t.Fatalf("EndpointKey = %q, must not contain raw APIKey", got)
+	}
+	// 同 baseURL 同 key 稳定；不同 key 可区分
+	if got != transport.EndpointKey(ep) {
+		t.Fatal("EndpointKey not stable for same endpoint")
+	}
+	ep2 := vo.UpstreamEndpoint{Model: "m", APIKey: "other-key", BaseURL: "https://api.example.com"}
+	if got == transport.EndpointKey(ep2) {
+		t.Fatal("EndpointKey must differ for different APIKeys")
 	}
 }
 

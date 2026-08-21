@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 )
 
@@ -33,6 +34,27 @@ func TestUpstreamCircuitEnv(t *testing.T) {
 		"UPSTREAM_CIRCUIT_WINDOW=10s",
 		"UPSTREAM_CIRCUIT_MIN_REQUESTS=5",
 		"UPSTREAM_BULKHEAD_MAX_CONCURRENT=16",
+		"_UPSTREAM_CIRCUIT_CHECK=1",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("subprocess failed: %v\n%s", err, out)
+	}
+}
+
+// TestUpstreamCircuitWindowClamp 验证窗口小于桶数秒数时被 clamp 到下界（防 record 桶索引除零 panic）。
+func TestUpstreamCircuitWindowClamp(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("_UPSTREAM_CIRCUIT_CHECK") == "1" {
+		config.InitEnvironment()
+		if config.UpstreamCircuitWindow != constant.ResilienceMinWindow {
+			t.Fatalf("UpstreamCircuitWindow = %v, want clamped to %v", config.UpstreamCircuitWindow, constant.ResilienceMinWindow)
+		}
+		return
+	}
+
+	cmd := exec.CommandContext(context.Background(), os.Args[0], "-test.run=TestUpstreamCircuitWindowClamp")
+	cmd.Env = append(os.Environ(),
+		"UPSTREAM_CIRCUIT_WINDOW=1s",
 		"_UPSTREAM_CIRCUIT_CHECK=1",
 	)
 	if out, err := cmd.CombinedOutput(); err != nil {

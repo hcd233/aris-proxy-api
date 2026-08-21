@@ -348,8 +348,6 @@ func TestChatCompletion_ToolObjectMissingProperties_Stream(t *testing.T) {
 	t.Logf("stream ok (traceID=%s, data_lines_before_substance=%d): %s", traceID, dataLines, firstDelta)
 }
 
-// hasSubstantiveDelta 检查一条 SSE chunk payload 是否携带了实质内容
-// （content 非空 或 reasoning_content 非空），用于判定流式链路是否真的在产 token。
 // TestChatCompletion_ModelNotFound_StandardErrorBody 回归用例：请求不存在的模型时，
 // 代理层必须以 404 + OpenAI 官方错误格式 {"error":{message,type,param,code}} 返回，
 // 而不是未包装的 {"message":...}（否则 OpenAI SDK 的 e.body 为 undefined、
@@ -399,6 +397,8 @@ func TestChatCompletion_ModelNotFound_StandardErrorBody(t *testing.T) {
 	}
 }
 
+// hasSubstantiveDelta 检查一条 SSE chunk payload 是否携带了实质内容
+// （content 非空 或 reasoning_content 非空），用于判定流式链路是否真的在产 token。
 // 只有 role 字段的空壳 chunk 返回 false。
 func hasSubstantiveDelta(payload string) bool {
 	var chunk struct {

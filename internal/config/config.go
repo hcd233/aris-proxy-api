@@ -374,7 +374,7 @@ func InitEnvironment() {
 	UpstreamRetryJitterFactor = config.GetFloat64("upstream.retry.jitter_factor")
 
 	UpstreamCircuitEnabled = config.GetBool("upstream.circuit.enabled")
-	UpstreamCircuitWindow = config.GetDuration("upstream.circuit.window")
+	UpstreamCircuitWindow = max(config.GetDuration("upstream.circuit.window"), constant.ResilienceMinWindow)
 	UpstreamCircuitMinRequests = config.GetInt("upstream.circuit.min_requests")
 	UpstreamCircuitErrorThreshold = config.GetFloat64("upstream.circuit.error_threshold")
 	UpstreamCircuitOpenTimeout = config.GetDuration("upstream.circuit.open_timeout")

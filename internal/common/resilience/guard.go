@@ -81,11 +81,14 @@ func NewGuard(cfg GuardConfig, metrics Metrics) *Guard {
 //	@author centonhuang
 //	@update 2026-08-20 10:00:00
 func (g *Guard) Allow(ctx context.Context, key string) (func(), error) {
-	if g.cfg.CircuitEnabled && !g.breaker(key).Allow() {
-		if g.metrics != nil {
-			g.metrics.IncCircuitRejected(key)
+	if g.cfg.CircuitEnabled {
+		b := g.breaker(key)
+		if !b.Allow() {
+			if g.metrics != nil {
+				g.metrics.IncCircuitRejected(key)
+			}
+			return nil, &model.CircuitOpenError{Key: key, RetryAfter: b.RetryAfter()}
 		}
-		return nil, &model.CircuitOpenError{Key: key, RetryAfter: g.breaker(key).RetryAfter()}
 	}
 	if g.cfg.BulkheadEnabled {
 		release, err := g.sem.Acquire(ctx, key)

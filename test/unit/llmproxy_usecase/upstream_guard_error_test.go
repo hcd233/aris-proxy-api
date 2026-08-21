@@ -23,8 +23,9 @@ func TestProxyErrorFromUpstream_CircuitOpen(t *testing.T) {
 	if pe.Headers[constant.HTTPHeaderRetryAfter] != "3" {
 		t.Fatalf("Retry-After = %q, want 3", pe.Headers[constant.HTTPHeaderRetryAfter])
 	}
-	if !strings.Contains(string(pe.Body), `"circuit_open"`) {
-		t.Fatalf("Body = %s, want circuit_open error type", pe.Body)
+	// type 为官方枚举 server_error；内部实现语义仅保留在 code 字段
+	if !strings.Contains(string(pe.Body), `"code":"circuit_open"`) {
+		t.Fatalf("Body = %s, want circuit_open error code", pe.Body)
 	}
 	if pe.Cause != err {
 		t.Fatalf("Cause not preserved")
@@ -56,8 +57,8 @@ func TestProxyErrorFromUpstream_BulkheadFull(t *testing.T) {
 	if pe.Headers[constant.HTTPHeaderRetryAfter] != "5" {
 		t.Fatalf("Retry-After = %q, want 5", pe.Headers[constant.HTTPHeaderRetryAfter])
 	}
-	if !strings.Contains(string(pe.Body), `"bulkhead_full"`) {
-		t.Fatalf("Body = %s, want bulkhead_full error type", pe.Body)
+	if !strings.Contains(string(pe.Body), `"code":"bulkhead_full"`) {
+		t.Fatalf("Body = %s, want bulkhead_full error code", pe.Body)
 	}
 }
 
