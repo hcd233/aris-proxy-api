@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { AuditLogItem, PageInfo } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -18,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PaginationBar } from "@/components/pagination-bar";
-import { ScrollText, Search, X } from "lucide-react";
+import { ScrollText } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,7 +31,9 @@ import {
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-import { MultiSelectPill } from "@/components/ui/multi-select-pill";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
+import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -67,67 +67,67 @@ function formatMs(ms: number): string {
   return `${ms}ms`;
 }
 
-function buildAuditFilter(
-  user: string[],
-  model: string[],
-  status: string[],
-  ua: string[],
-): string | undefined {
-  const parts: string[] = [];
-  if (user.length) parts.push(`user:${user.join("|")}`);
-  if (model.length) parts.push(`model:${model.join("|")}`);
-  if (status.length) parts.push(`status:${status.join("|")}`);
-  // ua 值可能含空格，统一加引号包裹；多值用 | 连接（filter 解析器保留引号内空格）
-  if (ua.length) parts.push(`ua:${ua.map((v) => `"${v}"`).join("|")}`);
-  return parts.length > 0 ? parts.join(" ") : undefined;
-}
-
 export default function AuditPage() {
   const isMobile = useIsMobile();
   const t = useT();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [filterUser, setFilterUser] = useState<string[]>([]);
-  const [filterModel, setFilterModel] = useState<string[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string[]>([]);
-  const [filterUA, setFilterUA] = useState<string[]>([]);
-  const [userOptions, setUserOptions] = useState<string[]>([]);
-  const [modelOptions, setModelOptions] = useState<string[]>([]);
-  const [statusOptions, setStatusOptions] = useState<string[]>([]);
-  const [uaOptions, setUAOptions] = useState<string[]>([]);
+
+  const fetchOptionsFor = useCallback(
+    (field: "user" | "model" | "status" | "ua") => async () => {
+      const { startTime, endTime } = computeRange(timeRange, customStart, customEnd);
+      const rsp = await api.listAuditOptions({ field, startTime, endTime });
+      return rsp.items ?? [];
+    },
+    [timeRange, customStart, customEnd],
+  );
+
+  const facets = useMemo<FacetDef[]>(
+    () => [
+      { key: "user", label: t("audit.filter_user"), options: fetchOptionsFor("user") },
+      { key: "model", label: t("audit.filter_model"), options: fetchOptionsFor("model") },
+      { key: "status", label: t("audit.filter_status"), options: fetchOptionsFor("status") },
+      { key: "ua", label: t("audit.filter_ua"), options: fetchOptionsFor("ua") },
+    ],
+    [t, fetchOptionsFor],
+  );
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.auditModel",
+    facets,
+    freeTextPlaceholder: t("audit.search_placeholder"),
+    optionsCacheKey: `${timeRange}:${customStart}:${customEnd}`,
+  });
+  const { queryParams } = filterBar;
+
+  interface AuditLogsQuery {
+    page: number;
+    pageSize: number;
+    range: TimeRangeKey;
+    cs: string;
+    ce: string;
+    qp: FilterBarQueryParams;
+  }
 
   const fetchLogs = useCallback(
-    async (
-      page: number,
-      pageSize: number,
-      query: string,
-      range: TimeRangeKey,
-      cs: string,
-      ce: string,
-      user: string[],
-      model: string[],
-      status: string[],
-      ua: string[],
-    ) => {
+    async (q: AuditLogsQuery) => {
       setLoading(true);
       try {
-        const { startTime, endTime } = computeRange(range, cs, ce);
-        const filter = buildAuditFilter(user, model, status, ua);
+        const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
         const rsp = await api.listAuditLogs({
-          page,
-          pageSize,
-          query: query || undefined,
+          page: q.page,
+          pageSize: q.pageSize,
+          query: q.qp.freeText || undefined,
           sort: "desc",
           sortField: "created_at",
           startTime,
           endTime,
-          filter,
+          filter: q.qp.filter,
         });
         if (rsp.error) {
           showErrorToast(rsp.error, { title: t("common.error") });
@@ -144,50 +144,21 @@ export default function AuditPage() {
     [t],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Initial data fetch on mount */
-  useEffect(() => {
-    fetchLogs(1, 20, "", "24h", "", "", [], [], [], []);
-  }, [fetchLogs]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const currentQuery = (): Omit<AuditLogsQuery, "page" | "pageSize"> => ({
+    range: timeRange,
+    cs: customStart,
+    ce: customEnd,
+    qp: queryParams,
+  });
 
-  const fetchOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
-    const { startTime, endTime } = computeRange(range, cs, ce);
-    const params = { startTime, endTime };
-    try {
-      const [userRsp, modelRsp, statusRsp, uaRsp] = await Promise.all([
-        api.listAuditOptions({ field: "user", ...params }),
-        api.listAuditOptions({ field: "model", ...params }),
-        api.listAuditOptions({ field: "status", ...params }),
-        api.listAuditOptions({ field: "ua", ...params }),
-      ]);
-      if (!userRsp.error && userRsp.items) setUserOptions(userRsp.items);
-      if (!modelRsp.error && modelRsp.items) setModelOptions(modelRsp.items);
-      if (!statusRsp.error && statusRsp.items) setStatusOptions(statusRsp.items);
-      if (!uaRsp.error && uaRsp.items) setUAOptions(uaRsp.items);
-    } catch (err) {
-      console.error("Failed to load audit options:", err);
-    }
-  }, []);
-
-  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch filter options when the time range changes */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
   useEffect(() => {
-    fetchOptions(timeRange, customStart, customEnd);
-  }, [timeRange, customStart, customEnd, fetchOptions]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    fetchLogs({ page: 1, pageSize: pageInfo.pageSize, ...currentQuery() });
+  }, [queryParams]);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchLogs(
-      page,
-      pageSize ?? pageInfo.pageSize,
-      searchQuery,
-      timeRange,
-      customStart,
-      customEnd,
-      filterUser,
-      filterModel,
-      filterStatus,
-      filterUA,
-    );
+    fetchLogs({ page, pageSize: pageSize ?? pageInfo.pageSize, ...currentQuery() });
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
@@ -212,156 +183,30 @@ export default function AuditPage() {
           <CardTitle className="font-display">{t("audit.logs_title")}</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Filters */}
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <TimeRangePicker
-                value={timeRange}
-                customStart={customStart}
-                customEnd={customEnd}
-                onChange={(key, cs, ce) => {
-                  setTimeRange(key);
-                  setCustomStart(cs);
-                  setCustomEnd(ce);
-                  fetchLogs(
-                    1,
-                    pageInfo.pageSize,
-                    searchQuery,
-                    key,
-                    cs,
-                    ce,
-                    filterUser,
-                    filterModel,
-                    filterStatus,
-                    filterUA,
-                  );
-                }}
-              />
-              <MultiSelectPill
-                label={t("audit.filter_user")}
-                options={userOptions}
-                value={filterUser}
-                onChange={(v) => {
-                  setFilterUser(v);
-                  fetchLogs(
-                    1,
-                    pageInfo.pageSize,
-                    searchQuery,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    v,
-                    filterModel,
-                    filterStatus,
-                    filterUA,
-                  );
-                }}
-              />
-              <MultiSelectPill
-                label={t("audit.filter_model")}
-                options={modelOptions}
-                value={filterModel}
-                onChange={(v) => {
-                  setFilterModel(v);
-                  fetchLogs(
-                    1,
-                    pageInfo.pageSize,
-                    searchQuery,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    filterUser,
-                    v,
-                    filterStatus,
-                    filterUA,
-                  );
-                }}
-              />
-              <MultiSelectPill
-                label={t("audit.filter_status")}
-                options={statusOptions}
-                value={filterStatus}
-                onChange={(v) => {
-                  setFilterStatus(v);
-                  fetchLogs(
-                    1,
-                    pageInfo.pageSize,
-                    searchQuery,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    filterUser,
-                    filterModel,
-                    v,
-                    filterUA,
-                  );
-                }}
-              />
-              <MultiSelectPill
-                label={t("audit.filter_ua")}
-                options={uaOptions}
-                value={filterUA}
-                onChange={(v) => {
-                  setFilterUA(v);
-                  fetchLogs(
-                    1,
-                    pageInfo.pageSize,
-                    searchQuery,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    filterUser,
-                    filterModel,
-                    filterStatus,
-                    v,
-                  );
-                }}
-              />
-              {(filterUser.length > 0 ||
-                filterModel.length > 0 ||
-                filterStatus.length > 0 ||
-                filterUA.length > 0) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-muted-foreground"
-                  onClick={() => {
-                    setFilterUser([]);
-                    setFilterModel([]);
-                    setFilterStatus([]);
-                    setFilterUA([]);
-                    fetchLogs(
-                      1,
-                      pageInfo.pageSize,
-                      searchQuery,
-                      timeRange,
-                      customStart,
-                      customEnd,
-                      [],
-                      [],
-                      [],
-                      [],
-                    );
-                  }}
-                >
-                  <X size={14} />
-                  {t("audit.clear_filters")}
-                </Button>
-              )}
-            </div>
-            <div className="relative w-full md:max-w-sm">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={t("audit.search_placeholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") refresh(1);
-                }}
-                className="pl-9"
-              />
-            </div>
+          {/* Filters — faceted bar */}
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+            <TimeRangePicker
+              value={timeRange}
+              customStart={customStart}
+              customEnd={customEnd}
+              onChange={(key, cs, ce) => {
+                setTimeRange(key);
+                setCustomStart(cs);
+                setCustomEnd(ce);
+                fetchLogs({ page: 1, pageSize: pageInfo.pageSize, range: key, cs, ce, qp: queryParams });
+              }}
+            />
+            <FilterBar
+              {...filterBar}
+              facets={facets}
+              placeholder={t("audit.search_placeholder")}
+            />
           </div>
+          {filterBar.tokens.length > 0 && (
+            <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+              {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+            </p>
+          )}
 
           {/* List */}
           {loading ? (
