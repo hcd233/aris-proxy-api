@@ -81,8 +81,10 @@ jobs:
 
       - name: Build server binary
         run: |
-          # go:embed all:dist 要求目录非空，真实前端产物由 docker 阶段注入
-          mkdir -p internal/web/dist && touch internal/web/dist/.gitkeep
+          # embed 真实前端产物（web/out 已 gzip），对齐 Makefile web-build 的产物形态；
+          # binary-prebuilt 路径不经过 docker 内的 frontend-final 注入，必须在此拷入
+          rm -rf internal/web/dist
+          cp -r web/out internal/web/dist
           CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o aris-proxy-api ./cmd/server
 
       # runner 预装 docker/buildx，直接原生构建推送（免去 setup-buildx/login/metadata 三个 action）
@@ -148,9 +150,11 @@ jobs:
             bash script/deploy-k8s.sh
             for i in $(seq 1 60); do
               if curl -kfsS --max-time 5 https://api.lvlvko.top/health; then
-                exit 0
+                break
               fi
               echo "waiting for production domain health (${i}/60)" >&2
               sleep 1
             done
-            exit 1
+            # Web 前端 embed 验收：曾因 binary-prebuilt 未注入前端产物静默 404
+            curl -kfsS --max-time 5 -o /dev/null https://api.lvlvko.top/web/
+            exit 0
