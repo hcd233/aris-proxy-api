@@ -27,6 +27,8 @@ import { SessionHistoryList } from "./session-history-list";
 import { ScoreDots } from "./score-dots";
 import { ToolsRail } from "./tools-rail";
 import { ReadingLayout } from "@/components/shared/reading-layout";
+import { DemoAddButton } from "@/components/demo-add-button";
+import { useDemoWhitelist } from "@/hooks/use-demo-whitelist";
 import { toast } from "sonner";
 
 export default function SessionDetailClient({ sessionId }: { sessionId: number }) {
@@ -34,6 +36,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const isMobile = useIsMobile();
   const t = useT();
   const { isDemo } = useAuth();
+  const { loginEnabled, pending, isInDemo, toggle } = useDemoWhitelist();
   const [metadata, setMetadata] = useState<SessionMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -362,6 +365,14 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
           </TooltipRoot>
         </TooltipProvider>
       )}
+
+      <DemoAddButton
+        sessionId={metadata.id}
+        inDemo={isInDemo(metadata.id)}
+        pending={pending}
+        loginEnabled={loginEnabled}
+        onToggle={toggle}
+      />
 
       <TooltipProvider>
         <TooltipRoot>

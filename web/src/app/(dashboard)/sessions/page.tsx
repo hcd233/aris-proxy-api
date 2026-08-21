@@ -35,6 +35,8 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { toast } from "sonner";
 import { ProviderIcon } from "@/components/provider-icon";
+import { DemoAddButton } from "@/components/demo-add-button";
+import { useDemoWhitelist } from "@/hooks/use-demo-whitelist";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
@@ -51,6 +53,7 @@ export default function SessionsPage() {
   const { t, locale } = useI18n();
   const isMobile = useIsMobile();
   const { isDemo } = useAuth();
+  const { loginEnabled, pending, isInDemo, toggle } = useDemoWhitelist();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.sessions.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState(
@@ -404,6 +407,13 @@ export default function SessionsPage() {
                                   String(s.messageCount ?? 0),
                                 )}
                               </Badge>
+                              <DemoAddButton
+                                sessionId={s.id}
+                                inDemo={isInDemo(s.id)}
+                                pending={pending}
+                                loginEnabled={loginEnabled}
+                                onToggle={toggle}
+                              />
                               <DeleteIconButton
                                 locked={isDemo()}
                                 disabled={
@@ -492,7 +502,7 @@ export default function SessionsPage() {
                           </span>
                         </TableHead>
                         <TableHead className="w-[140px]">{t("sessions.models")}</TableHead>
-                        <TableHead className="w-16 sr-only">{t("common.actions")}</TableHead>
+                        <TableHead className="w-[104px] sr-only">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -562,8 +572,15 @@ export default function SessionsPage() {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="w-16">
-                              <div className="flex justify-center">
+                            <TableCell className="w-[104px]">
+                              <div className="flex items-center justify-center gap-1">
+                                <DemoAddButton
+                                  sessionId={s.id}
+                                  inDemo={isInDemo(s.id)}
+                                  pending={pending}
+                                  loginEnabled={loginEnabled}
+                                  onToggle={toggle}
+                                />
                                 <DeleteIconButton
                                   locked={isDemo()}
                                   disabled={
