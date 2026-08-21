@@ -54,13 +54,15 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM scratch AS binary-prebuilt
 COPY aris-proxy-api /go/bin/aris-proxy-api
 
+# 阶段2c: 根据 build-arg 选择二进制来源（COPY --from 不支持变量展开，经 FROM 中转）
+FROM ${BINARY_SOURCE} AS binary-final
+
 # 阶段3: 运行时（distroless，自带 CA 证书，无 shell，nonroot）
 FROM gcr.io/distroless/static-debian12:nonroot AS final
 
-ARG BINARY_SOURCE
 WORKDIR /app
 
-COPY --from=${BINARY_SOURCE} /go/bin/aris-proxy-api /app/aris-proxy-api
+COPY --from=binary-final /go/bin/aris-proxy-api /app/aris-proxy-api
 
 USER nonroot:nonroot
 EXPOSE 8080
