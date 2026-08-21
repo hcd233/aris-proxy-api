@@ -4,8 +4,9 @@
 
 ## CI 与仓库
 
-- `.github/workflows/docker-publish.yml` 在推送到 `master`、`v*.*.*` tag、PR 到 `master` 和定时任务时构建多架构 GHCR 镜像。
-- 影响镜像构建的 path filter 包含 `internal/**`、`docker/**`、`cmd/**`、`go.mod`、`go.sum`。
+- `.github/workflows/lint.yml`：PR 到 `master` 与 push `master` 时触发（无 path 过滤）。包含 `go-lint`（golangci-lint v2.12.2，配置 `.golangci.yml`）与 `web-lint`（ESLint + Prettier check）。这两个 check 是 master 分支保护的 required check，**PR 必须全部通过才能合并**（admin 直推不受限）。
+- `.github/workflows/docker-publish.yml`：push `master`（path filter 过滤）、`v*.*.*` tag、定时任务（每日 cron 保温缓存）触发。结构为 build → publish 两步：build job 在 runner 上增量编译 Go（GOCACHE/actions-cache + web/out 产物缓存），镜像经 dockerfile 的 `binary-prebuilt` 阶段直接打包二进制（amd64 单平台，生产为单节点 amd64 k3s）；publish job SSH 到生产执行 `script/deploy-k8s.sh` 滚动部署。**PR 不构建镜像**。
+- 影响构建的 path filter 包含 `internal/**`、`docker/**`、`cmd/**`、`web/**`、`k8s/**`、`script/**`、workflow 自身、`go.mod`、`go.sum`。
 - 本地 hook 可通过 `bash .githooks/setup.sh` 安装；除非用户明确要求，不要绕过 hook。
 - `AGENTS.md`、`CLAUDE.md`、`CODEBUDDY.md` 是项目级持久规范，修改其中一个时保持同步。
 - 编写文档必须使用中文
