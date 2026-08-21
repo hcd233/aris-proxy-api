@@ -1,14 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { CronCallAuditItem, PageInfo } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -18,15 +16,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollText, Search, X } from "lucide-react";
+import { ScrollText } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-import { MultiSelectPill } from "@/components/ui/multi-select-pill";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
+import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -40,15 +40,8 @@ function formatTime(iso: string): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function buildCronAuditFilter(type: string[], status: string[]): string | undefined {
-  const parts: string[] = [];
-  if (type.length) parts.push(`type:${type.join("|")}`);
-  if (status.length) parts.push(`status:${status.join("|")}`);
-  return parts.length > 0 ? parts.join(" ") : undefined;
-}
-
 export default function CronAuditPage() {
-  const t = useT();
+  const { t, locale } = useI18n();
   const statusLabelMap: Record<string, string> = {
     success: t("cron_audit.status_success"),
     failed: t("cron_audit.status_failed"),
@@ -84,39 +77,65 @@ export default function CronAuditPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [filterType, setFilterType] = useState<string[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string[]>([]);
-  const [typeOptions, setTypeOptions] = useState<string[]>([]);
-  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+
+  const fetchOptionsFor = useCallback(
+    (field: "type" | "status") => async () => {
+      const { startTime, endTime } = computeRange(timeRange, customStart, customEnd);
+      const rsp = await api.listCronCallAuditOptions({ field, startTime, endTime });
+      return rsp.items ?? [];
+    },
+    [timeRange, customStart, customEnd],
+  );
+
+  const facets = useMemo<FacetDef[]>(
+    () => [
+      { key: "type", label: t("cron_audit.filter_type"), options: fetchOptionsFor("type") },
+      {
+        key: "status",
+        label: t("cron_audit.filter_status"),
+        options: fetchOptionsFor("status"),
+        formatValue: (v) => statusLabelMap[v] ?? v,
+      },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, fetchOptionsFor],
+  );
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.cronAudit",
+    facets,
+    freeTextPlaceholder: t("cron_audit.search_placeholder"),
+    optionsCacheKey: `${timeRange}:${customStart}:${customEnd}`,
+  });
+  const { queryParams } = filterBar;
+
+  interface CronAuditQuery {
+    page: number;
+    pageSize: number;
+    range: TimeRangeKey;
+    cs: string;
+    ce: string;
+    qp: FilterBarQueryParams;
+  }
 
   const fetchLogs = useCallback(
-    async (
-      page: number,
-      pageSize: number,
-      query: string,
-      range: TimeRangeKey,
-      cs: string,
-      ce: string,
-      typeFilter: string[],
-      statusFilter: string[],
-    ) => {
+    async (q: CronAuditQuery) => {
       setLoading(true);
       try {
-        const { startTime, endTime } = computeRange(range, cs, ce);
-        const filter = buildCronAuditFilter(typeFilter, statusFilter);
+        const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
         const rsp = await api.listCronCallAudits({
-          page,
-          pageSize,
-          query: query || undefined,
+          page: q.page,
+          pageSize: q.pageSize,
+          query: q.qp.freeText || undefined,
           sort: "desc",
           sortField: "created_at",
           startTime,
           endTime,
-          filter,
+          filter: q.qp.filter,
         });
         if (rsp.error) {
           showErrorToast(rsp.error, { title: t("common.error") });
@@ -137,43 +156,21 @@ export default function CronAuditPage() {
     [setPersistedPage, setPersistedPageSize, t],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
+  const currentQuery = (): Omit<CronAuditQuery, "page" | "pageSize"> => ({
+    range: timeRange,
+    cs: customStart,
+    ce: customEnd,
+    qp: queryParams,
+  });
+
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
   useEffect(() => {
-    fetchLogs(persistedPage, persistedPageSize, "", "24h", "", "", [], []);
-  }, [fetchLogs]);
+    fetchLogs({ page: 1, pageSize: pageInfo.pageSize, ...currentQuery() });
+  }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
-  const fetchOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
-    const { startTime, endTime } = computeRange(range, cs, ce);
-    try {
-      const [typeRsp, statusRsp] = await Promise.all([
-        api.listCronCallAuditOptions({ field: "type", startTime, endTime }),
-        api.listCronCallAuditOptions({ field: "status", startTime, endTime }),
-      ]);
-      if (!typeRsp.error && typeRsp.items) setTypeOptions(typeRsp.items);
-      if (!statusRsp.error && statusRsp.items) setStatusOptions(statusRsp.items);
-    } catch (err) {
-      console.error("Failed to load cron audit options:", err);
-    }
-  }, []);
-
-  /* eslint-disable react-hooks/set-state-in-effect -- Refresh filter options when range changes */
-  useEffect(() => {
-    fetchOptions(timeRange, customStart, customEnd);
-  }, [timeRange, customStart, customEnd, fetchOptions]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
   const refresh = (page: number, pageSize?: number) =>
-    fetchLogs(
-      page,
-      pageSize ?? pageInfo.pageSize,
-      searchQuery,
-      timeRange,
-      customStart,
-      customEnd,
-      filterType,
-      filterStatus,
-    );
+    fetchLogs({ page, pageSize: pageSize ?? pageInfo.pageSize, ...currentQuery() });
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
@@ -212,103 +209,37 @@ export default function CronAuditPage() {
             <CardTitle className="font-display">{t("cron_audit.logs_title")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <TimeRangePicker
-                  value={timeRange}
-                  customStart={customStart}
-                  customEnd={customEnd}
-                  onChange={(key, cs, ce) => {
-                    setTimeRange(key);
-                    setCustomStart(cs);
-                    setCustomEnd(ce);
-                    fetchLogs(
-                      1,
-                      pageInfo.pageSize,
-                      searchQuery,
-                      key,
-                      cs,
-                      ce,
-                      filterType,
-                      filterStatus,
-                    );
-                  }}
-                />
-                <MultiSelectPill
-                  label={t("cron_audit.filter_type")}
-                  options={typeOptions}
-                  value={filterType}
-                  onChange={(v) => {
-                    setFilterType(v);
-                    fetchLogs(
-                      1,
-                      pageInfo.pageSize,
-                      searchQuery,
-                      timeRange,
-                      customStart,
-                      customEnd,
-                      v,
-                      filterStatus,
-                    );
-                  }}
-                />
-                <MultiSelectPill
-                  label={t("cron_audit.filter_status")}
-                  options={statusOptions}
-                  value={filterStatus}
-                  formatOption={(v) => statusLabelMap[v] ?? v}
-                  onChange={(v) => {
-                    setFilterStatus(v);
-                    fetchLogs(
-                      1,
-                      pageInfo.pageSize,
-                      searchQuery,
-                      timeRange,
-                      customStart,
-                      customEnd,
-                      filterType,
-                      v,
-                    );
-                  }}
-                />
-                {(filterType.length > 0 || filterStatus.length > 0) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-muted-foreground"
-                    onClick={() => {
-                      setFilterType([]);
-                      setFilterStatus([]);
-                      fetchLogs(
-                        1,
-                        pageInfo.pageSize,
-                        searchQuery,
-                        timeRange,
-                        customStart,
-                        customEnd,
-                        [],
-                        [],
-                      );
-                    }}
-                  >
-                    <X size={14} />
-                    {t("cron_audit.clear_filters")}
-                  </Button>
-                )}
-              </div>
-              <div className="relative w-full md:max-w-sm">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder={t("cron_audit.search_placeholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") refresh(1);
-                  }}
-                  className="pl-9"
-                />
-              </div>
+            {/* Filters — faceted bar */}
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+              <TimeRangePicker
+                value={timeRange}
+                customStart={customStart}
+                customEnd={customEnd}
+                onChange={(key, cs, ce) => {
+                  setTimeRange(key);
+                  setCustomStart(cs);
+                  setCustomEnd(ce);
+                  fetchLogs({
+                    page: 1,
+                    pageSize: pageInfo.pageSize,
+                    range: key,
+                    cs,
+                    ce,
+                    qp: queryParams,
+                  });
+                }}
+              />
+              <FilterBar
+                {...filterBar}
+                facets={facets}
+                placeholder={t("cron_audit.search_placeholder")}
+              />
             </div>
+            {filterBar.tokens.length > 0 && (
+              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+              </p>
+            )}
 
             {loading ? (
               <div className="space-y-3">
