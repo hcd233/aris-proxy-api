@@ -246,7 +246,7 @@ kubectl apply -f "${K8S_DIR}/service.yaml"
 log "Cleaning up stuck pods before rollout (if any)"
 kubectl delete pod -n "${NAMESPACE}" -l app=${APP_NAME} --field-selector=status.phase!=Running --ignore-not-found=true || true
 
-log "Restarting deployment to pick up new image (tag: ${IMAGE_TAG})"
+log "Restarting deployment to pick up new image (${IMAGE})"
 kubectl rollout restart "deployment/${APP_NAME}" -n "${NAMESPACE}"
 
 log "Waiting for rollout"
