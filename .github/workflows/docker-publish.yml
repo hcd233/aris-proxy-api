@@ -113,7 +113,7 @@ jobs:
       # 后台预热：镜像 push 完成即让生产节点开始拉取（跨境带宽 0.6~1.3MB/s，48MB 层需 35~80s），
       # 与本 job 收尾和 publish job 启动并行；预拉未完成时部署侧自行拉取，幂等安全
       - name: Pre-pull image on production node
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
         env:
           PREPULL_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
         run: |
@@ -125,12 +125,12 @@ jobs:
             >/dev/null 2>&1 &
           echo "prepull started: ${PREPULL_IMAGE}"
 
-  # 步骤二：发布。推送生产 k3s 并滚动更新（仅 master push）。
+  # 步骤二：发布。推送生产 k3s 并滚动更新（master push 或手动 dispatch）。
   publish:
     runs-on: ubuntu-latest
     needs:
       - build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Deploy to k3s via SSH
         uses: appleboy/ssh-action@v1
