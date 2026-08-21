@@ -31,9 +31,8 @@ type AuditRepository interface {
 	// Save 持久化审计聚合（首次 Save 后回填 ID）
 	Save(ctx context.Context, audit *aggregate.ModelCallAudit) error
 
-	// ListAll 全量分页查询审计记录，支持时间范围过滤、关键词搜索和多字段排序（admin 用）
-	// sampleModulus > 1 时按 id % K == 0 抽样（demo 视角）
-	ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria, sampleModulus uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	// ListAll 全量分页查询审计记录，支持时间范围过滤、关键词搜索和多字段排序（admin/demo 用）
+	ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
 	// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
@@ -41,29 +40,29 @@ type AuditRepository interface {
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)
 
-	// ListDistinctUserNames 查询去重的用户名列表（支持模糊搜索、时间范围与 Demo 抽样过滤）
-	ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	// ListDistinctUserNames 查询去重的用户名列表（支持模糊搜索与时间范围）
+	ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctModels 查询去重的模型列表（支持模糊搜索、时间范围与 Demo 抽样过滤）
-	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	// ListDistinctModels 查询去重的模型列表（支持模糊搜索与时间范围）
+	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctStatusCodes 查询去重的上游状态码列表（支持时间范围与 Demo 抽样过滤）
-	ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	// ListDistinctStatusCodes 查询去重的上游状态码列表（支持时间范围）
+	ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctUserAgents 查询去重的 User-Agent 列表（支持模糊搜索、时间范围与 Demo 抽样过滤，排除空值）
-	ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	// ListDistinctUserAgents 查询去重的 User-Agent 列表（支持模糊搜索与时间范围，排除空值）
+	ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 
 	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
-	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*ModelTrendPoint, error)
+	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
 
 	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
-	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*RequestRatePoint, error)
+	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*RequestRatePoint, error)
 
 	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
-	QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*TokenThroughputPoint, error)
+	QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*TokenThroughputPoint, error)
 
 	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
-	QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*FirstTokenLatencyPoint, error)
+	QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*FirstTokenLatencyPoint, error)
 }
 
 // ModelTrendPoint 模型调用趋势的数据点

@@ -7,7 +7,6 @@ import { useT } from "@/lib/i18n";
 import type { DemoConfig, DemoModule } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -24,7 +23,7 @@ const DEMO_MODULES: DemoModule[] = [
   "cron_audit",
 ];
 
-/** Demo 演示配置卡片：admin 配置 demo 登录开关、行为数据抽样模数与开放模块 */
+/** Demo 演示配置卡片：admin 配置 demo 登录开关与开放模块 */
 export function DemoConfigCard() {
   const t = useT();
   const [config, setConfig] = useState<DemoConfig | null>(null);
@@ -62,7 +61,6 @@ export function DemoConfigCard() {
       const rsp = await api.updateDemoConfig({
         config: {
           loginEnabled: config.loginEnabled,
-          sampleModulus: config.sampleModulus,
           modules: config.modules,
         },
       });
@@ -102,22 +100,6 @@ export function DemoConfigCard() {
             <Label htmlFor="demo-login-enabled" className="text-sm min-w-20">
               {t("demo.login_enabled")}
             </Label>
-          </div>
-          <div className="flex items-center gap-3">
-            <Label htmlFor="demo-sample-modulus" className="text-sm min-w-20">
-              {t("demo.sample_modulus")}
-            </Label>
-            <Input
-              id="demo-sample-modulus"
-              type="number"
-              min={2}
-              className="w-24"
-              value={config.sampleModulus}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setConfig((prev) => (prev ? { ...prev, sampleModulus: v } : prev));
-              }}
-            />
           </div>
         </div>
 

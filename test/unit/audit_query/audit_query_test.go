@@ -22,14 +22,15 @@ import (
 // ─── fake repository ─────────────────────────────────────
 
 type fakeAuditRepo struct {
-	listAllFunc            func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria, sampleModulus uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	listAllFunc            func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 	listByAPIKeyIDsFn      func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
-	queryTokenThroughputFn func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.TokenThroughputPoint, error)
+	queryTokenThroughputFn func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
 
-	listDistinctUserNamesFn   func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
-	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
-	listDistinctStatusCodesFn func(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
-	listDistinctUserAgentsFn  func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error)
+	listDistinctUserNamesFn   func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	listDistinctStatusCodesFn func(ctx context.Context, startTime, endTime time.Time) ([]string, error)
+	listDistinctUserAgentsFn  func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	batchGetRelationsFn       func(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error)
 
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
@@ -38,10 +39,10 @@ type fakeAuditRepo struct {
 
 func (f *fakeAuditRepo) Save(ctx context.Context, a *aggregate.ModelCallAudit) error { return nil }
 
-func (f *fakeAuditRepo) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria, sampleModulus uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (f *fakeAuditRepo) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	f.listAllCalls++
 	if f.listAllFunc != nil {
-		return f.listAllFunc(ctx, param, startTime, endTime, criteria, sampleModulus)
+		return f.listAllFunc(ctx, param, startTime, endTime, criteria)
 	}
 	return nil, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
 }
@@ -56,59 +57,58 @@ func (f *fakeAuditRepo) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, p
 }
 
 func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*modelcall.AuditRelation, error) {
+	if f.batchGetRelationsFn != nil {
+		return f.batchGetRelationsFn(ctx, apiKeyIDs)
+	}
 	return map[uint]*modelcall.AuditRelation{}, nil
 }
 
-func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.ModelTrendPoint, error) {
+func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.RequestRatePoint, error) {
+func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.TokenThroughputPoint, error) {
+func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
 	if f.queryTokenThroughputFn != nil {
-		return f.queryTokenThroughputFn(ctx, apiKeyIDs, startTime, endTime, granularity, sampleModulus)
+		return f.queryTokenThroughputFn(ctx, apiKeyIDs, startTime, endTime, granularity)
 	}
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, sampleModulus uint) ([]*modelcall.FirstTokenLatencyPoint, error) {
+func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	if f.listDistinctUserNamesFn != nil {
-		return f.listDistinctUserNamesFn(ctx, keyword, startTime, endTime, sampleModulus)
+		return f.listDistinctUserNamesFn(ctx, keyword, startTime, endTime)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	if f.listDistinctModelsFn != nil {
-		return f.listDistinctModelsFn(ctx, keyword, startTime, endTime, sampleModulus)
+		return f.listDistinctModelsFn(ctx, keyword, startTime, endTime)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
 	if f.listDistinctStatusCodesFn != nil {
-		return f.listDistinctStatusCodesFn(ctx, startTime, endTime, sampleModulus)
+		return f.listDistinctStatusCodesFn(ctx, startTime, endTime)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	if f.listDistinctUserAgentsFn != nil {
-		return f.listDistinctUserAgentsFn(ctx, keyword, startTime, endTime, sampleModulus)
+		return f.listDistinctUserAgentsFn(ctx, keyword, startTime, endTime)
 	}
 	return []string{}, nil
 }
-
-type fakeDemoScope struct{ modulus uint }
-
-func (f fakeDemoScope) SampleModulus(ctx context.Context) (uint, error) { return f.modulus, nil }
 
 type fakeAPIKeyIDLookup struct {
 	lookupFunc func(ctx context.Context, userID uint) ([]uint, error)
@@ -130,7 +130,7 @@ var _ modelcall.AuditRepository = (*fakeAuditRepo)(nil)
 func TestListAllAuditLogs_DefaultsAndClamp(t *testing.T) {
 	t.Parallel()
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria, _ uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if param.Page != 1 {
 				t.Errorf("Page = %d, want 1 (default for 0)", param.Page)
 			}
@@ -178,7 +178,7 @@ func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
 	start := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC)
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, param model.CommonParam, s, e time.Time, _ *filter.FilterCriteria, _ uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listAllFunc: func(ctx context.Context, param model.CommonParam, s, e time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if !s.Equal(start) || !e.Equal(end) {
 				t.Errorf("time range mismatch: got [%v, %v], want [%v, %v]", s, e, start, end)
 			}
@@ -198,7 +198,7 @@ func TestListAllAuditLogs_TimeRangePassthrough(t *testing.T) {
 func TestListAllAuditLogs_UAFilterParsing(t *testing.T) {
 	t.Parallel()
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, criteria *filter.FilterCriteria, _ uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listAllFunc: func(ctx context.Context, param model.CommonParam, _, _ time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			if criteria == nil || len(criteria.Filters) != 1 {
 				t.Fatalf("criteria.Filters = %v, want exactly 1 filter", criteria)
 			}
@@ -294,19 +294,19 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 		listAllFunc:            nil,
 		listByAPIKeyIDsFn:      nil,
 		queryTokenThroughputFn: nil,
-		listDistinctUserNamesFn: func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+		listDistinctUserNamesFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 			userNamesCalled = true
 			return []string{"user1", "user2"}, nil
 		},
-		listDistinctModelsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+		listDistinctModelsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 			modelsCalled = true
 			return []string{"gpt-4", "claude"}, nil
 		},
-		listDistinctStatusCodesFn: func(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+		listDistinctStatusCodesFn: func(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
 			statusCodesCalled = true
 			return []string{"200", "400", "500"}, nil
 		},
-		listDistinctUserAgentsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+		listDistinctUserAgentsFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 			userAgentsCalled = true
 			return []string{"Mozilla/5.0", "curl/8.0"}, nil
 		},
@@ -391,16 +391,12 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 	})
 }
 
-func TestAuditService_DemoOptionsUseSampleModulus(t *testing.T) {
+func TestAuditService_DemoOptionsUseFullQuery(t *testing.T) {
 	t.Parallel()
 
-	const sampleModulus = 10
 	repo := &fakeAuditRepo{
-		listDistinctUserAgentsFn: func(_ context.Context, _ string, _ time.Time, _ time.Time, gotModulus uint) ([]string, error) {
-			if gotModulus != sampleModulus {
-				t.Fatalf("sample modulus = %d, want %d", gotModulus, sampleModulus)
-			}
-			return []string{"sampled-agent"}, nil
+		listDistinctUserAgentsFn: func(_ context.Context, _ string, _ time.Time, _ time.Time) ([]string, error) {
+			return []string{"full-agent"}, nil
 		},
 	}
 	svc := auditquery.NewAuditService(
@@ -419,15 +415,14 @@ func TestAuditService_DemoOptionsUseSampleModulus(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		fakeDemoScope{modulus: sampleModulus},
 	)
 
 	items, err := svc.ListAuditOption(context.Background(), enum.PermissionDemo, constant.AuditFilterFieldUA, "", time.Time{}, time.Time{})
 	if err != nil {
 		t.Fatalf("list demo audit options: %v", err)
 	}
-	if len(items) != 1 || items[0] != "sampled-agent" {
-		t.Fatalf("items = %v, want [sampled-agent]", items)
+	if len(items) != 1 || items[0] != "full-agent" {
+		t.Fatalf("items = %v, want [full-agent]", items)
 	}
 }
 
@@ -593,7 +588,7 @@ func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) 
 func TestAuditService_DispatchesByPermission(t *testing.T) {
 	t.Parallel()
 	repo := &fakeAuditRepo{
-		listAllFunc: func(ctx context.Context, _ model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria, _ uint) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+		listAllFunc: func(ctx context.Context, _ model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 			return nil, &model.PageInfo{Page: 1, PageSize: 20}, nil
 		},
 		listByAPIKeyIDsFn: func(ctx context.Context, _ []uint, _ model.CommonParam, _, _ time.Time, _ *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
@@ -616,7 +611,6 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewModelUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewFirstTokenLatencyHandler(repo),
 		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		fakeDemoScope{},
 	)
 
 	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
@@ -645,7 +639,7 @@ func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
 	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
 	t2 := t1.Add(time.Hour)
 	repo := &fakeAuditRepo{
-		queryTokenThroughputFn: func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, _ uint) ([]*modelcall.TokenThroughputPoint, error) {
+		queryTokenThroughputFn: func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
 			return []*modelcall.TokenThroughputPoint{
 				{ModelID: "gpt-4", Time: t1, InputTokens: 100, OutputTokens: 50, CacheReadTokens: 30, CacheCreationTokens: 10},
 				{ModelID: "gpt-4", Time: t2, InputTokens: 200, OutputTokens: 150, CacheReadTokens: 20, CacheCreationTokens: 5},

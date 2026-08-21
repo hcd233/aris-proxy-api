@@ -9,6 +9,7 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -74,6 +75,7 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 
 	views, pageInfo, err := h.list.Handle(ctx, port.ListEndpointsQuery{
 		CommonParam: req.CommonParam,
+		IsDemo:      util.CtxValuePermission(ctx) == enum.PermissionDemo,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] List endpoints failed", zap.Error(err))

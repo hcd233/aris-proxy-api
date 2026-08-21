@@ -75,9 +75,10 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	var projections []*session.SessionSummaryProjection
 	var pageInfo *model.PageInfo
 
-	// demo 视角（SampleModulus > 0）与 admin 同走全量分支，但按 id % K == 0 抽样
-	if q.IsAdmin || q.SampleModulus > 0 {
-		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword, criteria, q.SampleModulus)
+	if q.IsAdmin {
+		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword, criteria)
+	} else if q.IsDemo {
+		projections, pageInfo, err = h.readRepo.ListSessionsByIDs(ctx, q.SessionIDs, param)
 	} else {
 		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
 		if lookupErr != nil {
@@ -191,10 +192,10 @@ func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRe
 func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error) {
 	log := logger.WithCtx(ctx)
 
-	// demo 视角：仅允许访问抽样内的会话（id % K == 0），越权返回不存在
-	if q.SampleModulus > 0 && q.SessionID%q.SampleModulus != 0 {
-		log.Info("[SessionQuery] Demo session access denied by sample modulus",
-			zap.Uint("sessionID", q.SessionID), zap.Uint("sampleModulus", q.SampleModulus))
+	// demo 视角：仅允许访问白名单内的会话，越权返回不存在（防遍历）
+	if q.IsDemo && !slices.Contains(q.AllowedSessionIDs, q.SessionID) {
+		log.Info("[SessionQuery] Demo session access denied by whitelist",
+			zap.Uint("sessionID", q.SessionID))
 		return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
 	}
 

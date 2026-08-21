@@ -16,6 +16,7 @@ import (
 
 func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	metricsGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	metricsGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
 	huma.Register(metricsGroup, huma.Operation{
 		OperationID: "getRuntimeMetrics",

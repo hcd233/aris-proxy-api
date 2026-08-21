@@ -16,8 +16,6 @@ type ModelUsageQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
-	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
-	SampleModulus uint
 }
 
 type ModelUsageByUserQuery struct {
@@ -53,7 +51,7 @@ func NewModelUsageByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.A
 }
 
 func (h *modelUsageHandler) Handle(ctx context.Context, q ModelUsageQuery) ([]*dto.ModelUsageItem, error) {
-	points, err := h.repo.QueryTokenThroughput(ctx, nil, q.StartTime, q.EndTime, q.Granularity, q.SampleModulus)
+	points, err := h.repo.QueryTokenThroughput(ctx, nil, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +63,7 @@ func (h *modelUsageByUserHandler) Handle(ctx context.Context, q ModelUsageByUser
 	if err != nil {
 		return nil, err
 	}
-	points, err := h.repo.QueryTokenThroughput(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity, 0)
+	points, err := h.repo.QueryTokenThroughput(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err
 	}

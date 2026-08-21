@@ -18,8 +18,6 @@ type FirstTokenLatencyQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
-	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
-	SampleModulus uint
 }
 
 type FirstTokenLatencyByUserQuery struct {
@@ -55,7 +53,7 @@ func NewFirstTokenLatencyByUserHandler(repo modelcall.AuditRepository, apiKeyIDs
 }
 
 func (h *firstTokenLatencyHandler) Handle(ctx context.Context, q FirstTokenLatencyQuery) ([]*dto.FirstTokenLatencyItem, error) {
-	points, err := h.repo.QueryFirstTokenLatency(ctx, nil, q.StartTime, q.EndTime, q.Granularity, q.SampleModulus)
+	points, err := h.repo.QueryFirstTokenLatency(ctx, nil, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +65,7 @@ func (h *firstTokenLatencyByUserHandler) Handle(ctx context.Context, q FirstToke
 	if err != nil {
 		return nil, err
 	}
-	points, err := h.repo.QueryFirstTokenLatency(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity, 0)
+	points, err := h.repo.QueryFirstTokenLatency(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err
 	}
