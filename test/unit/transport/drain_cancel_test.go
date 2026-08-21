@@ -48,7 +48,7 @@ func hangingUpstream(t *testing.T, firstFrame string) *httptest.Server {
 func TestOpenAIProxy_DrainCancelInterruptsStream(t *testing.T) {
 	t.Parallel()
 	tracker := inflight.NewTracker()
-	proxy := transport.NewOpenAIProxy(tracker)
+	proxy := transport.NewOpenAIProxy(tracker, transport.NewEndpointGuard(nil))
 
 	srv := hangingUpstream(t, "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hi\"}}]}\n\n")
 	ep := vo.UpstreamEndpoint{BaseURL: srv.URL, Model: "test-model", APIKey: "test-key"}
@@ -96,7 +96,7 @@ func TestOpenAIProxy_DrainCancelInterruptsStream(t *testing.T) {
 func TestAnthropicProxy_DrainCancelInterruptsStream(t *testing.T) {
 	t.Parallel()
 	tracker := inflight.NewTracker()
-	proxy := transport.NewAnthropicProxy(tracker)
+	proxy := transport.NewAnthropicProxy(tracker, transport.NewEndpointGuard(nil))
 
 	srv := hangingUpstream(t, "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"m1\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"test\",\"content\":[]}}\n\n")
 	ep := vo.UpstreamEndpoint{BaseURL: srv.URL, Model: "test-model", APIKey: "test-key"}

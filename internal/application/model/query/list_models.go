@@ -41,16 +41,20 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 	}
 
 	views := lo.Map(models, func(m *aggregate.Model, _ int) *modelport.ModelView {
+		upstreamModel := m.UpstreamModel()
+		if q.IsDemo {
+			upstreamModel = commonutil.MaskSecret(upstreamModel)
+		}
 		return &modelport.ModelView{
 			ID:              m.AggregateID(),
 			Alias:           m.Alias().String(),
 			ModelID:         m.ModelID(),
-			UpstreamModel:   m.UpstreamModel(),
+			UpstreamModel:   upstreamModel,
 			Enabled:         m.Enabled(),
 			ContextLength:   m.ContextLength(),
 			MaxOutputTokens: m.MaxOutputTokens(),
 			Capabilities:    m.Capabilities(),
-			Endpoint:        toEndpointView(endpointsByID[m.EndpointID()]),
+			Endpoint:        toEndpointView(endpointsByID[m.EndpointID()], q.IsDemo),
 			CreatedAt:       m.CreatedAt(),
 			UpdatedAt:       m.UpdatedAt(),
 		}
@@ -66,15 +70,23 @@ func (h *listModelsHandler) loadEndpoints(ctx context.Context, models []*aggrega
 	return h.endpointRepo.BatchFindByIDs(ctx, ids)
 }
 
-func toEndpointView(ep *aggregate.Endpoint) *modelport.EndpointView {
+func toEndpointView(ep *aggregate.Endpoint, isDemo bool) *modelport.EndpointView {
 	if ep == nil {
 		return nil
 	}
+	name := ep.Name()
+	openaiBaseURL := ep.OpenaiBaseURL()
+	anthropicBaseURL := ep.AnthropicBaseURL()
+	if isDemo {
+		name = commonutil.MaskSecret(name)
+		openaiBaseURL = commonutil.MaskSecret(openaiBaseURL)
+		anthropicBaseURL = commonutil.MaskSecret(anthropicBaseURL)
+	}
 	return &modelport.EndpointView{
 		ID:                          ep.AggregateID(),
-		Name:                        ep.Name(),
-		OpenaiBaseURL:               ep.OpenaiBaseURL(),
-		AnthropicBaseURL:            ep.AnthropicBaseURL(),
+		Name:                        name,
+		OpenaiBaseURL:               openaiBaseURL,
+		AnthropicBaseURL:            anthropicBaseURL,
 		MaskedAPIKey:                commonutil.MaskSecret(ep.APIKey()),
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),

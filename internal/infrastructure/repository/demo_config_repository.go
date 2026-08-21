@@ -43,9 +43,8 @@ func (r *demoConfigRepository) Get(ctx context.Context) (*port.DemoConfigEntity,
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &port.DemoConfigEntity{
-				LoginEnabled:  false,
-				SampleModulus: constant.DemoDefaultSampleModulus,
-				Modules:       []string{},
+				LoginEnabled: false,
+				Modules:      []string{},
 			}, nil
 		}
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get demo config")
@@ -64,11 +63,10 @@ func (r *demoConfigRepository) Get(ctx context.Context) (*port.DemoConfigEntity,
 func (r *demoConfigRepository) Save(ctx context.Context, entity *port.DemoConfigEntity) error {
 	db := r.db.WithContext(ctx)
 	record := &dbmodel.DemoConfig{
-		ID:            constant.DemoConfigSingletonID,
-		LoginEnabled:  entity.LoginEnabled,
-		SampleModulus: entity.SampleModulus,
-		Modules:       entity.Modules,
-		UpdatedAt:     time.Now().UTC(),
+		ID:           constant.DemoConfigSingletonID,
+		LoginEnabled: entity.LoginEnabled,
+		Modules:      entity.Modules,
+		UpdatedAt:    time.Now().UTC(),
 	}
 	if err := db.Save(record).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "save demo config")
@@ -78,9 +76,8 @@ func (r *demoConfigRepository) Save(ctx context.Context, entity *port.DemoConfig
 
 func toDemoConfigEntity(m *dbmodel.DemoConfig) *port.DemoConfigEntity {
 	return &port.DemoConfigEntity{
-		LoginEnabled:  m.LoginEnabled,
-		SampleModulus: m.SampleModulus,
-		Modules:       m.Modules,
-		UpdatedAt:     m.UpdatedAt,
+		LoginEnabled: m.LoginEnabled,
+		Modules:      m.Modules,
+		UpdatedAt:    m.UpdatedAt,
 	}
 }

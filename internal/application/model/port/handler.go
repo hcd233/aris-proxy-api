@@ -94,6 +94,7 @@ type ModelView struct {
 // ListModelsQuery 列出 Models 查询命令
 type ListModelsQuery struct {
 	model.CommonParam
+	IsDemo bool
 }
 
 // ListModelsHandler 查询处理器

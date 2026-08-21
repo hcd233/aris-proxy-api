@@ -27,6 +27,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
@@ -40,6 +41,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewSessionWriteRepository,
 		NewAuditRepository,
 		NewDemoConfigRepository,
+		NewDemoSessionRepository,
 		NewEndpointRepository,
 		NewModelRepository,
 		NewEndpointReadRepository,
@@ -50,6 +52,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 			fx.As(new(sessionport.ShareCreator)),
 		),
 		NewSessionDetailCache,
+		NewEndpointGuard,
 		NewOpenAIProxy,
 		NewAnthropicProxy,
 		NewAPIKeyGenerator,
@@ -96,6 +99,10 @@ func NewDemoConfigRepository(db *gorm.DB) demoport.DemoConfigRepository {
 	return repository.NewDemoConfigRepository(db)
 }
 
+func NewDemoSessionRepository(db *gorm.DB) demoport.DemoSessionRepository {
+	return repository.NewDemoSessionRepository(db)
+}
+
 func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
 	return repository.NewEndpointRepository(db)
 }
@@ -123,12 +130,16 @@ func NewSessionDetailCache(redisClient *redis.Client) sessionport.SessionDetailC
 	return cache.NewSessionDetailCache(redisClient)
 }
 
-func NewOpenAIProxy(tracker *inflight.Tracker) usecase.OpenAIProxyPort {
-	return transport.NewOpenAIProxy(tracker)
+func NewOpenAIProxy(tracker *inflight.Tracker, guard *transport.EndpointGuard) usecase.OpenAIProxyPort {
+	return transport.NewOpenAIProxy(tracker, guard)
 }
 
-func NewAnthropicProxy(tracker *inflight.Tracker) usecase.AnthropicProxyPort {
-	return transport.NewAnthropicProxy(tracker)
+func NewAnthropicProxy(tracker *inflight.Tracker, guard *transport.EndpointGuard) usecase.AnthropicProxyPort {
+	return transport.NewAnthropicProxy(tracker, guard)
+}
+
+func NewEndpointGuard(registry *prometheus.Registry) *transport.EndpointGuard {
+	return transport.NewEndpointGuard(registry)
 }
 
 func NewAPIKeyGenerator() apikeyservice.APIKeyGenerator {

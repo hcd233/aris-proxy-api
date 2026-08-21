@@ -28,3 +28,11 @@ func MaskSecret(key string) string {
 	}
 	return fmt.Sprintf(constant.MaskSecretTemplate, key[:4], key[len(key)-4:])
 }
+
+// MaskIdentity 掩码身份类信息（姓名/邮箱），非空一律返回固定占位符，避免反推
+func MaskIdentity(s string) string {
+	if s == "" {
+		return ""
+	}
+	return constant.MaskSecretPlaceholder
+}

@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, Users } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
-import { DemoConfigCard } from "@/components/demo-config-card";
 import type { PageInfo, UserItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,13 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -32,7 +24,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -41,7 +32,10 @@ import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
+import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 
 const PERMISSIONS = ["pending", "demo", "user", "admin"] as const;
 
@@ -55,7 +49,7 @@ interface UserRowActionsProps {
 
 /** 行操作菜单：pending→升为 User；user→降级为 Pending；pending/user→设为 Demo；demo→恢复为 User；均可删除；admin 与自己只读 */
 function UserRowActions({ user, currentUserId, onAction }: UserRowActionsProps) {
-  const t = useT();
+  const { t } = useI18n();
   const canOperate = user.permission !== "admin" && user.id !== currentUserId;
   if (!canOperate) {
     return null;
@@ -110,21 +104,42 @@ export default function UsersPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [permission, setPermission] = useState("");
   const [acting, setActing] = useState<UserAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<UserAction | null>(null);
   const [confirmUser, setConfirmUser] = useState<UserItem | null>(null);
-  const t = useT();
+  const { t, locale } = useI18n();
   const isMobile = useIsMobile();
 
+  const facets = useMemo<FacetDef[]>(
+    () => [
+      {
+        key: "permission",
+        label: t("users.permission_filter"),
+        options: [...PERMISSIONS],
+        target: "param",
+        single: true,
+        formatValue: (v) => t(`permission.${v}`),
+      },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale],
+  );
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.users",
+    facets,
+    freeTextPlaceholder: t("users.search_placeholder"),
+  });
+  const { queryParams } = filterBar;
+
   const fetchUsers = useCallback(
-    async (page: number, pageSize: number, query?: string, perm?: string) => {
+    async (page: number, pageSize: number, qp: FilterBarQueryParams) => {
       setLoading(true);
       try {
         const rsp = await api.listUsers(page, pageSize, {
-          query: query || undefined,
-          permission: perm || undefined,
+          query: qp.freeText || undefined,
+          permission: qp.params.permission,
         });
         setItems(rsp.items ?? []);
         if (rsp.pageInfo) {
@@ -141,16 +156,11 @@ export default function UsersPage() {
     [setPersistedPage, setPersistedPageSize, t],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch list when the persisted page or size changes */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
   useEffect(() => {
-    fetchUsers(persistedPage, persistedPageSize, searchQuery || undefined, permission || undefined);
-  }, [fetchUsers, persistedPage, persistedPageSize, searchQuery, permission]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const handleSearch = useCallback(() => {
-    setPersistedPage(1);
-    fetchUsers(1, persistedPageSize, searchQuery || undefined, permission || undefined);
-  }, [fetchUsers, persistedPageSize, permission, searchQuery, setPersistedPage]);
+    fetchUsers(1, persistedPageSize, queryParams);
+  }, [queryParams]);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   // 批准（pending→user）：乐观更新 + 失败回滚，避免整表重拉导致闪烁
   const promoteUser = useOptimisticUpdate<UserItem>({
@@ -180,12 +190,7 @@ export default function UsersPage() {
           await api.deleteUser(user.id);
           toast.success(t("users.delete_success"));
         }
-        fetchUsers(
-          pageInfo.page,
-          pageInfo.pageSize,
-          searchQuery || undefined,
-          permission || undefined,
-        );
+        fetchUsers(pageInfo.page, pageInfo.pageSize, queryParams);
       } catch (err) {
         const titles: Record<UserAction, string> = {
           promote: t("users.approve_error"),
@@ -199,7 +204,7 @@ export default function UsersPage() {
         setActing(null);
       }
     },
-    [fetchUsers, pageInfo.page, pageInfo.pageSize, permission, searchQuery, t],
+    [fetchUsers, pageInfo.page, pageInfo.pageSize, queryParams, t],
   );
 
   const handleAction = useCallback(
@@ -258,33 +263,19 @@ export default function UsersPage() {
             <CardTitle className="font-display">{t("users.list_title")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <Select
-                value={permission}
-                onValueChange={(v) => {
-                  setPermission(v === "all" ? "" : (v as string));
-                  setPersistedPage(1);
-                }}
-              >
-                <SelectTrigger className="w-40" aria-label={t("users.permission_filter")}>
-                  <SelectValue placeholder={t("users.all_permissions")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("users.all_permissions")}</SelectItem>
-                  {PERMISSIONS.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {t(`permission.${p}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <SearchInput
+            {/* Filters — faceted bar */}
+            <div className="mb-4 flex">
+              <FilterBar
+                {...filterBar}
+                facets={facets}
                 placeholder={t("users.search_placeholder")}
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={handleSearch}
               />
             </div>
+            {filterBar.tokens.length > 0 && (
+              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+              </p>
+            )}
             {loading ? (
               <TableSkeleton />
             ) : items.length === 0 ? (
@@ -355,17 +346,13 @@ export default function UsersPage() {
                 )}
                 <PaginationBar
                   pageInfo={pageInfo}
-                  onChange={(page, pageSize) =>
-                    fetchUsers(page, pageSize, searchQuery || undefined, permission || undefined)
-                  }
+                  onChange={(page, pageSize) => fetchUsers(page, pageSize, queryParams)}
                   totalLabel={t("pagination.items")}
                 />
               </>
             )}
           </CardContent>
         </Card>
-
-        <DemoConfigCard />
 
         <DeleteConfirmDialog
           open={confirmAction !== null}

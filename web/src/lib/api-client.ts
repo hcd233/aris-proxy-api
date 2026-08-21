@@ -10,6 +10,8 @@ import type {
   DemoLoginRsp,
   GetDemoConfigRsp,
   UpdateDemoConfigReqBody,
+  ListDemoSessionsRsp,
+  AddDemoSessionsReqBody,
   GetCurUserRsp,
   UpdateUserReqBody,
   ListUsersRsp,
@@ -276,6 +278,25 @@ class ApiClient {
     return this.request<GetDemoConfigRsp>("/api/v1/demo/config", {
       method: "PATCH",
       body: JSON.stringify(body),
+    });
+  }
+
+  async listDemoSessions(page = 1, pageSize = 100): Promise<ListDemoSessionsRsp> {
+    return this.request<ListDemoSessionsRsp>(
+      `/api/v1/demo/sessions/list?page=${page}&pageSize=${pageSize}`,
+    );
+  }
+
+  async addDemoSessions(body: AddDemoSessionsReqBody): Promise<ListDemoSessionsRsp> {
+    return this.request<ListDemoSessionsRsp>("/api/v1/demo/sessions", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async removeDemoSessions(ids: number[]): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`/api/v1/demo/sessions?ids=${ids.join(",")}`, {
+      method: "DELETE",
     });
   }
 

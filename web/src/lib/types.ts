@@ -44,9 +44,25 @@ export interface DemoLoginRsp extends CommonRsp {
   refreshToken?: string;
 }
 
+export interface DemoSession {
+  id: number;
+  summary?: string;
+  messageCount: number;
+  toolCount: number;
+  createdAt?: string;
+}
+
+export interface ListDemoSessionsRsp extends CommonRsp {
+  sessions?: DemoSession[];
+  pageInfo?: PageInfo;
+}
+
+export interface AddDemoSessionsReqBody {
+  sessionIds: number[];
+}
+
 export interface DemoConfig {
   loginEnabled: boolean;
-  sampleModulus: number;
   modules: DemoModule[];
   updatedAt?: string;
 }
@@ -58,7 +74,6 @@ export interface GetDemoConfigRsp extends CommonRsp {
 export interface UpdateDemoConfigReqBody {
   config: {
     loginEnabled?: boolean;
-    sampleModulus?: number;
     modules?: DemoModule[];
   };
 }

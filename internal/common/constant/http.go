@@ -12,6 +12,10 @@ const (
 	HTTPResponseHeaderTimeout = 60 * time.Second
 	HTTPIdleConnTimeout       = 90 * time.Second
 
+	// BulkheadRetryAfterSeconds 信号量满载时建议客户端重试的秒数
+	//	@update 2026-08-20 10:00:00
+	BulkheadRetryAfterSeconds = 5
+
 	// HTTPHeader HTTP 头部常量（全部使用标准 Title-Case 格式）
 	HTTPHeaderAcceptEncoding      = "Accept-Encoding"
 	HTTPHeaderAcceptLanguage      = "Accept-Language"

@@ -35,10 +35,11 @@ func (h *listSessionMessagesHandler) Handle(ctx context.Context, q sessionport.L
 	log := logger.WithCtx(ctx)
 
 	meta, err := h.metaQuery.Handle(ctx, sessionport.GetSessionMetaByUserQuery{
-		UserID:        q.UserID,
-		IsAdmin:       q.IsAdmin,
-		SessionID:     q.SessionID,
-		SampleModulus: q.SampleModulus,
+		UserID:            q.UserID,
+		IsAdmin:           q.IsAdmin,
+		SessionID:         q.SessionID,
+		IsDemo:            q.IsDemo,
+		AllowedSessionIDs: q.AllowedSessionIDs,
 	})
 	if err != nil {
 		return nil, err

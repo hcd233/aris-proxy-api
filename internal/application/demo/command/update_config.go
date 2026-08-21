@@ -32,8 +32,6 @@ func NewUpdateDemoConfigHandler(repo port.DemoConfigRepository) port.UpdateDemoC
 //
 // 规则：
 //
-//   - SampleModulus 必须 >= 2（1 等于全量，违反 demo 受限访问原则）
-//
 //   - Modules 每项必须是合法 DemoModule 枚举
 //
 //     @receiver h *updateDemoConfigHandler
@@ -46,9 +44,6 @@ func NewUpdateDemoConfigHandler(repo port.DemoConfigRepository) port.UpdateDemoC
 func (h *updateDemoConfigHandler) Handle(ctx context.Context, cmd port.UpdateDemoConfigCommand) (*port.DemoConfigView, error) {
 	log := logger.WithCtx(ctx)
 
-	if cmd.SampleModulus != nil && *cmd.SampleModulus < 2 {
-		return nil, ierr.Newf(ierr.ErrValidation, "sample modulus must be >= 2, got %d", *cmd.SampleModulus)
-	}
 	if invalid := lo.Filter(cmd.Modules, func(m enum.DemoModule, _ int) bool {
 		return !enum.IsValidDemoModule(m)
 	}); len(invalid) > 0 {
@@ -64,9 +59,6 @@ func (h *updateDemoConfigHandler) Handle(ctx context.Context, cmd port.UpdateDem
 	if cmd.LoginEnabled != nil {
 		entity.LoginEnabled = *cmd.LoginEnabled
 	}
-	if cmd.SampleModulus != nil {
-		entity.SampleModulus = *cmd.SampleModulus
-	}
 	if cmd.Modules != nil {
 		entity.Modules = lo.Uniq(cmd.Modules)
 	}
@@ -79,12 +71,10 @@ func (h *updateDemoConfigHandler) Handle(ctx context.Context, cmd port.UpdateDem
 
 	log.Info("[DemoCommand] Update demo config",
 		zap.Bool("loginEnabled", entity.LoginEnabled),
-		zap.Uint("sampleModulus", entity.SampleModulus),
 		zap.Strings("modules", entity.Modules))
 	return &port.DemoConfigView{
-		LoginEnabled:  entity.LoginEnabled,
-		SampleModulus: entity.SampleModulus,
-		Modules:       entity.Modules,
-		UpdatedAt:     entity.UpdatedAt,
+		LoginEnabled: entity.LoginEnabled,
+		Modules:      entity.Modules,
+		UpdatedAt:    entity.UpdatedAt,
 	}, nil
 }

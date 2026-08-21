@@ -9,6 +9,7 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -73,6 +74,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 
 	views, pageInfo, err := h.list.Handle(ctx, port.ListModelsQuery{
 		CommonParam: req.CommonParam,
+		IsDemo:      util.CtxValuePermission(ctx) == enum.PermissionDemo,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))

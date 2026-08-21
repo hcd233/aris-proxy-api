@@ -26,11 +26,12 @@ import {
 } from "@/components/ui/tooltip";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PageHeader } from "@/components/page-header";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Ban, Check, Lock, Trash2 } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
@@ -120,7 +121,6 @@ export default function TriggerPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [inlineWord, setInlineWord] = useState("");
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -129,6 +129,13 @@ export default function TriggerPage() {
   const t = useT();
   const { isDemo } = useAuth();
   const isMobile = useIsMobile();
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.trigger",
+    facets: [],
+    freeTextPlaceholder: t("trigger.search_placeholder"),
+  });
+  const { queryParams } = filterBar;
 
   const fetchItems = useCallback(
     async (page: number, pageSize: number, query?: string) => {
@@ -152,16 +159,11 @@ export default function TriggerPage() {
     [setPersistedPage, setPersistedPageSize, t],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch list when the persisted page or size changes */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
-    fetchItems(persistedPage, persistedPageSize);
-  }, [fetchItems, persistedPage, persistedPageSize]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const handleSearch = useCallback(() => {
-    setPersistedPage(1);
-    fetchItems(1, persistedPageSize, searchQuery || undefined);
-  }, [fetchItems, persistedPageSize, searchQuery, setPersistedPage]);
+    fetchItems(1, persistedPageSize, queryParams.freeText || undefined);
+  }, [queryParams]);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleInlineAdd = useCallback(async () => {
     const word = inlineWord.trim();
@@ -259,14 +261,9 @@ export default function TriggerPage() {
             <CardTitle className="font-display">{t("trigger.all_words")}</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Search — faceted bar */}
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <SearchInput
-                className="sm:max-w-xs"
-                placeholder={t("trigger.search_placeholder")}
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={handleSearch}
-              />
+              <FilterBar {...filterBar} facets={[]} placeholder={t("trigger.search_placeholder")} />
               <Input
                 className="sm:max-w-xs"
                 placeholder={t("trigger.inline_add_placeholder")}
@@ -290,6 +287,11 @@ export default function TriggerPage() {
                 </Button>
               )}
             </div>
+            {filterBar.tokens.length > 0 && (
+              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+              </p>
+            )}
             {loading ? (
               <TableSkeleton />
             ) : items.length === 0 ? (
@@ -449,7 +451,7 @@ export default function TriggerPage() {
                 <PaginationBar
                   pageInfo={pageInfo}
                   onChange={(page, pageSize) =>
-                    fetchItems(page, pageSize, searchQuery || undefined)
+                    fetchItems(page, pageSize, queryParams.freeText || undefined)
                   }
                   totalLabel={t("pagination.items")}
                 />

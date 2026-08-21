@@ -203,9 +203,9 @@ const (
 	CronReloadChannel = "cron:reload"
 
 	// ── Demo account ──
-	DemoConfigTableName      = "demo_configs"
-	DemoConfigSingletonID    = 1
-	DemoDefaultSampleModulus = 10
+	DemoConfigTableName   = "demo_configs"
+	DemoSessionTableName  = "demo_sessions"
+	DemoConfigSingletonID = 1
 
 	// ── Locale ──
 	LocaleEmbedDir        = "locales"

@@ -18,8 +18,6 @@ type TokenRateQuery struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Granularity enum.Granularity
-	// SampleModulus demo 视角抽样模数（>1 时按 id % K == 0 过滤）
-	SampleModulus uint
 }
 
 type TokenRateByUserQuery struct {
@@ -55,7 +53,7 @@ func NewTokenRateByUserHandler(repo modelcall.AuditRepository, apiKeyIDs port.AP
 }
 
 func (h *tokenRateHandler) Handle(ctx context.Context, q TokenRateQuery) ([]*dto.TokenRateItem, error) {
-	points, err := h.repo.QueryTokenThroughput(ctx, nil, q.StartTime, q.EndTime, q.Granularity, q.SampleModulus)
+	points, err := h.repo.QueryTokenThroughput(ctx, nil, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +65,7 @@ func (h *tokenRateByUserHandler) Handle(ctx context.Context, q TokenRateByUserQu
 	if err != nil {
 		return nil, err
 	}
-	points, err := h.repo.QueryTokenThroughput(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity, 0)
+	points, err := h.repo.QueryTokenThroughput(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err
 	}

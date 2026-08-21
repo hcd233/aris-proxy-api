@@ -30,12 +30,13 @@ import TraceInstallPopover from "@/components/trace-install-popover";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PageHeader } from "@/components/page-header";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { formatDateTime } from "@/lib/utils";
 import { PermissionGuard } from "@/components/permission-guard";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 
 export default function TracePage() {
   const [traces, setTraces] = useState<TraceSummary[]>([]);
@@ -50,13 +51,20 @@ export default function TracePage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [keyword, setKeyword] = usePersistentState("dashboard.trace.keyword", "");
-  const [searchInput, setSearchInput] = usePersistentState("dashboard.trace.searchInput", "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const [batchDeleting, setBatchDeleting] = useState(false);
   const t = useT();
   const isMobile = useIsMobile();
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.trace",
+    facets: [],
+    freeTextPlaceholder: t("trace.search_placeholder"),
+    legacyFreeTextKey: "dashboard.trace.keyword",
+    legacyKeys: { _draft: "dashboard.trace.searchInput" },
+  });
+  const { queryParams } = filterBar;
 
   const fetchTraces = useCallback(
     async (page: number, pageSize: number, kw: string, silent?: boolean) => {
@@ -79,24 +87,18 @@ export default function TracePage() {
     [setPersistedPage, setPersistedPageSize, t],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount with persisted filters */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
-    fetchTraces(persistedPage, persistedPageSize, keyword);
-  }, [fetchTraces]);
+    fetchTraces(1, pageInfo.pageSize, queryParams.freeText);
+  }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-
-  const handleSearch = useCallback(() => {
-    const kw = searchInput.trim();
-    setKeyword(kw);
-    fetchTraces(1, pageInfo.pageSize, kw);
-  }, [fetchTraces, pageInfo.pageSize, searchInput, setKeyword]);
 
   const deleteConfirm = useDeleteConfirm<TraceSummary>({
     onConfirm: async (tr) => {
       await api.deleteTrace(tr.id);
       toast.success(t("trace.delete_success"));
       setSelected(new Set());
-      fetchTraces(pageInfo.page, pageInfo.pageSize, keyword, true);
+      fetchTraces(pageInfo.page, pageInfo.pageSize, queryParams.freeText, true);
     },
     onError: (err) => showErrorToast(err, { title: t("trace.delete_error") }),
   });
@@ -139,7 +141,7 @@ export default function TracePage() {
         toast.success(t("trace.batch_delete_success").replace("{count}", String(rsp.deletedCount)));
       }
       setSelected(new Set());
-      fetchTraces(1, pageInfo.pageSize, keyword, true);
+      fetchTraces(1, pageInfo.pageSize, queryParams.freeText, true);
     } catch (err) {
       showErrorToast(err, { title: t("trace.batch_delete_error") });
     } finally {
@@ -177,21 +179,15 @@ export default function TracePage() {
             <CardTitle className="font-display">{t("trace.all_traces")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Search — always visible */}
-            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
-              <SearchInput
-                placeholder={t("trace.search_placeholder")}
-                value={searchInput}
-                onChange={setSearchInput}
-                onSearch={handleSearch}
-                clearable
-                onClear={() => {
-                  setSearchInput("");
-                  setKeyword("");
-                  fetchTraces(1, pageInfo.pageSize, "");
-                }}
-              />
+            {/* Search — faceted bar */}
+            <div className="mb-4 flex">
+              <FilterBar {...filterBar} facets={[]} placeholder={t("trace.search_placeholder")} />
             </div>
+            {filterBar.tokens.length > 0 && (
+              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+              </p>
+            )}
 
             {loading ? (
               <TableSkeleton rows={5} rowClassName="h-10" />
@@ -337,7 +333,7 @@ export default function TracePage() {
                 )}
                 <PaginationBar
                   pageInfo={pageInfo}
-                  onChange={(page, pageSize) => fetchTraces(page, pageSize, keyword)}
+                  onChange={(page, pageSize) => fetchTraces(page, pageSize, queryParams.freeText)}
                   totalLabel={t("trace.traces")}
                 />
               </>

@@ -89,8 +89,11 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewRestoreDemoUserHandler,
 		demoquery.NewGetDemoConfigHandler,
 		demoquery.NewDemoModuleAccessor,
-		demoquery.NewDemoScopeProvider,
+		demoquery.NewDemoSessionAccessor,
+		demoquery.NewListDemoSessionsHandler,
 		democommand.NewUpdateDemoConfigHandler,
+		democommand.NewAddDemoSessionsHandler,
+		democommand.NewRemoveDemoSessionsHandler,
 		NewDemoLoginHandler,
 		NewDemoStatusHandler,
 		NewInitiateLoginHandler,
@@ -342,9 +345,8 @@ func NewAuditService(
 	modelUsageByUser auditquery.ModelUsageByUserHandler,
 	firstTokenLatency auditquery.FirstTokenLatencyHandler,
 	firstTokenLatencyByUser auditquery.FirstTokenLatencyByUserHandler,
-	demoScope demoport.DemoScopeProvider,
 ) auditport.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, demoScope)
+	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)
 }
 
 func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {

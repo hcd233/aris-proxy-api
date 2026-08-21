@@ -54,7 +54,7 @@ func (u *openAIUseCase) forwardChatNativeStream(ctx context.Context, req *dto.Op
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
@@ -78,7 +78,7 @@ func (u *openAIUseCase) forwardChatNativeUnary(ctx context.Context, req *dto.Ope
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
 		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, req.Body.Model, ep.Name(), enum.ProtocolOpenAIChatCompletion, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	completion.Model = req.Body.Model
 	bodyBytes := lo.Must1(sonic.Marshal(completion))
@@ -110,7 +110,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicStream(ctx context.Context, req *
 	if err != nil {
 		totalMs := time.Since(startTime).Milliseconds()
 		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
@@ -138,7 +138,7 @@ func (u *openAIUseCase) forwardChatViaAnthropicUnary(ctx context.Context, req *d
 	totalMs := time.Since(startTime).Milliseconds()
 	if err != nil {
 		auditFailureWithProviders(ctx, m, u.taskSubmitter, u.tokenMetrics, exposedModel, endpoint, enum.ProtocolAnthropicMessage, enum.ProtocolOpenAIChatCompletion, totalMs, err)
-		return nil, upstreamProxyError(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
 	}
 	completion, convErr := conv.ToOpenAIResponse(anthropicMsg)
 	if convErr != nil {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
@@ -16,15 +16,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, Lock, X } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, Lock } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDateTime, truncateText } from "@/lib/utils";
 import { ScoreDots } from "@/components/session-detail/score-dots";
 import { PageHeader } from "@/components/page-header";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -35,8 +34,10 @@ import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { toast } from "sonner";
-import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { ProviderIcon } from "@/components/provider-icon";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
+import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 
 type SortDir = "asc" | "desc";
 
@@ -47,7 +48,7 @@ const SORTABLE_COLUMNS: Record<string, string> = {
 };
 
 export default function SessionsPage() {
-  const t = useT();
+  const { t, locale } = useI18n();
   const isMobile = useIsMobile();
   const { isDemo } = useAuth();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -73,113 +74,79 @@ export default function SessionsPage() {
     dir: "desc",
   });
   const [scoring, setScoring] = useState<number | null>(null);
-  const [keyword, setKeyword] = usePersistentState("dashboard.sessions.keyword", "");
-  const [searchInput, setSearchInput] = usePersistentState("dashboard.sessions.searchInput", "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
-  const [filterScore, setFilterScore] = usePersistentState<string[]>(
-    "dashboard.sessions.filterScore",
-    [],
-  );
-  const [filterModel, setFilterModel] = usePersistentState<string[]>(
-    "dashboard.sessions.filterModel",
-    [],
-  );
-  const [filterMessageCount, setFilterMessageCount] = usePersistentState<string[]>(
-    "dashboard.sessions.filterMessageCount",
-    [],
-  );
-  const [scoreOptions, setScoreOptions] = useState<string[]>([]);
-  const [modelOptions, setModelOptions] = useState<string[]>([]);
-  const [messageCountOptions, setMessageCountOptions] = useState<string[]>([]);
 
-  const fetchScoreOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
-    const { startTime, endTime } = computeRange(range, cs, ce);
-    try {
-      const rsp = await api.listSessionOptions({ field: "score", startTime, endTime });
-      if (!rsp.error && rsp.items) setScoreOptions(rsp.items);
-    } catch (err) {
-      console.error("Failed to load score options:", err);
-    }
-  }, []);
-
-  const fetchModelOptions = useCallback(async (range: TimeRangeKey, cs: string, ce: string) => {
-    const { startTime, endTime } = computeRange(range, cs, ce);
-    try {
-      const rsp = await api.listSessionOptions({ field: "model", startTime, endTime });
-      if (!rsp.error && rsp.items) setModelOptions(rsp.items);
-    } catch (err) {
-      console.error("Failed to load model options:", err);
-    }
-  }, []);
-
-  const fetchMessageCountOptions = useCallback(
-    async (range: TimeRangeKey, cs: string, ce: string) => {
-      const { startTime, endTime } = computeRange(range, cs, ce);
-      try {
-        const rsp = await api.listSessionOptions({ field: "messageCount", startTime, endTime });
-        if (!rsp.error && rsp.items) setMessageCountOptions(rsp.items);
-      } catch (err) {
-        console.error("Failed to load message count options:", err);
-      }
+  const fetchOptionsFor = useCallback(
+    (field: "score" | "model" | "messageCount") => async () => {
+      const { startTime, endTime } = computeRange(timeRange, customStart, customEnd);
+      const rsp = await api.listSessionOptions({ field, startTime, endTime });
+      return rsp.items ?? [];
     },
-    [],
+    [timeRange, customStart, customEnd],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Re-fetch filter options when the time range changes */
-  useEffect(() => {
-    fetchScoreOptions(timeRange, customStart, customEnd);
-    fetchModelOptions(timeRange, customStart, customEnd);
-    fetchMessageCountOptions(timeRange, customStart, customEnd);
-  }, [
-    timeRange,
-    customStart,
-    customEnd,
-    fetchScoreOptions,
-    fetchModelOptions,
-    fetchMessageCountOptions,
-  ]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const facets = useMemo<FacetDef[]>(
+    () => [
+      {
+        key: "score",
+        label: t("sessions.filter_score"),
+        options: fetchOptionsFor("score"),
+        formatValue: (v) => (v === "unscored" ? t("sessions.filter_unscored") : `★${v}`),
+      },
+      { key: "model", label: t("sessions.filter_model"), options: fetchOptionsFor("model") },
+      {
+        key: "messageCount",
+        label: t("sessions.filter_message_count"),
+        options: fetchOptionsFor("messageCount"),
+      },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, fetchOptionsFor],
+  );
 
-  const buildSessionFilter = (
-    scores: string[],
-    models: string[],
-    msgCounts: string[],
-  ): string | undefined => {
-    const parts: string[] = [];
-    if (scores.length > 0) parts.push(`score:${scores.join("|")}`);
-    if (models.length > 0) parts.push(`model:${models.join("|")}`);
-    if (msgCounts.length > 0) parts.push(`messageCount:${msgCounts.join("|")}`);
-    return parts.length > 0 ? parts.join(" ") : undefined;
-  };
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.sessions",
+    facets,
+    freeTextPlaceholder: t("sessions.search_placeholder"),
+    legacyKeys: {
+      score: "dashboard.sessions.filterScore",
+      model: "dashboard.sessions.filterModel",
+      messageCount: "dashboard.sessions.filterMessageCount",
+      _draft: "dashboard.sessions.searchInput",
+    },
+    legacyFreeTextKey: "dashboard.sessions.keyword",
+    optionsCacheKey: `${timeRange}:${customStart}:${customEnd}`,
+  });
+  const { queryParams } = filterBar;
+
+  interface SessionsQuery {
+    page: number;
+    pageSize: number;
+    range: TimeRangeKey;
+    cs: string;
+    ce: string;
+    sortState: { field: string; dir: SortDir };
+    qp: FilterBarQueryParams;
+    silent?: boolean;
+  }
 
   const fetchSessions = useCallback(
-    async (
-      page: number,
-      pageSize: number,
-      range: TimeRangeKey,
-      cs: string,
-      ce: string,
-      sortState: { field: string; dir: SortDir },
-      kw: string,
-      score: string[],
-      models: string[],
-      msgCounts: string[],
-      silent?: boolean,
-    ) => {
-      if (!silent) setLoading(true);
+    async (q: SessionsQuery) => {
+      if (!q.silent) setLoading(true);
       try {
-        const { startTime, endTime } = computeRange(range, cs, ce);
+        const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
         const rsp = await api.listSessions({
-          page,
-          pageSize,
-          sort: sortState.dir,
-          sortField: sortState.field,
+          page: q.page,
+          pageSize: q.pageSize,
+          sort: q.sortState.dir,
+          sortField: q.sortState.field,
           startTime,
           endTime,
-          keyword: kw || undefined,
-          filter: buildSessionFilter(score, models, msgCounts),
+          keyword: q.qp.freeText || undefined,
+          filter: q.qp.filter,
         });
         setSessions(rsp.sessions ?? []);
         if (rsp.pageInfo) {
@@ -196,36 +163,23 @@ export default function SessionsPage() {
     [setPersistedPage, setPersistedPageSize],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial data fetch on mount with persisted filters */
+  const currentQuery = (): Omit<SessionsQuery, "page" | "pageSize"> => ({
+    range: timeRange,
+    cs: customStart,
+    ce: customEnd,
+    sortState: sort,
+    qp: queryParams,
+  });
+
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
   useEffect(() => {
-    fetchSessions(
-      persistedPage,
-      persistedPageSize,
-      timeRange,
-      customStart,
-      customEnd,
-      sort,
-      keyword,
-      filterScore,
-      filterModel,
-      filterMessageCount,
-    );
-  }, [fetchSessions]);
+    setSelected(new Set());
+    fetchSessions({ page: 1, pageSize: pageInfo.pageSize, ...currentQuery() });
+  }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchSessions(
-      page,
-      pageSize ?? pageInfo.pageSize,
-      timeRange,
-      customStart,
-      customEnd,
-      sort,
-      keyword,
-      filterScore,
-      filterModel,
-      filterMessageCount,
-    );
+    fetchSessions({ page, pageSize: pageSize ?? pageInfo.pageSize, ...currentQuery() });
 
   const handleSort = (field: string) => {
     const newSort: { field: string; dir: SortDir } =
@@ -233,36 +187,7 @@ export default function SessionsPage() {
         ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
         : { field, dir: "desc" };
     setSort(newSort);
-    fetchSessions(
-      1,
-      pageInfo.pageSize,
-      timeRange,
-      customStart,
-      customEnd,
-      newSort,
-      keyword,
-      filterScore,
-      filterModel,
-      filterMessageCount,
-    );
-  };
-
-  const handleSearch = () => {
-    const kw = searchInput.trim();
-    setKeyword(kw);
-    setSelected(new Set());
-    fetchSessions(
-      1,
-      pageInfo.pageSize,
-      timeRange,
-      customStart,
-      customEnd,
-      sort,
-      kw,
-      filterScore,
-      filterModel,
-      filterMessageCount,
-    );
+    fetchSessions({ page: 1, pageSize: pageInfo.pageSize, ...currentQuery(), sortState: newSort });
   };
 
   const renderSortIcon = (field: string) => {
@@ -274,19 +199,12 @@ export default function SessionsPage() {
     onConfirm: async (s) => {
       await api.deleteSession(s.id);
       toast.success(t("sessions.delete_success"));
-      fetchSessions(
-        pageInfo.page,
-        pageInfo.pageSize,
-        timeRange,
-        customStart,
-        customEnd,
-        sort,
-        keyword,
-        filterScore,
-        filterModel,
-        filterMessageCount,
-        true,
-      );
+      fetchSessions({
+        page: pageInfo.page,
+        pageSize: pageInfo.pageSize,
+        ...currentQuery(),
+        silent: true,
+      });
     },
     onError: (err) => showErrorToast(err, { title: t("sessions.delete_error") }),
   });
@@ -331,19 +249,7 @@ export default function SessionsPage() {
         );
       }
       setSelected(new Set());
-      fetchSessions(
-        1,
-        pageInfo.pageSize,
-        timeRange,
-        customStart,
-        customEnd,
-        sort,
-        keyword,
-        filterScore,
-        filterModel,
-        filterMessageCount,
-        true,
-      );
+      fetchSessions({ page: 1, pageSize: pageInfo.pageSize, ...currentQuery(), silent: true });
     } catch (err) {
       showErrorToast(err, { title: t("sessions.batch_delete_error") });
     } finally {
@@ -390,159 +296,50 @@ export default function SessionsPage() {
           <CardTitle className="font-display">{t("sessions.all_sessions")}</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Filters — always visible */}
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <TimeRangePicker
-                value={timeRange}
-                customStart={customStart}
-                customEnd={customEnd}
-                onChange={(key, cs, ce) => {
-                  setTimeRange(key);
-                  setCustomStart(cs);
-                  setCustomEnd(ce);
-                  fetchSessions(
-                    1,
-                    pageInfo.pageSize,
-                    key,
-                    cs,
-                    ce,
-                    sort,
-                    keyword,
-                    filterScore,
-                    filterModel,
-                    filterMessageCount,
-                  );
-                }}
-              />
-              <MultiSelectPill
-                label={t("sessions.filter_score")}
-                options={scoreOptions}
-                value={filterScore}
-                onChange={(v) => {
-                  setFilterScore(v);
-                  fetchSessions(
-                    1,
-                    pageInfo.pageSize,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    sort,
-                    keyword,
-                    v,
-                    filterModel,
-                    filterMessageCount,
-                  );
-                }}
-              />
-              <MultiSelectPill
-                label={t("sessions.filter_model")}
-                options={modelOptions}
-                value={filterModel}
-                onChange={(v) => {
-                  setFilterModel(v);
-                  fetchSessions(
-                    1,
-                    pageInfo.pageSize,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    sort,
-                    keyword,
-                    filterScore,
-                    v,
-                    filterMessageCount,
-                  );
-                }}
-              />
-              <MultiSelectPill
-                label={t("sessions.filter_message_count")}
-                options={messageCountOptions}
-                value={filterMessageCount}
-                onChange={(v) => {
-                  setFilterMessageCount(v);
-                  fetchSessions(
-                    1,
-                    pageInfo.pageSize,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    sort,
-                    keyword,
-                    filterScore,
-                    filterModel,
-                    v,
-                  );
-                }}
-              />
-              {(filterScore.length > 0 ||
-                filterModel.length > 0 ||
-                filterMessageCount.length > 0) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-muted-foreground"
-                  onClick={() => {
-                    setFilterScore([]);
-                    setFilterModel([]);
-                    setFilterMessageCount([]);
-                    fetchSessions(
-                      1,
-                      pageInfo.pageSize,
-                      timeRange,
-                      customStart,
-                      customEnd,
-                      sort,
-                      keyword,
-                      [],
-                      [],
-                      [],
-                    );
-                  }}
-                >
-                  <X className="size-3.5" />
-                  {t("common.clear")}
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <SearchInput
-                placeholder={t("sessions.search_placeholder")}
-                value={searchInput}
-                onChange={setSearchInput}
-                onSearch={handleSearch}
-                clearable
-                onClear={() => {
-                  setSearchInput("");
-                  setKeyword("");
-                  fetchSessions(
-                    1,
-                    pageInfo.pageSize,
-                    timeRange,
-                    customStart,
-                    customEnd,
-                    sort,
-                    "",
-                    filterScore,
-                    filterModel,
-                    filterMessageCount,
-                  );
-                }}
-              />
-              {selected.size > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={isDemo()}
-                  onClick={() => setBatchDeleteConfirmOpen(true)}
-                  className="gap-1.5"
-                >
-                  {isDemo() ? <Lock className="size-3.5" /> : <Trash2 className="size-3.5" />}
-                  {t("common.delete")} {selected.size}
-                </Button>
-              )}
-            </div>
+          {/* Filters — faceted bar */}
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+            <TimeRangePicker
+              value={timeRange}
+              customStart={customStart}
+              customEnd={customEnd}
+              onChange={(key, cs, ce) => {
+                setTimeRange(key);
+                setCustomStart(cs);
+                setCustomEnd(ce);
+                fetchSessions({
+                  page: 1,
+                  pageSize: pageInfo.pageSize,
+                  range: key,
+                  cs,
+                  ce,
+                  sortState: sort,
+                  qp: queryParams,
+                });
+              }}
+            />
+            <FilterBar
+              {...filterBar}
+              facets={facets}
+              placeholder={t("sessions.search_placeholder")}
+            />
+            {selected.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isDemo()}
+                onClick={() => setBatchDeleteConfirmOpen(true)}
+                className="gap-1.5 md:ml-auto"
+              >
+                {isDemo() ? <Lock className="size-3.5" /> : <Trash2 className="size-3.5" />}
+                {t("common.delete")} {selected.size}
+              </Button>
+            )}
           </div>
+          {filterBar.tokens.length > 0 && (
+            <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+              {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+            </p>
+          )}
 
           {loading ? (
             <TableSkeleton rows={5} rowClassName="h-10" />

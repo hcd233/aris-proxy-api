@@ -40,10 +40,11 @@ import { toast } from "sonner";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PageHeader } from "@/components/page-header";
-import { SearchInput } from "@/components/search-input";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
+import { FilterBar } from "@/components/filter-bar/filter-bar";
+import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useT } from "@/lib/i18n";
@@ -84,11 +85,17 @@ export default function EndpointsPage() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<EndpointForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  const filterBar = useFilterBar({
+    persistKey: "dashboard.endpoints",
+    facets: [],
+    freeTextPlaceholder: t("endpoints.search_endpoints"),
+  });
+  const { queryParams } = filterBar;
 
   const fetchEndpoints = useCallback(
     async (page: number, pageSize: number, query?: string) => {
@@ -114,14 +121,14 @@ export default function EndpointsPage() {
     [t, setPersistedPage, setPersistedPageSize],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
-    fetchEndpoints(persistedPage, persistedPageSize);
-  }, [fetchEndpoints]);
+    fetchEndpoints(1, pageInfo.pageSize, queryParams.freeText || undefined);
+  }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchEndpoints(page, pageSize ?? pageInfo.pageSize, searchQuery || undefined);
+    fetchEndpoints(page, pageSize ?? pageInfo.pageSize, queryParams.freeText || undefined);
 
   const openCreate = () => {
     setEditingId(null);
@@ -174,7 +181,7 @@ export default function EndpointsPage() {
         toast.success(t("endpoints.created_success"));
       }
       setDialogOpen(false);
-      fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
+      fetchEndpoints(pageInfo.page, pageInfo.pageSize, queryParams.freeText || undefined);
     } catch (err) {
       showErrorToast(err, { title: t("endpoints.save_error") });
     } finally {
@@ -186,7 +193,7 @@ export default function EndpointsPage() {
     onConfirm: async (ep) => {
       await api.deleteEndpoint(ep.id);
       toast.success(t("endpoints.deleted_success"));
-      fetchEndpoints(pageInfo.page, pageInfo.pageSize, searchQuery || undefined);
+      fetchEndpoints(pageInfo.page, pageInfo.pageSize, queryParams.freeText || undefined);
     },
     onError: (err) => showErrorToast(err, { title: t("endpoints.delete_error") }),
   });
@@ -210,14 +217,15 @@ export default function EndpointsPage() {
             <CardTitle className="font-display">{t("endpoints.all_endpoints")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <SearchInput
-                placeholder={t("endpoints.search_endpoints")}
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={() => fetchEndpoints(1, pageInfo.pageSize, searchQuery || undefined)}
-              />
+            {/* Search — faceted bar */}
+            <div className="mb-4 flex">
+              <FilterBar {...filterBar} facets={[]} placeholder={t("endpoints.search_endpoints")} />
             </div>
+            {filterBar.tokens.length > 0 && (
+              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+              </p>
+            )}
             {loading ? (
               <TableSkeleton />
             ) : endpoints.length === 0 ? (

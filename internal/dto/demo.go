@@ -3,6 +3,8 @@ package dto
 
 import (
 	"time"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
 // DemoLoginRsp Demo 登录响应（JWT token pair）
@@ -21,10 +23,9 @@ type DemoStatusRsp struct {
 
 // DemoConfig Demo 配置实体
 type DemoConfig struct {
-	LoginEnabled  bool      `json:"loginEnabled" doc:"Whether the demo login entry is enabled"`
-	SampleModulus uint      `json:"sampleModulus" doc:"Modulus for behavior data sampling (id % K == 0, must be >= 2)"`
-	Modules       []string  `json:"modules" doc:"Open modules for the demo account"`
-	UpdatedAt     time.Time `json:"updatedAt,omitzero" doc:"Last update time"`
+	LoginEnabled bool      `json:"loginEnabled" doc:"Whether the demo login entry is enabled"`
+	Modules      []string  `json:"modules" doc:"Open modules for the demo account"`
+	UpdatedAt    time.Time `json:"updatedAt,omitzero" doc:"Last update time"`
 }
 
 // GetDemoConfigRsp 读取 Demo 配置响应
@@ -45,7 +46,48 @@ type UpdateDemoConfigReqBody struct {
 
 // DemoConfigBody Demo 配置更新体
 type DemoConfigBody struct {
-	LoginEnabled  *bool    `json:"loginEnabled,omitempty" doc:"Whether the demo login entry is enabled"`
-	SampleModulus *uint    `json:"sampleModulus,omitempty" minimum:"2" doc:"Modulus for behavior data sampling (id % K == 0, must be >= 2)"`
-	Modules       []string `json:"modules,omitempty" doc:"Open modules for the demo account (dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit)"`
+	LoginEnabled *bool    `json:"loginEnabled,omitempty" doc:"Whether the demo login entry is enabled"`
+	Modules      []string `json:"modules,omitempty" doc:"Open modules for the demo account (dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit)"`
+}
+
+// DemoSession 白名单会话摘要
+type DemoSession struct {
+	ID           uint      `json:"id" doc:"Session ID"`
+	Summary      string    `json:"summary,omitempty" doc:"会话摘要"`
+	MessageCount int       `json:"messageCount" doc:"消息数"`
+	ToolCount    int       `json:"toolCount" doc:"工具调用数"`
+	CreatedAt    time.Time `json:"createdAt,omitzero" doc:"创建时间"`
+}
+
+// ListDemoSessionsReq 白名单会话列表请求
+type ListDemoSessionsReq struct {
+	Page     int `query:"page" required:"true" minimum:"1" doc:"页码"`
+	PageSize int `query:"pageSize" required:"true" minimum:"1" maximum:"500" doc:"每页条数"`
+}
+
+// ListDemoSessionsRsp 白名单会话列表响应
+type ListDemoSessionsRsp struct {
+	CommonRsp
+	Sessions []*DemoSession  `json:"sessions,omitempty" doc:"白名单会话列表"`
+	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
+}
+
+// AddDemoSessionsReq 批量添加白名单会话请求
+type AddDemoSessionsReq struct {
+	Body *AddDemoSessionsReqBody `json:"body" required:"true" doc:"请求体"`
+}
+
+// AddDemoSessionsReqBody 批量添加白名单会话请求体
+type AddDemoSessionsReqBody struct {
+	SessionIDs []uint `json:"sessionIds" required:"true" minItems:"1" doc:"会话 ID 列表"`
+}
+
+// RemoveDemoSessionsReq 批量移除白名单会话请求
+type RemoveDemoSessionsReq struct {
+	IDs []uint `query:"ids" required:"true" doc:"会话 ID 列表，逗号分隔"`
+}
+
+// RemoveDemoSessionsRsp 批量移除白名单会话响应
+type RemoveDemoSessionsRsp struct {
+	CommonRsp
 }

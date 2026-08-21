@@ -19,7 +19,7 @@ type fakeConfigRepo struct {
 
 func (r *fakeConfigRepo) Get(ctx context.Context) (*port.DemoConfigEntity, error) {
 	if r.entity == nil {
-		return &port.DemoConfigEntity{LoginEnabled: false, SampleModulus: 10, Modules: []enum.DemoModule{}}, nil
+		return &port.DemoConfigEntity{LoginEnabled: false, Modules: []enum.DemoModule{}}, nil
 	}
 	return r.entity, nil
 }
@@ -30,15 +30,13 @@ func (r *fakeConfigRepo) Save(ctx context.Context, entity *port.DemoConfigEntity
 }
 
 func boolPtr(v bool) *bool { return &v }
-func uintPtr(v uint) *uint { return &v }
 
 func TestUpdateDemoConfig_MergesPartialFields(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	repo := &fakeConfigRepo{entity: &port.DemoConfigEntity{
-		LoginEnabled:  false,
-		SampleModulus: 10,
-		Modules:       []enum.DemoModule{enum.DemoModuleSessions},
+		LoginEnabled: false,
+		Modules:      []enum.DemoModule{enum.DemoModuleSessions},
 	}}
 	handler := democommand.NewUpdateDemoConfigHandler(repo)
 
@@ -49,23 +47,8 @@ func TestUpdateDemoConfig_MergesPartialFields(t *testing.T) {
 	if !view.LoginEnabled {
 		t.Fatal("expected loginEnabled true")
 	}
-	if view.SampleModulus != 10 {
-		t.Fatalf("expected modulus unchanged 10, got %d", view.SampleModulus)
-	}
 	if len(view.Modules) != 1 || view.Modules[0] != enum.DemoModuleSessions {
 		t.Fatalf("expected modules unchanged, got %v", view.Modules)
-	}
-}
-
-func TestUpdateDemoConfig_RejectsModulusBelowTwo(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	handler := democommand.NewUpdateDemoConfigHandler(&fakeConfigRepo{})
-
-	for _, bad := range []uint{0, 1} {
-		if _, err := handler.Handle(ctx, port.UpdateDemoConfigCommand{SampleModulus: uintPtr(bad)}); !errors.Is(err, ierr.ErrValidation) {
-			t.Fatalf("expected ErrValidation for modulus %d, got %v", bad, err)
-		}
 	}
 }
 

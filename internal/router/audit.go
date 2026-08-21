@@ -16,6 +16,7 @@ import (
 
 func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	auditGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	auditGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
 	huma.Register(auditGroup, huma.Operation{
 		OperationID: "listAuditLogs",

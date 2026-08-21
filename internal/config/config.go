@@ -195,6 +195,42 @@ var (
 	//	@update 2026-06-23 10:00:00
 	UpstreamRetryJitterFactor float64
 
+	// UpstreamCircuitEnabled bool 是否启用上游熔断
+	//	@update 2026-08-20 10:00:00
+	UpstreamCircuitEnabled bool
+
+	// UpstreamCircuitWindow time.Duration 熔断滑动窗口时长
+	//	@update 2026-08-20 10:00:00
+	UpstreamCircuitWindow time.Duration
+
+	// UpstreamCircuitMinRequests int 窗口内最少请求数（低于该值不熔断）
+	//	@update 2026-08-20 10:00:00
+	UpstreamCircuitMinRequests int
+
+	// UpstreamCircuitErrorThreshold float64 熔断错误率阈值 (0~1)
+	//	@update 2026-08-20 10:00:00
+	UpstreamCircuitErrorThreshold float64
+
+	// UpstreamCircuitOpenTimeout time.Duration 熔断打开保持时长
+	//	@update 2026-08-20 10:00:00
+	UpstreamCircuitOpenTimeout time.Duration
+
+	// UpstreamCircuitHalfOpenMaxRequests int 半开期并发探测请求数
+	//	@update 2026-08-20 10:00:00
+	UpstreamCircuitHalfOpenMaxRequests int
+
+	// UpstreamBulkheadEnabled bool 是否启用每上游并发隔离
+	//	@update 2026-08-20 10:00:00
+	UpstreamBulkheadEnabled bool
+
+	// UpstreamBulkheadMaxConcurrent int 每上游最大并发转发数
+	//	@update 2026-08-20 10:00:00
+	UpstreamBulkheadMaxConcurrent int
+
+	// UpstreamBulkheadAcquireTimeout time.Duration 获取信号量等待超时
+	//	@update 2026-08-20 10:00:00
+	UpstreamBulkheadAcquireTimeout time.Duration
+
 	// HTTPClientTimeout time.Duration 上游 HTTP 客户端总超时时间（含响应 body 读取）
 	//	@update 2026-08-12 10:00:00
 	HTTPClientTimeout time.Duration
@@ -259,6 +295,16 @@ func InitEnvironment() {
 	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
 	config.SetDefault("upstream.retry.max_backoff", 2*time.Second)
 	config.SetDefault("upstream.retry.jitter_factor", 0.3)
+
+	config.SetDefault("upstream.circuit.enabled", true)
+	config.SetDefault("upstream.circuit.window", 60*time.Second)
+	config.SetDefault("upstream.circuit.min_requests", 10)
+	config.SetDefault("upstream.circuit.error_threshold", 0.5)
+	config.SetDefault("upstream.circuit.open_timeout", 30*time.Second)
+	config.SetDefault("upstream.circuit.halfopen_max_requests", 1)
+	config.SetDefault("upstream.bulkhead.enabled", true)
+	config.SetDefault("upstream.bulkhead.max_concurrent", 32)
+	config.SetDefault("upstream.bulkhead.acquire_timeout", time.Second)
 
 	config.AutomaticEnv()
 
@@ -326,6 +372,16 @@ func InitEnvironment() {
 	UpstreamRetryInitialBackoff = config.GetDuration("upstream.retry.initial_backoff")
 	UpstreamRetryMaxBackoff = config.GetDuration("upstream.retry.max_backoff")
 	UpstreamRetryJitterFactor = config.GetFloat64("upstream.retry.jitter_factor")
+
+	UpstreamCircuitEnabled = config.GetBool("upstream.circuit.enabled")
+	UpstreamCircuitWindow = max(config.GetDuration("upstream.circuit.window"), constant.ResilienceMinWindow)
+	UpstreamCircuitMinRequests = config.GetInt("upstream.circuit.min_requests")
+	UpstreamCircuitErrorThreshold = config.GetFloat64("upstream.circuit.error_threshold")
+	UpstreamCircuitOpenTimeout = config.GetDuration("upstream.circuit.open_timeout")
+	UpstreamCircuitHalfOpenMaxRequests = config.GetInt("upstream.circuit.halfopen_max_requests")
+	UpstreamBulkheadEnabled = config.GetBool("upstream.bulkhead.enabled")
+	UpstreamBulkheadMaxConcurrent = config.GetInt("upstream.bulkhead.max_concurrent")
+	UpstreamBulkheadAcquireTimeout = config.GetDuration("upstream.bulkhead.acquire_timeout")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{

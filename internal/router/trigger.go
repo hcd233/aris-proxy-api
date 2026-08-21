@@ -16,6 +16,7 @@ import (
 
 func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
 	group.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	group.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
 	huma.Register(group, huma.Operation{
 		OperationID: "createTrigger",

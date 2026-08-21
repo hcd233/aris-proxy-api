@@ -23,6 +23,10 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ![LLM 代理链路](docs/diagrams/aris-proxy-pipeline.png)
 
+**上游容错（熔断/隔离/降级）**：proxy 转发链路在重试外层接入容错守卫 `Guard`——按 `BaseURL|APIKey` 维度的三态熔断器（滑动窗口 60s × 6 桶、≥10 请求且错误率 ≥50% 打开、30s 后半开限量 1 探测恢复）与 per-key 信号量隔离（并发 ≤32、等待 1s 超时）组合判定；熔断打开或满载时快速失败为 503 + `Retry-After` + 按入口协议格式的错误体。429 仍可重试但不计熔断（限流不算故障），已建立的 SSE 连接不受熔断影响；熔断状态与拒绝计数注册 Prometheus 指标（label 为 endpoint key）。
+
+![上游容错：熔断 / 隔离 / 降级](docs/diagrams/aris-upstream-resilience.png)
+
 **会话数据模型与生命周期**：LLM 转发与 Trace 摄取两路写入 Session 聚合根，Message/Tool 按 checksum 内容寻址去重，审计、缓存、导出与后台消费围绕其展开。
 
 ![会话数据模型与生命周期](docs/diagrams/aris-session-data.png)
@@ -55,7 +59,7 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ![定时任务触发与执行](docs/diagrams/aris-cron-execution.png)
 
-**Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。admin 在 users 页设置 demo 账户（替换语义：旧 demo 自动降为 pending）并经 `PATCH /api/v1/demo/config` 写入单行配置表（登录开关、9 个模块白名单、抽样模数 K）。运行时权限中间件按模块白名单放行（fail-closed，读失败即拒绝），会话与审计等行为数据按 `WHERE id % K = 0` 取模抽样（详情接口校验 `sessionID % K` 防遍历）；全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
+**Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。demo 只读请求先过访问防线：权限中间件按模块白名单放行（fail-closed），`TokenBucketRateLimiterMiddleware` 以 `WithPermissionFilter(demo)` 仅对 demo 权限启用 `demoAccess` IP 令牌桶（5s/30，8 个接口组全局共享一桶，超限 429 + `Retry-After`；非 demo 用户零开销放行）。数据分两路视角：**会话白名单**——admin 在独立 `/demo` tab 勾选批量增删 `demo_sessions`（`session_id` 唯一索引），demo 列表走 `ListSessionsByIDs`、详情经 `IsAllowed` 成员校验，不在白名单一律返回"不存在"（防遍历），白名单内容明文（admin 选取即授权）；**全量脱敏**——audit/models/endpoints 展示全量数据但关键字段脱敏（身份类 `MaskIdentity` → `***`，连接类 `MaskSecret` → 保留前 4 后 4），统计数字与别名有意保留。全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
 
 ![Demo 演示账户架构](docs/diagrams/aris-demo-account.png)
 

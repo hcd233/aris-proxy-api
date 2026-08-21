@@ -238,7 +238,7 @@ type sessionSummaryRow struct {
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
-func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria, sampleModulus uint) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -248,11 +248,6 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	}
 
 	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
-
-	// demo 视角抽样：仅返回 id % K == 0 的行
-	if sampleModulus > 1 {
-		sql = sql.Where(constant.DBConditionIDModuloZero, sampleModulus)
-	}
 
 	if !startTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
@@ -354,6 +349,54 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 	var rows []sessionSummaryRow
 	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
+	}
+
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
+	if len(rows) > 0 {
+		pageInfo.Total = rows[0].TotalCount
+	}
+
+	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
+		return &session.SessionSummaryProjection{
+			ID:           row.ID,
+			CreatedAt:    row.CreatedAt,
+			UpdatedAt:    row.UpdatedAt,
+			Questions:    row.Questions,
+			ModelIDs:     row.ModelIDs,
+			Score:        row.Score,
+			MessageCount: row.MessageCount,
+			ToolCount:    row.ToolCount,
+		}
+	})
+	return out, pageInfo, nil
+}
+
+func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	if len(ids) == 0 {
+		return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: 0}, nil
+	}
+	db := r.db.WithContext(ctx)
+	if param.Page < 1 {
+		param.Page = 1
+	}
+	if param.PageSize < 1 {
+		param.PageSize = 20
+	}
+
+	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
+	sql = sql.Where(constant.FieldID+" IN ?", ids)
+
+	if param.Sort != "" && param.SortField != "" {
+		param.SortField = util.SafeSortField(param.SortField)
+	}
+	if param.Sort != "" && param.SortField != "" {
+		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+	}
+
+	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
+	var rows []sessionSummaryRow
+	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions by ids")
 	}
 
 	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
@@ -519,7 +562,7 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 }
 
 // ListDistinctScores 查询去重的评分列表。
-func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) ([]int, error) {
+func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
 	db := r.db.WithContext(ctx)
 
 	var scores []int
@@ -527,8 +570,8 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTim
 		Select(constant.SessionDistinctScoreSelect).
 		Where(constant.SessionDistinctScoreWhere).
 		Where(constant.DBConditionDeletedAtZero)
-	if sampleModulus > 1 {
-		query = query.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	if len(sessionIDs) > 0 {
+		query = query.Where(constant.FieldID+" IN ?", sessionIDs)
 	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
@@ -545,7 +588,7 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTim
 }
 
 // ListDistinctModels 查询去重的模型列表。
-func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sampleModulus uint) ([]string, error) {
+func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
 	db := r.db.WithContext(ctx)
 
 	var models []string
@@ -553,8 +596,8 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 		Select(constant.SessionDistinctModelSelect).
 		Where(constant.DBConditionDeletedAtZero).
 		Where(constant.SessionDistinctModelWhere)
-	if sampleModulus > 1 {
-		query = query.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	if len(sessionIDs) > 0 {
+		query = query.Where(constant.FieldID+" IN ?", sessionIDs)
 	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
@@ -576,14 +619,14 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 // ListMessageCountStats 查询消息数统计：
 //   - maxCount：当前时间范围内最大的 session 消息数（无会话时为 0）
 //   - bucketCounts：各固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+）的会话数
-func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time, sampleModulus uint) (maxCount int, bucketCounts map[int]int64, err error) {
+func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
 	db := r.db.WithContext(ctx)
 
 	maxQuery := db.Model(&dbmodel.Session{}).
 		Select(constant.SessionMessageCountMaxSelect).
 		Where(constant.DBConditionDeletedAtZero)
-	if sampleModulus > 1 {
-		maxQuery = maxQuery.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	if len(sessionIDs) > 0 {
+		maxQuery = maxQuery.Where(constant.FieldID+" IN ?", sessionIDs)
 	}
 	if !startTime.IsZero() {
 		maxQuery = maxQuery.Where(constant.WhereCreatedAtGTE, startTime)
@@ -599,8 +642,8 @@ func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, start
 	subQuery := db.Model(&dbmodel.Session{}).
 		Select(constant.SessionMessageCountSQLExpr + " AS cnt").
 		Where(constant.DBConditionDeletedAtZero)
-	if sampleModulus > 1 {
-		subQuery = subQuery.Where(constant.DBConditionIDModuloZero, sampleModulus)
+	if len(sessionIDs) > 0 {
+		subQuery = subQuery.Where(constant.FieldID+" IN ?", sessionIDs)
 	}
 	if !startTime.IsZero() {
 		subQuery = subQuery.Where(constant.WhereCreatedAtGTE, startTime)
