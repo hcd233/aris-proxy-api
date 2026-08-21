@@ -105,6 +105,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/dockerfile
           platforms: linux/amd64
           push: true
           build-args: |
