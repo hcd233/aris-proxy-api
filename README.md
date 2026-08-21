@@ -59,7 +59,7 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ![定时任务触发与执行](docs/diagrams/aris-cron-execution.png)
 
-**Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。admin 在 users 页设置 demo 账户（替换语义：旧 demo 自动降为 pending）并经 `PATCH /api/v1/demo/config` 写入单行配置表（登录开关、9 个模块白名单、抽样模数 K）。运行时权限中间件按模块白名单放行（fail-closed，读失败即拒绝），会话与审计等行为数据按 `WHERE id % K = 0` 取模抽样（详情接口校验 `sessionID % K` 防遍历）；全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
+**Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。demo 只读请求先过访问防线：权限中间件按模块白名单放行（fail-closed），`TokenBucketRateLimiterMiddleware` 以 `WithPermissionFilter(demo)` 仅对 demo 权限启用 `demoAccess` IP 令牌桶（5s/30，8 个接口组全局共享一桶，超限 429 + `Retry-After`；非 demo 用户零开销放行）。数据分两路视角：**会话白名单**——admin 在独立 `/demo` tab 勾选批量增删 `demo_sessions`（`session_id` 唯一索引），demo 列表走 `ListSessionsByIDs`、详情经 `IsAllowed` 成员校验，不在白名单一律返回"不存在"（防遍历），白名单内容明文（admin 选取即授权）；**全量脱敏**——audit/models/endpoints 展示全量数据但关键字段脱敏（身份类 `MaskIdentity` → `***`，连接类 `MaskSecret` → 保留前 4 后 4），统计数字与别名有意保留。全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
 
 ![Demo 演示账户架构](docs/diagrams/aris-demo-account.png)
 
