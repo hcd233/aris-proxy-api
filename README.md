@@ -23,6 +23,10 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ![LLM 代理链路](docs/diagrams/aris-proxy-pipeline.png)
 
+**上游容错（熔断/隔离/降级）**：proxy 转发链路在重试外层接入容错守卫 `Guard`——按 `BaseURL|APIKey` 维度的三态熔断器（滑动窗口 60s × 6 桶、≥10 请求且错误率 ≥50% 打开、30s 后半开限量 1 探测恢复）与 per-key 信号量隔离（并发 ≤32、等待 1s 超时）组合判定；熔断打开或满载时快速失败为 503 + `Retry-After` + 按入口协议格式的错误体。429 仍可重试但不计熔断（限流不算故障），已建立的 SSE 连接不受熔断影响；熔断状态与拒绝计数注册 Prometheus 指标（label 为 endpoint key）。
+
+![上游容错：熔断 / 隔离 / 降级](docs/diagrams/aris-upstream-resilience.png)
+
 **会话数据模型与生命周期**：LLM 转发与 Trace 摄取两路写入 Session 聚合根，Message/Tool 按 checksum 内容寻址去重，审计、缓存、导出与后台消费围绕其展开。
 
 ![会话数据模型与生命周期](docs/diagrams/aris-session-data.png)
