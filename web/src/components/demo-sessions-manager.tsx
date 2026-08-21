@@ -26,6 +26,7 @@ import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { ProviderIcon } from "@/components/provider-icon";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -41,9 +42,11 @@ import { computeRange } from "@/lib/time-range";
 interface SessionRow {
   id: number;
   summary?: string;
+  score?: number;
   messageCount: number;
   toolCount: number;
   createdAt?: string;
+  modelIds?: string[];
 }
 
 /** 勾选框（对齐 sessions/trigger 的 role="checkbox" 自绘模式） */
@@ -109,7 +112,7 @@ function SessionListTable({
                 <SelectCheckbox checked={isSelected} onToggle={() => onToggle(item.id)} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{summary(item)}</p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                     <span>
                       {t("common.id")}: {item.id}
                     </span>
@@ -119,6 +122,20 @@ function SessionListTable({
                     <span>
                       {t("sessions.tools")}: {item.toolCount}
                     </span>
+                    {item.score != null && (
+                      <span>
+                        {t("sessions.score")}: ★{item.score}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    {item.modelIds && item.modelIds.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        {item.modelIds.map((m) => (
+                          <ProviderIcon key={m} protocol={m} size={12} />
+                        ))}
+                      </div>
+                    )}
                     {item.createdAt && <span>{formatDateTime(item.createdAt)}</span>}
                   </div>
                 </div>
@@ -137,11 +154,13 @@ function SessionListTable({
           <TableHead className="w-10">
             <SelectCheckbox checked={selectedIds.size === items.length} onToggle={onToggleAll} />
           </TableHead>
-          <TableHead className="w-16">{t("common.id")}</TableHead>
+          <TableHead>{t("common.id")}</TableHead>
+          <TableHead className="w-[160px] whitespace-nowrap">{t("sessions.time")}</TableHead>
           <TableHead>{t("sessions.summary")}</TableHead>
+          <TableHead className="w-[160px] text-center">{t("sessions.score")}</TableHead>
           <TableHead className="w-24">{t("sessions.messages")}</TableHead>
           <TableHead className="w-24">{t("sessions.tools")}</TableHead>
-          <TableHead className="w-40">{t("sessions.created_at")}</TableHead>
+          <TableHead className="w-[140px]">{t("sessions.models")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -153,11 +172,42 @@ function SessionListTable({
                 <SelectCheckbox checked={isSelected} onToggle={() => onToggle(item.id)} />
               </TableCell>
               <TableCell className="font-mono text-xs">{item.id}</TableCell>
-              <TableCell className="max-w-[280px] truncate">{summary(item)}</TableCell>
+              <TableCell className="whitespace-nowrap text-muted-foreground">
+                {item.createdAt ? formatDateTime(item.createdAt) : "—"}
+              </TableCell>
+              <TableCell className="max-w-[200px] truncate">
+                {summary(item)}
+              </TableCell>
+              <TableCell className="w-[160px]">
+                <div className="flex justify-center">
+                  {item.score != null ? (
+                    <span className="text-sm">
+                      {"★".repeat(item.score)}
+                      <span className="text-muted-foreground/30">{"★".repeat(5 - item.score)}</span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>{item.messageCount}</TableCell>
               <TableCell>{item.toolCount}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {item.createdAt ? formatDateTime(item.createdAt) : "—"}
+              <TableCell>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {item.modelIds && item.modelIds.length > 0 ? (
+                    item.modelIds.map((m) => (
+                      <span
+                        key={m}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                      >
+                        <ProviderIcon protocol={m} size={14} />
+                        {m}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           );
@@ -270,6 +320,8 @@ export function DemoSessionsManager() {
         const rsp = await api.listSessions({
           page: q.page,
           pageSize: q.pageSize,
+          sort: "desc",
+          sortField: "created_at",
           startTime,
           endTime,
           keyword: q.qp.freeText || undefined,

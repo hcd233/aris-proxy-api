@@ -34,17 +34,16 @@ func (h *listEndpointsHandler) Handle(ctx context.Context, q port.ListEndpointsQ
 	}
 
 	views := lo.Map(endpoints, func(ep *aggregate.Endpoint, _ int) *port.EndpointView {
-		name := ep.Name()
+		// demo 视角：name 展示明文（供演示辨认），仅屏蔽 baseURL 与 APIKey
 		openaiBaseURL := ep.OpenaiBaseURL()
 		anthropicBaseURL := ep.AnthropicBaseURL()
 		if q.IsDemo {
-			name = commonutil.MaskSecret(name)
 			openaiBaseURL = commonutil.MaskSecret(openaiBaseURL)
 			anthropicBaseURL = commonutil.MaskSecret(anthropicBaseURL)
 		}
 		return &port.EndpointView{
 			ID:                          ep.AggregateID(),
-			Name:                        name,
+			Name:                        ep.Name(),
 			OpenaiBaseURL:               openaiBaseURL,
 			AnthropicBaseURL:            anthropicBaseURL,
 			MaskedAPIKey:                commonutil.MaskSecret(ep.APIKey()),

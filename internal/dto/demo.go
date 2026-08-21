@@ -54,9 +54,11 @@ type DemoConfigBody struct {
 type DemoSession struct {
 	ID           uint      `json:"id" doc:"Session ID"`
 	Summary      string    `json:"summary,omitempty" doc:"会话摘要"`
+	Score        *int      `json:"score,omitempty" doc:"人工评分(1-5)"`
 	MessageCount int       `json:"messageCount" doc:"消息数"`
 	ToolCount    int       `json:"toolCount" doc:"工具调用数"`
 	CreatedAt    time.Time `json:"createdAt,omitzero" doc:"创建时间"`
+	ModelIDs     []string  `json:"modelIds,omitempty" doc:"回答模型ID列表"`
 }
 
 // ListDemoSessionsReq 白名单会话列表请求

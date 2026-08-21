@@ -206,6 +206,8 @@ const (
 	DemoConfigTableName   = "demo_configs"
 	DemoSessionTableName  = "demo_sessions"
 	DemoConfigSingletonID = 1
+	// DemoSessionMaxPageSize demo 会话白名单列表单页上限（与 ListDemoSessionsReq pageSize maximum 一致）
+	DemoSessionMaxPageSize = 100
 
 	// ── Locale ──
 	LocaleEmbedDir        = "locales"

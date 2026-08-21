@@ -209,7 +209,6 @@ func TestE2E_DemoConfigPermission(t *testing.T) {
 	if status != http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("user patch demo config expected business error, got %d: %s", status, body)
 	}
-
 }
 
 // TestE2E_DemoAccountLifecycle 完整闭环：设 demo → 开入口 → demo 登录 → 模块白名单/只读校验 → 恢复

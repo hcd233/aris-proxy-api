@@ -9,6 +9,7 @@ import (
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/demo/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -181,7 +182,15 @@ func (h *demoHandler) HandleListDemoSessions(ctx context.Context, req *dto.ListD
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Sessions = lo.Map(views, func(v *port.DemoSessionView, _ int) *dto.DemoSession {
-		return &dto.DemoSession{ID: v.ID, Summary: v.Summary, MessageCount: v.MessageCount, ToolCount: v.ToolCount, CreatedAt: v.CreatedAt}
+		return &dto.DemoSession{
+			ID:           v.ID,
+			Summary:      v.Summary,
+			Score:        v.Score,
+			MessageCount: v.MessageCount,
+			ToolCount:    v.ToolCount,
+			CreatedAt:    v.CreatedAt,
+			ModelIDs:     v.ModelIDs,
+		}
 	})
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -196,7 +205,7 @@ func (h *demoHandler) HandleAddDemoSessions(ctx context.Context, req *dto.AddDem
 	if err != nil {
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
-	return h.HandleListDemoSessions(ctx, &dto.ListDemoSessionsReq{Page: 1, PageSize: 100})
+	return h.HandleListDemoSessions(ctx, &dto.ListDemoSessionsReq{Page: 1, PageSize: constant.DemoSessionMaxPageSize})
 }
 
 // HandleRemoveDemoSessions 批量移除白名单会话（admin）

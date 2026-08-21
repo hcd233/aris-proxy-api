@@ -47,9 +47,11 @@ export interface DemoLoginRsp extends CommonRsp {
 export interface DemoSession {
   id: number;
   summary?: string;
+  score?: number;
   messageCount: number;
   toolCount: number;
   createdAt?: string;
+  modelIds?: string[];
 }
 
 export interface ListDemoSessionsRsp extends CommonRsp {

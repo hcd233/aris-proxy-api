@@ -107,9 +107,11 @@ type DemoSessionAccessor interface {
 type DemoSessionView struct {
 	ID           uint
 	Summary      string
+	Score        *int
 	MessageCount int
 	ToolCount    int
 	CreatedAt    time.Time
+	ModelIDs     []string
 }
 
 // ListDemoSessionsQuery 查询白名单会话
